@@ -4,7 +4,7 @@
 
 Fast ExpressionTree compiler to delegate
 
-More than 10 times faster than `Expression.Compiler`.
+More than 10 times faster than `Expression.Compile`.
 
 Intially developed and used in DryIoc v2 (no closure support). 
 Then closure support is added into upcoming DryIoc v3 branch. 
