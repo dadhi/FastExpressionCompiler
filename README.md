@@ -17,17 +17,17 @@ __Main idea is to evolve and test the compiler separately targeting more project
 
 ## Idea
 
-Compile faster for selected/supported expressions, 
-and fallback to `Expression.Compile`for the rest. 
+__Compile faster for selected/supported expressions, 
+and fallback to `Expression.Compile`for the rest.__ 
 
-Compilation is done by visting expression nodes and emitting the IL. 
+Compilation is done by visiting expression nodes and emitting the IL. 
 The supporting code preserved as minimalistic as possible for perf. 
 
 Expression visited in two rounds:
 
--first to collect constants to create closure (for composed expression),
+- first to collect constants to create closure (for composed expression),
 or to find generated closure object (for the hoisted one) 
--second round to actually emit the IL.
+- second round to actually emit the IL.
 
 If at any round compilation visits not supported node, 
 the compilation is aborted, and null is returned enabling the fallback. 
