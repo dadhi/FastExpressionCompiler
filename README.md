@@ -1,5 +1,8 @@
 # FastExpressionCompiler
 
+[DryIoc]: https://bitbucket.org/dadhi/dryioc
+[ExpressionToCodeLib]: https://github.com/EamonNerbonne/ExpressionToCode
+
 ## Summary
 
 Fast ExpressionTree compiler to delegate
@@ -8,10 +11,10 @@ More than 10 times faster than `Expression.Compile`:
 
 ![benchmark](https://ibin.co/2oAik1nHNy3A.jpg) 
 
-Initially developed and used in [DryIoc](https://bitbucket.org/dadhi/dryioc) v2 (no closure support). 
+Initially developed and used in [DryIoc] v2 (no closure support). 
 Then closure support is added into upcoming DryIoc v3 branch. 
 
-Additionally the version with hoisted closure support was contributed by me to [ExpressionToCodeLib](https://github.com/EamonNerbonne/ExpressionToCode) . 
+Additionally the version with hoisted closure support was contributed by me to [ExpressionToCodeLib]. 
 
 __Main idea is to evolve and test the compiler separately targeting more projects.__
 
@@ -29,7 +32,7 @@ Expression visited in two rounds:
 or to find generated closure object (for the hoisted one) 
 - second round to actually emit the IL.
 
-If at any round compilation visits not supported node, 
+If any compilation round visits not supported node, 
 the compilation is aborted, and null is returned enabling the fallback. 
 
 
