@@ -22,15 +22,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-namespace DryIoc
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Linq.Expressions;
-    using System.Reflection;
-    using System.Reflection.Emit;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Reflection.Emit;
 
+namespace FastExpressionCompiler
+{
     /// <summary>Compiles expression to delegate by emitting the IL directly.
     /// The emitter is ~10 times faster than Expression.Compile.</summary>
     public static class FastExpressionCompiler
@@ -79,7 +79,7 @@ namespace DryIoc
                     var createClosure = createClosureMethod.MakeGenericMethod(constantTypes);
 
                     closure = createClosure.Invoke(null, constants);
-                    closureInfo = new ClosureInfo(constantExprs, closure.GetType().GetTypeInfo().DeclaredFields.ToArrayOrSelf());
+                    closureInfo = new ClosureInfo(constantExprs, closure.GetType().GetTypeInfo().DeclaredFields.ToArray());
                 }
                 else
                 {
@@ -137,7 +137,7 @@ namespace DryIoc
         internal static class Closure
         {
             public static readonly MethodInfo[] CreateMethods =
-                typeof(Closure).GetTypeInfo().DeclaredMethods.ToArrayOrSelf();
+                typeof(Closure).GetTypeInfo().DeclaredMethods.ToArray();
 
             public static Closure<T1> CreateClosure<T1>(T1 v1)
             {
@@ -648,7 +648,7 @@ namespace DryIoc
 
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
                 if (constantExpr.Type == typeof(object) &&
-                    constant != null && constant.GetType().IsValueType())
+                    constant != null && constant.GetType().IsValueType)
                     il.Emit(OpCodes.Box, constant.GetType());
 
                 return true;

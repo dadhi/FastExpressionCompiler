@@ -1,0 +1,36 @@
+﻿{
+  "version": "1.0.0-preview-001",
+
+  "description": "Expression Compiler 10 times faster than `Expression.Compile`. Based on IL.Emit. Fallbacks to Expression.Compile for not suppored expressions.",
+  "authors": [ "Maksim Volkau" ],
+
+  "buildOptions": {
+    "warningsAsErrors": false,
+    "xmlDoc": true
+  },
+
+  "packOptions": {
+    "owners": [ "Maksim Volkau" ],
+    "copyright": "Copyright © 2016 Maksim Volkau",
+    "tags": [ "Expression", "ExpressionTrees", "Compile", "DynamicMethod", "DryIoc", "ExpressionToCodeLib" ],
+    "projectUrl": "https://github.com/dadhi/FastExpressionCompiler",
+    "licenseUrl": "http://opensource.org/licenses/MIT",
+    "releaseNotes": "Initial version"
+  },
+
+  "frameworks": {
+    "net45": {
+      "frameworkAssemblies": {
+      }
+    },
+    "net40": {
+      "frameworkAssemblies": {
+      }
+    },
+    "net35": {
+      "frameworkAssemblies": {
+      }
+    }
+  }
+}
+

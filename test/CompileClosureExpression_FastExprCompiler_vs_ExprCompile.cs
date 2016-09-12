@@ -1,7 +1,6 @@
 using System;
 using System.Linq.Expressions;
 using BenchmarkDotNet.Attributes;
-using DryIoc;
 
 namespace Playground
 {
@@ -39,7 +38,7 @@ namespace Playground
         [Benchmark]
         public Func<object> FastExpressionCompiler()
         {
-            return DryIoc.FastExpressionCompiler.TryCompile<Func<object>>(_manualExpr.Body, 
+            return global::FastExpressionCompiler.FastExpressionCompiler.TryCompile<Func<object>>(_manualExpr.Body, 
                 ArrayTools.Empty<ParameterExpression>(), ArrayTools.Empty<Type>(), typeof(object));
         }
 
