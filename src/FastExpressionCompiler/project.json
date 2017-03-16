@@ -1,8 +1,5 @@
 ﻿{
-  "version": "1.0.0-preview-001",
-
-  "description": "Expression Compiler 10 times faster than `Expression.Compile`. Based on IL.Emit. Fallbacks to Expression.Compile for not suppored expressions.",
-  "authors": [ "Maksim Volkau" ],
+  "version": "1.0.0-preview-01",
 
   "buildOptions": {
     "warningsAsErrors": false,
@@ -10,25 +7,29 @@
   },
 
   "packOptions": {
-    "owners": [ "Maksim Volkau" ],
+    "summary": "Fast Expression Compiler is ~10 faster than `Expression.Compile()`",
     "copyright": "Copyright © 2016 Maksim Volkau",
-    "tags": [ "Expression", "ExpressionTrees", "Compile", "DynamicMethod", "DryIoc", "ExpressionToCodeLib" ],
-    "projectUrl": "https://github.com/dadhi/FastExpressionCompiler",
+    "owners": [ "Maksim Volkau" ],
     "licenseUrl": "http://opensource.org/licenses/MIT",
+    "projectUrl": "https://github.com/dadhi/FastExpressionCompiler",
+    "tags": [ "Expression", "ExpressionTrees", "Compile", "DynamicMethod", "ILEmit", "DryIoc", "ExpressionToCodeLib" ],
+
     "releaseNotes": "Initial version"
   },
 
   "frameworks": {
-    "net45": {
-      "frameworkAssemblies": {
+    "netstandard1.3": {
+      "dependencies": {
+        "NETStandard.Library": "1.6.1",
+        "System.Reflection.Emit.Lightweight": "4.3.0"
       }
-    },
-    "net40": {
+    }, 
+
+    "net452": {
       "frameworkAssemblies": {
-      }
-    },
-    "net35": {
-      "frameworkAssemblies": {
+        "System.Reflection": "",
+        "System.Linq": "",
+        "System.Linq.Expressions": ""
       }
     }
   }
