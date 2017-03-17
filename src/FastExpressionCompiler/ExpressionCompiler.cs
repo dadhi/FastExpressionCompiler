@@ -33,8 +33,46 @@ namespace FastExpressionCompiler
 
     /// <summary>Compiles expression to delegate by emitting the IL directly.
     /// The emitter is ~10 times faster than Expression.Compile.</summary>
-    public static partial class ExpressionCompiler
+    public static class ExpressionCompiler
     {
+        /// <summary>First tries to compile fast and if failed (null result), then falls back to Expression.Compile.</summary>
+        /// <typeparam name="T">Type of compiled delegate return result.</typeparam>
+        /// <param name="lambdaExpr">Expr to compile.</param>
+        /// <returns>Compiled delegate.</returns>
+        public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr)
+        {
+            return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, EmptyTypes, typeof(object)) 
+                ?? lambdaExpr.Compile();
+        }
+
+        /// <summary>Compiles arbitrary lambda expression to <typeparamref name="TDelegate"/>.</summary>
+        /// <typeparam name="TDelegate">Should be the compatible type of delegate, otherwise case will throw.</typeparam>
+        /// <param name="lambdaExpr">Lambda expression to compile.</param>
+        /// <returns>compiled delegate.</returns>
+        public static TDelegate Compile<TDelegate>(LambdaExpression lambdaExpr) 
+            where TDelegate : class
+        {
+            var paramExprs = lambdaExpr.Parameters;
+            var paramTypes = GetParamExprTypes(paramExprs);
+            return TryCompile<TDelegate>(lambdaExpr.Body, paramExprs, paramTypes, lambdaExpr.ReturnType)
+                ?? (TDelegate)(object)lambdaExpr.Compile();
+        }
+
+        private static Type[] GetParamExprTypes(IList<ParameterExpression> paramExprs)
+        {
+            var paramsCount = paramExprs.Count;
+            if (paramsCount == 0)
+                return EmptyTypes;
+
+            if (paramsCount == 1)
+                return new[] { paramExprs[0].Type };
+
+            var paramTypes = new Type[paramsCount];
+            for (var i = 0; i < paramTypes.Length; i++)
+                paramTypes[i] = paramExprs[i].Type;
+            return paramTypes;
+        }
+
         /// <summary>Compiles expression to delegate by emitting the IL. 
         /// If sub-expressions are not supported by emitter, then the method returns null.
         /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
@@ -45,7 +83,7 @@ namespace FastExpressionCompiler
         /// <returns>Result delegate or null, if unable to compile.</returns>
         public static TDelegate TryCompile<TDelegate>(
             Expression bodyExpr,
-            ParameterExpression[] paramExprs,
+            IList<ParameterExpression> paramExprs,
             Type[] paramTypes,
             Type returnType) where TDelegate : class
         {
@@ -565,17 +603,12 @@ namespace FastExpressionCompiler
                 case ExpressionType.Lambda:
 
                     var lambdaExpr = (LambdaExpression)expr;
-
                     var lambdaParamExprs = lambdaExpr.Parameters;
-                    var paramTypes = lambdaParamExprs.Count == 0
-                        ? EmptyTypes
-                        : lambdaParamExprs.Select(p => p.Type).ToArray();
-
-                    var returnType = lambdaExpr.Body.Type;
+                    var paramTypes = GetParamExprTypes(lambdaParamExprs);
 
                     ClosureInfo nestedClosure = null;
                     var nestedLambda = TryCompile(ref nestedClosure,
-                        lambdaExpr.Type, paramTypes, returnType, lambdaExpr.Body, lambdaParamExprs);
+                        lambdaExpr.Type, paramTypes, lambdaExpr.Body.Type, lambdaExpr.Body, lambdaParamExprs);
 
                     if (nestedLambda == null)
                         return false;
