@@ -1,7 +1,8 @@
 ﻿{
   "dependencies": {
     "NUnit": "3.6.0",
-    "dotnet-test-nunit": "3.4.0-beta-3"
+    "dotnet-test-nunit": "3.4.0-beta-3",
+    "FastExpressionCompiler": { "target": "project" }
   },
 
   "testRunner": "nunit",

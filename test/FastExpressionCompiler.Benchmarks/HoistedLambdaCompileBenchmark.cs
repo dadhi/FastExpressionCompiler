@@ -8,15 +8,15 @@ namespace FastExpressionCompiler.Benchmarks
 {
     public class HoistedLambdaCompileBenchmark
     {
-        private readonly Expression<Func<object>> _hoistedExpr = GetHoistedExpr();
-
-        private static Expression<Func<object>> GetHoistedExpr()
+        private static Expression<Func<X>> GetHoistedExpr()
         {
             var a = new A();
             var b = new B();
-            Expression<Func<object>> e = () => new X(a, b);
+            Expression<Func<X>> e = () => new X(a, b);
             return e;
         }
+
+        private readonly Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
 
         private readonly Expression<Func<object>> _manualExpr = GetManualExpr();
 
@@ -32,13 +32,13 @@ namespace FastExpressionCompiler.Benchmarks
         }
 
         [Benchmark]
-        public Func<object> Compile()
+        public Func<X> Compile()
         {
             return _hoistedExpr.Compile();
         }
 
         [Benchmark]
-        public Func<object> CompileFast()
+        public Func<X> CompileFast()
         {
             return ExpressionCompiler.Compile(_hoistedExpr);
         }

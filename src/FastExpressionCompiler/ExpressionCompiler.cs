@@ -41,7 +41,7 @@ namespace FastExpressionCompiler
         /// <returns>Compiled delegate.</returns>
         public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr)
         {
-            return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, EmptyTypes, typeof(object)) 
+            return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, EmptyTypes, typeof(T)) 
                 ?? lambdaExpr.Compile();
         }
 
@@ -54,7 +54,8 @@ namespace FastExpressionCompiler
         {
             var paramExprs = lambdaExpr.Parameters;
             var paramTypes = GetParamExprTypes(paramExprs);
-            return TryCompile<TDelegate>(lambdaExpr.Body, paramExprs, paramTypes, lambdaExpr.ReturnType)
+            var expr = lambdaExpr.Body;
+            return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type)
                 ?? (TDelegate)(object)lambdaExpr.Compile();
         }
 
@@ -135,12 +136,16 @@ namespace FastExpressionCompiler
         private static Type[] GetClosureAndParamTypes(Type[] paramTypes, Type closureType)
         {
             var paramCount = paramTypes.Length;
+            if (paramCount == 0)
+                return new[] { closureType };
+
             var closureAndParamTypes = new Type[paramCount + 1];
             closureAndParamTypes[0] = closureType;
             if (paramCount == 1)
                 closureAndParamTypes[1] = paramTypes[0];
             else if (paramCount > 1)
                 Array.Copy(paramTypes, 0, closureAndParamTypes, 1, paramCount);
+
             return closureAndParamTypes;
         }
 

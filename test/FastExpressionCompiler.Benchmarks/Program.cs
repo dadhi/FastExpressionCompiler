@@ -6,7 +6,7 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<HoistedLambdaPerfBenchmark>();
+            BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaCompileBenchmark>();
         }
     }
 }
