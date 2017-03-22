@@ -16,7 +16,66 @@ _TL;DR;_
 Fast Expression Compiler is ~20 times faster than `Expression.Compile()`,  
 and the result delegate _may be_ ~10 times faster than one produced by `Expression.Compile()`. 
 
-![benchmark](https://ibin.co/2oAik1nHNy3A.jpg)
+## Benchmarks
+
+```ini
+BenchmarkDotNet=v0.10.3.0, OS=Microsoft Windows 10.0.14393
+Processor=Intel(R) Core(TM) i5-6300U CPU 2.40GHz, ProcessorCount=4
+Frequency=2437493 Hz, Resolution=410.2576 ns, Timer=TSC
+dotnet cli version=1.0.0-preview2-1-003177
+  [Host]     : .NET Core 4.6.24628.01, 64bit RyuJIT
+  DefaultJob : .NET Core 4.6.24628.01, 64bit RyuJIT
+```
+
+
+### Hoisted expression with constructor and two arguments in closure
+
+```csharp
+    var a = new A();
+    var b = new B();
+    Expression<Func<X>> e = () => new X(a, b);
+```
+
+Compiling expression:
+
+ | Method |        Mean |    StdDev |
+ |------- |------------ |---------- |
+ |   Expr | 366.8057 us | 2.6807 us |
+ |   Fast |  12.3820 us | 0.3382 us |
+
+Invoking compiled delegate with direct constructor call as baseline:
+
+ |              Method |       Mean |    StdDev | Scaled | Scaled-StdDev |
+ |-------------------- |----------- |---------- |------- |-------------- |
+ |         Constructor |  7.0878 ns | 0.0480 ns |   1.00 |          0.00 |
+ |      CompiledLambda | 10.7929 ns | 0.1323 ns |   1.52 |          0.02 |
+ |  FastCompiledLambda |  9.6521 ns | 0.1556 ns |   1.36 |          0.02 |
+ 
+ 
+### Hoisted expression with static method and two nested lambdas and two arguments in closure
+
+```csharp
+    var a = new A();
+    var b = new B();
+    Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy<A>(() => a), b);
+```
+
+Compiling expression:
+
+ | Method |        Mean |    StdDev |
+ |------- |------------ |---------- |
+ |   Expr | 686.9673 us | 7.7669 us |
+ |   Fast |  33.5210 us | 0.1899 us |
+
+
+Invoking compiled delegate with direct method call as baseline:
+
+ |             Method |          Mean |     StdDev | Scaled | Scaled-StdDev |
+ |------------------- |-------------- |----------- |------- |-------------- |
+ |             Method |   144.8640 ns |  2.6944 ns |   1.00 |          0.00 |
+ | ExprCompiledLambda | 2,275.7026 ns | 49.6164 ns |  15.71 |          0.44 |
+ | FastCompiledLambda |   136.2695 ns |  2.4605 ns |   0.94 |          0.02 |
+
 
 ## Current state
 

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Attributes.Exporters;
 
 namespace FastExpressionCompiler.Benchmarks
 {
@@ -31,6 +32,7 @@ namespace FastExpressionCompiler.Benchmarks
             return e;
         }
 
+        [MarkdownExporter]
         public class Compile
         {
             [Benchmark]
@@ -46,6 +48,7 @@ namespace FastExpressionCompiler.Benchmarks
             }
         }
 
+        [MarkdownExporter]
         public class Invoke
         {
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
@@ -72,5 +75,24 @@ namespace FastExpressionCompiler.Benchmarks
                 return _lambdaCompiledFast();
             }
         }
+
+        #region SUT
+
+        public class A { }
+        public class B { }
+
+        public class X
+        {
+            public A A { get; }
+            public B B { get; }
+
+            public X(A a, B b)
+            {
+                A = a;
+                B = b;
+            }
+        }
+
+        #endregion
     }
 }
