@@ -7,7 +7,7 @@
   },
 
   "packOptions": {
-    "summary": "Fast Expression Compiler is ~10 faster than `Expression.Compile()`",
+    "summary": "Fast Expression Compiler is ~20x faster than `Expression.Compile()`",
     "copyright": "Copyright © 2016 Maksim Volkau",
     "owners": [ "Maksim Volkau" ],
     "licenseUrl": "http://opensource.org/licenses/MIT",
