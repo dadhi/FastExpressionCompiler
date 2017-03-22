@@ -5,7 +5,7 @@ using NUnit.Framework;
 namespace FastExpressionCompiler.UnitTests
 {
     [TestFixture]
-    public class NestedLambdaTests
+    public class HoistedLambdaExprTests
     {
         [Test]
         public void Should_compile_nested_lambda()
