@@ -6,15 +6,15 @@
 
 ## Why
 
-[Expression tree] compilation used by wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
+[Expression tree] compilation is used by wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
 But the performance of compilation with `Expression.Compile()` is just slow, 
-Moreover, the resulting compiled delegate may be slower than manually created delegate because of the [reasons](https://blogs.msdn.microsoft.com/seteplia/2017/02/01/dissecting-the-new-constraint-in-c-a-perfect-example-of-a-leaky-abstraction/):
+Moreover, the compiled delegate may be slower than manually created delegate because of the [reasons](https://blogs.msdn.microsoft.com/seteplia/2017/02/01/dissecting-the-new-constraint-in-c-a-perfect-example-of-a-leaky-abstraction/):
 
 _TL;DR;_
 > The question is, why is the compiled delegate way slower than a manually-written delegate? Expression.Compile creates a DynamicMethod and associates it with an anonymous assembly to run it in a sandboxed environment. This makes it safe for a dynamic method to be emitted and executed by partially trusted code but adds some run-time overhead.
 
 Fast Expression Compiler is ~20 times faster than `Expression.Compile()`,  
-and the result delegate _may be_ ~10 times faster than one produced by `Expression.Compile()`. 
+and the result compiled delegate _may be_ ~10 times faster than the one produced by `Expression.Compile()`. 
 
 ## Benchmarks
 
