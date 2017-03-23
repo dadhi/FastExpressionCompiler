@@ -4,6 +4,9 @@
 [ExpressionToCodeLib]: https://github.com/EamonNerbonne/ExpressionToCode
 [Expression Tree]: https://msdn.microsoft.com/en-us/library/mt654263.aspx
 
+[![NuGet Pre Release](https://img.shields.io/nuget/vpre/FastExpressionCompiler.svg)]()
+[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)]()
+
 ## Why
 
 [Expression tree] compilation is used by wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
