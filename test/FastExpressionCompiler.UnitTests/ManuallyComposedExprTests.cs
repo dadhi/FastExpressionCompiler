@@ -67,6 +67,5 @@ namespace FastExpressionCompiler.UnitTests
                 B = b;
             }
         }
-
     }
 }

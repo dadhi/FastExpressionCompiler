@@ -13,6 +13,7 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "FastExpressionCompiler.Unit
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{09193938-965D-4B58-8845-E4CD7D0A9BFB}"
 	ProjectSection(SolutionItems) = preProject
+		build.bat = build.bat
 		global.json = global.json
 		LICENSE = LICENSE
 		README.md = README.md

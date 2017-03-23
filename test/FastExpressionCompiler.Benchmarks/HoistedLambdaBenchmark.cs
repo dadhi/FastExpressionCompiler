@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.Benchmarks
             B bb = new B();
 
             [Benchmark(Baseline = true)]
-            public X ConstructorDirectly()
+            public X Constructor()
             {
                 return new X(aa, bb);
             }

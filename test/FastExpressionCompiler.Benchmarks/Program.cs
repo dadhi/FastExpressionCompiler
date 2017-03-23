@@ -8,7 +8,11 @@ namespace FastExpressionCompiler.Benchmarks
         {
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Compile>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
+
             //BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compile>();
+            //BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invoke>();
+
+            //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compile>();
             BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invoke>();
         }
     }

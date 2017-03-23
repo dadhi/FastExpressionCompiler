@@ -48,7 +48,7 @@ namespace FastExpressionCompiler.Benchmarks
             B bb = new B();
 
             [Benchmark(Baseline = true)]
-            public X MethodDirectly()
+            public X Method()
             {
                 return CreateX((a, b) => new X(a, b), new Lazy<A>(() => aa), bb);
             }
