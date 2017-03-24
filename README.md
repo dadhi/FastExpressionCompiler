@@ -16,8 +16,8 @@ Moreover, the compiled delegate may be slower than manually created delegate bec
 _TL;DR;_
 > The question is, why is the compiled delegate way slower than a manually-written delegate? Expression.Compile creates a DynamicMethod and associates it with an anonymous assembly to run it in a sandboxed environment. This makes it safe for a dynamic method to be emitted and executed by partially trusted code but adds some run-time overhead.
 
-Fast Expression Compiler is ~20 times faster than `Expression.Compile()`,  
-and the result compiled delegate _may be_ ~10 times faster than the one produced by `Expression.Compile()`. 
+Fast Expression Compiler is ~20 times faster than `Expression.Compile()`.  
+The compiled delegate __may be in some cases__ ~15 times faster than the one produced by `Expression.Compile()`.
 
 ## Benchmarks
 
@@ -41,12 +41,12 @@ dotnet cli version=1.0.0-preview2-1-003177
 
 Compiling expression:
 
- | Method |        Mean |    StdDev |
- |------- |------------ |---------- |
- |   Expr | 366.8057 us | 2.6807 us |
- |   Fast |  12.3820 us | 0.3382 us |
+ | Method      |        Mean |    StdDev |
+ |------------ |------------ |---------- |
+ | Compile     | 366.8057 us | 2.6807 us |
+ | CompileFast |  12.3820 us | 0.3382 us |
 
-Invoking compiled delegate with direct constructor call as baseline:
+Invoking compiled delegate comparing to direct constructor call:
 
  |              Method |       Mean |    StdDev | Scaled | Scaled-StdDev |
  |-------------------- |----------- |---------- |------- |-------------- |
@@ -65,25 +65,78 @@ Invoking compiled delegate with direct constructor call as baseline:
 
 Compiling expression:
 
- | Method |        Mean |    StdDev |
- |------- |------------ |---------- |
- |   Expr | 686.9673 us | 7.7669 us |
- |   Fast |  33.5210 us | 0.1899 us |
+ | Method      |        Mean |    StdDev |
+ |------------ |------------ |---------- |
+ | Compile     | 686.9673 us | 7.7669 us |
+ | CompileFast |  33.5210 us | 0.1899 us |
 
 
-Invoking compiled delegate with direct method call as baseline:
+Invoking compiled delegate comparing to direct method call:
 
  |             Method |          Mean |     StdDev | Scaled | Scaled-StdDev |
  |------------------- |-------------- |----------- |------- |-------------- |
  |             Method |   144.8640 ns |  2.6944 ns |   1.00 |          0.00 |
- | ExprCompiledLambda | 2,275.7026 ns | 49.6164 ns |  15.71 |          0.44 |
+ |     CompiledLambda | 2,275.7026 ns | 49.6164 ns |  15.71 |          0.44 |
  | FastCompiledLambda |   136.2695 ns |  2.4605 ns |   0.94 |          0.02 |
+
+
+### Manually composed expression with parameters and closure
+
+```csharp
+    var a = new A();
+    var bParamExpr = Expression.Parameter(typeof(B), "b");
+
+    var expr = Expression.Lambda(
+        Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
+            Expression.Constant(a, typeof(A)), bParamExpr),
+        bParamExpr);
+```
+
+Compiling expression:
+
+ | Method      |        Mean |    StdDev |
+ |------------ |------------ |---------- |
+ | Compile     | 269.9465 us | 3.9580 us |
+ | CompileFast |  11.3810 us | 0.1435 us |
+
+
+Invoking compiled delegate comparing to normal delegate:
+
+ |             Method |       Mean |    StdDev | Scaled | Scaled-StdDev |
+ |------------------- |----------- |---------- |------- |-------------- |
+ |             Lambda | 12.0089 ns | 0.2025 ns |   1.00 |          0.00 |
+ |     CompiledLambda | 12.9169 ns | 0.3836 ns |   1.08 |          0.04 |
+ | FastCompiledLambda | 12.6380 ns | 0.2724 ns |   1.05 |          0.03 |
+
+
+## Usage
+
+Hoisted lambda expression (created for you by compiler):
+```chsarp
+    var a = new A(); var b = new B();
+    Expression<Func<X>> expr = () => new X(a, b);
+    var getX = ExpressionCompiler.Compile(expr);
+    var x = getX();
+```
+
+Manually composed lambda expression:
+```chsarp
+    var a = new A();
+    var bParamExpr = Expression.Parameter(typeof(B), "b");
+    var expr = Expression.Lambda(
+        Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
+            Expression.Constant(a, typeof(A)), bParamExpr),
+        bParamExpr);
+    var getX = ExpressionCompiler.Compile<Func<B, X>>(expr);
+    var x = getX(new B());
+```
 
 
 ## Current state
 
-Initially developed and used in [DryIoc] since v2.  
-Additinally, contributed to [ExpressionToCodeLib] project.
+Initially developed and currently used in [DryIoc].
+
+Additionally contributed to [ExpressionToCodeLib].
 
 Supports:
 
@@ -97,6 +150,7 @@ Does not support now, but may be added later:
 
 - Code blocks, assignments and whatever added since .NET 4.0
 
+
 ## How
 
 The idea is to provide fast compilation of selected/supported expression types,
@@ -108,8 +162,8 @@ The supporting code preserved as minimalistic as possible for perf.
 Expression is visited in two rounds:
 
 1. To collect constants and nested lambdas into closure(s) for manually composed expression,
-or to find generated closure object (for the hoisted expression) 
+or to find generated closure object for the hoisted expression
 2. To emit the IL.
 
-If any round visits not supported expression node, 
+If the processing round visits not supported expression node, 
 the compilation is aborted, and null is returned enabling the fallback to normal `Expression.Compile()`.

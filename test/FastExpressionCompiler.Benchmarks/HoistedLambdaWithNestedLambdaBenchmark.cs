@@ -54,7 +54,7 @@ namespace FastExpressionCompiler.Benchmarks
             }
 
             [Benchmark]
-            public X ExprCompiledLambda()
+            public X CompiledLambda()
             {
                 return _lambdaCompiled();
             }

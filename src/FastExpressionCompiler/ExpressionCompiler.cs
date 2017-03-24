@@ -49,7 +49,7 @@ namespace FastExpressionCompiler
         /// <typeparam name="TDelegate">Should be the compatible type of delegate, otherwise case will throw.</typeparam>
         /// <param name="lambdaExpr">Lambda expression to compile.</param>
         /// <returns>compiled delegate.</returns>
-        public static TDelegate Compile<TDelegate>(LambdaExpression lambdaExpr) 
+        public static TDelegate Compile<TDelegate>(LambdaExpression lambdaExpr)
             where TDelegate : class
         {
             var paramExprs = lambdaExpr.Parameters;

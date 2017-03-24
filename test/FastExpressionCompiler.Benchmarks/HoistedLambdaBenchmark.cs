@@ -21,13 +21,13 @@ namespace FastExpressionCompiler.Benchmarks
         public class Compile
         {
             [Benchmark]
-            public Func<X> Expr()
+            public Func<X> Compile_()
             {
                 return _hoistedExpr.Compile();
             }
 
             [Benchmark]
-            public Func<X> Fast()
+            public Func<X> CompileFast()
             {
                 return ExpressionCompiler.Compile(_hoistedExpr);
             }
