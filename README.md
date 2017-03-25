@@ -144,10 +144,10 @@ Supports:
 - Nested lambdas
 - Constructor and method calls, lambda invocation
 - Property and member access, operators
-- and pretty much all from .NET 3.5 Expression Trees
 
 Does not support now, but may be added later:
 
+- `&&` and `||` operators, bitwise operators, and probably something more
 - Code blocks, assignments and whatever added since .NET 4.0
 
 
