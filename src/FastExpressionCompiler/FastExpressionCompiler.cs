@@ -32,8 +32,8 @@ namespace FastExpressionCompiler
     using System.Reflection.Emit;
 
     /// <summary>Compiles expression to delegate by emitting the IL directly.
-    /// The emitter is ~10 times faster than Expression.Compile.</summary>
-    public static class ExpressionCompiler
+    /// The emitter is ~20 times faster than Expression.Compile.</summary>
+    public static partial class ExpressionCompiler
     {
         /// <summary>First tries to compile fast and if failed (null result), then falls back to Expression.Compile.</summary>
         /// <typeparam name="T">Type of compiled delegate return result.</typeparam>
@@ -41,8 +41,8 @@ namespace FastExpressionCompiler
         /// <returns>Compiled delegate.</returns>
         public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr)
         {
-            return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, EmptyTypes, typeof(T)) 
-                ?? lambdaExpr.Compile();
+            return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, EmptyTypes, typeof(T))
+                   ?? lambdaExpr.Compile();
         }
 
         /// <summary>Compiles arbitrary lambda expression to <typeparamref name="TDelegate"/>.</summary>
@@ -56,7 +56,7 @@ namespace FastExpressionCompiler
             var paramTypes = GetParamExprTypes(paramExprs);
             var expr = lambdaExpr.Body;
             return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type)
-                ?? (TDelegate)(object)lambdaExpr.Compile();
+                   ?? (TDelegate)(object)lambdaExpr.Compile();
         }
 
         private static Type[] GetParamExprTypes(IList<ParameterExpression> paramExprs)
@@ -124,7 +124,7 @@ namespace FastExpressionCompiler
             if (closureInfo == null)
             {
                 return new DynamicMethod(string.Empty, returnType, paramTypes,
-                    typeof(ExpressionCompiler).GetTypeInfo().Module, skipVisibility: true);
+                    typeof(ExpressionCompiler), skipVisibility: true);
             }
 
             var closureType = closureInfo.ClosureObject.GetType();
@@ -677,8 +677,8 @@ namespace FastExpressionCompiler
         /// to normal and slow Expression.Compile.</summary>
         private static class EmittingVisitor
         {
-            private static readonly MethodInfo _getDelegateTargetProperty = 
-                typeof(Delegate).GetTypeInfo().DeclaredProperties.First(p => p.Name == "Target").GetMethod;
+            private static readonly MethodInfo _getDelegateTargetProperty =
+                typeof(Delegate).GetTypeInfo().DeclaredMethods.First(p => p.Name == "get_Target");
 
             public static bool TryEmit(Expression expr, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
@@ -956,7 +956,9 @@ namespace FastExpressionCompiler
                     var prop = binding.Member as PropertyInfo;
                     if (prop != null)
                     {
-                        var setMethod = prop.SetMethod;
+                        var propSetMethodName = "set_" + prop.Name;
+                        var setMethod = prop.DeclaringType.GetTypeInfo()
+                            .DeclaredMethods.FirstOrDefault(m => m.Name == propSetMethodName);
                         if (setMethod == null)
                             return false;
                         EmitMethodCall(setMethod, il);
@@ -1004,10 +1006,12 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                var property = m.Member as PropertyInfo;
-                if (property != null)
+                var prop = m.Member as PropertyInfo;
+                if (prop != null)
                 {
-                    var getMethod = property.GetMethod;
+                    var propGetMethodName = "get_" + prop.Name;
+                    var getMethod = prop.DeclaringType.GetTypeInfo()
+                        .DeclaredMethods.FirstOrDefault(_ => _.Name == propGetMethodName);
                     if (getMethod == null)
                         return false;
                     EmitMethodCall(getMethod, il);
