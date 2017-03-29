@@ -1,5 +1,5 @@
 ﻿{
-  "version": "1.0.0-preview-01",
+  "version": "1.0.0-preview-02",
 
   "buildOptions": {
     "warningsAsErrors": false,
@@ -14,7 +14,7 @@
     "projectUrl": "https://github.com/dadhi/FastExpressionCompiler",
     "tags": [ "Expression", "ExpressionTrees", "Compile", "DynamicMethod", "ILEmit", "DryIoc", "ExpressionToCodeLib" ],
 
-    "releaseNotes": "Initial version"
+    "releaseNotes": "added: Support for && and || in expresssions"
   },
 
   "frameworks": {
