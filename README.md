@@ -147,7 +147,7 @@ Supports:
 
 Does not support now, but may be added later:
 
-- `&&` and `||` operators, bitwise operators, and probably something more
+- `?:`, `??` operators, bitwise operators, and probably something more
 - Code blocks, assignments and whatever added since .NET 4.0
 
 
