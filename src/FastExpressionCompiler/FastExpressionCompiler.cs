@@ -45,18 +45,27 @@ namespace FastExpressionCompiler
                    ?? lambdaExpr.Compile();
         }
 
-        /// <summary>Compiles arbitrary lambda expression to <typeparamref name="TDelegate"/>.</summary>
-        /// <typeparam name="TDelegate">Should be the compatible type of delegate, otherwise case will throw.</typeparam>
+        /// <summary>Compiles lambda expression to <typeparamref name="TDelegate"/>.</summary>
+        /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
         /// <param name="lambdaExpr">Lambda expression to compile.</param>
-        /// <returns>compiled delegate.</returns>
+        /// <returns>Compiled delegate.</returns>
         public static TDelegate Compile<TDelegate>(LambdaExpression lambdaExpr)
+            where TDelegate : class
+        {
+            return TryCompile<TDelegate>(lambdaExpr) ?? (TDelegate)(object)lambdaExpr.Compile();
+        }
+
+        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
+        /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
+        /// <param name="lambdaExpr">Lambda expression to compile.</param>
+        /// <returns>Compiled delegate.</returns>
+        public static TDelegate TryCompile<TDelegate>(LambdaExpression lambdaExpr)
             where TDelegate : class
         {
             var paramExprs = lambdaExpr.Parameters;
             var paramTypes = GetParamExprTypes(paramExprs);
             var expr = lambdaExpr.Body;
-            return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type)
-                   ?? (TDelegate)(object)lambdaExpr.Compile();
+            return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type);
         }
 
         private static Type[] GetParamExprTypes(IList<ParameterExpression> paramExprs)
@@ -716,6 +725,14 @@ namespace FastExpressionCompiler
                     case ExpressionType.Equal:
                     case ExpressionType.NotEqual:
                         return EmitComparison((BinaryExpression)expr, paramExprs, il, closure);
+
+                    case ExpressionType.AndAlso:
+                    case ExpressionType.OrElse:
+                        return EmitLogicalOperator((BinaryExpression)expr, paramExprs, il, closure);
+
+                    // todo: add support
+                    //case ExpressionType.Conditional:
+                    //case ExpressionType.Coalesce:
                     default:
                         return false;
                 }
@@ -745,7 +762,6 @@ namespace FastExpressionCompiler
                     paramIndex += 1; // shift parameter indeces by one, because the first one will be closure
 
                 LoadParamArg(il, paramIndex);
-
                 return true;
             }
 
@@ -774,13 +790,10 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static bool EmitBinary(BinaryExpression b, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitBinary(BinaryExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var ok = TryEmit(b.Left, ps, il, closure);
-                if (ok)
-                    ok = TryEmit(b.Right, ps, il, closure);
-                // skips TryEmit(b.Conversion) for NodeType.Coalesce (?? operation)
-                return ok;
+                return TryEmit(e.Left, ps, il, closure)
+                    && TryEmit(e.Right, ps, il, closure);
             }
 
             private static bool EmitMany(IList<Expression> es, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
@@ -791,23 +804,23 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitConvert(UnaryExpression node, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitConvert(UnaryExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var ok = TryEmit(node.Operand, ps, il, closure);
-                if (ok)
-                {
-                    var convertTargetType = node.Type;
-                    if (convertTargetType == typeof(object))
-                        return false;
-                    il.Emit(OpCodes.Castclass, convertTargetType);
-                }
-                return ok;
+                if (!TryEmit(e.Operand, ps, il, closure))
+                    return false;
+
+                var convertTargetType = e.Type;
+                if (convertTargetType == typeof(object))
+                    return false;
+
+                il.Emit(OpCodes.Castclass, convertTargetType);
+                return true;
             }
 
-            private static bool EmitConstant(ConstantExpression constantExpr, ILGenerator il, ClosureInfo closure)
+            private static bool EmitConstant(ConstantExpression e, ILGenerator il, ClosureInfo closure)
             {
-                var constant = constantExpr.Value;
-                var constantType = constantExpr.Type;
+                var constant = e.Value;
+                var constantType = e.Type;
 
                 if (constant == null)
                 {
@@ -837,7 +850,7 @@ namespace FastExpressionCompiler
                 }
                 else if (closure != null)
                 {
-                    var constantIndex = closure.ConstantExpressions.IndexOf(constantExpr);
+                    var constantIndex = closure.ConstantExpressions.IndexOf(e);
                     if (constantIndex == -1)
                         return false;
 
@@ -881,18 +894,18 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static bool EmitNew(NewExpression n, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitNew(NewExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var ok = EmitMany(n.Arguments, ps, il, closure);
-                if (ok)
-                    il.Emit(OpCodes.Newobj, n.Constructor);
-                return ok;
+                if (!EmitMany(e.Arguments, ps, il, closure))
+                    return false;
+                il.Emit(OpCodes.Newobj, e.Constructor);
+                return true;
             }
 
-            private static bool EmitNewArray(NewArrayExpression na, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitNewArray(NewArrayExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var elems = na.Expressions;
-                var arrType = na.Type;
+                var elems = e.Expressions;
+                var arrType = e.Type;
                 var elemType = arrType.GetElementType();
                 var isElemOfValueType = elemType.GetTypeInfo().IsValueType;
 
@@ -902,8 +915,7 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Newarr, elemType);
                 il.Emit(OpCodes.Stloc, arrVar);
 
-                var ok = true;
-                for (int i = 0, n = elems.Count; i < n && ok; i++)
+                for (int i = 0, n = elems.Count; i < n; i++)
                 {
                     il.Emit(OpCodes.Ldloc, arrVar);
                     EmitLoadConstantInt(il, i);
@@ -912,32 +924,31 @@ namespace FastExpressionCompiler
                     if (isElemOfValueType)
                         il.Emit(OpCodes.Ldelema, elemType);
 
-                    ok = TryEmit(elems[i], ps, il, closure);
-                    if (ok)
-                    {
-                        if (isElemOfValueType)
-                            il.Emit(OpCodes.Stobj, elemType); // store element of value type by array element address
-                        else
-                            il.Emit(OpCodes.Stelem_Ref);
-                    }
+                    if (!TryEmit(elems[i], ps, il, closure))
+                        return false;
+
+                    if (isElemOfValueType)
+                        il.Emit(OpCodes.Stobj, elemType); // store element of value type by array element address
+                    else
+                        il.Emit(OpCodes.Stelem_Ref);
                 }
 
                 il.Emit(OpCodes.Ldloc, arrVar);
-                return ok;
+                return true;
             }
 
-            private static bool EmitArrayIndex(BinaryExpression ai, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitArrayIndex(BinaryExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var ok = EmitBinary(ai, ps, il, closure);
-                if (ok)
-                    il.Emit(OpCodes.Ldelem_Ref);
-                return ok;
+                if (!EmitBinary(e, ps, il, closure))
+                    return false;
+                il.Emit(OpCodes.Ldelem_Ref);
+                return true;
             }
 
             private static bool EmitMemberInit(MemberInitExpression mi, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var ok = EmitNew(mi.NewExpression, ps, il, closure);
-                if (!ok) return false;
+                if (!EmitNew(mi.NewExpression, ps, il, closure))
+                    return false;
 
                 var obj = il.DeclareLocal(mi.Type);
                 il.Emit(OpCodes.Stloc, obj);
@@ -950,8 +961,8 @@ namespace FastExpressionCompiler
                         return false;
                     il.Emit(OpCodes.Ldloc, obj);
 
-                    ok = TryEmit(((MemberAssignment)binding).Expression, ps, il, closure);
-                    if (!ok) return false;
+                    if (!TryEmit(((MemberAssignment)binding).Expression, ps, il, closure))
+                        return false;
 
                     var prop = binding.Member as PropertyInfo;
                     if (prop != null)
@@ -976,37 +987,34 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitMethodCall(MethodCallExpression m, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMethodCall(MethodCallExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var ok = true;
-                if (m.Object != null)
-                    ok = TryEmit(m.Object, ps, il, closure);
+                if (e.Object != null && 
+                    !TryEmit(e.Object, ps, il, closure))
+                    return false;
 
-                if (ok && m.Arguments.Count != 0)
-                    ok = EmitMany(m.Arguments, ps, il, closure);
+                if (e.Arguments.Count != 0 && 
+                    !EmitMany(e.Arguments, ps, il, closure))
+                    return false;
 
-                if (ok)
-                    EmitMethodCall(m.Method, il);
-
-                return ok;
+                EmitMethodCall(e.Method, il);
+                return true;
             }
 
-            private static bool EmitMemberAccess(MemberExpression m, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMemberAccess(MemberExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (m.Expression != null)
-                {
-                    var ok = TryEmit(m.Expression, ps, il, closure);
-                    if (!ok) return false;
-                }
+                if (e.Expression != null && 
+                    !TryEmit(e.Expression, ps, il, closure))
+                    return false;
 
-                var field = m.Member as FieldInfo;
+                var field = e.Member as FieldInfo;
                 if (field != null)
                 {
                     il.Emit(field.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, field);
                     return true;
                 }
 
-                var prop = m.Member as PropertyInfo;
+                var prop = e.Member as PropertyInfo;
                 if (prop != null)
                 {
                     var propGetMethodName = "get_" + prop.Name;
@@ -1105,53 +1113,68 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitInvokeLambda(InvocationExpression expr, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            private static bool EmitInvokeLambda(InvocationExpression e, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                if (TryEmit(expr.Expression, paramExprs, il, closure) &&
-                    EmitMany(expr.Arguments, paramExprs, il, closure))
-                {
-                    var invokeMethod = expr.Expression.Type.GetTypeInfo().DeclaredMethods.First(m => m.Name == "Invoke");
-                    EmitMethodCall(invokeMethod, il);
-                    return true;
-                }
+                if (!TryEmit(e.Expression, paramExprs, il, closure) ||
+                    !EmitMany(e.Arguments, paramExprs, il, closure))
+                    return false;
 
-                return false;
+                var invokeMethod = e.Expression.Type.GetTypeInfo().DeclaredMethods.First(m => m.Name == "Invoke");
+                EmitMethodCall(invokeMethod, il);
+                return true;
             }
 
-            private static bool EmitComparison(BinaryExpression c, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitComparison(BinaryExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var ok = EmitBinary(c, ps, il, closure);
-                if (ok)
+                if (!EmitBinary(e, ps, il, closure))
+                    return false;
+                switch (e.NodeType)
                 {
-                    switch (c.NodeType)
-                    {
-                        case ExpressionType.Equal:
-                            il.Emit(OpCodes.Ceq);
-                            break;
-                        case ExpressionType.LessThan:
-                            il.Emit(OpCodes.Clt);
-                            break;
-                        case ExpressionType.GreaterThan:
-                            il.Emit(OpCodes.Cgt);
-                            break;
-                        case ExpressionType.NotEqual:
-                            il.Emit(OpCodes.Ceq);
-                            il.Emit(OpCodes.Ldc_I4_0);
-                            il.Emit(OpCodes.Ceq);
-                            break;
-                        case ExpressionType.LessThanOrEqual:
-                            il.Emit(OpCodes.Cgt);
-                            il.Emit(OpCodes.Ldc_I4_0);
-                            il.Emit(OpCodes.Ceq);
-                            break;
-                        case ExpressionType.GreaterThanOrEqual:
-                            il.Emit(OpCodes.Clt);
-                            il.Emit(OpCodes.Ldc_I4_0);
-                            il.Emit(OpCodes.Ceq);
-                            break;
-                    }
+                    case ExpressionType.Equal:
+                        il.Emit(OpCodes.Ceq);
+                        break;
+                    case ExpressionType.LessThan:
+                        il.Emit(OpCodes.Clt);
+                        break;
+                    case ExpressionType.GreaterThan:
+                        il.Emit(OpCodes.Cgt);
+                        break;
+                    case ExpressionType.NotEqual:
+                        il.Emit(OpCodes.Ceq);
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.Emit(OpCodes.Ceq);
+                        break;
+                    case ExpressionType.LessThanOrEqual:
+                        il.Emit(OpCodes.Cgt);
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.Emit(OpCodes.Ceq);
+                        break;
+                    case ExpressionType.GreaterThanOrEqual:
+                        il.Emit(OpCodes.Clt);
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.Emit(OpCodes.Ceq);
+                        break;
                 }
-                return ok;
+                return true;
+            }
+
+            private static bool EmitLogicalOperator(BinaryExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            {
+                if (!TryEmit(e.Left, ps, il, closure))
+                    return false;
+
+                var label = il.DefineLabel();
+
+                var isAnd = e.NodeType == ExpressionType.AndAlso;
+                il.Emit(isAnd ? OpCodes.Brfalse_S : OpCodes.Brtrue_S, label);
+
+                if (!TryEmit(e.Right, ps, il, closure))
+                    return false;
+                il.Emit(OpCodes.Ret);
+
+                il.MarkLabel(label);
+                il.Emit(isAnd ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
+                return true;
             }
 
             private static void EmitMethodCall(MethodInfo method, ILGenerator il)

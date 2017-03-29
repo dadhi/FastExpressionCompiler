@@ -21,13 +21,13 @@ namespace FastExpressionCompiler.Benchmarks
         public class Compile
         {
             [Benchmark]
-            public Func<X> Compile_()
+            public object Compile_()
             {
                 return _hoistedExpr.Compile();
             }
 
             [Benchmark]
-            public Func<X> CompileFast()
+            public object CompileFast()
             {
                 return ExpressionCompiler.Compile(_hoistedExpr);
             }
@@ -43,19 +43,19 @@ namespace FastExpressionCompiler.Benchmarks
             B bb = new B();
 
             [Benchmark(Baseline = true)]
-            public X Constructor()
+            public object Constructor()
             {
                 return new X(aa, bb);
             }
 
             [Benchmark]
-            public X CompiledLambda()
+            public object CompiledLambda()
             {
                 return _lambdaCompiled();
             }
 
             [Benchmark]
-            public X FastCompiledLambda()
+            public object FastCompiledLambda()
             {
                 return _lambdaCompiledFast();
             }

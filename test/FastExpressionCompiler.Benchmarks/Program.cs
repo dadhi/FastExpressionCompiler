@@ -6,8 +6,6 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<ExpressionVsDryExpression>();
-
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Compile>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
 
@@ -16,6 +14,11 @@ namespace FastExpressionCompiler.Benchmarks
 
             //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compile>();
             //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invoke>();
+
+            //BenchmarkRunner.Run<ExpressionVsDryExpression>();
+
+            BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
+            //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
         }
     }
 }
