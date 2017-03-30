@@ -41,7 +41,7 @@ namespace FastExpressionCompiler
         /// <returns>Compiled delegate.</returns>
         public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr)
         {
-            return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, EmptyTypes, typeof(T))
+            return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, _emptyTypes, typeof(T))
                    ?? lambdaExpr.Compile();
         }
 
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler
         {
             var paramsCount = paramExprs.Count;
             if (paramsCount == 0)
-                return EmptyTypes;
+                return _emptyTypes;
 
             if (paramsCount == 1)
                 return new[] { paramExprs[0].Type };
@@ -131,10 +131,8 @@ namespace FastExpressionCompiler
         private static DynamicMethod GetDynamicMethod(Type[] paramTypes, Type returnType, ClosureInfo closureInfo)
         {
             if (closureInfo == null)
-            {
                 return new DynamicMethod(string.Empty, returnType, paramTypes,
                     typeof(ExpressionCompiler), skipVisibility: true);
-            }
 
             var closureType = closureInfo.ClosureObject.GetType();
             var closureAndParamTypes = GetClosureAndParamTypes(paramTypes, closureType);
@@ -540,12 +538,12 @@ namespace FastExpressionCompiler
 
         private static bool IsBoundConstant(object value)
         {
-            return value != null &&
-                   !(value is int || value is double || value is bool ||
+            return value != null
+                && !(value is int || value is double || value is bool ||
                      value is string || value is Type || value.GetType().GetTypeInfo().IsEnum);
         }
 
-        private static readonly Type[] EmptyTypes = new Type[0];
+        private static readonly Type[] _emptyTypes = new Type[0];
 
         // @paramExprs is required for nested lambda compilation
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr, IList<ParameterExpression> paramExprs)
@@ -583,18 +581,20 @@ namespace FastExpressionCompiler
                     var methodOwnerExpr = methodCallExpr.Object;
 
                     return (methodOwnerExpr == null
-                            || TryCollectBoundConstants(ref closure, methodOwnerExpr, paramExprs))
-                           && TryCollectBoundConstants(ref closure, methodCallExpr.Arguments, paramExprs);
+                        || TryCollectBoundConstants(ref closure, methodOwnerExpr, paramExprs))
+                        && TryCollectBoundConstants(ref closure, methodCallExpr.Arguments, paramExprs);
 
                 case ExpressionType.MemberAccess:
-                    return TryCollectBoundConstants(ref closure, ((MemberExpression)expr).Expression, paramExprs);
+
+                    var memberExpr = ((MemberExpression)expr).Expression;
+                    return memberExpr == null 
+                        || TryCollectBoundConstants(ref closure, memberExpr, paramExprs);
 
                 case ExpressionType.New:
                     return TryCollectBoundConstants(ref closure, ((NewExpression)expr).Arguments, paramExprs);
 
                 case ExpressionType.NewArrayInit:
-                    return TryCollectBoundConstants(ref closure, ((NewArrayExpression)expr).Expressions,
-                        paramExprs);
+                    return TryCollectBoundConstants(ref closure, ((NewArrayExpression)expr).Expressions, paramExprs);
 
                 // property initializer
                 case ExpressionType.MemberInit:
@@ -607,8 +607,7 @@ namespace FastExpressionCompiler
                     {
                         var memberBinding = memberBindings[i];
                         if (memberBinding.BindingType == MemberBindingType.Assignment &&
-                            !TryCollectBoundConstants(ref closure, ((MemberAssignment)memberBinding).Expression,
-                                paramExprs))
+                            !TryCollectBoundConstants(ref closure, ((MemberAssignment)memberBinding).Expression, paramExprs))
                             return false;
                     }
                     break;
@@ -652,7 +651,13 @@ namespace FastExpressionCompiler
                 case ExpressionType.Invoke:
                     var invocationExpr = (InvocationExpression)expr;
                     return TryCollectBoundConstants(ref closure, invocationExpr.Expression, paramExprs)
-                           && TryCollectBoundConstants(ref closure, invocationExpr.Arguments, paramExprs);
+                        && TryCollectBoundConstants(ref closure, invocationExpr.Arguments, paramExprs);
+
+                case ExpressionType.Conditional:
+                    var conditionalExpr = (ConditionalExpression)expr;
+                    return TryCollectBoundConstants(ref closure, conditionalExpr.Test, paramExprs)
+                        && TryCollectBoundConstants(ref closure, conditionalExpr.IfTrue, paramExprs)
+                        && TryCollectBoundConstants(ref closure, conditionalExpr.IfFalse, paramExprs);
 
                 default:
                     var unaryExpr = expr as UnaryExpression;
@@ -662,8 +667,7 @@ namespace FastExpressionCompiler
                     var binaryExpr = expr as BinaryExpression;
                     if (binaryExpr != null)
                         return TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs)
-                               && TryCollectBoundConstants(ref closure, binaryExpr.Right, paramExprs);
-
+                            && TryCollectBoundConstants(ref closure, binaryExpr.Right, paramExprs);
                     break;
             }
 
@@ -730,8 +734,9 @@ namespace FastExpressionCompiler
                     case ExpressionType.OrElse:
                         return EmitLogicalOperator((BinaryExpression)expr, paramExprs, il, closure);
 
-                    // todo: add support
-                    //case ExpressionType.Conditional:
+                    case ExpressionType.Conditional:
+                        return EmitTernararyOperator((ConditionalExpression)expr, paramExprs, il, closure);
+
                     //case ExpressionType.Coalesce:
                     default:
                         return false;
@@ -989,11 +994,11 @@ namespace FastExpressionCompiler
 
             private static bool EmitMethodCall(MethodCallExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (e.Object != null && 
+                if (e.Object != null &&
                     !TryEmit(e.Object, ps, il, closure))
                     return false;
 
-                if (e.Arguments.Count != 0 && 
+                if (e.Arguments.Count != 0 &&
                     !EmitMany(e.Arguments, ps, il, closure))
                     return false;
 
@@ -1003,7 +1008,7 @@ namespace FastExpressionCompiler
 
             private static bool EmitMemberAccess(MemberExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (e.Expression != null && 
+                if (e.Expression != null &&
                     !TryEmit(e.Expression, ps, il, closure))
                     return false;
 
@@ -1170,10 +1175,30 @@ namespace FastExpressionCompiler
 
                 if (!TryEmit(e.Right, ps, il, closure))
                     return false;
-                il.Emit(OpCodes.Ret);
+                il.Emit(OpCodes.Ret);// return after the first branch
 
-                il.MarkLabel(label);
+                il.MarkLabel(label); // label the second branch
                 il.Emit(isAnd ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
+                return true;
+            }
+
+            private static bool EmitTernararyOperator(ConditionalExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            {
+                if (!TryEmit(e.Test, ps, il, closure))
+                    return false;
+
+                var label = il.DefineLabel();
+                il.Emit(OpCodes.Brfalse_S, label);
+
+                if (!TryEmit(e.IfTrue, ps, il, closure))
+                    return false;
+                il.Emit(OpCodes.Ret);// return after the True branch
+
+                il.MarkLabel(label); // label the second branch
+
+                if (!TryEmit(e.IfFalse, ps, il, closure))
+                    return false;
+
                 return true;
             }
 
