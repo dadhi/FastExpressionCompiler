@@ -148,6 +148,7 @@ Supports:
 Does not support now, but may be added later:
 
 - `?:`, `??` operators, bitwise operators, and probably something more
+- ariphmetical operators
 - Code blocks, assignments and whatever added since .NET 4.0
 
 
