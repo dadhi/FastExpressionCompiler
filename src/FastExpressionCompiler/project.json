@@ -1,5 +1,5 @@
 ﻿{
-  "version": "1.0.0-preview-02",
+  "version": "1.0.0-preview-03",
 
   "buildOptions": {
     "warningsAsErrors": false,
@@ -14,7 +14,7 @@
     "projectUrl": "https://github.com/dadhi/FastExpressionCompiler",
     "tags": [ "Expression", "ExpressionTrees", "Compile", "DynamicMethod", "ILEmit", "DryIoc", "ExpressionToCodeLib" ],
 
-    "releaseNotes": "added: Support for && and || in expresssions"
+    "releaseNotes": "added: Support for ?:. fixed: static member access, logical ops as part of larger expr."
   },
 
   "frameworks": {
