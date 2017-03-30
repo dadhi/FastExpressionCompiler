@@ -118,13 +118,15 @@ namespace FastExpressionCompiler.UnitTests
             var x = 1;
             var s = "Test";
             Expression<Func<object>> expr = () => 
-                x > 0 && (s.Contains("X") || s.StartsWith("T")) ? string.Concat(s, "ccc") : string.Empty;
+                x > 0 && 
+                (s.Contains("e") && s.Contains("X") || 
+                 s.StartsWith("T") && s.EndsWith("t")) 
+                ? string.Concat(s, "ccc") : string.Empty;
 
             var dlg = ExpressionCompiler.TryCompile<Func<object>>(expr);
 
             Assert.IsNotNull(dlg);
-            var actual = dlg();
-            Assert.AreEqual(string.Empty, actual);
+            Assert.AreEqual(string.Concat(s, "ccc"), dlg());
         }
     }
 }

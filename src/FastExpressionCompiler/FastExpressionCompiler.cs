@@ -1168,17 +1168,19 @@ namespace FastExpressionCompiler
                 if (!TryEmit(e.Left, ps, il, closure))
                     return false;
 
-                var label = il.DefineLabel();
-
+                var labelSkipRight = il.DefineLabel();
                 var isAnd = e.NodeType == ExpressionType.AndAlso;
-                il.Emit(isAnd ? OpCodes.Brfalse_S : OpCodes.Brtrue_S, label);
+                il.Emit(isAnd ? OpCodes.Brfalse_S : OpCodes.Brtrue_S, labelSkipRight);
 
                 if (!TryEmit(e.Right, ps, il, closure))
                     return false;
-                il.Emit(OpCodes.Ret);// return after the first branch
+                var labelDone = il.DefineLabel();
+                il.Emit(OpCodes.Br, labelDone);
 
-                il.MarkLabel(label); // label the second branch
+                il.MarkLabel(labelSkipRight); // label the second branch
                 il.Emit(isAnd ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
+
+                il.MarkLabel(labelDone);
                 return true;
             }
 
@@ -1187,18 +1189,20 @@ namespace FastExpressionCompiler
                 if (!TryEmit(e.Test, ps, il, closure))
                     return false;
 
-                var label = il.DefineLabel();
-                il.Emit(OpCodes.Brfalse_S, label);
+                var labelIfFalse = il.DefineLabel();
+                il.Emit(OpCodes.Brfalse_S, labelIfFalse);
 
                 if (!TryEmit(e.IfTrue, ps, il, closure))
                     return false;
-                il.Emit(OpCodes.Ret);// return after the True branch
 
-                il.MarkLabel(label); // label the second branch
+                var labelDone = il.DefineLabel();
+                il.Emit(OpCodes.Br, labelDone);
 
+                il.MarkLabel(labelIfFalse);
                 if (!TryEmit(e.IfFalse, ps, il, closure))
                     return false;
 
+                il.MarkLabel(labelDone);
                 return true;
             }
 
