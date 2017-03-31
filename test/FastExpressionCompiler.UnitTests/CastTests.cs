@@ -7,19 +7,30 @@ namespace FastExpressionCompiler.UnitTests
     public class CastTests
     {
         [Test]
-        public void Expressions_with_small_int_casts_should_not_crash()
+        public void Expressions_with_small_long_casts_should_not_crash()
         {
-            //currently crashes with NullReferenceException
             var x = 65535;
             Assert.IsTrue(ExpressionCompiler.Compile(() => x == (long)x)());
         }
 
         [Test]
-        public void Expressions_with_larger_int_casts_should_not_crash()
+        public void Expressions_with_larger_long_casts_should_not_crash()
         {
-            //currently tears down process: "The process was terminated due to an internal error in the .NET Runtime at IP 00007FFD35C25C22 (00007FFD35B90000) with exit code 80131506."
-            var x = 65536;
-            Assert.IsTrue(ExpressionCompiler.Compile(() => x == (long)x)());
+            var y = 65536;
+            var yn1 = y + 1;
+            Assert.IsTrue(ExpressionCompiler.Compile(() => yn1 != (long)y)());
+        }
+
+        [Test]
+        public void Expressions_with_ulong_constants_and_casts()
+        {
+            Assert.IsFalse(ExpressionCompiler.Compile(() => 0UL == (ulong)"x".Length)());
+        }
+
+        [Test]
+        public void Expressions_with_DateTime()
+        {
+            Assert.IsFalse(ExpressionCompiler.Compile(() => 0UL == (ulong)DateTime.Now.Day)());
         }
     }
 }

@@ -814,11 +814,33 @@ namespace FastExpressionCompiler
                 if (!TryEmit(e.Operand, ps, il, closure))
                     return false;
 
-                var convertTargetType = e.Type;
-                if (convertTargetType == typeof(object))
+                var targetType = e.Type;
+                if (targetType == typeof(object))
                     return false;
 
-                il.Emit(OpCodes.Castclass, convertTargetType);
+                if (targetType == typeof(int))
+                    il.Emit(OpCodes.Conv_I4);
+                else if (targetType == typeof(float))
+                    il.Emit(OpCodes.Conv_R4);
+                else if (targetType == typeof(uint))
+                    il.Emit(OpCodes.Conv_U4);
+                else if (targetType == typeof(sbyte))
+                    il.Emit(OpCodes.Conv_I1);
+                else if (targetType == typeof(byte))
+                    il.Emit(OpCodes.Conv_U1);
+                else if (targetType == typeof(short))
+                    il.Emit(OpCodes.Conv_I2);
+                else if (targetType == typeof(ushort))
+                    il.Emit(OpCodes.Conv_U2);
+                else if (targetType == typeof(long))
+                    il.Emit(OpCodes.Conv_I8);
+                else if (targetType == typeof(ulong))
+                    il.Emit(OpCodes.Conv_U8);
+                else if (targetType == typeof(double))
+                    il.Emit(OpCodes.Conv_R8);
+                else
+                    il.Emit(OpCodes.Castclass, targetType);
+
                 return true;
             }
 
@@ -831,9 +853,25 @@ namespace FastExpressionCompiler
                 {
                     il.Emit(OpCodes.Ldnull);
                 }
-                else if (constant is int || constant.GetType().GetTypeInfo().IsEnum)
+                else if (constant is int || constant is uint
+                    || constant is short || constant is ushort
+                    || constant.GetType().GetTypeInfo().IsEnum)
                 {
                     EmitLoadConstantInt(il, (int)constant);
+                }
+                else if (constant is sbyte || constant is byte)
+                {
+                    il.Emit(OpCodes.Ldc_I4_S, (byte)constant);
+                }
+                else if (constant is long || constant is ulong)
+                {
+                    // il.Emit(OpCodes.Ldc_I8, (long)constant);
+                    // todo: add support, emit int for smaller numbers
+                    return false;
+                }
+                else if (constant is float)
+                {
+                    il.Emit(OpCodes.Ldc_R4, (float)constant);
                 }
                 else if (constant is double)
                 {
@@ -850,7 +888,8 @@ namespace FastExpressionCompiler
                 else if (constant is Type)
                 {
                     il.Emit(OpCodes.Ldtoken, (Type)constant);
-                    var getTypeFromHandle = typeof(Type).GetTypeInfo().DeclaredMethods.First(m => m.Name == "GetTypeFromHandle");
+                    var getTypeFromHandle = typeof(Type).GetTypeInfo()
+                        .DeclaredMethods.First(m => m.Name == "GetTypeFromHandle");
                     il.Emit(OpCodes.Call, getTypeFromHandle);
                 }
                 else if (closure != null)
@@ -994,9 +1033,13 @@ namespace FastExpressionCompiler
 
             private static bool EmitMethodCall(MethodCallExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (e.Object != null &&
-                    !TryEmit(e.Object, ps, il, closure))
-                    return false;
+                var methodOwnerExpr = e.Object;
+                if (methodOwnerExpr != null)
+                {
+                    if (!TryEmit(methodOwnerExpr, ps, il, closure))
+                        return false;
+                    ForValueTypeStoreAndLoadValueAddress(il, methodOwnerExpr.Type);
+                }
 
                 if (e.Arguments.Count != 0 &&
                     !EmitMany(e.Arguments, ps, il, closure))
@@ -1006,11 +1049,25 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static void ForValueTypeStoreAndLoadValueAddress(ILGenerator il, Type ownerType)
+            {
+                if (ownerType.GetTypeInfo().IsValueType)
+                {
+                    var valueVar = il.DeclareLocal(ownerType);
+                    il.Emit(OpCodes.Stloc, valueVar);
+                    il.Emit(OpCodes.Ldloca, valueVar);
+                }
+            }
+
             private static bool EmitMemberAccess(MemberExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (e.Expression != null &&
-                    !TryEmit(e.Expression, ps, il, closure))
-                    return false;
+                var memberOwnerExpr = e.Expression;
+                if (memberOwnerExpr != null)
+                {
+                    if (!TryEmit(memberOwnerExpr, ps, il, closure))
+                        return false;
+                    ForValueTypeStoreAndLoadValueAddress(il, memberOwnerExpr.Type);
+                }
 
                 var field = e.Member as FieldInfo;
                 if (field != null)
@@ -1029,7 +1086,6 @@ namespace FastExpressionCompiler
                         return false;
                     EmitMethodCall(getMethod, il);
                 }
-
                 return true;
             }
 
@@ -1215,6 +1271,9 @@ namespace FastExpressionCompiler
             {
                 switch (i)
                 {
+                    case -1:
+                        il.Emit(OpCodes.Ldc_I4_M1);
+                        break;
                     case 0:
                         il.Emit(OpCodes.Ldc_I4_0);
                         break;
