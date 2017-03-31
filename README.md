@@ -17,7 +17,7 @@ _TL;DR;_
 > The question is, why is the compiled delegate way slower than a manually-written delegate? Expression.Compile creates a DynamicMethod and associates it with an anonymous assembly to run it in a sandboxed environment. This makes it safe for a dynamic method to be emitted and executed by partially trusted code but adds some run-time overhead.
 
 Fast Expression Compiler is ~20 times faster than `Expression.Compile()`.  
-The compiled delegate __may be in some cases__ ~15 times faster than the one produced by `Expression.Compile()`.
+The compiled delegate __may be in some cases???__ ~15 times faster than the one produced by `Expression.Compile()`.
 
 ## Benchmarks
 
@@ -147,9 +147,11 @@ Supports:
 
 Does not support now, but may be added later:
 
-- `?:`, `??` operators, bitwise operators, and probably something more
-- ariphmetical operators
+- `??`, `?.` operators, bitwise operators, ariphmetical operators
+- `ulong` and `long` constants
 - Code blocks, assignments and whatever added since .NET 4.0
+
+__The most of current limitations may be removed by wrapping not supported epression into Method or Propery.__
 
 
 ## How
