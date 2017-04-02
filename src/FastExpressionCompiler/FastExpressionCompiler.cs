@@ -42,7 +42,7 @@ namespace FastExpressionCompiler
         public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr)
         {
             return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, _emptyTypes, typeof(T))
-                   ?? lambdaExpr.Compile();
+               ?? lambdaExpr.Compile();
         }
 
         /// <summary>Compiles lambda expression to <typeparamref name="TDelegate"/>.</summary>
@@ -538,9 +538,14 @@ namespace FastExpressionCompiler
 
         private static bool IsBoundConstant(object value)
         {
-            return value != null
-                && !(value is int || value is double || value is bool ||
-                     value is string || value is Type || value.GetType().GetTypeInfo().IsEnum);
+            if (value == null)
+                return false;
+
+            var typeInfo = value.GetType().GetTypeInfo();
+            return !typeInfo.IsPrimitive 
+                && !(value is string) 
+                && !(value is Type)
+                && !typeInfo.IsEnum;
         }
 
         private static readonly Type[] _emptyTypes = new Type[0];
@@ -847,31 +852,38 @@ namespace FastExpressionCompiler
             private static bool EmitConstant(ConstantExpression e, ILGenerator il, ClosureInfo closure)
             {
                 var constant = e.Value;
-                var constantType = e.Type;
-
                 if (constant == null)
                 {
                     il.Emit(OpCodes.Ldnull);
                 }
-                else if (constant is int || constant is uint
-                    || constant is short || constant is ushort
-                    || constant.GetType().GetTypeInfo().IsEnum)
+                else if (constant is int 
+                      || constant.GetType().GetTypeInfo().IsEnum
+                      || constant is char || constant is short || constant is byte
+                      || constant is ushort || constant is sbyte)
                 {
                     EmitLoadConstantInt(il, (int)constant);
                 }
-                else if (constant is sbyte || constant is byte)
+                else if (constant is uint)
                 {
-                    il.Emit(OpCodes.Ldc_I4_S, (byte)constant);
+                    unchecked
+                    {
+                        EmitLoadConstantInt(il, (int)(uint)constant);
+                    }
                 }
-                else if (constant is long || constant is ulong)
+                else if (constant is long)
                 {
-                    // il.Emit(OpCodes.Ldc_I8, (long)constant);
-                    // todo: add support, emit int for smaller numbers
-                    return false;
+                    il.Emit(OpCodes.Ldc_I8, (long)constant);
+                }
+                else if (constant is ulong)
+                {
+                    unchecked
+                    {
+                        il.Emit(OpCodes.Ldc_I8, (long)(ulong)constant);
+                    }
                 }
                 else if (constant is float)
                 {
-                    il.Emit(OpCodes.Ldc_R4, (float)constant);
+                    il.Emit(OpCodes.Ldc_R8, (float)constant);
                 }
                 else if (constant is double)
                 {
@@ -897,14 +909,13 @@ namespace FastExpressionCompiler
                     var constantIndex = closure.ConstantExpressions.IndexOf(e);
                     if (constantIndex == -1)
                         return false;
+                    LoadClosureFieldOrItem(il, closure, constantIndex, e.Type);
 
-                    LoadClosureFieldOrItem(il, closure, constantIndex, constantType);
                 }
-                else
-                    return false;
+                else return false;
 
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
-                if (constantType == typeof(object) &&
+                if (e.Type == typeof(object) &&
                     constant != null && constant.GetType().GetTypeInfo().IsValueType)
                     il.Emit(OpCodes.Box, constant.GetType());
 
@@ -1187,8 +1198,10 @@ namespace FastExpressionCompiler
 
             private static bool EmitComparison(BinaryExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (!EmitBinary(e, ps, il, closure))
+                if (!TryEmit(e.Left, ps, il, closure) || 
+                    !TryEmit(e.Right, ps, il, closure))
                     return false;
+
                 switch (e.NodeType)
                 {
                     case ExpressionType.Equal:
