@@ -7,6 +7,8 @@
 [![NuGet Pre Release](https://img.shields.io/nuget/v/FastExpressionCompiler.svg)](https://www.nuget.org/packages/FastExpressionCompiler/1.0.0)
 [![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)
 
+Supported platforms: __.NET 4.5.2__, __.NET Standard 1.3__
+
 ## Why
 
 [Expression tree] compilation is used by wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
