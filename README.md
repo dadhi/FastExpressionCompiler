@@ -4,7 +4,7 @@
 [ExpressionToCodeLib]: https://github.com/EamonNerbonne/ExpressionToCode
 [Expression Tree]: https://msdn.microsoft.com/en-us/library/mt654263.aspx
 
-[![NuGet Pre Release](https://img.shields.io/nuget/vpre/FastExpressionCompiler.svg)](https://www.nuget.org/packages/FastExpressionCompiler/1.0.0-preview-03)
+[![NuGet Pre Release](https://img.shields.io/nuget/v/FastExpressionCompiler.svg)](https://www.nuget.org/packages/FastExpressionCompiler/1.0.0)
 [![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)
 
 ## Why
@@ -132,27 +132,26 @@ Manually composed lambda expression:
 ```
 
 
-## Current state
+## Status
 
 Initially developed and currently used in [DryIoc].
 
 Additionally contributed to [ExpressionToCodeLib].
 
-Supports:
+v1 supports:
 
 - Manually created or hoisted lambda expressions __with closure__
 - Nested lambdas
 - Constructor and method calls, lambda invocation
 - Property and member access, operators
 
-Does not support now, but may be added later:
+v1 does not support now:
 
 - `??`, `?.` operators, bitwise operators, ariphmetical operators
 - `ulong` and `long` constants
 - Code blocks, assignments and whatever added since .NET 4.0
 
-__The most of current limitations may be removed by wrapping not supported epression into Method or Propery.__
-
+__Note:__ The above limitations may be removed by wrapping not supported epression into method or property.
 
 ## How
 

@@ -1,5 +1,5 @@
 ﻿{
-  "version": "1.0.0-preview-04",
+  "version": "1.0.0",
 
   "buildOptions": {
     "warningsAsErrors": false,
@@ -12,9 +12,9 @@
     "owners": [ "Maksim Volkau" ],
     "licenseUrl": "http://opensource.org/licenses/MIT",
     "projectUrl": "https://github.com/dadhi/FastExpressionCompiler",
-    "tags": [ "Expression", "ExpressionTrees", "Compile", "DynamicMethod", "ILEmit", "DryIoc", "ExpressionToCodeLib" ],
+    "tags": [ "Expression", "ExpressionTree", "Compile", "DynamicMethod", "ILEmit", "DryIoc", "ExpressionToCodeLib" ],
 
-    "releaseNotes": "fixed: some cases of using ValueType, number conversions, turned Off code causing #2"
+    "releaseNotes": "first stable version. fixed: #2: cast int->ulong creates invalid delegates"
   },
 
   "frameworks": {
