@@ -1,5 +1,6 @@
 ﻿using System;
 using NUnit.Framework;
+// ReSharper disable CompareOfFloatsByEqualityOperator
 
 namespace FastExpressionCompiler.UnitTests
 {
@@ -10,7 +11,8 @@ namespace FastExpressionCompiler.UnitTests
         public void Expressions_with_small_long_casts_should_not_crash()
         {
             var x = 65535;
-            Assert.IsTrue(ExpressionCompiler.Compile(() => x == (long)x)());
+            var y = 65535;
+            Assert.IsTrue(ExpressionCompiler.Compile(() => x == (long)y)());
         }
 
         [Test]
