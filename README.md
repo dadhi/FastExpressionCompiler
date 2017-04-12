@@ -145,15 +145,16 @@ v1 supports:
 - Manually created or hoisted lambda expressions __with closure__
 - Nested lambdas
 - Constructor and method calls, lambda invocation
-- Property and member access, operators
+- Property and member access
+- Equality and `?:` operators
 
-v1 does not support now:
+v1 does not support:
 
-- `??`, `?.` operators, bitwise operators, ariphmetical operators
-- `ulong` and `long` constants
+- `??`, `?.`, bitwise, and ariphmetic operators
 - Code blocks, assignments and whatever added since .NET 4.0
 
-__Note:__ The above limitations may be removed by wrapping not supported epression into method or property.
+__Note:__ The current limitations may be lifted by wrapping not yet supported expression into method or property.
+
 
 ## How
 
