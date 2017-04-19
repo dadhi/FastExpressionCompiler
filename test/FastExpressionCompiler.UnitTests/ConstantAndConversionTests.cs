@@ -1,11 +1,12 @@
-﻿using System;
+using System;
 using NUnit.Framework;
+
 // ReSharper disable CompareOfFloatsByEqualityOperator
 
 namespace FastExpressionCompiler.UnitTests
 {
     [TestFixture]
-    public class CastTests
+    public class ConstantAndConversionTests
     {
         [Test]
         public void Expressions_with_small_long_casts_should_not_crash()
