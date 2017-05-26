@@ -12,7 +12,7 @@ Supported platforms: __.NET 4.5.2+__, __.NET Standard 1.3__
 ## Why
 
 [Expression tree] compilation is used by wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
-But the performance of compilation with `Expression.Compile()` is just slow, 
+But the performance of compilation with `Expression.Compile()` is just slow. 
 Moreover, the compiled delegate may be slower than manually created delegate because of the [reasons](https://blogs.msdn.microsoft.com/seteplia/2017/02/01/dissecting-the-new-constraint-in-c-a-perfect-example-of-a-leaky-abstraction/):
 
 _TL;DR;_
@@ -168,7 +168,7 @@ Expression is visited in two rounds:
 
 1. To collect constants and nested lambdas into closure(s) for manually composed expression,
 or to find generated closure object for the hoisted expression
-2. To emit the IL.
+2. To emit the IL
 
 If the processing round visits not supported expression node, 
 the compilation is aborted, and null is returned enabling the fallback to normal `Expression.Compile()`.
