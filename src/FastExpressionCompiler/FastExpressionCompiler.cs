@@ -204,7 +204,7 @@ namespace FastExpressionCompiler
                 var items = new object[totalItemCount];
 
                 // Deciding to create typed or array based closure, based on number of closed constants
-                // Not null array of contstant types means a typed closure can be created
+                // Not null array of constant types means a typed closure can be created
                 var typedClosureCreateMethods = Closure.TypedClosureCreateMethods;
                 var constantTypes = totalItemCount <= typedClosureCreateMethods.Length ? new Type[totalItemCount] : null;
 
@@ -574,8 +574,8 @@ namespace FastExpressionCompiler
                     break;
 
                 case ExpressionType.Parameter:
-                    // if parameter is used But no passed (not in param expressions)
-                    // it means param is provided by outer lambda and should be put in closure for current lambda
+                    // if parameter is used But no passed (not in parameter expressions)
+                    // it means parameter is provided by outer lambda and should be put in closure for current lambda
                     var paramExpr = (ParameterExpression)expr;
                     if (paramExprs.IndexOf(paramExpr) == -1)
                     {
@@ -762,7 +762,7 @@ namespace FastExpressionCompiler
                 if (paramIndex != -1)
                 {
                     if (closure != null)
-                        paramIndex += 1; // shift parameter indeces by one, because the first one will be closure
+                        paramIndex += 1; // shift parameter indices by one, because the first one will be closure
                     LoadParamArg(il, paramIndex);
                     return true;
                 }
@@ -861,41 +861,64 @@ namespace FastExpressionCompiler
                 if (constant == null)
                 {
                     il.Emit(OpCodes.Ldnull);
+                    return true;
                 }
-                else if (constant is int 
-                      || constant.GetType().GetTypeInfo().IsEnum
-                      || constant is char || constant is short || constant is byte
-                      || constant is ushort || constant is sbyte)
+
+                var constantActualType = constant.GetType();
+                if (constantActualType.GetTypeInfo().IsEnum)
+                    constantActualType = Enum.GetUnderlyingType(constantActualType);
+
+                if (constantActualType == typeof(int))
                 {
                     EmitLoadConstantInt(il, (int)constant);
                 }
-                else if (constant is uint)
+                else if (constantActualType == typeof(char))
+                {
+                    EmitLoadConstantInt(il, (char)constant);
+                }
+                else if (constantActualType == typeof(short))
+                {
+                    EmitLoadConstantInt(il, (short)constant);
+                }
+                else if (constantActualType == typeof(byte))
+                {
+                    EmitLoadConstantInt(il, (byte)constant);
+                }
+                else if (constantActualType == typeof(ushort))
+                {
+                    EmitLoadConstantInt(il, (ushort)constant);
+                }
+                else if (constantActualType == typeof(sbyte))
+                {
+                    EmitLoadConstantInt(il, (sbyte)constant);
+                }
+                else if (constantActualType == typeof(uint))
                 {
                     unchecked
                     {
                         EmitLoadConstantInt(il, (int)(uint)constant);
                     }
                 }
-                else if (constant is long)
+                else if (constantActualType == typeof(long))
                 {
                     il.Emit(OpCodes.Ldc_I8, (long)constant);
                 }
-                else if (constant is ulong)
+                else if (constantActualType == typeof(ulong))
                 {
                     unchecked
                     {
                         il.Emit(OpCodes.Ldc_I8, (long)(ulong)constant);
                     }
                 }
-                else if (constant is float)
+                else if (constantActualType == typeof(float))
                 {
                     il.Emit(OpCodes.Ldc_R8, (float)constant);
                 }
-                else if (constant is double)
+                else if (constantActualType == typeof(double))
                 {
                     il.Emit(OpCodes.Ldc_R8, (double)constant);
                 }
-                else if (constant is bool)
+                else if (constantActualType == typeof(bool))
                 {
                     il.Emit((bool)constant ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                 }
@@ -921,9 +944,8 @@ namespace FastExpressionCompiler
                 else return false;
 
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
-                if (e.Type == typeof(object) &&
-                    constant != null && constant.GetType().GetTypeInfo().IsValueType)
-                    il.Emit(OpCodes.Box, constant.GetType());
+                if (e.Type == typeof(object) && constantActualType.GetTypeInfo().IsValueType)
+                    il.Emit(OpCodes.Box, constant.GetType()); // using normal type for Enum instead of underlying type
 
                 return true;
             }
@@ -1119,7 +1141,7 @@ namespace FastExpressionCompiler
                     --nestedLambdaIndex;
 
                 // Situation with not found lambda is not possible/exceptional - 
-                // means that we somehow skipped the lambda expression while collecteing closure info.
+                // means that we somehow skipped the lambda expression while collecting closure info.
                 if (nestedLambdaIndex == -1)
                     return false;
 
@@ -1162,7 +1184,7 @@ namespace FastExpressionCompiler
                     }
 
                     var paramIndex = paramExprs.IndexOf(nestedUsedParamExpr);
-                    if (paramIndex != -1) // load param from inout params
+                    if (paramIndex != -1) // load param from input params
                     {
                         // +1 is set cause of added first closure argument
                         LoadParamArg(il, paramIndex + 1);
