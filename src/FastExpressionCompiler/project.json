@@ -1,8 +1,8 @@
 ﻿{
-  "version": "1.0.0",
+  "version": "1.0.1",
 
   "buildOptions": {
-    "warningsAsErrors": false,
+    "warningsAsErrors": true,
     "xmlDoc": true
   },
 
@@ -14,7 +14,7 @@
     "projectUrl": "https://github.com/dadhi/FastExpressionCompiler",
     "tags": [ "Expression", "ExpressionTree", "Compile", "DynamicMethod", "ILEmit", "DryIoc", "ExpressionToCodeLib" ],
 
-    "releaseNotes": "first stable version. fixed: #2: cast int->ulong creates invalid delegates"
+    "releaseNotes": "fixed: #6: When number of items in closure greater than 10, unable to load closed parameter of value type; fixed: #7: InvalidCastException for enum constant of unsigned type;"
   },
 
   "frameworks": {
