@@ -14,10 +14,10 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compile>();
             //BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invoke>();
 
-            //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compile>();
+            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compile>();
             //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invoke>();
 
-            BenchmarkRunner.Run<ExpressionVsDryExpression>();
+            //BenchmarkRunner.Run<ExpressionVsDryExpression>();
 
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();

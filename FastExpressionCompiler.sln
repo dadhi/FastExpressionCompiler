@@ -1,25 +1,24 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.13
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "FastExpressionCompiler", "src\FastExpressionCompiler\FastExpressionCompiler.xproj", "{2623B696-1C74-41D3-A4DF-C84C2431F137}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B1CBFC5C-9B4F-4C54-A61E-4422B8D0300B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{AA457CA0-4D92-4922-9C5C-6F9575957AE7}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "FastExpressionCompiler.UnitTests", "test\FastExpressionCompiler.UnitTests\FastExpressionCompiler.UnitTests.xproj", "{E11705E8-EE51-429D-9B08-C2EB1E242AF2}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{09193938-965D-4B58-8845-E4CD7D0A9BFB}"
 	ProjectSection(SolutionItems) = preProject
 		build.bat = build.bat
-		global.json = global.json
 		LICENSE = LICENSE
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "FastExpressionCompiler.Benchmarks", "test\FastExpressionCompiler.Benchmarks\FastExpressionCompiler.Benchmarks.xproj", "{826AB601-2B08-48BF-9F1F-337190A8DDB9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler", "src\FastExpressionCompiler\FastExpressionCompiler.csproj", "{2623B696-1C74-41D3-A4DF-C84C2431F137}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.UnitTests", "test\FastExpressionCompiler.UnitTests\FastExpressionCompiler.UnitTests.csproj", "{E11705E8-EE51-429D-9B08-C2EB1E242AF2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.Benchmarks", "test\FastExpressionCompiler.Benchmarks\FastExpressionCompiler.Benchmarks.csproj", "{826AB601-2B08-48BF-9F1F-337190A8DDB9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

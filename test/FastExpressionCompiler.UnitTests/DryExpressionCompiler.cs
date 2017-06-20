@@ -33,9 +33,10 @@ namespace FastExpressionCompiler.UnitTests
             Type[] paramTypes, 
             Type returnType) where TDelegate : class
         {
-            ExpressionCompiler.ClosureInfo ignored = null;
-            return (TDelegate)TryCompile(ref ignored,
-                typeof(TDelegate), paramTypes, returnType, bodyExpr, paramExprs);
+            //ExpressionCompiler.ClosureInfo ignored = null;
+            //return (TDelegate)TryCompile(ref ignored,
+            //    typeof(TDelegate), paramTypes, returnType, bodyExpr, paramExprs);
+            return null;
         }
     }
 }

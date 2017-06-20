@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <VersionPrefix>1.0.1</VersionPrefix>
+    <TargetFrameworks>netstandard1.3;net452</TargetFrameworks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AssemblyName>FastExpressionCompiler</AssemblyName>
+    <PackageId>FastExpressionCompiler</PackageId>
+    <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
+    <PackageReleaseNotes>fixed: #6: When number of items in closure greater than 10, unable to load closed parameter of value type; fixed: #7: InvalidCastException for enum constant of unsigned type;</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
+    <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.3' ">1.6.1</NetStandardImplicitPackageVersion>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
+    <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <Reference Include="System.Reflection" />
+    <Reference Include="System.Linq" />
+    <Reference Include="System.Linq.Expressions" />
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="FastExpressionCompiler.net452.v3.ncrunchproject" />
+    <None Remove="FastExpressionCompiler.netstandard1.3.v3.ncrunchproject" />
+  </ItemGroup>
+
+</Project>

@@ -39,7 +39,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly Expression<Func<B, X>> _expr = ComposeManualExprWithParams();
 
-        [MarkdownExporter]
+        [MarkdownExporter, MemoryDiagnoser]
         public class Compile
         {
             [Benchmark]
@@ -55,7 +55,7 @@ namespace FastExpressionCompiler.Benchmarks
             }
         }
 
-        [MarkdownExporter]
+        [MarkdownExporter, MemoryDiagnoser]
         public class Invoke
         {
             private static readonly Func<B, X> _lambdaCompiled = _expr.Compile();
