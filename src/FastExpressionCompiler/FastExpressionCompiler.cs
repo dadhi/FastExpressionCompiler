@@ -41,7 +41,7 @@ namespace FastExpressionCompiler
         /// <returns>Compiled delegate.</returns>
         public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr)
         {
-            return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, _emptyTypes, typeof(T))
+            return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, EmptyTypes, typeof(T))
                    ?? lambdaExpr.Compile();
         }
 
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler
         {
             var paramsCount = paramExprs.Count;
             if (paramsCount == 0)
-                return _emptyTypes;
+                return EmptyTypes;
 
             if (paramsCount == 1)
                 return new[] { paramExprs[0].Type };
@@ -550,10 +550,12 @@ namespace FastExpressionCompiler
                 && !typeInfo.IsEnum;
         }
 
-        private static readonly Type[] _emptyTypes = new Type[0];
+        /// <summary>Singleton of empty array of types.</summary>
+        public static readonly Type[] EmptyTypes = new Type[0];
 
         // @paramExprs is required for nested lambda compilation
-        private static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr, IList<ParameterExpression> paramExprs)
+        private static bool TryCollectBoundConstants(
+            ref ClosureInfo closure, Expression expr, IList<ParameterExpression> paramExprs)
         {
             if (expr == null)
                 return false;
