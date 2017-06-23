@@ -48,7 +48,7 @@ namespace FastExpressionCompiler.Benchmarks
                 return _expr.Compile();
             }
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public Func<B, X> CompileFast()
             {
                 return ExpressionCompiler.Compile<Func<B, X>>(_expr);

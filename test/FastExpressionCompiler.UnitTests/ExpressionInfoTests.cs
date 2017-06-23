@@ -1,21 +1,21 @@
 ﻿using System;
-using NUnit.Compatibility;
+using System.Reflection;
 using NUnit.Framework;
 
 namespace FastExpressionCompiler.UnitTests
 {
     [TestFixture]
-    public class DryExpressionCompilerTests
+    public class ExpressionInfoTests
     {
         [Test]
         public void Can_compile_dry_expression_without_coverting_to_expression()
         {
             var funcExpr =
-                DryExpression.Lambda(
-                    DryExpression.New(typeof(X).GetConstructors()[0],
-                        DryExpression.New(typeof(Y).GetConstructors()[0])));
+                ExpressionInfo.Lambda(
+                    ExpressionInfo.New(typeof(X).GetTypeInfo().GetConstructors()[0],
+                        ExpressionInfo.New(typeof(Y).GetTypeInfo().GetConstructors()[0])));
 
-            var func = DryExpressionCompiler.TryCompile<Func<X>>(funcExpr);
+            var func = ExpressionCompiler.TryCompile<Func<X>>(funcExpr);
             Assert.IsNotNull(func);
 
             var x = func();

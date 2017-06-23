@@ -22,7 +22,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
 
-        [MarkdownExporter]
+        [MarkdownExporter, MemoryDiagnoser]
         public class Compile
         {
             [Benchmark]
@@ -31,14 +31,14 @@ namespace FastExpressionCompiler.Benchmarks
                 return _hoistedExpr.Compile();
             }
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public Func<X> Fast()
             {
                 return ExpressionCompiler.Compile(_hoistedExpr);
             }
         }
 
-        [MarkdownExporter]
+        [MarkdownExporter, MemoryDiagnoser]
         public class Invoke
         {
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
