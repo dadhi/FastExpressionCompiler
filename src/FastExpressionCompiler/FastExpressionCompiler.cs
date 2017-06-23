@@ -68,19 +68,6 @@ namespace FastExpressionCompiler
             return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type);
         }
 
-        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
-        /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
-        /// <param name="lambdaExpr">Lambda expression to compile.</param>
-        /// <returns>Compiled delegate.</returns>
-        public static TDelegate TryCompile<TDelegate>(LambdaExpressionInfo lambdaExpr)
-            where TDelegate : class
-        {
-            var paramExprs = lambdaExpr.Parameters;
-            var paramTypes = GetParamExprTypes(paramExprs);
-            var expr = lambdaExpr.Body;
-            return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type);
-        }
-
         private static Type[] GetParamExprTypes(IList<ParameterExpression> paramExprs)
         {
             var paramsCount = paramExprs.Count;
@@ -113,6 +100,19 @@ namespace FastExpressionCompiler
             ClosureInfo ignored = null;
             return (TDelegate)TryCompile(ref ignored,
                 typeof(TDelegate), paramTypes, returnType, bodyExpr, paramExprs);
+        }
+
+        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
+        /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
+        /// <param name="lambdaExpr">Lambda expression to compile.</param>
+        /// <returns>Compiled delegate.</returns>
+        public static TDelegate TryCompile<TDelegate>(LambdaExpressionInfo lambdaExpr)
+            where TDelegate : class
+        {
+            var paramExprs = lambdaExpr.Parameters;
+            var paramTypes = GetParamExprTypes(paramExprs);
+            var expr = lambdaExpr.Body;
+            return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type);
         }
 
         /// <summary>Compiles expression to delegate by emitting the IL. 

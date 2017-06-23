@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <AssemblyName>FastExpressionCompiler.Benchmarks</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>FastExpressionCompiler.Benchmarks</PackageId>
+    <RuntimeFrameworkVersion>1.1.1</RuntimeFrameworkVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="FastExpressionCompiler.Benchmarks.v3.ncrunchproject" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj" />
+    <ProjectReference Include="..\FastExpressionCompiler.UnitTests\FastExpressionCompiler.UnitTests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.10.3" />
+  </ItemGroup>
+
+</Project>
