@@ -138,25 +138,23 @@ namespace FastExpressionCompiler
         {
             public static implicit operator Expr(Expression expr)
             {
-                return expr == null ? default(Expr) : new Expr(expr, expr.NodeType, expr.Type, false);
+                return expr == null ? default(Expr) : new Expr(expr, expr.NodeType, expr.Type);
             }
 
             public static implicit operator Expr(ExpressionInfo expr)
             {
-                return expr == null ? default(Expr) : new Expr(expr, expr.NodeType, expr.Type, true);
+                return expr == null ? default(Expr) : new Expr(expr, expr.NodeType, expr.Type);
             }
 
             public object Expression;
             public ExpressionType NodeType;
             public Type Type;
-            public bool IsInfo;
 
-            private Expr(object expression, ExpressionType nodeType, Type type, bool isInfo)
+            private Expr(object expression, ExpressionType nodeType, Type type)
             {
                 Expression = expression;
                 NodeType = nodeType;
                 Type = type;
-                IsInfo = isInfo;
             }
         }
 
@@ -659,7 +657,8 @@ namespace FastExpressionCompiler
             switch (e.NodeType)
             {
                 case ExpressionType.Constant:
-                    var value = e.IsInfo ? ((ConstantExpressionInfo)expr).Value : ((ConstantExpression)expr).Value;
+                    var constExprInfo = expr as ConstantExpressionInfo;
+                    var value = constExprInfo != null ? constExprInfo.Value : ((ConstantExpression)expr).Value;
                     if (value is Delegate || IsBoundConstant(value))
                         (closure ?? (closure = new ClosureInfo())).Add(expr, value, e.Type);
                     break;
@@ -686,8 +685,9 @@ namespace FastExpressionCompiler
                         || TryCollectBoundConstants(ref closure, memberExpr, paramExprs);
 
                 case ExpressionType.New:
-                    return e.IsInfo
-                        ? TryCollectBoundConstants(ref closure, ((NewExpressionInfo)expr).Arguments, paramExprs)
+                    var newExprInfo = expr as NewExpressionInfo;
+                    return newExprInfo != null
+                        ? TryCollectBoundConstants(ref closure, newExprInfo.Arguments, paramExprs)
                         : TryCollectBoundConstants(ref closure, ((NewExpression)expr).Arguments, paramExprs);
 
                 case ExpressionType.NewArrayInit:
@@ -961,7 +961,8 @@ namespace FastExpressionCompiler
             private static bool EmitConstant(Expr e, ILGenerator il, ClosureInfo closure)
             {
                 var expr = e.Expression;
-                var constantValue = e.IsInfo ? ((ConstantExpressionInfo)expr).Value : ((ConstantExpression)expr).Value;
+                var constExprInfo = expr as ConstantExpressionInfo;
+                var constantValue = constExprInfo != null ? constExprInfo.Value : ((ConstantExpression)expr).Value;
                 if (constantValue == null)
                 {
                     il.Emit(OpCodes.Ldnull);
@@ -1087,12 +1088,12 @@ namespace FastExpressionCompiler
 
             private static bool EmitNew(Expr e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (e.IsInfo)
+                var newExprInfo = e.Expression as NewExpressionInfo;
+                if (newExprInfo != null)
                 {
-                    var newExpr = (NewExpressionInfo)e.Expression;
-                    if (!EmitMany(newExpr.Arguments, ps, il, closure))
+                    if (!EmitMany(newExprInfo.Arguments, ps, il, closure))
                         return false;
-                    il.Emit(OpCodes.Newobj, newExpr.Constructor);
+                    il.Emit(OpCodes.Newobj, newExprInfo.Constructor);
                 }
                 else
                 {
