@@ -38,13 +38,21 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly ConstructorInfo _bCtor = typeof(B).GetTypeInfo().GetConstructors()[0];
 
         [Benchmark]
+        public object CreateExpression_and_Compile()
+        {
+            var expr = Expression.Lambda(Expression.New(_xCtor, Expression.New(_aCtor), Expression.New(_bCtor)));
+            return expr.Compile();
+        }
+
+
+        [Benchmark]
         public object CreateExpression_and_FastCompile()
         {
             var expr = Expression.Lambda(Expression.New(_xCtor, Expression.New(_aCtor), Expression.New(_bCtor)));
             return ExpressionCompiler.TryCompile<Func<object>>(expr);
         }
 
-        [Benchmark]
+        [Benchmark(Baseline = true)]
         public object CreateExpressionInfo_and_FastCompile()
         {
             var expr = ExpressionInfo.Lambda(ExpressionInfo.New(_xCtor, ExpressionInfo.New(_aCtor), ExpressionInfo.New(_bCtor)));
@@ -66,8 +74,8 @@ namespace FastExpressionCompiler.Benchmarks
 
             return method.CreateDelegate(typeof(Func<object>), null);
         }
-
-        [Benchmark(Baseline = true)]
+        
+        [Benchmark]
         public object ActivatorCreateInstance()
         {
             return Activator.CreateInstance(typeof(X),
