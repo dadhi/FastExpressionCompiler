@@ -165,35 +165,37 @@ namespace FastExpressionCompiler
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs))
                 return null;
 
-            if (closureInfo != null)
-                closureInfo.ConstructClosure();
-
-            var method = GetDynamicMethod(paramTypes, returnType, closureInfo);
-
-            var il = method.GetILGenerator();
-
-            if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, closureInfo))
-                return null;
-
-            il.Emit(OpCodes.Ret); // emits return from generated method
-
-            // create open delegate with closure object
             if (closureInfo == null)
-                return method.CreateDelegate(delegateType);
-
-            return method.CreateDelegate(delegateType, closureInfo.ClosureObject);
-        }
-
-        private static DynamicMethod GetDynamicMethod(Type[] paramTypes, Type returnType, ClosureInfo closureInfo)
-        {
-            if (closureInfo == null)
-                return new DynamicMethod(string.Empty, returnType, paramTypes,
+            {
+                var method = new DynamicMethod(string.Empty, returnType, paramTypes,
                     typeof(ExpressionCompiler), skipVisibility: true);
+                if (TryEmit(method, bodyExpr, paramExprs, null))
+                    return method.CreateDelegate(delegateType);
+                return null;
+            }
 
-            var closureType = closureInfo.ClosureObject.GetType();
+            var closureObject = closureInfo.ConstructClosure();
+            var closureType = closureObject.GetType();
             var closureAndParamTypes = GetClosureAndParamTypes(paramTypes, closureType);
 
-            return new DynamicMethod(string.Empty, returnType, closureAndParamTypes, closureType, skipVisibility: true);
+            var boundMethod = new DynamicMethod(string.Empty, returnType, closureAndParamTypes,
+                closureType, skipVisibility: true);
+
+            if (TryEmit(boundMethod, bodyExpr, paramExprs, closureInfo))
+                return boundMethod.CreateDelegate(delegateType, closureObject);
+            return null;
+        }
+
+        private static bool TryEmit(DynamicMethod method,
+            Expr bodyExpr, IList<ParameterExpression> paramExprs,
+            ClosureInfo closureInfo)
+        {
+            var il = method.GetILGenerator();
+            if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, closureInfo))
+                return false;
+
+            il.Emit(OpCodes.Ret); // emits return from generated method
+            return true;
         }
 
         private static Type[] GetClosureAndParamTypes(Type[] paramTypes, Type closureType)
@@ -203,7 +205,7 @@ namespace FastExpressionCompiler
                 return new[] { closureType };
 
             if (paramCount == 1)
-                return new [] { closureType, paramTypes[0] };
+                return new[] { closureType, paramTypes[0] };
 
             var closureAndParamTypes = new Type[paramCount + 1];
             closureAndParamTypes[0] = closureType;
@@ -239,7 +241,7 @@ namespace FastExpressionCompiler
             if (source == null || source.Length == 0)
                 return new[] { value };
             if (source.Length == 1)
-                return new[] {source[0], value };
+                return new[] { source[0], value };
             if (source.Length == 2)
                 return new[] { source[0], source[1], value };
             var sourceLength = source.Length;
@@ -267,11 +269,10 @@ namespace FastExpressionCompiler
             public ParameterExpression[] UsedParameters = Empty<ParameterExpression>();
             public NestedLambdaInfo[] NestedLambdas = Empty<NestedLambdaInfo>();
 
+            // Field infos are needed to load field of closure object on stack in emitter
+            // It is also an indicator that we use typed Closure object and not an array
             public FieldInfo[] Fields { get; private set; }
-
-            public bool IsArray { get; private set; }
-
-            public object ClosureObject { get; private set; }
+            public bool IsArray { get { return Fields == null; } }
 
             public void Add(object expr, object value, Type type)
             {
@@ -288,7 +289,7 @@ namespace FastExpressionCompiler
                 NestedLambdas = NestedLambdas.Append(lambda);
             }
 
-            public void ConstructClosure()
+            public object ConstructClosure()
             {
                 var constantCount = Constants.Length;
                 var paramCount = UsedParameters.Length;
@@ -302,23 +303,25 @@ namespace FastExpressionCompiler
                 // Deciding to create typed or array based closure, based on number of closed constants
                 // Not null array of constant types means a typed closure can be created
                 var typedClosureCreateMethods = Closure.TypedClosureCreateMethods;
-                var constantTypes = totalItemCount <= typedClosureCreateMethods.Length ? new Type[totalItemCount] : null;
+                var fieldTypes = totalItemCount <= typedClosureCreateMethods.Length
+                    ? new Type[totalItemCount]
+                    : null;
 
                 if (constantCount != 0)
                     for (var i = 0; i < constantCount; i++)
                     {
                         var constantExpr = Constants[i];
                         items[i] = constantExpr.Value;
-                        if (constantTypes != null)
-                            constantTypes[i] = constantExpr.Type;
+                        if (fieldTypes != null)
+                            fieldTypes[i] = constantExpr.Type;
                     }
 
                 if (paramCount != 0)
                     for (var i = 0; i < paramCount; i++)
                     {
                         items[constantCount + i] = null;
-                        if (constantTypes != null)
-                            constantTypes[constantCount + i] = UsedParameters[i].Type;
+                        if (fieldTypes != null)
+                            fieldTypes[constantCount + i] = UsedParameters[i].Type;
                     }
 
                 if (nestedLambdaCount != 0)
@@ -326,28 +329,22 @@ namespace FastExpressionCompiler
                     {
                         var lambda = NestedLambdas[i].Lambda;
                         items[constantPlusParamCount + i] = lambda;
-                        if (constantTypes != null)
-                            constantTypes[constantPlusParamCount + i] = lambda.GetType();
+                        if (fieldTypes != null)
+                            fieldTypes[constantPlusParamCount + i] = lambda.GetType();
                     }
 
-                if (constantTypes != null)
-                {
-                    var createClosureMethod = typedClosureCreateMethods[totalItemCount - 1];
-                    var createClosure = createClosureMethod.MakeGenericMethod(constantTypes);
+                if (fieldTypes == null)
+                    return new ArrayClosure(items);
 
-                    var closure = createClosure.Invoke(null, items);
+                var createClosureMethod = typedClosureCreateMethods[totalItemCount - 1];
+                var createClosure = createClosureMethod.MakeGenericMethod(fieldTypes);
 
-                    var fields = closure.GetType().GetTypeInfo().DeclaredFields;
-                    var fieldsArray = fields as FieldInfo[] ?? fields.ToArray();
+                var closure = createClosure.Invoke(null, items);
 
-                    ClosureObject = closure;
-                    Fields = fieldsArray;
-                }
-                else
-                {
-                    ClosureObject = new ArrayClosure(items);
-                    IsArray = true;
-                }
+                var fields = closure.GetType().GetTypeInfo().DeclaredFields;
+                Fields = fields as FieldInfo[] ?? fields.ToArray();
+
+                return closure;
             }
         }
 
@@ -795,8 +792,11 @@ namespace FastExpressionCompiler
         /// to normal and slow Expression.Compile.</summary>
         private static class EmittingVisitor
         {
-            private static readonly MethodInfo _getDelegateTargetProperty =
-                typeof(Delegate).GetTypeInfo().DeclaredMethods.First(p => p.Name == "get_Target");
+            private static readonly MethodInfo _getDelegateTargetProperty = typeof(Delegate).GetTypeInfo()
+                .DeclaredMethods.First(m => m.Name == "get_Target");
+
+            private static readonly MethodInfo _getTypeFromHandleMethod = typeof(Type).GetTypeInfo()
+                .DeclaredMethods.First(m => m.Name == "GetTypeFromHandle");
 
             public static bool TryEmit(Expr e, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
@@ -1034,9 +1034,7 @@ namespace FastExpressionCompiler
                 else if (constantValue is Type)
                 {
                     il.Emit(OpCodes.Ldtoken, (Type)constantValue);
-                    var getTypeFromHandle = typeof(Type).GetTypeInfo()
-                        .DeclaredMethods.First(m => m.Name == "GetTypeFromHandle");
-                    il.Emit(OpCodes.Call, getTypeFromHandle);
+                    il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
                 }
                 else if (closure != null)
                 {
@@ -1292,7 +1290,7 @@ namespace FastExpressionCompiler
 
                     if (nestedLambdaClosure.IsArray)
                     {
-                        // load array field
+                        // load array
                         il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField);
 
                         // load array item index
@@ -1310,7 +1308,7 @@ namespace FastExpressionCompiler
                         if (closure.UsedParameters == null)
                             return false; // impossible, better to throw?
 
-                        var outerClosureParamIndex = closure.UsedParameters.IndexOf(p => p == nestedUsedParamExpr);
+                        var outerClosureParamIndex = closure.UsedParameters.IndexOf(it => it == nestedUsedParamExpr);
                         if (outerClosureParamIndex == -1)
                             return false; // impossible, better to throw?
 
