@@ -10,6 +10,133 @@ namespace FastExpressionCompiler.UnitTests
     public class NestedLambdaTests
     {
         [Test]
+        public void Nested_lambda_using_outer_parameter()
+        {
+            // The same hoisted expression: 
+            //Expression<Func<string, string>> expr = a => GetS(() => a);
+
+            var aParam = Expression.Parameter(typeof(string), "a");
+            var expr = Expression.Lambda(
+                Expression.Call(GetType(), nameof(GetS), Type.EmptyTypes,
+                    Expression.Lambda(aParam)),
+                aParam);
+
+            var f = ExpressionCompiler.TryCompile<Func<string, string>>(expr);
+
+            Assert.AreEqual("a", f("a"));
+        }
+
+        [Test]
+        public void Nested_Hoisted_lambda_using_outer_parameter()
+        {
+            Expression<Func<string, string>> expr = a => GetS(() => a);
+
+            var f = ExpressionCompiler.TryCompile<Func<string, string>>(expr);
+
+            Assert.AreEqual("a", f("a"));
+        }
+
+        [Test]
+        public void Nested_lambda_using_outer_parameter_and_closed_value()
+        {
+            var b = new S { Value = "b" };
+
+            // The same hoisted expression: 
+            //Expression<Func<string, string>> expr = a => GetS(() => b.Append(a));
+
+            var bExpr = Expression.Constant(b);
+
+            var aParam = Expression.Parameter(typeof(string), "a");
+            var expr = Expression.Lambda(
+                Expression.Call(GetType(), nameof(GetS), Type.EmptyTypes,
+                    Expression.Lambda(
+                        Expression.Call(bExpr, "Append", Type.EmptyTypes,
+                            aParam))),
+                aParam);
+
+            var f = ExpressionCompiler.TryCompile<Func<string, string>>(expr);
+
+            Assert.AreEqual("ba", f("a"));
+        }
+
+        [Test]
+        public void Nested_Hoisted_lambda_using_outer_parameter_and_closed_value()
+        {
+            var b = new S { Value = "b" };
+
+            Expression<Func<string, string>> expr = a => GetS(() => b.Append(a));
+
+            var f = ExpressionCompiler.TryCompile<Func<string, string>>(expr);
+
+            Assert.AreEqual("ba", f("a"));
+        }
+
+        [Test]
+        public void Nested_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda()
+        {
+            var b = new S { Value = "b" };
+
+            // The same hoisted expression: 
+            //Expression<Func<string, string>> expr =
+            //    a => GetS(
+            //        () => b.Prepend(a,
+            //            rest => b.Append(rest)));
+
+            var bExpr = Expression.Constant(b);
+
+            var aParam = Expression.Parameter(typeof(string), "a");
+            var bbParam = Expression.Parameter(typeof(string), "bb");
+
+            var expr = Expression.Lambda(
+                Expression.Call(GetType(), nameof(GetS), Type.EmptyTypes,
+                    Expression.Lambda(
+                        Expression.Call(bExpr, "Prepend", Type.EmptyTypes,
+                            aParam,
+                            Expression.Lambda(Expression.Call(bExpr, "Append", Type.EmptyTypes, bbParam), 
+                                bbParam)))),
+                aParam);
+
+            var f = ExpressionCompiler.TryCompile<Func<string, string>>(expr);
+
+            Assert.AreEqual("abb", f("a"));
+        }
+
+        [Test]
+        public void Nested_Hoisted_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda()
+        {
+            var b = new S { Value = "b" };
+
+            Expression<Func<string, string>> expr =
+                a => GetS(
+                    () => b.Prepend(a,
+                        rest => b.Append(rest)));
+
+            var f = ExpressionCompiler.TryCompile<Func<string, string>>(expr);
+
+            Assert.AreEqual("abb", f("a"));
+        }
+
+        public static string GetS(Func<string> getS)
+        {
+            return getS();
+        }
+
+        public class S
+        {
+            public string Value;
+
+            public string Append(string s)
+            {
+                return Value + s;
+            }
+
+            public string Prepend(string s, Func<string, string> restTransform)
+            {
+                return s + restTransform(Value);
+            }
+        }
+
+        [Test]
         public void Given_hoisted_expr_with_closure_over_parameters_in_nested_lambda_should_work()
         {
             Expression<Func<object, object>> funcExpr = a =>

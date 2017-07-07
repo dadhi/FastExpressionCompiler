@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         public void Should_compile_nested_lambda()
         {
             var a = new A();
-            Expression<Func<X>> getXExpr = () => X.Get(_ => new X(_), new Lazy<A>(() => a));
+            Expression<Func<X>> getXExpr = () => X.Get(it => new X(it), new Lazy<A>(() => a));
 
             var getX = ExpressionCompiler.Compile(getXExpr);
 
