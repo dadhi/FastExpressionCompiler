@@ -669,17 +669,26 @@ namespace FastExpressionCompiler
                     break;
 
                 case ExpressionType.Call:
-                    var methodCallExpr = (MethodCallExpression)expr;
-                    var methodOwnerExpr = methodCallExpr.Object;
+                    var callExprInfo = expr as MethodCallExpressionInfo;
+                    if (callExprInfo != null)
+                        return (callExprInfo.Object == null ||
+                            TryCollectBoundConstants(ref closure, callExprInfo.Object, paramExprs)) &&
+                            TryCollectBoundConstants(ref closure, callExprInfo.Arguments, paramExprs);
 
-                    return (methodOwnerExpr == null
-                        || TryCollectBoundConstants(ref closure, methodOwnerExpr, paramExprs))
-                        && TryCollectBoundConstants(ref closure, methodCallExpr.Arguments, paramExprs);
+                    var callExpr = (MethodCallExpression)expr;
+                    return (callExpr.Object == null ||
+                        TryCollectBoundConstants(ref closure, callExpr.Object, paramExprs)) &&
+                        TryCollectBoundConstants(ref closure, callExpr.Arguments, paramExprs);
 
                 case ExpressionType.MemberAccess:
+                    var memberExprInfo = expr as MemberExpressionInfo;
+                    if (memberExprInfo != null)
+                        return memberExprInfo.Expression == null ||
+                               TryCollectBoundConstants(ref closure, memberExprInfo.Expression, paramExprs);
+
                     var memberExpr = ((MemberExpression)expr).Expression;
-                    return memberExpr == null
-                        || TryCollectBoundConstants(ref closure, memberExpr, paramExprs);
+                    return memberExpr == null ||
+                        TryCollectBoundConstants(ref closure, memberExpr, paramExprs);
 
                 case ExpressionType.New:
                     var newExprInfo = expr as NewExpressionInfo;
@@ -811,17 +820,16 @@ namespace FastExpressionCompiler
                         return EmitArrayIndex((BinaryExpression)expr, paramExprs, il, closure);
                     case ExpressionType.Constant:
                         return EmitConstant(e, il, closure);
+                    case ExpressionType.Call:
+                        return EmitMethodCall(e, paramExprs, il, closure);
+                    case ExpressionType.MemberAccess:
+                        return EmitMemberAccess(e, paramExprs, il, closure);
                     case ExpressionType.New:
                         return EmitNew(e, paramExprs, il, closure);
                     case ExpressionType.NewArrayInit:
                         return EmitNewArray((NewArrayExpression)expr, paramExprs, il, closure);
                     case ExpressionType.MemberInit:
                         return EmitMemberInit((MemberInitExpression)expr, paramExprs, il, closure);
-                    case ExpressionType.Call:
-                        return EmitMethodCall((MethodCallExpression)expr, paramExprs, il, closure);
-                    case ExpressionType.MemberAccess:
-                        return EmitMemberAccess((MemberExpression)expr, paramExprs, il, closure);
-
                     case ExpressionType.Lambda:
                         return EmitNestedLambda((LambdaExpression)expr, paramExprs, il, closure);
 
@@ -1188,25 +1196,42 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitMethodCall(MethodCallExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMethodCall(Expr e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var methodOwnerExpr = e.Object;
-                if (methodOwnerExpr != null)
+                var exprObj = e.Expression;
+                var exprInfo = exprObj as MethodCallExpressionInfo;
+                if (exprInfo != null)
                 {
-                    if (!TryEmit(methodOwnerExpr, ps, il, closure))
+                    if (exprInfo.Object != null)
+                    {
+                        if (!TryEmit(exprInfo.Object, ps, il, closure)) return false;
+                        IfValueTypeStoreAndLoadValueAddress(il, exprInfo.Object.Type);
+                    }
+
+                    if (exprInfo.Arguments.Length != 0 &&
+                        !EmitMany(exprInfo.Arguments, ps, il, closure))
                         return false;
-                    ForValueTypeStoreAndLoadValueAddress(il, methodOwnerExpr.Type);
+                }
+                else
+                {
+                    var expr = (MethodCallExpression)exprObj;
+                    if (expr.Object != null)
+                    {
+                        if (!TryEmit(expr.Object, ps, il, closure)) return false;
+                        IfValueTypeStoreAndLoadValueAddress(il, expr.Object.Type);
+                    }
+
+                    if (expr.Arguments.Count != 0 &&
+                        !EmitMany(expr.Arguments, ps, il, closure))
+                        return false;
                 }
 
-                if (e.Arguments.Count != 0 &&
-                    !EmitMany(e.Arguments, ps, il, closure))
-                    return false;
-
-                EmitMethodCall(e.Method, il);
+                var method = exprInfo != null ? exprInfo.Method : ((MethodCallExpression)exprObj).Method;
+                EmitMethodCall(method, il);
                 return true;
             }
 
-            private static void ForValueTypeStoreAndLoadValueAddress(ILGenerator il, Type ownerType)
+            private static void IfValueTypeStoreAndLoadValueAddress(ILGenerator il, Type ownerType)
             {
                 if (ownerType.GetTypeInfo().IsValueType)
                 {
@@ -1216,29 +1241,42 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static bool EmitMemberAccess(MemberExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMemberAccess(Expr e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var memberOwnerExpr = e.Expression;
-                if (memberOwnerExpr != null)
+                var exprObj = e.Expression;
+                var exprInfo = exprObj as MemberExpressionInfo;
+                if (exprInfo != null)
                 {
-                    if (!TryEmit(memberOwnerExpr, ps, il, closure))
-                        return false;
-                    ForValueTypeStoreAndLoadValueAddress(il, memberOwnerExpr.Type);
+                    if (exprInfo.Expression != null)
+                    {
+                        if (!TryEmit(exprInfo.Expression, ps, il, closure)) return false;
+                        IfValueTypeStoreAndLoadValueAddress(il, exprInfo.Expression.Type);
+                    }
+                }
+                else
+                {
+                    var instanceExpr = ((MemberExpression)exprObj).Expression;
+                    if (instanceExpr != null)
+                    {
+                        if (!TryEmit(instanceExpr, ps, il, closure)) return false;
+                        IfValueTypeStoreAndLoadValueAddress(il, instanceExpr.Type);
+                    }
                 }
 
-                var field = e.Member as FieldInfo;
+                var member = exprInfo != null ? exprInfo.Member : ((MemberExpression)exprObj).Member;
+                var field = member as FieldInfo;
                 if (field != null)
                 {
                     il.Emit(field.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, field);
                     return true;
                 }
 
-                var prop = e.Member as PropertyInfo;
+                var prop = member as PropertyInfo;
                 if (prop != null)
                 {
                     var propGetMethodName = "get_" + prop.Name;
                     var getMethod = prop.DeclaringType.GetTypeInfo()
-                        .DeclaredMethods.FirstOrDefault(_ => _.Name == propGetMethodName);
+                        .DeclaredMethods.FirstOrDefault(m => m.Name == propGetMethodName);
                     if (getMethod == null)
                         return false;
                     EmitMethodCall(getMethod, il);
@@ -1481,19 +1519,41 @@ namespace FastExpressionCompiler
         /// <summary>All expressions should have a Type.</summary>
         public abstract Type Type { get; }
 
-        /// <summary>Analog of Expression.New</summary>
-        /// <param name="ctor">constructor info</param>
-        /// <param name="args">argument expressions</param>
-        /// <returns>New expression.</returns>
-        public static NewExpressionInfo New(ConstructorInfo ctor, params ExpressionInfo[] args)
-        {
-            return new NewExpressionInfo(ctor, args);
-        }
-
         /// <summary>Analog of Expression.Constant</summary>
         public static ConstantExpressionInfo Constant(object value, Type type = null)
         {
             return new ConstantExpressionInfo(value, type);
+        }
+
+        /// <summary>Analog of Expression.New</summary>
+        public static NewExpressionInfo New(ConstructorInfo ctor, params ExpressionInfo[] arguments)
+        {
+            return new NewExpressionInfo(ctor, arguments);
+        }
+
+        /// <summary>Static method call</summary>
+        public static MethodCallExpressionInfo Call(MethodInfo method, params ExpressionInfo[] arguments)
+        {
+            return new MethodCallExpressionInfo(null, method, arguments);
+        }
+
+        /// <summary>Instance method call</summary>
+        public static MethodCallExpressionInfo Call(
+            ExpressionInfo instance, MethodInfo method, params ExpressionInfo[] arguments)
+        {
+            return new MethodCallExpressionInfo(instance, method, arguments);
+        }
+
+        /// <summary>Static property</summary>
+        public static PropertyExpressionInfo Property(PropertyInfo property)
+        {
+            return new PropertyExpressionInfo(null, property);
+        }
+
+        /// <summary>Instance property</summary>
+        public static PropertyExpressionInfo Property(ExpressionInfo instance, PropertyInfo property)
+        {
+            return new PropertyExpressionInfo(instance, property);
         }
 
         /// <summary>Analog of Expression.Lambda</summary>
@@ -1548,11 +1608,66 @@ namespace FastExpressionCompiler
         /// <summary>The constructor info.</summary>
         public readonly ConstructorInfo Constructor;
 
-        /// <summary>Constructor</summary>
+        /// <summary>Construct from constructor info and argument expressions</summary>
         public NewExpressionInfo(ConstructorInfo constructor, params ExpressionInfo[] arguments) : base(arguments)
         {
             Constructor = constructor;
         }
+    }
+
+    /// <summary>Analog of MethodCallExpression</summary>
+    public class MethodCallExpressionInfo : ArgumentsExpressionInfo
+    {
+        /// <inheritdoc />
+        public override ExpressionType NodeType { get { return ExpressionType.Call; } }
+
+        /// <inheritdoc />
+        public override Type Type { get { return Method.ReturnType; } }
+
+        /// <summary>The method info.</summary>
+        public readonly MethodInfo Method;
+
+        /// <summary>Instance expression, null if static.</summary>
+        public readonly ExpressionInfo Object;
+
+        /// <summary>Construct from method info and argument expressions</summary>
+        public MethodCallExpressionInfo(
+            ExpressionInfo @object, MethodInfo method, params ExpressionInfo[] arguments) : base(arguments)
+        {
+            Object = @object;
+            Method = method;
+        }
+    }
+
+    /// <summary>Analog of MemberExpression</summary>
+    public abstract class MemberExpressionInfo : ExpressionInfo
+    {
+        /// <inheritdoc />
+        public override ExpressionType NodeType { get { return ExpressionType.MemberAccess; } }
+
+        /// <summary>Member info.</summary>
+        public readonly MemberInfo Member;
+
+        /// <summary>Instance expression, null if static.</summary>
+        public readonly ExpressionInfo Expression;
+
+        /// <summary>Constructs with</summary>
+        protected MemberExpressionInfo(ExpressionInfo expression, MemberInfo member)
+        {
+            Expression = expression;
+            Member = member;
+        }
+    }
+
+    /// <summary>Analog of PropertyExpression</summary>
+    public class PropertyExpressionInfo : MemberExpressionInfo
+    {
+        /// <inheritdoc />
+        public override Type Type { get { return ((PropertyInfo)Member).PropertyType; } }
+
+        /// <summary>Construct from property info</summary>
+        public PropertyExpressionInfo(ExpressionInfo instance, PropertyInfo property)
+            : base(instance, property) { }
     }
 
     /// <summary>LambdaExpression</summary>

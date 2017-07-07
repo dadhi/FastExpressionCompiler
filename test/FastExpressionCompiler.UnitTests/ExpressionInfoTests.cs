@@ -8,7 +8,7 @@ namespace FastExpressionCompiler.UnitTests
     public class ExpressionInfoTests
     {
         [Test]
-        public void Can_compile_dry_expression_without_coverting_to_expression()
+        public void Can_compile_lambda_without_coverting_to_expression()
         {
             var funcExpr =
                 ExpressionInfo.Lambda(
@@ -31,5 +31,39 @@ namespace FastExpressionCompiler.UnitTests
                 Y = y;
             }
         }
+
+        [Test]
+        public void Can_compile_lambda_with_property()
+        {
+            var thisType = GetType().GetTypeInfo();
+            var funcExpr =
+                ExpressionInfo.Lambda(
+                        ExpressionInfo.Property(thisType.GetProperty(nameof(PropX))));
+
+            var func = ExpressionCompiler.TryCompile<Func<X>>(funcExpr);
+            Assert.IsNotNull(func);
+
+            var x = func();
+            Assert.IsInstanceOf<X>(x);
+        }
+
+        [Test]
+        public void Can_compile_lambda_with_call_and_property()
+        {
+            var thisType = GetType().GetTypeInfo();
+            var funcExpr =
+                ExpressionInfo.Lambda(
+                    ExpressionInfo.Call(thisType.GetMethod(nameof(GetX)),
+                        ExpressionInfo.Property(thisType.GetProperty(nameof(PropX)))));
+
+            var func = ExpressionCompiler.TryCompile<Func<X>>(funcExpr);
+            Assert.IsNotNull(func);
+
+            var x = func();
+            Assert.IsInstanceOf<X>(x);
+        }
+
+        public static X PropX => new X(new Y());
+        public static X GetX(X x) => x;
     }
 }
