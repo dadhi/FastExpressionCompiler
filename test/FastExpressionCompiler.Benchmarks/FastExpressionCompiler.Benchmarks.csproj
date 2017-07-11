@@ -2,10 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp1.1</TargetFramework>
-    <AssemblyName>FastExpressionCompiler.Benchmarks</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PackageId>FastExpressionCompiler.Benchmarks</PackageId>
-    <RuntimeFrameworkVersion>1.1.1</RuntimeFrameworkVersion>
   </PropertyGroup>
 
   <ItemGroup>

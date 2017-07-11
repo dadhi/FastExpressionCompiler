@@ -5,7 +5,7 @@ dotnet restore
 dotnet build
 
 pushd ".\test\FastExpressionCompiler.UnitTests"
-rem dotnet test 
+dotnet test
 popd
 
 dotnet pack ".\src\FastExpressionCompiler" -c Release -o "./dist"
