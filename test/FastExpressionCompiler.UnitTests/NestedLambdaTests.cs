@@ -218,8 +218,8 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(3, aa.X);
             Assert.AreEqual(-3, bb.X);
 
-            var aExpr = Expression.Parameter(typeof(A));
-            var bExpr = Expression.Parameter(typeof(A));
+            var aExpr = Expression.Parameter(typeof(A), "a");
+            var bExpr = Expression.Parameter(typeof(A), "b");
 
             var funcExpr = Expression.Lambda(
                 Expression.Call(aExpr, "Increment", new Type[0],

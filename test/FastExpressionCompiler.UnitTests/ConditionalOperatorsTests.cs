@@ -121,7 +121,8 @@ namespace FastExpressionCompiler.UnitTests
                 x > 0 && 
                 (s.Contains("e") && s.Contains("X") || 
                  s.StartsWith("T") && s.EndsWith("t")) 
-                ? string.Concat(s, "ccc") : string.Empty;
+                ? string.Concat(s, "ccc") 
+                : string.Empty;
 
             var dlg = ExpressionCompiler.TryCompile<Func<object>>(expr);
 
