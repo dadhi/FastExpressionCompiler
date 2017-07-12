@@ -42,7 +42,7 @@ namespace FastExpressionCompiler
         public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr)
         {
             return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, Empty<Type>(), typeof(T))
-                ?? lambdaExpr.Compile();
+                   ?? lambdaExpr.Compile();
         }
 
         /// <summary>Compiles lambda expression to <typeparamref name="TDelegate"/>.</summary>
@@ -335,7 +335,7 @@ namespace FastExpressionCompiler
 
                 ClosedItemCount = totalItemCount;
 
-                var typedClosureCreateMethods = Closure.TypedClosureCreateMethods;
+                var typedClosureCreateMethods = Closure.CreateMethods;
 
                 // Construct the array base closure when number of values is bigger than
                 // number of fields in biggest Closure class
@@ -419,8 +419,11 @@ namespace FastExpressionCompiler
 
         internal static class Closure
         {
-            public static readonly MethodInfo[] TypedClosureCreateMethods =
-                typeof(Closure).GetTypeInfo().DeclaredMethods.ToArray();
+            private static readonly IEnumerable<MethodInfo> _methods =
+                typeof(Closure).GetTypeInfo().DeclaredMethods;
+
+            public static readonly MethodInfo[] CreateMethods =
+                _methods as MethodInfo[] ?? _methods.ToArray();
 
             public static Closure<T1> CreateClosure<T1>(T1 v1)
             {
@@ -684,7 +687,7 @@ namespace FastExpressionCompiler
 
         #endregion
 
-        #region Nested Lambda Expressions
+        #region Nested Lambdas
 
         private struct NestedLambdaInfo
         {
@@ -703,31 +706,37 @@ namespace FastExpressionCompiler
             }
         }
 
-        internal static readonly MethodInfo[] CurryClosureFuncMethods =
-            typeof(ExpressionCompiler).GetTypeInfo().DeclaredMethods.Where(m => m.Name == "CurryFunc").ToArray();
+        internal static class CurryClosureFuncs
+        {
+            private static readonly IEnumerable<MethodInfo> _methods =
+                typeof(CurryClosureFuncs).GetTypeInfo().DeclaredMethods;
 
-        internal static Func<R> CurryFunc<C, R>(Func<C, R> f, C c) { return () => f(c); }
-        internal static Func<T1, R> CurryFunc<C, T1, R>(Func<C, T1, R> f, C c) { return t1 => f(c, t1); }
-        internal static Func<T1, T2, R> CurryFunc<C, T1, T2, R>(Func<C, T1, T2, R> f, C c) { return (t1, t2) => f(c, t1, t2); }
-        internal static Func<T1, T2, T3, R> CurryFunc<C, T1, T2, T3, R>(Func<C, T1, T2, T3, R> f, C c) { return (t1, t2, t3) => f(c, t1, t2, t3); }
-        internal static Func<T1, T2, T3, T4, R> CurryFunc<C, T1, T2, T3, T4, R>(Func<C, T1, T2, T3, T4, R> f, C c) { return (t1, t2, t3, t4) => f(c, t1, t2, t3, t4); }
-        internal static Func<T1, T2, T3, T4, T5, R> CurryFunc<C, T1, T2, T3, T4, T5, R>(Func<C, T1, T2, T3, T4, T5, R> f, C c) { return (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5); }
-        internal static Func<T1, T2, T3, T4, T5, T6, R> CurryFunc<C, T1, T2, T3, T4, T5, T6, R>(Func<C, T1, T2, T3, T4, T5, T6, R> f, C c) { return (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6); }
-        internal static Func<T1, T2, T3, T4, T5, T6, T7, R> CurryFunc<C, T1, T2, T3, T4, T5, T6, T7, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, R> f, C c) { return (t1, t2, t3, t4, t5, t6, t7) => f(c, t1, t2, t3, t4, t5, t6, t7); }
-        internal static Func<T1, T2, T3, T4, T5, T6, T7, T8, R> CurryFunc<C, T1, T2, T3, T4, T5, T6, T7, T8, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, T8, R> f, C c) { return (t1, t2, t3, t4, t5, t6, t7, t8) => f(c, t1, t2, t3, t4, t5, t6, t7, t8); }
+            public static readonly MethodInfo[] Methods = _methods as MethodInfo[] ?? _methods.ToArray();
 
-        internal static readonly MethodInfo[] CurryClosureActionMethods =
-            typeof(ExpressionCompiler).GetTypeInfo().DeclaredMethods.Where(m => m.Name == "CurryAction").ToArray();
+            public static Func<R> Curry<C, R>(Func<C, R> f, C c) { return () => f(c); }
+            public static Func<T1, R> Curry<C, T1, R>(Func<C, T1, R> f, C c) { return t1 => f(c, t1); }
+            public static Func<T1, T2, R> Curry<C, T1, T2, R>(Func<C, T1, T2, R> f, C c) { return (t1, t2) => f(c, t1, t2); }
+            public static Func<T1, T2, T3, R> Curry<C, T1, T2, T3, R>(Func<C, T1, T2, T3, R> f, C c) { return (t1, t2, t3) => f(c, t1, t2, t3); }
+            public static Func<T1, T2, T3, T4, R> Curry<C, T1, T2, T3, T4, R>(Func<C, T1, T2, T3, T4, R> f, C c) { return (t1, t2, t3, t4) => f(c, t1, t2, t3, t4); }
+            public static Func<T1, T2, T3, T4, T5, R> Curry<C, T1, T2, T3, T4, T5, R>(Func<C, T1, T2, T3, T4, T5, R> f, C c) { return (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5); }
+            public static Func<T1, T2, T3, T4, T5, T6, R> Curry<C, T1, T2, T3, T4, T5, T6, R>(Func<C, T1, T2, T3, T4, T5, T6, R> f, C c) { return (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6); }
+        }
 
-        internal static Action CurryAction<C>(Action<C> a, C c) { return () => a(c); }
-        internal static Action<T1> CurryAction<C, T1>(Action<C, T1> f, C c) { return t1 => f(c, t1); }
-        internal static Action<T1, T2> CurryAction<C, T1, T2>(Action<C, T1, T2> f, C c) { return (t1, t2) => f(c, t1, t2); }
-        internal static Action<T1, T2, T3> CurryAction<C, T1, T2, T3>(Action<C, T1, T2, T3> f, C c) { return (t1, t2, t3) => f(c, t1, t2, t3); }
-        internal static Action<T1, T2, T3, T4> CurryAction<C, T1, T2, T3, T4>(Action<C, T1, T2, T3, T4> f, C c) { return (t1, t2, t3, t4) => f(c, t1, t2, t3, t4); }
-        internal static Action<T1, T2, T3, T4, T5> CurryAction<C, T1, T2, T3, T4, T5>(Action<C, T1, T2, T3, T4, T5> f, C c) { return (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5); }
-        internal static Action<T1, T2, T3, T4, T5, T6> CurryAction<C, T1, T2, T3, T4, T5, T6>(Action<C, T1, T2, T3, T4, T5, T6> f, C c) { return (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6); }
-        internal static Action<T1, T2, T3, T4, T5, T6, T7> CurryAction<C, T1, T2, T3, T4, T5, T6, T7>(Action<C, T1, T2, T3, T4, T5, T6, T7> f, C c) { return (t1, t2, t3, t4, t5, t6, t7) => f(c, t1, t2, t3, t4, t5, t6, t7); }
-        internal static Action<T1, T2, T3, T4, T5, T6, T7, T8> CurryAction<C, T1, T2, T3, T4, T5, T6, T7, T8>(Action<C, T1, T2, T3, T4, T5, T6, T7, T8> f, C c) { return (t1, t2, t3, t4, t5, t6, t7, t8) => f(c, t1, t2, t3, t4, t5, t6, t7, t8); }
+        internal static class CurryClosureActions
+        {
+            private static readonly IEnumerable<MethodInfo> _methods =
+                typeof(CurryClosureActions).GetTypeInfo().DeclaredMethods;
+
+            public static readonly MethodInfo[] Methods = _methods as MethodInfo[] ?? _methods.ToArray();
+
+            internal static Action Curry<C>(Action<C> a, C c) { return () => a(c); }
+            internal static Action<T1> Curry<C, T1>(Action<C, T1> f, C c) { return t1 => f(c, t1); }
+            internal static Action<T1, T2> Curry<C, T1, T2>(Action<C, T1, T2> f, C c) { return (t1, t2) => f(c, t1, t2); }
+            internal static Action<T1, T2, T3> Curry<C, T1, T2, T3>(Action<C, T1, T2, T3> f, C c) { return (t1, t2, t3) => f(c, t1, t2, t3); }
+            internal static Action<T1, T2, T3, T4> Curry<C, T1, T2, T3, T4>(Action<C, T1, T2, T3, T4> f, C c) { return (t1, t2, t3, t4) => f(c, t1, t2, t3, t4); }
+            internal static Action<T1, T2, T3, T4, T5> Curry<C, T1, T2, T3, T4, T5>(Action<C, T1, T2, T3, T4, T5> f, C c) { return (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5); }
+            internal static Action<T1, T2, T3, T4, T5, T6> Curry<C, T1, T2, T3, T4, T5, T6>(Action<C, T1, T2, T3, T4, T5, T6> f, C c) { return (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6); }
+        }
 
         #endregion
 
@@ -740,9 +749,9 @@ namespace FastExpressionCompiler
 
             var typeInfo = value.GetType().GetTypeInfo();
             return !typeInfo.IsPrimitive
-                && !(value is string)
-                && !(value is Type)
-                && !typeInfo.IsEnum;
+                   && !(value is string)
+                   && !(value is Type)
+                   && !typeInfo.IsEnum;
         }
 
         // @paramExprs is required for nested lambda compilation
@@ -775,23 +784,23 @@ namespace FastExpressionCompiler
                     var callExprInfo = expr as MethodCallExpressionInfo;
                     if (callExprInfo != null)
                         return (callExprInfo.Object == null ||
-                            TryCollectBoundConstants(ref closure, callExprInfo.Object, paramExprs)) &&
-                            TryCollectBoundConstants(ref closure, callExprInfo.Arguments, paramExprs);
+                                TryCollectBoundConstants(ref closure, callExprInfo.Object, paramExprs)) &&
+                               TryCollectBoundConstants(ref closure, callExprInfo.Arguments, paramExprs);
 
                     var callExpr = (MethodCallExpression)expr;
                     return (callExpr.Object == null ||
-                        TryCollectBoundConstants(ref closure, callExpr.Object, paramExprs)) &&
-                        TryCollectBoundConstants(ref closure, callExpr.Arguments, paramExprs);
+                            TryCollectBoundConstants(ref closure, callExpr.Object, paramExprs)) &&
+                           TryCollectBoundConstants(ref closure, callExpr.Arguments, paramExprs);
 
                 case ExpressionType.MemberAccess:
                     var memberExprInfo = expr as MemberExpressionInfo;
                     if (memberExprInfo != null)
                         return memberExprInfo.Expression == null
-                            || TryCollectBoundConstants(ref closure, memberExprInfo.Expression, paramExprs);
+                               || TryCollectBoundConstants(ref closure, memberExprInfo.Expression, paramExprs);
 
                     var memberExpr = ((MemberExpression)expr).Expression;
                     return memberExpr == null ||
-                        TryCollectBoundConstants(ref closure, memberExpr, paramExprs);
+                           TryCollectBoundConstants(ref closure, memberExpr, paramExprs);
 
                 case ExpressionType.New:
                     var newExprInfo = expr as NewExpressionInfo;
@@ -887,13 +896,13 @@ namespace FastExpressionCompiler
                 case ExpressionType.Invoke:
                     var invocationExpr = (InvocationExpression)expr;
                     return TryCollectBoundConstants(ref closure, invocationExpr.Expression, paramExprs)
-                        && TryCollectBoundConstants(ref closure, invocationExpr.Arguments, paramExprs);
+                           && TryCollectBoundConstants(ref closure, invocationExpr.Arguments, paramExprs);
 
                 case ExpressionType.Conditional:
                     var conditionalExpr = (ConditionalExpression)expr;
                     return TryCollectBoundConstants(ref closure, conditionalExpr.Test, paramExprs)
-                        && TryCollectBoundConstants(ref closure, conditionalExpr.IfTrue, paramExprs)
-                        && TryCollectBoundConstants(ref closure, conditionalExpr.IfFalse, paramExprs);
+                           && TryCollectBoundConstants(ref closure, conditionalExpr.IfTrue, paramExprs)
+                           && TryCollectBoundConstants(ref closure, conditionalExpr.IfFalse, paramExprs);
 
                 default:
                     var unaryExpr = expr as UnaryExpression;
@@ -903,7 +912,7 @@ namespace FastExpressionCompiler
                     var binaryExpr = expr as BinaryExpression;
                     if (binaryExpr != null)
                         return TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs)
-                            && TryCollectBoundConstants(ref closure, binaryExpr.Right, paramExprs);
+                               && TryCollectBoundConstants(ref closure, binaryExpr.Right, paramExprs);
                     break;
             }
 
@@ -941,7 +950,6 @@ namespace FastExpressionCompiler
                     case 5: return typeof(Action<,,,,>).MakeGenericType(paramTypes);
                     case 6: return typeof(Action<,,,,,>).MakeGenericType(paramTypes);
                     case 7: return typeof(Action<,,,,,,>).MakeGenericType(paramTypes);
-                    case 8: return typeof(Action<,,,,,,,>).MakeGenericType(paramTypes);
                     default:
                         throw new NotSupportedException(
                             string.Format("Action with so many ({0}) parameters is not supported!", paramTypes.Length));
@@ -982,7 +990,7 @@ namespace FastExpressionCompiler
                 switch (e.NodeType)
                 {
                     case ExpressionType.Parameter:
-                        var pInfo = expr as ParameterExpressionInfo; 
+                        var pInfo = expr as ParameterExpressionInfo;
                         return EmitParameter(pInfo != null ? pInfo.ParamExpr : (ParameterExpression)expr, paramExprs, il, closure);
                     case ExpressionType.Convert:
                         return EmitConvert((UnaryExpression)expr, paramExprs, il, closure);
@@ -1082,7 +1090,7 @@ namespace FastExpressionCompiler
             private static bool EmitBinary(BinaryExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
                 return TryEmit(e.Left, ps, il, closure)
-                    && TryEmit(e.Right, ps, il, closure);
+                       && TryEmit(e.Right, ps, il, closure);
             }
 
             private static bool EmitMany(IList<Expression> es, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
@@ -1459,7 +1467,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitNestedLambda(object lambdaExpr, 
+            private static bool EmitNestedLambda(object lambdaExpr,
                 IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
                 // First, find in closed compiled lambdas the one corresponding to the current lambda expression.
@@ -1586,16 +1594,12 @@ namespace FastExpressionCompiler
                     }
                 }
 
+                // Create nested closure object composed of all constants, params, lambdas loaded on stack
                 if (isNestedArrayClosure)
-                {
                     il.Emit(OpCodes.Newobj, ArrayClosure.Constructor);
-                }
                 else
-                {
-                    // Create nested closure object composed of all constants, params, lambdas loaded on stack
-                    var closureCtor = nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.First();
-                    il.Emit(OpCodes.Newobj, closureCtor);
-                }
+                    il.Emit(OpCodes.Newobj,
+                        nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.First());
 
                 EmitMethodCall(il, GetCurryClosureMethod(nestedLambda, nestedLambdaInfo.IsAction));
                 return true;
@@ -1604,9 +1608,9 @@ namespace FastExpressionCompiler
             private static MethodInfo GetCurryClosureMethod(object lambda, bool isAction)
             {
                 var lambdaTypeArgs = lambda.GetType().GetTypeInfo().GenericTypeArguments;
-                return isAction 
-                    ? CurryClosureActionMethods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs) 
-                    : CurryClosureFuncMethods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
+                return isAction
+                    ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
+                    : CurryClosureFuncs.Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
             }
 
             private static bool EmitInvokeLambda(InvocationExpression e, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
