@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
 
@@ -65,5 +67,56 @@ namespace FastExpressionCompiler.UnitTests
 
         public static X PropX => new X(new Y());
         public static X GetX(X x) => x;
+
+        [Test]
+        public void Nested_Func_using_outer_parameter()
+        {
+            // The same hoisted expression: 
+            //Expression<Func<string, string>> expr = a => GetS(() => a);
+
+            var aParam = Expression.Parameter(typeof(string), "a");
+            var expr = ExpressionInfo.Lambda(
+                ExpressionInfo.Call(GetType().GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(GetS)),
+                    ExpressionInfo.Lambda(aParam)),
+                aParam);
+
+            var f = ExpressionCompiler.TryCompile<Func<string, string>>(expr);
+
+            Assert.AreEqual("a", f("a"));
+        }
+
+        public static string GetS(Func<string> getS)
+        {
+            return getS();
+        }
+
+        [Test]
+        public void Nested_Action_using_constant_and_outer_parameter()
+        {
+            // The same hoisted expression: 
+            var s = new S();
+            Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
+
+            //var aParam = Expression.Parameter(typeof(string), "a");
+            //var expr = ExpressionInfo.Lambda(
+            //    ExpressionInfo.Call(GetType().GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(GetS)),
+            //        ExpressionInfo.Lambda(aParam)),
+            //    aParam);
+
+            var f = ExpressionCompiler.TryCompile<Func<Action<string>>>(expr);
+
+            f()("a");
+            Assert.AreEqual("a", s.Value);
+        }
+
+        public class S
+        {
+            public string Value;
+
+            public void SetValue(string s)
+            {
+                Value = s;
+            }
+        }
     }
 }

@@ -68,7 +68,8 @@ namespace FastExpressionCompiler
             return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type);
         }
 
-        private static Type[] GetParamExprTypes(IList<ParameterExpression> paramExprs)
+        /// <summary>Performant method to get parameter types from parameter expressions.</summary>
+        public static Type[] GetParamExprTypes(IList<ParameterExpression> paramExprs)
         {
             var paramsCount = paramExprs.Count;
             if (paramsCount == 0)
@@ -184,12 +185,8 @@ namespace FastExpressionCompiler
             if (!TryEmit(methodWithClosure, bodyExpr, paramExprs, closureInfo))
                 return null;
 
-            if (isNestedLambda)
-            {
-                // Add the closure to delegate type
-                delegateType = GetDelegateType(closureAndParamTypes, returnType);
-                return methodWithClosure.CreateDelegate(delegateType);
-            }
+            if (isNestedLambda) // include closure as the first parameter, BUT don't bound to it. It will be bound later in EmitNestedLambda.
+                return methodWithClosure.CreateDelegate(GetFuncOrActionType(closureAndParamTypes, returnType));
 
             return methodWithClosure.CreateDelegate(delegateType, closureObject);
         }
@@ -313,11 +310,11 @@ namespace FastExpressionCompiler
                     NonPassedParameters = NonPassedParameters.Append(expr);
             }
 
-            public void AddNestedLambda(Expression lambdaExpr, object lambda, ClosureInfo closureInfo)
+            public void AddNestedLambda(object lambdaExpr, object lambda, ClosureInfo closureInfo, bool isAction)
             {
                 if (NestedLambdas.Length == 0 ||
                     NestedLambdas.IndexOf(it => it.LambdaExpr == lambdaExpr) == -1)
-                    NestedLambdas = NestedLambdas.Append(new NestedLambdaInfo(lambdaExpr, lambda, closureInfo));
+                    NestedLambdas = NestedLambdas.Append(new NestedLambdaInfo(closureInfo, lambdaExpr, lambda, isAction));
             }
 
             public void AddNestedLambda(NestedLambdaInfo info)
@@ -691,30 +688,46 @@ namespace FastExpressionCompiler
 
         private struct NestedLambdaInfo
         {
-            public object LambdaExpr; // to find the lambda in bigger parent expression
-            public object Lambda;
             public ClosureInfo ClosureInfo;
 
-            public NestedLambdaInfo(object lambdaExpr, object lambda, ClosureInfo closureInfo)
+            public object LambdaExpr; // to find the lambda in bigger parent expression
+            public object Lambda;
+            public bool IsAction;
+
+            public NestedLambdaInfo(ClosureInfo closureInfo, object lambdaExpr, object lambda, bool isAction)
             {
+                ClosureInfo = closureInfo;
                 Lambda = lambda;
                 LambdaExpr = lambdaExpr;
-                ClosureInfo = closureInfo;
+                IsAction = isAction;
             }
         }
 
-        internal static readonly MethodInfo[] CurryClosureMethods =
-            typeof(ExpressionCompiler).GetTypeInfo().DeclaredMethods.Where(m => m.Name == "CurryClosure").ToArray();
+        internal static readonly MethodInfo[] CurryClosureFuncMethods =
+            typeof(ExpressionCompiler).GetTypeInfo().DeclaredMethods.Where(m => m.Name == "CurryFunc").ToArray();
 
-        internal static Func<R> CurryClosure<C, R>(Func<C, R> f, C c) { return () => f(c); }
-        internal static Func<T1, R> CurryClosure<C, T1, R>(Func<C, T1, R> f, C c) { return t1 => f(c, t1); }
-        internal static Func<T1, T2, R> CurryClosure<C, T1, T2, R>(Func<C, T1, T2, R> f, C c) { return (t1, t2) => f(c, t1, t2); }
-        internal static Func<T1, T2, T3, R> CurryClosure<C, T1, T2, T3, R>(Func<C, T1, T2, T3, R> f, C c) { return (t1, t2, t3) => f(c, t1, t2, t3); }
-        internal static Func<T1, T2, T3, T4, R> CurryClosure<C, T1, T2, T3, T4, R>(Func<C, T1, T2, T3, T4, R> f, C c) { return (t1, t2, t3, t4) => f(c, t1, t2, t3, t4); }
-        internal static Func<T1, T2, T3, T4, T5, R> CurryClosure<C, T1, T2, T3, T4, T5, R>(Func<C, T1, T2, T3, T4, T5, R> f, C c) { return (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5); }
-        internal static Func<T1, T2, T3, T4, T5, T6, R> CurryClosure<C, T1, T2, T3, T4, T5, T6, R>(Func<C, T1, T2, T3, T4, T5, T6, R> f, C c) { return (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6); }
-        internal static Func<T1, T2, T3, T4, T5, T6, T7, R> CurryClosure<C, T1, T2, T3, T4, T5, T6, T7, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, R> f, C c) { return (t1, t2, t3, t4, t5, t6, t7) => f(c, t1, t2, t3, t4, t5, t6, t7); }
-        internal static Func<T1, T2, T3, T4, T5, T6, T7, T8, R> CurryClosure<C, T1, T2, T3, T4, T5, T6, T7, T8, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, T8, R> f, C c) { return (t1, t2, t3, t4, t5, t6, t7, t8) => f(c, t1, t2, t3, t4, t5, t6, t7, t8); }
+        internal static Func<R> CurryFunc<C, R>(Func<C, R> f, C c) { return () => f(c); }
+        internal static Func<T1, R> CurryFunc<C, T1, R>(Func<C, T1, R> f, C c) { return t1 => f(c, t1); }
+        internal static Func<T1, T2, R> CurryFunc<C, T1, T2, R>(Func<C, T1, T2, R> f, C c) { return (t1, t2) => f(c, t1, t2); }
+        internal static Func<T1, T2, T3, R> CurryFunc<C, T1, T2, T3, R>(Func<C, T1, T2, T3, R> f, C c) { return (t1, t2, t3) => f(c, t1, t2, t3); }
+        internal static Func<T1, T2, T3, T4, R> CurryFunc<C, T1, T2, T3, T4, R>(Func<C, T1, T2, T3, T4, R> f, C c) { return (t1, t2, t3, t4) => f(c, t1, t2, t3, t4); }
+        internal static Func<T1, T2, T3, T4, T5, R> CurryFunc<C, T1, T2, T3, T4, T5, R>(Func<C, T1, T2, T3, T4, T5, R> f, C c) { return (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5); }
+        internal static Func<T1, T2, T3, T4, T5, T6, R> CurryFunc<C, T1, T2, T3, T4, T5, T6, R>(Func<C, T1, T2, T3, T4, T5, T6, R> f, C c) { return (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6); }
+        internal static Func<T1, T2, T3, T4, T5, T6, T7, R> CurryFunc<C, T1, T2, T3, T4, T5, T6, T7, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, R> f, C c) { return (t1, t2, t3, t4, t5, t6, t7) => f(c, t1, t2, t3, t4, t5, t6, t7); }
+        internal static Func<T1, T2, T3, T4, T5, T6, T7, T8, R> CurryFunc<C, T1, T2, T3, T4, T5, T6, T7, T8, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, T8, R> f, C c) { return (t1, t2, t3, t4, t5, t6, t7, t8) => f(c, t1, t2, t3, t4, t5, t6, t7, t8); }
+
+        internal static readonly MethodInfo[] CurryClosureActionMethods =
+            typeof(ExpressionCompiler).GetTypeInfo().DeclaredMethods.Where(m => m.Name == "CurryAction").ToArray();
+
+        internal static Action CurryAction<C>(Action<C> a, C c) { return () => a(c); }
+        internal static Action<T1> CurryAction<C, T1>(Action<C, T1> f, C c) { return t1 => f(c, t1); }
+        internal static Action<T1, T2> CurryAction<C, T1, T2>(Action<C, T1, T2> f, C c) { return (t1, t2) => f(c, t1, t2); }
+        internal static Action<T1, T2, T3> CurryAction<C, T1, T2, T3>(Action<C, T1, T2, T3> f, C c) { return (t1, t2, t3) => f(c, t1, t2, t3); }
+        internal static Action<T1, T2, T3, T4> CurryAction<C, T1, T2, T3, T4>(Action<C, T1, T2, T3, T4> f, C c) { return (t1, t2, t3, t4) => f(c, t1, t2, t3, t4); }
+        internal static Action<T1, T2, T3, T4, T5> CurryAction<C, T1, T2, T3, T4, T5>(Action<C, T1, T2, T3, T4, T5> f, C c) { return (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5); }
+        internal static Action<T1, T2, T3, T4, T5, T6> CurryAction<C, T1, T2, T3, T4, T5, T6>(Action<C, T1, T2, T3, T4, T5, T6> f, C c) { return (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6); }
+        internal static Action<T1, T2, T3, T4, T5, T6, T7> CurryAction<C, T1, T2, T3, T4, T5, T6, T7>(Action<C, T1, T2, T3, T4, T5, T6, T7> f, C c) { return (t1, t2, t3, t4, t5, t6, t7) => f(c, t1, t2, t3, t4, t5, t6, t7); }
+        internal static Action<T1, T2, T3, T4, T5, T6, T7, T8> CurryAction<C, T1, T2, T3, T4, T5, T6, T7, T8>(Action<C, T1, T2, T3, T4, T5, T6, T7, T8> f, C c) { return (t1, t2, t3, t4, t5, t6, t7, t8) => f(c, t1, t2, t3, t4, t5, t6, t7, t8); }
 
         #endregion
 
@@ -752,7 +765,8 @@ namespace FastExpressionCompiler
                 case ExpressionType.Parameter:
                     // if parameter is used But no passed (not in parameter expressions)
                     // it means parameter is provided by outer lambda and should be put in closure for current lambda
-                    var paramExpr = (ParameterExpression)expr;
+                    var exprInfo = expr as ParameterExpressionInfo;
+                    var paramExpr = exprInfo ?? (ParameterExpression)expr;
                     if (paramExprs.IndexOf(paramExpr) == -1)
                         (closure ?? (closure = new ClosureInfo())).AddNonPassedParam(paramExpr);
                     break;
@@ -811,21 +825,35 @@ namespace FastExpressionCompiler
                     // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
                     // 3. Add the compiled lambda to closure of outer lambda for later invocation
 
-                    var lambdaExpr = (LambdaExpression)expr;
-                    var lambdaParamExprs = lambdaExpr.Parameters;
-                    var paramTypes = GetParamExprTypes(lambdaParamExprs);
-
+                    object lambda;
+                    Type lambdaReturnType;
                     ClosureInfo nestedClosure = null;
-                    var lambda = TryCompile(ref nestedClosure,
-                        lambdaExpr.Type, paramTypes, lambdaExpr.Body.Type,
-                        lambdaExpr.Body, lambdaParamExprs,
-                        isNestedLambda: true);
+
+                    var lambdaExprInfo = expr as LambdaExpressionInfo;
+                    if (lambdaExprInfo != null)
+                    {
+                        var lambdaParamExprs = lambdaExprInfo.Parameters;
+                        lambdaReturnType = lambdaExprInfo.Body.Type;
+                        lambda = TryCompile(ref nestedClosure,
+                            lambdaExprInfo.Type, GetParamExprTypes(lambdaParamExprs), lambdaReturnType,
+                            lambdaExprInfo.Body, lambdaParamExprs, isNestedLambda: true);
+                    }
+                    else
+                    {
+                        var lambdaExpr = (LambdaExpression)expr;
+                        var lambdaParamExprs = lambdaExpr.Parameters;
+                        lambdaReturnType = lambdaExpr.Body.Type;
+                        lambda = TryCompile(ref nestedClosure,
+                            lambdaExpr.Type, GetParamExprTypes(lambdaParamExprs), lambdaReturnType,
+                            lambdaExpr.Body, lambdaParamExprs, isNestedLambda: true);
+                    }
 
                     if (lambda == null)
                         return false;
 
                     // add the nested lambda into closure
-                    (closure ?? (closure = new ClosureInfo())).AddNestedLambda(lambdaExpr, lambda, nestedClosure);
+                    (closure ?? (closure = new ClosureInfo()))
+                        .AddNestedLambda(expr, lambda, nestedClosure, isAction: lambdaReturnType == typeof(void));
 
                     if (nestedClosure == null)
                         break;
@@ -898,7 +926,8 @@ namespace FastExpressionCompiler
             return true;
         }
 
-        private static Type GetDelegateType(Type[] paramTypes, Type returnType)
+        /// <summary>Construct delegate type (Func or Action) from given input and return parameter types.</summary>
+        public static Type GetFuncOrActionType(Type[] paramTypes, Type returnType)
         {
             if (returnType == typeof(void))
             {
@@ -953,7 +982,8 @@ namespace FastExpressionCompiler
                 switch (e.NodeType)
                 {
                     case ExpressionType.Parameter:
-                        return EmitParameter((ParameterExpression)expr, paramExprs, il, closure);
+                        var pInfo = expr as ParameterExpressionInfo; 
+                        return EmitParameter(pInfo != null ? pInfo.ParamExpr : (ParameterExpression)expr, paramExprs, il, closure);
                     case ExpressionType.Convert:
                         return EmitConvert((UnaryExpression)expr, paramExprs, il, closure);
                     case ExpressionType.ArrayIndex:
@@ -971,7 +1001,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.MemberInit:
                         return EmitMemberInit((MemberInitExpression)expr, paramExprs, il, closure);
                     case ExpressionType.Lambda:
-                        return EmitNestedLambda((LambdaExpression)expr, paramExprs, il, closure);
+                        return EmitNestedLambda(expr, paramExprs, il, closure);
 
                     case ExpressionType.Invoke:
                         return EmitInvokeLambda((InvocationExpression)expr, paramExprs, il, closure);
@@ -1326,7 +1356,7 @@ namespace FastExpressionCompiler
                             .DeclaredMethods.FirstOrDefault(m => m.Name == propSetMethodName);
                         if (setMethod == null)
                             return false;
-                        EmitMethodCall(setMethod, il);
+                        EmitMethodCall(il, setMethod);
                     }
                     else
                     {
@@ -1372,7 +1402,7 @@ namespace FastExpressionCompiler
                 }
 
                 var method = exprInfo != null ? exprInfo.Method : ((MethodCallExpression)exprObj).Method;
-                EmitMethodCall(method, il);
+                EmitMethodCall(il, method);
                 return true;
             }
 
@@ -1424,12 +1454,13 @@ namespace FastExpressionCompiler
                         .DeclaredMethods.FirstOrDefault(m => m.Name == propGetMethodName);
                     if (getMethod == null)
                         return false;
-                    EmitMethodCall(getMethod, il);
+                    EmitMethodCall(il, getMethod);
                 }
                 return true;
             }
 
-            private static bool EmitNestedLambda(LambdaExpression lambdaExpr, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            private static bool EmitNestedLambda(object lambdaExpr, 
+                IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
                 // First, find in closed compiled lambdas the one corresponding to the current lambda expression.
                 // Situation with not found lambda is not possible/exceptional,
@@ -1561,18 +1592,21 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
-                    // todo: May be exist a faster way to find a constructor Or replace this with CreateClosure method
                     // Create nested closure object composed of all constants, params, lambdas loaded on stack
                     var closureCtor = nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.First();
                     il.Emit(OpCodes.Newobj, closureCtor);
                 }
 
-                // todo: Replace GenericTypeArguments with something crossplatform
-                // Bind or remove the closure object from nested lambda signature
-                EmitMethodCall(CurryClosureMethods[lambdaExpr.Parameters.Count]
-                    .MakeGenericMethod(nestedLambda.GetType().GenericTypeArguments), il);
-
+                EmitMethodCall(il, GetCurryClosureMethod(nestedLambda, nestedLambdaInfo.IsAction));
                 return true;
+            }
+
+            private static MethodInfo GetCurryClosureMethod(object lambda, bool isAction)
+            {
+                var lambdaTypeArgs = lambda.GetType().GetTypeInfo().GenericTypeArguments;
+                return isAction 
+                    ? CurryClosureActionMethods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs) 
+                    : CurryClosureFuncMethods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
             }
 
             private static bool EmitInvokeLambda(InvocationExpression e, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
@@ -1582,7 +1616,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 var invokeMethod = e.Expression.Type.GetTypeInfo().DeclaredMethods.First(m => m.Name == "Invoke");
-                EmitMethodCall(invokeMethod, il);
+                EmitMethodCall(il, invokeMethod);
                 return true;
             }
 
@@ -1666,7 +1700,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static void EmitMethodCall(MethodInfo method, ILGenerator il)
+            private static void EmitMethodCall(ILGenerator il, MethodInfo method)
             {
                 il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
             }
@@ -1722,6 +1756,12 @@ namespace FastExpressionCompiler
         /// <summary>All expressions should have a Type.</summary>
         public abstract Type Type { get; }
 
+        /// <summary>Allow to change parameter expression as info interchangeable.</summary>
+        public static implicit operator ExpressionInfo(ParameterExpression paramExpr)
+        {
+            return new ParameterExpressionInfo(paramExpr);
+        }
+
         /// <summary>Analog of Expression.Constant</summary>
         public static ConstantExpressionInfo Constant(object value, Type type = null)
         {
@@ -1759,10 +1799,50 @@ namespace FastExpressionCompiler
             return new PropertyExpressionInfo(instance, property);
         }
 
+        /// <summary>Static field</summary>
+        public static FieldExpressionInfo Field(FieldInfo field)
+        {
+            return new FieldExpressionInfo(null, field);
+        }
+
+        /// <summary>Instance field</summary>
+        public static FieldExpressionInfo Property(ExpressionInfo instance, FieldInfo field)
+        {
+            return new FieldExpressionInfo(instance, field);
+        }
+
         /// <summary>Analog of Expression.Lambda</summary>
         public static LambdaExpressionInfo Lambda(ExpressionInfo body, params ParameterExpression[] parameters)
         {
             return new LambdaExpressionInfo(body, parameters);
+        }
+    }
+
+    /// <summary>Wraps ParameterExpression and just it.</summary>
+    public class ParameterExpressionInfo : ExpressionInfo
+    {
+        /// <summary>Wrapped parameter expression.</summary>
+        public ParameterExpression ParamExpr { get; }
+
+        /// <summary>Allow to change parameter expression as info interchangeable.</summary>
+        public static implicit operator ParameterExpression(ParameterExpressionInfo info)
+        {
+            return info.ParamExpr;
+        }
+
+        /// <inheritdoc />
+        public override ExpressionType NodeType { get { return ExpressionType.Parameter; } }
+
+        /// <inheritdoc />
+        public override Type Type { get { return ParamExpr.Type; } }
+
+        /// <summary>Optional name.</summary>
+        public string Name { get { return ParamExpr.Name; } }
+
+        /// <summary>Constructor</summary>
+        public ParameterExpressionInfo(ParameterExpression paramExpr)
+        {
+            ParamExpr = paramExpr;
         }
     }
 
@@ -1873,6 +1953,17 @@ namespace FastExpressionCompiler
             : base(instance, property) { }
     }
 
+    /// <summary>Analog of PropertyExpression</summary>
+    public class FieldExpressionInfo : MemberExpressionInfo
+    {
+        /// <inheritdoc />
+        public override Type Type { get { return ((FieldInfo)Member).FieldType; } }
+
+        /// <summary>Construct from field info</summary>
+        public FieldExpressionInfo(ExpressionInfo instance, FieldInfo field)
+            : base(instance, field) { }
+    }
+
     /// <summary>LambdaExpression</summary>
     public class LambdaExpressionInfo : ExpressionInfo
     {
@@ -1880,7 +1971,9 @@ namespace FastExpressionCompiler
         public override ExpressionType NodeType { get { return ExpressionType.Lambda; } }
 
         /// <inheritdoc />
-        public override Type Type { get { return Body.Type; } }
+        public override Type Type { get { return _type; } }
+
+        private readonly Type _type;
 
         /// <summary>Lambda body.</summary>
         public readonly ExpressionInfo Body;
@@ -1893,6 +1986,7 @@ namespace FastExpressionCompiler
         {
             Body = body;
             Parameters = parameters;
+            _type = ExpressionCompiler.GetFuncOrActionType(ExpressionCompiler.GetParamExprTypes(parameters), Body.Type);
         }
     }
 
