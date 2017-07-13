@@ -7,15 +7,6 @@ using BenchmarkDotNet.Attributes.Exporters;
 
 namespace FastExpressionCompiler.Benchmarks
 {
-    /// <summary>
-    /// Results:
-    ///                              Method |       Mean |    StdErr |    StdDev | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
-    ///------------------------------------ |----------- |---------- |---------- |------- |-------------- |------- |------- |---------- |
-    ///    CreateExpression_and_FastCompile | 14.0174 us | 0.0765 us | 0.2758 us |  11.28 |          0.25 | 0.6714 |      - |    2.2 kB |
-    ///CreateExpressionInfo_and_FastCompile |  6.5936 us | 0.0658 us | 0.2632 us |   5.31 |          0.21 | 0.7135 | 0.2223 |   1.49 kB |
-    ///                          ManualEmit |  5.7978 us | 0.0747 us | 0.2893 us |   4.67 |          0.23 | 0.7100 | 0.2625 |   1.38 kB |
-    ///             ActivatorCreateInstance |  1.2429 us | 0.0041 us | 0.0149 us |   1.00 |          0.00 | 0.2698 |      - |     504 B |
-    /// </summary>
     [MemoryDiagnoser, MarkdownExporter]
     public class CreateExprCompile_vs_CreateExprInfoCompile
     {
