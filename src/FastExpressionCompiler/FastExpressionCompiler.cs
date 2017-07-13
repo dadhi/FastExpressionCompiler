@@ -42,7 +42,7 @@ namespace FastExpressionCompiler
         public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr)
         {
             return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, Empty<Type>(), typeof(T))
-                   ?? lambdaExpr.Compile();
+                ?? lambdaExpr.Compile();
         }
 
         /// <summary>Compiles lambda expression to <typeparamref name="TDelegate"/>.</summary>
@@ -283,10 +283,11 @@ namespace FastExpressionCompiler
             // Field infos are needed to load field of closure object on stack in emitter
             // It is also an indicator that we use typed Closure object and not an array
             public FieldInfo[] Fields { get; private set; }
-            public bool IsArray { get { return Fields == null; } }
 
+            // Type of constructed closure, is known after ConstructClosure call
             public Type ClosureType { get; private set; }
 
+            // Known after ConstructClosure call
             public int ClosedItemCount { get; private set; }
 
             public void AddConstant(object expr, object value, Type type)
@@ -335,11 +336,11 @@ namespace FastExpressionCompiler
 
                 ClosedItemCount = totalItemCount;
 
-                var typedClosureCreateMethods = Closure.CreateMethods;
+                var closureCreateMethods = Closure.CreateMethods;
 
-                // Construct the array base closure when number of values is bigger than
-                // number of fields in biggest Closure class
-                if (totalItemCount > typedClosureCreateMethods.Length)
+                // Construct the array based closure when number of values is bigger than
+                // number of fields in biggest supported Closure class.
+                if (totalItemCount > closureCreateMethods.Length)
                 {
                     ClosureType = typeof(ArrayClosure);
 
@@ -402,7 +403,7 @@ namespace FastExpressionCompiler
                         }
                 }
 
-                var createClosureMethod = typedClosureCreateMethods[totalItemCount - 1];
+                var createClosureMethod = closureCreateMethods[totalItemCount - 1];
                 var createClosure = createClosureMethod.MakeGenericMethod(fieldTypes);
                 ClosureType = createClosure.ReturnType;
 
@@ -1053,12 +1054,18 @@ namespace FastExpressionCompiler
                 if (closure == null)
                     return false;
 
-                var usedParamIndex = closure.NonPassedParameters.IndexOf(it => it == p);
-                if (usedParamIndex == -1)
+                var nonPassedParamIndex = closure.NonPassedParameters.IndexOf(it => it == p);
+                if (nonPassedParamIndex == -1)
                     return false;  // what??? no chance
 
-                var closureItemIndex = usedParamIndex + closure.Constants.Length;
-                LoadClosureFieldOrArrayItem(il, closure, closureItemIndex, p.Type);
+                var closureItemIndex = closure.Constants.Length + nonPassedParamIndex;
+
+                il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
+                if (closure.Fields != null)
+                    il.Emit(OpCodes.Ldfld, closure.Fields[closureItemIndex]);
+                else
+                    LoadArrayClosureItem(il, closureItemIndex, p.Type);
+
                 return true;
             }
 
@@ -1227,7 +1234,12 @@ namespace FastExpressionCompiler
                     var constantIndex = closure.Constants.IndexOf(it => it.ConstantExpr == expr);
                     if (constantIndex == -1)
                         return false;
-                    LoadClosureFieldOrArrayItem(il, closure, constantIndex, e.Type);
+
+                    il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
+                    if (closure.Fields != null)
+                        il.Emit(OpCodes.Ldfld, closure.Fields[constantIndex]);
+                    else 
+                        LoadArrayClosureItem(il, constantIndex, e.Type);
 
                 }
                 else return false;
@@ -1241,20 +1253,9 @@ namespace FastExpressionCompiler
 
             // The @skipCastOrUnboxing option is for use-case when we loading and immediately storing the item, 
             // it may happen when copying from one object array to another.
-            private static void LoadClosureFieldOrArrayItem(ILGenerator il,
-                ClosureInfo closure, int closedItemIndex, Type closedItemType = null)
+            private static void LoadArrayClosureItem(ILGenerator il, int closedItemIndex, 
+                Type closedItemType = null)
             {
-                // Load closure argument: typed or array-based.
-                // Closure will always be a first argument.
-                il.Emit(OpCodes.Ldarg_0);
-
-                if (!closure.IsArray)
-                {
-                    // load closure field
-                    il.Emit(OpCodes.Ldfld, closure.Fields[closedItemIndex]);
-                    return;
-                }
-
                 // load array field
                 il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField);
 
@@ -1486,7 +1487,12 @@ namespace FastExpressionCompiler
 
                 // Load compiled lambda on stack counting the offset
                 outerNestedLambdaIndex += outerConstants.Length + outerNonPassedParams.Length;
-                LoadClosureFieldOrArrayItem(il, closure, outerNestedLambdaIndex, nestedLambda.GetType());
+
+                il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
+                if (closure.Fields != null)
+                    il.Emit(OpCodes.Ldfld, closure.Fields[outerNestedLambdaIndex]);
+                else
+                    LoadArrayClosureItem(il, outerNestedLambdaIndex, nestedLambda.GetType());
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
                 var nestedClosureInfo = nestedLambdaInfo.ClosureInfo;
@@ -1494,7 +1500,7 @@ namespace FastExpressionCompiler
                     return true;
 
                 // If closure is array-based, the create a new array to represent closure for the nested lambda
-                var isNestedArrayClosure = nestedClosureInfo.IsArray;
+                var isNestedArrayClosure = nestedClosureInfo.Fields == null;
                 if (isNestedArrayClosure)
                 {
                     EmitLoadConstantInt(il, nestedClosureInfo.ClosedItemCount); // size of array
@@ -1521,8 +1527,12 @@ namespace FastExpressionCompiler
                             EmitLoadConstantInt(il, nestedConstIndex);
                         }
 
-                        LoadClosureFieldOrArrayItem(il, closure, outerConstIndex,
-                            isNestedArrayClosure ? null : nestedConstant.Type);
+                        il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
+                        if (closure.Fields != null)
+                            il.Emit(OpCodes.Ldfld, closure.Fields[outerConstIndex]);
+                        else
+                            LoadArrayClosureItem(il, outerConstIndex,
+                                isNestedArrayClosure ? null : nestedConstant.Type);
 
                         if (isNestedArrayClosure)
                             il.Emit(OpCodes.Stelem_Ref); // store the item in array
@@ -1557,8 +1567,12 @@ namespace FastExpressionCompiler
                         if (outerParamIndex == -1)
                             return false; // impossible, better to throw?
 
-                        LoadClosureFieldOrArrayItem(il, closure, outerConstants.Length + outerParamIndex,
-                            isNestedArrayClosure ? null : nestedUsedParam.Type);
+                        il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
+                        if (closure.Fields != null)
+                            il.Emit(OpCodes.Ldfld, closure.Fields[outerConstants.Length + outerParamIndex]);
+                        else
+                            LoadArrayClosureItem(il, outerConstants.Length + outerParamIndex,
+                                isNestedArrayClosure ? null : nestedUsedParam.Type);
                     }
 
                     if (isNestedArrayClosure)
@@ -1586,8 +1600,13 @@ namespace FastExpressionCompiler
                         }
 
                         outerLambdaIndex += outerConstants.Length + outerNonPassedParams.Length;
-                        LoadClosureFieldOrArrayItem(il, closure, outerLambdaIndex,
-                            isNestedArrayClosure ? null : nestedNestedLambda.GetType());
+
+                        il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
+                        if (closure.Fields != null)
+                            il.Emit(OpCodes.Ldfld, closure.Fields[outerLambdaIndex]);
+                        else
+                            LoadArrayClosureItem(il, outerLambdaIndex,
+                                isNestedArrayClosure ? null : nestedNestedLambda.GetType());
 
                         if (isNestedArrayClosure)
                             il.Emit(OpCodes.Stelem_Ref); // store the item in array

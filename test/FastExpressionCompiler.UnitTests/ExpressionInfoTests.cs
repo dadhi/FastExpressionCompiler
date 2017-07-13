@@ -91,17 +91,20 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Nested_Action_using_constant_and_outer_parameter()
+        public void Nested_Action_using_outer_parameter_and_closed_value()
         {
-            // The same hoisted expression: 
             var s = new S();
-            Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
+            //Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
 
-            //var aParam = Expression.Parameter(typeof(string), "a");
-            //var expr = ExpressionInfo.Lambda(
-            //    ExpressionInfo.Call(GetType().GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(GetS)),
-            //        ExpressionInfo.Lambda(aParam)),
-            //    aParam);
+            var aParam = Expression.Parameter(typeof(string), "a");
+            var expr = ExpressionInfo.Lambda(
+                ExpressionInfo.Lambda(
+                    ExpressionInfo.Call(
+                        ExpressionInfo.Constant(s),
+                        typeof(S).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(S.SetValue)),
+                        aParam),
+                    aParam)
+                );
 
             var f = ExpressionCompiler.TryCompile<Func<Action<string>>>(expr);
 

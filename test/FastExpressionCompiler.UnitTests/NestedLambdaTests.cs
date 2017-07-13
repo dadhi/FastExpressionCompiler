@@ -27,7 +27,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Nested_Hoisted_lambda_using_outer_parameter()
+        public void Nested_Hoisted_Func_using_outer_parameter()
         {
             Expression<Func<string, string>> expr = a => GetS(() => a);
 
@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Nested_Hoisted_lambda_using_outer_parameter_and_closed_value()
+        public void Nested_Hoisted_Func_using_outer_parameter_and_closed_value()
         {
             var b = new S { Value = "b" };
 
@@ -69,6 +69,19 @@ namespace FastExpressionCompiler.UnitTests
             var f = ExpressionCompiler.TryCompile<Func<string, string>>(expr);
 
             Assert.AreEqual("ba", f("a"));
+        }
+
+        [Test]
+        public void Nested_Hoisted_Action_using_outer_parameter_and_closed_value()
+        {
+            // The same hoisted expression: 
+            var s = new S();
+            Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
+
+            var f = ExpressionCompiler.TryCompile<Func<Action<string>>>(expr);
+
+            f()("a");
+            Assert.AreEqual("a", s.Value);
         }
 
         [Test]
@@ -133,6 +146,11 @@ namespace FastExpressionCompiler.UnitTests
             public string Prepend(string s, Func<string, string> restTransform)
             {
                 return s + restTransform(Value);
+            }
+
+            public void SetValue(string s)
+            {
+                Value = s;
             }
         }
 
