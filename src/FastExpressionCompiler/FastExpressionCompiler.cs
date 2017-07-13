@@ -2013,10 +2013,10 @@ namespace FastExpressionCompiler
         }
     }
 
-    /// <summary>Typedclambda expression.</summary>
+    /// <summary>Typed lambda expression.</summary>
     public sealed class ExpressionInfo<TDelegate> : LambdaExpressionInfo
     {
-        /// <summary>Tyoe of lambda</summary>
+        /// <summary>Type of lambda</summary>
         public Type DelegateType { get { return typeof(TDelegate); } }
 
         /// <summary>Constructor</summary>

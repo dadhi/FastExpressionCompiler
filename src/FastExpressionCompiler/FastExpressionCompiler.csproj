@@ -1,16 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.0.1</VersionPrefix>
+    <VersionPrefix>1.1.0</VersionPrefix>
     <TargetFrameworks>netstandard1.3;net452</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>FastExpressionCompiler</AssemblyName>
     <PackageId>FastExpressionCompiler</PackageId>
-    <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
+    <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
-      fixed: #6: When number of items in closure greater than 10, unable to load closed parameter of value type; 
-      fixed: #7: InvalidCastException for enum constant of unsigned type;
+      fixed (!!!): #9: Race condition in nested lambda expression with closure
+      fixed: #5: Use lightweight replacement for Expression to improve performance of manually created expression
     </PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
     <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
