@@ -1122,8 +1122,24 @@ namespace FastExpressionCompiler
                     return false;
 
                 var targetType = e.Type;
+                var sourceType = e.Operand.Type;
+                if (targetType == sourceType)
+                    return true; // do nothing, no conversion is needed
+
                 if (targetType == typeof(object))
-                    return false;
+                {
+                    if (sourceType.GetTypeInfo().IsValueType)
+                        il.Emit(OpCodes.Box, sourceType); // for valuy type to object, just box a value
+                    return true; // for reference type we don't need to convert
+                }
+
+                // Just unbox type object to the target value type
+                if (targetType.GetTypeInfo().IsValueType &&
+                    sourceType == typeof(object))
+                {
+                    il.Emit(OpCodes.Unbox_Any, targetType);
+                    return true;
+                }
 
                 if (targetType == typeof(int))
                     il.Emit(OpCodes.Conv_I4);
