@@ -6,7 +6,8 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<CreateExpVsCreateExprInfo_NestedLambda>();
+            BenchmarkRunner.Run<CreateExpVsCreateExprInfo_ComplexExpr>();
+            //BenchmarkRunner.Run<CreateExpVsCreateExprInfo_NestedLambda>();
             //BenchmarkRunner.Run<CreateExprCompile_vs_CreateExprInfoCompile>();
 
             //BenchmarkRunner.Run<ExpressionVsExpressionInfo>();
