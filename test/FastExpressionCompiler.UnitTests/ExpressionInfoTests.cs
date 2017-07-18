@@ -123,16 +123,18 @@ namespace FastExpressionCompiler.UnitTests
             }
         }
 
-        [Test]
-        public void Can_compile_complex_expr_with_Array_Properties_and_Casts()
-        {
-            // TODO:   
-        }
-
         // Result delegate to be created by CreateComplexExpression
         public object CreateA(object[] state)
         {
-            return new A(new B(), (string)state[11], new ID[] { new D1(), new D2() }) { Prop = new P(new B()), Bop = new B() };
+            return new A(
+                new B(), 
+                (string)state[11], 
+                new ID[] { new D1(), new D2() }
+            )
+            {
+                Prop = new P(new B()),
+                Bop = new B()
+            };
         }
 
         private static ConstructorInfo _ctorOfA = typeof(A).GetTypeInfo().DeclaredConstructors.First();
@@ -142,7 +144,6 @@ namespace FastExpressionCompiler.UnitTests
         private static ConstructorInfo _ctorOfD2 = typeof(D2).GetTypeInfo().DeclaredConstructors.First();
         private static PropertyInfo _propAProp = typeof(A).GetTypeInfo().DeclaredProperties.First(p => p.Name == "Prop");
         private static FieldInfo _fieldABop = typeof(A).GetTypeInfo().DeclaredFields.First(p => p.Name == "Bop");
-
 
         public static Expression<Func<object[], object>> CreateComplexExpression()
         {
@@ -164,6 +165,36 @@ namespace FastExpressionCompiler.UnitTests
                 stateParamExpr);
 
             return funcExpr;
+        }
+
+        public static ExpressionInfo<Func<object[], object>> CreateComplexExpressionInfo()
+        {
+            var stateParamExpr = Expression.Parameter(typeof(object[]));
+
+            var expr = ExpressionInfo.Lambda<Func<object[], object>>(
+                ExpressionInfo.MemberInit(
+                    ExpressionInfo.New(_ctorOfA,
+                        ExpressionInfo.New(_ctorOfB),
+                        ExpressionInfo.Convert(
+                            ExpressionInfo.ArrayIndex(stateParamExpr, ExpressionInfo.Constant(11)), 
+                            typeof(string)),
+                        ExpressionInfo.NewArrayInit(typeof(ID[]),
+                            ExpressionInfo.New(_ctorOfD1),
+                            ExpressionInfo.New(_ctorOfD2))),
+                    ExpressionInfo.Bind(_propAProp,
+                        ExpressionInfo.New(_ctorOfP,
+                            ExpressionInfo.New(_ctorOfB))),
+                    ExpressionInfo.Bind(_fieldABop,
+                        ExpressionInfo.New(_ctorOfB))),
+                stateParamExpr);
+
+            return expr;
+        }
+
+        [Test]
+        public void Can_compile_complex_expr_with_Array_Properties_and_Casts()
+        {
+            var expr = CreateComplexExpressionInfo();
         }
 
         public class A

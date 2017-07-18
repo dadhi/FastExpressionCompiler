@@ -1254,7 +1254,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
                     if (closure.Fields != null)
                         il.Emit(OpCodes.Ldfld, closure.Fields[constantIndex]);
-                    else 
+                    else
                         LoadArrayClosureItem(il, constantIndex, e.Type);
 
                 }
@@ -1269,7 +1269,7 @@ namespace FastExpressionCompiler
 
             // The @skipCastOrUnboxing option is for use-case when we loading and immediately storing the item, 
             // it may happen when copying from one object array to another.
-            private static void LoadArrayClosureItem(ILGenerator il, int closedItemIndex, 
+            private static void LoadArrayClosureItem(ILGenerator il, int closedItemIndex,
                 Type closedItemType = null)
             {
                 // load array field
@@ -1855,6 +1855,121 @@ namespace FastExpressionCompiler
         {
             return new LambdaExpressionInfo(body, parameters);
         }
+
+        /// <summary>Analog of Expression.Convert</summary>
+        public static UnaryExpressionInfo Convert(ExpressionInfo operand, Type targetType)
+        {
+            return new UnaryExpressionInfo(ExpressionType.Convert, operand, targetType);
+        }
+
+        /// <summary>Analog of Expression.Lambda</summary>
+        public static ExpressionInfo<TDelegate> Lambda<TDelegate>(ExpressionInfo body, params ParameterExpression[] parameters)
+        {
+            return new ExpressionInfo<TDelegate>(body, parameters);
+        }
+
+        /// <summary>Analog of Expression.ArrayIdex</summary>
+        public static BinaryExpressionInfo ArrayIndex(ExpressionInfo array, ExpressionInfo index)
+        {
+            return new BinaryExpressionInfo(ExpressionType.ArrayIndex, array, index, array.Type.GetElementType());
+        }
+
+        /// <summary>Expression.Bind used in Expression.MemberInit</summary>
+        public static MemberAssignmentInfo Bind(MemberInfo member, ExpressionInfo expression)
+        {
+            return new MemberAssignmentInfo(member, expression);
+        }
+
+        /// <summary>Analog of Expression.MemberInit</summary>
+        public static MemberInitExpressionInfo MemberInit(NewExpressionInfo newExpr, params MemberAssignmentInfo[] bindings)
+        {
+            return new MemberInitExpressionInfo(newExpr, bindings);
+        }
+
+        /// <summary>Constructs an array given the array type and item initializer expressions.</summary>
+        public static NewArrayExpressionInfo NewArrayInit(Type type, params ExpressionInfo[] initializers)
+        {
+            return new NewArrayExpressionInfo(type, initializers);
+        }
+    }
+
+    /// <summary>Analog of Convert expression.</summary>
+    public class UnaryExpressionInfo : ExpressionInfo
+    {
+        /// <inheritdoc />
+        public override ExpressionType NodeType { get { return _nodeType; } }
+
+        /// <summary>Target type.</summary>
+        public override Type Type { get { return _type; } }
+
+        /// <summary>Operand expression</summary>
+        public readonly ExpressionInfo Operand;
+
+        /// <summary>Constructor</summary>
+        public UnaryExpressionInfo(ExpressionType nodeType, ExpressionInfo operand, Type targetType)
+        {
+            _nodeType = nodeType;
+            Operand = operand;
+            _type = targetType;
+        }
+
+        private readonly Type _type;
+        private readonly ExpressionType _nodeType;
+    }
+
+
+    /// <summary>BinaryExpression analog.</summary>
+    public class BinaryExpressionInfo : ExpressionInfo
+    {
+        /// <inheritdoc />
+        public override ExpressionType NodeType
+        {
+            get { return _nodeType; }
+        }
+
+        /// <inheritdoc />
+        public override Type Type { get { return _type; } }
+
+        /// <summary>Left expression</summary>
+        public readonly ExpressionInfo Left;
+
+        /// <summary>Right expression</summary>
+        public readonly ExpressionInfo Right;
+
+        /// <summary>Constructs from left and right expressions.</summary>
+        public BinaryExpressionInfo(ExpressionType nodeType, ExpressionInfo left, ExpressionInfo right, Type type)
+        {
+            _nodeType = nodeType;
+            _type = type;
+            Left = left;
+            Right = right;
+        }
+
+        private readonly Type _type;
+        private readonly ExpressionType _nodeType;
+    }
+
+    /// <summary>Analog of MemberInitExpression</summary>
+    public class MemberInitExpressionInfo : ExpressionInfo
+    {
+        /// <inheritdoc />
+        public override ExpressionType NodeType { get { return ExpressionType.MemberInit; } }
+
+        /// <inheritdoc />
+        public override Type Type { get { return NewExpr.Type; } }
+
+        /// <summary>New expression.</summary>
+        public readonly NewExpressionInfo NewExpr;
+
+        /// <summary>Member assignments.</summary>
+        public readonly MemberAssignmentInfo[] Bindings;
+
+        /// <summary>Constructs out of new expression and member initialization list.</summary>
+        public MemberInitExpressionInfo(NewExpressionInfo newExpr, MemberAssignmentInfo[] bindings)
+        {
+            NewExpr = newExpr;
+            Bindings = bindings;
+        }
     }
 
     /// <summary>Wraps ParameterExpression and just it.</summary>
@@ -1937,6 +2052,24 @@ namespace FastExpressionCompiler
         }
     }
 
+    /// <summary>NewArrayExpression</summary>
+    public class NewArrayExpressionInfo : ArgumentsExpressionInfo
+    {
+        /// <inheritdoc />
+        public override ExpressionType NodeType { get { return ExpressionType.NewArrayInit; } }
+
+        /// <inheritdoc />
+        public override Type Type { get { return _type; } }
+
+        /// <summary>Array type and initializer</summary>
+        public NewArrayExpressionInfo(Type type, ExpressionInfo[] initializers) : base(initializers)
+        {
+            _type = type;
+        }
+
+        private readonly Type _type;
+    }
+
     /// <summary>Analog of MethodCallExpression</summary>
     public class MethodCallExpressionInfo : ArgumentsExpressionInfo
     {
@@ -2001,6 +2134,23 @@ namespace FastExpressionCompiler
         /// <summary>Construct from field info</summary>
         public FieldExpressionInfo(ExpressionInfo instance, FieldInfo field)
             : base(instance, field) { }
+    }
+
+    /// <summary>MemberAssignment analog.</summary>
+    public class MemberAssignmentInfo
+    {
+        /// <summary>Member to assign to.</summary>
+        public readonly MemberInfo Member;
+
+        /// <summary>Expression to assign</summary>
+        public readonly ExpressionInfo Expression;
+
+        /// <summary>Constructs out of member and expression to assign.</summary>
+        public MemberAssignmentInfo(MemberInfo member, ExpressionInfo expression)
+        {
+            Member = member;
+            Expression = expression;
+        }
     }
 
     /// <summary>LambdaExpression</summary>
