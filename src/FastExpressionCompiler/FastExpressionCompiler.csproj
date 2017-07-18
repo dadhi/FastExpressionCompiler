@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.1.0</VersionPrefix>
+    <VersionPrefix>1.1.1</VersionPrefix>
     <TargetFrameworks>netstandard1.3;net452</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -9,8 +9,8 @@
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
-      fixed (!!!): #9: Race condition in nested lambda expression with closure
-      fixed: #5: Use lightweight replacement for Expression to improve performance of manually created expression
+      actually fixed(!!!): #9: Race condition in nested lambda expression with closure
+      added: #5: Use lightweight replacement for Expression to improve performance of manually created expression
     </PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
     <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
