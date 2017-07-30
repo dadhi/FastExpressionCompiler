@@ -195,6 +195,7 @@ namespace FastExpressionCompiler.UnitTests
         public void Can_compile_complex_expr_with_Array_Properties_and_Casts()
         {
             var expr = CreateComplexExpressionInfo();
+            var func = ExpressionCompiler.TryCompile<Func<object[], object>>(expr);
         }
 
         public class A
