@@ -100,7 +100,8 @@ namespace FastExpressionCompiler
         {
             ClosureInfo ignored = null;
             return (TDelegate)TryCompile(ref ignored,
-                typeof(TDelegate), paramTypes, returnType, bodyExpr, paramExprs);
+                typeof(TDelegate), paramTypes, returnType,
+                bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramExprs);
         }
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
@@ -132,49 +133,21 @@ namespace FastExpressionCompiler
         {
             ClosureInfo ignored = null;
             return (TDelegate)TryCompile(ref ignored,
-                typeof(TDelegate), paramTypes, returnType, bodyExpr, paramExprs);
-        }
-
-        private struct Expr
-        {
-            public static implicit operator Expr(Expression expr)
-            {
-                return expr == null ? default(Expr) : new Expr(expr, expr.NodeType, expr.Type);
-            }
-
-            public static implicit operator Expr(ExpressionInfo expr)
-            {
-                return expr == null ? default(Expr) : new Expr(expr, expr.NodeType, expr.Type);
-            }
-
-            public object Expression;
-            public ExpressionType NodeType;
-            public Type Type;
-
-            private Expr(object expression, ExpressionType nodeType, Type type)
-            {
-                Expression = expression;
-                NodeType = nodeType;
-                Type = type;
-            }
+                typeof(TDelegate), paramTypes, returnType,
+                bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramExprs);
         }
 
         private static object TryCompile(ref ClosureInfo closureInfo,
             Type delegateType, Type[] paramTypes, Type returnType,
-            Expr bodyExpr, IList<ParameterExpression> paramExprs,
+            object exprObj, ExpressionType exprNodeType, Type exprType,
+            IList<ParameterExpression> paramExprs,
             bool isNestedLambda = false)
         {
-            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs))
+            if (!TryCollectBoundConstants(ref closureInfo, exprObj, exprNodeType, exprType, paramExprs))
                 return null;
 
             if (closureInfo == null)
-            {
-                var method = new DynamicMethod(string.Empty, returnType, paramTypes,
-                    typeof(ExpressionCompiler), skipVisibility: true);
-                if (!TryEmit(method, bodyExpr, paramExprs, closureInfo))
-                    return null;
-                return method.CreateDelegate(delegateType);
-            }
+                return TryCompileStaticDelegate(delegateType, paramTypes, returnType, exprObj, exprNodeType, exprType, paramExprs);
 
             var closureObject = closureInfo.ConstructClosure(closureTypeOnly: isNestedLambda);
             var closureAndParamTypes = GetClosureAndParamTypes(paramTypes, closureInfo.ClosureType);
@@ -182,21 +155,34 @@ namespace FastExpressionCompiler
             var methodWithClosure = new DynamicMethod(string.Empty, returnType, closureAndParamTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
 
-            if (!TryEmit(methodWithClosure, bodyExpr, paramExprs, closureInfo))
+            if (!TryEmit(methodWithClosure, exprObj, exprNodeType, exprType, paramExprs, closureInfo))
                 return null;
 
+            // todo: Use sugar TryCompileStaticDelegate?
             if (isNestedLambda) // include closure as the first parameter, BUT don't bound to it. It will be bound later in EmitNestedLambda.
                 return methodWithClosure.CreateDelegate(GetFuncOrActionType(closureAndParamTypes, returnType));
 
             return methodWithClosure.CreateDelegate(delegateType, closureObject);
         }
 
+        private static object TryCompileStaticDelegate(Type delegateType, Type[] paramTypes, Type returnType, object exprObj,
+            ExpressionType exprNodeType, Type exprType, IList<ParameterExpression> paramExprs)
+        {
+            var method = new DynamicMethod(string.Empty, returnType, paramTypes,
+                typeof(ExpressionCompiler), skipVisibility: true);
+
+            if (!TryEmit(method, exprObj, exprNodeType, exprType, paramExprs, null))
+                return null;
+
+            return method.CreateDelegate(delegateType);
+        }
+
         private static bool TryEmit(DynamicMethod method,
-            Expr bodyExpr, IList<ParameterExpression> paramExprs,
-            ClosureInfo closureInfo)
+            object exprObj, ExpressionType exprNodeType, Type exprType,
+            IList<ParameterExpression> paramExprs, ClosureInfo closureInfo)
         {
             var il = method.GetILGenerator();
-            if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, closureInfo))
+            if (!EmittingVisitor.TryEmit(exprObj, exprNodeType, exprType, paramExprs, il, closureInfo))
                 return false;
 
             il.Emit(OpCodes.Ret); // emits return from generated method
@@ -378,7 +364,7 @@ namespace FastExpressionCompiler
                 return createClosure.Invoke(null, fieldValues);
             }
         }
-        
+
         #region Closures
 
         internal static class Closure
@@ -719,20 +705,20 @@ namespace FastExpressionCompiler
         }
 
         // @paramExprs is required for nested lambda compilation
-        private static bool TryCollectBoundConstants(
-            ref ClosureInfo closure, Expr e, IList<ParameterExpression> paramExprs)
+        private static bool TryCollectBoundConstants(ref ClosureInfo closure,
+            object exprObj, ExpressionType exprNodeType, Type exprType,
+            IList<ParameterExpression> paramExprs)
         {
-            var exprObj = e.Expression;
             if (exprObj == null)
                 return false;
 
-            switch (e.NodeType)
+            switch (exprNodeType)
             {
                 case ExpressionType.Constant:
                     var constExprInfo = exprObj as ConstantExpressionInfo;
                     var value = constExprInfo != null ? constExprInfo.Value : ((ConstantExpression)exprObj).Value;
                     if (value is Delegate || IsBoundConstant(value))
-                        (closure ?? (closure = new ClosureInfo())).AddConstant(exprObj, value, e.Type);
+                        (closure ?? (closure = new ClosureInfo())).AddConstant(exprObj, value, exprType);
                     break;
 
                 case ExpressionType.Parameter:
@@ -745,26 +731,33 @@ namespace FastExpressionCompiler
                     break;
 
                 case ExpressionType.Call:
-                    var callExprInfo = exprObj as MethodCallExpressionInfo;
-                    if (callExprInfo != null)
-                        return (callExprInfo.Object == null
-                            || TryCollectBoundConstants(ref closure, callExprInfo.Object, paramExprs))
-                            && TryCollectBoundConstants(ref closure, callExprInfo.Arguments, paramExprs);
+                    var callInfo = exprObj as MethodCallExpressionInfo;
+                    if (callInfo != null)
+                    {
+                        var objInfo = callInfo.Object;
+                        return (objInfo == null
+                            || TryCollectBoundConstants(ref closure, objInfo, objInfo.NodeType, objInfo.Type, paramExprs))
+                            && TryCollectBoundConstants(ref closure, callInfo.Arguments, paramExprs);
+                    }
 
                     var callExpr = (MethodCallExpression)exprObj;
-                    return (callExpr.Object == null
-                        || TryCollectBoundConstants(ref closure, callExpr.Object, paramExprs))
+                    var objExpr = callExpr.Object;
+                    return (objExpr == null
+                        || TryCollectBoundConstants(ref closure, objExpr, objExpr.NodeType, objExpr.Type, paramExprs))
                         && TryCollectBoundConstants(ref closure, callExpr.Arguments, paramExprs);
 
                 case ExpressionType.MemberAccess:
                     var memberExprInfo = exprObj as MemberExpressionInfo;
                     if (memberExprInfo != null)
-                        return memberExprInfo.Expression == null
-                            || TryCollectBoundConstants(ref closure, memberExprInfo.Expression, paramExprs);
+                    {
+                        var maExprInfo = memberExprInfo.Expression;
+                        return maExprInfo == null
+                            || TryCollectBoundConstants(ref closure, maExprInfo, maExprInfo.NodeType, maExprInfo.Type, paramExprs);
+                    }
 
                     var memberExpr = ((MemberExpression)exprObj).Expression;
                     return memberExpr == null
-                        || TryCollectBoundConstants(ref closure, memberExpr, paramExprs);
+                        || TryCollectBoundConstants(ref closure, memberExpr, memberExpr.NodeType, memberExpr.Type, paramExprs);
 
                 case ExpressionType.New:
                     var newExprInfo = exprObj as NewExpressionInfo;
@@ -773,37 +766,43 @@ namespace FastExpressionCompiler
                         : TryCollectBoundConstants(ref closure, ((NewExpression)exprObj).Arguments, paramExprs);
 
                 case ExpressionType.NewArrayInit:
-                    var newArrayInitExprInfo = exprObj as NewArrayExpressionInfo;
-                    if (newArrayInitExprInfo != null)
-                        return TryCollectBoundConstants(ref closure, newArrayInitExprInfo.Arguments, paramExprs);
+                    var newArrayInitInfo = exprObj as NewArrayExpressionInfo;
+                    if (newArrayInitInfo != null)
+                        return TryCollectBoundConstants(ref closure, newArrayInitInfo.Arguments, paramExprs);
                     return TryCollectBoundConstants(ref closure, ((NewArrayExpression)exprObj).Expressions, paramExprs);
 
-                // property initializer
+                // property and field initializer
                 case ExpressionType.MemberInit:
 
                     var memberInitExprInfo = exprObj as MemberInitExpressionInfo;
                     if (memberInitExprInfo != null)
                     {
-                        if (!TryCollectBoundConstants(ref closure, memberInitExprInfo.NewExpressionInfo, paramExprs))
+                        var miNewInfo = memberInitExprInfo.NewExpressionInfo;
+                        if (!TryCollectBoundConstants(ref closure, miNewInfo, miNewInfo.NodeType, miNewInfo.Type, paramExprs))
                             return false;
 
                         var memberBindingInfos = memberInitExprInfo.Bindings;
                         for (var i = 0; i < memberBindingInfos.Length; i++)
-                            if (!TryCollectBoundConstants(ref closure, memberBindingInfos[i].Expression, paramExprs))
+                        {
+                            var maInfo = memberBindingInfos[i].Expression;
+                            if (!TryCollectBoundConstants(ref closure, maInfo, maInfo.NodeType, maInfo.Type, paramExprs))
                                 return false;
+                        }
                         return true;
                     }
                     else
                     {
                         var memberInitExpr = (MemberInitExpression)exprObj;
-                        if (!TryCollectBoundConstants(ref closure, memberInitExpr.NewExpression, paramExprs))
+                        var miNewExpr = memberInitExpr.NewExpression;
+                        if (!TryCollectBoundConstants(ref closure, miNewExpr, miNewExpr.NodeType, miNewExpr.Type, paramExprs))
                             return false;
                         var memberBindings = memberInitExpr.Bindings;
                         for (var i = 0; i < memberBindings.Count; ++i)
                         {
                             var memberBinding = memberBindings[i];
+                            var maExpr = ((MemberAssignment)memberBinding).Expression;
                             if (memberBinding.BindingType == MemberBindingType.Assignment &&
-                                !TryCollectBoundConstants(ref closure, ((MemberAssignment)memberBinding).Expression, paramExprs))
+                                !TryCollectBoundConstants(ref closure, maExpr, maExpr.NodeType, maExpr.Type, paramExprs))
                                 return false;
                         }
                     }
@@ -825,19 +824,23 @@ namespace FastExpressionCompiler
                     if (lambdaExprInfo != null)
                     {
                         var lambdaParamExprs = lambdaExprInfo.Parameters;
-                        lambdaReturnType = lambdaExprInfo.Body.Type;
+                        var bodyExprInfo = lambdaExprInfo.Body;
+                        lambdaReturnType = bodyExprInfo.Type;
                         lambda = TryCompile(ref nestedClosure,
                             lambdaExprInfo.Type, GetParamExprTypes(lambdaParamExprs), lambdaReturnType,
-                            lambdaExprInfo.Body, lambdaParamExprs, isNestedLambda: true);
+                            bodyExprInfo, bodyExprInfo.NodeType, bodyExprInfo.Type,
+                            lambdaParamExprs, isNestedLambda: true);
                     }
                     else
                     {
                         var lambdaExpr = (LambdaExpression)exprObj;
                         var lambdaParamExprs = lambdaExpr.Parameters;
-                        lambdaReturnType = lambdaExpr.Body.Type;
+                        var bodyExpr = lambdaExpr.Body;
+                        lambdaReturnType = bodyExpr.Type;
                         lambda = TryCompile(ref nestedClosure,
                             lambdaExpr.Type, GetParamExprTypes(lambdaParamExprs), lambdaReturnType,
-                            lambdaExpr.Body, lambdaParamExprs, isNestedLambda: true);
+                            bodyExpr, bodyExpr.NodeType, bodyExpr.Type,
+                            lambdaParamExprs, isNestedLambda: true);
                     }
 
                     if (lambda == null)
@@ -877,57 +880,78 @@ namespace FastExpressionCompiler
                     break;
 
                 case ExpressionType.Invoke:
-                    var invocationExpr = (InvocationExpression)exprObj;
-                    return TryCollectBoundConstants(ref closure, invocationExpr.Expression, paramExprs)
-                           && TryCollectBoundConstants(ref closure, invocationExpr.Arguments, paramExprs);
+                    var invokeExpr = (InvocationExpression)exprObj;
+                    var invokeExprExpr = invokeExpr.Expression;
+                    return TryCollectBoundConstants(ref closure, invokeExprExpr, invokeExprExpr.NodeType, invokeExprExpr.Type, paramExprs)
+                        && TryCollectBoundConstants(ref closure, invokeExpr.Arguments, paramExprs);
 
                 case ExpressionType.Conditional:
-                    var conditionalExpr = (ConditionalExpression)exprObj;
-                    return TryCollectBoundConstants(ref closure, conditionalExpr.Test, paramExprs)
-                           && TryCollectBoundConstants(ref closure, conditionalExpr.IfTrue, paramExprs)
-                           && TryCollectBoundConstants(ref closure, conditionalExpr.IfFalse, paramExprs);
+                    var condExpr = (ConditionalExpression)exprObj;
+                    return TryCollectBoundConstants(ref closure, condExpr.Test, condExpr.Test.NodeType, condExpr.Type, paramExprs)
+                        && TryCollectBoundConstants(ref closure, condExpr.IfTrue, condExpr.IfTrue.NodeType, condExpr.Type, paramExprs)
+                        && TryCollectBoundConstants(ref closure, condExpr.IfFalse, condExpr.IfFalse.NodeType, condExpr.IfFalse.Type, paramExprs);
 
                 default:
                     if (exprObj is ExpressionInfo)
                     {
                         var unaryExprInfo = exprObj as UnaryExpressionInfo;
                         if (unaryExprInfo != null)
-                            return TryCollectBoundConstants(ref closure, unaryExprInfo.Operand, paramExprs);
+                        {
+                            var opInfo = unaryExprInfo.Operand;
+                            return TryCollectBoundConstants(ref closure, opInfo, opInfo.NodeType, opInfo.Type, paramExprs);
+                        }
 
-                        var binaryExprInfo = exprObj as BinaryExpressionInfo;
-                        if (binaryExprInfo != null)
-                            return TryCollectBoundConstants(ref closure, binaryExprInfo.Left, paramExprs)
-                                && TryCollectBoundConstants(ref closure, binaryExprInfo.Right, paramExprs);
+                        var binInfo = exprObj as BinaryExpressionInfo;
+                        if (binInfo != null)
+                        {
+                            var leftInfo = binInfo.Left;
+                            var rightInfo = binInfo.Right;
+                            return TryCollectBoundConstants(ref closure, leftInfo, leftInfo.NodeType, leftInfo.Type, paramExprs)
+                                && TryCollectBoundConstants(ref closure, rightInfo, rightInfo.NodeType, rightInfo.Type, paramExprs);
+                        }
                         break;
                     }
 
                     var unaryExpr = exprObj as UnaryExpression;
                     if (unaryExpr != null)
-                        return TryCollectBoundConstants(ref closure, unaryExpr.Operand, paramExprs);
+                    {
+                        var opExpr = unaryExpr.Operand;
+                        return TryCollectBoundConstants(ref closure, opExpr, opExpr.NodeType, opExpr.Type, paramExprs);
+                    }
 
                     var binaryExpr = exprObj as BinaryExpression;
                     if (binaryExpr != null)
-                        return TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs)
-                            && TryCollectBoundConstants(ref closure, binaryExpr.Right, paramExprs);
+                    {
+                        var leftExpr = binaryExpr.Left;
+                        var rightExpr = binaryExpr.Right;
+                        return TryCollectBoundConstants(ref closure, leftExpr, leftExpr.NodeType, leftExpr.Type, paramExprs)
+                            && TryCollectBoundConstants(ref closure, rightExpr, rightExpr.NodeType, rightExpr.Type, paramExprs);
+                    }
                     break;
             }
 
             return true;
         }
 
-        private static bool TryCollectBoundConstants(ref ClosureInfo closure, ExpressionInfo[] exprs, IList<ParameterExpression> paramExprs)
+        private static bool TryCollectBoundConstants(ref ClosureInfo closure, ExpressionInfo[] infos, IList<ParameterExpression> paramExprs)
         {
-            for (var i = 0; i < exprs.Length; i++)
-                if (!TryCollectBoundConstants(ref closure, exprs[i], paramExprs))
+            for (var i = 0; i < infos.Length; i++)
+            {
+                var info = infos[i];
+                if (!TryCollectBoundConstants(ref closure, info, info.NodeType, info.Type, paramExprs))
                     return false;
+            }
             return true;
         }
 
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, IList<Expression> exprs, IList<ParameterExpression> paramExprs)
         {
             for (var i = 0; i < exprs.Count; i++)
-                if (!TryCollectBoundConstants(ref closure, exprs[i], paramExprs))
+            {
+                var expr = exprs[i];
+                if (!TryCollectBoundConstants(ref closure, expr, expr.NodeType, expr.Type, paramExprs))
                     return false;
+            }
             return true;
         }
 
@@ -979,22 +1003,21 @@ namespace FastExpressionCompiler
             private static readonly MethodInfo _getTypeFromHandleMethod = typeof(Type).GetTypeInfo()
                 .DeclaredMethods.First(m => m.Name == "GetTypeFromHandle");
 
-            public static bool TryEmit(Expr e, 
+            public static bool TryEmit(object exprObj, ExpressionType exprNodeType, Type exprType,
                 IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                var exprObj = e.Expression;
-                switch (e.NodeType)
+                switch (exprNodeType)
                 {
                     case ExpressionType.Parameter:
                         var paramExprInfo = exprObj as ParameterExpressionInfo;
-                        return EmitParameter(paramExprInfo != null ? paramExprInfo.ParamExpr : (ParameterExpression)exprObj, 
+                        return EmitParameter(paramExprInfo != null ? paramExprInfo.ParamExpr : (ParameterExpression)exprObj,
                             paramExprs, il, closure);
                     case ExpressionType.Convert:
-                        return EmitConvert(exprObj, paramExprs, il, closure);
+                        return EmitConvert(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.ArrayIndex:
                         return EmitArrayIndex(exprObj, paramExprs, il, closure);
                     case ExpressionType.Constant:
-                        return EmitConstant(exprObj, e.Type, il, closure);
+                        return EmitConstant(exprObj, exprType, il, closure);
                     case ExpressionType.Call:
                         return EmitMethodCall(exprObj, paramExprs, il, closure);
                     case ExpressionType.MemberAccess:
@@ -1004,7 +1027,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.NewArrayInit:
                         return EmitNewArray(exprObj, paramExprs, il, closure);
                     case ExpressionType.MemberInit:
-                        return EmitMemberInit(exprObj, e.Type, paramExprs, il, closure);
+                        return EmitMemberInit(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.Lambda:
                         return EmitNestedLambda(exprObj, paramExprs, il, closure);
 
@@ -1094,48 +1117,60 @@ namespace FastExpressionCompiler
             {
                 var exprInfo = exprObj as BinaryExpressionInfo;
                 if (exprInfo != null)
-                    return TryEmit(exprInfo.Left, ps, il, closure)
-                        && TryEmit(exprInfo.Right, ps, il, closure);
+                {
+                    var leftInfo = exprInfo.Left;
+                    var rightInfo = exprInfo.Right;
+                    return TryEmit(leftInfo, leftInfo.NodeType, leftInfo.Type, ps, il, closure)
+                        && TryEmit(rightInfo, rightInfo.NodeType, rightInfo.Type, ps, il, closure);
+                }
 
                 var expr = (BinaryExpression)exprObj;
-                return TryEmit(expr.Left, ps, il, closure)
-                    && TryEmit(expr.Right, ps, il, closure);
+                var leftExpr = expr.Left;
+                var rightExpr = expr.Right;
+                return TryEmit(leftExpr, leftExpr.NodeType, leftExpr.Type, ps, il, closure)
+                    && TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, ps, il, closure);
             }
 
-            private static bool EmitMany(IList<Expression> es, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMany(IList<Expression> exprs, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                for (int i = 0, n = es.Count; i < n; i++)
-                    if (!TryEmit(es[i], ps, il, closure))
+                for (int i = 0, n = exprs.Count; i < n; i++)
+                {
+                    var expr = exprs[i];
+                    if (!TryEmit(expr, expr.NodeType, expr.Type, ps, il, closure))
                         return false;
+                }
                 return true;
             }
 
-            private static bool EmitMany(IList<ExpressionInfo> es, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMany(IList<ExpressionInfo> infos, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                for (int i = 0, n = es.Count; i < n; i++)
-                    if (!TryEmit(es[i], ps, il, closure))
+                for (int i = 0, n = infos.Count; i < n; i++)
+                {
+                    var info = infos[i];
+                    if (!TryEmit(info, info.NodeType, info.Type, ps, il, closure))
                         return false;
+                }
                 return true;
             }
 
-            private static bool EmitConvert(object exprObj, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitConvert(object exprObj, Type targetType, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
                 var exprInfo = exprObj as UnaryExpressionInfo;
-                Type targetType, sourceType;
+                Type sourceType;
                 if (exprInfo != null)
                 {
-                    if (!TryEmit(exprInfo.Operand, ps, il, closure))
+                    var opInfo = exprInfo.Operand;
+                    if (!TryEmit(opInfo, opInfo.NodeType, opInfo.Type, ps, il, closure))
                         return false;
-                    targetType = exprInfo.Type;
-                    sourceType = exprInfo.Operand.Type;
+                    sourceType = opInfo.Type;
                 }
                 else
                 {
                     var expr = (UnaryExpression)exprObj;
-                    if (!TryEmit(expr.Operand, ps, il, closure))
+                    var opExpr = expr.Operand;
+                    if (!TryEmit(opExpr, opExpr.NodeType, opExpr.Type, ps, il, closure))
                         return false;
-                    targetType = expr.Type;
-                    sourceType = expr.Operand.Type;
+                    sourceType = opExpr.Type;
                 }
 
                 if (targetType == sourceType)
@@ -1350,7 +1385,8 @@ namespace FastExpressionCompiler
                     if (isElemOfValueType)
                         il.Emit(OpCodes.Ldelema, elemType);
 
-                    if (!TryEmit(elems[i], ps, il, closure))
+                    var elemExpr = elems[i];
+                    if (!TryEmit(elemExpr, elemExpr.NodeType, elemExpr.Type, ps, il, closure))
                         return false;
 
                     if (isElemOfValueType)
@@ -1388,7 +1424,8 @@ namespace FastExpressionCompiler
                     if (isElemOfValueType)
                         il.Emit(OpCodes.Ldelema, elemType);
 
-                    if (!TryEmit(elems[i], ps, il, closure))
+                    var elemInfo = elems[i];
+                    if (!TryEmit(elemInfo, elemInfo.NodeType, elemInfo.Type, ps, il, closure))
                         return false;
 
                     if (isElemOfValueType)
@@ -1430,7 +1467,8 @@ namespace FastExpressionCompiler
                         return false;
                     il.Emit(OpCodes.Ldloc, obj);
 
-                    if (!TryEmit(((MemberAssignment)binding).Expression, ps, il, closure))
+                    var bindingExpr = ((MemberAssignment)binding).Expression;
+                    if (!TryEmit(bindingExpr, bindingExpr.NodeType, bindingExpr.Type, ps, il, closure))
                         return false;
 
                     var prop = binding.Member as PropertyInfo;
@@ -1471,7 +1509,8 @@ namespace FastExpressionCompiler
 
                     il.Emit(OpCodes.Ldloc, obj);
 
-                    if (!TryEmit(binding.Expression, ps, il, closure))
+                    var bindingExpr = binding.Expression;
+                    if (!TryEmit(bindingExpr, bindingExpr.NodeType, bindingExpr.Type, ps, il, closure))
                         return false;
 
                     var prop = binding.Member as PropertyInfo;
@@ -1497,17 +1536,18 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitMethodCall(object exprObj, 
+            private static bool EmitMethodCall(object exprObj,
                 IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
                 var exprInfo = exprObj as MethodCallExpressionInfo;
                 if (exprInfo != null)
                 {
-                    if (exprInfo.Object != null)
+                    var objInfo = exprInfo.Object;
+                    if (objInfo != null)
                     {
-                        if (!TryEmit(exprInfo.Object, ps, il, closure))
+                        if (!TryEmit(objInfo, objInfo.NodeType, objInfo.Type, ps, il, closure))
                             return false;
-                        IfValueTypeStoreAndLoadValueAddress(il, exprInfo.Object.Type);
+                        IfValueTypeStoreAndLoadValueAddress(il, objInfo.Type);
                     }
 
                     if (exprInfo.Arguments.Length != 0 &&
@@ -1517,11 +1557,12 @@ namespace FastExpressionCompiler
                 else
                 {
                     var expr = (MethodCallExpression)exprObj;
-                    if (expr.Object != null)
+                    var objExpr = expr.Object;
+                    if (objExpr != null)
                     {
-                        if (!TryEmit(expr.Object, ps, il, closure))
+                        if (!TryEmit(objExpr, objExpr.NodeType, objExpr.Type, ps, il, closure))
                             return false;
-                        IfValueTypeStoreAndLoadValueAddress(il, expr.Object.Type);
+                        IfValueTypeStoreAndLoadValueAddress(il, objExpr.Type);
                     }
 
                     if (expr.Arguments.Count != 0 &&
@@ -1549,19 +1590,22 @@ namespace FastExpressionCompiler
                 var exprInfo = exprObj as MemberExpressionInfo;
                 if (exprInfo != null)
                 {
-                    if (exprInfo.Expression != null)
+                    var instInfo = exprInfo.Expression;
+                    if (instInfo != null)
                     {
-                        if (!TryEmit(exprInfo.Expression, ps, il, closure)) return false;
-                        IfValueTypeStoreAndLoadValueAddress(il, exprInfo.Expression.Type);
+                        if (!TryEmit(instInfo, instInfo.NodeType, instInfo.Type, ps, il, closure))
+                            return false;
+                        IfValueTypeStoreAndLoadValueAddress(il, instInfo.Type);
                     }
                 }
                 else
                 {
-                    var instanceExpr = ((MemberExpression)exprObj).Expression;
-                    if (instanceExpr != null)
+                    var instExpr = ((MemberExpression)exprObj).Expression;
+                    if (instExpr != null)
                     {
-                        if (!TryEmit(instanceExpr, ps, il, closure)) return false;
-                        IfValueTypeStoreAndLoadValueAddress(il, instanceExpr.Type);
+                        if (!TryEmit(instExpr, instExpr.NodeType, instExpr.Type, ps, il, closure))
+                            return false;
+                        IfValueTypeStoreAndLoadValueAddress(il, instExpr.Type);
                     }
                 }
 
@@ -1729,7 +1773,7 @@ namespace FastExpressionCompiler
                         if (closure.Fields != null)
                             il.Emit(OpCodes.Ldfld, closure.Fields[outerLambdaIndex]);
                         else
-                            LoadArrayClosureItem(il, outerLambdaIndex, 
+                            LoadArrayClosureItem(il, outerLambdaIndex,
                                 nestedNestedLambda.Lambda.GetType());
 
                         if (isNestedArrayClosure)
@@ -1756,21 +1800,24 @@ namespace FastExpressionCompiler
                     : CurryClosureFuncs.Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
             }
 
-            private static bool EmitInvokeLambda(InvocationExpression e, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            private static bool EmitInvokeLambda(InvocationExpression expr, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                if (!TryEmit(e.Expression, paramExprs, il, closure) ||
-                    !EmitMany(e.Arguments, paramExprs, il, closure))
+                var instanceExpr = expr.Expression;
+                if (!TryEmit(instanceExpr, instanceExpr.NodeType, instanceExpr.Type, paramExprs, il, closure) ||
+                    !EmitMany(expr.Arguments, paramExprs, il, closure))
                     return false;
 
-                var invokeMethod = e.Expression.Type.GetTypeInfo().DeclaredMethods.First(m => m.Name == "Invoke");
+                var invokeMethod = instanceExpr.Type.GetTypeInfo().DeclaredMethods.First(m => m.Name == "Invoke");
                 EmitMethodCall(il, invokeMethod);
                 return true;
             }
 
             private static bool EmitComparison(BinaryExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (!TryEmit(e.Left, ps, il, closure) ||
-                    !TryEmit(e.Right, ps, il, closure))
+                var leftExpr = e.Left;
+                var rightExpr = e.Right;
+                if (!TryEmit(leftExpr, leftExpr.NodeType, leftExpr.Type, ps, il, closure) ||
+                    !TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, ps, il, closure))
                     return false;
 
                 switch (e.NodeType)
@@ -1803,16 +1850,18 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitLogicalOperator(BinaryExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitLogicalOperator(BinaryExpression expr, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (!TryEmit(e.Left, ps, il, closure))
+                var leftExpr = expr.Left;
+                if (!TryEmit(leftExpr, leftExpr.NodeType, leftExpr.Type, ps, il, closure))
                     return false;
 
                 var labelSkipRight = il.DefineLabel();
-                var isAnd = e.NodeType == ExpressionType.AndAlso;
+                var isAnd = expr.NodeType == ExpressionType.AndAlso;
                 il.Emit(isAnd ? OpCodes.Brfalse : OpCodes.Brtrue, labelSkipRight);
 
-                if (!TryEmit(e.Right, ps, il, closure))
+                var rightExpr = expr.Right;
+                if (!TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, ps, il, closure))
                     return false;
 
                 var labelDone = il.DefineLabel();
@@ -1825,22 +1874,25 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitTernararyOperator(ConditionalExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitTernararyOperator(ConditionalExpression expr, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (!TryEmit(e.Test, ps, il, closure))
+                var testExpr = expr.Test;
+                if (!TryEmit(testExpr, testExpr.NodeType, testExpr.Type, ps, il, closure))
                     return false;
 
                 var labelIfFalse = il.DefineLabel();
                 il.Emit(OpCodes.Brfalse, labelIfFalse);
 
-                if (!TryEmit(e.IfTrue, ps, il, closure))
+                var ifTrueExpr = expr.IfTrue;
+                if (!TryEmit(ifTrueExpr, ifTrueExpr.NodeType, ifTrueExpr.Type, ps, il, closure))
                     return false;
 
                 var labelDone = il.DefineLabel();
                 il.Emit(OpCodes.Br, labelDone);
 
                 il.MarkLabel(labelIfFalse);
-                if (!TryEmit(e.IfFalse, ps, il, closure))
+                var ifFalseExpr = expr.IfFalse;
+                if (!TryEmit(ifFalseExpr, ifFalseExpr.NodeType, ifFalseExpr.Type, ps, il, closure))
                     return false;
 
                 il.MarkLabel(labelDone);
