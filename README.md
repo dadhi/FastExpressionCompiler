@@ -166,9 +166,8 @@ The supporting code preserved as minimalistic as possible for perf.
 
 Expression is visited in two rounds:
 
-1. To collect constants and nested lambdas into closure(s) for manually composed expression,
-or to find generated closure object for the hoisted expression
-2. To emit the IL
+1. To collect constants and nested lambdas into closure objects.
+2. To emit an IL.
 
-If the processing round visits not supported expression node, 
-the compilation is aborted, and null is returned enabling the fallback to normal `Expression.Compile()`.
+If some processing round visits a not supported expression node, 
+then compilation is aborted, and null is returned enabling the fallback to normal `Expression.Compile()`.
