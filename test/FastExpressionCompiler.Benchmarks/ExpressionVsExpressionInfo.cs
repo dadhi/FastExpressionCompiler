@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.Benchmarks
         }
 
         [Benchmark]
-        public object NewDryExpression()
+        public object NewExpressionInfo()
         {
             return ExpressionInfo.New(_xCtor, ExpressionInfo.Constant(_y));
         }

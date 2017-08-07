@@ -196,6 +196,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             var expr = CreateComplexExpressionInfo();
             var func = ExpressionCompiler.TryCompile<Func<object[], object>>(expr);
+            func(new object[12]);
         }
 
         public class A
@@ -213,6 +214,17 @@ namespace FastExpressionCompiler.UnitTests
         public interface ID { }
         public class D1 : ID { }
         public class D2 : ID { }
+
+        [Test]
+        public void Can_embed_normal_Expression_into_ExpressionInfo_eg_as_Constructor_argument()
+        {
+            var func = ExpressionCompiler.TryCompile<Func<P>>(
+                ExpressionInfo.Lambda(
+                    ExpressionInfo.New(_ctorOfP,
+                        Expression.New(_ctorOfB))));
+
+            Assert.IsInstanceOf<P>(func());
+        }
 
     }
 }

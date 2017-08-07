@@ -40,23 +40,23 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly Expression<Func<B, X>> _expr = ComposeManualExprWithParams();
 
         [MarkdownExporter, MemoryDiagnoser]
-        public class Compile
+        public class CompileManuallyComposed
         {
             [Benchmark]
-            public Func<B, X> Compile_()
+            public Func<B, X> CompileExpression()
             {
                 return _expr.Compile();
             }
 
             [Benchmark(Baseline = true)]
-            public Func<B, X> CompileFast()
+            public Func<B, X> CompileFastExpression()
             {
                 return ExpressionCompiler.Compile<Func<B, X>>(_expr);
             }
         }
 
         [MarkdownExporter, MemoryDiagnoser]
-        public class Invoke
+        public class InvokeManuallyComposed
         {
             private static readonly Func<B, X> _lambdaCompiled = _expr.Compile();
             private static readonly Func<B, X> _lambdaCompiledFast = ExpressionCompiler.Compile<Func<B, X>>(_expr);
@@ -65,8 +65,8 @@ namespace FastExpressionCompiler.Benchmarks
             private static readonly B _bb = new B();
             private static readonly Func<B, X> _lambda = b => new X(_aa, b);
 
-            [Benchmark(Baseline = true)]
-            public X Lambda()
+            [Benchmark]
+            public X RawLambda()
             {
                 return _lambda(_bb);
             }
@@ -77,7 +77,7 @@ namespace FastExpressionCompiler.Benchmarks
                 return _lambdaCompiled(_bb);
             }
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public X FastCompiledLambda()
             {
                 return _lambdaCompiledFast(_bb);

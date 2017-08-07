@@ -43,18 +43,18 @@ dotnet cli version=1.0.0-preview2-1-003177
 
 Compiling expression:
 
- | Method      |        Mean |    StdDev |
- |------------ |------------ |---------- |
- | Compile     | 366.8057 us | 2.6807 us |
- | CompileFast |  12.3820 us | 0.3382 us |
+ |                Method |        Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
+ |---------------------- |------------ |----------- |------- |-------------- |------- |------- |---------- |
+ |     ExpressionCompile | 426.1452 us | 10.8108 us |  29.91 |          1.15 |      - |      - |   4.36 kB |
+ | ExpressionCompileFast |  14.2593 us |  0.4461 us |   1.00 |          0.00 | 1.0579 | 0.2035 |   2.72 kB |
 
 Invoking compiled delegate comparing to direct constructor call:
 
- |              Method |       Mean |    StdDev | Scaled | Scaled-StdDev |
- |-------------------- |----------- |---------- |------- |-------------- |
- |         Constructor |  7.0878 ns | 0.0480 ns |   1.00 |          0.00 |
- |      CompiledLambda | 10.7929 ns | 0.1323 ns |   1.52 |          0.02 |
- |  FastCompiledLambda |  9.6521 ns | 0.1556 ns |   1.36 |          0.02 |
+ |                Method |       Mean |    StdErr |    StdDev | Scaled | Scaled-StdDev |  Gen 0 | Allocated |
+ |---------------------- |----------- |---------- |---------- |------- |-------------- |------- |---------- |
+ | DirectConstructorCall |  9.7089 ns | 0.1423 ns | 0.5692 ns |   0.70 |          0.04 | 0.0202 |      32 B |
+ |        CompiledLambda | 15.8753 ns | 0.2077 ns | 1.2113 ns |   1.15 |          0.09 | 0.0198 |      32 B |
+ |    FastCompiledLambda | 13.8102 ns | 0.0963 ns | 0.3473 ns |   1.00 |          0.00 | 0.0195 |      32 B |
  
  
 ### Hoisted expression with static method and two nested lambdas and two arguments in closure
@@ -67,19 +67,19 @@ Invoking compiled delegate comparing to direct constructor call:
 
 Compiling expression:
 
- | Method      |        Mean |    StdDev |
- |------------ |------------ |---------- |
- | Compile     | 686.9673 us | 7.7669 us |
- | CompileFast |  33.5210 us | 0.1899 us |
+ |                Method |        Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
+ |---------------------- |------------ |----------- |------- |-------------- |------- |------- |---------- |
+ |     ExpressionCompile | 885.8788 us | 14.5933 us |  17.07 |          0.37 |      - |      - |  12.28 kB |
+ | ExpressionFastCompile |  51.9052 us |  0.7952 us |   1.00 |          0.00 | 4.0616 | 1.3761 |      8 kB |
 
 
 Invoking compiled delegate comparing to direct method call:
 
- |             Method |          Mean |     StdDev | Scaled | Scaled-StdDev |
- |------------------- |-------------- |----------- |------- |-------------- |
- |             Method |   144.8640 ns |  2.6944 ns |   1.00 |          0.00 |
- |     CompiledLambda | 2,275.7026 ns | 49.6164 ns |  15.71 |          0.44 |
- | FastCompiledLambda |   136.2695 ns |  2.4605 ns |   0.94 |          0.02 |
+ |             Method |          Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 | Allocated |
+ |------------------- |-------------- |----------- |------- |-------------- |------- |---------- |
+ |   DirectMethodCall |   166.9818 ns |  3.0175 ns |   0.86 |          0.02 | 0.1111 |     184 B |
+ |     CompiledLambda | 2,547.4770 ns | 46.7880 ns |  13.08 |          0.27 | 0.0900 |     280 B |
+ | FastCompiledLambda |   194.8093 ns |  2.2769 ns |   1.00 |          0.00 | 0.1399 |     240 B |
 
 
 ### Manually composed expression with parameters and closure
@@ -96,19 +96,19 @@ Invoking compiled delegate comparing to direct method call:
 
 Compiling expression:
 
- | Method      |        Mean |    StdDev |
- |------------ |------------ |---------- |
- | Compile     | 269.9465 us | 3.9580 us |
- | CompileFast |  11.3810 us | 0.1435 us |
+ |                Method |        Mean |     StdDev |      Median | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
+ |---------------------- |------------ |----------- |------------ |------- |-------------- |------- |------- |---------- |
+ |     CompileExpression | 397.5570 us | 27.6319 us | 386.6312 us |  27.46 |          1.92 |      - |      - |   4.72 kB |
+ | CompileFastExpression |  14.4785 us |  0.1752 us |  14.5392 us |   1.00 |          0.00 | 1.3086 | 0.5762 |   2.26 kB |
 
 
 Invoking compiled delegate comparing to normal delegate:
 
- |             Method |       Mean |    StdDev | Scaled | Scaled-StdDev |
- |------------------- |----------- |---------- |------- |-------------- |
- |             Lambda | 12.0089 ns | 0.2025 ns |   1.00 |          0.00 |
- |     CompiledLambda | 12.9169 ns | 0.3836 ns |   1.08 |          0.04 |
- | FastCompiledLambda | 12.6380 ns | 0.2724 ns |   1.05 |          0.03 |
+ |             Method |       Mean |    StdErr |    StdDev | Scaled | Scaled-StdDev |  Gen 0 | Allocated |
+ |------------------- |----------- |---------- |---------- |------- |-------------- |------- |---------- |
+ |          RawLambda | 12.5377 ns | 0.0839 ns | 0.3249 ns |   0.93 |          0.03 | 0.0196 |      32 B |
+ |     CompiledLambda | 14.2297 ns | 0.1640 ns | 0.6135 ns |   1.06 |          0.05 | 0.0195 |      32 B |
+ | FastCompiledLambda | 13.4183 ns | 0.0352 ns | 0.1317 ns |   1.00 |          0.00 | 0.0195 |      32 B |
 
 
 ## Usage

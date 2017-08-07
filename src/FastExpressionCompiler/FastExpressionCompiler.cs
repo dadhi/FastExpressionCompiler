@@ -31,8 +31,7 @@ namespace FastExpressionCompiler
     using System.Reflection;
     using System.Reflection.Emit;
 
-    /// <summary>Compiles expression to delegate by emitting the IL directly.
-    /// The emitter is ~20 times faster than Expression.Compile.</summary>
+    /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.</summary>
     public static partial class ExpressionCompiler
     {
         /// <summary>First tries to compile fast and if failed (null result), then falls back to Expression.Compile.</summary>
@@ -41,15 +40,21 @@ namespace FastExpressionCompiler
         /// <returns>Compiled delegate.</returns>
         public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr)
         {
-            return TryCompile<Func<T>>(lambdaExpr.Body, lambdaExpr.Parameters, Arr.Empty<Type>(), typeof(T))
-                ?? lambdaExpr.Compile();
+            return lambdaExpr.CompileFast<Func<T>>();
+        }
+
+        /// <summary>Obsolete: replaced by <see cref="CompileFast{TDelegate}"/></summary>
+        public static TDelegate Compile<TDelegate>(LambdaExpression lambdaExpr)
+            where TDelegate : class
+        {
+            return TryCompile<TDelegate>(lambdaExpr) ?? (TDelegate)(object)lambdaExpr.Compile();
         }
 
         /// <summary>Compiles lambda expression to <typeparamref name="TDelegate"/>.</summary>
-        /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
+        /// <typeparam name="TDelegate">The compatible delegate type, otherwise it will throw.</typeparam>
         /// <param name="lambdaExpr">Lambda expression to compile.</param>
         /// <returns>Compiled delegate.</returns>
-        public static TDelegate Compile<TDelegate>(LambdaExpression lambdaExpr)
+        public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr)
             where TDelegate : class
         {
             return TryCompile<TDelegate>(lambdaExpr) ?? (TDelegate)(object)lambdaExpr.Compile();
@@ -763,7 +768,7 @@ namespace FastExpressionCompiler
                     var newExprInfo = exprObj as NewExpressionInfo;
                     return newExprInfo != null
                         ? TryCollectBoundConstants(ref closure, newExprInfo.Arguments, paramExprs)
-                        : TryCollectBoundConstants(ref closure, ((NewExpression)exprObj).Arguments, paramExprs);
+                        : TryCollectBoundConstants(ref closure, ((NewExpression)(Expression)exprObj).Arguments, paramExprs);
 
                 case ExpressionType.NewArrayInit:
                     var newArrayInitInfo = exprObj as NewArrayExpressionInfo;
@@ -933,15 +938,25 @@ namespace FastExpressionCompiler
             return true;
         }
 
-        private static bool TryCollectBoundConstants(ref ClosureInfo closure, ExpressionInfo[] infos, IList<ParameterExpression> paramExprs)
+        private static bool TryCollectBoundConstants(ref ClosureInfo closure, object[] exprObjects, IList<ParameterExpression> paramExprs)
         {
-            for (var i = 0; i < infos.Length; i++)
+            for (var i = 0; i < exprObjects.Length; i++)
             {
-                var info = infos[i];
-                if (!TryCollectBoundConstants(ref closure, info, info.NodeType, info.Type, paramExprs))
+                var exprObj = exprObjects[i];
+                var exprMeta = GetExpressionMeta(exprObj);
+                if (!TryCollectBoundConstants(ref closure, exprObj, exprMeta.Key, exprMeta.Value, paramExprs))
                     return false;
             }
             return true;
+        }
+
+        private static KeyValuePair<ExpressionType, Type> GetExpressionMeta(object exprObj)
+        {
+            var expr = exprObj as Expression;
+            if (expr != null)
+                return new KeyValuePair<ExpressionType, Type>(expr.NodeType, expr.Type);
+            var exprInfo = (ExpressionInfo)exprObj;
+            return new KeyValuePair<ExpressionType, Type>(exprInfo.NodeType, exprInfo.Type);
         }
 
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, IList<Expression> exprs, IList<ParameterExpression> paramExprs)
@@ -1142,12 +1157,13 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitMany(IList<ExpressionInfo> infos, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMany(IList<object> exprObjects, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                for (int i = 0, n = infos.Count; i < n; i++)
+                for (int i = 0, n = exprObjects.Count; i < n; i++)
                 {
-                    var info = infos[i];
-                    if (!TryEmit(info, info.NodeType, info.Type, ps, il, closure))
+                    var exprObj = exprObjects[i];
+                    var exprMeta = GetExpressionMeta(exprObj);
+                    if (!TryEmit(exprObj, exprMeta.Key, exprMeta.Value, ps, il, closure))
                         return false;
                 }
                 return true;
@@ -1401,7 +1417,7 @@ namespace FastExpressionCompiler
 
             private static bool EmitNewArrayInfo(NewArrayExpressionInfo expr, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var elems = expr.Arguments;
+                var elemExprObjects = expr.Arguments;
                 var arrType = expr.Type;
                 var elemType = arrType.GetElementType();
                 if (elemType == null)
@@ -1411,11 +1427,11 @@ namespace FastExpressionCompiler
 
                 var arrVar = il.DeclareLocal(arrType);
 
-                EmitLoadConstantInt(il, elems.Length);
+                EmitLoadConstantInt(il, elemExprObjects.Length);
                 il.Emit(OpCodes.Newarr, elemType);
                 il.Emit(OpCodes.Stloc, arrVar);
 
-                for (var i = 0; i < elems.Length; i++)
+                for (var i = 0; i < elemExprObjects.Length; i++)
                 {
                     il.Emit(OpCodes.Ldloc, arrVar);
                     EmitLoadConstantInt(il, i);
@@ -1424,8 +1440,9 @@ namespace FastExpressionCompiler
                     if (isElemOfValueType)
                         il.Emit(OpCodes.Ldelema, elemType);
 
-                    var elemInfo = elems[i];
-                    if (!TryEmit(elemInfo, elemInfo.NodeType, elemInfo.Type, ps, il, closure))
+                    var elemExprObject = elemExprObjects[i];
+                    var elemExprMeta = GetExpressionMeta(elemExprObject);
+                    if (!TryEmit(elemExprObject, elemExprMeta.Key, elemExprMeta.Value, ps, il, closure))
                         return false;
 
                     if (isElemOfValueType)
@@ -1995,7 +2012,7 @@ namespace FastExpressionCompiler
         /// <summary>All expressions should have a Type.</summary>
         public abstract Type Type { get; }
 
-        /// <summary>Allow to change parameter expression as info interchangeable.</summary>
+        /// <summary>Allow to use the parameter expression interchangeably as and info.</summary>
         public static implicit operator ExpressionInfo(ParameterExpression paramExpr)
         {
             return new ParameterExpressionInfo(paramExpr);
@@ -2010,25 +2027,47 @@ namespace FastExpressionCompiler
         /// <summary>Analog of Expression.New</summary>
         public static NewExpressionInfo New(ConstructorInfo ctor)
         {
-            return new NewExpressionInfo(ctor, Arr.Empty<ExpressionInfo>());
+            return new NewExpressionInfo(ctor, Arr.Empty<object>());
+        }
+
+        /// <summary>Analog of Expression.New</summary>
+        public static NewExpressionInfo New(ConstructorInfo ctor, params object[] arguments)
+        {
+            return new NewExpressionInfo(ctor, arguments);
         }
 
         /// <summary>Analog of Expression.New</summary>
         public static NewExpressionInfo New(ConstructorInfo ctor, params ExpressionInfo[] arguments)
         {
+            // ReSharper disable once CoVariantArrayConversion
             return new NewExpressionInfo(ctor, arguments);
+        }
+
+        /// <summary>Static method call</summary>
+        public static MethodCallExpressionInfo Call(MethodInfo method, params object[] arguments)
+        {
+            return new MethodCallExpressionInfo(null, method, arguments);
         }
 
         /// <summary>Static method call</summary>
         public static MethodCallExpressionInfo Call(MethodInfo method, params ExpressionInfo[] arguments)
         {
+            // ReSharper disable once CoVariantArrayConversion
             return new MethodCallExpressionInfo(null, method, arguments);
+        }
+
+        /// <summary>Instance method call</summary>
+        public static MethodCallExpressionInfo Call(
+            ExpressionInfo instance, MethodInfo method, params object[] arguments)
+        {
+            return new MethodCallExpressionInfo(instance, method, arguments);
         }
 
         /// <summary>Instance method call</summary>
         public static MethodCallExpressionInfo Call(
             ExpressionInfo instance, MethodInfo method, params ExpressionInfo[] arguments)
         {
+            // ReSharper disable once CoVariantArrayConversion
             return new MethodCallExpressionInfo(instance, method, arguments);
         }
 
@@ -2105,8 +2144,15 @@ namespace FastExpressionCompiler
         }
 
         /// <summary>Constructs an array given the array type and item initializer expressions.</summary>
+        public static NewArrayExpressionInfo NewArrayInit(Type type, params object[] initializers)
+        {
+            return new NewArrayExpressionInfo(type, initializers);
+        }
+
+        /// <summary>Constructs an array given the array type and item initializer expressions.</summary>
         public static NewArrayExpressionInfo NewArrayInit(Type type, params ExpressionInfo[] initializers)
         {
+            // ReSharper disable once CoVariantArrayConversion
             return new NewArrayExpressionInfo(type, initializers);
         }
     }
@@ -2242,10 +2288,10 @@ namespace FastExpressionCompiler
     public abstract class ArgumentsExpressionInfo : ExpressionInfo
     {
         /// <summary>List of arguments</summary>
-        public readonly ExpressionInfo[] Arguments;
+        public readonly object[] Arguments;
 
         /// <summary>Constructor</summary>
-        protected ArgumentsExpressionInfo(ExpressionInfo[] arguments)
+        protected ArgumentsExpressionInfo(object[] arguments)
         {
             Arguments = arguments;
         }
@@ -2264,7 +2310,7 @@ namespace FastExpressionCompiler
         public readonly ConstructorInfo Constructor;
 
         /// <summary>Construct from constructor info and argument expressions</summary>
-        public NewExpressionInfo(ConstructorInfo constructor, params ExpressionInfo[] arguments) : base(arguments)
+        public NewExpressionInfo(ConstructorInfo constructor, params object[] arguments) : base(arguments)
         {
             Constructor = constructor;
         }
@@ -2280,7 +2326,7 @@ namespace FastExpressionCompiler
         public override Type Type { get { return _type; } }
 
         /// <summary>Array type and initializer</summary>
-        public NewArrayExpressionInfo(Type type, ExpressionInfo[] initializers) : base(initializers)
+        public NewArrayExpressionInfo(Type type, object[] initializers) : base(initializers)
         {
             _type = type;
         }
@@ -2305,7 +2351,7 @@ namespace FastExpressionCompiler
 
         /// <summary>Construct from method info and argument expressions</summary>
         public MethodCallExpressionInfo(
-            ExpressionInfo @object, MethodInfo method, params ExpressionInfo[] arguments) : base(arguments)
+            ExpressionInfo @object, MethodInfo method, params object[] arguments) : base(arguments)
         {
             Object = @object;
             Method = method;

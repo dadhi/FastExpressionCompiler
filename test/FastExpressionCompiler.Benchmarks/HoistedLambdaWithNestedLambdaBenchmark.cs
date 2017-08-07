@@ -23,23 +23,23 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
 
         [MarkdownExporter, MemoryDiagnoser]
-        public class Compile
+        public class CompileWithNestedLambda
         {
             [Benchmark]
-            public Func<X> Expr()
+            public Func<X> ExpressionCompile()
             {
                 return _hoistedExpr.Compile();
             }
 
             [Benchmark(Baseline = true)]
-            public Func<X> Fast()
+            public Func<X> ExpressionFastCompile()
             {
                 return ExpressionCompiler.Compile(_hoistedExpr);
             }
         }
 
         [MarkdownExporter, MemoryDiagnoser]
-        public class Invoke
+        public class InvokeWithNestedLambda
         {
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
             private static readonly Func<X> _lambdaCompiledFast = ExpressionCompiler.Compile(_hoistedExpr);
@@ -47,8 +47,8 @@ namespace FastExpressionCompiler.Benchmarks
             A aa = new A();
             B bb = new B();
 
-            [Benchmark(Baseline = true)]
-            public X Method()
+            [Benchmark]
+            public X DirectMethodCall()
             {
                 return CreateX((a, b) => new X(a, b), new Lazy<A>(() => aa), bb);
             }
@@ -59,7 +59,7 @@ namespace FastExpressionCompiler.Benchmarks
                 return _lambdaCompiled();
             }
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public X FastCompiledLambda()
             {
                 return _lambdaCompiledFast();
