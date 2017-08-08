@@ -28,7 +28,7 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark]
             public object CompileFast()
             {
-                return ExpressionCompiler.Compile(_hoistedExpr);
+                return _hoistedExpr.CompileFast();
             }
         }
 
@@ -36,7 +36,7 @@ namespace FastExpressionCompiler.Benchmarks
         public class Invoke
         {
             private static readonly Func<bool> _lambdaCompiled = _hoistedExpr.Compile();
-            private static readonly Func<bool> _lambdaCompiledFast = ExpressionCompiler.Compile(_hoistedExpr);
+            private static readonly Func<bool> _lambdaCompiledFast = _hoistedExpr.CompileFast();
 
             [Benchmark]
             public object CompiledLambda()
