@@ -53,11 +53,14 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression to <typeparamref name="TDelegate"/>.</summary>
         /// <typeparam name="TDelegate">The compatible delegate type, otherwise it will throw.</typeparam>
         /// <param name="lambdaExpr">Lambda expression to compile.</param>
+        /// <param name="ifFastFailedReturnNull">(optional) Specify to return null when fast compilation is failed,
+        /// instead of falling back to `Expression.Compile` (which is default).</param>
         /// <returns>Compiled delegate.</returns>
-        public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr)
+        public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
             where TDelegate : class
         {
-            return TryCompile<TDelegate>(lambdaExpr) ?? (TDelegate)(object)lambdaExpr.Compile();
+            var fastCompiled = TryCompile<TDelegate>(lambdaExpr);
+            return fastCompiled ?? (ifFastFailedReturnNull ? (TDelegate)(object)lambdaExpr.Compile() : null);
         }
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
@@ -1016,7 +1019,10 @@ namespace FastExpressionCompiler
         private static class EmittingVisitor
         {
             private static readonly MethodInfo _getTypeFromHandleMethod = typeof(Type).GetTypeInfo()
-                .DeclaredMethods.First(m => m.Name == "GetTypeFromHandle");
+                .DeclaredMethods.First(m => m.IsStatic && m.Name == "GetTypeFromHandle");
+
+            private static readonly MethodInfo _objectEqualsMethod = typeof(object).GetTypeInfo()
+                .DeclaredMethods.First(m => m.IsStatic && m.Name == "Equals");
 
             public static bool TryEmit(object exprObj, ExpressionType exprNodeType, Type exprType,
                 IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
@@ -1103,6 +1109,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            // todo: Test struct arguments loading via il.Emit(OpCodes.Ldarga_S)
             private static void LoadParamArg(ILGenerator il, int paramIndex)
             {
                 switch (paramIndex)
@@ -1637,14 +1644,22 @@ namespace FastExpressionCompiler
                 var prop = member as PropertyInfo;
                 if (prop != null)
                 {
-                    var propGetMethodName = "get_" + prop.Name;
-                    var getMethod = prop.DeclaringType.GetTypeInfo()
-                        .DeclaredMethods.FirstOrDefault(m => m.Name == propGetMethodName);
+                    var getMethod = TryGetPropertyGetMethod(prop);
                     if (getMethod == null)
                         return false;
                     EmitMethodCall(il, getMethod);
+                    return true;
                 }
-                return true;
+
+                return false;
+            }
+
+            private static MethodInfo TryGetPropertyGetMethod(PropertyInfo prop)
+            {
+                var propGetMethodName = "get_" + prop.Name;
+                var getMethod = prop.DeclaringType.GetTypeInfo()
+                    .DeclaredMethods.FirstOrDefault(m => m.Name == propGetMethodName);
+                return getMethod;
             }
 
             private static bool EmitNestedLambda(object lambdaExpr,
@@ -1829,41 +1844,69 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitComparison(BinaryExpression e, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitComparison(BinaryExpression expr, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var leftExpr = e.Left;
-                var rightExpr = e.Right;
+                var leftExpr = expr.Left;
+                var rightExpr = expr.Right;
                 if (!TryEmit(leftExpr, leftExpr.NodeType, leftExpr.Type, ps, il, closure) ||
                     !TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, ps, il, closure))
                     return false;
 
-                switch (e.NodeType)
+                switch (expr.NodeType)
                 {
                     case ExpressionType.Equal:
-                        il.Emit(OpCodes.Ceq);
-                        break;
-                    case ExpressionType.LessThan:
-                        il.Emit(OpCodes.Clt);
-                        break;
-                    case ExpressionType.GreaterThan:
-                        il.Emit(OpCodes.Cgt);
-                        break;
+                        return EmitEqual(il, leftExpr.Type);
                     case ExpressionType.NotEqual:
-                        il.Emit(OpCodes.Ceq);
+                        if (!EmitEqual(il, leftExpr.Type))
+                            return false;
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        break;
+                        return true;
+
+                    case ExpressionType.LessThan:
+                        il.Emit(OpCodes.Clt);
+                        return true;
+
+                    case ExpressionType.GreaterThan:
+                        il.Emit(OpCodes.Cgt);
+                        return true;
+
                     case ExpressionType.LessThanOrEqual:
                         il.Emit(OpCodes.Cgt);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        break;
+                        return true;
+
                     case ExpressionType.GreaterThanOrEqual:
                         il.Emit(OpCodes.Clt);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        break;
+                        return true;
+
                 }
+                return false;
+            }
+
+            private static bool EmitEqual(ILGenerator il, Type operandType)
+            {
+                var operandTypeInfo = operandType.GetTypeInfo();
+                if (operandTypeInfo.IsPrimitive ||
+                    operandTypeInfo.IsEnum)
+                {
+                    il.Emit(OpCodes.Ceq);
+                    return true;
+                }
+
+                // Emit call to equality operator
+                var equalityOperator = operandTypeInfo.DeclaredMethods.FirstOrDefault(m => m.IsStatic && m.Name == "op_Equality");
+                if (equalityOperator != null)
+                {
+                    EmitMethodCall(il, equalityOperator);
+                    return true;
+                }
+
+                // Otherwise emit Object.Equals(one, two)
+                EmitMethodCall(il, _objectEqualsMethod);
                 return true;
             }
 
