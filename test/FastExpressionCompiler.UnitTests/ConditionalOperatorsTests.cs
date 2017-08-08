@@ -129,5 +129,13 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(dlg);
             Assert.AreEqual(string.Concat(s, "ccc"), dlg());
         }
+
+        [Test]
+        public void CompileFast_should_return_null_when_option_is_set_and_expression_type_is_not_supported()
+        {
+            Assert.IsNull(Expression.Lambda(
+                Expression.Coalesce(Expression.Constant("not null"), Expression.Constant("null")))
+                .CompileFast(ifFastFailedReturnNull: true));
+        } 
     }
 }

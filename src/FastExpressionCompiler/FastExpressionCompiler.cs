@@ -50,19 +50,20 @@ namespace FastExpressionCompiler
 
         #region CompileFast overloads for Delegate, Funcs, and Actions
 
-        /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            var fastCompiled = TryCompile<Delegate>(lambdaExpr);
-            return fastCompiled ?? (ifFastFailedReturnNull ? lambdaExpr.Compile() : null);
-        }
-
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
             where TDelegate : class
         {
             var fastCompiled = TryCompile<TDelegate>(lambdaExpr);
-            return fastCompiled ?? (ifFastFailedReturnNull ? (TDelegate)(object)lambdaExpr.Compile() : null);
+            if (fastCompiled != null)
+                return fastCompiled;
+            return ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.Compile();
+        }
+
+        /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
+        {
+            return lambdaExpr.CompileFast<Delegate>(ifFastFailedReturnNull);
         }
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>

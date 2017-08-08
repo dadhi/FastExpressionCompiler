@@ -1,16 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.2.1</VersionPrefix>
+    <VersionPrefix>1.2.2</VersionPrefix>
     <TargetFrameworks>netstandard1.3;net45</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>FastExpressionCompiler</AssemblyName>
     <Description>Fast Expression Compiler is ~20 times faster than Expression.Compile()</Description>
-    <Summary>Fast Expression Compiler is ~20 times faster than Expression.Compile()</Summary>
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
+
+      v1.2.2:
+      - fixed: #16: FastCompile with fallback could return null
       v1.2.1:
       - Lowering full .NET support to .NET 4.5
       v1.2.0:
