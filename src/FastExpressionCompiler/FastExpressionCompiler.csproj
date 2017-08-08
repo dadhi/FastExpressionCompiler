@@ -1,19 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.2.0</VersionPrefix>
-    <TargetFrameworks>netstandard1.3;net452</TargetFrameworks>
+    <VersionPrefix>1.2.1</VersionPrefix>
+    <TargetFrameworks>netstandard1.3;net45</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>FastExpressionCompiler</AssemblyName>
     <Description>Fast Expression Compiler is ~20 times faster than Expression.Compile()</Description>
+    <Summary>Fast Expression Compiler is ~20 times faster than Expression.Compile()</Summary>
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
-      fixed: #14, #15: Support general equality mechanism, e.g. Equals and equality operator
-      added: #11: Support for ExpressionInfo NewArray, MemberInit, ArrayIndex, Convert, MemberAccess
-      added: #12: Add extension method CompileFast to simplify migration from Compile
-      added: #13: Allow Expression as child of multi-child ExpressionInfo
+      v1.2.1:
+      - Lowering full .NET support to .NET 4.5
+      v1.2.0:
+      - fixed: #14, #15: Support general equality mechanism, e.g. Equals and equality operator
+      - added: #11: Support for ExpressionInfo NewArray, MemberInit, ArrayIndex, Convert, MemberAccess
+      - added: #12: Add extension method CompileFast to simplify migration from Compile
+      - added: #13: Allow Expression as child of multi-child ExpressionInfo
     </PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
     <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
@@ -23,7 +27,7 @@
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <Reference Include="System.Reflection" />
     <Reference Include="System.Linq" />
     <Reference Include="System.Linq.Expressions" />
