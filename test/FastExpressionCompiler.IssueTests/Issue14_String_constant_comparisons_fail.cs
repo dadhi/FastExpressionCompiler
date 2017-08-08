@@ -99,7 +99,9 @@ namespace FastExpressionCompiler.IssueTests
         {
             internal int N;
             public Pooh(int n) => N = n;
+#pragma warning disable 659
             public override bool Equals(object obj) => (obj as Pooh)?.N == N;
+#pragma warning restore 659
         }
     }
 }

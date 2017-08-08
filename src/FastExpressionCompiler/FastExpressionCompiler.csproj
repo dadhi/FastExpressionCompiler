@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.1.1</VersionPrefix>
+    <VersionPrefix>1.2.0</VersionPrefix>
     <TargetFrameworks>netstandard1.3;net452</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -10,8 +10,10 @@
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
-      actually fixed(!!!): #9: Race condition in nested lambda expression with closure
-      added: #5: Use lightweight replacement for Expression to improve performance of manually created expression
+      fixed: #14, #15: Support general equality mechanism, e.g. Equals and equality operator
+      added: #11: Support for ExpressionInfo NewArray, MemberInit, ArrayIndex, Convert, MemberAccess
+      added: #12: Add extension method CompileFast to simplify migration from Compile
+      added: #13: Allow Expression as child of multi-child ExpressionInfo
     </PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
     <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
