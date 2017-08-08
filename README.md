@@ -43,18 +43,18 @@ dotnet cli version=1.0.0-preview2-1-003177
 
 Compiling expression:
 
- |                Method |        Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
- |---------------------- |------------ |----------- |------- |-------------- |------- |------- |---------- |
- |     ExpressionCompile | 426.1452 us | 10.8108 us |  29.91 |          1.15 |      - |      - |   4.36 kB |
- | ExpressionCompileFast |  14.2593 us |  0.4461 us |   1.00 |          0.00 | 1.0579 | 0.2035 |   2.72 kB |
+ |                Method     |        Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
+ |-------------------------- |------------ |----------- |------- |-------------- |------- |------- |---------- |
+ |     ExpressionCompile     | 426.1452 us | 10.8108 us |  29.91 |          1.15 |      - |      - |   4.36 kB |
+ | __ExpressionCompileFast__ |  14.2593 us |  0.4461 us |   1.00 |          0.00 | 1.0579 | 0.2035 |   2.72 kB |
 
 Invoking compiled delegate comparing to direct constructor call:
 
- |                Method |       Mean |    StdErr |    StdDev | Scaled | Scaled-StdDev |  Gen 0 | Allocated |
- |---------------------- |----------- |---------- |---------- |------- |-------------- |------- |---------- |
- | DirectConstructorCall |  9.7089 ns | 0.1423 ns | 0.5692 ns |   0.70 |          0.04 | 0.0202 |      32 B |
- |        CompiledLambda | 15.8753 ns | 0.2077 ns | 1.2113 ns |   1.15 |          0.09 | 0.0198 |      32 B |
- |    FastCompiledLambda | 13.8102 ns | 0.0963 ns | 0.3473 ns |   1.00 |          0.00 | 0.0195 |      32 B |
+ |                Method     |       Mean |    StdErr |    StdDev | Scaled | Scaled-StdDev |  Gen 0 | Allocated |
+ |-------------------------- |----------- |---------- |---------- |------- |-------------- |------- |---------- |
+ | DirectConstructorCall     |  9.7089 ns | 0.1423 ns | 0.5692 ns |   0.70 |          0.04 | 0.0202 |      32 B |
+ |        CompiledLambda     | 15.8753 ns | 0.2077 ns | 1.2113 ns |   1.15 |          0.09 | 0.0198 |      32 B |
+ |    __FastCompiledLambda__ | 13.8102 ns | 0.0963 ns | 0.3473 ns |   1.00 |          0.00 | 0.0195 |      32 B |
  
  
 ### Hoisted expression with static method and two nested lambdas and two arguments in closure
@@ -68,18 +68,18 @@ Invoking compiled delegate comparing to direct constructor call:
 Compiling expression:
 
  |                Method |        Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
- |---------------------- |------------ |----------- |------- |-------------- |------- |------- |---------- |
- |     ExpressionCompile | 885.8788 us | 14.5933 us |  17.07 |          0.37 |      - |      - |  12.28 kB |
- | ExpressionFastCompile |  51.9052 us |  0.7952 us |   1.00 |          0.00 | 4.0616 | 1.3761 |      8 kB |
+ |-------------------------- |------------ |----------- |------- |-------------- |------- |------- |---------- |
+ |     ExpressionCompile     | 885.8788 us | 14.5933 us |  17.07 |          0.37 |      - |      - |  12.28 kB |
+ | __ExpressionFastCompile__ |  51.9052 us |  0.7952 us |   1.00 |          0.00 | 4.0616 | 1.3761 |      8 kB |
 
 
 Invoking compiled delegate comparing to direct method call:
 
- |             Method |          Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 | Allocated |
- |------------------- |-------------- |----------- |------- |-------------- |------- |---------- |
- |   DirectMethodCall |   166.9818 ns |  3.0175 ns |   0.86 |          0.02 | 0.1111 |     184 B |
- |     CompiledLambda | 2,547.4770 ns | 46.7880 ns |  13.08 |          0.27 | 0.0900 |     280 B |
- | FastCompiledLambda |   194.8093 ns |  2.2769 ns |   1.00 |          0.00 | 0.1399 |     240 B |
+ |             Method     |          Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 | Allocated |
+ |----------------------- |-------------- |----------- |------- |-------------- |------- |---------- |
+ |   DirectMethodCall     |   166.9818 ns |  3.0175 ns |   0.86 |          0.02 | 0.1111 |     184 B |
+ |     CompiledLambda     | 2,547.4770 ns | 46.7880 ns |  13.08 |          0.27 | 0.0900 |     280 B |
+ | __FastCompiledLambda__ |   194.8093 ns |  2.2769 ns |   1.00 |          0.00 | 0.1399 |     240 B |
 
 
 ### Manually composed expression with parameters and closure
@@ -96,19 +96,35 @@ Invoking compiled delegate comparing to direct method call:
 
 Compiling expression:
 
- |                Method |        Mean |     StdDev |      Median | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
- |---------------------- |------------ |----------- |------------ |------- |-------------- |------- |------- |---------- |
- |     CompileExpression | 397.5570 us | 27.6319 us | 386.6312 us |  27.46 |          1.92 |      - |      - |   4.72 kB |
- | CompileFastExpression |  14.4785 us |  0.1752 us |  14.5392 us |   1.00 |          0.00 | 1.3086 | 0.5762 |   2.26 kB |
+ |                    Method |        Mean |     StdDev |      Median | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
+ |-------------------------- |------------ |----------- |------------ |------- |-------------- |------- |------- |---------- |
+ |     CompileExpression     | 397.5570 us | 27.6319 us | 386.6312 us |  27.46 |          1.92 |      - |      - |   4.72 kB |
+ | __CompileFastExpression__ |  14.4785 us |  0.1752 us |  14.5392 us |   1.00 |          0.00 | 1.3086 | 0.5762 |   2.26 kB |
 
 
 Invoking compiled delegate comparing to normal delegate:
 
- |             Method |       Mean |    StdErr |    StdDev | Scaled | Scaled-StdDev |  Gen 0 | Allocated |
- |------------------- |----------- |---------- |---------- |------- |-------------- |------- |---------- |
- |          RawLambda | 12.5377 ns | 0.0839 ns | 0.3249 ns |   0.93 |          0.03 | 0.0196 |      32 B |
- |     CompiledLambda | 14.2297 ns | 0.1640 ns | 0.6135 ns |   1.06 |          0.05 | 0.0195 |      32 B |
- | FastCompiledLambda | 13.4183 ns | 0.0352 ns | 0.1317 ns |   1.00 |          0.00 | 0.0195 |      32 B |
+ |                 Method |       Mean |    StdErr |    StdDev | Scaled | Scaled-StdDev |  Gen 0 | Allocated |
+ |----------------------- |----------- |---------- |---------- |------- |-------------- |------- |---------- |
+ |          RawLambda     | 12.5377 ns | 0.0839 ns | 0.3249 ns |   0.93 |          0.03 | 0.0196 |      32 B |
+ |     CompiledLambda     | 14.2297 ns | 0.1640 ns | 0.6135 ns |   1.06 |          0.05 | 0.0195 |      32 B |
+ | __FastCompiledLambda__ | 13.4183 ns | 0.0352 ns | 0.1317 ns |   1.00 |          0.00 | 0.0195 |      32 B |
+
+
+### Manually composed complex ExpressionInfo
+
+`FastExpressionCompiler.ExpressionInfo` is the lightweight version of `Expression`. 
+You may consider it instead of `Expression` when you are validating the Expression arguments on your own,
+and not relying on Expression composition exceptions.
+
+__Note:__ Explore `ExpressioInfo` class in [FastExpressionCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) 
+for finding the supported expression types.
+
+ |                               Method     |        Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
+ |----------------------------------------- |------------ |----------- |------- |-------------- |------- |------- |---------- |
+ |         CreateExpression_and_Compile     | 632.4135 us | 26.5744 us |  32.37 |          1.72 |      - |      - |   7.81 kB |
+ |     CreateExpression_and_CompileFast     |  29.7829 us |  1.6242 us |   1.52 |          0.10 | 1.8694 | 0.6487 |   3.86 kB |
+ | __CreateExpressionInfo_and_CompileFast__ |  19.5569 us |  0.6645 us |   1.00 |          0.00 | 1.4689 | 0.3703 |   3.38 kB |
 
 
 ## Usage
@@ -138,11 +154,11 @@ Manually composed lambda expression:
 
 Initially developed and currently used in [DryIoc].
 
-Additionally contributed to [ExpressionToCodeLib].
+Used by [Marten v2](https://github.com/JasperFx/marten), [ExpressionToCodeLib].
 
-v1 supports:
+v1.2 supports:
 
-- Manually created or hoisted lambda expressions __with closure__
+- Manually created or hoisted lambda expressions with closure
 - Nested lambdas
 - Constructor and method calls, lambda invocation
 - Property and member access

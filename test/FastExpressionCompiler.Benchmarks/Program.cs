@@ -6,7 +6,8 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            //BenchmarkRunner.Run<CreateExpVsCreateExprInfo_ComplexExpr>();
+            BenchmarkRunner.Run<CreateExpVsCreateExprInfo_ComplexExpr>();
+
             //BenchmarkRunner.Run<CreateExpVsCreateExprInfo_NestedLambda>();
             //BenchmarkRunner.Run<CreateExprCompile_vs_CreateExprInfoCompile>();
 
@@ -22,7 +23,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
 
             //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.CompileManuallyComposed>();
-            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.InvokeManuallyComposed>();
+            //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.InvokeManuallyComposed>();
         }
     }
 }
