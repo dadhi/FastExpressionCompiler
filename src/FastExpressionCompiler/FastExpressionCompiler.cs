@@ -1109,7 +1109,6 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            // todo: Test struct arguments loading via il.Emit(OpCodes.Ldarga_S)
             private static void LoadParamArg(ILGenerator il, int paramIndex)
             {
                 switch (paramIndex)
