@@ -7,7 +7,7 @@
 [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)
 [![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)
 
-Supported platforms: __.NET 4.5.2+__, __.NET Standard 1.3__
+Supported platforms: __.NET 4.5+__, __.NET Standard 1.3__
 
 ## Why
 
