@@ -816,7 +816,7 @@ namespace FastExpressionCompiler
                     var value = constExprInfo != null ? constExprInfo.Value : ((ConstantExpression)exprObj).Value;
                     if (value is Delegate || IsBoundConstant(value))
                         (closure ?? (closure = new ClosureInfo())).AddConstant(exprObj, value, exprType);
-                    break;
+                    return true;
 
                 case ExpressionType.Parameter:
                     // if parameter is used But no passed (not in parameter expressions)
@@ -825,7 +825,7 @@ namespace FastExpressionCompiler
                     var paramExpr = exprInfo ?? (ParameterExpression)exprObj;
                     if (paramExprs.IndexOf(paramExpr) == -1)
                         (closure ?? (closure = new ClosureInfo())).AddNonPassedParam(paramExpr);
-                    break;
+                    return true;
 
                 case ExpressionType.Call:
                     var callInfo = exprObj as MethodCallExpressionInfo;
@@ -893,6 +893,7 @@ namespace FastExpressionCompiler
                         var miNewExpr = memberInitExpr.NewExpression;
                         if (!TryCollectBoundConstants(ref closure, miNewExpr, miNewExpr.NodeType, miNewExpr.Type, paramExprs))
                             return false;
+
                         var memberBindings = memberInitExpr.Bindings;
                         for (var i = 0; i < memberBindings.Count; ++i)
                         {
@@ -904,7 +905,7 @@ namespace FastExpressionCompiler
                         }
                     }
 
-                    break;
+                    return true;
 
                 // nested lambda expression
                 case ExpressionType.Lambda:
@@ -948,7 +949,7 @@ namespace FastExpressionCompiler
                         .AddNestedLambda(exprObj, lambda, nestedClosure, isAction: lambdaReturnType == typeof(void));
 
                     if (nestedClosure == null)
-                        break;
+                        return true; // done
 
                     // if nested non passed parameter is no matched with any outer passed parameter, 
                     // then ensure it goes to outer non passed parameter.
@@ -974,7 +975,7 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < nestedNestedLambdas.Length; i++)
                             closure.AddNestedLambda(nestedNestedLambdas[i]);
 
-                    break;
+                    return true;
 
                 case ExpressionType.Invoke:
                     var invokeExpr = (InvocationExpression)exprObj;
@@ -1006,7 +1007,8 @@ namespace FastExpressionCompiler
                             return TryCollectBoundConstants(ref closure, leftInfo, leftInfo.NodeType, leftInfo.Type, paramExprs)
                                 && TryCollectBoundConstants(ref closure, rightInfo, rightInfo.NodeType, rightInfo.Type, paramExprs);
                         }
-                        break;
+
+                        return false;
                     }
 
                     var unaryExpr = exprObj as UnaryExpression;
@@ -1024,10 +1026,9 @@ namespace FastExpressionCompiler
                         return TryCollectBoundConstants(ref closure, leftExpr, leftExpr.NodeType, leftExpr.Type, paramExprs)
                             && TryCollectBoundConstants(ref closure, rightExpr, rightExpr.NodeType, rightExpr.Type, paramExprs);
                     }
-                    break;
+                    
+                    return false;
             }
-
-            return true;
         }
 
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, object[] exprObjects, IList<ParameterExpression> paramExprs)
