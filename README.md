@@ -129,15 +129,18 @@ for finding the supported expression types.
 
 ## Usage
 
-Hoisted lambda expression (created for you by compiler):
+Hoisted lambda expression (created by compiler):
+
 ```chsarp
     var a = new A(); var b = new B();
     Expression<Func<X>> expr = () => new X(a, b);
-    var getX = ExpressionCompiler.Compile(expr);
+
+    var getX = expr.CompileFast();
     var x = getX();
 ```
 
 Manually composed lambda expression:
+
 ```chsarp
     var a = new A();
     var bParamExpr = Expression.Parameter(typeof(B), "b");
@@ -145,7 +148,8 @@ Manually composed lambda expression:
         Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
             Expression.Constant(a, typeof(A)), bParamExpr),
         bParamExpr);
-    var getX = ExpressionCompiler.Compile<Func<B, X>>(expr);
+
+    var getX = expr.CompileFast();
     var x = getX(new B());
 ```
 
@@ -154,7 +158,7 @@ Manually composed lambda expression:
 
 Initially developed and currently used in [DryIoc].
 
-Used by [Marten v2](https://github.com/JasperFx/marten), [ExpressionToCodeLib].
+Used in [Marten v2](https://github.com/JasperFx/marten), [ExpressionToCodeLib].
 
 v1.2 supports:
 
@@ -164,7 +168,7 @@ v1.2 supports:
 - Property and member access
 - Equality and `?:` operators
 
-v1 does not support:
+v1.2 does not support:
 
 - `??`, `?.`, bitwise, and ariphmetic operators
 - Code blocks, assignments and whatever added since .NET 4.0
