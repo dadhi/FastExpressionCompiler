@@ -2342,7 +2342,7 @@ namespace FastExpressionCompiler
         }
 
         /// <summary>Enables member assignement on existing instance expression.</summary>
-        public static ExpressionInfo MemberAssign(ExpressionInfo instanceExpr, params MemberAssignmentInfo[] assignments)
+        public static ExpressionInfo MemberInit(ExpressionInfo instanceExpr, params MemberAssignmentInfo[] assignments)
         {
             return new MemberInitExpressionInfo(instanceExpr, assignments);
         }
