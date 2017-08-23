@@ -1026,7 +1026,7 @@ namespace FastExpressionCompiler
                         return TryCollectBoundConstants(ref closure, leftExpr, leftExpr.NodeType, leftExpr.Type, paramExprs)
                             && TryCollectBoundConstants(ref closure, rightExpr, rightExpr.NodeType, rightExpr.Type, paramExprs);
                     }
-                    
+
                     return false;
             }
         }
@@ -1134,7 +1134,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.MemberAccess:
                         return EmitMemberAccess(exprObj, paramExprs, il, closure);
                     case ExpressionType.New:
-                        return EmitNew(exprObj, paramExprs, il, closure);
+                        return EmitNew(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.NewArrayInit:
                         return EmitNewArray(exprObj, paramExprs, il, closure);
                     case ExpressionType.MemberInit:
@@ -1448,22 +1448,41 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Castclass, closedItemType);
             }
 
-            private static bool EmitNew(object exprObj, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitNew(
+                object exprObj, Type exprType, IList<ParameterExpression> ps,
+                ILGenerator il, ClosureInfo closure,
+                LocalBuilder resultValueVar = null)
             {
+                ConstructorInfo ctor;
                 var exprInfo = exprObj as NewExpressionInfo;
                 if (exprInfo != null)
                 {
                     if (!EmitMany(exprInfo.Arguments, ps, il, closure))
                         return false;
-                    il.Emit(OpCodes.Newobj, exprInfo.Constructor);
+                    ctor = exprInfo.Constructor;
                 }
                 else
                 {
                     var expr = (NewExpression)exprObj;
                     if (!EmitMany(expr.Arguments, ps, il, closure))
                         return false;
-                    il.Emit(OpCodes.Newobj, expr.Constructor);
+                    ctor = expr.Constructor;
                 }
+
+                if (ctor != null)
+                    il.Emit(OpCodes.Newobj, ctor);
+                else
+                {
+                    if (!exprType.GetTypeInfo().IsValueType)
+                        return false; // null constructor and not a value type, better fallback
+
+                    var valueVar = resultValueVar ?? il.DeclareLocal(exprType);
+                    il.Emit(OpCodes.Ldloca, valueVar);
+                    il.Emit(OpCodes.Initobj, exprType);
+                    if (resultValueVar == null)
+                        il.Emit(OpCodes.Ldloc, valueVar);
+                }
+
                 return true;
             }
 
@@ -1559,18 +1578,21 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitMemberInit(object exprObj, Type memberType, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMemberInit(
+                object exprObj, Type exprType, IList<ParameterExpression> ps,
+                ILGenerator il, ClosureInfo closure)
             {
                 var exprInfo = exprObj as MemberInitExpressionInfo;
                 if (exprInfo != null)
-                    return EmitMemberInitInfo(exprInfo, memberType, ps, il, closure);
+                    return EmitMemberInitInfo(exprInfo, exprType, ps, il, closure);
+
+                LocalBuilder valueVar = null;
+                if (exprType.GetTypeInfo().IsValueType)
+                    valueVar = il.DeclareLocal(exprType);
 
                 var expr = (MemberInitExpression)exprObj;
-                if (!EmitNew(expr.NewExpression, ps, il, closure))
+                if (!EmitNew(expr.NewExpression, exprType, ps, il, closure, valueVar))
                     return false;
-
-                var obj = il.DeclareLocal(memberType);
-                il.Emit(OpCodes.Stloc, obj);
 
                 var bindings = expr.Bindings;
                 for (var i = 0; i < bindings.Count; i++)
@@ -1578,74 +1600,79 @@ namespace FastExpressionCompiler
                     var binding = bindings[i];
                     if (binding.BindingType != MemberBindingType.Assignment)
                         return false;
-                    il.Emit(OpCodes.Ldloc, obj);
+
+                    if (valueVar != null) // load local value address, to set its members
+                        il.Emit(OpCodes.Ldloca, valueVar);
+                    else
+                        il.Emit(OpCodes.Dup); // duplicate member owner on stack
 
                     var bindingExpr = ((MemberAssignment)binding).Expression;
-                    if (!TryEmit(bindingExpr, bindingExpr.NodeType, bindingExpr.Type, ps, il, closure))
+                    if (!EmitMemberBinding(bindingExpr, bindingExpr.NodeType, bindingExpr.Type,
+                        binding.Member, ps, il, closure))
                         return false;
-
-                    var prop = binding.Member as PropertyInfo;
-                    if (prop != null)
-                    {
-                        var propSetMethodName = "set_" + prop.Name;
-                        var setMethod = prop.DeclaringType.GetTypeInfo()
-                            .DeclaredMethods.FirstOrDefault(m => m.Name == propSetMethodName);
-                        if (setMethod == null)
-                            return false;
-                        EmitMethodCall(il, setMethod);
-                    }
-                    else
-                    {
-                        var field = binding.Member as FieldInfo;
-                        if (field == null)
-                            return false;
-                        il.Emit(OpCodes.Stfld, field);
-                    }
                 }
 
-                il.Emit(OpCodes.Ldloc, obj);
+                if (valueVar != null)
+                    il.Emit(OpCodes.Ldloc, valueVar);
+
                 return true;
             }
 
-            private static bool EmitMemberInitInfo(MemberInitExpressionInfo exprInfo, Type memberType, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMemberInitInfo(MemberInitExpressionInfo exprInfo, Type exprType, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (!EmitNew(exprInfo.NewExpressionInfo, ps, il, closure))
-                    return false;
+                LocalBuilder valueVar = null;
+                if (exprType.GetTypeInfo().IsValueType)
+                    valueVar = il.DeclareLocal(exprType);
 
-                var obj = il.DeclareLocal(memberType);
-                il.Emit(OpCodes.Stloc, obj);
+                if (!EmitNew(exprInfo.NewExpressionInfo, exprType, ps, il, closure, valueVar))
+                    return false;
 
                 var bindings = exprInfo.Bindings;
                 for (var i = 0; i < bindings.Length; i++)
                 {
                     var binding = bindings[i];
 
-                    il.Emit(OpCodes.Ldloc, obj);
+                    if (valueVar != null) // load local value address, to set its members
+                        il.Emit(OpCodes.Ldloca, valueVar);
+                    else
+                        il.Emit(OpCodes.Dup); // duplicate member owner on stack
 
                     var bindingExpr = binding.Expression;
-                    if (!TryEmit(bindingExpr, bindingExpr.NodeType, bindingExpr.Type, ps, il, closure))
+                    if (!EmitMemberBinding(bindingExpr, bindingExpr.NodeType, bindingExpr.Type,
+                        binding.Member, ps, il, closure))
                         return false;
-
-                    var prop = binding.Member as PropertyInfo;
-                    if (prop != null)
-                    {
-                        var propSetMethodName = "set_" + prop.Name;
-                        var setMethod = prop.DeclaringType.GetTypeInfo()
-                            .DeclaredMethods.FirstOrDefault(m => m.Name == propSetMethodName);
-                        if (setMethod == null)
-                            return false;
-                        EmitMethodCall(il, setMethod);
-                    }
-                    else
-                    {
-                        var field = binding.Member as FieldInfo;
-                        if (field == null)
-                            return false;
-                        il.Emit(OpCodes.Stfld, field);
-                    }
                 }
 
-                il.Emit(OpCodes.Ldloc, obj);
+                if (valueVar != null)
+                    il.Emit(OpCodes.Ldloc, valueVar);
+
+                return true;
+            }
+
+            private static bool EmitMemberBinding(
+                object exprObj, ExpressionType exprNodeType, Type exprType, MemberInfo bindingMember,
+                IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            {
+                if (!TryEmit(exprObj, exprNodeType, exprType, ps, il, closure))
+                    return false;
+
+                var prop = bindingMember as PropertyInfo;
+                if (prop != null)
+                {
+                    var propSetMethodName = "set_" + prop.Name;
+                    var setMethod = prop.DeclaringType.GetTypeInfo()
+                        .DeclaredMethods.FirstOrDefault(m => m.Name == propSetMethodName);
+                    if (setMethod == null)
+                        return false;
+                    EmitMethodCall(il, setMethod);
+                }
+                else
+                {
+                    var field = bindingMember as FieldInfo;
+                    if (field == null)
+                        return false;
+                    il.Emit(OpCodes.Stfld, field);
+                }
                 return true;
             }
 
@@ -1658,9 +1685,10 @@ namespace FastExpressionCompiler
                     var objInfo = exprInfo.Object;
                     if (objInfo != null)
                     {
-                        if (!TryEmit(objInfo, objInfo.NodeType, objInfo.Type, ps, il, closure))
+                        var objType = objInfo.Type;
+                        if (!TryEmit(objInfo, objInfo.NodeType, objType, ps, il, closure))
                             return false;
-                        IfValueTypeStoreAndLoadValueAddress(il, objInfo.Type);
+                        EmitBoxingForValueType(il, objType);
                     }
 
                     if (exprInfo.Arguments.Length != 0 &&
@@ -1673,9 +1701,10 @@ namespace FastExpressionCompiler
                     var objExpr = expr.Object;
                     if (objExpr != null)
                     {
-                        if (!TryEmit(objExpr, objExpr.NodeType, objExpr.Type, ps, il, closure))
+                        var objType = objExpr.Type;
+                        if (!TryEmit(objExpr, objExpr.NodeType, objType, ps, il, closure))
                             return false;
-                        IfValueTypeStoreAndLoadValueAddress(il, objExpr.Type);
+                        EmitBoxingForValueType(il, objType);
                     }
 
                     if (expr.Arguments.Count != 0 &&
@@ -1688,7 +1717,13 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static void IfValueTypeStoreAndLoadValueAddress(ILGenerator il, Type ownerType)
+            private static void EmitBoxingForValueType(ILGenerator il, Type exprType)
+            {
+                if (exprType.GetTypeInfo().IsValueType)
+                    il.Emit(OpCodes.Box, exprType);
+            }
+
+            private static void EmitValueTypeAccess(ILGenerator il, Type ownerType)
             {
                 if (ownerType.GetTypeInfo().IsValueType)
                 {
@@ -1706,9 +1741,10 @@ namespace FastExpressionCompiler
                     var instInfo = exprInfo.Expression;
                     if (instInfo != null)
                     {
-                        if (!TryEmit(instInfo, instInfo.NodeType, instInfo.Type, ps, il, closure))
+                        var instType = instInfo.Type;
+                        if (!TryEmit(instInfo, instInfo.NodeType, instType, ps, il, closure))
                             return false;
-                        IfValueTypeStoreAndLoadValueAddress(il, instInfo.Type);
+                        EmitValueTypeAccess(il, instType);
                     }
                 }
                 else
@@ -1716,9 +1752,10 @@ namespace FastExpressionCompiler
                     var instExpr = ((MemberExpression)exprObj).Expression;
                     if (instExpr != null)
                     {
-                        if (!TryEmit(instExpr, instExpr.NodeType, instExpr.Type, ps, il, closure))
+                        var instType = instExpr.Type;
+                        if (!TryEmit(instExpr, instExpr.NodeType, instType, ps, il, closure))
                             return false;
-                        IfValueTypeStoreAndLoadValueAddress(il, instExpr.Type);
+                        EmitValueTypeAccess(il, instType);
                     }
                 }
 
