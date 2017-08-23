@@ -1132,7 +1132,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Call:
                         return EmitMethodCall(exprObj, paramExprs, il, closure);
                     case ExpressionType.MemberAccess:
-                        return EmitMemberAccess(exprObj, paramExprs, il, closure);
+                        return EmitMemberAccess(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.New:
                         return EmitNew(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.NewArrayInit:
@@ -1723,43 +1723,52 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Box, exprType);
             }
 
-            private static void EmitValueTypeAccess(ILGenerator il, Type ownerType)
+            private static bool EmitMemberAccess(object exprObj, Type exprType, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                if (ownerType.GetTypeInfo().IsValueType)
-                {
-                    var valueVar = il.DeclareLocal(ownerType);
-                    il.Emit(OpCodes.Stloc, valueVar);
-                    il.Emit(OpCodes.Ldloca, valueVar);
-                }
-            }
-
-            private static bool EmitMemberAccess(object exprObj, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
-            {
+                MemberInfo member;
+                Type instanceType = null;
                 var exprInfo = exprObj as MemberExpressionInfo;
                 if (exprInfo != null)
                 {
                     var instInfo = exprInfo.Expression;
                     if (instInfo != null)
                     {
-                        var instType = instInfo.Type;
-                        if (!TryEmit(instInfo, instInfo.NodeType, instType, ps, il, closure))
+                        instanceType = instInfo.Type;
+                        if (!TryEmit(instInfo, instInfo.NodeType, instanceType, ps, il, closure))
                             return false;
-                        EmitValueTypeAccess(il, instType);
                     }
+                    member = exprInfo.Member;
                 }
                 else
                 {
-                    var instExpr = ((MemberExpression)exprObj).Expression;
+                    var expr = (MemberExpression)exprObj;
+                    var instExpr = expr.Expression;
                     if (instExpr != null)
                     {
-                        var instType = instExpr.Type;
-                        if (!TryEmit(instExpr, instExpr.NodeType, instType, ps, il, closure))
+                        instanceType = instExpr.Type;
+                        if (!TryEmit(instExpr, instExpr.NodeType, instanceType, ps, il, closure))
                             return false;
-                        EmitValueTypeAccess(il, instType);
+                    }
+                    member = expr.Member;
+                }
+
+                if (instanceType != null) // it is a non-static member access
+                {
+                    // value type special treatment: 
+                    // load address of value instance in order to access value member or call a method (does a copy).
+                    // todo: May be optimized for method call to load address of initial variable without copy
+                    if (instanceType.GetTypeInfo().IsValueType)
+                    {
+                        if (exprType.GetTypeInfo().IsValueType ||
+                            member is PropertyInfo)
+                        {
+                            var valueVar = il.DeclareLocal(instanceType);
+                            il.Emit(OpCodes.Stloc, valueVar);
+                            il.Emit(OpCodes.Ldloca, valueVar);
+                        }
                     }
                 }
 
-                var member = exprInfo != null ? exprInfo.Member : ((MemberExpression)exprObj).Member;
                 var field = member as FieldInfo;
                 if (field != null)
                 {
