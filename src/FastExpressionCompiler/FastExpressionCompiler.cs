@@ -201,7 +201,7 @@ namespace FastExpressionCompiler
                 bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramExprs);
         }
 
-        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
+        /// <summary>Tries to compile lambda expression info.</summary>
         /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
         /// <param name="lambdaExpr">Lambda expression to compile.</param>
         /// <returns>Compiled delegate.</returns>
@@ -212,6 +212,16 @@ namespace FastExpressionCompiler
             var paramTypes = GetParamExprTypes(paramExprs);
             var expr = lambdaExpr.Body;
             return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type);
+        }
+
+        /// <summary>Tries to compile lambda expression info.</summary>
+        /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
+        /// <param name="lambdaExpr">Lambda expression to compile.</param>
+        /// <returns>Compiled delegate.</returns>
+        public static TDelegate TryCompile<TDelegate>(ExpressionInfo<TDelegate> lambdaExpr)
+            where TDelegate : class
+        {
+            return TryCompile<TDelegate>((LambdaExpressionInfo)lambdaExpr);
         }
 
         /// <summary>Compiles expression to delegate by emitting the IL. 
@@ -874,7 +884,7 @@ namespace FastExpressionCompiler
                     var memberInitExprInfo = exprObj as MemberInitExpressionInfo;
                     if (memberInitExprInfo != null)
                     {
-                        var miNewInfo = memberInitExprInfo.NewExpressionInfo;
+                        var miNewInfo = memberInitExprInfo.ExpressionInfo;
                         if (!TryCollectBoundConstants(ref closure, miNewInfo, miNewInfo.NodeType, miNewInfo.Type, paramExprs))
                             return false;
 
@@ -1114,7 +1124,8 @@ namespace FastExpressionCompiler
             private static readonly MethodInfo _objectEqualsMethod = typeof(object).GetTypeInfo()
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "Equals");
 
-            public static bool TryEmit(object exprObj, ExpressionType exprNodeType, Type exprType,
+            public static bool TryEmit(
+                object exprObj, ExpressionType exprNodeType, Type exprType,
                 IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
                 switch (exprNodeType)
@@ -1624,8 +1635,21 @@ namespace FastExpressionCompiler
                 if (exprType.GetTypeInfo().IsValueType)
                     valueVar = il.DeclareLocal(exprType);
 
-                if (!EmitNew(exprInfo.NewExpressionInfo, exprType, ps, il, closure, valueVar))
-                    return false;
+                var objInfo = exprInfo.ExpressionInfo;
+                if (objInfo == null)
+                    return false; // static initialization is Not supported
+
+                var newExpr = exprInfo.NewExpressionInfo;
+                if (newExpr != null)
+                {
+                    if (!EmitNew(newExpr, exprType, ps, il, closure, valueVar))
+                        return false;
+                }
+                else
+                {
+                    if (!TryEmit(objInfo, objInfo.NodeType, objInfo.Type, ps, il, closure))
+                        return false;
+                }
 
                 var bindings = exprInfo.Bindings;
                 for (var i = 0; i < bindings.Length; i++)
@@ -1688,7 +1712,8 @@ namespace FastExpressionCompiler
                         var objType = objInfo.Type;
                         if (!TryEmit(objInfo, objInfo.NodeType, objType, ps, il, closure))
                             return false;
-                        EmitBoxingForValueType(il, objType);
+                        if (objType.GetTypeInfo().IsValueType)
+                            il.Emit(OpCodes.Box, objType); // todo: not optimal, should be replaced by Ldloca
                     }
 
                     if (exprInfo.Arguments.Length != 0 &&
@@ -1704,7 +1729,8 @@ namespace FastExpressionCompiler
                         var objType = objExpr.Type;
                         if (!TryEmit(objExpr, objExpr.NodeType, objType, ps, il, closure))
                             return false;
-                        EmitBoxingForValueType(il, objType);
+                        if (objType.GetTypeInfo().IsValueType)
+                            il.Emit(OpCodes.Box, objType); // todo: not optimal, should be replaced by Ldloca
                     }
 
                     if (expr.Arguments.Count != 0 &&
@@ -1715,12 +1741,6 @@ namespace FastExpressionCompiler
                 var method = exprInfo != null ? exprInfo.Method : ((MethodCallExpression)exprObj).Method;
                 EmitMethodCall(il, method);
                 return true;
-            }
-
-            private static void EmitBoxingForValueType(ILGenerator il, Type exprType)
-            {
-                if (exprType.GetTypeInfo().IsValueType)
-                    il.Emit(OpCodes.Box, exprType);
             }
 
             private static bool EmitMemberAccess(object exprObj, Type exprType, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
@@ -2321,6 +2341,12 @@ namespace FastExpressionCompiler
             return new MemberInitExpressionInfo(newExpr, bindings);
         }
 
+        /// <summary>Enables member assignement on existing instance expression.</summary>
+        public static ExpressionInfo MemberAssign(ExpressionInfo instanceExpr, params MemberAssignmentInfo[] assignments)
+        {
+            return new MemberInitExpressionInfo(instanceExpr, assignments);
+        }
+
         /// <summary>Constructs an array given the array type and item initializer expressions.</summary>
         public static NewArrayExpressionInfo NewArrayInit(Type type, params object[] initializers)
         {
@@ -2398,18 +2424,25 @@ namespace FastExpressionCompiler
         public override ExpressionType NodeType { get { return ExpressionType.MemberInit; } }
 
         /// <inheritdoc />
-        public override Type Type { get { return NewExpressionInfo.Type; } }
+        public override Type Type { get { return ExpressionInfo.Type; } }
 
         /// <summary>New expression.</summary>
-        public readonly NewExpressionInfo NewExpressionInfo;
+        public NewExpressionInfo NewExpressionInfo { get { return ExpressionInfo as NewExpressionInfo; } }
+
+        /// <summary>New expression.</summary>
+        public readonly ExpressionInfo ExpressionInfo;
 
         /// <summary>Member assignments.</summary>
         public readonly MemberAssignmentInfo[] Bindings;
 
-        /// <summary>Constructs out of new expression and member initialization list.</summary>
+        /// <summary>Constructs from the new expression and member initialization list.</summary>
         public MemberInitExpressionInfo(NewExpressionInfo newExpressionInfo, MemberAssignmentInfo[] bindings)
+            : this((ExpressionInfo)newExpressionInfo, bindings) {}
+
+        /// <summary>Constructs from existing expression and member assignment list.</summary>
+        public MemberInitExpressionInfo(ExpressionInfo expressionInfo, MemberAssignmentInfo[] bindings)
         {
-            NewExpressionInfo = newExpressionInfo;
+            ExpressionInfo = expressionInfo;
             Bindings = bindings;
         }
     }

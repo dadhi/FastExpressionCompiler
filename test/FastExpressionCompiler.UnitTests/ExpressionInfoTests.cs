@@ -225,6 +225,5 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.IsInstanceOf<P>(func());
         }
-
     }
 }
