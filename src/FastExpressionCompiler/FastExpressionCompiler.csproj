@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.2.2</VersionPrefix>
+    <VersionPrefix>1.3.0</VersionPrefix>
     <TargetFrameworks>netstandard1.3;net45</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -10,7 +10,11 @@
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
-
+      v1.3.0:
+      - added: #20 Allow ExpressionInfo.MemberInit for non-New expressions
+      - fixed: #19 Nested CallExpression causes System.AccessViolationException
+      - fixed: ValueType member access
+      - fixed: False positive in TryCollectBoundConstants for not yet supported expression types
       v1.2.2:
       - fixed: #16: FastCompile with fallback could return null
       v1.2.1:
