@@ -1,0 +1,9 @@
+language: csharp
+dist: trusty
+os:  
+  - linux
+sudo: required
+mono: none
+dotnet: 1.0.1
+script:
+  - ./build.sh --quiet verify

@@ -9,5 +9,3 @@ dotnet test
 popd
 
 dotnet pack ".\src\FastExpressionCompiler" -c Release -o "./dist"
-
-pause
