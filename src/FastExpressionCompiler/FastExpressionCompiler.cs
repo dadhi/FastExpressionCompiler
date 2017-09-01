@@ -156,7 +156,7 @@ namespace FastExpressionCompiler
         /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
         /// <param name="lambdaExpr">Lambda expression to compile.</param>
         /// <returns>Compiled delegate.</returns>
-        public static TDelegate TryCompile<TDelegate>(LambdaExpression lambdaExpr)
+        public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr)
             where TDelegate : class
         {
             var paramExprs = lambdaExpr.Parameters;
@@ -1171,7 +1171,9 @@ namespace FastExpressionCompiler
                     case ExpressionType.Conditional:
                         return EmitTernararyOperator((ConditionalExpression)exprObj, paramExprs, il, closure);
 
-                    //case ExpressionType.Coalesce:
+                    case ExpressionType.Assign:
+                        return EmitAssign(exprObj, exprType, paramExprs, il, closure);
+
                     default:
                         return false;
                 }
@@ -1698,6 +1700,36 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stfld, field);
                 }
                 return true;
+            }
+
+            private static bool EmitAssign(object exprObj, Type exprType, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            {
+                var expr = exprObj as BinaryExpression;
+                if (expr == null)
+                    return false;
+
+                var valueExpr = expr.Right;
+                if (!TryEmit(valueExpr, valueExpr.NodeType, exprType, paramExprs, il, closure))
+                    return false;
+
+                var targetExpr = expr.Left;
+                switch (targetExpr.NodeType)
+                {
+                    case ExpressionType.Parameter:
+                        var paramIndex = paramExprs.IndexOf((ParameterExpression)targetExpr);
+                        if (paramIndex == -1)
+                            return false;
+
+                        il.Emit(OpCodes.Dup); // dup value to assign and return
+
+                        if (paramIndex >= byte.MaxValue)
+                            return false;
+
+                        il.Emit(OpCodes.Starg_S, paramIndex);
+                        return true;
+
+                    default: return false;
+                }
             }
 
             private static bool EmitMethodCall(object exprObj,
