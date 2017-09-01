@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.3.0</VersionPrefix>
-    <TargetFrameworks>netstandard1.3;net45</TargetFrameworks>
+    <VersionPrefix>1.4.0</VersionPrefix>
+    <TargetFrameworks>net45;netstandard1.3;netstandard2.0</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>FastExpressionCompiler</AssemblyName>
@@ -12,6 +12,8 @@
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
+      v1.4.0:
+      - added: NetStandard 2.0 target
       v1.3.0:
       - added: #20 Allow ExpressionInfo.MemberInit for non-New expressions
       - fixed: #19 Nested CallExpression causes System.AccessViolationException
@@ -35,6 +37,10 @@
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
   </ItemGroup>
 
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+  </ItemGroup>
+
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <Reference Include="System.Reflection" />
     <Reference Include="System.Linq" />
@@ -44,8 +50,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="FastExpressionCompiler.net452.v3.ncrunchproject" />
-    <None Remove="FastExpressionCompiler.netstandard1.3.v3.ncrunchproject" />
+    <None Remove="FastExpressionCompiler.*.ncrunchproject" />
   </ItemGroup>
 
 </Project>
