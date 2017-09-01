@@ -1702,30 +1702,59 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitAssign(object exprObj, Type exprType, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            private static bool EmitAssign(object exprObj, Type exprType, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
                 var expr = exprObj as BinaryExpression;
                 if (expr == null)
                     return false;
 
-                var valueExpr = expr.Right;
-                if (!TryEmit(valueExpr, valueExpr.NodeType, exprType, paramExprs, il, closure))
-                    return false;
-
-                var targetExpr = expr.Left;
-                switch (targetExpr.NodeType)
+                var leftExpr = expr.Left;
+                switch (leftExpr.NodeType)
                 {
                     case ExpressionType.Parameter:
-                        var paramIndex = paramExprs.IndexOf((ParameterExpression)targetExpr);
-                        if (paramIndex == -1)
+                        var p = (ParameterExpression)leftExpr;
+                        var paramIndex = ps.IndexOf(p);
+                        if (paramIndex != -1)
+                        {
+                            if (closure != null)
+                                paramIndex += 1; // shift parameter indices by one, because the first one will be closure
+
+                            if (paramIndex >= byte.MaxValue)
+                                return false;
+
+                            if (!TryEmit(expr.Right, expr.Right.NodeType, exprType, ps, il, closure))
+                                return false;
+
+                            il.Emit(OpCodes.Dup); // dup value to assign and return
+                            il.Emit(OpCodes.Starg_S, paramIndex);
+                            return true;
+                        }
+
+                        // if parameter isn't passed, then it is passed into some outer lambda,
+                        // so it should be loaded from closure. Then the closure is null will be an invalid case.
+                        if (closure == null)
                             return false;
 
-                        il.Emit(OpCodes.Dup); // dup value to assign and return
+                        var nonPassedParamIndex = closure.NonPassedParameters.IndexOf(it => it == p);
+                        if (nonPassedParamIndex == -1)
+                            return false;  // what??? no chance
 
-                        if (paramIndex >= byte.MaxValue)
+                        var paramInClosureIndex = closure.Constants.Length + nonPassedParamIndex;
+
+                        il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
+                        if (closure.Fields == null) //todo: support closure array later
                             return false;
 
-                        il.Emit(OpCodes.Starg_S, paramIndex);
+                        if (!TryEmit(expr.Right, expr.Right.NodeType, exprType, ps, il, closure))
+                            return false;
+
+                        il.Emit(OpCodes.Dup); // duplicate right value on stack  to assign and return
+
+                        var valueVar = il.DeclareLocal(exprType); // store left value in variable
+                        il.Emit(OpCodes.Stloc, valueVar);
+                        il.Emit(OpCodes.Stfld, closure.Fields[paramInClosureIndex]); // assign the variable to parameter field
+                        il.Emit(OpCodes.Ldloc, valueVar); // load the variable again to return
+
                         return true;
 
                     default: return false;
