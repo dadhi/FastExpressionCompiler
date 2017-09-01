@@ -1715,7 +1715,7 @@ namespace FastExpressionCompiler
                     var paramIndex = paramExprs.IndexOf(parameterExpression);
                     if (paramIndex == -1)
                     {
-                        // todo: it'll only matters when the variables of the a block expression is handled correctly
+                        // todo: this will only matters when the variables of a block expression is handled correctly
                         //var localIndex = closure.ConstructedLocals.IndexOf(it => it == parameterExpression);
                         //if (localIndex == -1)
                         //    return false;
