@@ -6,6 +6,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>FastExpressionCompiler</AssemblyName>
+    <Authors>Maksim Volkau</Authors>
+    <Copyright>Copyright © 2017 Maksim Volkau</Copyright>
     <Description>Fast Expression Compiler is ~20 times faster than Expression.Compile()</Description>
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
