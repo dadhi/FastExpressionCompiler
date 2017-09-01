@@ -1172,7 +1172,7 @@ namespace FastExpressionCompiler
                         return EmitTernararyOperator((ConditionalExpression)exprObj, paramExprs, il, closure);
 
                     case ExpressionType.Assign:
-                        return EmitAssign(exprObj, exprType, paramExprs, il, closure);
+                        return EmitAssign(exprObj, paramExprs, il, closure);
 
                     default:
                         return false;
@@ -1702,34 +1702,78 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitAssign(object exprObj, Type exprType, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            private static bool EmitAssign(object exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
                 var expr = exprObj as BinaryExpression;
                 if (expr == null)
                     return false;
-
-                var valueExpr = expr.Right;
-                if (!TryEmit(valueExpr, valueExpr.NodeType, exprType, paramExprs, il, closure))
-                    return false;
-
+                
                 var targetExpr = expr.Left;
-                switch (targetExpr.NodeType)
+
+                if (targetExpr is ParameterExpression parameterExpression)
                 {
-                    case ExpressionType.Parameter:
-                        var paramIndex = paramExprs.IndexOf((ParameterExpression)targetExpr);
-                        if (paramIndex == -1)
-                            return false;
+                    var paramIndex = paramExprs.IndexOf(parameterExpression);
+                    if (paramIndex == -1)
+                    {
+                        // todo: this will only matters when the variables of a block expression is handled correctly
+                        //var localIndex = closure.ConstructedLocals.IndexOf(it => it == parameterExpression);
+                        //if (localIndex == -1)
+                        //    return false;
 
-                        il.Emit(OpCodes.Dup); // dup value to assign and return
+                        //if (!TryEmit(expr.Right, expr.Right.NodeType, expr.Right.Type, paramExprs, il, closure))
+                        //    return false;
 
-                        if (paramIndex >= byte.MaxValue)
-                            return false;
+                        //il.Emit(OpCodes.Stloc, closure.LocalBuilders[localIndex]);
 
-                        il.Emit(OpCodes.Starg_S, paramIndex);
-                        return true;
+                        //return true;
 
-                    default: return false;
+                        return false;
+                    }
+
+                    if (!TryEmit(expr.Right, expr.Right.NodeType, expr.Right.Type, paramExprs, il, closure))
+                        return false;
+
+                    il.Emit(OpCodes.Dup); // dup value to assign and return
+
+                    if (paramIndex >= byte.MaxValue)
+                        return false;
+
+                    il.Emit(OpCodes.Starg_S, paramIndex);
+                    return true;
                 }
+
+                if (targetExpr is MemberExpression memberExpression)
+                {
+                    if (!TryEmit(memberExpression.Expression, memberExpression.Expression.NodeType, memberExpression.Expression.Type, paramExprs, il, closure))
+                        return false;
+
+                    if (!TryEmit(expr.Right, expr.Right.NodeType, expr.Right.Type, paramExprs, il, closure))
+                        return false;
+                    
+                    if (memberExpression.Member is PropertyInfo prop)
+                    {
+                        var propSetMethodName = "set_" + prop.Name;
+                        var setMethod = prop.DeclaringType.GetTypeInfo()
+                            .DeclaredMethods.FirstOrDefault(m => m.Name == propSetMethodName);
+                        if (setMethod == null)
+                            return false;
+                        EmitMethodCall(il, setMethod);
+                    }
+                    else
+                    {
+                        var field = memberExpression.Member as FieldInfo;
+                        if (field == null)
+                            return false;
+                        il.Emit(OpCodes.Stfld, field);
+                    }
+
+                    if (!EmitMemberAccess(memberExpression, memberExpression.Type, paramExprs, il, closure))
+                        return false;
+
+                    return true;
+                }
+
+                return false;
             }
 
             private static bool EmitMethodCall(object exprObj,
