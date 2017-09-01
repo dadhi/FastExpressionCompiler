@@ -1,0 +1,11 @@
+version: 1.4.{build}
+build_script:
+- cmd: build.bat
+artifacts:
+- path: ./src/FastExpressionCompiler/dist/*.nupkg
+deploy:
+- provider: NuGet
+  api_key:
+    secure: TODOADDKEY
+  on:
+    appveyor_repo_tag: true

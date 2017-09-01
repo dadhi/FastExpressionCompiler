@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B1CBFC5C-9B4F-4C54-A61E-4422B8D0300B}"
 EndProject
@@ -9,7 +9,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{AA457CA0-4
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{09193938-965D-4B58-8845-E4CD7D0A9BFB}"
 	ProjectSection(SolutionItems) = preProject
+		.travis.yml = .travis.yml
+		appveyor.yml = appveyor.yml
 		build.bat = build.bat
+		build.sh = build.sh
 		LICENSE = LICENSE
 		README.md = README.md
 	EndProjectSection
@@ -20,7 +23,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.Unit
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.Benchmarks", "test\FastExpressionCompiler.Benchmarks\FastExpressionCompiler.Benchmarks.csproj", "{826AB601-2B08-48BF-9F1F-337190A8DDB9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastExpressionCompiler.IssueTests", "test\FastExpressionCompiler.IssueTests\FastExpressionCompiler.IssueTests.csproj", "{2485E7E3-A778-4CEF-98E5-8E02D218E612}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.IssueTests", "test\FastExpressionCompiler.IssueTests\FastExpressionCompiler.IssueTests.csproj", "{2485E7E3-A778-4CEF-98E5-8E02D218E612}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -53,5 +56,8 @@ Global
 		{E11705E8-EE51-429D-9B08-C2EB1E242AF2} = {AA457CA0-4D92-4922-9C5C-6F9575957AE7}
 		{826AB601-2B08-48BF-9F1F-337190A8DDB9} = {AA457CA0-4D92-4922-9C5C-6F9575957AE7}
 		{2485E7E3-A778-4CEF-98E5-8E02D218E612} = {AA457CA0-4D92-4922-9C5C-6F9575957AE7}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E0034036-4006-4AA3-8322-F3F461C3C444}
 	EndGlobalSection
 EndGlobal
