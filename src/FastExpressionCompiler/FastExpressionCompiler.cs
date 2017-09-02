@@ -1441,8 +1441,6 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            // The @skipCastOrUnboxing option is for use-case when we loading and immediately storing the item, 
-            // it may happen when copying from one object array to another.
             private static void LoadArrayClosureItem(ILGenerator il, int closedItemIndex, Type closedItemType)
             {
                 // load array field
@@ -1709,7 +1707,11 @@ namespace FastExpressionCompiler
                     return false;
 
                 var leftExpr = expr.Left;
-                switch (leftExpr.NodeType)
+                var leftNodeType = leftExpr.NodeType;
+
+                var rightExpr = expr.Right;
+                var rightNodeType = rightExpr.NodeType;
+                switch (leftNodeType)
                 {
                     case ExpressionType.Parameter:
                         var p = (ParameterExpression)leftExpr;
@@ -1722,7 +1724,7 @@ namespace FastExpressionCompiler
                             if (paramIndex >= byte.MaxValue)
                                 return false;
 
-                            if (!TryEmit(expr.Right, expr.Right.NodeType, exprType, ps, il, closure))
+                            if (!TryEmit(rightExpr, rightNodeType, exprType, ps, il, closure))
                                 return false;
 
                             il.Emit(OpCodes.Dup); // dup value to assign and return
@@ -1731,7 +1733,7 @@ namespace FastExpressionCompiler
                         }
 
                         // if parameter isn't passed, then it is passed into some outer lambda,
-                        // so it should be loaded from closure. Then the closure is null will be an invalid case.
+                        // so it should be loaded from closure. Then the closure is null will be an invalid state.
                         if (closure == null)
                             return false;
 
@@ -1742,19 +1744,33 @@ namespace FastExpressionCompiler
                         var paramInClosureIndex = closure.Constants.Length + nonPassedParamIndex;
 
                         il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                        if (closure.Fields == null) //todo: support closure array later
-                            return false;
 
-                        if (!TryEmit(expr.Right, expr.Right.NodeType, exprType, ps, il, closure))
+                        if (!TryEmit(rightExpr, rightNodeType, exprType, ps, il, closure))
                             return false;
-
-                        il.Emit(OpCodes.Dup); // duplicate right value on stack  to assign and return
 
                         var valueVar = il.DeclareLocal(exprType); // store left value in variable
-                        il.Emit(OpCodes.Stloc, valueVar);
-                        il.Emit(OpCodes.Stfld, closure.Fields[paramInClosureIndex]); // assign the variable to parameter field
-                        il.Emit(OpCodes.Ldloc, valueVar); // load the variable again to return
+                        if (closure.Fields != null)
+                        {
+                            il.Emit(OpCodes.Dup);
+                            il.Emit(OpCodes.Stloc, valueVar);
+                            il.Emit(OpCodes.Stfld, closure.Fields[paramInClosureIndex]);
+                            il.Emit(OpCodes.Ldloc, valueVar);
+                        }
+                        else
+                        {
+                            il.Emit(OpCodes.Stloc, valueVar);
+                            il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField);// load array field
+                            EmitLoadConstantInt(il, paramInClosureIndex);   // load array item index
+                            il.Emit(OpCodes.Ldloc, valueVar);
+                            il.Emit(OpCodes.Stelem_Ref);                    // store the variable at array index of param
+                            il.Emit(OpCodes.Ldloc, valueVar);
 
+                            // Cast or unbox the array object item depending if it is a class or value type
+                            if (exprType.GetTypeInfo().IsValueType)
+                                il.Emit(OpCodes.Unbox_Any, exprType);
+                            else
+                                il.Emit(OpCodes.Castclass, exprType);
+                        }
                         return true;
 
                     default: return false;
