@@ -1618,8 +1618,8 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Dup); // duplicate member owner on stack
 
                     var bindingExpr = ((MemberAssignment)binding).Expression;
-                    if (!EmitMemberBinding(bindingExpr, bindingExpr.NodeType, bindingExpr.Type,
-                        binding.Member, ps, il, closure))
+                    if (!TryEmit(bindingExpr, bindingExpr.NodeType, bindingExpr.Type, ps, il, closure) ||
+                        !EmitMemberAssign(il, binding.Member))
                         return false;
                 }
 
@@ -1662,8 +1662,8 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Dup); // duplicate member owner on stack
 
                     var bindingExpr = binding.Expression;
-                    if (!EmitMemberBinding(bindingExpr, bindingExpr.NodeType, bindingExpr.Type,
-                        binding.Member, ps, il, closure))
+                    if (!TryEmit(bindingExpr, bindingExpr.NodeType, bindingExpr.Type, ps, il, closure) || 
+                        !EmitMemberAssign(il, binding.Member))
                         return false;
                 }
 
@@ -1673,26 +1673,21 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitMemberBinding(
-                object exprObj, ExpressionType exprNodeType, Type exprType, MemberInfo bindingMember,
-                IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMemberAssign(ILGenerator il, MemberInfo member)
             {
-                if (!TryEmit(exprObj, exprNodeType, exprType, ps, il, closure))
-                    return false;
-
-                var prop = bindingMember as PropertyInfo;
+                var prop = member as PropertyInfo;
                 if (prop != null)
                 {
                     var propSetMethodName = "set_" + prop.Name;
                     var setMethod = prop.DeclaringType.GetTypeInfo()
-                        .DeclaredMethods.FirstOrDefault(m => m.Name == propSetMethodName);
+                        .DeclaredMethods.FirstOrDefault(m => m.Name == propSetMethodName); // todo: make more performant, remove linq
                     if (setMethod == null)
                         return false;
                     EmitMethodCall(il, setMethod);
                 }
                 else
                 {
-                    var field = bindingMember as FieldInfo;
+                    var field = member as FieldInfo;
                     if (field == null)
                         return false;
                     il.Emit(OpCodes.Stfld, field);
@@ -1700,7 +1695,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitAssign(object exprObj, Type exprType, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitAssign(object exprObj, Type exprType, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
                 var expr = exprObj as BinaryExpression;
                 if (expr == null)
@@ -1708,14 +1703,14 @@ namespace FastExpressionCompiler
 
                 var leftExpr = expr.Left;
                 var leftNodeType = leftExpr.NodeType;
-
                 var rightExpr = expr.Right;
                 var rightNodeType = rightExpr.NodeType;
+
                 switch (leftNodeType)
                 {
                     case ExpressionType.Parameter:
                         var p = (ParameterExpression)leftExpr;
-                        var paramIndex = ps.IndexOf(p);
+                        var paramIndex = paramExprs.IndexOf(p);
                         if (paramIndex != -1)
                         {
                             if (closure != null)
@@ -1724,7 +1719,7 @@ namespace FastExpressionCompiler
                             if (paramIndex >= byte.MaxValue)
                                 return false;
 
-                            if (!TryEmit(rightExpr, rightNodeType, exprType, ps, il, closure))
+                            if (!TryEmit(rightExpr, rightNodeType, exprType, paramExprs, il, closure))
                                 return false;
 
                             il.Emit(OpCodes.Dup); // dup value to assign and return
@@ -1745,7 +1740,7 @@ namespace FastExpressionCompiler
 
                         il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
 
-                        if (!TryEmit(rightExpr, rightNodeType, exprType, ps, il, closure))
+                        if (!TryEmit(rightExpr, rightNodeType, exprType, paramExprs, il, closure))
                             return false;
 
                         var valueVar = il.DeclareLocal(exprType); // store left value in variable
@@ -1762,7 +1757,7 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField);// load array field
                             EmitLoadConstantInt(il, paramInClosureIndex);   // load array item index
                             il.Emit(OpCodes.Ldloc, valueVar);
-                            il.Emit(OpCodes.Stelem_Ref);                    // store the variable at array index of param
+                            il.Emit(OpCodes.Stelem_Ref);                    // put the variable into array
                             il.Emit(OpCodes.Ldloc, valueVar);
 
                             // Cast or unbox the array object item depending if it is a class or value type
@@ -1773,7 +1768,31 @@ namespace FastExpressionCompiler
                         }
                         return true;
 
-                    default: return false;
+                    case ExpressionType.MemberAccess:
+
+                        var memberExpr = (MemberExpression)leftExpr;
+                        var objExpr = memberExpr.Expression;
+
+                        if (objExpr != null &&
+                            !TryEmit(objExpr, objExpr.NodeType, objExpr.Type, paramExprs, il, closure))
+                            return false;
+
+                        if (!TryEmit(rightExpr, rightNodeType, exprType, paramExprs, il, closure))
+                            return false;
+
+                        il.Emit(OpCodes.Dup);
+
+                        var rightVar = il.DeclareLocal(exprType); // store right value in variable
+                        il.Emit(OpCodes.Stloc, rightVar);
+
+                        if (!EmitMemberAssign(il, memberExpr.Member))
+                            return false;
+
+                        il.Emit(OpCodes.Ldloc, rightVar);
+                        return true;
+
+                    default: // not yet support assingment targets
+                        return false;
                 }
             }
 
@@ -2514,7 +2533,7 @@ namespace FastExpressionCompiler
 
         /// <summary>Constructs from the new expression and member initialization list.</summary>
         public MemberInitExpressionInfo(NewExpressionInfo newExpressionInfo, MemberAssignmentInfo[] bindings)
-            : this((ExpressionInfo)newExpressionInfo, bindings) {}
+            : this((ExpressionInfo)newExpressionInfo, bindings) { }
 
         /// <summary>Constructs from existing expression and member assignment list.</summary>
         public MemberInitExpressionInfo(ExpressionInfo expressionInfo, MemberAssignmentInfo[] bindings)
