@@ -196,6 +196,26 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Given_composed_exprInfo_with_closure_over_parameters_in_nested_lambda_should_work()
+        {
+            var argExpr = Expression.Parameter(typeof(object));
+            var funcExpr = ExpressionInfo.Lambda(
+                ExpressionInfo.Invoke(ExpressionInfo.Lambda(
+                    ExpressionInfo.Invoke(ExpressionInfo.Lambda(argExpr)))),
+                argExpr);
+
+            var funcFec = funcExpr.TryCompile<Func<object, object>>();
+
+            var arg1 = new object();
+            Assert.AreSame(arg1, funcFec(arg1));
+
+            var arg2 = new object();
+            Assert.AreSame(arg2, funcFec(arg2));
+
+            Assert.AreSame(arg1, funcFec(arg1));
+        }
+
+        [Test]
         public void Given_composed_expr_with_closure_over_parameters_used_in_2_levels_of_nested_lambda()
         {
             //Func<A, A> funcEthalon = a => a.Increment(() => a.Increment(() => a.Increment(null)));

@@ -864,9 +864,9 @@ namespace FastExpressionCompiler
                     var memberExprInfo = exprObj as MemberExpressionInfo;
                     if (memberExprInfo != null)
                     {
-                        var maExprInfo = memberExprInfo.Expression;
-                        return maExprInfo == null
-                            || TryCollectBoundConstants(ref closure, maExprInfo, maExprInfo.NodeType, maExprInfo.Type, paramExprs);
+                        var maExpr = memberExprInfo.Expression;
+                        return maExpr == null
+                            || TryCollectBoundConstants(ref closure, maExpr, maExpr.GetNodeType(), maExpr.GetResultType(), paramExprs);
                     }
 
                     var memberExpr = ((MemberExpression)exprObj).Expression;
@@ -995,10 +995,20 @@ namespace FastExpressionCompiler
                     return true;
 
                 case ExpressionType.Invoke:
-                    var invokeExpr = (InvocationExpression)exprObj;
-                    var invokeExprExpr = invokeExpr.Expression;
-                    return TryCollectBoundConstants(ref closure, invokeExprExpr, invokeExprExpr.NodeType, invokeExprExpr.Type, paramExprs)
-                        && TryCollectBoundConstants(ref closure, invokeExpr.Arguments, paramExprs);
+                    var invokeExpr = exprObj as InvocationExpression;
+                    if (invokeExpr != null)
+                    {
+                        var lambda = invokeExpr.Expression;
+                        return TryCollectBoundConstants(ref closure, lambda, lambda.NodeType, lambda.Type, paramExprs)
+                               && TryCollectBoundConstants(ref closure, invokeExpr.Arguments, paramExprs);
+                    }
+                    else
+                    {
+                        var invokeInfo = (InvocationExpressionInfo)exprObj;
+                        var lambda = invokeInfo.LambdaExprInfo;
+                        return TryCollectBoundConstants(ref closure, lambda, lambda.NodeType, lambda.Type, paramExprs)
+                               && TryCollectBoundConstants(ref closure, invokeInfo.Arguments, paramExprs);
+                    }
 
                 case ExpressionType.Conditional:
                     var condExpr = (ConditionalExpression)exprObj;
@@ -1161,7 +1171,7 @@ namespace FastExpressionCompiler
                         return EmitNestedLambda(exprObj, paramExprs, il, closure);
 
                     case ExpressionType.Invoke:
-                        return EmitInvokeLambda((InvocationExpression)exprObj, paramExprs, il, closure);
+                        return EmitInvokeLambda(exprObj, paramExprs, il, closure);
 
                     case ExpressionType.GreaterThan:
                     case ExpressionType.GreaterThanOrEqual:
@@ -1669,7 +1679,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Dup); // duplicate member owner on stack
 
                     var bindingExpr = binding.Expression;
-                    if (!TryEmit(bindingExpr, bindingExpr.NodeType, bindingExpr.Type, ps, il, closure) || 
+                    if (!TryEmit(bindingExpr, bindingExpr.NodeType, bindingExpr.Type, ps, il, closure) ||
                         !EmitMemberAssign(il, binding.Member))
                         return false;
                 }
@@ -1687,7 +1697,7 @@ namespace FastExpressionCompiler
                 {
                     var propSetMethodName = "set_" + prop.Name;
                     var setMethod = prop.DeclaringType.GetTypeInfo()
-                        .DeclaredMethods.FirstOrDefault(m => m.Name == propSetMethodName); // todo: make more performant, remove linq
+                        .DeclaredMethods.GetFirst(m => m.Name == propSetMethodName);
                     if (setMethod == null)
                         return false;
                     EmitMethodCall(il, setMethod);
@@ -1702,7 +1712,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitAssign(object exprObj, Type exprType, IList<ParameterExpression> paramExprs, 
+            private static bool EmitAssign(object exprObj, Type exprType, IList<ParameterExpression> paramExprs,
                 ILGenerator il, ClosureInfo closure)
             {
                 object left, right;
@@ -1877,11 +1887,11 @@ namespace FastExpressionCompiler
                 var exprInfo = exprObj as MemberExpressionInfo;
                 if (exprInfo != null)
                 {
-                    var instInfo = exprInfo.Expression;
-                    if (instInfo != null)
+                    var instance = exprInfo.Expression;
+                    if (instance != null)
                     {
-                        instanceType = instInfo.Type;
-                        if (!TryEmit(instInfo, instInfo.NodeType, instanceType, ps, il, closure))
+                        instanceType = instance.GetResultType();
+                        if (!TryEmit(instance, instance.GetNodeType(), instanceType, ps, il, closure))
                             return false;
                     }
                     member = exprInfo.Member;
@@ -1936,11 +1946,12 @@ namespace FastExpressionCompiler
                 return false;
             }
 
+            // todo: inline GetFirst
             private static MethodInfo TryGetPropertyGetMethod(PropertyInfo prop)
             {
                 var propGetMethodName = "get_" + prop.Name;
                 var getMethod = prop.DeclaringType.GetTypeInfo()
-                    .DeclaredMethods.FirstOrDefault(m => m.Name == propGetMethodName);
+                    .DeclaredMethods.GetFirst(m => m.Name == propGetMethodName);
                 return getMethod;
             }
 
@@ -2114,14 +2125,29 @@ namespace FastExpressionCompiler
                     : CurryClosureFuncs.Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
             }
 
-            private static bool EmitInvokeLambda(InvocationExpression expr, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            private static bool EmitInvokeLambda(object exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                var instanceExpr = expr.Expression;
-                if (!TryEmit(instanceExpr, instanceExpr.NodeType, instanceExpr.Type, paramExprs, il, closure) ||
-                    !EmitMany(expr.Arguments, paramExprs, il, closure))
-                    return false;
+                var expr = exprObj as InvocationExpression;
+                Type lambdaType;
+                if (expr != null)
+                {
+                    var lambdaExpr = expr.Expression;
+                    lambdaType = lambdaExpr.Type;
+                    if (!TryEmit(lambdaExpr, lambdaExpr.NodeType, lambdaType, paramExprs, il, closure) ||
+                        !EmitMany(expr.Arguments, paramExprs, il, closure))
+                        return false;
+                }
+                else
+                {
+                    var exprInfo = (InvocationExpressionInfo)exprObj;
+                    var lambdaExprInfo = exprInfo.LambdaExprInfo;
+                    lambdaType = lambdaExprInfo.Type;
+                    if (!TryEmit(lambdaExprInfo, lambdaExprInfo.NodeType, lambdaType, paramExprs, il, closure) ||
+                        !EmitMany(exprInfo.Arguments, paramExprs, il, closure))
+                        return false;
+                }
 
-                var invokeMethod = instanceExpr.Type.GetTypeInfo().DeclaredMethods.First(m => m.Name == "Invoke");
+                var invokeMethod = lambdaType.GetTypeInfo().DeclaredMethods.GetFirst(m => m.Name == "Invoke");
                 EmitMethodCall(il, invokeMethod);
                 return true;
             }
@@ -2180,7 +2206,7 @@ namespace FastExpressionCompiler
                 }
 
                 // Emit call to equality operator
-                var equalityOperator = operandTypeInfo.DeclaredMethods.FirstOrDefault(m => m.IsStatic && m.Name == "op_Equality");
+                var equalityOperator = operandTypeInfo.DeclaredMethods.GetFirst(m => m.IsStatic && m.Name == "op_Equality");
                 if (equalityOperator != null)
                 {
                     EmitMethodCall(il, equalityOperator);
@@ -2354,6 +2380,18 @@ namespace FastExpressionCompiler
                     return i;
             return -1;
         }
+
+        // Note: the method name is not a standard to prevent conflicts with helper with standard names
+        public static T GetFirst<T>(this IEnumerable<T> source, Func<T, bool> predicate)
+        {
+            var arr = source as T[];
+            if (arr != null)
+            {
+                var index = arr.GetFirstIndex(predicate);
+                return index == -1 ? default(T) : arr[index];
+            }
+            return source.FirstOrDefault(predicate);
+        }
     }
 
     /// <summary>Facade for constructing expression info.</summary>
@@ -2426,6 +2464,12 @@ namespace FastExpressionCompiler
 
         /// <summary>Instance property</summary>
         public static PropertyExpressionInfo Property(ExpressionInfo instance, PropertyInfo property)
+        {
+            return new PropertyExpressionInfo(instance, property);
+        }
+
+        /// <summary>Instance property</summary>
+        public static PropertyExpressionInfo Property(object instance, PropertyInfo property)
         {
             return new PropertyExpressionInfo(instance, property);
         }
@@ -2531,7 +2575,13 @@ namespace FastExpressionCompiler
         /// <summary>Constructs assignment expression from possibly mixed types of left and right.</summary>
         public static ExpressionInfo Assign(object left, object right)
         {
-            return new BinaryExpressionInfo(ExpressionType.Assign, left, right, Tools.GetResultType(left));
+            return new BinaryExpressionInfo(ExpressionType.Assign, left, right, left.GetResultType());
+        }
+
+        /// <summary>Invoke</summary>
+        public static ExpressionInfo Invoke(LambdaExpressionInfo lambda, params object[] args)
+        {
+            return new InvocationExpressionInfo(lambda, args, lambda.Type);
         }
     }
 
@@ -2753,10 +2803,10 @@ namespace FastExpressionCompiler
         public readonly MemberInfo Member;
 
         /// <summary>Instance expression, null if static.</summary>
-        public readonly ExpressionInfo Expression;
+        public readonly object Expression;
 
         /// <summary>Constructs with</summary>
-        protected MemberExpressionInfo(ExpressionInfo expression, MemberInfo member)
+        protected MemberExpressionInfo(object expression, MemberInfo member)
         {
             Expression = expression;
             Member = member;
@@ -2770,7 +2820,7 @@ namespace FastExpressionCompiler
         public override Type Type { get { return ((PropertyInfo)Member).PropertyType; } }
 
         /// <summary>Construct from property info</summary>
-        public PropertyExpressionInfo(ExpressionInfo instance, PropertyInfo property)
+        public PropertyExpressionInfo(object instance, PropertyInfo property)
             : base(instance, property) { }
     }
 
@@ -2837,5 +2887,25 @@ namespace FastExpressionCompiler
 
         /// <summary>Constructor</summary>
         public ExpressionInfo(ExpressionInfo body, ParameterExpression[] parameters) : base(body, parameters) { }
+    }
+
+    /// <summary>Analog of InvocationExpression.</summary>
+    public sealed class InvocationExpressionInfo : ArgumentsExpressionInfo
+    {
+        /// <inheritdoc />
+        public override ExpressionType NodeType => ExpressionType.Invoke;
+
+        /// <inheritdoc />
+        public override Type Type { get; }
+
+        /// <summary>Delegate to invoke.</summary>
+        public readonly LambdaExpressionInfo LambdaExprInfo;
+
+        /// <summary>Constructs</summary>
+        public InvocationExpressionInfo(LambdaExpressionInfo lambda, object[] arguments, Type type) : base(arguments)
+        {
+            LambdaExprInfo = lambda;
+            Type = type;
+        }
     }
 }
