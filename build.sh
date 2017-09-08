@@ -9,5 +9,3 @@ fi
 
 dotnet test test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.IssueTests.csproj -c Release -f netcoreapp2.0;
 dotnet test test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.UnitTests.csproj -c Release -f netcoreapp2.0;
-
-exit 0
