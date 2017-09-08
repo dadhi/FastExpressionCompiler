@@ -5,7 +5,8 @@
 [Expression Tree]: https://msdn.microsoft.com/en-us/library/mt654263.aspx
 
 [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)
-[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)
+[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
+
 [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)
 [![Linux build](https://travis-ci.org/dadhi/FastExpressionCompiler.svg?branch=master)](https://travis-ci.org/dadhi/FastExpressionCompiler)
 
