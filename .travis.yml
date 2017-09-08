@@ -22,4 +22,4 @@ before_install:
   - if test "$TRAVIS_OS_NAME" == "osx"; then ulimit -n 2048; fi #nuget restore can cause too many open files error
 
 script:
-  - ./build.sh
+  - ./build.sh --quiet verify
