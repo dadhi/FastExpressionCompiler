@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
-dotnet restore && dotnet build -f netcoreapp2.0 -c Release && dotnet test ./test/FastExpressionCompiler.UnitTests && dotnet test ./test/FastExpressionCompiler.IssueTests
+dotnet restore
 
-#dotnet pack ".\src\FastExpressionCompiler" -c Release -o "./dist"
+if test "$TRAVIS_OS_NAME" != "osx";
+then 
+dotnet test test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.IssueTests.csproj -c Release -f netcoreapp1.1;
+dotnet test test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.UnitTests.csproj -c Release -f netcoreapp1.1;
+fi
+
+dotnet test test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.IssueTests.csproj -c Release -f netcoreapp2.0;
+dotnet test test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.UnitTests.csproj -c Release -f netcoreapp2.0;
