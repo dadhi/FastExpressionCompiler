@@ -174,7 +174,8 @@ What is supported:
 What is not supported:
 
 - `??`, `?.`, bitwise, and ariphmetic operators
-- Code blocks, assignments and whatever added since .NET 4.0
+- Expression.Block and declarative expressions added in .NET 4.0
+- Check an open issues for more details
 
 __Note:__ The current limitations may be lifted by wrapping not yet supported expression into method or property.
 

@@ -14,6 +14,8 @@
     <PackageReleaseNotes>
       v1.4.0:
       - added: NetStandard 2.0 target
+      - added: #17: Expression(Info).Assign support for parameters, fields and members
+      - added: Support for ExpressionInfo.Invoke
       v1.3.0:
       - added: #20 Allow ExpressionInfo.MemberInit for non-New expressions
       - fixed: #19 Nested CallExpression causes System.AccessViolationException
