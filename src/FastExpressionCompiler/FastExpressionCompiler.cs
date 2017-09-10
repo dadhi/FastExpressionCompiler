@@ -418,7 +418,6 @@ namespace FastExpressionCompiler
                             items[i] = constants[i].Value;
 
                     // skip non passed parameters as it is only for nested lambdas
-                    // also skip local variables their value will be evaluated later
 
                     if (nestedLambdas.Length != 0)
                         for (var i = 0; i < nestedLambdas.Length; i++)
@@ -1203,32 +1202,21 @@ namespace FastExpressionCompiler
                         return EmitAssign(exprObj, exprType, paramExprs, il, closure);
 
                     case ExpressionType.Block:
-                        var blockExpr = (BlockExpression)exprObj;
-                        closure.OpenedBlocks.Push(blockExpr);
-                        //if (blockExpr.Result.Type != typeof(void))
-                        //{
-                        //    for (var i = 0; i < blockExpr.Expressions.Count - 1; i++)
-                        //    {
-                        //        if (!TryEmit(blockExpr.Expressions[i], blockExpr.Expressions[i].NodeType,
-                        //            blockExpr.Expressions[i].Type, paramExprs, il, closure))
-                        //            return false;
-                        //    }
-
-                        //    il.Emit(OpCodes.Pop);
-
-                        //    var lastExpr = blockExpr.Expressions[blockExpr.Expressions.Count - 1];
-
-                        //    return TryEmit(lastExpr, lastExpr.NodeType, lastExpr.Type, paramExprs, il, closure);
-
-                        //}
-                        //else
-                        var result = EmitMany(blockExpr.Expressions, paramExprs, il, closure);
-                        closure.OpenedBlocks.Pop();
-                        return result;
+                        return EmitBlock((BlockExpression)exprObj, paramExprs, il, closure);
 
                     default:
                         return false;
                 }
+            }
+
+            private static bool EmitBlock(BlockExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            {
+                closure.OpenedBlocks.Push(exprObj);
+                if (!EmitMany(exprObj.Expressions, paramExprs, il, closure))
+                    return false;
+
+                closure.OpenedBlocks.Pop();
+                return true;
             }
 
             private static bool EmitParameter(ParameterExpression p, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
