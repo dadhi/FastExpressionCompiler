@@ -120,7 +120,7 @@ Invoking compiled delegate comparing to normal delegate:
 You may consider it instead of `Expression` when you are validating the Expression arguments on your own,
 and not relying on Expression composition exceptions.
 
-__Note:__ Explore `ExpressioInfo` class in [FastExpressionCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) 
+__Note:__ Explore `ExpressionInfo` class in [FastExpressionCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) 
 for finding the supported expression types.
 
  |                               Method     |        Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
