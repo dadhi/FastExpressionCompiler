@@ -353,6 +353,8 @@ namespace FastExpressionCompiler
             // Known after ConstructClosure call
             public int ClosedItemCount { get; private set; }
 
+            public Stack<BlockExpression> OpenedBlocks = new Stack<BlockExpression>();
+
             public void AddConstant(object expr, object value, Type type)
             {
                 if (Constants.Length == 0 ||
@@ -416,6 +418,7 @@ namespace FastExpressionCompiler
                             items[i] = constants[i].Value;
 
                     // skip non passed parameters as it is only for nested lambdas
+                    // also skip local variables their value will be evaluated later
 
                     if (nestedLambdas.Length != 0)
                         for (var i = 0; i < nestedLambdas.Length; i++)
@@ -1016,6 +1019,14 @@ namespace FastExpressionCompiler
                         && TryCollectBoundConstants(ref closure, condExpr.IfTrue, condExpr.IfTrue.NodeType, condExpr.Type, paramExprs)
                         && TryCollectBoundConstants(ref closure, condExpr.IfFalse, condExpr.IfFalse.NodeType, condExpr.IfFalse.Type, paramExprs);
 
+                case ExpressionType.Block:
+                    var blockExpr = (BlockExpression)exprObj;
+                    var length = blockExpr.Variables.Count;
+                    for (var i = 0; i < length; i++)
+                        (closure ?? (closure = new ClosureInfo())).AddNonPassedParam(blockExpr.Variables[i]);
+
+                    return TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs);
+
                 default:
                     if (exprObj is ExpressionInfo)
                     {
@@ -1190,6 +1201,30 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Assign:
                         return EmitAssign(exprObj, exprType, paramExprs, il, closure);
+
+                    case ExpressionType.Block:
+                        var blockExpr = (BlockExpression)exprObj;
+                        closure.OpenedBlocks.Push(blockExpr);
+                        //if (blockExpr.Result.Type != typeof(void))
+                        //{
+                        //    for (var i = 0; i < blockExpr.Expressions.Count - 1; i++)
+                        //    {
+                        //        if (!TryEmit(blockExpr.Expressions[i], blockExpr.Expressions[i].NodeType,
+                        //            blockExpr.Expressions[i].Type, paramExprs, il, closure))
+                        //            return false;
+                        //    }
+
+                        //    il.Emit(OpCodes.Pop);
+
+                        //    var lastExpr = blockExpr.Expressions[blockExpr.Expressions.Count - 1];
+
+                        //    return TryEmit(lastExpr, lastExpr.NodeType, lastExpr.Type, paramExprs, il, closure);
+
+                        //}
+                        //else
+                        var result = EmitMany(blockExpr.Expressions, paramExprs, il, closure);
+                        closure.OpenedBlocks.Pop();
+                        return result;
 
                     default:
                         return false;
@@ -1735,6 +1770,13 @@ namespace FastExpressionCompiler
                     rightNodeType = right.GetNodeType();
                 }
 
+                var block = closure?.OpenedBlocks.Count > 0 ? closure.OpenedBlocks.Peek() : null;
+
+                // if this assignment is part of a single bodyless expression or the result of a block
+                // we should put it's result to the evaluation stack before the return, otherwise we are
+                // somewhere inside the block, so we shouldn't return with the result
+                var noBlockOrisBlockResult = block == null || block.Result == exprObj;
+
                 switch (leftNodeType)
                 {
                     case ExpressionType.Parameter:
@@ -1750,7 +1792,9 @@ namespace FastExpressionCompiler
                             if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
                                 return false;
 
-                            il.Emit(OpCodes.Dup); // dup value to assign and return
+                            if (noBlockOrisBlockResult)
+                                il.Emit(OpCodes.Dup); // dup value to assign and return
+
                             il.Emit(OpCodes.Starg_S, paramIndex);
                             return true;
                         }
@@ -1771,28 +1815,44 @@ namespace FastExpressionCompiler
                         if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
                             return false;
 
-                        var valueVar = il.DeclareLocal(exprType); // store left value in variable
-                        if (closure.Fields != null)
+                        if (noBlockOrisBlockResult)
                         {
-                            il.Emit(OpCodes.Dup);
-                            il.Emit(OpCodes.Stloc, valueVar);
-                            il.Emit(OpCodes.Stfld, closure.Fields[paramInClosureIndex]);
-                            il.Emit(OpCodes.Ldloc, valueVar);
+                            var valueVar = il.DeclareLocal(exprType); // store left value in variable
+                            if (closure.Fields != null)
+                            {
+                                il.Emit(OpCodes.Dup);
+                                il.Emit(OpCodes.Stloc, valueVar);
+                                il.Emit(OpCodes.Stfld, closure.Fields[paramInClosureIndex]);
+                                il.Emit(OpCodes.Ldloc, valueVar);
+                            }
+                            else
+                            {
+                                il.Emit(OpCodes.Stloc, valueVar);
+                                il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField); // load array field
+                                EmitLoadConstantInt(il, paramInClosureIndex); // load array item index
+                                il.Emit(OpCodes.Ldloc, valueVar);
+                                il.Emit(OpCodes.Stelem_Ref); // put the variable into array
+                                il.Emit(OpCodes.Ldloc, valueVar);
+
+                                // Cast or unbox the array object item depending if it is a class or value type
+                                if (exprType.GetTypeInfo().IsValueType)
+                                    il.Emit(OpCodes.Unbox_Any, exprType);
+                                else
+                                    il.Emit(OpCodes.Castclass, exprType);
+                            }
                         }
                         else
                         {
-                            il.Emit(OpCodes.Stloc, valueVar);
-                            il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField);// load array field
-                            EmitLoadConstantInt(il, paramInClosureIndex);   // load array item index
-                            il.Emit(OpCodes.Ldloc, valueVar);
-                            il.Emit(OpCodes.Stelem_Ref);                    // put the variable into array
-                            il.Emit(OpCodes.Ldloc, valueVar);
-
-                            // Cast or unbox the array object item depending if it is a class or value type
-                            if (exprType.GetTypeInfo().IsValueType)
-                                il.Emit(OpCodes.Unbox_Any, exprType);
+                            if (closure.Fields != null)
+                            {
+                                il.Emit(OpCodes.Stfld, closure.Fields[paramInClosureIndex]);
+                            }
                             else
-                                il.Emit(OpCodes.Castclass, exprType);
+                            {
+                                il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField); // load array field
+                                EmitLoadConstantInt(il, paramInClosureIndex); // load array item index
+                                il.Emit(OpCodes.Stelem_Ref); // put the variable into array
+                            }
                         }
                         return true;
 
@@ -1820,6 +1880,9 @@ namespace FastExpressionCompiler
 
                         if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
                             return false;
+
+                        if (!noBlockOrisBlockResult)
+                            return EmitMemberAssign(il, member);
 
                         il.Emit(OpCodes.Dup);
 
