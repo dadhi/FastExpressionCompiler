@@ -343,6 +343,9 @@ namespace FastExpressionCompiler
             // All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas = Tools.Empty<NestedLambdaInfo>();
 
+            // All variables defined in the current block, they are stored in the closure
+            public ParameterExpression[] DefinedVariables = Tools.Empty<ParameterExpression>();
+
             // Field infos are needed to load field of closure object on stack in emitter
             // It is also an indicator that we use typed Closure object and not an array
             public FieldInfo[] Fields { get; private set; }
@@ -353,7 +356,8 @@ namespace FastExpressionCompiler
             // Known after ConstructClosure call
             public int ClosedItemCount { get; private set; }
 
-            public Stack<BlockExpression> OpenedBlocks = new Stack<BlockExpression>();
+            // Helper member decide we are inside in a block or not
+            public readonly Stack<BlockExpression> OpenedBlocks = new Stack<BlockExpression>();
 
             public void AddConstant(object expr, object value, Type type)
             {
@@ -376,6 +380,15 @@ namespace FastExpressionCompiler
                     NonPassedParameters = NonPassedParameters.WithLast(expr);
             }
 
+            public void AddDefinedVariable(ParameterExpression expr)
+            {
+                if (DefinedVariables.Length == 0 ||
+                    DefinedVariables.GetFirstIndex(expr) == -1)
+                    DefinedVariables = DefinedVariables.WithLast(expr);
+
+                AddNonPassedParam(expr);
+            }
+
             public void AddNestedLambda(object lambdaExpr, object lambda, ClosureInfo closureInfo, bool isAction)
             {
                 if (NestedLambdas.Length == 0 ||
@@ -389,7 +402,7 @@ namespace FastExpressionCompiler
                     NestedLambdas.GetFirstIndex(it => it.LambdaExpr == info.LambdaExpr) == -1)
                     NestedLambdas = NestedLambdas.WithLast(info);
             }
-
+            
             public object ConstructClosure(bool closureTypeOnly)
             {
                 var constants = Constants;
@@ -979,7 +992,8 @@ namespace FastExpressionCompiler
                         {
                             var nestedNonPassedParam = nestedNonPassedParams[i];
                             if (paramExprs.Count == 0 ||
-                                paramExprs.IndexOf(nestedNonPassedParam) == -1)
+                                paramExprs.IndexOf(nestedNonPassedParam) == -1 && 
+                                nestedClosure.DefinedVariables.GetFirstIndex(nestedNonPassedParam) == -1) // if it's a defined variable by the nested lambda then skip
                                 closure.AddNonPassedParam(nestedNonPassedParam);
                         }
 
@@ -1022,7 +1036,7 @@ namespace FastExpressionCompiler
                     var blockExpr = (BlockExpression)exprObj;
                     var length = blockExpr.Variables.Count;
                     for (var i = 0; i < length; i++)
-                        (closure ?? (closure = new ClosureInfo())).AddNonPassedParam(blockExpr.Variables[i]);
+                        (closure ?? (closure = new ClosureInfo())).AddDefinedVariable(blockExpr.Variables[i]);
 
                     return TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs);
 
@@ -1763,7 +1777,7 @@ namespace FastExpressionCompiler
                 // if this assignment is part of a single bodyless expression or the result of a block
                 // we should put it's result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
-                var noBlockOrisBlockResult = block == null || block.Result == exprObj;
+                var shouldPushResult = block == null || block.Result == exprObj;
 
                 switch (leftNodeType)
                 {
@@ -1780,7 +1794,7 @@ namespace FastExpressionCompiler
                             if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
                                 return false;
 
-                            if (noBlockOrisBlockResult)
+                            if (shouldPushResult)
                                 il.Emit(OpCodes.Dup); // dup value to assign and return
 
                             il.Emit(OpCodes.Starg_S, paramIndex);
@@ -1800,11 +1814,11 @@ namespace FastExpressionCompiler
 
                         il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
 
-                        if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
-                            return false;
-
-                        if (noBlockOrisBlockResult)
+                        if (shouldPushResult)
                         {
+                            if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
+                                return false;
+
                             var valueVar = il.DeclareLocal(exprType); // store left value in variable
                             if (closure.Fields != null)
                             {
@@ -1819,28 +1833,32 @@ namespace FastExpressionCompiler
                                 il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField); // load array field
                                 EmitLoadConstantInt(il, paramInClosureIndex); // load array item index
                                 il.Emit(OpCodes.Ldloc, valueVar);
+                                if (exprType.GetTypeInfo().IsValueType)
+                                    il.Emit(OpCodes.Box, exprType);
                                 il.Emit(OpCodes.Stelem_Ref); // put the variable into array
                                 il.Emit(OpCodes.Ldloc, valueVar);
-
-                                // Cast or unbox the array object item depending if it is a class or value type
-                                if (exprType.GetTypeInfo().IsValueType)
-                                    il.Emit(OpCodes.Unbox_Any, exprType);
-                                else
-                                    il.Emit(OpCodes.Castclass, exprType);
                             }
                         }
                         else
                         {
-                            if (closure.Fields != null)
-                            {
-                                il.Emit(OpCodes.Stfld, closure.Fields[paramInClosureIndex]);
-                            }
-                            else
+                            var isArrayClosure = closure.Fields == null;
+                            if (isArrayClosure)
                             {
                                 il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField); // load array field
                                 EmitLoadConstantInt(il, paramInClosureIndex); // load array item index
+                            }
+
+                            if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
+                                return false;
+
+                            if (isArrayClosure)
+                            {
+                                if (exprType.GetTypeInfo().IsValueType)
+                                    il.Emit(OpCodes.Box, exprType);
                                 il.Emit(OpCodes.Stelem_Ref); // put the variable into array
                             }
+                            else
+                                il.Emit(OpCodes.Stfld, closure.Fields[paramInClosureIndex]);
                         }
                         return true;
 
@@ -1869,7 +1887,7 @@ namespace FastExpressionCompiler
                         if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
                             return false;
 
-                        if (!noBlockOrisBlockResult)
+                        if (!shouldPushResult)
                             return EmitMemberAssign(il, member);
 
                         il.Emit(OpCodes.Dup);
@@ -2085,7 +2103,7 @@ namespace FastExpressionCompiler
                 for (var nestedParamIndex = 0; nestedParamIndex < nestedNonPassedParams.Length; nestedParamIndex++)
                 {
                     var nestedUsedParam = nestedNonPassedParams[nestedParamIndex];
-
+                    
                     // Duplicate nested array on stack to store the item, and load index to where to store
                     if (isNestedArrayClosure)
                     {
@@ -2104,15 +2122,21 @@ namespace FastExpressionCompiler
                         if (outerNonPassedParams.Length == 0)
                             return false; // impossible, better to throw?
 
-                        var outerParamIndex = outerNonPassedParams.GetFirstIndex(nestedUsedParam);
-                        if (outerParamIndex == -1)
-                            return false; // impossible, better to throw?
-
-                        il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                        if (closure.Fields != null)
-                            il.Emit(OpCodes.Ldfld, closure.Fields[outerConstants.Length + outerParamIndex]);
+                        // if nested param is a defined var by the nested lambda, push a null placeholder
+                        if (nestedClosureInfo.DefinedVariables.GetFirstIndex(nestedUsedParam) != -1)
+                            il.Emit(OpCodes.Ldnull);
                         else
-                            LoadArrayClosureItem(il, outerConstants.Length + outerParamIndex, nestedUsedParam.Type);
+                        {
+                            var outerParamIndex = outerNonPassedParams.GetFirstIndex(nestedUsedParam);
+                            if (outerParamIndex == -1)
+                                return false; // impossible, better to throw?
+
+                            il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
+                            if (closure.Fields != null)
+                                il.Emit(OpCodes.Ldfld, closure.Fields[outerConstants.Length + outerParamIndex]);
+                            else
+                                LoadArrayClosureItem(il, outerConstants.Length + outerParamIndex, nestedUsedParam.Type);
+                        }
                     }
 
                     if (isNestedArrayClosure)
