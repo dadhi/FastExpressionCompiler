@@ -357,7 +357,7 @@ namespace FastExpressionCompiler
             public int ClosedItemCount { get; private set; }
 
             // Helper member decide we are inside in a block or not
-            public readonly Stack<BlockExpression> OpenedBlocks = new Stack<BlockExpression>();
+            public Tools.Stack<BlockExpression> OpenedBlocks = Tools.Stack<BlockExpression>.Empty;
 
             public void AddConstant(object expr, object value, Type type)
             {
@@ -1225,11 +1225,11 @@ namespace FastExpressionCompiler
 
             private static bool EmitBlock(BlockExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                closure.OpenedBlocks.Push(exprObj);
+                closure.OpenedBlocks = closure.OpenedBlocks.Push(exprObj);
                 if (!EmitMany(exprObj.Expressions, paramExprs, il, closure))
                     return false;
 
-                closure.OpenedBlocks.Pop();
+                closure.OpenedBlocks = closure.OpenedBlocks.Tail;
                 return true;
             }
 
@@ -1772,12 +1772,12 @@ namespace FastExpressionCompiler
                     rightNodeType = right.GetNodeType();
                 }
 
-                var block = closure?.OpenedBlocks.Count > 0 ? closure.OpenedBlocks.Peek() : null;
-
                 // if this assignment is part of a single bodyless expression or the result of a block
                 // we should put it's result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
-                var shouldPushResult = block == null || block.Result == exprObj;
+                var shouldPushResult = closure == null 
+                    || closure.OpenedBlocks.IsEmpty 
+                    || closure.OpenedBlocks.Head.Result == exprObj;
 
                 switch (leftNodeType)
                 {
@@ -2466,6 +2466,23 @@ namespace FastExpressionCompiler
                 return index == -1 ? default(T) : arr[index];
             }
             return source.FirstOrDefault(predicate);
+        }
+
+        public sealed class Stack<T>
+        {
+            public static readonly Stack<T> Empty = new Stack<T>(default(T), null);
+            public bool IsEmpty => Tail == null;
+
+            public readonly T Head;
+            public readonly Stack<T> Tail;
+
+            public Stack<T> Push(T head) => new Stack<T>(head, this);
+
+            private Stack(T head, Stack<T> tail)
+            {
+                Head = head;
+                Tail = tail;
+            }
         }
     }
 
