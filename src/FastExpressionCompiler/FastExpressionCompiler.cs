@@ -267,12 +267,11 @@ namespace FastExpressionCompiler
             var closureAndParamTypes = GetClosureAndParamTypes(paramTypes, closureInfo.ClosureType);
 
             var methodWithClosure = new DynamicMethod(string.Empty, returnType, closureAndParamTypes,
-                typeof(ExpressionCompiler), skipVisibility: true);
+                closureInfo.ClosureType, skipVisibility: true);
 
             if (!TryEmit(methodWithClosure, exprObj, exprNodeType, exprType, paramExprs, closureInfo))
                 return null;
 
-            // todo: Use sugar TryCompileStaticDelegate?
             if (isNestedLambda) // include closure as the first parameter, BUT don't bound to it. It will be bound later in EmitNestedLambda.
                 return methodWithClosure.CreateDelegate(GetFuncOrActionType(closureAndParamTypes, returnType));
 
@@ -755,8 +754,8 @@ namespace FastExpressionCompiler
         {
             public readonly object[] Constants;
 
-            public static FieldInfo ArrayField = typeof(ArrayClosure).GetTypeInfo().DeclaredFields.First(f => !f.IsStatic);
-            public static ConstructorInfo Constructor = typeof(ArrayClosure).GetTypeInfo().DeclaredConstructors.First();
+            public static FieldInfo ArrayField = typeof(ArrayClosure).GetTypeInfo().DeclaredFields.GetFirst(f => !f.IsStatic);
+            public static ConstructorInfo Constructor = typeof(ArrayClosure).GetTypeInfo().DeclaredConstructors.GetFirst();
 
             public ArrayClosure(object[] constants)
             {
@@ -1210,7 +1209,7 @@ namespace FastExpressionCompiler
                         return EmitLogicalOperator((BinaryExpression)exprObj, paramExprs, il, closure);
 
                     case ExpressionType.Conditional:
-                        return EmitTernararyOperator((ConditionalExpression)exprObj, paramExprs, il, closure);
+                        return EmitConditional((ConditionalExpression)exprObj, paramExprs, il, closure);
 
                     case ExpressionType.Assign:
                         return EmitAssign(exprObj, exprType, paramExprs, il, closure);
@@ -2186,7 +2185,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Newobj, ArrayClosure.Constructor);
                 else
                     il.Emit(OpCodes.Newobj,
-                        nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.First());
+                        nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
                 EmitMethodCall(il, GetCurryClosureMethod(nestedLambda, nestedLambdaInfo.IsAction));
                 return true;
@@ -2317,7 +2316,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitTernararyOperator(ConditionalExpression expr, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitConditional(ConditionalExpression expr, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
                 var testExpr = expr.Test;
                 if (!TryEmit(testExpr, testExpr.NodeType, testExpr.Type, ps, il, closure))
@@ -2454,6 +2453,14 @@ namespace FastExpressionCompiler
                 if (predicate(source[i]))
                     return i;
             return -1;
+        }
+
+        public static T GetFirst<T>(this IEnumerable<T> source)
+        {
+            var arr = source as T[];
+            return arr == null 
+                ? source.FirstOrDefault() 
+                : arr.Length != 0 ? arr[0] : default(T);
         }
 
         // Note: the method name is not a standard to prevent conflicts with helper with standard names

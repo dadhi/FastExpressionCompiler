@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
+using System.Reflection;
 using NUnit.Framework;
 
 namespace FastExpressionCompiler.UnitTests
@@ -14,7 +15,7 @@ namespace FastExpressionCompiler.UnitTests
             var s = "Test";
             Expression<Func<bool>> expr = () => x == 1 && s.Contains("S");
 
-            var dlg = ExpressionCompiler.TryCompile<Func<bool>>(expr);
+            var dlg = expr.TryCompile<Func<bool>>();
 
             Assert.IsNotNull(dlg);
             Assert.IsFalse(dlg());
@@ -27,7 +28,7 @@ namespace FastExpressionCompiler.UnitTests
             var s = "Test";
             Expression<Func<bool>> expr = () => x == 0 || s.Contains("S");
 
-            var dele = ExpressionCompiler.TryCompile<Func<bool>>(expr);
+            var dele = expr.TryCompile<Func<bool>>();
 
             Assert.IsNotNull(dele);
         }
@@ -39,7 +40,7 @@ namespace FastExpressionCompiler.UnitTests
             var s = "Test";
             Expression<Func<bool>> expr = () => x == 1 && (s.Contains("S") || s.Contains("s"));
 
-            var dele = ExpressionCompiler.TryCompile<Func<bool>>(expr);
+            var dele = expr.TryCompile<Func<bool>>();
 
             Assert.IsNotNull(dele);
         }
@@ -54,7 +55,7 @@ namespace FastExpressionCompiler.UnitTests
             Expression<Func<bool>> expr = () => 
                 (f || x == 1) && (s.Contains("S") || s.Contains("s")) || t;
 
-            var dlg = ExpressionCompiler.TryCompile<Func<bool>>(expr);
+            var dlg = expr.TryCompile<Func<bool>>();
 
             Assert.IsNotNull(dlg);
             Assert.IsTrue(dlg());
@@ -67,7 +68,7 @@ namespace FastExpressionCompiler.UnitTests
             var s = "Test";
             Expression<Func<object>> expr = () => x == 1 ? s : string.Empty;
 
-            var dlg = ExpressionCompiler.TryCompile<Func<object>>(expr);
+            var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
             Assert.AreEqual(s, dlg());
@@ -80,7 +81,7 @@ namespace FastExpressionCompiler.UnitTests
             var s = "Test";
             Expression<Func<object>> expr = () => x != 1 ? string.Concat(s, "ccc") : string.Empty;
 
-            var dlg = ExpressionCompiler.TryCompile<Func<object>>(expr);
+            var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
             Assert.AreEqual(string.Empty, dlg());
@@ -93,7 +94,7 @@ namespace FastExpressionCompiler.UnitTests
             var s = "Test";
             Expression<Func<object>> expr = () => x < 1 ? string.Concat(s, "ccc") : string.Empty;
 
-            var dlg = ExpressionCompiler.TryCompile<Func<object>>(expr);
+            var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
             Assert.AreEqual(string.Empty, dlg());
@@ -106,7 +107,7 @@ namespace FastExpressionCompiler.UnitTests
             var s = "Test";
             Expression<Func<object>> expr = () => x > 0 ? string.Concat(s, "ccc") : string.Empty;
 
-            var dlg = ExpressionCompiler.TryCompile<Func<object>>(expr);
+            var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
             Assert.AreEqual(string.Concat(s, "ccc"), dlg());
@@ -124,7 +125,7 @@ namespace FastExpressionCompiler.UnitTests
                 ? string.Concat(s, "ccc") 
                 : string.Empty;
 
-            var dlg = ExpressionCompiler.TryCompile<Func<object>>(expr);
+            var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
             Assert.AreEqual(string.Concat(s, "ccc"), dlg());
@@ -136,6 +137,36 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNull(Expression.Lambda(
                 Expression.Coalesce(Expression.Constant("not null"), Expression.Constant("null")))
                 .CompileFast(ifFastFailedReturnNull: true));
-        } 
+        }
+
+        [Test]
+        public void Test_IfThenElse()
+        {
+            const bool test = true;
+
+            // This expression represents the conditional block.
+            var ifThenElseExpr = Expression.IfThenElse(
+                Expression.Constant(test),
+                Expression.Call(
+                    GetType(),
+                    "WriteLine", Type.EmptyTypes,
+                    Expression.Constant("The condition is true.")
+                ),
+                Expression.Call(
+                    GetType(),
+                    "WriteLine", Type.EmptyTypes,
+                    Expression.Constant("The condition is false.")
+                )
+            );
+
+            // The following statement first creates an expression tree,
+            // then compiles it, and then runs it.
+            var f = Expression.Lambda<Action>(ifThenElseExpr).CompileFast(true);
+            Assert.IsNotNull(f);
+
+            f();
+        }
+
+        public static void WriteLine(string s) => Console.WriteLine(s);
     }
 }
