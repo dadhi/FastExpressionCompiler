@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 using NUnit.Framework;
+using static System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.UnitTests
 {
@@ -18,6 +19,26 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Can_sum_bytes()
+        {
+            Expression<Func<byte, byte, int>> expr = (arg1, arg2) => arg1 + arg2;
+            var sumFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(sumFunc);
+            Assert.AreEqual(sumFunc(1, 3), 4);
+        }
+
+        [Test]
+        public void Can_sum_signed_bytes()
+        {
+            Expression<Func<sbyte, sbyte, int>> expr = (arg1, arg2) => arg1 + arg2;
+            var sumFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(sumFunc);
+            Assert.AreEqual(sumFunc(1, 3), 4);
+        }
+
+        [Test]
         [TestCase(1, 2, 3)]
         [TestCase((short)1, (short)2, (short)3)]
         [TestCase((ushort)1, (ushort)2, (ushort)3)]
@@ -26,8 +47,8 @@ namespace FastExpressionCompiler.UnitTests
         [TestCase(3L, 4L, 7L)]
         [TestCase(4f, 5f, 9f)]
         [TestCase(5d, 6d, 11d)]
-        public void Can_sum_all_primitive_numeric_types(object param1, object param2, object expectedResult) =>
-            expectedResult.ShouldBeResultOfArithmeticOperation((a1, a2) => Expression.Add(a1, a2), param1, param2);
+        public void Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(object param1, object param2, object expectedResult) =>
+            expectedResult.ShouldBeResultOfArithmeticOperation((a1, a2) => Add(a1, a2), param1, param2);
 
         [Test]
         public void Can_sum_with_unchecked_overflow()
@@ -63,6 +84,28 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Can_substract_bytes()
+        {
+            Expression<Func<byte, byte, int>> expr = (arg1, arg2) => arg1 - arg2;
+
+            var substractFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(substractFunc);
+            Assert.AreEqual(substractFunc(7, 3), 4);
+        }
+
+        [Test]
+        public void Can_substract_signed_bytes()
+        {
+            Expression<Func<sbyte, sbyte, int>> expr = (arg1, arg2) => arg1 - arg2;
+
+            var substractFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(substractFunc);
+            Assert.AreEqual(substractFunc(7, 3), 4);
+        }
+
+        [Test]
         [TestCase(3, 2, 1)]
         [TestCase((short)3, (short)2, (short)1)]
         [TestCase((ushort)3, (ushort)2, (ushort)1)]
@@ -71,8 +114,8 @@ namespace FastExpressionCompiler.UnitTests
         [TestCase(3L, 2L, 1L)]
         [TestCase(3f, 2f, 1f)]
         [TestCase(3d, 2d, 1d)]
-        public void Can_substract_all_primitive_numeric_types(object param1, object param2, object expectedResult) =>
-            expectedResult.ShouldBeResultOfArithmeticOperation((a1, a2) => Expression.Subtract(a1, a2), param1, param2);
+        public void Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract(object param1, object param2, object expectedResult) =>
+            expectedResult.ShouldBeResultOfArithmeticOperation((a1, a2) => Subtract(a1, a2), param1, param2);
 
         [Test]
         public void Can_substarct_with_unchecked_overflow()
@@ -108,6 +151,28 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Can_multiply_bytes()
+        {
+            Expression<Func<byte, byte, int>> expr = (arg1, arg2) => arg1 * arg2;
+
+            var multiplyFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(multiplyFunc);
+            Assert.AreEqual(multiplyFunc(7, 3), 21);
+        }
+
+        [Test]
+        public void Can_multiply_signed_bytes()
+        {
+            Expression<Func<sbyte, sbyte, int>> expr = (arg1, arg2) => arg1 * arg2;
+
+            var multiplyFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(multiplyFunc);
+            Assert.AreEqual(multiplyFunc(7, 3), 21);
+        }
+
+        [Test]
         [TestCase(3, 2, 6)]
         [TestCase((short)3, (short)2, (short)6)]
         [TestCase((ushort)3, (ushort)2, (ushort)6)]
@@ -116,8 +181,8 @@ namespace FastExpressionCompiler.UnitTests
         [TestCase(3L, 2L, 6L)]
         [TestCase(3f, 2f, 6f)]
         [TestCase(3d, 2d, 6d)]
-        public void Can_multiply_all_primitive_numeric_types(object param1, object param2, object expectedResult) =>
-            expectedResult.ShouldBeResultOfArithmeticOperation((a1, a2) => Expression.Multiply(a1, a2), param1, param2);
+        public void Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(object param1, object param2, object expectedResult) =>
+            expectedResult.ShouldBeResultOfArithmeticOperation((a1, a2) => Multiply(a1, a2), param1, param2);
 
 
         [Test]
@@ -146,6 +211,28 @@ namespace FastExpressionCompiler.UnitTests
         public void Can_divide()
         {
             Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 / arg2;
+
+            var divideFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(divideFunc);
+            Assert.AreEqual(divideFunc(7, 3), 2);
+        }
+
+        [Test]
+        public void Can_divide_bytes()
+        {
+            Expression<Func<byte, byte, int>> expr = (arg1, arg2) => arg1 / arg2;
+
+            var divideFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(divideFunc);
+            Assert.AreEqual(divideFunc(7, 3), 2);
+        }
+
+        [Test]
+        public void Can_divide_signed_bytes()
+        {
+            Expression<Func<sbyte, sbyte, int>> expr = (arg1, arg2) => arg1 / arg2;
 
             var divideFunc = expr.CompileFast(true);
 
@@ -206,8 +293,8 @@ namespace FastExpressionCompiler.UnitTests
         [TestCase(6L, 3L, 2L)]
         [TestCase(6f, 3f, 2f)]
         [TestCase(6d, 3d, 2d)]
-        public void Can_divide_all_primitive_numeric_types(object param1, object param2, object expectedResult) =>
-            expectedResult.ShouldBeResultOfArithmeticOperation((a1, a2) => Expression.Divide(a1, a2), param1, param2);
+        public void Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(object param1, object param2, object expectedResult) =>
+            expectedResult.ShouldBeResultOfArithmeticOperation((a1, a2) => Divide(a1, a2), param1, param2);
 
 
         [Test]
@@ -231,9 +318,9 @@ namespace FastExpressionCompiler.UnitTests
 
         private static void AssertArithmeticOperation<T>(T expectedResult, Func<ParameterExpression, ParameterExpression, Expression> arithmeticOperation, T param1, T param2)
         {
-            var arg1 = Expression.Parameter(typeof(T), "arg1");
-            var arg2 = Expression.Parameter(typeof(T), "arg2");
-            var expr = Expression.Lambda(arithmeticOperation(arg1, arg2), arg1, arg2);
+            var arg1 = Parameter(typeof(T), "arg1");
+            var arg2 = Parameter(typeof(T), "arg2");
+            var expr = Lambda(arithmeticOperation(arg1, arg2), arg1, arg2);
 
             var arithmeticFunc = expr.CompileFast<Func<T, T, T>>(true);
 

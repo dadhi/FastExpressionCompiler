@@ -2291,7 +2291,8 @@ namespace FastExpressionCompiler
                     !TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, ps, il, closure))
                     return false;
 
-                bool isUnsigned = leftExpr.Type == typeof(ushort) ||
+                bool isUnsigned = leftExpr.Type == typeof(byte) ||
+                                  leftExpr.Type == typeof(ushort) ||
                                   leftExpr.Type == typeof(uint) ||
                                   leftExpr.Type == typeof(ulong);
 
