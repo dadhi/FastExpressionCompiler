@@ -1204,6 +1204,15 @@ namespace FastExpressionCompiler
                     case ExpressionType.NotEqual:
                         return EmitComparison((BinaryExpression)exprObj, paramExprs, il, closure);
 
+                    case ExpressionType.Add:
+                    case ExpressionType.AddChecked:
+                    case ExpressionType.Subtract:
+                    case ExpressionType.SubtractChecked:
+                    case ExpressionType.Multiply:
+                    case ExpressionType.MultiplyChecked:
+                    case ExpressionType.Divide:
+                        return EmitArithmeticOperation((BinaryExpression)exprObj, paramExprs, il, closure);
+
                     case ExpressionType.AndAlso:
                     case ExpressionType.OrElse:
                         return EmitLogicalOperator((BinaryExpression)exprObj, paramExprs, il, closure);
@@ -2266,6 +2275,58 @@ namespace FastExpressionCompiler
                         return true;
 
                 }
+                return false;
+            }
+
+            private static bool EmitArithmeticOperation(BinaryExpression expr, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            {
+                var leftExpr = expr.Left;
+                var rightExpr = expr.Right;
+                if (!leftExpr.Type.GetTypeInfo().IsPrimitive)
+                {
+                    //TODO: implement arithmetic operations for non primitive classes and structs (like Decimal).
+                    return false;
+                }
+                if (!TryEmit(leftExpr, leftExpr.NodeType, leftExpr.Type, ps, il, closure) ||
+                    !TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, ps, il, closure))
+                    return false;
+
+                bool isUnsigned = leftExpr.Type == typeof(byte) ||
+                                  leftExpr.Type == typeof(ushort) ||
+                                  leftExpr.Type == typeof(uint) ||
+                                  leftExpr.Type == typeof(ulong);
+
+                switch (expr.NodeType)
+                {
+                    case ExpressionType.Add:
+                        il.Emit(OpCodes.Add);
+                        return true;
+
+                    case ExpressionType.AddChecked:
+                        il.Emit(isUnsigned ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf);
+                        return true;
+
+                    case ExpressionType.Subtract:
+                        il.Emit(OpCodes.Sub);
+                        return true;
+
+                    case ExpressionType.SubtractChecked:
+                        il.Emit(isUnsigned ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf);
+                        return true;
+
+                    case ExpressionType.Multiply:
+                        il.Emit(OpCodes.Mul);
+                        return true;
+
+                    case ExpressionType.MultiplyChecked:
+                        il.Emit(isUnsigned ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf);
+                        return true;
+
+                    case ExpressionType.Divide:
+                        il.Emit(OpCodes.Div);
+                        return true;
+                }
+
                 return false;
             }
 
