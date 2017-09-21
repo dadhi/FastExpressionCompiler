@@ -401,7 +401,7 @@ namespace FastExpressionCompiler
                     NestedLambdas.GetFirstIndex(it => it.LambdaExpr == info.LambdaExpr) == -1)
                     NestedLambdas = NestedLambdas.WithLast(info);
             }
-            
+
             public object ConstructClosure(bool closureTypeOnly)
             {
                 var constants = Constants;
@@ -991,7 +991,7 @@ namespace FastExpressionCompiler
                         {
                             var nestedNonPassedParam = nestedNonPassedParams[i];
                             if (paramExprs.Count == 0 ||
-                                paramExprs.IndexOf(nestedNonPassedParam) == -1 && 
+                                paramExprs.IndexOf(nestedNonPassedParam) == -1 &&
                                 nestedClosure.DefinedVariables.GetFirstIndex(nestedNonPassedParam) == -1) // if it's a defined variable by the nested lambda then skip
                                 closure.AddNonPassedParam(nestedNonPassedParam);
                         }
@@ -1038,6 +1038,9 @@ namespace FastExpressionCompiler
                         (closure ?? (closure = new ClosureInfo())).AddDefinedVariable(blockExpr.Variables[i]);
 
                     return TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs);
+
+                case ExpressionType.Default:
+                    return true;
 
                 default:
                     if (exprObj is ExpressionInfo)
@@ -1226,9 +1229,52 @@ namespace FastExpressionCompiler
                     case ExpressionType.Block:
                         return EmitBlock((BlockExpression)exprObj, paramExprs, il, closure);
 
+                    case ExpressionType.Default:
+                        return EmitDefault((DefaultExpression)exprObj, il);
+
                     default:
                         return false;
                 }
+            }
+
+            private static bool EmitDefault(DefaultExpression exprObj, ILGenerator il)
+            {
+                var type = exprObj.Type;
+
+                if (type == typeof(void))
+                    return true;
+                else if (type == typeof(string))
+                    il.Emit(OpCodes.Ldnull);
+                else if (type == typeof(bool) ||
+                        type == typeof(byte) ||
+                        type == typeof(char) ||
+                        type == typeof(sbyte) ||
+                        type == typeof(int) ||
+                        type == typeof(uint) ||
+                        type == typeof(short) ||
+                        type == typeof(ushort))
+                    il.Emit(OpCodes.Ldc_I4_0);
+                else if (type == typeof(long) ||
+                        type == typeof(ulong))
+                {
+                    il.Emit(OpCodes.Ldc_I4_0);
+                    il.Emit(OpCodes.Conv_I8);
+                }
+                else if (type == typeof(float))
+                    il.Emit(OpCodes.Ldc_R4, default(float));
+                else if (type == typeof(double))
+                    il.Emit(OpCodes.Ldc_R8, default(double));
+                else if (type.GetTypeInfo().IsValueType)
+                {
+                    LocalBuilder lb = il.DeclareLocal(type);
+                    il.Emit(OpCodes.Ldloca, lb);
+                    il.Emit(OpCodes.Initobj, type);
+                    il.Emit(OpCodes.Ldloc, lb);
+                }
+                else
+                    il.Emit(OpCodes.Ldnull);
+
+                return true;
             }
 
             private static bool EmitBlock(BlockExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
@@ -1783,8 +1829,8 @@ namespace FastExpressionCompiler
                 // if this assignment is part of a single bodyless expression or the result of a block
                 // we should put it's result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
-                var shouldPushResult = closure == null 
-                    || closure.OpenedBlocks.IsEmpty 
+                var shouldPushResult = closure == null
+                    || closure.OpenedBlocks.IsEmpty
                     || closure.OpenedBlocks.Head.Result == exprObj;
 
                 switch (leftNodeType)
@@ -2111,7 +2157,7 @@ namespace FastExpressionCompiler
                 for (var nestedParamIndex = 0; nestedParamIndex < nestedNonPassedParams.Length; nestedParamIndex++)
                 {
                     var nestedUsedParam = nestedNonPassedParams[nestedParamIndex];
-                    
+
                     // Duplicate nested array on stack to store the item, and load index to where to store
                     if (isNestedArrayClosure)
                     {
@@ -2519,8 +2565,8 @@ namespace FastExpressionCompiler
         public static T GetFirst<T>(this IEnumerable<T> source)
         {
             var arr = source as T[];
-            return arr == null 
-                ? source.FirstOrDefault() 
+            return arr == null
+                ? source.FirstOrDefault()
                 : arr.Length != 0 ? arr[0] : default(T);
         }
 
