@@ -1161,10 +1161,6 @@ namespace FastExpressionCompiler
         /// to normal and slow Expression.Compile.</summary>
         private static class EmittingVisitor
         {
-            private static readonly FieldInfo _decimalZero = typeof(decimal).GetTypeInfo().DeclaredFields.First(m => m.IsStatic && m.Name == nameof(decimal.Zero));
-
-            private static readonly FieldInfo _dateTimeMin = typeof(DateTime).GetTypeInfo().DeclaredFields.First(m => m.IsStatic && m.Name == nameof(DateTime.MinValue));
-
             private static readonly MethodInfo _getTypeFromHandleMethod = typeof(Type).GetTypeInfo()
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "GetTypeFromHandle");
 
@@ -1247,24 +1243,11 @@ namespace FastExpressionCompiler
 
                 if (type == typeof(void))
                     return true;
-                else if (type == typeof(DateTime))
-                    il.Emit(OpCodes.Ldsfld, _dateTimeMin);
-                else if (type == typeof(object))
-                {
-                    if (type.GetTypeInfo().IsValueType)
-                    {
-                        LocalBuilder lb = il.DeclareLocal(type);
-                        il.Emit(OpCodes.Ldloca, lb);
-                        il.Emit(OpCodes.Initobj, type);
-                        il.Emit(OpCodes.Ldloc, lb);
-                    }
-                    else
-                        il.Emit(OpCodes.Ldnull);
-                }
                 else if (type == typeof(string))
                     il.Emit(OpCodes.Ldnull);
                 else if (type == typeof(bool) ||
                         type == typeof(byte) ||
+                        type == typeof(char) ||
                         type == typeof(sbyte) ||
                         type == typeof(int) ||
                         type == typeof(uint) ||
@@ -1281,10 +1264,15 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldc_R4, default(float));
                 else if (type == typeof(double))
                     il.Emit(OpCodes.Ldc_R8, default(double));
-                else if (type == typeof(decimal))
-                    il.Emit(OpCodes.Ldsfld, _decimalZero);
+                else if (type.GetTypeInfo().IsValueType)
+                {
+                    LocalBuilder lb = il.DeclareLocal(type);
+                    il.Emit(OpCodes.Ldloca, lb);
+                    il.Emit(OpCodes.Initobj, type);
+                    il.Emit(OpCodes.Ldloc, lb);
+                }
                 else
-                    return false;
+                    il.Emit(OpCodes.Ldnull);
 
                 return true;
             }

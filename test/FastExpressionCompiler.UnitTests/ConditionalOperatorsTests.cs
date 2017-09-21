@@ -168,7 +168,7 @@ namespace FastExpressionCompiler.UnitTests
         public static void WriteLine(string s) => Console.WriteLine(s);
 
         [Test]
-        public void Test_IfThen()
+        public void IfThen_with_block()
         {
             var variable = Variable(typeof(int));
             var param = Parameter(typeof(bool));
@@ -189,7 +189,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Test_IfThenElse_WithParam()
+        public void IfThenElse_with_block()
         {
             var variable = Variable(typeof(int));
             var param = Parameter(typeof(bool));
