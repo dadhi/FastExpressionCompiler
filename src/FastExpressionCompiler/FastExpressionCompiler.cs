@@ -1220,6 +1220,9 @@ namespace FastExpressionCompiler
                     case ExpressionType.OrElse:
                         return EmitLogicalOperator((BinaryExpression)exprObj, paramExprs, il, closure);
 
+                    case ExpressionType.Coalesce:
+                        return EmitCoalesceOperator((BinaryExpression)exprObj, paramExprs, il, closure);
+
                     case ExpressionType.Conditional:
                         return EmitConditional((ConditionalExpression)exprObj, paramExprs, il, closure);
 
@@ -1235,6 +1238,43 @@ namespace FastExpressionCompiler
                     default:
                         return false;
                 }
+            }
+
+            private static bool EmitCoalesceOperator(BinaryExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            {
+                var labelFalse = il.DefineLabel();
+                var labelDone = il.DefineLabel();
+
+                var left = exprObj.Left;
+                var right = exprObj.Right;
+
+                if (!TryEmit(left, left.NodeType, left.Type, paramExprs, il, closure))
+                    return false;
+
+                il.Emit(OpCodes.Dup); // duplicate left, if it's not null, after the branch this value will be on the top of the stack
+                il.Emit(OpCodes.Ldnull);
+                il.Emit(OpCodes.Ceq);
+                il.Emit(OpCodes.Brfalse, labelFalse);
+
+                il.Emit(OpCodes.Pop); // left is null, pop it's value from the stack
+
+                if (!TryEmit(right, right.NodeType, right.Type, paramExprs, il, closure))
+                    return false;
+
+                if (right.Type != exprObj.Type)
+                    if (right.Type.GetTypeInfo().IsValueType)
+                        il.Emit(OpCodes.Box, right.Type);
+                    else
+                        il.Emit(OpCodes.Castclass, exprObj.Type);
+
+                il.Emit(OpCodes.Br, labelDone);
+
+                il.MarkLabel(labelFalse);
+                if (left.Type != exprObj.Type)
+                    il.Emit(OpCodes.Castclass, exprObj.Type);
+
+                il.MarkLabel(labelDone);
+                return true;
             }
 
             private static bool EmitDefault(DefaultExpression exprObj, ILGenerator il)
