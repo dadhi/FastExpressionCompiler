@@ -135,7 +135,7 @@ namespace FastExpressionCompiler.UnitTests
         public void CompileFast_should_return_null_when_option_is_set_and_expression_type_is_not_supported()
         {
             Assert.IsNull(Lambda(
-                Coalesce(Constant("not null"), Constant("null")))
+                Return(Label(), Constant("null")))
                 .CompileFast(ifFastFailedReturnNull: true));
         }
 
