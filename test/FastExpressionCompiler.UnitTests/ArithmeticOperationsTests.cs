@@ -240,7 +240,6 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(divideFunc(7, 3), 2);
         }
 
-        /*TODO: Add support of decimal
         [Test]
         public void Can_sum_decimal_numbers()
         {
@@ -283,7 +282,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.IsNotNull(divideFunc);
             Assert.AreEqual(divideFunc(2.0m, 1.0m), 2.0m / 1.0m);
-        }*/
+        }
 
         [Test]
         [TestCase(6, 3, 2)]
@@ -306,6 +305,52 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.IsNotNull(arithmeticFunc);
             Assert.AreEqual(arithmeticFunc(1, 2, 3, 4), 2);
+        }
+
+        [Test]
+        public void Can_calculate_arithmetic_operation_on_non_primitive_class()
+        {
+            Expression<Func<NonPrimitiveInt32Class, NonPrimitiveInt32Class, NonPrimitiveInt32Class>> expr = (a1 ,a2) => a1 + a2;
+
+            var arithmeticFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(arithmeticFunc);
+            var result = arithmeticFunc(new NonPrimitiveInt32Class(1), new NonPrimitiveInt32Class(2));
+            Assert.AreEqual(result, new NonPrimitiveInt32Class(3));
+        }
+
+        [Test]
+        public void Can_calculate_arithmetic_operation_on_non_primitive_value_type()
+        {
+            Expression<Func<NonPrimitiveInt32ValueType, NonPrimitiveInt32ValueType, NonPrimitiveInt32ValueType>> expr = (a1, a2) => a1 + a2;
+
+            var arithmeticFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(arithmeticFunc);
+            var result = arithmeticFunc(new NonPrimitiveInt32ValueType(1), new NonPrimitiveInt32ValueType(2));
+            Assert.AreEqual(result, new NonPrimitiveInt32ValueType(3));
+        }
+
+        private sealed class NonPrimitiveInt32Class
+        {
+            private readonly int _value;
+
+            public NonPrimitiveInt32Class(int value) => _value = value;
+            public override bool Equals(object obj) => (obj as NonPrimitiveInt32Class)?._value.Equals(_value) ?? false;
+            public override int GetHashCode() => _value.GetHashCode();
+
+            public static NonPrimitiveInt32Class operator +(NonPrimitiveInt32Class left, NonPrimitiveInt32Class right) =>
+                new NonPrimitiveInt32Class(left._value + right._value);
+        }
+
+        private struct NonPrimitiveInt32ValueType
+        {
+            private readonly int _value;
+
+            public NonPrimitiveInt32ValueType(int value) => _value = value;
+
+            public static NonPrimitiveInt32ValueType operator +(NonPrimitiveInt32ValueType left, NonPrimitiveInt32ValueType right) =>
+                new NonPrimitiveInt32ValueType(left._value + right._value);
         }
     }
 

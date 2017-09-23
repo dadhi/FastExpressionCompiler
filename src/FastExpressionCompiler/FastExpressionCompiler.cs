@@ -2368,14 +2368,26 @@ namespace FastExpressionCompiler
             {
                 var leftExpr = expr.Left;
                 var rightExpr = expr.Right;
-                if (!leftExpr.Type.GetTypeInfo().IsPrimitive)
-                {
-                    //TODO: implement arithmetic operations for non primitive classes and structs (like Decimal).
-                    return false;
-                }
                 if (!TryEmit(leftExpr, leftExpr.NodeType, leftExpr.Type, ps, il, closure) ||
                     !TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, ps, il, closure))
                     return false;
+
+                if (!leftExpr.Type.GetTypeInfo().IsPrimitive)
+                {
+                    string methodName = expr.NodeType == ExpressionType.Add             ? "op_Addition"
+                                      : expr.NodeType == ExpressionType.AddChecked      ? "op_Addition"
+                                      : expr.NodeType == ExpressionType.Subtract        ? "op_Subtraction"
+                                      : expr.NodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
+                                      : expr.NodeType == ExpressionType.Multiply        ? "op_Multiply"
+                                      : expr.NodeType == ExpressionType.Divide          ? "op_Division"
+                                      : null;
+
+                    if (methodName == null)
+                        { return false; }
+
+                    EmitMethodCall(il, leftExpr.Type.GetTypeInfo().GetDeclaredMethod(methodName));
+                    return true;
+                }
 
                 bool isUnsigned = leftExpr.Type == typeof(byte) ||
                                   leftExpr.Type == typeof(ushort) ||
