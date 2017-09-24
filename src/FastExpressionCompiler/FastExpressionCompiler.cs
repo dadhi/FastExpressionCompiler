@@ -1046,6 +1046,47 @@ namespace FastExpressionCompiler
                     return obj == null || TryCollectBoundConstants(ref closure, indexExpr.Object, indexExpr.Object.NodeType, indexExpr.Object.Type, paramExprs)
                            && TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs);
 
+                case ExpressionType.Try:
+                    var tryExpr = (TryExpression)exprObj;
+                    if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.NodeType, tryExpr.Type, paramExprs))
+                    {
+                        return false;
+                    }
+
+                    foreach (CatchBlock handler in tryExpr.Handlers)
+                    {
+                        if (handler.Variable != null)
+                        {
+                            if (!TryCollectBoundConstants(ref closure, handler.Variable, handler.Variable.NodeType, handler.Variable.Type, paramExprs))
+                            {
+                                return false;
+                            }
+                        }
+
+                        if (handler.Filter != null)
+                        {
+                            if (!TryCollectBoundConstants(ref closure, handler.Filter, handler.Filter.NodeType, handler.Filter.Type, paramExprs))
+                            {
+                                return false;
+                            }
+                        }
+
+                        if (!TryCollectBoundConstants(ref closure, handler.Body, handler.Body.NodeType, handler.Test, paramExprs))
+                        {
+                            return false;
+                        }
+                    }
+
+                    if (tryExpr.Finally != null)
+                    {
+                        if (!TryCollectBoundConstants(ref closure, tryExpr.Finally, tryExpr.Finally.NodeType, tryExpr.Finally.Type, paramExprs))
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+
                 case ExpressionType.Default:
                     return true;
 
@@ -1240,6 +1281,12 @@ namespace FastExpressionCompiler
                     case ExpressionType.Block:
                         return EmitBlock((BlockExpression)exprObj, paramExprs, il, closure);
 
+                    case ExpressionType.Try:
+                        return EmitTryCatchFinallyBlock((TryExpression)exprObj, paramExprs, il, closure);
+
+                    case ExpressionType.Throw:
+                        return EmitThrow((UnaryExpression)exprObj, paramExprs, il, closure);
+
                     case ExpressionType.Default:
                         return EmitDefault((DefaultExpression)exprObj, il);
 
@@ -1352,6 +1399,69 @@ namespace FastExpressionCompiler
                     return false;
 
                 closure.OpenedBlocks = closure.OpenedBlocks.Tail;
+                return true;
+            }
+
+            private static bool EmitTryCatchFinallyBlock(TryExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            {
+                if (exprObj.Type != typeof(void))
+                {
+                    //TODO: Add suport for try catch expression when method has return value.
+                    //In this case we can't return value as usual. 
+                    //Instead we have to declare local variable of return type and return value of variable at the end of the method.
+                    //For branching from try and catch expression we shoud use il.Emit(OpCodes.Leave_S, returnValueLabel);
+                    //Also we should not forget about situation when we have nested try catch expression.
+                    //In that case we still should have one variable for return value.
+                    return false;
+                }
+
+                il.BeginExceptionBlock();
+                if (!TryEmit(exprObj.Body, exprObj.Body.NodeType, exprObj.Body.Type, paramExprs, il, closure))
+                    return false;
+
+                foreach (CatchBlock catchBlock in exprObj.Handlers)
+                {
+                    if (catchBlock.Filter != null)
+                    {
+                        //TODO: Add suport for filters on catch expression
+                        return false;
+                    }
+
+                    if (catchBlock.Variable != null)
+                    {
+                        //TODO: Add suport for case when "exception parameter" (Exception ex) is used
+                        return false;
+                    }
+
+                    Expression catchExpr = catchBlock.Body;
+                    il.BeginCatchBlock(catchBlock.Test);
+
+                    if (!TryEmit(catchExpr, catchExpr.NodeType, catchExpr.Type, paramExprs, il, closure))
+                        return false;
+
+                    il.Emit(OpCodes.Pop);
+                }
+
+                if (exprObj.Finally != null)
+                {
+                    il.BeginFinallyBlock();
+
+                    if (!TryEmit(exprObj.Finally, exprObj.Finally.NodeType, exprObj.Finally.Type, paramExprs, il, closure))
+                        return false;
+                }
+
+                il.EndExceptionBlock();
+                return true;
+            }
+
+            private static bool EmitThrow(UnaryExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            {
+                Expression exceptionExpr = exprObj.Operand;
+
+                if (!TryEmit(exceptionExpr, exceptionExpr.NodeType, exceptionExpr.Type, paramExprs, il, closure))
+                    return false;
+
+                il.ThrowException(exceptionExpr.Type);
                 return true;
             }
 
