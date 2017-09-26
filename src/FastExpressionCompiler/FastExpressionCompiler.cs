@@ -1265,7 +1265,7 @@ namespace FastExpressionCompiler
                         return false;
                 }
 
-                return EmitIndexAssign(exprObj, obj?.Type, exprObj.Type, il);
+                return EmitIndexAccess(exprObj, obj?.Type, exprObj.Type, il);
             }
 
             private static bool EmitCoalesceOperator(BinaryExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
@@ -2065,13 +2065,13 @@ namespace FastExpressionCompiler
                             return false;
 
                         if (!shouldPushResult)
-                            return EmitIndexAccess(indexExpr, obj?.Type, exprType, il);
+                            return EmitIndexAssign(indexExpr, obj?.Type, exprType, il);
 
                         var variable = il.DeclareLocal(exprType); // store value in variable to return
                         il.Emit(OpCodes.Dup);
                         il.Emit(OpCodes.Stloc, variable);
 
-                        if (!EmitIndexAccess(indexExpr, obj?.Type, exprType, il))
+                        if (!EmitIndexAssign(indexExpr, obj?.Type, exprType, il))
                             return false;
 
                         il.Emit(OpCodes.Ldloc, variable);
