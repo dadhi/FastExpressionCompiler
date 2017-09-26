@@ -1697,14 +1697,11 @@ namespace FastExpressionCompiler
                 else // multi dimensional
                 {
                     var boundsLength = elems.Count;
-                    var types = new Type[boundsLength];
                     for (var i = 0; i < boundsLength; i++)
                     {
                         var bound = elems[i];
                         if (!TryEmit(bound, bound.NodeType, bound.Type, ps, il, closure))
                             return false;
-
-                        types[i] = typeof(int);
                     }
 
                     var constructor = arrType.GetTypeInfo().DeclaredConstructors.GetFirst();
