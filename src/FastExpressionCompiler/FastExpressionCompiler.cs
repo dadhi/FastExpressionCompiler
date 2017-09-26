@@ -1265,7 +1265,7 @@ namespace FastExpressionCompiler
                         return false;
                 }
 
-                return EmitArrayAccessGet(exprObj, obj?.Type, exprObj.Type, il);
+                return EmitIndexAssign(exprObj, obj?.Type, exprObj.Type, il);
             }
 
             private static bool EmitCoalesceOperator(BinaryExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
@@ -2065,13 +2065,13 @@ namespace FastExpressionCompiler
                             return false;
 
                         if (!shouldPushResult)
-                            return EmitArrayAccessSet(indexExpr, obj?.Type, exprType, il);
+                            return EmitIndexAccess(indexExpr, obj?.Type, exprType, il);
 
                         var variable = il.DeclareLocal(exprType); // store value in variable to return
                         il.Emit(OpCodes.Dup);
                         il.Emit(OpCodes.Stloc, variable);
 
-                        if (!EmitArrayAccessSet(indexExpr, obj?.Type, exprType, il))
+                        if (!EmitIndexAccess(indexExpr, obj?.Type, exprType, il))
                             return false;
 
                         il.Emit(OpCodes.Ldloc, variable);
@@ -2083,7 +2083,7 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static bool EmitArrayAccessSet(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
+            private static bool EmitIndexAssign(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
             {
                 if (indexExpr.Indexer != null)
                     return EmitMemberAssign(il, indexExpr.Indexer);
@@ -2107,7 +2107,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitArrayAccessGet(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
+            private static bool EmitIndexAccess(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
             {
                 if (indexExpr.Indexer != null)
                     return EmitMemberAccess(il, indexExpr.Indexer);
