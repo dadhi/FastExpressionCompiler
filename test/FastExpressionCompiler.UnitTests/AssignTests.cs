@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using static System.Linq.Expressions.Expression;
 
@@ -80,11 +82,154 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(5, f());
             Assert.AreEqual(5, a.Field);
         }
-
+        
         public class Test
         {
             public int Prop { get; set; }
             public int Field;
+        }
+
+        [Test]
+        public void Array_index_assign_bodyless()
+        {
+            var expr = Lambda<Func<int>>(
+                Assign(ArrayAccess(NewArrayInit(typeof(int), Constant(0), Constant(0)), Constant(1)),
+                    Constant(5)));
+
+            var f = expr.CompileFast(true);
+
+            Assert.IsNotNull(f);
+            Assert.AreEqual(5, f());
+        }
+
+        [Test]
+        public void Array_index_assign_ref_type_bodyless()
+        {
+            var a = new object();
+            var expr = Lambda<Func<object>>(
+                Assign(ArrayAccess(NewArrayInit(typeof(object), Constant(null), Constant(null)), Constant(1)),
+                    Constant(a)));
+
+            var f = expr.CompileFast(true);
+
+            Assert.IsNotNull(f);
+            Assert.AreEqual(a, f());
+        }
+
+        [Test]
+        public void Array_index_assign_value_type_block()
+        {
+            var variable = Variable(typeof(int[]));
+            var arr = NewArrayInit(typeof(int), Constant(0), Constant(0));
+            var expr = Lambda<Func<int>>(
+                Block(new[] { variable },
+                    Assign(variable, arr),
+                    Assign(ArrayAccess(variable, Constant(1)), Constant(5)),
+                    ArrayIndex(variable, Constant(1))));
+
+            var f = expr.CompileFast(true);
+
+            Assert.IsNotNull(f);
+            Assert.AreEqual(5, f());
+        }
+
+        [Test]
+        public void Array_index_assign_ref_type_block()
+        {
+            var a = new object();
+            var variable = Variable(typeof(object[]));
+            var arr = NewArrayInit(typeof(object), Constant(null), Constant(null));
+            var expr = Lambda<Func<object>>(
+                Block(new[] { variable },
+                    Assign(variable, arr),
+                    Assign(ArrayAccess(variable, Constant(1)), Constant(a)),
+                    ArrayIndex(variable, Constant(1))));
+
+            var f = expr.CompileFast(true);
+
+            Assert.IsNotNull(f);
+            Assert.AreEqual(a, f());
+        }
+
+        [Test]
+        public void Array_multi_dimensional_index_assign_value_type_block()
+        {
+            var variable = Variable(typeof(int[,]));
+            var arr = NewArrayBounds(typeof(int), Constant(2), Constant(1)); // new int[2,1]
+            var expr = Lambda<Func<int>>(
+                Block(new[] { variable },
+                    Assign(variable, arr),
+                    Assign(ArrayAccess(variable, Constant(1), Constant(0)), Constant(5)), // a[1,0] = 5
+                    ArrayAccess(variable, Constant(1), Constant(0)))); // ret a[1,0]
+
+            var f = expr.CompileFast(true);
+
+            Assert.IsNotNull(f);
+            Assert.AreEqual(5, f());
+        }
+
+        [Test]
+        public void Array_multi_dimensional_index_assign_ref_type_block()
+        {
+            var a = new object();
+            var variable = Variable(typeof(object[,]));
+            var arr = NewArrayBounds(typeof(object), Constant(2), Constant(1)); // new object[2,1]
+            var expr = Lambda<Func<object>>(
+                Block(new[] { variable },
+                    Assign(variable, arr),
+                    Assign(ArrayAccess(variable, Constant(1), Constant(0)), Constant(a)), // o[1,0] = a
+                    ArrayAccess(variable, Constant(1), Constant(0)))); // ret o[1,0]
+
+            var f = expr.CompileFast(true);
+
+            Assert.IsNotNull(f);
+            Assert.AreEqual(a, f());
+        }
+
+        [Test]
+        public void Arra_index_assign_custom_indexer()
+        {
+            var a = new IndexTest();
+            var variable = Variable(typeof(IndexTest));
+            var prop = typeof(IndexTest).GetTypeInfo().DeclaredProperties.First(p => p.GetIndexParameters().Length > 0);
+            var expr = Lambda<Func<int>>(
+                Block(new[] { variable },
+                    Assign(variable, Constant(a)),
+                    Assign(Property(variable, prop, Constant(1)), Constant(5))));
+
+            var f = expr.CompileFast(true);
+
+            Assert.IsNotNull(f);
+            Assert.AreEqual(5, f());
+        }
+
+        [Test]
+        public void Arra_index_assign_custom_indexer_with_get()
+        {
+            var a = new IndexTest();
+            var variable = Variable(typeof(IndexTest));
+            var prop = typeof(IndexTest).GetTypeInfo().DeclaredProperties.First(p => p.GetIndexParameters().Length > 0);
+            var expr = Lambda<Func<int>>(
+                Block(new[] { variable },
+                    Assign(variable, Constant(a)),
+                    Assign(Property(variable, prop, Constant(1)), Constant(5)),
+                    Property(variable, prop, Constant(1))));
+
+            var f = expr.CompileFast(true);
+
+            Assert.IsNotNull(f);
+            Assert.AreEqual(5, f());
+        }
+
+        public class IndexTest
+        {
+            private readonly int[] a = { 0, 0 };
+
+            public int this[int i]
+            {
+                get => a[i];
+                set => a[i] = value;
+            }
         }
     }
 }

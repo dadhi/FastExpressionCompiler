@@ -893,6 +893,7 @@ namespace FastExpressionCompiler
                         ? TryCollectBoundConstants(ref closure, newExprInfo.Arguments, paramExprs)
                         : TryCollectBoundConstants(ref closure, ((NewExpression)(Expression)exprObj).Arguments, paramExprs);
 
+                case ExpressionType.NewArrayBounds:
                 case ExpressionType.NewArrayInit:
                     var newArrayInitInfo = exprObj as NewArrayExpressionInfo;
                     if (newArrayInitInfo != null)
@@ -1039,6 +1040,12 @@ namespace FastExpressionCompiler
 
                     return TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs);
 
+                case ExpressionType.Index:
+                    var indexExpr = (IndexExpression)exprObj;
+                    var obj = indexExpr.Object;
+                    return obj == null || TryCollectBoundConstants(ref closure, indexExpr.Object, indexExpr.Object.NodeType, indexExpr.Object.Type, paramExprs)
+                           && TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs);
+
                 case ExpressionType.Default:
                     return true;
 
@@ -1180,7 +1187,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Convert:
                         return EmitConvert(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.ArrayIndex:
-                        return EmitArrayIndex(exprObj, paramExprs, il, closure);
+                        return EmitArrayIndex(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.Constant:
                         return EmitConstant(exprObj, exprType, il, closure);
                     case ExpressionType.Call:
@@ -1189,6 +1196,7 @@ namespace FastExpressionCompiler
                         return EmitMemberAccess(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.New:
                         return EmitNew(exprObj, exprType, paramExprs, il, closure);
+                    case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
                         return EmitNewArray(exprObj, paramExprs, il, closure);
                     case ExpressionType.MemberInit:
@@ -1235,9 +1243,29 @@ namespace FastExpressionCompiler
                     case ExpressionType.Default:
                         return EmitDefault((DefaultExpression)exprObj, il);
 
+                    case ExpressionType.Index:
+                        return EmitIndex((IndexExpression)exprObj, paramExprs, il, closure);
+
                     default:
                         return false;
                 }
+            }
+
+            private static bool EmitIndex(IndexExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            {
+                var obj = exprObj.Object;
+                if (obj != null && !TryEmit(obj, obj.NodeType, obj.Type, paramExprs, il, closure))
+                    return false;
+
+                var argLength = exprObj.Arguments.Count;
+                for (var i = 0; i < argLength; i++)
+                {
+                    var arg = exprObj.Arguments[i];
+                    if (!TryEmit(arg, arg.NodeType, arg.Type, paramExprs, il, closure))
+                        return false;
+                }
+
+                return EmitIndexAccess(exprObj, obj?.Type, exprObj.Type, il);
             }
 
             private static bool EmitCoalesceOperator(BinaryExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
@@ -1662,7 +1690,27 @@ namespace FastExpressionCompiler
 
                 var arrVar = il.DeclareLocal(arrType);
 
-                EmitLoadConstantInt(il, elems.Count);
+                var rank = arrType.GetArrayRank();
+
+                if (rank == 1) // one dimensional
+                    EmitLoadConstantInt(il, elems.Count);
+                else // multi dimensional
+                {
+                    var boundsLength = elems.Count;
+                    for (var i = 0; i < boundsLength; i++)
+                    {
+                        var bound = elems[i];
+                        if (!TryEmit(bound, bound.NodeType, bound.Type, ps, il, closure))
+                            return false;
+                    }
+
+                    var constructor = arrType.GetTypeInfo().DeclaredConstructors.GetFirst();
+                    if (constructor == null) return false;
+                    il.Emit(OpCodes.Newobj, constructor);
+
+                    return true;
+                }
+
                 il.Emit(OpCodes.Newarr, elemType);
                 il.Emit(OpCodes.Stloc, arrVar);
 
@@ -1729,11 +1777,14 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitArrayIndex(object exprObj, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitArrayIndex(object exprObj, Type exprType, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
                 if (!EmitBinary(exprObj, ps, il, closure))
                     return false;
-                il.Emit(OpCodes.Ldelem_Ref);
+                if (exprType.GetTypeInfo().IsValueType)
+                    il.Emit(OpCodes.Ldelem, exprType);
+                else
+                    il.Emit(OpCodes.Ldelem_Ref);
                 return true;
             }
 
@@ -1995,9 +2046,89 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldloc, rightVar);
                         return true;
 
+                    case ExpressionType.Index:
+                        var indexExpr = (IndexExpression)left;
+
+                        var obj = indexExpr.Object;
+                        if (obj != null && !TryEmit(obj, obj.NodeType, obj.Type, paramExprs, il, closure))
+                            return false;
+
+                        var argLength = indexExpr.Arguments.Count;
+                        for (var i = 0; i < argLength; i++)
+                        {
+                            var arg = indexExpr.Arguments[i];
+                            if (!TryEmit(arg, arg.NodeType, arg.Type, paramExprs, il, closure))
+                                return false;
+                        }
+
+                        if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
+                            return false;
+
+                        if (!shouldPushResult)
+                            return EmitIndexAssign(indexExpr, obj?.Type, exprType, il);
+
+                        var variable = il.DeclareLocal(exprType); // store value in variable to return
+                        il.Emit(OpCodes.Dup);
+                        il.Emit(OpCodes.Stloc, variable);
+
+                        if (!EmitIndexAssign(indexExpr, obj?.Type, exprType, il))
+                            return false;
+
+                        il.Emit(OpCodes.Ldloc, variable);
+
+                        return true;
+
                     default: // not yet support assingment targets
                         return false;
                 }
+            }
+
+            private static bool EmitIndexAssign(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
+            {
+                if (indexExpr.Indexer != null)
+                    return EmitMemberAssign(il, indexExpr.Indexer);
+
+                if (indexExpr.Arguments.Count == 1) // one dimensional array
+                {
+                    if (elementType.GetTypeInfo().IsValueType)
+                        il.Emit(OpCodes.Stelem, elementType);
+                    else
+                        il.Emit(OpCodes.Stelem_Ref);
+                }
+                else // multi dimensional array
+                {
+                    if (instType == null)
+                        return false;
+
+                    var setMethod = instType.GetTypeInfo().GetDeclaredMethod("Set");
+                    EmitMethodCall(il, setMethod);
+                }
+
+                return true;
+            }
+
+            private static bool EmitIndexAccess(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
+            {
+                if (indexExpr.Indexer != null)
+                    return EmitMemberAccess(il, indexExpr.Indexer);
+
+                if (indexExpr.Arguments.Count == 1) // one dimensional array
+                {
+                    if (elementType.GetTypeInfo().IsValueType)
+                        il.Emit(OpCodes.Ldelem, elementType);
+                    else
+                        il.Emit(OpCodes.Ldelem_Ref);
+                }
+                else // multi dimensional array
+                {
+                    if (instType == null)
+                        return false;
+
+                    var setMethod = instType.GetTypeInfo().GetDeclaredMethod("Get");
+                    EmitMethodCall(il, setMethod);
+                }
+
+                return true;
             }
 
             private static bool EmitMethodCall(object exprObj,
@@ -2089,6 +2220,11 @@ namespace FastExpressionCompiler
                     }
                 }
 
+                return EmitMemberAccess(il, member);
+            }
+
+            private static bool EmitMemberAccess(ILGenerator il, MemberInfo member)
+            {
                 var field = member as FieldInfo;
                 if (field != null)
                 {
@@ -2374,16 +2510,16 @@ namespace FastExpressionCompiler
 
                 if (!leftExpr.Type.GetTypeInfo().IsPrimitive)
                 {
-                    string methodName = expr.NodeType == ExpressionType.Add             ? "op_Addition"
-                                      : expr.NodeType == ExpressionType.AddChecked      ? "op_Addition"
-                                      : expr.NodeType == ExpressionType.Subtract        ? "op_Subtraction"
+                    string methodName = expr.NodeType == ExpressionType.Add ? "op_Addition"
+                                      : expr.NodeType == ExpressionType.AddChecked ? "op_Addition"
+                                      : expr.NodeType == ExpressionType.Subtract ? "op_Subtraction"
                                       : expr.NodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
-                                      : expr.NodeType == ExpressionType.Multiply        ? "op_Multiply"
-                                      : expr.NodeType == ExpressionType.Divide          ? "op_Division"
+                                      : expr.NodeType == ExpressionType.Multiply ? "op_Multiply"
+                                      : expr.NodeType == ExpressionType.Divide ? "op_Division"
                                       : null;
 
                     if (methodName == null)
-                        { return false; }
+                    { return false; }
 
                     EmitMethodCall(il, leftExpr.Type.GetTypeInfo().GetDeclaredMethod(methodName));
                     return true;
