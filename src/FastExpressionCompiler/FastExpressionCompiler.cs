@@ -893,6 +893,7 @@ namespace FastExpressionCompiler
                         ? TryCollectBoundConstants(ref closure, newExprInfo.Arguments, paramExprs)
                         : TryCollectBoundConstants(ref closure, ((NewExpression)(Expression)exprObj).Arguments, paramExprs);
 
+                case ExpressionType.NewArrayBounds:
                 case ExpressionType.NewArrayInit:
                     var newArrayInitInfo = exprObj as NewArrayExpressionInfo;
                     if (newArrayInitInfo != null)
@@ -1038,6 +1039,12 @@ namespace FastExpressionCompiler
                         (closure ?? (closure = new ClosureInfo())).AddDefinedVariable(blockExpr.Variables[i]);
 
                     return TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs);
+
+                case ExpressionType.Index:
+                    var indexExpr = (IndexExpression)exprObj;
+                    var obj = indexExpr.Object;
+                    return obj == null || TryCollectBoundConstants(ref closure, indexExpr.Object, indexExpr.Object.NodeType, indexExpr.Object.Type, paramExprs)
+                           && TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs);
 
                 case ExpressionType.Default:
                     return true;
@@ -1189,6 +1196,7 @@ namespace FastExpressionCompiler
                         return EmitMemberAccess(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.New:
                         return EmitNew(exprObj, exprType, paramExprs, il, closure);
+                    case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
                         return EmitNewArray(exprObj, paramExprs, il, closure);
                     case ExpressionType.MemberInit:
@@ -1235,9 +1243,29 @@ namespace FastExpressionCompiler
                     case ExpressionType.Default:
                         return EmitDefault((DefaultExpression)exprObj, il);
 
+                    case ExpressionType.Index:
+                        return EmitIndex((IndexExpression)exprObj, paramExprs, il, closure);
+
                     default:
                         return false;
                 }
+            }
+
+            private static bool EmitIndex(IndexExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
+            {
+                var obj = exprObj.Object;
+                if (!TryEmit(obj, obj.NodeType, obj.Type, paramExprs, il, closure))
+                    return false;
+
+                var argLength = exprObj.Arguments.Count;
+                for (var i = 0; i < argLength; i++)
+                {
+                    var arg = exprObj.Arguments[i];
+                    if (!TryEmit(arg, arg.NodeType, arg.Type, paramExprs, il, closure))
+                        return false;
+                }
+
+                return EmitArrayAccessGet(exprObj, obj.Type, il);
             }
 
             private static bool EmitCoalesceOperator(BinaryExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
@@ -1662,7 +1690,30 @@ namespace FastExpressionCompiler
 
                 var arrVar = il.DeclareLocal(arrType);
 
-                EmitLoadConstantInt(il, elems.Count);
+                var rank = arrType.GetArrayRank();
+
+                if (rank == 1) // one dimensional
+                    EmitLoadConstantInt(il, elems.Count);
+                else // multi dimensional
+                {
+                    var boundsLength = elems.Count;
+                    var types = new Type[boundsLength];
+                    for (var i = 0; i < boundsLength; i++)
+                    {
+                        var bound = elems[i];
+                        if (!TryEmit(bound, bound.NodeType, bound.Type, ps, il, closure))
+                            return false;
+
+                        types[i] = typeof(int);
+                    }
+
+                    var constructor = arrType.GetTypeInfo().DeclaredConstructors.GetFirst();
+                    if (constructor == null) return false;
+                    il.Emit(OpCodes.Newobj, constructor);
+
+                    return true;
+                }
+
                 il.Emit(OpCodes.Newarr, elemType);
                 il.Emit(OpCodes.Stloc, arrVar);
 
@@ -1995,9 +2046,83 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldloc, rightVar);
                         return true;
 
+                    case ExpressionType.Index:
+                        var indexExpr = (IndexExpression)left;
+
+                        if (!TryEmit(indexExpr.Object, indexExpr.Object.NodeType,
+                            indexExpr.Object.Type, paramExprs, il, closure))
+                            return false;
+
+                        var argLength = indexExpr.Arguments.Count;
+                        for (var i = 0; i < argLength; i++)
+                        {
+                            var arg = indexExpr.Arguments[i];
+                            if (!TryEmit(arg, arg.NodeType, arg.Type, paramExprs, il, closure))
+                                return false;
+                        }
+
+                        if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
+                            return false;
+
+                        if (!shouldPushResult)
+                            return EmitArrayAccessSet(indexExpr, indexExpr.Object.Type, il);
+
+                        var variable = il.DeclareLocal(exprType); // store value in variable to return
+                        il.Emit(OpCodes.Dup);
+                        il.Emit(OpCodes.Stloc, variable);
+
+                        if (!EmitArrayAccessSet(indexExpr, exprType, il))
+                            return false;
+
+                        il.Emit(OpCodes.Ldloc, variable);
+
+                        return true;
+
                     default: // not yet support assingment targets
                         return false;
                 }
+            }
+
+            private static bool EmitArrayAccessSet(IndexExpression indexExpr, Type exprType, ILGenerator il)
+            {
+                if (indexExpr.Indexer != null)
+                    return EmitMemberAssign(il, indexExpr.Indexer);
+
+                if (indexExpr.Arguments.Count == 1) // one dimensional array
+                {
+                    if (exprType.GetTypeInfo().IsValueType)
+                        il.Emit(OpCodes.Stelem, exprType);
+                    else
+                        il.Emit(OpCodes.Stelem_Ref);
+                }
+                else // multi dimensional array
+                {
+                    var setMethod = exprType.GetTypeInfo().GetDeclaredMethod("Set");
+                    EmitMethodCall(il, setMethod);
+                }
+
+                return true;
+            }
+
+            private static bool EmitArrayAccessGet(IndexExpression indexExpr, Type exprType, ILGenerator il)
+            {
+                if (indexExpr.Indexer != null)
+                    return EmitMemberAccess(il, indexExpr.Indexer);
+
+                if (indexExpr.Arguments.Count == 1) // one dimensional array
+                {
+                    if (exprType.GetTypeInfo().IsValueType)
+                        il.Emit(OpCodes.Ldelem, exprType);
+                    else
+                        il.Emit(OpCodes.Ldelem_Ref);
+                }
+                else // multi dimensional array
+                {
+                    var setMethod = exprType.GetTypeInfo().GetDeclaredMethod("Get");
+                    EmitMethodCall(il, setMethod);
+                }
+
+                return true;
             }
 
             private static bool EmitMethodCall(object exprObj,
@@ -2089,6 +2214,11 @@ namespace FastExpressionCompiler
                     }
                 }
 
+                return EmitMemberAccess(il, member);
+            }
+
+            private static bool EmitMemberAccess(ILGenerator il, MemberInfo member)
+            {
                 var field = member as FieldInfo;
                 if (field != null)
                 {
