@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 Maksim Volkau
+Copyright (c) 2016-2017 Maksim Volkau
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -76,7 +76,7 @@ namespace FastExpressionCompiler
             return lambdaExpr.CompileFast<Func<R>>(ifFastFailedReturnNull);
         }
 
-        /// <summary>Compiles lambda expression to delegatee. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, R> CompileFast<T1, R>(this Expression<Func<T1, R>> lambdaExpr, bool ifFastFailedReturnNull = false)
         {
             return lambdaExpr.CompileFast<Func<T1, R>>(ifFastFailedReturnNull);
@@ -345,7 +345,7 @@ namespace FastExpressionCompiler
             // All variables defined in the current block, they are stored in the closure
             public ParameterExpression[] DefinedVariables = Tools.Empty<ParameterExpression>();
 
-            // Field infos are needed to load field of closure object on stack in emitter
+            // FieldInfos are needed to load field of closure object on stack in emitter
             // It is also an indicator that we use typed Closure object and not an array
             public FieldInfo[] Fields { get; private set; }
 
@@ -1049,41 +1049,28 @@ namespace FastExpressionCompiler
                 case ExpressionType.Try:
                     var tryExpr = (TryExpression)exprObj;
                     if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.NodeType, tryExpr.Type, paramExprs))
-                    {
                         return false;
-                    }
 
-                    foreach (CatchBlock handler in tryExpr.Handlers)
+                    var catchBlocks = tryExpr.Handlers;
+                    for (var i = 0; i < catchBlocks.Count; i++)
                     {
-                        if (handler.Variable != null)
-                        {
-                            if (!TryCollectBoundConstants(ref closure, handler.Variable, handler.Variable.NodeType, handler.Variable.Type, paramExprs))
-                            {
-                                return false;
-                            }
-                        }
-
-                        if (handler.Filter != null)
-                        {
-                            if (!TryCollectBoundConstants(ref closure, handler.Filter, handler.Filter.NodeType, handler.Filter.Type, paramExprs))
-                            {
-                                return false;
-                            }
-                        }
-
-                        if (!TryCollectBoundConstants(ref closure, handler.Body, handler.Body.NodeType, handler.Test, paramExprs))
-                        {
+                        var handler = catchBlocks[i];
+                        if (handler.Variable != null && !TryCollectBoundConstants(ref closure, 
+                            handler.Variable, handler.Variable.NodeType, handler.Variable.Type, paramExprs))
                             return false;
-                        }
+
+                        if (handler.Filter != null && !TryCollectBoundConstants(ref closure,
+                            handler.Filter, handler.Filter.NodeType, handler.Filter.Type, paramExprs))
+                            return false;
+
+                        if (!TryCollectBoundConstants(ref closure, handler.Body, handler.Body.NodeType, handler.Test,
+                            paramExprs))
+                            return false;
                     }
 
-                    if (tryExpr.Finally != null)
-                    {
-                        if (!TryCollectBoundConstants(ref closure, tryExpr.Finally, tryExpr.Finally.NodeType, tryExpr.Finally.Type, paramExprs))
-                        {
-                            return false;
-                        }
-                    }
+                    if (tryExpr.Finally != null && !TryCollectBoundConstants(ref closure, 
+                        tryExpr.Finally, tryExpr.Finally.NodeType, tryExpr.Finally.Type, paramExprs))
+                        return false;
 
                     return true;
 
@@ -1406,10 +1393,10 @@ namespace FastExpressionCompiler
             {
                 if (exprObj.Type != typeof(void))
                 {
-                    //TODO: Add suport for try catch expression when method has return value.
+                    //TODO: Add support for try catch expression when method has return value.
                     //In this case we can't return value as usual. 
                     //Instead we have to declare local variable of return type and return value of variable at the end of the method.
-                    //For branching from try and catch expression we shoud use il.Emit(OpCodes.Leave_S, returnValueLabel);
+                    //For branching from try and catch expression we should use il.Emit(OpCodes.Leave_S, returnValueLabel);
                     //Also we should not forget about situation when we have nested try catch expression.
                     //In that case we still should have one variable for return value.
                     return false;
@@ -1419,21 +1406,20 @@ namespace FastExpressionCompiler
                 if (!TryEmit(exprObj.Body, exprObj.Body.NodeType, exprObj.Body.Type, paramExprs, il, closure))
                     return false;
 
-                foreach (CatchBlock catchBlock in exprObj.Handlers)
+                var catchBlocks = exprObj.Handlers;
+                for (var i = 0; i < catchBlocks.Count; i++)
                 {
+                    var catchBlock = catchBlocks[i];
+
+                    //TODO: Add support for filters on catch expression
                     if (catchBlock.Filter != null)
-                    {
-                        //TODO: Add suport for filters on catch expression
                         return false;
-                    }
 
+                    //TODO: Add support for case when "exception parameter" (Exception ex) is used
                     if (catchBlock.Variable != null)
-                    {
-                        //TODO: Add suport for case when "exception parameter" (Exception ex) is used
                         return false;
-                    }
 
-                    Expression catchExpr = catchBlock.Body;
+                    var catchExpr = catchBlock.Body;
                     il.BeginCatchBlock(catchBlock.Test);
 
                     if (!TryEmit(catchExpr, catchExpr.NodeType, catchExpr.Type, paramExprs, il, closure))
@@ -1445,7 +1431,6 @@ namespace FastExpressionCompiler
                 if (exprObj.Finally != null)
                 {
                     il.BeginFinallyBlock();
-
                     if (!TryEmit(exprObj.Finally, exprObj.Finally.NodeType, exprObj.Finally.Type, paramExprs, il, closure))
                         return false;
                 }
@@ -1590,11 +1575,11 @@ namespace FastExpressionCompiler
                 if (targetType == typeof(object))
                 {
                     if (sourceType.GetTypeInfo().IsValueType)
-                        il.Emit(OpCodes.Box, sourceType); // for valuy type to object, just box a value
+                        il.Emit(OpCodes.Box, sourceType); // for value type to object, just box a value
                     return true; // for reference type we don't need to convert
                 }
 
-                // Just unbox type object to the target value type
+                // Just un-box type object to the target value type
                 if (targetType.GetTypeInfo().IsValueType &&
                     sourceType == typeof(object))
                 {
@@ -1738,7 +1723,7 @@ namespace FastExpressionCompiler
                 // load item from index
                 il.Emit(OpCodes.Ldelem_Ref);
 
-                // Cast or unbox the object item depending if it is a class or value type
+                // Cast or un-box the object item depending if it is a class or value type
                 if (closedItemType.GetTypeInfo().IsValueType)
                     il.Emit(OpCodes.Unbox_Any, closedItemType);
                 else
@@ -2027,7 +2012,7 @@ namespace FastExpressionCompiler
                     rightNodeType = right.GetNodeType();
                 }
 
-                // if this assignment is part of a single bodyless expression or the result of a block
+                // if this assignment is part of a single body-less expression or the result of a block
                 // we should put it's result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
                 var shouldPushResult = closure == null
@@ -2188,7 +2173,7 @@ namespace FastExpressionCompiler
 
                         return true;
 
-                    default: // not yet support assingment targets
+                    default: // not yet support assignment targets
                         return false;
                 }
             }
@@ -2355,7 +2340,6 @@ namespace FastExpressionCompiler
                 return false;
             }
 
-            // todo: inline GetFirst
             private static MethodInfo TryGetPropertyGetMethod(PropertyInfo prop)
             {
                 var propGetMethodName = "get_" + prop.Name;
@@ -3026,13 +3010,13 @@ namespace FastExpressionCompiler
             return new ExpressionInfo<TDelegate>(body, parameters);
         }
 
-        /// <summary>Analog of Expression.ArrayIdex</summary>
+        /// <summary>Analog of Expression.ArrayIndex</summary>
         public static BinaryExpressionInfo ArrayIndex(ExpressionInfo array, ExpressionInfo index)
         {
             return new BinaryExpressionInfo(ExpressionType.ArrayIndex, array, index, array.Type.GetElementType());
         }
 
-        /// <summary>Analog of Expression.ArrayIdex</summary>
+        /// <summary>Analog of Expression.ArrayIndex</summary>
         public static BinaryExpressionInfo ArrayIndex(object array, object index)
         {
             var arrayItemType = array.GetResultType().GetElementType();
@@ -3051,7 +3035,7 @@ namespace FastExpressionCompiler
             return new MemberInitExpressionInfo(newExpr, bindings);
         }
 
-        /// <summary>Enables member assignement on existing instance expression.</summary>
+        /// <summary>Enables member assignment on existing instance expression.</summary>
         public static ExpressionInfo MemberInit(ExpressionInfo instanceExpr, params MemberAssignmentInfo[] assignments)
         {
             return new MemberInitExpressionInfo(instanceExpr, assignments);
