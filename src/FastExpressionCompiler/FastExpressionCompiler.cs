@@ -1411,11 +1411,11 @@ namespace FastExpressionCompiler
                 {
                     var catchBlock = catchBlocks[i];
 
-                    //TODO: Add support for filters on catch expression
+                    // TODO: Add support for filters on catch expression
                     if (catchBlock.Filter != null)
                         return false;
 
-                    //TODO: Add support for case when "exception parameter" (Exception ex) is used
+                    // TODO: Add support for case when "exception parameter" (Exception ex) is used
                     if (catchBlock.Variable != null)
                         return false;
 

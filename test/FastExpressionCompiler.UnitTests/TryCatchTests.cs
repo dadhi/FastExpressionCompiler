@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using static System.Linq.Expressions.Expression;
@@ -41,6 +43,43 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.IsNotNull(func);
             Assert.Throws<InvalidDataSourceException>(() => func());
+        }
+
+        [Test] // todo: work in progress
+        public void Can_handle_the_exception_and_return_result_from_TryCatch_block()
+        {
+            // Test expression
+            // (string a) => {
+            //      try { return int.Parse(a); }
+            //      catch (Exception ex) { return ex.Message.Length; }
+            // }
+
+            var aParamExpr = Parameter(typeof(string), "a");
+            var exParamExpr = Parameter(typeof(Exception), "ex");
+
+            var expr = TryCatch(
+                Call(typeof(Int32).GetTypeInfo()
+                    .DeclaredMethods.First(m => m.Name == nameof(int.Parse)),
+                    aParamExpr
+                ),
+                Catch(exParamExpr,
+                    Property(
+                        Property(exParamExpr, typeof(Exception).GetTypeInfo()
+                            .DeclaredProperties.First(p => p.Name == nameof(Exception.Message))),
+                        typeof(string).GetTypeInfo()
+                            .DeclaredProperties.First(p => p.Name == nameof(string.Length))
+                    )
+                )
+            );
+
+            // Test that expression is valid with system Compile
+            var fExpr = Lambda<Func<string, int>>(expr, aParamExpr);
+
+            var f = fExpr.Compile();
+            Assert.AreEqual(41, f("A"));
+
+            var ff = fExpr.CompileFast(ifFastFailedReturnNull: true);
+            Assert.IsNotNull(ff);
         }
 
         /*TODO: Add suport for usage of exception parameter
