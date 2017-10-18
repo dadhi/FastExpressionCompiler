@@ -859,20 +859,7 @@ namespace FastExpressionCompiler
                     return true;
 
                 case ExpressionType.Call:
-                    var callInfo = exprObj as MethodCallExpressionInfo;
-                    if (callInfo != null)
-                    {
-                        var objInfo = callInfo.Object;
-                        return (objInfo == null
-                            || TryCollectBoundConstants(ref closure, objInfo, objInfo.NodeType, objInfo.Type, paramExprs))
-                            && TryCollectBoundConstants(ref closure, callInfo.Arguments, paramExprs);
-                    }
-
-                    var callExpr = (MethodCallExpression)exprObj;
-                    var objExpr = callExpr.Object;
-                    return (objExpr == null
-                        || TryCollectBoundConstants(ref closure, objExpr, objExpr.NodeType, objExpr.Type, paramExprs))
-                        && TryCollectBoundConstants(ref closure, callExpr.Arguments, paramExprs);
+                    return TryCollectCallExprConstants(ref closure, exprObj, paramExprs);
 
                 case ExpressionType.MemberAccess:
                     var memberExprInfo = exprObj as MemberExpressionInfo;
@@ -900,116 +887,12 @@ namespace FastExpressionCompiler
                         return TryCollectBoundConstants(ref closure, newArrayInitInfo.Arguments, paramExprs);
                     return TryCollectBoundConstants(ref closure, ((NewArrayExpression)exprObj).Expressions, paramExprs);
 
-                // property and field initializer
                 case ExpressionType.MemberInit:
+                    return TryCollectMemberInitExprConstants(ref closure, exprObj, paramExprs);
 
-                    var memberInitExprInfo = exprObj as MemberInitExpressionInfo;
-                    if (memberInitExprInfo != null)
-                    {
-                        var miNewInfo = memberInitExprInfo.ExpressionInfo;
-                        if (!TryCollectBoundConstants(ref closure, miNewInfo, miNewInfo.NodeType, miNewInfo.Type, paramExprs))
-                            return false;
-
-                        var memberBindingInfos = memberInitExprInfo.Bindings;
-                        for (var i = 0; i < memberBindingInfos.Length; i++)
-                        {
-                            var maInfo = memberBindingInfos[i].Expression;
-                            if (!TryCollectBoundConstants(ref closure, maInfo, maInfo.NodeType, maInfo.Type, paramExprs))
-                                return false;
-                        }
-                        return true;
-                    }
-                    else
-                    {
-                        var memberInitExpr = (MemberInitExpression)exprObj;
-                        var miNewExpr = memberInitExpr.NewExpression;
-                        if (!TryCollectBoundConstants(ref closure, miNewExpr, miNewExpr.NodeType, miNewExpr.Type, paramExprs))
-                            return false;
-
-                        var memberBindings = memberInitExpr.Bindings;
-                        for (var i = 0; i < memberBindings.Count; ++i)
-                        {
-                            var memberBinding = memberBindings[i];
-                            var maExpr = ((MemberAssignment)memberBinding).Expression;
-                            if (memberBinding.BindingType == MemberBindingType.Assignment &&
-                                !TryCollectBoundConstants(ref closure, maExpr, maExpr.NodeType, maExpr.Type, paramExprs))
-                                return false;
-                        }
-                    }
-
-                    return true;
-
-                // nested lambda expression
                 case ExpressionType.Lambda:
-
-                    // 1. Try to compile nested lambda in place
-                    // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
-                    // 3. Add the compiled lambda to closure of outer lambda for later invocation
-
-                    object compiledLambda;
-                    Type bodyType;
-                    ClosureInfo nestedClosure = null;
-
-                    var lambdaExprInfo = exprObj as LambdaExpressionInfo;
-                    if (lambdaExprInfo != null)
-                    {
-                        var lambdaParamExprs = lambdaExprInfo.Parameters;
-                        var body = lambdaExprInfo.Body;
-                        bodyType = body.GetResultType();
-                        compiledLambda = TryCompile(ref nestedClosure,
-                            lambdaExprInfo.Type, GetParamExprTypes(lambdaParamExprs), bodyType,
-                            body, body.GetNodeType(), bodyType,
-                            lambdaParamExprs, isNestedLambda: true);
-                    }
-                    else
-                    {
-                        var lambdaExpr = (LambdaExpression)exprObj;
-                        var lambdaParamExprs = lambdaExpr.Parameters;
-                        var bodyExpr = lambdaExpr.Body;
-                        bodyType = bodyExpr.Type;
-                        compiledLambda = TryCompile(ref nestedClosure,
-                            lambdaExpr.Type, GetParamExprTypes(lambdaParamExprs), bodyType,
-                            bodyExpr, bodyExpr.NodeType, bodyExpr.Type,
-                            lambdaParamExprs, isNestedLambda: true);
-                    }
-
-                    if (compiledLambda == null)
-                        return false;
-
-                    // add the nested lambda into closure
-                    (closure ?? (closure = new ClosureInfo()))
-                        .AddNestedLambda(exprObj, compiledLambda, nestedClosure, isAction: bodyType == typeof(void));
-
-                    if (nestedClosure == null)
-                        return true; // done
-
-                    // if nested non passed parameter is no matched with any outer passed parameter, 
-                    // then ensure it goes to outer non passed parameter.
-                    // But check that have non passed parameter in root expression is invalid.
-                    var nestedNonPassedParams = nestedClosure.NonPassedParameters;
-                    if (nestedNonPassedParams.Length != 0)
-                        for (var i = 0; i < nestedNonPassedParams.Length; i++)
-                        {
-                            var nestedNonPassedParam = nestedNonPassedParams[i];
-                            if (paramExprs.Count == 0 ||
-                                paramExprs.IndexOf(nestedNonPassedParam) == -1 &&
-                                nestedClosure.DefinedVariables.GetFirstIndex(nestedNonPassedParam) == -1) // if it's a defined variable by the nested lambda then skip
-                                closure.AddNonPassedParam(nestedNonPassedParam);
-                        }
-
-                    // Promote found constants and nested lambdas into outer closure
-                    var nestedConstants = nestedClosure.Constants;
-                    if (nestedConstants.Length != 0)
-                        for (var i = 0; i < nestedConstants.Length; i++)
-                            closure.AddConstant(nestedConstants[i]);
-
-                    var nestedNestedLambdas = nestedClosure.NestedLambdas;
-                    if (nestedNestedLambdas.Length != 0)
-                        for (var i = 0; i < nestedNestedLambdas.Length; i++)
-                            closure.AddNestedLambda(nestedNestedLambdas[i]);
-
-                    return true;
-
+                    return TryCompileNestedLambda(ref closure, exprObj, paramExprs);
+ 
                 case ExpressionType.Invoke:
                     var invokeExpr = exprObj as InvocationExpression;
                     if (invokeExpr != null)
@@ -1047,75 +930,13 @@ namespace FastExpressionCompiler
                            && TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs);
 
                 case ExpressionType.Try:
-                    var tryExpr = (TryExpression)exprObj;
-                    if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.NodeType, tryExpr.Type, paramExprs))
-                        return false;
-
-                    var catchBlocks = tryExpr.Handlers;
-                    for (var i = 0; i < catchBlocks.Count; i++)
-                    {
-                        var handler = catchBlocks[i];
-                        if (handler.Variable != null && !TryCollectBoundConstants(ref closure, 
-                            handler.Variable, handler.Variable.NodeType, handler.Variable.Type, paramExprs))
-                            return false;
-
-                        if (handler.Filter != null && !TryCollectBoundConstants(ref closure,
-                            handler.Filter, handler.Filter.NodeType, handler.Filter.Type, paramExprs))
-                            return false;
-
-                        if (!TryCollectBoundConstants(ref closure, handler.Body, handler.Body.NodeType, handler.Test,
-                            paramExprs))
-                            return false;
-                    }
-
-                    if (tryExpr.Finally != null && !TryCollectBoundConstants(ref closure, 
-                        tryExpr.Finally, tryExpr.Finally.NodeType, tryExpr.Finally.Type, paramExprs))
-                        return false;
-
-                    return true;
-
+                    return TryCollectTryExprConstants(ref closure, exprObj, paramExprs);
+ 
                 case ExpressionType.Default:
                     return true;
 
                 default:
-                    if (exprObj is ExpressionInfo)
-                    {
-                        var unaryExprInfo = exprObj as UnaryExpressionInfo;
-                        if (unaryExprInfo != null)
-                        {
-                            var opInfo = unaryExprInfo.Operand;
-                            return TryCollectBoundConstants(ref closure, opInfo, opInfo.NodeType, opInfo.Type, paramExprs);
-                        }
-
-                        var binInfo = exprObj as BinaryExpressionInfo;
-                        if (binInfo != null)
-                        {
-                            var left = binInfo.Left;
-                            var right = binInfo.Right;
-                            return TryCollectBoundConstants(ref closure, left, left.GetNodeType(), left.GetResultType(), paramExprs)
-                                && TryCollectBoundConstants(ref closure, right, right.GetNodeType(), right.GetResultType(), paramExprs);
-                        }
-
-                        return false;
-                    }
-
-                    var unaryExpr = exprObj as UnaryExpression;
-                    if (unaryExpr != null)
-                    {
-                        var opExpr = unaryExpr.Operand;
-                        return TryCollectBoundConstants(ref closure, opExpr, opExpr.NodeType, opExpr.Type, paramExprs);
-                    }
-
-                    var binaryExpr = exprObj as BinaryExpression;
-                    if (binaryExpr != null)
-                    {
-                        var leftExpr = binaryExpr.Left;
-                        var rightExpr = binaryExpr.Right;
-                        return TryCollectBoundConstants(ref closure, leftExpr, leftExpr.NodeType, leftExpr.Type, paramExprs)
-                            && TryCollectBoundConstants(ref closure, rightExpr, rightExpr.NodeType, rightExpr.Type, paramExprs);
-                    }
-
-                    return false;
+                    return TryCollectUnaryOrBinaryExprConstants(ref closure, exprObj, paramExprs);
             }
         }
 
@@ -1129,6 +950,213 @@ namespace FastExpressionCompiler
                     return false;
             }
             return true;
+        }
+
+        private static bool TryCompileNestedLambda(ref ClosureInfo closure, 
+            object exprObj, IList<ParameterExpression> paramExprs)
+        {
+            // 1. Try to compile nested lambda in place
+            // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
+            // 3. Add the compiled lambda to closure of outer lambda for later invocation
+
+            object compiledLambda;
+            Type bodyType;
+            ClosureInfo nestedClosure = null;
+
+            var lambdaExprInfo = exprObj as LambdaExpressionInfo;
+            if (lambdaExprInfo != null)
+            {
+                var lambdaParamExprs = lambdaExprInfo.Parameters;
+                var body = lambdaExprInfo.Body;
+                bodyType = body.GetResultType();
+                compiledLambda = TryCompile(ref nestedClosure,
+                    lambdaExprInfo.Type, GetParamExprTypes(lambdaParamExprs), bodyType,
+                    body, body.GetNodeType(), bodyType,
+                    lambdaParamExprs, isNestedLambda: true);
+            }
+            else
+            {
+                var lambdaExpr = (LambdaExpression)exprObj;
+                var lambdaParamExprs = lambdaExpr.Parameters;
+                var bodyExpr = lambdaExpr.Body;
+                bodyType = bodyExpr.Type;
+                compiledLambda = TryCompile(ref nestedClosure,
+                    lambdaExpr.Type, GetParamExprTypes(lambdaParamExprs), bodyType,
+                    bodyExpr, bodyExpr.NodeType, bodyExpr.Type,
+                    lambdaParamExprs, isNestedLambda: true);
+            }
+
+            if (compiledLambda == null)
+                return false;
+
+            // add the nested lambda into closure
+            (closure ?? (closure = new ClosureInfo()))
+                .AddNestedLambda(exprObj, compiledLambda, nestedClosure, isAction: bodyType == typeof(void));
+
+            if (nestedClosure == null)
+                return true; // done
+
+            // if nested non passed parameter is no matched with any outer passed parameter, 
+            // then ensure it goes to outer non passed parameter.
+            // But check that have non passed parameter in root expression is invalid.
+            var nestedNonPassedParams = nestedClosure.NonPassedParameters;
+            if (nestedNonPassedParams.Length != 0)
+                for (var i = 0; i < nestedNonPassedParams.Length; i++)
+                {
+                    var nestedNonPassedParam = nestedNonPassedParams[i];
+                    if (paramExprs.Count == 0 ||
+                        paramExprs.IndexOf(nestedNonPassedParam) == -1 &&
+                        nestedClosure.DefinedVariables.GetFirstIndex(nestedNonPassedParam) == -1) // if it's a defined variable by the nested lambda then skip
+                        closure.AddNonPassedParam(nestedNonPassedParam);
+                }
+
+            // Promote found constants and nested lambdas into outer closure
+            var nestedConstants = nestedClosure.Constants;
+            if (nestedConstants.Length != 0)
+                for (var i = 0; i < nestedConstants.Length; i++)
+                    closure.AddConstant(nestedConstants[i]);
+
+            var nestedNestedLambdas = nestedClosure.NestedLambdas;
+            if (nestedNestedLambdas.Length != 0)
+                for (var i = 0; i < nestedNestedLambdas.Length; i++)
+                    closure.AddNestedLambda(nestedNestedLambdas[i]);
+
+            return true;
+
+        }
+
+        private static bool TryCollectMemberInitExprConstants(ref ClosureInfo closure,
+            object exprObj, IList<ParameterExpression> paramExprs)
+        {
+            var memberInitExprInfo = exprObj as MemberInitExpressionInfo;
+            if (memberInitExprInfo != null)
+            {
+                var miNewInfo = memberInitExprInfo.ExpressionInfo;
+                if (!TryCollectBoundConstants(ref closure, miNewInfo, miNewInfo.NodeType, miNewInfo.Type, paramExprs))
+                    return false;
+
+                var memberBindingInfos = memberInitExprInfo.Bindings;
+                for (var i = 0; i < memberBindingInfos.Length; i++)
+                {
+                    var maInfo = memberBindingInfos[i].Expression;
+                    if (!TryCollectBoundConstants(ref closure, maInfo, maInfo.NodeType, maInfo.Type, paramExprs))
+                        return false;
+                }
+                return true;
+            }
+            else
+            {
+                var memberInitExpr = (MemberInitExpression)exprObj;
+                var miNewExpr = memberInitExpr.NewExpression;
+                if (!TryCollectBoundConstants(ref closure, miNewExpr, miNewExpr.NodeType, miNewExpr.Type, paramExprs))
+                    return false;
+
+                var memberBindings = memberInitExpr.Bindings;
+                for (var i = 0; i < memberBindings.Count; ++i)
+                {
+                    var memberBinding = memberBindings[i];
+                    var maExpr = ((MemberAssignment)memberBinding).Expression;
+                    if (memberBinding.BindingType == MemberBindingType.Assignment &&
+                        !TryCollectBoundConstants(ref closure, maExpr, maExpr.NodeType, maExpr.Type, paramExprs))
+                        return false;
+                }
+            }
+
+            return true;
+
+        }
+
+        private static bool TryCollectTryExprConstants(ref ClosureInfo closure,
+            object exprObj, IList<ParameterExpression> paramExprs)
+        {
+            var tryExpr = (TryExpression)exprObj;
+            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.NodeType, tryExpr.Type, paramExprs))
+                return false;
+
+            var catchBlocks = tryExpr.Handlers;
+            for (var i = 0; i < catchBlocks.Count; i++)
+            {
+                var handler = catchBlocks[i];
+                if (handler.Variable != null && !TryCollectBoundConstants(ref closure,
+                        handler.Variable, handler.Variable.NodeType, handler.Variable.Type, paramExprs))
+                    return false;
+
+                if (handler.Filter != null && !TryCollectBoundConstants(ref closure,
+                        handler.Filter, handler.Filter.NodeType, handler.Filter.Type, paramExprs))
+                    return false;
+
+                if (!TryCollectBoundConstants(ref closure, handler.Body, handler.Body.NodeType, handler.Test,
+                    paramExprs))
+                    return false;
+            }
+
+            if (tryExpr.Finally != null && !TryCollectBoundConstants(ref closure,
+                    tryExpr.Finally, tryExpr.Finally.NodeType, tryExpr.Finally.Type, paramExprs))
+                return false;
+
+            return true;
+        }
+
+        private static bool TryCollectUnaryOrBinaryExprConstants(ref ClosureInfo closure,
+            object exprObj, IList<ParameterExpression> paramExprs)
+        {
+            if (exprObj is ExpressionInfo)
+            {
+                var unaryExprInfo = exprObj as UnaryExpressionInfo;
+                if (unaryExprInfo != null)
+                {
+                    var opInfo = unaryExprInfo.Operand;
+                    return TryCollectBoundConstants(ref closure, opInfo, opInfo.NodeType, opInfo.Type, paramExprs);
+                }
+
+                var binInfo = exprObj as BinaryExpressionInfo;
+                if (binInfo != null)
+                {
+                    var left = binInfo.Left;
+                    var right = binInfo.Right;
+                    return TryCollectBoundConstants(ref closure, left, left.GetNodeType(), left.GetResultType(), paramExprs)
+                           && TryCollectBoundConstants(ref closure, right, right.GetNodeType(), right.GetResultType(), paramExprs);
+                }
+
+                return false;
+            }
+
+            var unaryExpr = exprObj as UnaryExpression;
+            if (unaryExpr != null)
+            {
+                var opExpr = unaryExpr.Operand;
+                return TryCollectBoundConstants(ref closure, opExpr, opExpr.NodeType, opExpr.Type, paramExprs);
+            }
+
+            var binaryExpr = exprObj as BinaryExpression;
+            if (binaryExpr != null)
+            {
+                var leftExpr = binaryExpr.Left;
+                var rightExpr = binaryExpr.Right;
+                return TryCollectBoundConstants(ref closure, leftExpr, leftExpr.NodeType, leftExpr.Type, paramExprs)
+                       && TryCollectBoundConstants(ref closure, rightExpr, rightExpr.NodeType, rightExpr.Type, paramExprs);
+            }
+
+            return false;
+        }
+
+        private static bool TryCollectCallExprConstants(ref ClosureInfo closure,
+            object exprObj, IList<ParameterExpression> paramExprs)
+        {
+            var callInfo = exprObj as MethodCallExpressionInfo;
+            if (callInfo != null)
+            {
+                var objInfo = callInfo.Object;
+                return (objInfo == null
+                        || TryCollectBoundConstants(ref closure, objInfo, objInfo.NodeType, objInfo.Type, paramExprs))
+                       && TryCollectBoundConstants(ref closure, callInfo.Arguments, paramExprs);
+            }
+
+            var callExpr = (MethodCallExpression)exprObj;
+            var objExpr = callExpr.Object;
+            return (objExpr == null
+                    || TryCollectBoundConstants(ref closure, objExpr, objExpr.NodeType, objExpr.Type, paramExprs))
+                   && TryCollectBoundConstants(ref closure, callExpr.Arguments, paramExprs);
         }
 
         private static KeyValuePair<ExpressionType, Type> GetExpressionMeta(object exprObj)
@@ -1391,20 +1419,25 @@ namespace FastExpressionCompiler
 
             private static bool EmitTryCatchFinallyBlock(TryExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                if (exprObj.Type != typeof(void))
+                var returnLabel = default(Label);
+                var returnResult = default(LocalBuilder);
+                var hasResult = exprObj.Type != typeof(void);
+                if (hasResult)
                 {
-                    //TODO: Add support for try catch expression when method has return value.
-                    //In this case we can't return value as usual. 
-                    //Instead we have to declare local variable of return type and return value of variable at the end of the method.
-                    //For branching from try and catch expression we should use il.Emit(OpCodes.Leave_S, returnValueLabel);
-                    //Also we should not forget about situation when we have nested try catch expression.
-                    //In that case we still should have one variable for return value.
-                    return false;
+                    returnLabel = il.DefineLabel();
+                    returnResult = il.DeclareLocal(exprObj.Type);
                 }
 
                 il.BeginExceptionBlock();
+
                 if (!TryEmit(exprObj.Body, exprObj.Body.NodeType, exprObj.Body.Type, paramExprs, il, closure))
                     return false;
+
+                if (hasResult)
+                {
+                    il.Emit(OpCodes.Stloc_S, returnResult);
+                    il.Emit(OpCodes.Leave_S, returnLabel);
+                }
 
                 var catchBlocks = exprObj.Handlers;
                 for (var i = 0; i < catchBlocks.Count; i++)
@@ -1415,27 +1448,50 @@ namespace FastExpressionCompiler
                     if (catchBlock.Filter != null)
                         return false;
 
-                    // TODO: Add support for case when "exception parameter" (Exception ex) is used
-                    if (catchBlock.Variable != null)
-                        return false;
-
-                    var catchExpr = catchBlock.Body;
                     il.BeginCatchBlock(catchBlock.Test);
 
+                    // at the beginning of catch the Exception value is on the stack,
+                    // we will store into local variable.
+                    if (catchBlock.Variable != null)
+                    {
+                        var exVar = il.DeclareLocal(catchBlock.Variable.Type);
+                        il.Emit(OpCodes.Stloc_S, exVar);
+
+                        // todo: Exception variable should be propagated and loaded when needed
+                        closure.AddDefinedVariable(catchBlock.Variable);
+
+                        return false;
+                    }
+
+                    var catchExpr = catchBlock.Body;
                     if (!TryEmit(catchExpr, catchExpr.NodeType, catchExpr.Type, paramExprs, il, closure))
                         return false;
 
-                    il.Emit(OpCodes.Pop);
+                    if (hasResult)
+                    {
+                        il.Emit(OpCodes.Stloc_S, returnResult);
+                        il.Emit(OpCodes.Leave_S, returnLabel);
+                    }
+                    else
+                        il.Emit(OpCodes.Pop);
                 }
 
                 if (exprObj.Finally != null)
                 {
                     il.BeginFinallyBlock();
+
                     if (!TryEmit(exprObj.Finally, exprObj.Finally.NodeType, exprObj.Finally.Type, paramExprs, il, closure))
                         return false;
                 }
 
                 il.EndExceptionBlock();
+
+                if (hasResult)
+                {
+                    il.MarkLabel(returnLabel);
+                    il.Emit(OpCodes.Ldloc, returnResult);
+                }
+
                 return true;
             }
 

@@ -45,7 +45,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.Throws<InvalidDataSourceException>(() => func());
         }
 
-        [Test] // todo: work in progress
+        [Test, Ignore("wip")] // todo: work in progress
         public void Can_handle_the_exception_and_return_result_from_TryCatch_block()
         {
             // Test expression
@@ -58,7 +58,7 @@ namespace FastExpressionCompiler.UnitTests
             var exParamExpr = Parameter(typeof(Exception), "ex");
 
             var expr = TryCatch(
-                Call(typeof(Int32).GetTypeInfo()
+                Call(typeof(int).GetTypeInfo()
                     .DeclaredMethods.First(m => m.Name == nameof(int.Parse)),
                     aParamExpr
                 ),
@@ -80,6 +80,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var ff = fExpr.CompileFast(ifFastFailedReturnNull: true);
             Assert.IsNotNull(ff);
+
+            ff("x");
         }
 
         /*TODO: Add suport for usage of exception parameter
