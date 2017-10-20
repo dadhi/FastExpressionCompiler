@@ -512,7 +512,7 @@ namespace FastExpressionCompiler
                 this.openedBlockVariables = this.openedBlockVariables.Tail ?? Tools.Stack<KeyValuePair<ParameterExpression, LocalBuilder>[]>.Empty;
             }
 
-            public LocalBuilder GetLocalVariableOrDefault(object variable)
+            public LocalBuilder GetLocalVariableOrDefault(object variableExpr)
             {
                 if (this.openedBlockVariables.IsEmpty)
                     return null;
@@ -523,7 +523,7 @@ namespace FastExpressionCompiler
                     var length = current.Head.Length;
                     for (var i = 0; i < length; i++)
                     {
-                        if (current.Head[i].Key == variable)
+                        if (current.Head[i].Key == variableExpr)
                             return current.Head[i].Value;
                     }
 
@@ -533,7 +533,7 @@ namespace FastExpressionCompiler
                 return null;
             }
 
-            public bool CurrentBlockContainsVariable(ParameterExpression parameterExpression)
+            public bool IsDefinedVariable(ParameterExpression parameterExpression)
             {
                 if (this.OpenedBlocks.IsEmpty)
                     return false;
@@ -916,7 +916,7 @@ namespace FastExpressionCompiler
                     // it means parameter is provided by outer lambda and should be put in closure for current lambda
                     var exprInfo = exprObj as ParameterExpressionInfo;
                     var paramExpr = exprInfo ?? (ParameterExpression)exprObj;
-                    if (paramExprs.IndexOf(paramExpr) == -1 || closure != null && !closure.CurrentBlockContainsVariable(paramExpr))
+                    if (paramExprs.IndexOf(paramExpr) == -1 || closure != null && !closure.IsDefinedVariable(paramExpr))
                         (closure ?? (closure = new ClosureInfo())).AddNonPassedParam(paramExpr);
                     return true;
 
