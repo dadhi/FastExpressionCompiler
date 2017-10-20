@@ -260,7 +260,7 @@ namespace FastExpressionCompiler
             if (!TryCollectBoundConstants(ref closureInfo, exprObj, exprNodeType, exprType, paramExprs))
                 return null;
 
-            if (closureInfo == null)
+            if (closureInfo == null || !closureInfo.HasClosureArgument)
                 return TryCompileStaticDelegate(delegateType, paramTypes, returnType, exprObj, exprNodeType, exprType, paramExprs);
 
             var closureObject = closureInfo.ConstructClosure(closureTypeOnly: isNestedLambda);
@@ -295,6 +295,7 @@ namespace FastExpressionCompiler
             IList<ParameterExpression> paramExprs, ClosureInfo closureInfo)
         {
             var il = method.GetILGenerator();
+            closureInfo?.ConstructLocals(il);
             if (!EmittingVisitor.TryEmit(exprObj, exprNodeType, exprType, paramExprs, il, closureInfo))
                 return false;
 
@@ -342,8 +343,11 @@ namespace FastExpressionCompiler
             // All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas = Tools.Empty<NestedLambdaInfo>();
 
-            // All variables defined in the current block, they are stored in the closure
+            // All variables defined in the current block
             public ParameterExpression[] DefinedVariables = Tools.Empty<ParameterExpression>();
+
+            // All emitted local variables in the current scope
+            public LocalBuilder[] LocalBuilders = Tools.Empty<LocalBuilder>();
 
             // FieldInfos are needed to load field of closure object on stack in emitter
             // It is also an indicator that we use typed Closure object and not an array
@@ -357,6 +361,10 @@ namespace FastExpressionCompiler
 
             // Helper member decide we are inside in a block or not
             public Tools.Stack<BlockExpression> OpenedBlocks = Tools.Stack<BlockExpression>.Empty;
+
+            // Tells that we should construct a bounded closure object for the compiled delegate,
+            // also indicates that we have to shift when we are operating on arguments becouse the first will be the closure
+            public bool HasClosureArgument => this.Constants.Length > 0 || this.NestedLambdas.Length > 0 || this.NonPassedParameters.Length > 0;
 
             public void AddConstant(object expr, object value, Type type)
             {
@@ -489,6 +497,14 @@ namespace FastExpressionCompiler
                 if (fieldValues == null)
                     return null;
                 return createClosure.Invoke(null, fieldValues);
+            }
+
+            public void ConstructLocals(ILGenerator il)
+            {
+                var length = this.DefinedVariables.Length;
+                this.LocalBuilders = new LocalBuilder[length];
+                for (var i = 0; i < length; i++)
+                    this.LocalBuilders[i] = il.DeclareLocal(this.DefinedVariables[i].Type);
             }
         }
 
@@ -853,7 +869,7 @@ namespace FastExpressionCompiler
                     // it means parameter is provided by outer lambda and should be put in closure for current lambda
                     var exprInfo = exprObj as ParameterExpressionInfo;
                     var paramExpr = exprInfo ?? (ParameterExpression)exprObj;
-                    if (paramExprs.IndexOf(paramExpr) == -1)
+                    if (paramExprs.IndexOf(paramExpr) == -1 || closure == null || closure.DefinedVariables.GetFirstIndex(paramExpr) == -1)
                         (closure ?? (closure = new ClosureInfo())).AddNonPassedParam(paramExpr);
                     return true;
 
@@ -891,7 +907,7 @@ namespace FastExpressionCompiler
 
                 case ExpressionType.Lambda:
                     return TryCompileNestedLambda(ref closure, exprObj, paramExprs);
- 
+
                 case ExpressionType.Invoke:
                     var invokeExpr = exprObj as InvocationExpression;
                     if (invokeExpr != null)
@@ -931,7 +947,7 @@ namespace FastExpressionCompiler
 
                 case ExpressionType.Try:
                     return TryCollectTryExprConstants(ref closure, exprObj, paramExprs);
- 
+
                 case ExpressionType.Default:
                     return true;
 
@@ -952,7 +968,7 @@ namespace FastExpressionCompiler
             return true;
         }
 
-        private static bool TryCompileNestedLambda(ref ClosureInfo closure, 
+        private static bool TryCompileNestedLambda(ref ClosureInfo closure,
             object exprObj, IList<ParameterExpression> paramExprs)
         {
             // 1. Try to compile nested lambda in place
@@ -1005,9 +1021,7 @@ namespace FastExpressionCompiler
                 {
                     var nestedNonPassedParam = nestedNonPassedParams[i];
                     if (paramExprs.Count == 0 ||
-                        paramExprs.IndexOf(nestedNonPassedParam) == -1 &&
-                        // if it's a defined variable by the nested lambda then skip
-                        nestedClosure.DefinedVariables.GetFirstIndex(nestedNonPassedParam) == -1)
+                        paramExprs.IndexOf(nestedNonPassedParam) == -1)
                         closure.AddNonPassedParam(nestedNonPassedParam);
                 }
 
@@ -1512,16 +1526,24 @@ namespace FastExpressionCompiler
                 // if parameter is passed, then just load it on stack
                 if (paramIndex != -1)
                 {
-                    if (closure != null)
+                    if (closure != null && closure.HasClosureArgument)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
                     LoadParamArg(il, paramIndex);
                     return true;
                 }
 
-                // if parameter isn't passed, then it is passed into some outer lambda,
-                // so it should be loaded from closure. Then the closure is null will be an invalid case.
+                // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
+                // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
                 if (closure == null)
                     return false;
+
+                // check that it's a local var
+                var variableIndex = closure.DefinedVariables.GetFirstIndex(p);
+                if (variableIndex != -1)
+                {
+                    il.Emit(OpCodes.Ldloc, closure.LocalBuilders[variableIndex]);
+                    return true;
+                }
 
                 var nonPassedParamIndex = closure.NonPassedParameters.GetFirstIndex(p);
                 if (nonPassedParamIndex == -1)
@@ -1745,7 +1767,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldtoken, (Type)constantValue);
                     il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
                 }
-                else if (closure != null)
+                else if (closure != null && closure.HasClosureArgument)
                 {
                     var constantIndex = closure.Constants.GetFirstIndex(it => it.ConstantExpr == exprObj);
                     if (constantIndex == -1)
@@ -2080,7 +2102,7 @@ namespace FastExpressionCompiler
                         var paramIndex = paramExprs.GetFirstIndex(left);
                         if (paramIndex != -1)
                         {
-                            if (closure != null)
+                            if (closure != null && closure.HasClosureArgument)
                                 paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
                             if (paramIndex >= byte.MaxValue)
@@ -2096,11 +2118,26 @@ namespace FastExpressionCompiler
                             return true;
                         }
 
-                        // if parameter isn't passed, then it is passed into some outer lambda,
-                        // so it should be loaded from closure. Then the closure is null will be an invalid state.
+                        // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
+                        // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
                         if (closure == null)
                             return false;
 
+                        // check that it's a local variable, if it is, then store the right value in it
+                        var variableIndex = closure.DefinedVariables.GetFirstIndex(left);
+                        if (variableIndex != -1)
+                        {
+                            if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
+                                return false;
+
+                            if (shouldPushResult) // if we have to push the result back, dup the right value
+                                il.Emit(OpCodes.Dup);
+
+                            il.Emit(OpCodes.Stloc, closure.LocalBuilders[variableIndex]);
+                            return true;
+                        }
+
+                        // chech that it's a captured parameter by closure
                         var nonPassedParamIndex = closure.NonPassedParameters.GetFirstIndex(left);
                         if (nonPassedParamIndex == -1)
                             return false;  // what??? no chance
@@ -2496,15 +2533,17 @@ namespace FastExpressionCompiler
                         // +1 is set cause of added first closure argument
                         LoadParamArg(il, 1 + paramIndex);
                     }
-                    else // load parameter from outer closure
+                    else // load parameter from outer closure or from the locals
                     {
                         if (outerNonPassedParams.Length == 0)
                             return false; // impossible, better to throw?
 
-                        // if nested param is a defined var by the nested lambda, push a null placeholder
-                        if (nestedClosureInfo.DefinedVariables.GetFirstIndex(nestedUsedParam) != -1)
-                            il.Emit(OpCodes.Ldnull);
-                        else
+                        var variableIndex = closure.DefinedVariables.GetFirstIndex(nestedUsedParam);
+                        if (variableIndex != -1) // it's a local variable
+                        {
+                            il.Emit(OpCodes.Ldloc, closure.LocalBuilders[variableIndex]);
+                        }
+                        else // it's a parameter from outer closure
                         {
                             var outerParamIndex = outerNonPassedParams.GetFirstIndex(nestedUsedParam);
                             if (outerParamIndex == -1)
