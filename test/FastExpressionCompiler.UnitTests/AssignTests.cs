@@ -90,7 +90,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Array_index_assign_bodyless()
+        public void Array_index_assign_body_less()
         {
             var expr = Lambda<Func<int>>(
                 Assign(ArrayAccess(NewArrayInit(typeof(int), Constant(0), Constant(0)), Constant(1)),
@@ -103,7 +103,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Array_index_assign_ref_type_bodyless()
+        public void Array_index_assign_ref_type_body_less()
         {
             var a = new object();
             var expr = Lambda<Func<object>>(
@@ -187,7 +187,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Arra_index_assign_custom_indexer()
+        public void Array_index_assign_custom_indexer()
         {
             var a = new IndexTest();
             var variable = Variable(typeof(IndexTest));
@@ -204,7 +204,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Arra_index_assign_custom_indexer_with_get()
+        public void Array_index_assign_custom_indexer_with_get()
         {
             var a = new IndexTest();
             var variable = Variable(typeof(IndexTest));

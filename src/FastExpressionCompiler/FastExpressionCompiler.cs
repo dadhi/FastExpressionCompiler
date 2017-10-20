@@ -384,7 +384,6 @@ namespace FastExpressionCompiler
                 if (DefinedVariables.Length == 0 ||
                     DefinedVariables.GetFirstIndex(expr) == -1)
                     DefinedVariables = DefinedVariables.WithLast(expr);
-
                 AddNonPassedParam(expr);
             }
 
@@ -917,9 +916,10 @@ namespace FastExpressionCompiler
 
                 case ExpressionType.Block:
                     var blockExpr = (BlockExpression)exprObj;
-                    var length = blockExpr.Variables.Count;
+                    var blockExprVars = blockExpr.Variables;
+                    var length = blockExprVars.Count;
                     for (var i = 0; i < length; i++)
-                        (closure ?? (closure = new ClosureInfo())).AddDefinedVariable(blockExpr.Variables[i]);
+                        (closure ?? (closure = new ClosureInfo())).AddDefinedVariable(blockExprVars[i]);
 
                     return TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs);
 
@@ -1006,7 +1006,8 @@ namespace FastExpressionCompiler
                     var nestedNonPassedParam = nestedNonPassedParams[i];
                     if (paramExprs.Count == 0 ||
                         paramExprs.IndexOf(nestedNonPassedParam) == -1 &&
-                        nestedClosure.DefinedVariables.GetFirstIndex(nestedNonPassedParam) == -1) // if it's a defined variable by the nested lambda then skip
+                        // if it's a defined variable by the nested lambda then skip
+                        nestedClosure.DefinedVariables.GetFirstIndex(nestedNonPassedParam) == -1)
                         closure.AddNonPassedParam(nestedNonPassedParam);
                 }
 
@@ -1412,7 +1413,6 @@ namespace FastExpressionCompiler
                 closure.OpenedBlocks = closure.OpenedBlocks.Push(exprObj);
                 if (!EmitMany(exprObj.Expressions, paramExprs, il, closure))
                     return false;
-
                 closure.OpenedBlocks = closure.OpenedBlocks.Tail;
                 return true;
             }
@@ -1458,7 +1458,6 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Stloc_S, exVar);
 
                         // todo: Exception variable should be propagated and loaded when needed
-                        closure.AddDefinedVariable(catchBlock.Variable);
 
                         return false;
                     }
@@ -2069,7 +2068,7 @@ namespace FastExpressionCompiler
                 }
 
                 // if this assignment is part of a single body-less expression or the result of a block
-                // we should put it's result to the evaluation stack before the return, otherwise we are
+                // we should put its result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
                 var shouldPushResult = closure == null
                     || closure.OpenedBlocks.IsEmpty
