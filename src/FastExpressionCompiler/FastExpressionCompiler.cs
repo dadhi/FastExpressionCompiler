@@ -260,7 +260,7 @@ namespace FastExpressionCompiler
             if (!TryCollectBoundConstants(ref closureInfo, exprObj, exprNodeType, exprType, paramExprs))
                 return null;
 
-            if (closureInfo == null || !closureInfo.HasClosureArgument)
+            if (closureInfo == null || !closureInfo.HasBoundClosure)
                 return TryCompileStaticDelegate(delegateType, paramTypes, returnType, exprObj, exprNodeType, exprType, paramExprs);
 
             var closureObject = closureInfo.ConstructClosure(closureTypeOnly: isNestedLambda);
@@ -364,7 +364,7 @@ namespace FastExpressionCompiler
 
             // Tells that we should construct a bounded closure object for the compiled delegate,
             // also indicates that we have to shift when we are operating on arguments becouse the first will be the closure
-            public bool HasClosureArgument => this.Constants.Length > 0 || this.NestedLambdas.Length > 0 || this.NonPassedParameters.Length > 0;
+            public bool HasBoundClosure => this.Constants.Length > 0 || this.NestedLambdas.Length > 0 || this.NonPassedParameters.Length > 0;
 
             public void AddConstant(object expr, object value, Type type)
             {
@@ -1526,7 +1526,7 @@ namespace FastExpressionCompiler
                 // if parameter is passed, then just load it on stack
                 if (paramIndex != -1)
                 {
-                    if (closure != null && closure.HasClosureArgument)
+                    if (closure != null && closure.HasBoundClosure)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
                     LoadParamArg(il, paramIndex);
                     return true;
@@ -1767,7 +1767,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldtoken, (Type)constantValue);
                     il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
                 }
-                else if (closure != null && closure.HasClosureArgument)
+                else if (closure != null && closure.HasBoundClosure)
                 {
                     var constantIndex = closure.Constants.GetFirstIndex(it => it.ConstantExpr == exprObj);
                     if (constantIndex == -1)
@@ -2102,7 +2102,7 @@ namespace FastExpressionCompiler
                         var paramIndex = paramExprs.GetFirstIndex(left);
                         if (paramIndex != -1)
                         {
-                            if (closure != null && closure.HasClosureArgument)
+                            if (closure != null && closure.HasBoundClosure)
                                 paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
                             if (paramIndex >= byte.MaxValue)
