@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using System;
 using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.IssueTests
 {
@@ -22,6 +23,15 @@ namespace FastExpressionCompiler.IssueTests
         {
             Expression<Func<int?>> expression = () => null;
             int? answer = expression.CompileFast().Invoke();
+
+            Assert.IsFalse(answer.HasValue);
+        }
+
+        [Test]
+        public void Conversion_to_nullable_should_work_with_null_constructed_with_expressions()
+        {
+            var expr = Lambda<Func<int?>>(Convert(Constant(null), typeof(int?)));
+            int? answer = expr.CompileFast().Invoke();
 
             Assert.IsFalse(answer.HasValue);
         }
