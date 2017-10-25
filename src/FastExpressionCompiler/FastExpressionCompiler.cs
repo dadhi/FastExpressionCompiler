@@ -891,7 +891,7 @@ namespace FastExpressionCompiler
 
                 case ExpressionType.Lambda:
                     return TryCompileNestedLambda(ref closure, exprObj, paramExprs);
- 
+
                 case ExpressionType.Invoke:
                     var invokeExpr = exprObj as InvocationExpression;
                     if (invokeExpr != null)
@@ -931,7 +931,7 @@ namespace FastExpressionCompiler
 
                 case ExpressionType.Try:
                     return TryCollectTryExprConstants(ref closure, exprObj, paramExprs);
- 
+
                 case ExpressionType.Default:
                     return true;
 
@@ -952,7 +952,7 @@ namespace FastExpressionCompiler
             return true;
         }
 
-        private static bool TryCompileNestedLambda(ref ClosureInfo closure, 
+        private static bool TryCompileNestedLambda(ref ClosureInfo closure,
             object exprObj, IList<ParameterExpression> paramExprs)
         {
             // 1. Try to compile nested lambda in place
@@ -1639,6 +1639,15 @@ namespace FastExpressionCompiler
                     sourceType == typeof(object))
                 {
                     il.Emit(OpCodes.Unbox_Any, targetType);
+                    return true;
+                }
+
+                // Conversion to nullable: new Nullable<T>(T val);
+                if (targetType.IsNullable())
+                {
+                    var wrappedType = targetType.GetWrappedTypeFromNullable();
+                    var ctor = targetType.GetConstructorByArgs(wrappedType);
+                    il.Emit(OpCodes.Newobj, ctor);
                     return true;
                 }
 
@@ -2834,6 +2843,15 @@ namespace FastExpressionCompiler
 
     internal static class Tools
     {
+        public static bool IsNullable(this Type type) =>
+            type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>);
+
+        public static Type GetWrappedTypeFromNullable(this Type type) =>
+            type.GetTypeInfo().GenericTypeArguments[0];
+
+        public static ConstructorInfo GetConstructorByArgs(this Type type, params Type[] args) =>
+            type.GetTypeInfo().DeclaredConstructors.FirstOrDefault(c => c.GetParameters().Select(p => p.ParameterType).SequenceEqual(args));
+
         public static ExpressionType GetNodeType(this object exprObj)
         {
             var expr = exprObj as Expression;
