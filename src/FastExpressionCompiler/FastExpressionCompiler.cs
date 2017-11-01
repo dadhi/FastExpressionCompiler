@@ -260,6 +260,8 @@ namespace FastExpressionCompiler
             if (!TryCollectBoundConstants(ref closureInfo, exprObj, exprNodeType, exprType, paramExprs))
                 return null;
 
+            closureInfo?.FinishAnalyzation();
+
             if (closureInfo == null || !closureInfo.HasBoundClosure)
                 return TryCompileStaticDelegate(delegateType, paramTypes, returnType, exprObj, exprNodeType, exprType, paramExprs);
 
@@ -317,6 +319,41 @@ namespace FastExpressionCompiler
             return closureAndParamTypes;
         }
 
+        private class BlockInfo
+        {
+            public static BlockInfo Empty = new BlockInfo();
+
+            public BlockExpression BlockExpression { get; }
+            public BlockInfo Parent { get; }
+            public bool IsEmpty { get; }
+            public LocalBuilder[] LocalBuilders { get; private set; }
+            private BlockInfo(BlockInfo parent, BlockExpression block)
+            {
+                Parent = parent;
+                BlockExpression = block;
+                IsEmpty = false;
+            }
+
+            public BlockInfo()
+            {
+                IsEmpty = true;
+            }
+
+            public BlockInfo OpenNestedBlock(BlockExpression blockExpression)
+                => new BlockInfo(this, blockExpression);
+
+            public void ConstructLocals(ILGenerator il)
+            {
+                if (BlockExpression.Variables.Count == 0)
+                    return;
+
+                var length = BlockExpression.Variables.Count;
+                LocalBuilders = new LocalBuilder[length];
+                for (var i = 0; i < length; i++)
+                    LocalBuilders[i] = il.DeclareLocal(BlockExpression.Variables[i].Type);
+            }
+        }
+
         private struct ConstantInfo
         {
             public object ConstantExpr;
@@ -332,10 +369,6 @@ namespace FastExpressionCompiler
 
         private sealed class ClosureInfo
         {
-            // stores the constructed variables of the currently opened blocks
-            private Tools.Stack<KeyValuePair<ParameterExpression, LocalBuilder>[]> openedBlockVariables =
-                Tools.Stack<KeyValuePair<ParameterExpression, LocalBuilder>[]>.Empty;
-
             // Closed values used by expression and by its nested lambdas
             public ConstantInfo[] Constants = Tools.Empty<ConstantInfo>();
 
@@ -357,11 +390,11 @@ namespace FastExpressionCompiler
             public int ClosedItemCount { get; private set; }
 
             // Helper member decide we are inside in a block or not
-            public Tools.Stack<BlockExpression> OpenedBlocks = Tools.Stack<BlockExpression>.Empty;
+            public BlockInfo CurrentBlock = BlockInfo.Empty;
 
             // Tells that we should construct a bounded closure object for the compiled delegate,
             // also indicates that we have to shift when we are operating on arguments becouse the first will be the closure
-            public bool HasBoundClosure => this.Constants.Length > 0 || this.NestedLambdas.Length > 0 || this.NonPassedParameters.Length > 0;
+            public bool HasBoundClosure { get; private set; }
 
             public void AddConstant(object expr, object value, Type type)
             {
@@ -488,70 +521,43 @@ namespace FastExpressionCompiler
                 return createClosure.Invoke(null, fieldValues);
             }
 
+            public void FinishAnalyzation() =>
+                HasBoundClosure = Constants.Length > 0 || NestedLambdas.Length > 0 || NonPassedParameters.Length > 0;
+
             public void OpenBlock(BlockExpression block) =>
-                this.OpenedBlocks = this.OpenedBlocks.Push(block);
+                CurrentBlock = CurrentBlock.OpenNestedBlock(block);
 
             public void OpenBlockAndConstructLocals(BlockExpression block, ILGenerator il)
             {
-                this.OpenBlock(block);
-
-                if (block.Variables.Count == 0)
-                    return;
-
-                var length = block.Variables.Count;
-                var locals = new KeyValuePair<ParameterExpression, LocalBuilder>[length];
-                for (var i = 0; i < length; i++)
-                    locals[i] = new KeyValuePair<ParameterExpression, LocalBuilder>(block.Variables[i], il.DeclareLocal(block.Variables[i].Type));
-
-                this.openedBlockVariables = this.openedBlockVariables.Push(locals);
+                CurrentBlock = CurrentBlock.OpenNestedBlock(block);
+                CurrentBlock.ConstructLocals(il);
             }
 
-            public void CloseBlock()
-            {
-                this.OpenedBlocks = this.OpenedBlocks.Tail ?? Tools.Stack<BlockExpression>.Empty;
-                this.openedBlockVariables = this.openedBlockVariables.Tail ?? Tools.Stack<KeyValuePair<ParameterExpression, LocalBuilder>[]>.Empty;
-            }
+            public void CloseBlock() =>
+                CurrentBlock = CurrentBlock.Parent;
+
+            public bool IsDefinedVariable(ParameterExpression parameterExpression) =>
+                GetLocalVariableOrDefault(parameterExpression) != null;
 
             public LocalBuilder GetLocalVariableOrDefault(object variableExpr)
             {
-                if (this.openedBlockVariables.IsEmpty)
+                if (CurrentBlock.IsEmpty)
                     return null;
 
-                var current = this.openedBlockVariables;
+                var current = CurrentBlock;
                 while (!current.IsEmpty)
                 {
-                    var length = current.Head.Length;
+                    var length = current.BlockExpression.Variables.Count;
                     for (var i = 0; i < length; i++)
                     {
-                        if (current.Head[i].Key == variableExpr)
-                            return current.Head[i].Value;
+                        if (current.BlockExpression.Variables[i] == variableExpr)
+                            return current.LocalBuilders[i];
                     }
 
-                    current = this.openedBlockVariables.Tail;
+                    current = current.Parent;
                 }
 
                 return null;
-            }
-
-            public bool IsDefinedVariable(ParameterExpression parameterExpression)
-            {
-                if (this.OpenedBlocks.IsEmpty)
-                    return false;
-
-                var current = this.OpenedBlocks;
-                while (!current.IsEmpty)
-                {
-                    var length = current.Head.Variables.Count;
-                    for (var i = 0; i < length; i++)
-                    {
-                        if (current.Head.Variables[i] == parameterExpression)
-                            return true;
-                    }
-
-                    current = this.OpenedBlocks.Tail;
-                }
-
-                return false;
             }
         }
 
@@ -2138,8 +2144,8 @@ namespace FastExpressionCompiler
                 // we should put its result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
                 var shouldPushResult = closure == null
-                    || closure.OpenedBlocks.IsEmpty
-                    || closure.OpenedBlocks.Head.Result == exprObj;
+                    || closure.CurrentBlock.IsEmpty
+                    || closure.CurrentBlock.BlockExpression.Result == exprObj;
 
                 switch (leftNodeType)
                 {
@@ -3001,23 +3007,6 @@ namespace FastExpressionCompiler
                 return index == -1 ? default(T) : arr[index];
             }
             return source.FirstOrDefault(predicate);
-        }
-
-        public sealed class Stack<T>
-        {
-            public static readonly Stack<T> Empty = new Stack<T>(default(T), null);
-            public bool IsEmpty => Tail == null;
-
-            public readonly T Head;
-            public readonly Stack<T> Tail;
-
-            public Stack<T> Push(T head) => new Stack<T>(head, this);
-
-            private Stack(T head, Stack<T> tail)
-            {
-                Head = head;
-                Tail = tail;
-            }
         }
     }
 
