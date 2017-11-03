@@ -260,7 +260,7 @@ namespace FastExpressionCompiler
             if (!TryCollectBoundConstants(ref closureInfo, exprObj, exprNodeType, exprType, paramExprs))
                 return null;
 
-            closureInfo?.FinishAnalyzation();
+            closureInfo?.FinishAnalysis();
 
             if (closureInfo == null || !closureInfo.HasBoundClosure)
                 return TryCompileStaticDelegate(delegateType, paramTypes, returnType, exprObj, exprNodeType, exprType, paramExprs);
@@ -319,38 +319,25 @@ namespace FastExpressionCompiler
             return closureAndParamTypes;
         }
 
-        private class BlockInfo
+        private sealed class BlockInfo
         {
-            public static BlockInfo Empty = new BlockInfo();
+            public static readonly BlockInfo Empty = new BlockInfo();
 
-            public BlockExpression BlockExpression { get; }
-            public BlockInfo Parent { get; }
-            public bool IsEmpty { get; }
-            public LocalBuilder[] LocalBuilders { get; private set; }
-            private BlockInfo(BlockInfo parent, BlockExpression block)
+            public bool IsEmpty => Parent == null;
+            public readonly BlockInfo Parent;
+            public readonly BlockExpression BlockExpression;
+            public readonly LocalBuilder[] LocalVariables;
+
+            public BlockInfo OpenNestedBlock(BlockExpression blockExpression, LocalBuilder[] localVariables) =>
+                new BlockInfo(this, blockExpression, localVariables);
+
+            private BlockInfo() { }
+
+            private BlockInfo(BlockInfo parent, BlockExpression block, LocalBuilder[] localVariables)
             {
                 Parent = parent;
                 BlockExpression = block;
-                IsEmpty = false;
-            }
-
-            public BlockInfo()
-            {
-                IsEmpty = true;
-            }
-
-            public BlockInfo OpenNestedBlock(BlockExpression blockExpression)
-                => new BlockInfo(this, blockExpression);
-
-            public void ConstructLocals(ILGenerator il)
-            {
-                if (BlockExpression.Variables.Count == 0)
-                    return;
-
-                var length = BlockExpression.Variables.Count;
-                LocalBuilders = new LocalBuilder[length];
-                for (var i = 0; i < length; i++)
-                    LocalBuilders[i] = il.DeclareLocal(BlockExpression.Variables[i].Type);
+                LocalVariables = localVariables;
             }
         }
 
@@ -389,11 +376,12 @@ namespace FastExpressionCompiler
             // Known after ConstructClosure call
             public int ClosedItemCount { get; private set; }
 
-            // Helper member decide we are inside in a block or not
+            // Helper member to decide when we are inside in a block or not
             public BlockInfo CurrentBlock = BlockInfo.Empty;
 
             // Tells that we should construct a bounded closure object for the compiled delegate,
-            // also indicates that we have to shift when we are operating on arguments becouse the first will be the closure
+            // also indicates that we have to shift when we are operating on arguments 
+            // because the first will be the closure
             public bool HasBoundClosure { get; private set; }
 
             public void AddConstant(object expr, object value, Type type)
@@ -521,16 +509,24 @@ namespace FastExpressionCompiler
                 return createClosure.Invoke(null, fieldValues);
             }
 
-            public void FinishAnalyzation() =>
-                HasBoundClosure = Constants.Length > 0 || NestedLambdas.Length > 0 || NonPassedParameters.Length > 0;
+            public void FinishAnalysis() =>
+                HasBoundClosure = Constants.Length != 0 || NestedLambdas.Length != 0 || NonPassedParameters.Length != 0;
 
             public void OpenBlock(BlockExpression block) =>
-                CurrentBlock = CurrentBlock.OpenNestedBlock(block);
+                CurrentBlock = CurrentBlock.OpenNestedBlock(block, Tools.Empty<LocalBuilder>());
 
-            public void OpenBlockAndConstructLocals(BlockExpression block, ILGenerator il)
+            public void OpenBlockAndConstructLocalVars(BlockExpression block, ILGenerator il)
             {
-                CurrentBlock = CurrentBlock.OpenNestedBlock(block);
-                CurrentBlock.ConstructLocals(il);
+                var localVars = Tools.Empty<LocalBuilder>();
+                var blockVars = block.Variables;
+                if (blockVars.Count != 0)
+                {
+                    localVars = new LocalBuilder[blockVars.Count];
+                    for (var i = 0; i < localVars.Length; i++)
+                        localVars[i] = il.DeclareLocal(blockVars[i].Type);
+                }
+
+                CurrentBlock = CurrentBlock.OpenNestedBlock(block, localVars);
             }
 
             public void CloseBlock() =>
@@ -541,22 +537,13 @@ namespace FastExpressionCompiler
 
             public LocalBuilder GetLocalVariableOrDefault(object variableExpr)
             {
-                if (CurrentBlock.IsEmpty)
-                    return null;
-
-                var current = CurrentBlock;
-                while (!current.IsEmpty)
-                {
-                    var length = current.BlockExpression.Variables.Count;
-                    for (var i = 0; i < length; i++)
+                if (!CurrentBlock.IsEmpty)
+                    for (var block = CurrentBlock; !block.IsEmpty; block = block.Parent)
                     {
-                        if (current.BlockExpression.Variables[i] == variableExpr)
-                            return current.LocalBuilders[i];
+                        var varIndex = block.BlockExpression.Variables.GetFirstIndex(variableExpr);
+                        if (varIndex != -1)
+                            return block.LocalVariables[varIndex];
                     }
-
-                    current = current.Parent;
-                }
-
                 return null;
             }
         }
@@ -1475,7 +1462,7 @@ namespace FastExpressionCompiler
 
             private static bool EmitBlock(BlockExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                closure.OpenBlockAndConstructLocals(exprObj, il);
+                closure.OpenBlockAndConstructLocalVars(exprObj, il);
                 if (!EmitMany(exprObj.Expressions, paramExprs, il, closure))
                     return false;
                 closure.CloseBlock();
@@ -2197,7 +2184,7 @@ namespace FastExpressionCompiler
                             return true;
                         }
 
-                        // chech that it's a captured parameter by closure
+                        // check that it's a captured parameter by closure
                         var nonPassedParamIndex = closure.NonPassedParameters.GetFirstIndex(left);
                         if (nonPassedParamIndex == -1)
                             return false;  // what??? no chance
