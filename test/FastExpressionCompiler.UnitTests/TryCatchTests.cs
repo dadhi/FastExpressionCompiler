@@ -45,7 +45,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.Throws<InvalidDataSourceException>(() => func());
         }
 
-        [Test, Ignore("wip")] // todo: work in progress
+        [Test]
         public void Can_handle_the_exception_and_return_result_from_TryCatch_block()
         {
             // Test expression
@@ -81,7 +81,8 @@ namespace FastExpressionCompiler.UnitTests
             var ff = fExpr.CompileFast(ifFastFailedReturnNull: true);
             Assert.IsNotNull(ff);
 
-            ff("x");
+            Assert.AreEqual(41, ff("A"));
+            Assert.AreEqual(123, ff("123"));
         }
 
         /*TODO: Add suport for usage of exception parameter

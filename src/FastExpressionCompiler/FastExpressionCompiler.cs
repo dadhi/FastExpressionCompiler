@@ -325,19 +325,23 @@ namespace FastExpressionCompiler
 
             public bool IsEmpty => Parent == null;
             public readonly BlockInfo Parent;
-            public readonly BlockExpression BlockExpression;
-            public readonly LocalBuilder[] LocalVariables;
+            public readonly Expression ResultExpr;
+            public readonly IList<ParameterExpression> VarExprs;
+            public readonly LocalBuilder[] LocalVars;
 
-            public BlockInfo OpenNestedBlock(BlockExpression blockExpression, LocalBuilder[] localVariables) =>
-                new BlockInfo(this, blockExpression, localVariables);
+            public BlockInfo Push(Expression blockResult,
+                IList<ParameterExpression> blockVars, LocalBuilder[] localVars) =>
+                new BlockInfo(this, blockResult, blockVars, localVars);
 
             private BlockInfo() { }
 
-            private BlockInfo(BlockInfo parent, BlockExpression block, LocalBuilder[] localVariables)
+            private BlockInfo(BlockInfo parent, Expression resultExpr,
+                IList<ParameterExpression> varExprs, LocalBuilder[] localVars)
             {
                 Parent = parent;
-                BlockExpression = block;
-                LocalVariables = localVariables;
+                ResultExpr = resultExpr;
+                VarExprs = varExprs;
+                LocalVars = localVars;
             }
         }
 
@@ -512,10 +516,10 @@ namespace FastExpressionCompiler
             public void FinishAnalysis() =>
                 HasBoundClosure = Constants.Length != 0 || NestedLambdas.Length != 0 || NonPassedParameters.Length != 0;
 
-            public void OpenBlock(BlockExpression block) =>
-                CurrentBlock = CurrentBlock.OpenNestedBlock(block, Tools.Empty<LocalBuilder>());
+            public void PushBlock(BlockExpression block) =>
+                CurrentBlock = CurrentBlock.Push(block.Result, Tools.Empty<ParameterExpression>(), Tools.Empty<LocalBuilder>());
 
-            public void OpenBlockAndConstructLocalVars(BlockExpression block, ILGenerator il)
+            public void PushBlockAndConstructLocalVars(BlockExpression block, ILGenerator il)
             {
                 var localVars = Tools.Empty<LocalBuilder>();
                 var blockVars = block.Variables;
@@ -526,23 +530,20 @@ namespace FastExpressionCompiler
                         localVars[i] = il.DeclareLocal(blockVars[i].Type);
                 }
 
-                CurrentBlock = CurrentBlock.OpenNestedBlock(block, localVars);
+                CurrentBlock = CurrentBlock.Push(block.Result, blockVars, localVars);
             }
 
-            public void CloseBlock() =>
+            public void PopBlock() =>
                 CurrentBlock = CurrentBlock.Parent;
 
-            public bool IsDefinedVariable(ParameterExpression parameterExpression) =>
-                GetLocalVariableOrDefault(parameterExpression) != null;
-
-            public LocalBuilder GetLocalVariableOrDefault(object variableExpr)
+            public LocalBuilder GetLocalVarOrDefault(object variableExpr)
             {
                 if (!CurrentBlock.IsEmpty)
                     for (var block = CurrentBlock; !block.IsEmpty; block = block.Parent)
                     {
-                        var varIndex = block.BlockExpression.Variables.GetFirstIndex(variableExpr);
+                        var varIndex = block.VarExprs.GetFirstIndex(variableExpr);
                         if (varIndex != -1)
-                            return block.LocalVariables[varIndex];
+                            return block.LocalVars[varIndex];
                     }
                 return null;
             }
@@ -909,7 +910,8 @@ namespace FastExpressionCompiler
                     // it means parameter is provided by outer lambda and should be put in closure for current lambda
                     var exprInfo = exprObj as ParameterExpressionInfo;
                     var paramExpr = exprInfo ?? (ParameterExpression)exprObj;
-                    if (paramExprs.IndexOf(paramExpr) == -1 || closure != null && !closure.IsDefinedVariable(paramExpr))
+                    if (paramExprs.IndexOf(paramExpr) == -1 ||
+                        closure != null && closure.GetLocalVarOrDefault(paramExpr) == null)
                         (closure ?? (closure = new ClosureInfo())).AddNonPassedParam(paramExpr);
                     return true;
 
@@ -972,9 +974,9 @@ namespace FastExpressionCompiler
 
                 case ExpressionType.Block:
                     var blockExpr = (BlockExpression)exprObj;
-                    (closure ?? (closure = new ClosureInfo())).OpenBlock(blockExpr);
+                    (closure ?? (closure = new ClosureInfo())).PushBlock(blockExpr);
                     var result = TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs);
-                    closure.CloseBlock();
+                    closure.PopBlock();
                     return result;
 
                 case ExpressionType.Index:
@@ -1462,10 +1464,10 @@ namespace FastExpressionCompiler
 
             private static bool EmitBlock(BlockExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                closure.OpenBlockAndConstructLocalVars(exprObj, il);
+                closure.PushBlockAndConstructLocalVars(exprObj, il);
                 if (!EmitMany(exprObj.Expressions, paramExprs, il, closure))
                     return false;
-                closure.CloseBlock();
+                closure.PopBlock();
                 return true;
             }
 
@@ -1496,7 +1498,7 @@ namespace FastExpressionCompiler
                 {
                     var catchBlock = catchBlocks[i];
 
-                    // TODO: Add support for filters on catch expression
+                    // todo: Add support for filters on catch expression
                     if (catchBlock.Filter != null)
                         return false;
 
@@ -1504,19 +1506,26 @@ namespace FastExpressionCompiler
 
                     // at the beginning of catch the Exception value is on the stack,
                     // we will store into local variable.
-                    if (catchBlock.Variable != null)
+                    var catchExpr = catchBlock.Body;
+                    var catchExceptionVarExpr = catchBlock.Variable;
+                    if (catchExceptionVarExpr != null)
                     {
-                        var exVar = il.DeclareLocal(catchBlock.Variable.Type);
-                        il.Emit(OpCodes.Stloc_S, exVar);
+                        var exceptionVar = il.DeclareLocal(catchExceptionVarExpr.Type);
 
-                        // todo: Exception variable should be propagated and loaded when needed
+                        // todo: Refactor to a method
+                        closure = closure ?? new ClosureInfo();
+                        closure.CurrentBlock = closure.CurrentBlock.Push(
+                            catchBlock.Body, new[] { catchExceptionVarExpr }, new[] { exceptionVar });
 
-                        return false;
+                        // store the values of exception on stack into the variable
+                        il.Emit(OpCodes.Stloc_S, exceptionVar);
                     }
 
-                    var catchExpr = catchBlock.Body;
                     if (!TryEmit(catchExpr, catchExpr.NodeType, catchExpr.Type, paramExprs, il, closure))
                         return false;
+
+                    if (catchExceptionVarExpr != null)
+                        closure.PopBlock();
 
                     if (hasResult)
                     {
@@ -1576,7 +1585,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 // check that it's a local var
-                var variable = closure.GetLocalVariableOrDefault(p);
+                var variable = closure.GetLocalVarOrDefault(p);
                 if (variable != null)
                 {
                     il.Emit(OpCodes.Ldloc, variable);
@@ -2141,7 +2150,7 @@ namespace FastExpressionCompiler
                 // somewhere inside the block, so we shouldn't return with the result
                 var shouldPushResult = closure == null
                     || closure.CurrentBlock.IsEmpty
-                    || closure.CurrentBlock.BlockExpression.Result == exprObj;
+                    || closure.CurrentBlock.ResultExpr == exprObj;
 
                 switch (leftNodeType)
                 {
@@ -2171,7 +2180,7 @@ namespace FastExpressionCompiler
                             return false;
 
                         // if it's a local variable, then store the right value in it
-                        var localVariable = closure.GetLocalVariableOrDefault(left);
+                        var localVariable = closure.GetLocalVarOrDefault(left);
                         if (localVariable != null)
                         {
                             if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, closure))
@@ -2585,7 +2594,7 @@ namespace FastExpressionCompiler
                         if (outerNonPassedParams.Length == 0)
                             return false; // impossible, better to throw?
 
-                        var variable = closure.GetLocalVariableOrDefault(nestedUsedParam);
+                        var variable = closure.GetLocalVarOrDefault(nestedUsedParam);
                         if (variable != null) // it's a local variable
                         {
                             il.Emit(OpCodes.Ldloc, variable);
