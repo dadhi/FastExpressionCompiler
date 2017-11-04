@@ -1148,8 +1148,7 @@ namespace FastExpressionCompiler
 
         }
 
-        private static bool TryCollectTryExprConstants(ref ClosureInfo closure,
-            object exprObj, IList<ParameterExpression> paramExprs)
+        private static bool TryCollectTryExprConstants(ref ClosureInfo closure, object exprObj, IList<ParameterExpression> paramExprs)
         {
             var tryExpr = (TryExpression)exprObj;
             if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.NodeType, tryExpr.Type, paramExprs))
@@ -1164,6 +1163,7 @@ namespace FastExpressionCompiler
                 var blockExceptionVar = block.Variable;
                 if (blockExceptionVar != null)
                 {
+                    closure = closure ?? new ClosureInfo();
                     closure.PushBlock(blockBody, new[] { blockExceptionVar }, Tools.Empty<LocalBuilder>());
 
                     if (!TryCollectBoundConstants(ref closure,
@@ -1502,6 +1502,7 @@ namespace FastExpressionCompiler
 
             private static bool EmitBlock(BlockExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
+                closure = closure ?? new ClosureInfo();
                 closure.PushBlockAndConstructLocalVars(exprObj, il);
                 if (!EmitMany(exprObj.Expressions, paramExprs, il, closure))
                     return false;
