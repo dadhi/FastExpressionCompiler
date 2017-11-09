@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             Expression<Func<A, int>> expr = a => a.N;
 
-            var getN = expr.CompileFast<Func<A, int>>(true);
+            var getN = expr.CompileFast(true);
 
             Assert.AreEqual(42, getN(new A { N = 42 }));
         }
@@ -22,7 +22,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             Expression<Func<A, string>> expr = a => a.ToString();
 
-            var getN = expr.CompileFast<Func<A, string>>(true);
+            var getN = expr.CompileFast(true);
 
             Assert.AreEqual("42", getN(new A { N = 42 }));
         }
@@ -79,6 +79,28 @@ namespace FastExpressionCompiler.UnitTests
             public string Sp { get; set; }
 
             public override string ToString() => N.ToString();
+        }
+
+        [Test]
+        public void Action_using_with_struct_closure_field()
+        {
+            var s = new SS();
+            Expression<Action<string>> expr = a => s.SetValue(a);
+
+            var lambda = expr.CompileFast(ifFastFailedReturnNull: true);
+
+            lambda("a");
+            Assert.IsNull(s.Value);
+        }
+
+        public struct SS
+        {
+            public string Value;
+
+            public void SetValue(string s)
+            {
+                Value = s;
+            }
         }
     }
 }

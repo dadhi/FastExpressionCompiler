@@ -40,17 +40,13 @@ namespace FastExpressionCompiler
         #region Obsolete APIs
 
         /// <summary>Obsolete: replaced by CompileFast extension method</summary>
-        public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr)
-        {
-            return lambdaExpr.CompileFast<Func<T>>();
-        }
+        public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr) =>
+            lambdaExpr.CompileFast<Func<T>>();
 
         /// <summary>Obsolete: replaced by CompileFast extension method</summary>
         public static TDelegate Compile<TDelegate>(LambdaExpression lambdaExpr)
-            where TDelegate : class
-        {
-            return TryCompile<TDelegate>(lambdaExpr) ?? (TDelegate)(object)lambdaExpr.Compile();
-        }
+            where TDelegate : class =>
+            TryCompile<TDelegate>(lambdaExpr) ?? (TDelegate)(object)lambdaExpr.Compile();
 
         #endregion
 
@@ -58,133 +54,90 @@ namespace FastExpressionCompiler
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
-            where TDelegate : class
-        {
-            var fastCompiled = TryCompile<TDelegate>(lambdaExpr);
-            if (fastCompiled != null)
-                return fastCompiled;
-            return ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.Compile();
-        }
+            where TDelegate : class =>
+            TryCompile<TDelegate>(lambdaExpr) ??
+            (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.Compile());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Delegate>(ifFastFailedReturnNull);
-        }
+        public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Delegate>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Func<R> CompileFast<R>(this Expression<Func<R>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Func<R>>(ifFastFailedReturnNull);
-        }
+        public static Func<R> CompileFast<R>(this Expression<Func<R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Func<R>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Func<T1, R> CompileFast<T1, R>(this Expression<Func<T1, R>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Func<T1, R>>(ifFastFailedReturnNull);
-        }
+        public static Func<T1, R> CompileFast<T1, R>(this Expression<Func<T1, R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Func<T1, R>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Func<T1, T2, R> CompileFast<T1, T2, R>(this Expression<Func<T1, T2, R>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Func<T1, T2, R>>(ifFastFailedReturnNull);
-        }
+        public static Func<T1, T2, R> CompileFast<T1, T2, R>(this Expression<Func<T1, T2, R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Func<T1, T2, R>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Func<T1, T2, T3, R> CompileFast<T1, T2, T3, R>(this Expression<Func<T1, T2, T3, R>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Func<T1, T2, T3, R>>(ifFastFailedReturnNull);
-        }
+        public static Func<T1, T2, T3, R> CompileFast<T1, T2, T3, R>(
+            this Expression<Func<T1, T2, T3, R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Func<T1, T2, T3, R>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Func<T1, T2, T3, T4, R> CompileFast<T1, T2, T3, T4, R>(this Expression<Func<T1, T2, T3, T4, R>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Func<T1, T2, T3, T4, R>>(ifFastFailedReturnNull);
-        }
+        public static Func<T1, T2, T3, T4, R> CompileFast<T1, T2, T3, T4, R>(
+            this Expression<Func<T1, T2, T3, T4, R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Func<T1, T2, T3, T4, R>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Func<T1, T2, T3, T4, T5, R> CompileFast<T1, T2, T3, T4, T5, R>(this Expression<Func<T1, T2, T3, T4, T5, R>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Func<T1, T2, T3, T4, T5, R>>(ifFastFailedReturnNull);
-        }
+        public static Func<T1, T2, T3, T4, T5, R> CompileFast<T1, T2, T3, T4, T5, R>(
+            this Expression<Func<T1, T2, T3, T4, T5, R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Func<T1, T2, T3, T4, T5, R>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Func<T1, T2, T3, T4, T5, T6, R> CompileFast<T1, T2, T3, T4, T5, T6, R>(this Expression<Func<T1, T2, T3, T4, T5, T6, R>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Func<T1, T2, T3, T4, T5, T6, R>>(ifFastFailedReturnNull);
-        }
+        public static Func<T1, T2, T3, T4, T5, T6, R> CompileFast<T1, T2, T3, T4, T5, T6, R>(
+            this Expression<Func<T1, T2, T3, T4, T5, T6, R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Func<T1, T2, T3, T4, T5, T6, R>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Action CompileFast(this Expression<Action> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Action>(ifFastFailedReturnNull);
-        }
+        public static Action CompileFast(this Expression<Action> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Action>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Action<T1> CompileFast<T1>(this Expression<Action<T1>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Action<T1>>(ifFastFailedReturnNull);
-        }
+        public static Action<T1> CompileFast<T1>(this Expression<Action<T1>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Action<T1>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Action<T1, T2> CompileFast<T1, T2>(this Expression<Action<T1, T2>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Action<T1, T2>>(ifFastFailedReturnNull);
-        }
+        public static Action<T1, T2> CompileFast<T1, T2>(this Expression<Action<T1, T2>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Action<T1, T2>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Action<T1, T2, T3> CompileFast<T1, T2, T3>(this Expression<Action<T1, T2, T3>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Action<T1, T2, T3>>(ifFastFailedReturnNull);
-        }
+        public static Action<T1, T2, T3> CompileFast<T1, T2, T3>(this Expression<Action<T1, T2, T3>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Action<T1, T2, T3>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Action<T1, T2, T3, T4> CompileFast<T1, T2, T3, T4>(this Expression<Action<T1, T2, T3, T4>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Action<T1, T2, T3, T4>>(ifFastFailedReturnNull);
-        }
+        public static Action<T1, T2, T3, T4> CompileFast<T1, T2, T3, T4>(
+            this Expression<Action<T1, T2, T3, T4>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Action<T1, T2, T3, T4>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Action<T1, T2, T3, T4, T5> CompileFast<T1, T2, T3, T4, T5>(this Expression<Action<T1, T2, T3, T4, T5>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Action<T1, T2, T3, T4, T5>>(ifFastFailedReturnNull);
-        }
+        public static Action<T1, T2, T3, T4, T5> CompileFast<T1, T2, T3, T4, T5>(
+            this Expression<Action<T1, T2, T3, T4, T5>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Action<T1, T2, T3, T4, T5>>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Action<T1, T2, T3, T4, T5, T6> CompileFast<T1, T2, T3, T4, T5, T6>(this Expression<Action<T1, T2, T3, T4, T5, T6>> lambdaExpr, bool ifFastFailedReturnNull = false)
-        {
-            return lambdaExpr.CompileFast<Action<T1, T2, T3, T4, T5, T6>>(ifFastFailedReturnNull);
-        }
+        public static Action<T1, T2, T3, T4, T5, T6> CompileFast<T1, T2, T3, T4, T5, T6>(
+            this Expression<Action<T1, T2, T3, T4, T5, T6>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            lambdaExpr.CompileFast<Action<T1, T2, T3, T4, T5, T6>>(ifFastFailedReturnNull);
 
         #endregion
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
-        /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
+        /// <typeparam name="TDelegate">The compatible delegate type, otherwise it will throw.</typeparam>
         /// <param name="lambdaExpr">Lambda expression to compile.</param>
         /// <returns>Compiled delegate.</returns>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr)
             where TDelegate : class
         {
             var paramExprs = lambdaExpr.Parameters;
-            var paramTypes = GetParamExprTypes(paramExprs);
+            var paramTypes = Tools.GetParamExprTypes(paramExprs);
             var expr = lambdaExpr.Body;
             return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type);
-        }
-
-        /// <summary>Performant method to get parameter types from parameter expressions.</summary>
-        public static Type[] GetParamExprTypes(IList<ParameterExpression> paramExprs)
-        {
-            var paramsCount = paramExprs.Count;
-            if (paramsCount == 0)
-                return Tools.Empty<Type>();
-
-            if (paramsCount == 1)
-                return new[] { paramExprs[0].Type };
-
-            var paramTypes = new Type[paramsCount];
-            for (var i = 0; i < paramTypes.Length; i++)
-                paramTypes[i] = paramExprs[i].Type;
-            return paramTypes;
         }
 
         /// <summary>Compiles expression to delegate by emitting the IL. 
@@ -215,7 +168,7 @@ namespace FastExpressionCompiler
             where TDelegate : class
         {
             var paramExprs = lambdaExpr.Parameters;
-            var paramTypes = GetParamExprTypes(paramExprs);
+            var paramTypes = Tools.GetParamExprTypes(paramExprs);
             var body = lambdaExpr.Body;
             var bodyExpr = body as Expression;
             return bodyExpr != null
@@ -1053,7 +1006,7 @@ namespace FastExpressionCompiler
                 var body = lambdaExprInfo.Body;
                 bodyType = body.GetResultType();
                 compiledLambda = TryCompile(ref nestedClosure,
-                    lambdaExprInfo.Type, GetParamExprTypes(lambdaParamExprs), bodyType,
+                    lambdaExprInfo.Type, Tools.GetParamExprTypes(lambdaParamExprs), bodyType,
                     body, body.GetNodeType(), bodyType,
                     lambdaParamExprs, isNestedLambda: true);
             }
@@ -1064,7 +1017,7 @@ namespace FastExpressionCompiler
                 var bodyExpr = lambdaExpr.Body;
                 bodyType = bodyExpr.Type;
                 compiledLambda = TryCompile(ref nestedClosure,
-                    lambdaExpr.Type, GetParamExprTypes(lambdaParamExprs), bodyType,
+                    lambdaExpr.Type, Tools.GetParamExprTypes(lambdaParamExprs), bodyType,
                     bodyExpr, bodyExpr.NodeType, bodyExpr.Type,
                     lambdaParamExprs, isNestedLambda: true);
             }
@@ -1371,7 +1324,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Multiply:
                     case ExpressionType.MultiplyChecked:
                     case ExpressionType.Divide:
-                        return EmitArithmeticOperation((BinaryExpression)exprObj, paramExprs, il, closure);
+                        return EmitArithmeticOperation(exprObj, exprType, exprNodeType, paramExprs, il, closure);
 
                     case ExpressionType.AndAlso:
                     case ExpressionType.OrElse:
@@ -1593,8 +1546,7 @@ namespace FastExpressionCompiler
 
             private static bool EmitThrow(UnaryExpression exprObj, IList<ParameterExpression> paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                Expression exceptionExpr = exprObj.Operand;
-
+                var exceptionExpr = exprObj.Operand;
                 if (!TryEmit(exceptionExpr, exceptionExpr.NodeType, exceptionExpr.Type, paramExprs, il, closure))
                     return false;
 
@@ -1635,18 +1587,14 @@ namespace FastExpressionCompiler
                     return false;  // what??? no chance
 
                 var closureItemIndex = closure.Constants.Length + nonPassedParamIndex;
-
-                il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                if (closure.Fields != null)
-                    il.Emit(OpCodes.Ldfld, closure.Fields[closureItemIndex]);
-                else
-                    LoadArrayClosureItem(il, closureItemIndex, p.Type);
+                LoadClosureFieldOrItem(closure, il, closureItemIndex, p.Type);
 
                 return true;
             }
 
             private static void LoadParamArg(ILGenerator il, int paramIndex)
             {
+                // todo: consider using Ldarga_S for ValueType
                 switch (paramIndex)
                 {
                     case 0:
@@ -1688,6 +1636,7 @@ namespace FastExpressionCompiler
                     && TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, ps, il, closure);
             }
 
+            // todo: check if it is possible to consolidate two methods below via array (with covariance) instead of IList
             private static bool EmitMany(IList<Expression> exprs, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
                 for (int i = 0, n = exprs.Count; i < n; i++)
@@ -1867,15 +1816,12 @@ namespace FastExpressionCompiler
                     if (constantIndex == -1)
                         return false;
 
-                    il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                    if (closure.Fields != null)
-                        il.Emit(OpCodes.Ldfld, closure.Fields[constantIndex]);
-                    else
-                        LoadArrayClosureItem(il, constantIndex, exprType);
+                    LoadClosureFieldOrItem(closure, il, constantIndex, exprType);
 
                 }
                 else return false;
 
+                // todo: consider how to remove boxing where it is not required
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
                 if (exprType == typeof(object) && constantActualType.GetTypeInfo().IsValueType)
                     il.Emit(OpCodes.Box, constantValue.GetType()); // using normal type for Enum instead of underlying type
@@ -1883,22 +1829,30 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static void LoadArrayClosureItem(ILGenerator il, int closedItemIndex, Type closedItemType)
+            private static void LoadClosureFieldOrItem(ClosureInfo closure, ILGenerator il, int itemIndex, Type itemType)
             {
-                // load array field
-                il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField);
+                il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
 
-                // load array item index
-                EmitLoadConstantInt(il, closedItemIndex);
-
-                // load item from index
-                il.Emit(OpCodes.Ldelem_Ref);
-
-                // Cast or un-box the object item depending if it is a class or value type
-                if (closedItemType.GetTypeInfo().IsValueType)
-                    il.Emit(OpCodes.Unbox_Any, closedItemType);
+                // todo: consider using Ldarga for ValueType
+                if (closure.Fields != null)
+                    il.Emit(OpCodes.Ldfld, closure.Fields[itemIndex]);
                 else
-                    il.Emit(OpCodes.Castclass, closedItemType);
+                {
+                    // for ArrayClosure load an array field
+                    il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField);
+
+                    // load array item index
+                    EmitLoadConstantInt(il, itemIndex);
+
+                    // load item from index
+                    il.Emit(OpCodes.Ldelem_Ref);
+
+                    // cast or un-box the object item depending if it is a class or value type
+                    if (itemType.GetTypeInfo().IsValueType)
+                        il.Emit(OpCodes.Unbox_Any, itemType);
+                    else
+                        il.Emit(OpCodes.Castclass, itemType);
+                }
             }
 
             private static bool EmitNew(
@@ -2554,11 +2508,7 @@ namespace FastExpressionCompiler
                 // Load compiled lambda on stack counting the offset
                 outerNestedLambdaIndex += outerConstants.Length + outerNonPassedParams.Length;
 
-                il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                if (closure.Fields != null)
-                    il.Emit(OpCodes.Ldfld, closure.Fields[outerNestedLambdaIndex]);
-                else
-                    LoadArrayClosureItem(il, outerNestedLambdaIndex, nestedLambda.GetType());
+                LoadClosureFieldOrItem(closure, il, outerNestedLambdaIndex, nestedLambda.GetType());
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
                 var nestedClosureInfo = nestedLambdaInfo.ClosureInfo;
@@ -2593,11 +2543,7 @@ namespace FastExpressionCompiler
                             EmitLoadConstantInt(il, nestedConstIndex);
                         }
 
-                        il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                        if (closure.Fields != null)
-                            il.Emit(OpCodes.Ldfld, closure.Fields[outerConstIndex]);
-                        else
-                            LoadArrayClosureItem(il, outerConstIndex, nestedConstant.Type);
+                        LoadClosureFieldOrItem(closure, il, outerConstIndex, nestedConstant.Type);
 
                         if (isNestedArrayClosure)
                         {
@@ -2643,11 +2589,7 @@ namespace FastExpressionCompiler
                             if (outerParamIndex == -1)
                                 return false; // impossible, better to throw?
 
-                            il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                            if (closure.Fields != null)
-                                il.Emit(OpCodes.Ldfld, closure.Fields[outerConstants.Length + outerParamIndex]);
-                            else
-                                LoadArrayClosureItem(il, outerConstants.Length + outerParamIndex, nestedUsedParam.Type);
+                            LoadClosureFieldOrItem(closure, il, outerConstants.Length + outerParamIndex, nestedUsedParam.Type);
                         }
                     }
 
@@ -2681,12 +2623,7 @@ namespace FastExpressionCompiler
 
                         outerLambdaIndex += outerConstants.Length + outerNonPassedParams.Length;
 
-                        il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                        if (closure.Fields != null)
-                            il.Emit(OpCodes.Ldfld, closure.Fields[outerLambdaIndex]);
-                        else
-                            LoadArrayClosureItem(il, outerLambdaIndex,
-                                nestedNestedLambda.Lambda.GetType());
+                        LoadClosureFieldOrItem(closure, il, outerLambdaIndex, nestedNestedLambda.Lambda.GetType());
 
                         if (isNestedArrayClosure)
                             il.Emit(OpCodes.Stelem_Ref); // store the item in array
@@ -2741,18 +2678,16 @@ namespace FastExpressionCompiler
 
             private static bool EmitComparison(BinaryExpression expr, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var leftExpr = expr.Left;
-                var rightExpr = expr.Right;
-                if (!TryEmit(leftExpr, leftExpr.NodeType, leftExpr.Type, ps, il, closure) ||
-                    !TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, ps, il, closure))
+                if (!EmitBinary(expr, ps, il, closure))
                     return false;
 
                 switch (expr.NodeType)
                 {
                     case ExpressionType.Equal:
-                        return EmitEqual(il, leftExpr.Type);
+                        return EmitEqual(il, expr.Left.Type);
+
                     case ExpressionType.NotEqual:
-                        if (!EmitEqual(il, leftExpr.Type))
+                        if (!EmitEqual(il, expr.Left.Type))
                             return false;
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
@@ -2777,49 +2712,42 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
                         return true;
-
                 }
                 return false;
             }
 
-            private static bool EmitArithmeticOperation(BinaryExpression expr, IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitArithmeticOperation(object exprObj, Type exprType, ExpressionType exprNodeType,
+                IList<ParameterExpression> ps, ILGenerator il, ClosureInfo closure)
             {
-                var leftExpr = expr.Left;
-                var rightExpr = expr.Right;
-                if (!TryEmit(leftExpr, leftExpr.NodeType, leftExpr.Type, ps, il, closure) ||
-                    !TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, ps, il, closure))
+                if (!EmitBinary(exprObj, ps, il, closure))
                     return false;
 
-                if (!leftExpr.Type.GetTypeInfo().IsPrimitive)
+                if (!exprType.GetTypeInfo().IsPrimitive)
                 {
-                    string methodName = expr.NodeType == ExpressionType.Add ? "op_Addition"
-                                      : expr.NodeType == ExpressionType.AddChecked ? "op_Addition"
-                                      : expr.NodeType == ExpressionType.Subtract ? "op_Subtraction"
-                                      : expr.NodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
-                                      : expr.NodeType == ExpressionType.Multiply ? "op_Multiply"
-                                      : expr.NodeType == ExpressionType.Divide ? "op_Division"
-                                      : null;
+                    var methodName
+                        = exprNodeType == ExpressionType.Add ? "op_Addition"
+                        : exprNodeType == ExpressionType.AddChecked ? "op_Addition"
+                        : exprNodeType == ExpressionType.Subtract ? "op_Subtraction"
+                        : exprNodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
+                        : exprNodeType == ExpressionType.Multiply ? "op_Multiply"
+                        : exprNodeType == ExpressionType.Divide ? "op_Division"
+                        : null;
 
                     if (methodName == null)
-                    { return false; }
+                        return false;
 
-                    EmitMethodCall(il, leftExpr.Type.GetTypeInfo().GetDeclaredMethod(methodName));
+                    EmitMethodCall(il, exprType.GetTypeInfo().GetDeclaredMethod(methodName));
                     return true;
                 }
 
-                bool isUnsigned = leftExpr.Type == typeof(byte) ||
-                                  leftExpr.Type == typeof(ushort) ||
-                                  leftExpr.Type == typeof(uint) ||
-                                  leftExpr.Type == typeof(ulong);
-
-                switch (expr.NodeType)
+                switch (exprNodeType)
                 {
                     case ExpressionType.Add:
                         il.Emit(OpCodes.Add);
                         return true;
 
                     case ExpressionType.AddChecked:
-                        il.Emit(isUnsigned ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf);
+                        il.Emit(IsUnsigned(exprType) ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf);
                         return true;
 
                     case ExpressionType.Subtract:
@@ -2827,7 +2755,7 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.SubtractChecked:
-                        il.Emit(isUnsigned ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf);
+                        il.Emit(IsUnsigned(exprType) ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf);
                         return true;
 
                     case ExpressionType.Multiply:
@@ -2835,7 +2763,7 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.MultiplyChecked:
-                        il.Emit(isUnsigned ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf);
+                        il.Emit(IsUnsigned(exprType) ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf);
                         return true;
 
                     case ExpressionType.Divide:
@@ -2845,6 +2773,9 @@ namespace FastExpressionCompiler
 
                 return false;
             }
+
+            private static bool IsUnsigned(Type type) =>
+                type == typeof(byte) || type == typeof(ushort) || type == typeof(uint) || type == typeof(ulong);
 
             private static bool EmitEqual(ILGenerator il, Type operandType)
             {
@@ -2888,7 +2819,6 @@ namespace FastExpressionCompiler
 
                 il.MarkLabel(labelSkipRight); // label the second branch
                 il.Emit(isAnd ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
-
                 il.MarkLabel(labelDone);
                 return true;
             }
@@ -2976,27 +2906,18 @@ namespace FastExpressionCompiler
         public static ConstructorInfo GetConstructorByArgs(this Type type, params Type[] args) =>
             type.GetTypeInfo().DeclaredConstructors.FirstOrDefault(c => c.GetParameters().Select(p => p.ParameterType).SequenceEqual(args));
 
-        public static ExpressionType GetNodeType(this object exprObj)
-        {
-            var expr = exprObj as Expression;
-            return expr != null ? expr.NodeType : ((ExpressionInfo)exprObj).NodeType;
-        }
+        public static ExpressionType GetNodeType(this object exprObj) =>
+            (exprObj as Expression)?.NodeType ?? ((ExpressionInfo)exprObj).NodeType;
 
-        public static Type GetResultType(this object exprObj)
-        {
-            var expr = exprObj as Expression;
-            return expr != null ? expr.Type : ((ExpressionInfo)exprObj).Type;
-        }
+        public static Type GetResultType(this object exprObj) =>
+            (exprObj as Expression)?.Type ?? ((ExpressionInfo)exprObj).Type;
 
         private static class EmptyArray<T>
         {
             public static readonly T[] Value = new T[0];
         }
 
-        public static T[] Empty<T>()
-        {
-            return EmptyArray<T>.Value;
-        }
+        public static T[] Empty<T>() => EmptyArray<T>.Value;
 
         // Note: the method name is not a standard to prevent conflicts with helper with standard names
         public static T[] WithLast<T>(this T[] source, T value)
@@ -3012,6 +2933,22 @@ namespace FastExpressionCompiler
             Array.Copy(source, result, sourceLength);
             result[sourceLength] = value;
             return result;
+        }
+
+        /// <summary>Performant method to get parameter types from parameter expressions.</summary>
+        public static Type[] GetParamExprTypes(IList<ParameterExpression> paramExprs)
+        {
+            var paramsCount = paramExprs.Count;
+            if (paramsCount == 0)
+                return Empty<Type>();
+
+            if (paramsCount == 1)
+                return new[] { paramExprs[0].Type };
+
+            var paramTypes = new Type[paramsCount];
+            for (var i = 0; i < paramTypes.Length; i++)
+                paramTypes[i] = paramExprs[i].Type;
+            return paramTypes;
         }
 
         // Note: the method name is not a standard to prevent conflicts with helper with standard names
@@ -3543,7 +3480,7 @@ namespace FastExpressionCompiler
             Body = body;
             Parameters = parameters;
             var bodyType = body.GetResultType();
-            _type = ExpressionCompiler.GetFuncOrActionType(ExpressionCompiler.GetParamExprTypes(parameters), bodyType);
+            _type = ExpressionCompiler.GetFuncOrActionType(Tools.GetParamExprTypes(parameters), bodyType);
         }
     }
 

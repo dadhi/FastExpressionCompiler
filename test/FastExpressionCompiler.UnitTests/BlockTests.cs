@@ -195,8 +195,10 @@ namespace FastExpressionCompiler.UnitTests
             var variable = Variable(typeof(A));
 
             var block = Block(new[] { variable },
-                Assign(variable, MemberInit(New(typeof(A).GetConstructor(Type.EmptyTypes)), Bind(typeof(A).GetProperty("K"), Constant(5)))),
-                Property(variable, typeof(A).GetProperty("K")));
+                Assign(variable, MemberInit(New(
+                    typeof(A).GetTypeInfo().DeclaredConstructors.First()), 
+                    Bind(typeof(A).GetTypeInfo().GetDeclaredProperty("K"), Constant(5)))),
+                Property(variable, typeof(A).GetTypeInfo().GetDeclaredProperty("K")));
 
             var lambda = Lambda<Func<int>>(block);
 
@@ -212,8 +214,9 @@ namespace FastExpressionCompiler.UnitTests
             var variables = Vars<A>().Take(20).ToArray();
 
             var block = Block(new[] { variables[0] },
-                Assign(variables[0], MemberInit(New(typeof(A).GetConstructor(Type.EmptyTypes)), Bind(typeof(A).GetProperty("K"), Constant(5)))),
-                Property(variables[0], typeof(A).GetProperty("K")));
+                Assign(variables[0], MemberInit(New(typeof(A).GetTypeInfo().DeclaredConstructors.First()), 
+                Bind(typeof(A).GetTypeInfo().GetDeclaredProperty("K"), Constant(5)))),
+                Property(variables[0], typeof(A).GetTypeInfo().GetDeclaredProperty("K")));
 
             var lambda = Lambda<Func<int>>(block);
 

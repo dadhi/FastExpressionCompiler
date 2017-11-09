@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
+using static FastExpressionCompiler.ExpressionInfo;
 
 namespace FastExpressionCompiler.UnitTests
 {
@@ -11,14 +12,13 @@ namespace FastExpressionCompiler.UnitTests
     public class ExpressionInfoTests
     {
         [Test]
-        public void Can_compile_lambda_without_coverting_to_expression()
+        public void Can_compile_lambda_without_converting_to_expression()
         {
-            var funcExpr =
-                ExpressionInfo.Lambda(
-                    ExpressionInfo.New(typeof(X).GetTypeInfo().GetConstructors()[0],
-                        ExpressionInfo.New(typeof(Y).GetTypeInfo().GetConstructors()[0])));
+            var funcExpr = Lambda(
+                    New(typeof(X).GetTypeInfo().GetConstructors()[0],
+                        New(typeof(Y).GetTypeInfo().GetConstructors()[0])));
 
-            var func = ExpressionCompiler.TryCompile<Func<X>>(funcExpr);
+            var func = funcExpr.TryCompile<Func<X>>();
             Assert.IsNotNull(func);
 
             var x = func();
@@ -39,11 +39,9 @@ namespace FastExpressionCompiler.UnitTests
         public void Can_compile_lambda_with_property()
         {
             var thisType = GetType().GetTypeInfo();
-            var funcExpr =
-                ExpressionInfo.Lambda(
-                        ExpressionInfo.Property(thisType.GetProperty(nameof(PropX))));
+            var funcExpr = Lambda(Property(thisType.GetProperty(nameof(PropX))));
 
-            var func = ExpressionCompiler.TryCompile<Func<X>>(funcExpr);
+            var func = funcExpr.TryCompile<Func<X>>();
             Assert.IsNotNull(func);
 
             var x = func();
@@ -55,11 +53,10 @@ namespace FastExpressionCompiler.UnitTests
         {
             var thisType = GetType().GetTypeInfo();
             var funcExpr =
-                ExpressionInfo.Lambda(
-                    ExpressionInfo.Call(thisType.GetMethod(nameof(GetX)),
-                        ExpressionInfo.Property(thisType.GetProperty(nameof(PropX)))));
+                Lambda(Call(thisType.GetMethod(nameof(GetX)),
+                    Property(thisType.GetProperty(nameof(PropX)))));
 
-            var func = ExpressionCompiler.TryCompile<Func<X>>(funcExpr);
+            var func = funcExpr.TryCompile<Func<X>>();
             Assert.IsNotNull(func);
 
             var x = func();
@@ -76,12 +73,12 @@ namespace FastExpressionCompiler.UnitTests
             //Expression<Func<string, string>> expr = a => GetS(() => a);
 
             var aParam = Expression.Parameter(typeof(string), "a");
-            var expr = ExpressionInfo.Lambda(
-                ExpressionInfo.Call(GetType().GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(GetS)),
-                    ExpressionInfo.Lambda(aParam)),
+            var expr = Lambda(
+                Call(GetType().GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(GetS)),
+                    Lambda(aParam)),
                 aParam);
 
-            var f = ExpressionCompiler.TryCompile<Func<string, string>>(expr);
+            var f = expr.TryCompile<Func<string, string>>();
 
             Assert.AreEqual("a", f("a"));
         }
@@ -94,20 +91,20 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Nested_Action_using_outer_parameter_and_closed_value()
         {
-            var s = new S();
             //Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
 
+            var s = new S();
             var aParam = Expression.Parameter(typeof(string), "a");
-            var expr = ExpressionInfo.Lambda(
-                ExpressionInfo.Lambda(
-                    ExpressionInfo.Call(
-                        ExpressionInfo.Constant(s),
+            var expr = Lambda(
+                Lambda(
+                    Call(
+                        Constant(s),
                         typeof(S).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(S.SetValue)),
                         aParam),
                     aParam)
                 );
 
-            var f = ExpressionCompiler.TryCompile<Func<Action<string>>>(expr);
+            var f = expr.TryCompile<Func<Action<string>>>();
 
             f()("a");
             Assert.AreEqual("a", s.Value);
@@ -171,21 +168,21 @@ namespace FastExpressionCompiler.UnitTests
         {
             var stateParamExpr = Expression.Parameter(typeof(object[]));
 
-            var expr = ExpressionInfo.Lambda<Func<object[], object>>(
-                ExpressionInfo.MemberInit(
-                    ExpressionInfo.New(_ctorOfA,
-                        ExpressionInfo.New(_ctorOfB),
-                        ExpressionInfo.Convert(
-                            ExpressionInfo.ArrayIndex(stateParamExpr, ExpressionInfo.Constant(11)), 
+            var expr = Lambda<Func<object[], object>>(
+                MemberInit(
+                    New(_ctorOfA,
+                        New(_ctorOfB),
+                        Convert(
+                            ArrayIndex(stateParamExpr, Constant(11)), 
                             typeof(string)),
-                        ExpressionInfo.NewArrayInit(typeof(ID[]),
-                            ExpressionInfo.New(_ctorOfD1),
-                            ExpressionInfo.New(_ctorOfD2))),
-                    ExpressionInfo.Bind(_propAProp,
-                        ExpressionInfo.New(_ctorOfP,
-                            ExpressionInfo.New(_ctorOfB))),
-                    ExpressionInfo.Bind(_fieldABop,
-                        ExpressionInfo.New(_ctorOfB))),
+                        NewArrayInit(typeof(ID[]),
+                            New(_ctorOfD1),
+                            New(_ctorOfD2))),
+                    Bind(_propAProp,
+                        New(_ctorOfP,
+                            New(_ctorOfB))),
+                    Bind(_fieldABop,
+                        New(_ctorOfB))),
                 stateParamExpr);
 
             return expr;
@@ -195,7 +192,7 @@ namespace FastExpressionCompiler.UnitTests
         public void Can_compile_complex_expr_with_Array_Properties_and_Casts()
         {
             var expr = CreateComplexExpressionInfo();
-            var func = ExpressionCompiler.TryCompile(expr);
+            var func = expr.TryCompile();
             func(new object[12]);
         }
 
@@ -218,10 +215,9 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Can_embed_normal_Expression_into_ExpressionInfo_eg_as_Constructor_argument()
         {
-            var func = ExpressionCompiler.TryCompile<Func<P>>(
-                ExpressionInfo.Lambda(
-                    ExpressionInfo.New(_ctorOfP,
-                        Expression.New(_ctorOfB))));
+            var func = Lambda(
+                New(_ctorOfP,
+                    Expression.New(_ctorOfB))).TryCompile<Func<P>>();
 
             Assert.IsInstanceOf<P>(func());
         }

@@ -3,14 +3,17 @@
 [DryIoc]: https://bitbucket.org/dadhi/dryioc
 [ExpressionToCodeLib]: https://github.com/EamonNerbonne/ExpressionToCode
 [Expression Tree]: https://msdn.microsoft.com/en-us/library/mt654263.aspx
+[Marten]: https://github.com/JasperFx/marten
 
 [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)
 [![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 
-[![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)
-[![Linux build](https://travis-ci.org/dadhi/FastExpressionCompiler.svg?branch=master)](https://travis-ci.org/dadhi/FastExpressionCompiler)
 
-Supported platforms: __.NET 4.5+__, __.NET Standard 1.3__, __.NET Standard 2.0__ 
+| Windows    |Linux, MacOS |
+|--------------------------|
+|[![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master) | [![Linux build](https://travis-ci.org/dadhi/FastExpressionCompiler.svg?branch=master)](https://travis-ci.org/dadhi/FastExpressionCompiler)|
+
+Supported platforms: __.NET 4.5+__, __.NET Standard 1.3__
 
 ## Why
 
@@ -161,7 +164,7 @@ Manually composed lambda expression:
 
 Initially developed and currently used in [DryIoc].
 
-Used in [Marten v2](https://github.com/JasperFx/marten), [ExpressionToCodeLib].
+Used in [Marten], [ExpressionToCodeLib].
 
 What is supported:
 
@@ -169,12 +172,12 @@ What is supported:
 - Nested lambdas
 - Constructor and method calls, lambda invocation
 - Property and member access
-- Equality and `?:` operators
+- Equality and `?:`, `??`, `?.` operators
+- Expression.Assign, Block and TryCatch
+- Ariphmetic operators
 
 What is not supported:
-
-- `??`, `?.`, bitwise, and ariphmetic operators
-- Expression.Block and declarative expressions added in .NET 4.0
+- Bitwise operators
 - Check an open issues for more details
 
 __Note:__ The current limitations may be lifted by wrapping not yet supported expression into method or property.

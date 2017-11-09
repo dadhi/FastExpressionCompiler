@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
+using static System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.IssueTests
 {
@@ -11,15 +12,15 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void TestString()
         {
-            var param = Expression.Parameter(typeof(Test), "x");
-            var predicate = Expression.Lambda<Func<Test, Test>>(
-                Expression.MemberInit(
-                    Expression.New(typeof(Test)),
-                    Expression.Bind(typeof(Test).GetTypeInfo().GetProperty("Name"),
-                        Expression.Call(
-                            Expression.Call(
+            var param = Parameter(typeof(Test), "x");
+            var predicate = Lambda<Func<Test, Test>>(
+                MemberInit(
+                    New(typeof(Test)),
+                    Bind(typeof(Test).GetTypeInfo().GetProperty("Name"),
+                        Call(
+                            Call(
                                 _innerMethod.MakeGenericMethod(typeof(int)),
-                                Expression.Property(param, "Id")
+                                Property(param, "Id")
                             ),
                             _toStringMethod
                         )
