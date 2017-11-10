@@ -38,6 +38,20 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Can_assign_to_parameter_via_ExpressionInfo_with_untyped_delegate()
+        {
+            var sParamExpr = Parameter(typeof(string), "s");
+            var expr = ExpressionInfo.Lambda(
+                ExpressionInfo.Assign(sParamExpr, ExpressionInfo.Constant("aaa")),
+                sParamExpr);
+
+            var f = (Func<string, string>)expr.TryCompile();
+
+            Assert.IsNotNull(f);
+            Assert.AreEqual("aaa", f("ignored"));
+        }
+
+        [Test]
         public void Can_assign_to_parameter_in_nested_lambda()
         {
             // s => () => s = "aaa" 

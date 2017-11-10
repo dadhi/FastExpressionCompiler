@@ -164,7 +164,7 @@ namespace FastExpressionCompiler
         /// <summary>Tries to compile lambda expression info.</summary>
         /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
         /// <param name="lambdaExpr">Lambda expression to compile.</param>
-        /// <returns>Compiled delegate.</returns>
+        /// <returns>Compiled delegate or null.</returns>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpressionInfo lambdaExpr)
             where TDelegate : class
         {
@@ -178,14 +178,18 @@ namespace FastExpressionCompiler
         }
 
         /// <summary>Tries to compile lambda expression info.</summary>
+        /// <param name="lambdaExpr">Lambda expression to compile.</param>
+        /// <returns>Compiled delegate or null.</returns>
+        public static Delegate TryCompile(this LambdaExpressionInfo lambdaExpr) =>
+            TryCompile<Delegate>(lambdaExpr);
+
+        /// <summary>Tries to compile lambda expression info.</summary>
         /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
         /// <param name="lambdaExpr">Lambda expression to compile.</param>
-        /// <returns>Compiled delegate.</returns>
+        /// <returns>Compiled delegate or null.</returns>
         public static TDelegate TryCompile<TDelegate>(this ExpressionInfo<TDelegate> lambdaExpr)
-            where TDelegate : class
-        {
-            return TryCompile<TDelegate>((LambdaExpressionInfo)lambdaExpr);
-        }
+            where TDelegate : class =>
+            TryCompile<TDelegate>((LambdaExpressionInfo)lambdaExpr);
 
         /// <summary>Compiles expression to delegate by emitting the IL. 
         /// If sub-expressions are not supported by emitter, then the method returns null.
@@ -3005,6 +3009,11 @@ namespace FastExpressionCompiler
 
         /// <summary>All expressions should have a Type.</summary>
         public abstract Type Type { get; }
+
+        /// <summary>Analog of Expression.Parameter</summary>
+        /// <remarks>For now it is return just an `Expression.Parameter`</remarks>
+        public static ParameterExpression Parameter(Type type, string name = null) =>
+            Expression.Parameter(type, name);
 
         /// <summary>Analog of Expression.Constant</summary>
         public static ConstantExpressionInfo Constant(object value, Type type = null) =>
