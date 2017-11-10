@@ -179,11 +179,9 @@ What is supported:
 - Expression.Assign, Block and TryCatch
 - Ariphmetic operators
 
-What is not supported:
-- Bitwise operators
-- Check an open issues for more details
+Complete list of supported expression types may be found in this [switch](https://github.com/dadhi/FastExpressionCompiler/blob/95ff639f19aedc729eb2b77f514b35d2f3995205/src/FastExpressionCompiler/FastExpressionCompiler.cs#L1250)
 
-__Note:__ The current limitations may be lifted by wrapping not yet supported expression into method or property.
+__Note:__ If the currently not supported expressions may be wrapped in a method or property, then it will make them supported.
 
 
 ## How
