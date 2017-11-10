@@ -1,15 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading.Tasks;
-
-// note: ExpressionInfo instead of Expression
-using static FastExpressionCompiler.ExpressionInfo;
-
-namespace FastExpressionCompiler.IssueTests
+﻿namespace FastExpressionCompiler.IssueTests
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Linq.Expressions;
+    using System.Reflection;
+    using System.Threading.Tasks;
+    using Pipeline;
+
+    // note: ExpressionInfo instead of Expression
+    using static FastExpressionCompiler.ExpressionInfo;
+
     static class PipelineExecutionExtensions
     {
         // ReSharper disable once SuggestBaseTypeForParameter
