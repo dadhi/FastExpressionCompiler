@@ -26,6 +26,10 @@ _TL;DR;_
 Fast Expression Compiler is ~20 times faster than `Expression.Compile()`.  
 The compiled delegate __may be in some cases???__ ~15 times faster than the one produced by `Expression.Compile()`.
 
+## How to install
+
+Either from [NuGet](https://www.nuget.org/packages/FastExpressionCompiler) or grab a single [FastExpressioncCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) file.
+
 ## Benchmarks
 
 ```ini
