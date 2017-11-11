@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016-2017 Maksim Volkau
+Copyright (c) 2016 Maksim Volkau
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -2874,7 +2874,10 @@ namespace FastExpressionCompiler
             type.GetTypeInfo().GenericTypeArguments[0];
 
         public static ConstructorInfo GetConstructorByArgs(this Type type, params Type[] args) =>
-            type.GetTypeInfo().DeclaredConstructors.FirstOrDefault(c => c.GetParameters().Select(p => p.ParameterType).SequenceEqual(args));
+            type.GetTypeInfo().DeclaredConstructors.GetFirst(c => c.GetParameters().Project(p => p.ParameterType).SequenceEqual(args));
+
+        public static Expression ToExpression(this object exprObj) =>
+            exprObj as Expression ?? ((ExpressionInfo)exprObj).ToExpression();
 
         public static ExpressionType GetNodeType(this object exprObj) =>
             (exprObj as Expression)?.NodeType ?? ((ExpressionInfo)exprObj).NodeType;
@@ -2999,6 +3002,20 @@ namespace FastExpressionCompiler
             }
             return source.FirstOrDefault(predicate);
         }
+
+        public static R[] Project<T, R>(this T[] source, Func<T, R> project)
+        {
+            if (source == null || source.Length == 0)
+                return Empty<R>();
+
+            if (source.Length == 1)
+                return new[] { project(source[0]) };
+
+            var result = new R[source.Length];
+            for (var i = 0; i < result.Length; ++i)
+                result[i] = project(source[i]);
+            return result;
+        }
     }
 
     /// <summary>Facade for constructing expression info.</summary>
@@ -3009,6 +3026,9 @@ namespace FastExpressionCompiler
 
         /// <summary>All expressions should have a Type.</summary>
         public abstract Type Type { get; }
+        
+        /// <summary>Converts back to respective expression so you may Compile it by usual means.</summary>
+        public abstract Expression ToExpression();
 
         /// <summary>Analog of Expression.Parameter</summary>
         /// <remarks>For now it is return just an `Expression.Parameter`</remarks>
@@ -3095,11 +3115,11 @@ namespace FastExpressionCompiler
 
         /// <summary>Analog of Expression.ArrayIndex</summary>
         public static BinaryExpressionInfo ArrayIndex(ExpressionInfo array, ExpressionInfo index) =>
-            new BinaryExpressionInfo(ExpressionType.ArrayIndex, array, index, array.Type.GetElementType());
+            new ArrayIndexExpressionInfo(array, index, array.Type.GetElementType());
 
         /// <summary>Analog of Expression.ArrayIndex</summary>
         public static BinaryExpressionInfo ArrayIndex(object array, object index) =>
-            new BinaryExpressionInfo(ExpressionType.ArrayIndex, array, index, array.GetResultType().GetElementType());
+            new ArrayIndexExpressionInfo(array, index, array.GetResultType().GetElementType());
 
         /// <summary>Expression.Bind used in Expression.MemberInit</summary>
         public static MemberAssignmentInfo Bind(MemberInfo member, ExpressionInfo expression) =>
@@ -3125,11 +3145,11 @@ namespace FastExpressionCompiler
 
         /// <summary>Constructs assignment expression.</summary>
         public static ExpressionInfo Assign(ExpressionInfo left, ExpressionInfo right) => 
-            new BinaryExpressionInfo(ExpressionType.Assign, left, right, left.Type);
+            new AssignBinaryExpressionInfo(left, right, left.Type);
 
         /// <summary>Constructs assignment expression from possibly mixed types of left and right.</summary>
         public static ExpressionInfo Assign(object left, object right) =>
-            new BinaryExpressionInfo(ExpressionType.Assign, left, right, left.GetResultType());
+            new AssignBinaryExpressionInfo(left, right, left.GetResultType());
 
         /// <summary>Invoke</summary>
         public static ExpressionInfo Invoke(LambdaExpressionInfo lambda, params object[] args) =>
@@ -3148,17 +3168,25 @@ namespace FastExpressionCompiler
         /// <summary>Operand expression</summary>
         public readonly ExpressionInfo Operand;
 
+        /// <inheritdoc />
+        public override Expression ToExpression()
+        {
+            if (NodeType == ExpressionType.Convert)
+                return Expression.Convert(Operand.ToExpression(), Type);
+            throw new NotSupportedException("Cannot convert ExpressionInfo to Expression of type " + NodeType);
+        }
+
         /// <summary>Constructor</summary>
-        public UnaryExpressionInfo(ExpressionType nodeType, ExpressionInfo operand, Type targetType)
+        public UnaryExpressionInfo(ExpressionType nodeType, ExpressionInfo operand, Type type)
         {
             NodeType = nodeType;
             Operand = operand;
-            Type = targetType;
+            Type = type;
         }
     }
 
     /// <summary>BinaryExpression analog.</summary>
-    public class BinaryExpressionInfo : ExpressionInfo
+    public abstract class BinaryExpressionInfo : ExpressionInfo
     {
         /// <inheritdoc />
         public override ExpressionType NodeType { get; }
@@ -3173,13 +3201,37 @@ namespace FastExpressionCompiler
         public readonly object Right;
 
         /// <summary>Constructs from left and right expressions.</summary>
-        public BinaryExpressionInfo(ExpressionType nodeType, object left, object right, Type type)
+        protected BinaryExpressionInfo(ExpressionType nodeType, object left, object right, Type type)
         {
             NodeType = nodeType;
             Type = type;
             Left = left;
             Right = right;
         }
+    }
+
+    /// <summary>Expression.ArrayIndex </summary>
+    public class ArrayIndexExpressionInfo : BinaryExpressionInfo
+    {
+        /// <summary>Constructor</summary>
+        public ArrayIndexExpressionInfo(object left, object right, Type type) 
+            : base(ExpressionType.ArrayIndex, left, right, type) { }
+
+        /// <inheritdoc />
+        public override Expression ToExpression() =>
+            Expression.ArrayIndex(Left.ToExpression(), Right.ToExpression());
+    }
+
+    /// <summary>Expression.Assign </summary>
+    public class AssignBinaryExpressionInfo : BinaryExpressionInfo
+    {
+        /// <summary>Constructor</summary>
+        public AssignBinaryExpressionInfo(object left, object right, Type type)
+            : base(ExpressionType.Assign, left, right, type) { }
+
+        /// <inheritdoc />
+        public override Expression ToExpression() =>
+            Expression.Assign(Left.ToExpression(), Right.ToExpression());
     }
 
     /// <summary>Analog of MemberInitExpression</summary>
@@ -3199,6 +3251,10 @@ namespace FastExpressionCompiler
 
         /// <summary>Member assignments.</summary>
         public readonly MemberAssignmentInfo[] Bindings;
+
+        /// <inheritdoc />
+        public override Expression ToExpression() =>
+            Expression.MemberInit(NewExpressionInfo.ToNewExpression(), Bindings.Project(b => b.ToMemberAssignment()));
 
         /// <summary>Constructs from the new expression and member initialization list.</summary>
         public MemberInitExpressionInfo(NewExpressionInfo newExpressionInfo, MemberAssignmentInfo[] bindings)
@@ -3230,6 +3286,9 @@ namespace FastExpressionCompiler
         /// <summary>Optional name.</summary>
         public string Name => ParamExpr.Name;
 
+        /// <inheritdoc />
+        public override Expression ToExpression() => ParamExpr;
+
         /// <summary>Constructor</summary>
         public ParameterExpressionInfo(ParameterExpression paramExpr)
         {
@@ -3249,6 +3308,9 @@ namespace FastExpressionCompiler
         /// <summary>Value of constant.</summary>
         public readonly object Value;
 
+        /// <inheritdoc />
+        public override Expression ToExpression() => Expression.Constant(Value, Type);
+
         /// <summary>Constructor</summary>
         public ConstantExpressionInfo(object value, Type type = null)
         {
@@ -3263,11 +3325,11 @@ namespace FastExpressionCompiler
         /// <summary>List of arguments</summary>
         public readonly object[] Arguments;
 
+        /// <summary>Convert to expressions</summary>
+        protected Expression[] ArgumentsToExpressions() => Arguments.Project(Tools.ToExpression);
+
         /// <summary>Constructor</summary>
-        protected ArgumentsExpressionInfo(object[] arguments)
-        {
-            Arguments = arguments;
-        }
+        protected ArgumentsExpressionInfo(object[] arguments) { Arguments = arguments; }
     }
 
     /// <summary>Analog of NewExpression</summary>
@@ -3281,6 +3343,12 @@ namespace FastExpressionCompiler
 
         /// <summary>The constructor info.</summary>
         public readonly ConstructorInfo Constructor;
+
+        /// <inheritdoc />
+        public override Expression ToExpression() => ToNewExpression();
+
+        /// <summary>Converts to NewExpression</summary>
+        public NewExpression ToNewExpression() => Expression.New(Constructor, ArgumentsToExpressions());
 
         /// <summary>Construct from constructor info and argument expressions</summary>
         public NewExpressionInfo(ConstructorInfo constructor, params object[] arguments) : base(arguments)
@@ -3297,6 +3365,9 @@ namespace FastExpressionCompiler
 
         /// <inheritdoc />
         public override Type Type { get; }
+
+        /// <inheritdoc />
+        public override Expression ToExpression() => Expression.NewArrayInit(Type, ArgumentsToExpressions());
 
         /// <summary>Array type and initializer</summary>
         public NewArrayExpressionInfo(Type type, object[] initializers) : base(initializers)
@@ -3319,6 +3390,10 @@ namespace FastExpressionCompiler
 
         /// <summary>Instance expression, null if static.</summary>
         public readonly ExpressionInfo Object;
+
+        /// <inheritdoc />
+        public override Expression ToExpression() =>
+            Expression.Call(Object.ToExpression(), Method, ArgumentsToExpressions());
 
         /// <summary>Construct from method info and argument expressions</summary>
         public MethodCallExpressionInfo(ExpressionInfo @object, MethodInfo method, params object[] arguments) 
@@ -3353,7 +3428,14 @@ namespace FastExpressionCompiler
     public class PropertyExpressionInfo : MemberExpressionInfo
     {
         /// <inheritdoc />
-        public override Type Type => ((PropertyInfo)Member).PropertyType;
+        public override Type Type => PropertyInfo.PropertyType;
+
+        /// <summary>Subject</summary>
+        public PropertyInfo PropertyInfo => (PropertyInfo)Member;
+
+        /// <inheritdoc />
+        public override Expression ToExpression() =>
+            System.Linq.Expressions.Expression.Property(Expression.ToExpression(), PropertyInfo);
 
         /// <summary>Construct from property info</summary>
         public PropertyExpressionInfo(object instance, PropertyInfo property)
@@ -3364,7 +3446,14 @@ namespace FastExpressionCompiler
     public class FieldExpressionInfo : MemberExpressionInfo
     {
         /// <inheritdoc />
-        public override Type Type => ((FieldInfo)Member).FieldType;
+        public override Type Type => FieldInfo.FieldType;
+
+        /// <summary>Subject</summary>
+        public FieldInfo FieldInfo => (FieldInfo)Member;
+
+        /// <inheritdoc />
+        public override Expression ToExpression() =>
+            System.Linq.Expressions.Expression.Field(Expression.ToExpression(), FieldInfo);
 
         /// <summary>Construct from field info</summary>
         public FieldExpressionInfo(ExpressionInfo instance, FieldInfo field)
@@ -3380,11 +3469,39 @@ namespace FastExpressionCompiler
         /// <summary>Expression to assign</summary>
         public ExpressionInfo Expression;
 
+        /// <summary>Converts back to MemberAssignment</summary>
+        public MemberBinding ToMemberAssignment() => 
+            System.Linq.Expressions.Expression.Bind(Member, Expression.ToExpression());
+
         /// <summary>Constructs out of member and expression to assign.</summary>
         public MemberAssignmentInfo(MemberInfo member, ExpressionInfo expression)
         {
             Member = member;
             Expression = expression;
+        }
+    }
+
+    /// <summary>Analog of InvocationExpression.</summary>
+    public sealed class InvocationExpressionInfo : ArgumentsExpressionInfo
+    {
+        /// <inheritdoc />
+        public override ExpressionType NodeType => ExpressionType.Invoke;
+
+        /// <inheritdoc />
+        public override Type Type { get; }
+
+        /// <summary>Delegate to invoke.</summary>
+        public readonly LambdaExpressionInfo LambdaExprInfo;
+
+        /// <inheritdoc />
+        public override Expression ToExpression() =>
+            Expression.Invoke(LambdaExprInfo.ToExpression(), ArgumentsToExpressions());
+
+        /// <summary>Constructs</summary>
+        public InvocationExpressionInfo(LambdaExpressionInfo lambda, object[] arguments, Type type) : base(arguments)
+        {
+            LambdaExprInfo = lambda;
+            Type = type;
         }
     }
 
@@ -3403,6 +3520,13 @@ namespace FastExpressionCompiler
         /// <summary>List of parameters.</summary>
         public readonly ParameterExpression[] Parameters;
 
+        /// <inheritdoc />
+        public override Expression ToExpression() => ToLambdaExpression();
+
+        /// <summary>subject</summary>
+        public LambdaExpression ToLambdaExpression() =>
+            Expression.Lambda(Body.ToExpression(), Parameters);
+
         /// <summary>Constructor</summary>
         public LambdaExpressionInfo(object body, ParameterExpression[] parameters)
         {
@@ -3419,27 +3543,14 @@ namespace FastExpressionCompiler
         /// <summary>Type of lambda</summary>
         public Type DelegateType => typeof(TDelegate);
 
+        /// <inheritdoc />
+        public override Expression ToExpression() => ToLambdaExpression();
+        
+        /// <summary>subject</summary>
+        public new Expression<TDelegate> ToLambdaExpression() =>
+            Expression.Lambda<TDelegate>(Body.ToExpression(), Parameters);
+
         /// <summary>Constructor</summary>
         public ExpressionInfo(ExpressionInfo body, ParameterExpression[] parameters) : base(body, parameters) { }
-    }
-
-    /// <summary>Analog of InvocationExpression.</summary>
-    public sealed class InvocationExpressionInfo : ArgumentsExpressionInfo
-    {
-        /// <inheritdoc />
-        public override ExpressionType NodeType => ExpressionType.Invoke;
-
-        /// <inheritdoc />
-        public override Type Type { get; }
-
-        /// <summary>Delegate to invoke.</summary>
-        public readonly LambdaExpressionInfo LambdaExprInfo;
-
-        /// <summary>Constructs</summary>
-        public InvocationExpressionInfo(LambdaExpressionInfo lambda, object[] arguments, Type type) : base(arguments)
-        {
-            LambdaExprInfo = lambda;
-            Type = type;
-        }
     }
 }

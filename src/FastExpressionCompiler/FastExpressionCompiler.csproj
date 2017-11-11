@@ -7,10 +7,10 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>FastExpressionCompiler</AssemblyName>
     <Authors>Maksim Volkau</Authors>
-    <Copyright>Copyright © 2017 Maksim Volkau</Copyright>
-    <Description>Fast Expression Compiler is ~20 times faster than Expression.Compile()</Description>
+    <Copyright>Copyright © 2016 Maksim Volkau</Copyright>
+    <Description>FastExpressionCompiler is up to ~20 times faster than Expression.Compile()</Description>
     <PackageId>FastExpressionCompiler</PackageId>
-    <PackageTags>Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
+    <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
       v1.4.0:
       - added: NetStandard 2.0 target
