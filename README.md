@@ -4,6 +4,7 @@
 [ExpressionToCodeLib]: https://github.com/EamonNerbonne/ExpressionToCode
 [Expression Tree]: https://msdn.microsoft.com/en-us/library/mt654263.aspx
 [Marten]: https://github.com/JasperFx/marten
+[Rebus]: https://github.com/rebus-org/Rebus
 
 [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)
 [![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
@@ -168,9 +169,10 @@ Manually composed lambda expression:
 
 ## Status
 
-Initially developed and currently used in [DryIoc].
+Originally the project was part of [DryIoc], 
+then split for more general adoption.
 
-Used in [Marten], [ExpressionToCodeLib].
+Some users: [Marten], [Rebus], [ExpressionToCodeLib]
 
 What is supported:
 
