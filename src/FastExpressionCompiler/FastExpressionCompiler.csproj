@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.4.0</VersionPrefix>
+    <VersionPrefix>1.5.0</VersionPrefix>
     <TargetFrameworks>net45;netstandard1.3;netstandard2.0</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -12,6 +12,17 @@
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
+      v1.5.0
+      - added: #10 TryExpression support
+      - added: #18 Support Expression.Block
+      - added: #30 Expression.Assign for array indexer
+      - added: #32 Support Expression.Condition
+      - added: #35 Coalescence operator ??
+      - added: #34 Arithmetic operations
+      - added: #42 Add conversion from ExpressionInfo to Expression
+      - added: FastCompile methods for ExpressionInfo
+      - fixed: #44 Conversion to Nullable{T} throws InvalidProgramException
+      - fixed: Creation of dynamic method for un-typed delegate
       v1.4.0:
       - added: NetStandard 2.0 target
       - added: #17: Expression(Info).Assign support for parameters, fields and members
