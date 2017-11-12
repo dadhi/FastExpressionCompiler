@@ -167,7 +167,7 @@ Manually composed lambda expression:
 ```
 
 
-## Status
+## State
 
 Originally the project was part of [DryIoc], 
 then split for more general adoption.
