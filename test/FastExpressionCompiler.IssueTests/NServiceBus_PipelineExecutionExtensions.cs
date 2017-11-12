@@ -1,4 +1,6 @@
-﻿namespace FastExpressionCompiler.IssueTests
+﻿#define USE_EXPRESSION_INFO // I am here!
+
+namespace NServiceBus
 {
     using System;
     using System.Collections.Generic;
@@ -8,8 +10,14 @@
     using System.Threading.Tasks;
     using Pipeline;
 
-    // note: ExpressionInfo instead of Expression
+    using FastExpressionCompiler;
+#if USE_EXPRESSION_INFO
+    using Expr = FastExpressionCompiler.ExpressionInfo;
     using static FastExpressionCompiler.ExpressionInfo;
+#else
+    using Expr = System.Linq.Expressions.Expression;
+    using static System.Linq.Expressions.Expression;
+#endif
 
     static class PipelineExecutionExtensions
     {
@@ -28,7 +36,7 @@
         ///          context{N} => behavior{N}.Invoke(context{N},
         ///             context{N+1} => TaskEx.Completed))
         /// </code>
-        public static Delegate CreatePipelineExecutionExpression(this IBehavior[] behaviors, List<ExpressionInfo> expressions = null)
+        public static Delegate CreatePipelineExecutionExpression(this IBehavior[] behaviors, List<Expr> expressions = null)
         {
             Delegate lambdaExpression = null;
             var behaviorCount = behaviors.Length - 1;
@@ -75,12 +83,12 @@
         /// <code>
         /// context{i} => behavior.Invoke(context{i}, context{i+1} => previous)
         /// </code>>
-        static Delegate CreateBehaviorCallDelegate(IBehavior currentBehavior, MethodInfo methodInfo, ParameterExpression outerContextParam, Delegate previous, List<ExpressionInfo> expressions = null)
+        static Delegate CreateBehaviorCallDelegate(IBehavior currentBehavior, MethodInfo methodInfo, ParameterExpression outerContextParam, Delegate previous, List<Expr> expressions = null)
         {
             var body = Call(Constant(currentBehavior), methodInfo, outerContextParam, Constant(previous));
             var lambdaExpression = Lambda(body, outerContextParam);
             expressions?.Add(lambdaExpression);
-            return lambdaExpression.TryCompile();
+            return lambdaExpression.CompileFast();
         }
 
         /// <code>
@@ -89,7 +97,7 @@
         static Delegate CreateDoneDelegate(Type inContextType, int i)
         {
             var innerContextParam = Parameter(inContextType, $"context{i + 1}");
-            return Lambda(Constant(Task.FromResult(0)), innerContextParam).TryCompile();
+            return Lambda(Constant(Task.FromResult(0)), innerContextParam).CompileFast();
         }
     }
 }

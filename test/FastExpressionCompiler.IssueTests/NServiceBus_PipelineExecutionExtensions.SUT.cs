@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 
-namespace FastExpressionCompiler.IssueTests.Pipeline
+namespace NServiceBus.Pipeline
 {
     internal interface IBehavior { }
 
