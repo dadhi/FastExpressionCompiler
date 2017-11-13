@@ -18,7 +18,7 @@ Supported platforms: __.NET 4.5+__, __.NET Standard 1.3__
 ## Why
 
 [Expression tree] compilation is used by wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
-But the performance of compilation with `Expression.Compile()` is just slow. 
+But `Expression.Compile()` is just slow. 
 Moreover, the compiled delegate may be slower than manually created delegate because of the [reasons](https://blogs.msdn.microsoft.com/seteplia/2017/02/01/dissecting-the-new-constraint-in-c-a-perfect-example-of-a-leaky-abstraction/):
 
 _TL;DR;_
