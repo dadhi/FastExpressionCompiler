@@ -6,12 +6,12 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            //BenchmarkRunner.Run<CreateExpVsCreateExprInfo_ComplexExpr>();
+            BenchmarkRunner.Run<ExprInfoVsExpr_CreateAndCompile_ComplexExpr>();
+            //BenchmarkRunner.Run<ExprInfoVsExpr_CreateAndCompile_NestedLambdaExpr>();
+            //BenchmarkRunner.Run<ExprInfoVsExpr_CreateAndCompile_SimpleExpr>();
 
-            //BenchmarkRunner.Run<CreateExpVsCreateExprInfo_NestedLambda>();
-            //BenchmarkRunner.Run<CreateExprCompile_vs_CreateExprInfoCompile>();
-
-            //BenchmarkRunner.Run<ExpressionVsExpressionInfo>();
+            //BenchmarkRunner.Run<ExprInfoVsExpr_Create_SimpleExpr>();
+            //BenchmarkRunner.Run<ExprInfoVsExpr_Create_ComplexExpr>();
 
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Compile>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();

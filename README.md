@@ -124,20 +124,30 @@ Invoking compiled delegate comparing to normal delegate:
  | __FastCompiledLambda__ | 13.4183 ns | 0.0352 ns | 0.1317 ns |   1.00 |          0.00 | 0.0195 |      32 B |
 
 
-### Manually composed complex ExpressionInfo
+### ExpressionInfo vs Expression
 
 `FastExpressionCompiler.ExpressionInfo` is the lightweight version of `Expression`. 
-You may consider it instead of `Expression` when you are validating the Expression arguments on your own,
-and not relying on Expression composition exceptions.
+You may look at it as just a thin wrapper on operation node which helps you to compose the computation tree. But
+it __won't do any node compatibility verification__ for the tree as the `Expression` does (and why it is slow).
+Hopefully, you are checking the expression arguments yourself, and not waiting for `Expression` exceptions to blow up.
 
-__Note:__ Explore `ExpressionInfo` class in [FastExpressionCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) 
-for finding the supported expression types.
+__Note:__ At the moment `ExpressionInfo` is not supported for all supported expression types
+(#46).
 
- |                               Method     |        Mean |     StdDev | Scaled | Scaled-StdDev |  Gen 0 |  Gen 1 | Allocated |
- |----------------------------------------- |------------ |----------- |------- |-------------- |------- |------- |---------- |
- |         CreateExpression_and_Compile     | 632.4135 us | 26.5744 us |  32.37 |          1.72 |      - |      - |   7.81 kB |
- |     CreateExpression_and_CompileFast     |  29.7829 us |  1.6242 us |   1.52 |          0.10 | 1.8694 | 0.6487 |   3.86 kB |
- | __CreateExpressionInfo_and_CompileFast__ |  19.5569 us |  0.6645 us |   1.00 |          0.00 | 1.4689 | 0.3703 |   3.38 kB |
+#### Creating expression
+
+ |               Method     |     Mean |     Error |    StdDev |   Median | Scaled | ScaledSD |  Gen 0 | Allocated |
+ |------------------------- |---------:|----------:|----------:|---------:|-------:|---------:|-------:|----------:|
+ |     CreateExpression     | 6.788 us | 0.2688 us | 0.7625 us | 6.537 us |   4.00 |     0.50 | 0.9003 |    1424 B |
+ | __CreateExpressionInfo__ | 1.703 us | 0.0364 us | 0.0973 us | 1.691 us |   1.00 |     0.00 | 0.5951 |     936 B |
+
+#### Creating and compiling
+
+ |                               Method     |      Mean |      Error |     StdDev |    Median | Scaled | ScaledSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+ |----------------------------------------- |----------:|-----------:|-----------:|----------:|-------:|---------:|-------:|-------:|-------:|----------:|
+ |         CreateExpression_and_Compile     | 648.73 us | 12.7079 us | 18.2253 us | 644.46 us |  35.28 |     1.94 | 3.9063 | 1.9531 |      - |   7.32 KB |
+ |     CreateExpression_and_CompileFast     |  30.30 us |  1.3381 us |  3.7301 us |  28.89 us |   1.65 |     0.22 | 2.3804 | 1.1597 |      - |   3.69 KB |
+ | __CreateExpressionInfo_and_CompileFast__ |  18.43 us |  0.3662 us |  0.9321 us |  18.12 us |   1.00 |     0.00 | 2.0447 | 1.0071 | 0.0305 |   3.15 KB |
 
 
 ## Usage
@@ -145,6 +155,7 @@ for finding the supported expression types.
 Hoisted lambda expression (created by compiler):
 
 ```chsarp
+
     var a = new A(); var b = new B();
     Expression<Func<X>> expr = () => new X(a, b);
 
@@ -155,17 +166,51 @@ Hoisted lambda expression (created by compiler):
 Manually composed lambda expression:
 
 ```chsarp
+
     var a = new A();
     var bParamExpr = Expression.Parameter(typeof(B), "b");
     var expr = Expression.Lambda(
         Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
             Expression.Constant(a, typeof(A)), bParamExpr),
+
         bParamExpr);
 
     var getX = expr.CompileFast();
     var x = getX(new B());
 ```
 
+Lambda `ExpressionInfo`:
+
+```chsarp
+
+    var a = new A();
+    var bParamExpr = ExpressionInfo.Parameter(typeof(B), "b");
+    var expr = ExpressionInfo.Lambda(
+        ExpressionInfo.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
+            ExpressionInfo.Constant(a, typeof(A)), bParamExpr),
+
+        bParamExpr);
+
+    var getX = expr.CompileFast();
+    var x = getX(new B());
+```
+
+__Note:__ The way to simplify your life when working with expressions is C# 6 `using static` construct
+
+```chsarp
+
+    using static System.Linq.Expressions.Expression;
+// or
+//  using static FastExpressionCompiler.ExpressionInfo;
+
+    var a = new A();
+    var bParamExpr = Parameter(typeof(B), "b");
+    var expr = Lambda(
+        New(typeof(X).GetTypeInfo().DeclaredConstructors.First(), Constant(a, typeof(A)), bParamExpr),
+        bParamExpr);
+
+    var x = expr.CompileFast()(new B());
+```
 
 ## State
 
