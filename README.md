@@ -134,14 +134,16 @@ Hopefully, you are checking the expression arguments yourself, and not waiting f
 __Note:__ At the moment `ExpressionInfo` is not supported for all supported expression types
 (#46).
 
-#### Creating expression
+
+Creating expression:
 
  |               Method     |     Mean |     Error |    StdDev |   Median | Scaled | ScaledSD |  Gen 0 | Allocated |
  |------------------------- |---------:|----------:|----------:|---------:|-------:|---------:|-------:|----------:|
  |     CreateExpression     | 6.788 us | 0.2688 us | 0.7625 us | 6.537 us |   4.00 |     0.50 | 0.9003 |    1424 B |
  | __CreateExpressionInfo__ | 1.703 us | 0.0364 us | 0.0973 us | 1.691 us |   1.00 |     0.00 | 0.5951 |     936 B |
 
-#### Creating and compiling
+
+Creating and compiling:
 
  |                               Method     |      Mean |      Error |     StdDev |    Median | Scaled | ScaledSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
  |----------------------------------------- |----------:|-----------:|-----------:|----------:|-------:|---------:|-------:|-------:|-------:|----------:|
@@ -214,7 +216,7 @@ __Note:__ The way to simplify your life when working with expressions is C# 6 `u
 
 ## State
 
-Originally the project was part of [DryIoc], 
+Originally the project is part of [DryIoc], 
 then split for more general adoption.
 
 Some users: [Marten], [Rebus], [ExpressionToCodeLib]
