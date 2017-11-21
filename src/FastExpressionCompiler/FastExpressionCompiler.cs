@@ -23,6 +23,7 @@ THE SOFTWARE.
 */
 
 // ReSharper disable CoVariantArrayConversion
+
 namespace FastExpressionCompiler
 {
     using System;
@@ -206,17 +207,10 @@ namespace FastExpressionCompiler
         #endregion
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
-        /// <typeparam name="TDelegate">The compatible delegate type, otherwise it will throw.</typeparam>
-        /// <param name="lambdaExpr">Lambda expression to compile.</param>
-        /// <returns>Compiled delegate.</returns>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr)
-            where TDelegate : class
-        {
-            var paramExprs = lambdaExpr.Parameters;
-            var paramTypes = Tools.GetParamExprTypes(paramExprs);
-            var expr = lambdaExpr.Body;
-            return TryCompile<TDelegate>(expr, paramExprs, paramTypes, expr.Type);
-        }
+            where TDelegate : class => 
+            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters, 
+                Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.Body.Type);
 
         /// <summary>Compiles expression to delegate by emitting the IL. 
         /// If sub-expressions are not supported by emitter, then the method returns null.
@@ -230,11 +224,10 @@ namespace FastExpressionCompiler
             Expression bodyExpr, IList<ParameterExpression> paramExprs, Type[] paramTypes,
             Type returnType) where TDelegate : class
         {
-            var paramArray = paramExprs as ParameterExpression[] ?? paramExprs.ToArray();
+            var paramArray = paramExprs as ParameterExpression[] ?? paramExprs.ToArray(); // todo: Improve, better remove
             ClosureInfo ignored = null;
-            return (TDelegate)TryCompile(ref ignored,
-                typeof(TDelegate), paramTypes, returnType,
-                bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramArray);
+            return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
+                paramTypes, returnType, bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramArray);
         }
 
         /// <summary>Tries to compile lambda expression info.</summary>
@@ -242,27 +235,15 @@ namespace FastExpressionCompiler
         /// <param name="lambdaExpr">Lambda expression to compile.</param>
         /// <returns>Compiled delegate or null.</returns>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpressionInfo lambdaExpr)
-            where TDelegate : class
-        {
-            var paramExprs = lambdaExpr.Parameters;
-            var paramTypes = Tools.GetParamExprTypes(paramExprs);
-            var body = lambdaExpr.Body;
-            var bodyExpr = body as Expression;
-            return bodyExpr != null
-                ? TryCompile<TDelegate>(bodyExpr, paramExprs, paramTypes, bodyExpr.Type)
-                : TryCompile<TDelegate>((ExpressionInfo)body, paramExprs, paramTypes, body.GetResultType());
-        }
+            where TDelegate : class =>
+            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters, 
+                Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.Body.GetResultType());
 
         /// <summary>Tries to compile lambda expression info.</summary>
-        /// <param name="lambdaExpr">Lambda expression to compile.</param>
-        /// <returns>Compiled delegate or null.</returns>
         public static Delegate TryCompile(this LambdaExpressionInfo lambdaExpr) =>
             TryCompile<Delegate>(lambdaExpr);
 
         /// <summary>Tries to compile lambda expression info.</summary>
-        /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
-        /// <param name="lambdaExpr">Lambda expression to compile.</param>
-        /// <returns>Compiled delegate or null.</returns>
         public static TDelegate TryCompile<TDelegate>(this ExpressionInfo<TDelegate> lambdaExpr)
             where TDelegate : class =>
             TryCompile<TDelegate>((LambdaExpressionInfo)lambdaExpr);
@@ -276,9 +257,8 @@ namespace FastExpressionCompiler
         {
             var paramArray = paramExprs as ParameterExpression[] ?? paramExprs.ToArray();
             ClosureInfo ignored = null;
-            return (TDelegate)TryCompile(ref ignored,
-                typeof(TDelegate), paramTypes, returnType,
-                bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramArray);
+            return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
+                paramTypes, returnType, bodyExpr, bodyExpr.NodeType, returnType, paramArray);
         }
 
         /// <summary>Compiles expression to delegate by emitting the IL. 
@@ -290,9 +270,20 @@ namespace FastExpressionCompiler
         {
             var paramArray = paramExprs as ParameterExpressionInfo[] ?? paramExprs.ToArray();
             ClosureInfo ignored = null;
-            return (TDelegate)TryCompile(ref ignored,
-                typeof(TDelegate), paramTypes, returnType,
-                bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramArray);
+            return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
+                paramTypes, returnType, bodyExpr, bodyExpr.NodeType, returnType, paramArray);
+        }
+
+        /// <summary>Compiles expression to delegate by emitting the IL. 
+        /// If sub-expressions are not supported by emitter, then the method returns null.
+        /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
+        public static TDelegate TryCompile<TDelegate>(
+            object bodyExpr, object[] paramExprs, Type[] paramTypes,
+            Type returnType) where TDelegate : class
+        {
+            ClosureInfo ignored = null;
+            return (TDelegate)TryCompile(ref ignored, typeof(TDelegate), 
+                paramTypes, returnType, bodyExpr, bodyExpr.GetNodeType(), returnType, paramExprs);
         }
 
         private static object TryCompile(ref ClosureInfo closureInfo,
@@ -411,6 +402,7 @@ namespace FastExpressionCompiler
             }
         }
 
+        // Track the info required to build a closure object + some context information not directly related to closure.
         private sealed class ClosureInfo
         {
             // Closed values used by expression and by its nested lambdas
@@ -1097,7 +1089,7 @@ namespace FastExpressionCompiler
             else
             {
                 var lambdaExpr = (LambdaExpression)exprObj;
-                var lambdaParamExprs = lambdaExpr.Parameters.ToArray();
+                object[] lambdaParamExprs = lambdaExpr.Parameters.ToArray();
                 var bodyExpr = lambdaExpr.Body;
                 bodyType = bodyExpr.Type;
                 compiledLambda = TryCompile(ref nestedClosure,
@@ -1341,7 +1333,7 @@ namespace FastExpressionCompiler
                         return EmitNew(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
-                        return EmitNewArray(exprObj, paramExprs, il, closure);
+                        return EmitNewArray(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.MemberInit:
                         return EmitMemberInit(exprObj, exprType, paramExprs, il, closure);
                     case ExpressionType.Lambda:
@@ -1600,9 +1592,10 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitParameter(object paramExprObj, Type paramType, object[] ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitParameter(
+                object paramExprObj, Type paramType, object[] paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                var paramIndex = ps.GetFirstIndex(paramExprObj);
+                var paramIndex = paramExprs.GetFirstIndex(paramExprObj);
 
                 // if parameter is passed, then just load it on stack
                 if (paramIndex != -1)
@@ -1682,38 +1675,40 @@ namespace FastExpressionCompiler
                     && TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, paramExprs, il, closure);
             }
 
-            // todo: check if it is possible to consolidate two methods below via array (with covariance) instead of IList
-            private static bool EmitMany(IList<Expression> exprs, object[] ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMany(
+                IList<Expression> exprs, object[] paramExprs, ILGenerator il, ClosureInfo closure)
             {
                 for (int i = 0, n = exprs.Count; i < n; i++)
                 {
                     var expr = exprs[i];
-                    if (!TryEmit(expr, expr.NodeType, expr.Type, ps, il, closure))
+                    if (!TryEmit(expr, expr.NodeType, expr.Type, paramExprs, il, closure))
                         return false;
                 }
                 return true;
             }
 
-            private static bool EmitMany(IList<object> exprObjects, object[] ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitMany(
+                IList<object> exprObjects, object[] paramExprs, ILGenerator il, ClosureInfo closure)
             {
                 for (int i = 0, n = exprObjects.Count; i < n; i++)
                 {
                     var exprObj = exprObjects[i];
                     var exprMeta = GetExpressionMeta(exprObj);
-                    if (!TryEmit(exprObj, exprMeta.Key, exprMeta.Value, ps, il, closure))
+                    if (!TryEmit(exprObj, exprMeta.Key, exprMeta.Value, paramExprs, il, closure))
                         return false;
                 }
                 return true;
             }
 
-            private static bool EmitConvert(object exprObj, Type targetType, object[] ps, ILGenerator il, ClosureInfo closure)
+            private static bool EmitConvert(
+                object exprObj, Type targetType, object[] paramExprs, ILGenerator il, ClosureInfo closure)
             {
                 var exprInfo = exprObj as UnaryExpressionInfo;
                 Type sourceType;
                 if (exprInfo != null)
                 {
                     var opInfo = exprInfo.Operand;
-                    if (!TryEmit(opInfo, opInfo.NodeType, opInfo.Type, ps, il, closure))
+                    if (!TryEmit(opInfo, opInfo.NodeType, opInfo.Type, paramExprs, il, closure))
                         return false;
                     sourceType = opInfo.Type;
                 }
@@ -1721,7 +1716,7 @@ namespace FastExpressionCompiler
                 {
                     var expr = (UnaryExpression)exprObj;
                     var opExpr = expr.Operand;
-                    if (!TryEmit(opExpr, opExpr.NodeType, opExpr.Type, ps, il, closure))
+                    if (!TryEmit(opExpr, opExpr.NodeType, opExpr.Type, paramExprs, il, closure))
                         return false;
                     sourceType = opExpr.Type;
                 }
@@ -1779,7 +1774,8 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitConstant(object exprObj, Type exprType, ILGenerator il, ClosureInfo closure)
+            private static bool EmitConstant(
+                object exprObj, Type exprType, ILGenerator il, ClosureInfo closure)
             {
                 var constExprInfo = exprObj as ConstantExpressionInfo;
                 var constantValue = constExprInfo != null ? constExprInfo.Value : ((ConstantExpression)exprObj).Value;
@@ -1876,7 +1872,7 @@ namespace FastExpressionCompiler
             }
 
             // if itemType is null, then itemExprObj should be not null
-            private static void LoadClosureFieldOrItem(ClosureInfo closure, ILGenerator il, int itemIndex, 
+            private static void LoadClosureFieldOrItem(ClosureInfo closure, ILGenerator il, int itemIndex,
                 Type itemType, object itemExprObj = null)
             {
                 il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
@@ -1904,21 +1900,23 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static bool EmitNew(object exprObj, Type exprType, object[] ps, ILGenerator il, ClosureInfo closure,
+            // todo: Replace result variable with a closureInfo block
+            private static bool EmitNew(
+                object exprObj, Type exprType, object[] paramExprs, ILGenerator il, ClosureInfo closure,
                 LocalBuilder resultValueVar = null)
             {
                 ConstructorInfo ctor;
                 var exprInfo = exprObj as NewExpressionInfo;
                 if (exprInfo != null)
                 {
-                    if (!EmitMany(exprInfo.Arguments, ps, il, closure))
+                    if (!EmitMany(exprInfo.Arguments, paramExprs, il, closure))
                         return false;
                     ctor = exprInfo.Constructor;
                 }
                 else
                 {
                     var expr = (NewExpression)exprObj;
-                    if (!EmitMany(expr.Arguments, ps, il, closure))
+                    if (!EmitMany(expr.Arguments, paramExprs, il, closure))
                         return false;
                     ctor = expr.Constructor;
                 }
@@ -1940,24 +1938,24 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitNewArray(object exprObj, object[] paramExprs, ILGenerator il, ClosureInfo closure)
+            private static bool EmitNewArray(
+                object exprObj, Type arrayType, object[] paramExprs, ILGenerator il, ClosureInfo closure)
             {
                 var exprInfo = exprObj as NewArrayExpressionInfo;
                 if (exprInfo != null)
-                    return EmitNewArrayInfo(exprInfo, paramExprs, il, closure);
+                    return EmitNewArrayInfo(exprInfo, arrayType, paramExprs, il, closure);
 
                 var expr = (NewArrayExpression)exprObj;
                 var elems = expr.Expressions;
-                var arrType = expr.Type;
-                var elemType = arrType.GetElementType();
+                var elemType = arrayType.GetElementType();
                 if (elemType == null)
                     return false;
 
                 var isElemOfValueType = elemType.GetTypeInfo().IsValueType;
 
-                var arrVar = il.DeclareLocal(arrType);
+                var arrVar = il.DeclareLocal(arrayType);
 
-                var rank = arrType.GetArrayRank();
+                var rank = arrayType.GetArrayRank();
                 if (rank == 1) // one dimensional
                 {
                     EmitLoadConstantInt(il, elems.Count);
@@ -1972,7 +1970,7 @@ namespace FastExpressionCompiler
                             return false;
                     }
 
-                    var constructor = arrType.GetTypeInfo().DeclaredConstructors.GetFirst();
+                    var constructor = arrayType.GetTypeInfo().DeclaredConstructors.GetFirst();
                     if (constructor == null) return false;
                     il.Emit(OpCodes.Newobj, constructor);
 
@@ -2005,17 +2003,17 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitNewArrayInfo(NewArrayExpressionInfo expr, object[] paramExprs, ILGenerator il, ClosureInfo closure)
+            private static bool EmitNewArrayInfo(
+                NewArrayExpressionInfo expr, Type arrayType, object[] paramExprs, ILGenerator il, ClosureInfo closure)
             {
                 var elemExprObjects = expr.Arguments;
-                var arrType = expr.Type;
-                var elemType = arrType.GetElementType();
+                var elemType = arrayType.GetElementType();
                 if (elemType == null)
                     return false;
 
                 var isElemOfValueType = elemType.GetTypeInfo().IsValueType;
 
-                var arrVar = il.DeclareLocal(arrType);
+                var arrVar = il.DeclareLocal(arrayType);
 
                 EmitLoadConstantInt(il, elemExprObjects.Length);
                 il.Emit(OpCodes.Newarr, elemType);
@@ -2063,6 +2061,7 @@ namespace FastExpressionCompiler
                 if (exprInfo != null)
                     return EmitMemberInitInfo(exprInfo, exprType, paramExprs, il, closure);
 
+                // todo: Use closureInfo Block to track the variable instead
                 LocalBuilder valueVar = null;
                 if (exprType.GetTypeInfo().IsValueType)
                     valueVar = il.DeclareLocal(exprType);
@@ -2489,8 +2488,8 @@ namespace FastExpressionCompiler
 
                 if (instanceType != null) // it is a non-static member access
                 {
-                    // value type special treatment: 
-                    // load address of value instance in order to access value member or call a method (does a copy).
+                    // value type special treatment to load address of value instance
+                    // in order to access value member or call a method (does a copy).
                     // todo: May be optimized for method call to load address of initial variable without copy
                     if (instanceType.GetTypeInfo().IsValueType)
                     {
@@ -2642,7 +2641,7 @@ namespace FastExpressionCompiler
                             if (outerParamIndex == -1)
                                 return false; // impossible, better to throw?
 
-                            LoadClosureFieldOrItem(closure, il, outerConstants.Length + outerParamIndex, 
+                            LoadClosureFieldOrItem(closure, il, outerConstants.Length + outerParamIndex,
                                 nestedUsedParamType, nestedUsedParam);
                         }
                     }
@@ -2744,7 +2743,7 @@ namespace FastExpressionCompiler
                 if (!leftOpTypeInfo.IsPrimitive &&
                     !leftOpTypeInfo.IsEnum)
                 {
-                    var methodName 
+                    var methodName
                         = exprNodeType == ExpressionType.Equal ? "op_Equality"
                         : exprNodeType == ExpressionType.NotEqual ? "op_Inequality"
                         : exprNodeType == ExpressionType.GreaterThan ? "op_GreaterThan"
@@ -2757,7 +2756,7 @@ namespace FastExpressionCompiler
                         return false;
 
                     // todo: for now handling only parameters of the same type
-                    var method = leftOpTypeInfo.DeclaredMethods.GetFirst(m => 
+                    var method = leftOpTypeInfo.DeclaredMethods.GetFirst(m =>
                         m.IsStatic && m.Name == methodName &&
                         m.GetParameters().All(p => p.ParameterType == leftOpType));
 
@@ -3036,6 +3035,21 @@ namespace FastExpressionCompiler
             return paramTypes;
         }
 
+        public static Type[] GetParamExprTypes(IList<object> paramExprs)
+        {
+            var paramsCount = paramExprs.Count;
+            if (paramsCount == 0)
+                return Empty<Type>();
+
+            if (paramsCount == 1)
+                return new[] { paramExprs[0].GetResultType() };
+
+            var paramTypes = new Type[paramsCount];
+            for (var i = 0; i < paramTypes.Length; i++)
+                paramTypes[i] = paramExprs[i].GetResultType();
+            return paramTypes;
+        }
+
         public static Type GetFuncOrActionType(Type[] paramTypes, Type returnType)
         {
             if (returnType == typeof(void))
@@ -3073,15 +3087,15 @@ namespace FastExpressionCompiler
             }
         }
 
-        public static int GetFirstIndex<T>(this IList<T> ps, object p)
+        public static int GetFirstIndex<T>(this IList<T> source, object item)
         {
-            if (ps == null || ps.Count == 0)
+            if (source == null || source.Count == 0)
                 return -1;
-            var count = ps.Count;
+            var count = source.Count;
             if (count == 1)
-                return ReferenceEquals(ps[0], p) ? 0 : -1;
+                return ReferenceEquals(source[0], item) ? 0 : -1;
             for (var i = 0; i < count; ++i)
-                if (ReferenceEquals(ps[i], p))
+                if (ReferenceEquals(source[i], item))
                     return i;
             return -1;
         }
@@ -3109,12 +3123,11 @@ namespace FastExpressionCompiler
         public static T GetFirst<T>(this IEnumerable<T> source, Func<T, bool> predicate)
         {
             var arr = source as T[];
-            if (arr != null)
-            {
-                var index = arr.GetFirstIndex(predicate);
-                return index == -1 ? default(T) : arr[index];
-            }
-            return source.FirstOrDefault(predicate);
+            if (arr == null)
+                return source.FirstOrDefault(predicate);
+
+            var index = arr.GetFirstIndex(predicate);
+            return index == -1 ? default(T) : arr[index];
         }
 
         public static R[] Project<T, R>(this T[] source, Func<T, R> project)
@@ -3140,7 +3153,7 @@ namespace FastExpressionCompiler
 
         /// <summary>All expressions should have a Type.</summary>
         public abstract Type Type { get; }
-        
+
         /// <summary>Converts back to respective expression so you may Compile it by usual means.</summary>
         public abstract Expression ToExpression();
 
@@ -3200,19 +3213,19 @@ namespace FastExpressionCompiler
             new FieldExpressionInfo(null, field);
 
         /// <summary>Instance field</summary>
-        public static FieldExpressionInfo Property(ExpressionInfo instance, FieldInfo field) =>
+        public static FieldExpressionInfo Field(ExpressionInfo instance, FieldInfo field) =>
             new FieldExpressionInfo(instance, field);
 
         /// <summary>Analog of Expression.Lambda</summary>
         public static LambdaExpressionInfo Lambda(ExpressionInfo body) =>
-            new LambdaExpressionInfo(body, Tools.Empty<ParameterExpression>());
+            new LambdaExpressionInfo(body, Tools.Empty<object>());
 
         /// <summary>Analog of Expression.Lambda</summary>
         public static LambdaExpressionInfo Lambda(ExpressionInfo body, params ParameterExpression[] parameters) =>
             new LambdaExpressionInfo(body, parameters);
 
         /// <summary>Analog of Expression.Lambda</summary>
-        public static LambdaExpressionInfo Lambda(object body, params ParameterExpression[] parameters) =>
+        public static LambdaExpressionInfo Lambda(object body, params object[] parameters) =>
             new LambdaExpressionInfo(body, parameters);
 
         /// <summary>Analog of Expression.Convert</summary>
@@ -3224,7 +3237,13 @@ namespace FastExpressionCompiler
             new ExpressionInfo<TDelegate>(body, Tools.Empty<ParameterExpression>());
 
         /// <summary>Analog of Expression.Lambda</summary>
-        public static ExpressionInfo<TDelegate> Lambda<TDelegate>(ExpressionInfo body, params ParameterExpression[] parameters) =>
+        public static ExpressionInfo<TDelegate> Lambda<TDelegate>(ExpressionInfo body,
+            params ParameterExpression[] parameters) =>
+            new ExpressionInfo<TDelegate>(body, parameters);
+
+        /// <summary>Analog of Expression.Lambda</summary>
+        public static ExpressionInfo<TDelegate> Lambda<TDelegate>(ExpressionInfo body,
+            params ParameterExpressionInfo[] parameters) =>
             new ExpressionInfo<TDelegate>(body, parameters);
 
         /// <summary>Analog of Expression.ArrayIndex</summary>
@@ -3246,19 +3265,19 @@ namespace FastExpressionCompiler
 
         /// <summary>Enables member assignment on existing instance expression.</summary>
         public static ExpressionInfo MemberInit(ExpressionInfo instanceExpr,
-            params MemberAssignmentInfo[] assignments) => 
+            params MemberAssignmentInfo[] assignments) =>
             new MemberInitExpressionInfo(instanceExpr, assignments);
 
         /// <summary>Constructs an array given the array type and item initializer expressions.</summary>
-        public static NewArrayExpressionInfo NewArrayInit(Type type, params object[] initializers) => 
+        public static NewArrayExpressionInfo NewArrayInit(Type type, params object[] initializers) =>
             new NewArrayExpressionInfo(type, initializers);
 
         /// <summary>Constructs an array given the array type and item initializer expressions.</summary>
-        public static NewArrayExpressionInfo NewArrayInit(Type type, params ExpressionInfo[] initializers) => 
+        public static NewArrayExpressionInfo NewArrayInit(Type type, params ExpressionInfo[] initializers) =>
             new NewArrayExpressionInfo(type, initializers);
 
         /// <summary>Constructs assignment expression.</summary>
-        public static ExpressionInfo Assign(ExpressionInfo left, ExpressionInfo right) => 
+        public static ExpressionInfo Assign(ExpressionInfo left, ExpressionInfo right) =>
             new AssignBinaryExpressionInfo(left, right, left.Type);
 
         /// <summary>Constructs assignment expression from possibly mixed types of left and right.</summary>
@@ -3328,7 +3347,7 @@ namespace FastExpressionCompiler
     public class ArrayIndexExpressionInfo : BinaryExpressionInfo
     {
         /// <summary>Constructor</summary>
-        public ArrayIndexExpressionInfo(object left, object right, Type type) 
+        public ArrayIndexExpressionInfo(object left, object right, Type type)
             : base(ExpressionType.ArrayIndex, left, right, type) { }
 
         /// <inheritdoc />
@@ -3412,7 +3431,7 @@ namespace FastExpressionCompiler
         }
 
         /// <summary>Constructor</summary>
-        public ParameterExpressionInfo(ParameterExpression paramExpr) 
+        public ParameterExpressionInfo(ParameterExpression paramExpr)
             : this(paramExpr.Type, paramExpr.Name)
         {
             _parameter = paramExpr;
@@ -3521,7 +3540,7 @@ namespace FastExpressionCompiler
             Expression.Call(Object.ToExpression(), Method, ArgumentsToExpressions());
 
         /// <summary>Construct from method info and argument expressions</summary>
-        public MethodCallExpressionInfo(ExpressionInfo @object, MethodInfo method, params object[] arguments) 
+        public MethodCallExpressionInfo(ExpressionInfo @object, MethodInfo method, params object[] arguments)
             : base(arguments)
         {
             Object = @object;
@@ -3595,7 +3614,7 @@ namespace FastExpressionCompiler
         public ExpressionInfo Expression;
 
         /// <summary>Converts back to MemberAssignment</summary>
-        public MemberBinding ToMemberAssignment() => 
+        public MemberBinding ToMemberAssignment() =>
             System.Linq.Expressions.Expression.Bind(Member, Expression.ToExpression());
 
         /// <summary>Constructs out of member and expression to assign.</summary>
@@ -3631,7 +3650,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>LambdaExpression</summary>
-    public class LambdaExpressionInfo : ExpressionInfo
+    public class LambdaExpressionInfo : ArgumentsExpressionInfo
     {
         /// <inheritdoc />
         public override ExpressionType NodeType => ExpressionType.Lambda;
@@ -3643,20 +3662,20 @@ namespace FastExpressionCompiler
         public readonly object Body;
 
         /// <summary>List of parameters.</summary>
-        public readonly ParameterExpression[] Parameters;
+        public object[] Parameters => Arguments;
 
         /// <inheritdoc />
         public override Expression ToExpression() => ToLambdaExpression();
 
         /// <summary>subject</summary>
         public LambdaExpression ToLambdaExpression() =>
-            Expression.Lambda(Body.ToExpression(), Parameters);
+            Expression.Lambda(Body.ToExpression(),
+                Parameters.Project(p => (ParameterExpression)p.ToExpression()));
 
         /// <summary>Constructor</summary>
-        public LambdaExpressionInfo(object body, ParameterExpression[] parameters)
+        public LambdaExpressionInfo(object body, object[] parameters) : base(parameters)
         {
             Body = body;
-            Parameters = parameters;
             var bodyType = body.GetResultType();
             Type = Tools.GetFuncOrActionType(Tools.GetParamExprTypes(parameters), bodyType);
         }
@@ -3670,12 +3689,13 @@ namespace FastExpressionCompiler
 
         /// <inheritdoc />
         public override Expression ToExpression() => ToLambdaExpression();
-        
+
         /// <summary>subject</summary>
         public new Expression<TDelegate> ToLambdaExpression() =>
-            Expression.Lambda<TDelegate>(Body.ToExpression(), Parameters);
+            Expression.Lambda<TDelegate>(Body.ToExpression(),
+                Parameters.Project(p => (ParameterExpression)p.ToExpression()));
 
         /// <summary>Constructor</summary>
-        public ExpressionInfo(ExpressionInfo body, ParameterExpression[] parameters) : base(body, parameters) { }
+        public ExpressionInfo(ExpressionInfo body, object[] parameters) : base(body, parameters) { }
     }
 }
