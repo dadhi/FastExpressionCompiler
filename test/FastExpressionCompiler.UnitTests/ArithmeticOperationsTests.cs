@@ -118,7 +118,7 @@ namespace FastExpressionCompiler.UnitTests
             expectedResult.ShouldBeResultOfArithmeticOperation((a1, a2) => Subtract(a1, a2), param1, param2);
 
         [Test]
-        public void Can_substarct_with_unchecked_overflow()
+        public void Can_substract_with_unchecked_overflow()
         {
             Expression<Func<int, int, int>> expr = (arg1, arg2) => unchecked(arg1 - arg2);
 
@@ -129,7 +129,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Can_not_substarct_with_checked_overflow()
+        public void Can_not_substract_with_checked_overflow()
         {
             Expression<Func<int, int, int>> expr = (arg1, arg2) => checked(arg1 - arg2);
 
@@ -354,9 +354,9 @@ namespace FastExpressionCompiler.UnitTests
         }
     }
 
-    internal static class ArithmeticAssertationExtensions
+    internal static class ArithmeticAssertExtensions
     {
-        public static void ShouldBeResultOfArithmeticOperation(this object expectedResult, Func<ParameterExpression, ParameterExpression, Expression> arithmeticOperation, object param1, object param2)
+        public static void ShouldBeResultOfArithmeticOperation<T>(this T expectedResult, Func<ParameterExpression, ParameterExpression, Expression> arithmeticOperation, T param1, T param2)
         {
             AssertArithmeticOperation((dynamic)expectedResult, arithmeticOperation, (dynamic)param1, (dynamic)param2);
         }
