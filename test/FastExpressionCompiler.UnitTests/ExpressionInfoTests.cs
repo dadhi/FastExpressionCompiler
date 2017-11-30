@@ -175,7 +175,7 @@ namespace FastExpressionCompiler.UnitTests
                         Convert(
                             ArrayIndex(stateParamExpr, Constant(11)), 
                             typeof(string)),
-                        NewArrayInit(typeof(ID[]),
+                        NewArrayInit(typeof(ID),
                             New(_ctorOfD1),
                             New(_ctorOfD2))),
                     Bind(_propAProp,

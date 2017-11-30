@@ -208,8 +208,8 @@ namespace FastExpressionCompiler
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr)
-            where TDelegate : class => 
-            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters, 
+            where TDelegate : class =>
+            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters,
                 Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.Body.Type);
 
         /// <summary>Compiles expression to delegate by emitting the IL. 
@@ -236,7 +236,7 @@ namespace FastExpressionCompiler
         /// <returns>Compiled delegate or null.</returns>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpressionInfo lambdaExpr)
             where TDelegate : class =>
-            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters, 
+            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters,
                 Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.Body.GetResultType());
 
         /// <summary>Tries to compile lambda expression info.</summary>
@@ -282,7 +282,7 @@ namespace FastExpressionCompiler
             Type returnType) where TDelegate : class
         {
             ClosureInfo ignored = null;
-            return (TDelegate)TryCompile(ref ignored, typeof(TDelegate), 
+            return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
                 paramTypes, returnType, bodyExpr, bodyExpr.GetNodeType(), returnType, paramExprs);
         }
 
@@ -1052,7 +1052,8 @@ namespace FastExpressionCompiler
             }
         }
 
-        private static bool TryCollectBoundConstants(ref ClosureInfo closure, object[] exprObjects, object[] paramExprs)
+        private static bool TryCollectBoundConstants(ref ClosureInfo closure,
+            object[] exprObjects, object[] paramExprs)
         {
             for (var i = 0; i < exprObjects.Length; i++)
             {
@@ -2011,13 +2012,13 @@ namespace FastExpressionCompiler
                 if (elemType == null)
                     return false;
 
-                var isElemOfValueType = elemType.GetTypeInfo().IsValueType;
-
                 var arrVar = il.DeclareLocal(arrayType);
 
                 EmitLoadConstantInt(il, elemExprObjects.Length);
                 il.Emit(OpCodes.Newarr, elemType);
                 il.Emit(OpCodes.Stloc, arrVar);
+
+                var isElemOfValueType = elemType.GetTypeInfo().IsValueType;
 
                 for (var i = 0; i < elemExprObjects.Length; i++)
                 {
@@ -2990,7 +2991,7 @@ namespace FastExpressionCompiler
             type.GetTypeInfo().DeclaredConstructors.GetFirst(c => c.GetParameters().Project(p => p.ParameterType).SequenceEqual(args));
 
         public static Expression ToExpression(this object exprObj) =>
-            exprObj as Expression ?? ((ExpressionInfo)exprObj).ToExpression();
+            exprObj == null ? null : exprObj as Expression ?? ((ExpressionInfo)exprObj).ToExpression();
 
         public static ExpressionType GetNodeType(this object exprObj) =>
             (exprObj as Expression)?.NodeType ?? ((ExpressionInfo)exprObj).NodeType;
@@ -3022,29 +3023,27 @@ namespace FastExpressionCompiler
 
         public static Type[] GetParamExprTypes(IList<ParameterExpression> paramExprs)
         {
-            var paramsCount = paramExprs.Count;
-            if (paramsCount == 0)
+            if (paramExprs == null || paramExprs.Count == 0)
                 return Empty<Type>();
 
-            if (paramsCount == 1)
-                return new[] { paramExprs[0].Type };
+            if (paramExprs.Count == 1)
+                return new[] { paramExprs[0].GetResultType() };
 
-            var paramTypes = new Type[paramsCount];
+            var paramTypes = new Type[paramExprs.Count];
             for (var i = 0; i < paramTypes.Length; i++)
-                paramTypes[i] = paramExprs[i].Type;
+                paramTypes[i] = paramExprs[i].GetResultType();
             return paramTypes;
         }
 
         public static Type[] GetParamExprTypes(IList<object> paramExprs)
         {
-            var paramsCount = paramExprs.Count;
-            if (paramsCount == 0)
+            if (paramExprs == null || paramExprs.Count == 0)
                 return Empty<Type>();
 
-            if (paramsCount == 1)
+            if (paramExprs.Count == 1)
                 return new[] { paramExprs[0].GetResultType() };
 
-            var paramTypes = new Type[paramsCount];
+            var paramTypes = new Type[paramExprs.Count];
             for (var i = 0; i < paramTypes.Length; i++)
                 paramTypes[i] = paramExprs[i].GetResultType();
             return paramTypes;
@@ -3218,15 +3217,20 @@ namespace FastExpressionCompiler
 
         /// <summary>Analog of Expression.Lambda</summary>
         public static LambdaExpressionInfo Lambda(ExpressionInfo body) =>
-            new LambdaExpressionInfo(body, Tools.Empty<object>());
+            new LambdaExpressionInfo(null, body, Tools.Empty<object>());
 
         /// <summary>Analog of Expression.Lambda</summary>
-        public static LambdaExpressionInfo Lambda(ExpressionInfo body, params ParameterExpression[] parameters) =>
-            new LambdaExpressionInfo(body, parameters);
+        public static LambdaExpressionInfo Lambda(ExpressionInfo body,
+            params ParameterExpression[] parameters) =>
+            new LambdaExpressionInfo(null, body, parameters);
 
         /// <summary>Analog of Expression.Lambda</summary>
         public static LambdaExpressionInfo Lambda(object body, params object[] parameters) =>
-            new LambdaExpressionInfo(body, parameters);
+            new LambdaExpressionInfo(null, body, parameters);
+
+        /// <summary>Analog of Expression.Lambda with lambda type specified</summary>
+        public static LambdaExpressionInfo Lambda(Type delegateType, object body, params object[] parameters) =>
+            new LambdaExpressionInfo(delegateType, body, parameters);
 
         /// <summary>Analog of Expression.Convert</summary>
         public static UnaryExpressionInfo Convert(ExpressionInfo operand, Type targetType) =>
@@ -3387,7 +3391,8 @@ namespace FastExpressionCompiler
 
         /// <inheritdoc />
         public override Expression ToExpression() =>
-            Expression.MemberInit(NewExpressionInfo.ToNewExpression(), Bindings.Project(b => b.ToMemberAssignment()));
+            Expression.MemberInit(NewExpressionInfo.ToNewExpression(), 
+                Bindings.Project(b => b.ToMemberAssignment()));
 
         /// <summary>Constructs from the new expression and member initialization list.</summary>
         public MemberInitExpressionInfo(NewExpressionInfo newExpressionInfo, MemberAssignmentInfo[] bindings)
@@ -3397,7 +3402,7 @@ namespace FastExpressionCompiler
         public MemberInitExpressionInfo(ExpressionInfo expressionInfo, MemberAssignmentInfo[] bindings)
         {
             ExpressionInfo = expressionInfo;
-            Bindings = bindings;
+            Bindings = bindings ?? Tools.Empty<MemberAssignmentInfo>();
         }
     }
 
@@ -3459,7 +3464,7 @@ namespace FastExpressionCompiler
         public ConstantExpressionInfo(object value, Type type = null)
         {
             Value = value;
-            Type = type ?? value?.GetType() ?? typeof(object);
+            Type = type ?? Value?.GetType() ?? typeof(object);
         }
     }
 
@@ -3469,11 +3474,14 @@ namespace FastExpressionCompiler
         /// <summary>List of arguments</summary>
         public readonly object[] Arguments;
 
-        /// <summary>Convert to expressions</summary>
+        /// <summary>Converts arguments to expressions</summary>
         protected Expression[] ArgumentsToExpressions() => Arguments.Project(Tools.ToExpression);
 
         /// <summary>Constructor</summary>
-        protected ArgumentsExpressionInfo(object[] arguments) { Arguments = arguments; }
+        protected ArgumentsExpressionInfo(object[] arguments)
+        {
+            Arguments = arguments ?? Tools.Empty<object>();
+        }
     }
 
     /// <summary>Analog of NewExpression</summary>
@@ -3511,13 +3519,17 @@ namespace FastExpressionCompiler
         public override Type Type { get; }
 
         /// <inheritdoc />
-        public override Expression ToExpression() => Expression.NewArrayInit(Type, ArgumentsToExpressions());
+        public override Expression ToExpression() =>
+            Expression.NewArrayInit(_elementType, ArgumentsToExpressions());
 
         /// <summary>Array type and initializer</summary>
-        public NewArrayExpressionInfo(Type type, object[] initializers) : base(initializers)
+        public NewArrayExpressionInfo(Type elementType, object[] elements) : base(elements)
         {
-            Type = type;
+            Type = elementType.MakeArrayType();
+            _elementType = elementType;
         }
+
+        private readonly Type _elementType;
     }
 
     /// <summary>Analog of MethodCallExpression</summary>
@@ -3537,7 +3549,7 @@ namespace FastExpressionCompiler
 
         /// <inheritdoc />
         public override Expression ToExpression() =>
-            Expression.Call(Object.ToExpression(), Method, ArgumentsToExpressions());
+            Expression.Call(Object?.ToExpression(), Method, ArgumentsToExpressions());
 
         /// <summary>Construct from method info and argument expressions</summary>
         public MethodCallExpressionInfo(ExpressionInfo @object, MethodInfo method, params object[] arguments)
@@ -3673,11 +3685,13 @@ namespace FastExpressionCompiler
                 Parameters.Project(p => (ParameterExpression)p.ToExpression()));
 
         /// <summary>Constructor</summary>
-        public LambdaExpressionInfo(object body, object[] parameters) : base(parameters)
+        public LambdaExpressionInfo(Type delegateType, object body, object[] parameters) : base(parameters)
         {
             Body = body;
             var bodyType = body.GetResultType();
-            Type = Tools.GetFuncOrActionType(Tools.GetParamExprTypes(parameters), bodyType);
+            Type = delegateType != null && delegateType != typeof(Delegate)
+                ? delegateType
+                : Tools.GetFuncOrActionType(Tools.GetParamExprTypes(parameters), bodyType);
         }
     }
 
@@ -3685,7 +3699,7 @@ namespace FastExpressionCompiler
     public sealed class ExpressionInfo<TDelegate> : LambdaExpressionInfo
     {
         /// <summary>Type of lambda</summary>
-        public Type DelegateType => typeof(TDelegate);
+        public Type DelegateType => Type;
 
         /// <inheritdoc />
         public override Expression ToExpression() => ToLambdaExpression();
@@ -3696,6 +3710,7 @@ namespace FastExpressionCompiler
                 Parameters.Project(p => (ParameterExpression)p.ToExpression()));
 
         /// <summary>Constructor</summary>
-        public ExpressionInfo(ExpressionInfo body, object[] parameters) : base(body, parameters) { }
+        public ExpressionInfo(ExpressionInfo body, object[] parameters)
+            : base(typeof(TDelegate), body, parameters) { }
     }
 }
