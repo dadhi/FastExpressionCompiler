@@ -2012,13 +2012,13 @@ namespace FastExpressionCompiler
                 if (elemType == null)
                     return false;
 
+                var isElemOfValueType = elemType.GetTypeInfo().IsValueType;
+
                 var arrVar = il.DeclareLocal(arrayType);
 
                 EmitLoadConstantInt(il, elemExprObjects.Length);
                 il.Emit(OpCodes.Newarr, elemType);
                 il.Emit(OpCodes.Stloc, arrVar);
-
-                var isElemOfValueType = elemType.GetTypeInfo().IsValueType;
 
                 for (var i = 0; i < elemExprObjects.Length; i++)
                 {
@@ -3155,6 +3155,9 @@ namespace FastExpressionCompiler
 
         /// <summary>Converts back to respective expression so you may Compile it by usual means.</summary>
         public abstract Expression ToExpression();
+
+        /// <summary>Converts to Expression and outputs its as string</summary>
+        public override string ToString() => ToExpression().ToString();
 
         /// <summary>Analog of Expression.Parameter</summary>
         /// <remarks>For now it is return just an `Expression.Parameter`</remarks>
