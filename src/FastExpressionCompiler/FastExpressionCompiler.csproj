@@ -12,6 +12,11 @@
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
+      v1.6.0
+      - added: ExpressionInfo.ToString()
+      - added: Overload to compile most generic ExpressionInfo to lambda
+      - fixed: #49 Why the result is incorrect?
+      - fixed: ExpressionInfo to Expression conversion in cirtain cases
       v1.5.0
       - added: #10 TryExpression support
       - added: #18 Support Expression.Block
