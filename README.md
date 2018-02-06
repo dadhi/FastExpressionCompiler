@@ -32,7 +32,7 @@ how complex is expression, does it have a closure over the values, does it have 
 
 ## How to install
 
-Either from [NuGet](https://www.nuget.org/packages/FastExpressionCompiler) or grab a single [FastExpressioncCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) file.
+Either from [NuGet](https://www.nuget.org/packages/FastExpressionCompiler) or grab a single [FastExpressionCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) file.
 
 ## Benchmarks
 
