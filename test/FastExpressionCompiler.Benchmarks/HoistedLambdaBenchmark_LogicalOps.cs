@@ -1,54 +1,58 @@
 using System;
 using System.Linq.Expressions;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Attributes.Exporters;
 
 namespace FastExpressionCompiler.Benchmarks
 {
     public class HoistedLambdaBenchmark_LogicalOps
     {
-        private static Expression<Func<bool>> And_with_or()
+        private static Expression<Func<bool>> Get_and_with_or_Expr()
         {
             var x = 1;
             var s = "Test";
             return () => x == 1 && (s.Contains("S") || s.Contains("s"));
         }
 
-        private static readonly Expression<Func<bool>> _hoistedExpr = And_with_or();
+        private static Func<bool> Get_and_with_or_Lambda()
+        {
+            var x = 1;
+            var s = "Test";
+            return () => x == 1 && (s.Contains("S") || s.Contains("s"));
+        }
 
-        [MarkdownExporter]
+        private static readonly Expression<Func<bool>> _and_with_or_expr = Get_and_with_or_Expr();
+
+        [MemoryDiagnoser]
         public class Compile
         {
             [Benchmark]
             public object Compile_()
             {
-                return _hoistedExpr.Compile();
+                return _and_with_or_expr.Compile();
             }
 
             [Benchmark]
             public object CompileFast()
             {
-                return _hoistedExpr.CompileFast();
+                return _and_with_or_expr.CompileFast();
             }
         }
 
-        [MarkdownExporter]
+        [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true)]
         public class Invoke
         {
-            private static readonly Func<bool> _lambdaCompiled = _hoistedExpr.Compile();
-            private static readonly Func<bool> _lambdaCompiledFast = _hoistedExpr.CompileFast();
+            private static readonly Func<bool> _lambda = Get_and_with_or_Lambda();
+            private static readonly Func<bool> _expr_Compiled = _and_with_or_expr.Compile();
+            private static readonly Func<bool> _expr_CompiledFast = _and_with_or_expr.CompileFast();
+
+            [Benchmark(Baseline = true)]
+            public object Lambda() => _lambda();
 
             [Benchmark]
-            public object CompiledLambda()
-            {
-                return _lambdaCompiled();
-            }
+            public object Expr_Compiled() => _expr_Compiled();
 
             [Benchmark]
-            public object FastCompiledLambda()
-            {
-                return _lambdaCompiledFast();
-            }
+            public object Expr_CompiledFast() => _expr_CompiledFast();
         }
     }
 }

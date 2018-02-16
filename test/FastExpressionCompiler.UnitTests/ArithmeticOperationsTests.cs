@@ -19,6 +19,18 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Can_sum_with_ExprInfo()
+        {
+            var a = ExpressionInfo.Parameter(typeof(int), "a");
+            var b = ExpressionInfo.Parameter(typeof(int), "b");
+            var expr = ExpressionInfo.Lambda<Func<int, int, int>>(ExpressionInfo.Add(a, b), a, b);
+            var sumFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(sumFunc);
+            Assert.AreEqual(sumFunc(1, 3), 4);
+        }
+
+        [Test]
         public void Can_sum_bytes()
         {
             Expression<Func<byte, byte, int>> expr = (arg1, arg2) => arg1 + arg2;

@@ -3294,6 +3294,22 @@ namespace FastExpressionCompiler
         /// <summary>Invoke</summary>
         public static ExpressionInfo Invoke(ExpressionInfo lambda, params object[] args) =>
             new InvocationExpressionInfo(lambda, args, lambda.Type);
+
+        /// <summary>Binary add</summary>
+        public static ExpressionInfo Add(ExpressionInfo left, ExpressionInfo right) =>
+            new ArithmeticBinaryExpressionInfo(ExpressionType.Add, left, right, left.Type);
+
+        /// <summary>Binary substract</summary>
+        public static ExpressionInfo Substract(ExpressionInfo left, ExpressionInfo right) =>
+            new ArithmeticBinaryExpressionInfo(ExpressionType.Subtract, left, right, left.Type);
+
+        /// <summary>Binary multiply</summary>
+        public static ExpressionInfo Multiply(ExpressionInfo left, ExpressionInfo right) =>
+            new ArithmeticBinaryExpressionInfo(ExpressionType.Multiply, left, right, left.Type);
+
+        /// <summary>Binary divide</summary>
+        public static ExpressionInfo Divide(ExpressionInfo left, ExpressionInfo right) =>
+            new ArithmeticBinaryExpressionInfo(ExpressionType.Divide, left, right, left.Type);
     }
 
     /// <summary>Analog of Convert expression.</summary>
@@ -3348,6 +3364,19 @@ namespace FastExpressionCompiler
             Left = left;
             Right = right;
         }
+    }
+
+    internal class ArithmeticBinaryExpressionInfo : BinaryExpressionInfo
+    {
+        public override Expression ToExpression() =>
+            NodeType == ExpressionType.Add      ? Expression.Add(Left.ToExpression(), Right.ToExpression()) :
+            NodeType == ExpressionType.Subtract ? Expression.Subtract(Left.ToExpression(), Right.ToExpression()) :
+            NodeType == ExpressionType.Multiply ? Expression.Multiply(Left.ToExpression(), Right.ToExpression()) :
+            NodeType == ExpressionType.Divide   ? Expression.Divide(Left.ToExpression(), Right.ToExpression()) :
+            throw new NotSupportedException($"Not valid {NodeType} for arithmetic binary expression.");
+
+        public ArithmeticBinaryExpressionInfo(ExpressionType nodeType, object left, object right, Type type)
+            : base(nodeType, left, right, type) { }
     }
 
     /// <summary>Expression.ArrayIndex </summary>
