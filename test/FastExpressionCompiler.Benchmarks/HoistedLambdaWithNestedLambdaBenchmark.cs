@@ -16,8 +16,7 @@ namespace FastExpressionCompiler.Benchmarks
         {
             var a = new A();
             var b = new B();
-            Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy<A>(() => a), b);
-            return getXExpr;
+            return () => CreateX((aa, bb) => new X(aa, bb), new Lazy<A>(() => a), b);
         }
 
         private static readonly Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
@@ -38,7 +37,7 @@ namespace FastExpressionCompiler.Benchmarks
             }
         }
 
-        [MarkdownExporter, MemoryDiagnoser]
+        [MemoryDiagnoser]
         public class InvokeWithNestedLambda
         {
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
