@@ -250,4 +250,6 @@ paket-files/
 # JetBrains Rider
 .idea/
 *.sln.iml
-/test/FastExpressionCompiler.Benchmarks/*
+
+/test/FastExpressionCompiler.Benchmarks/BenchmarkDotNet.Artifacts/
+/test/FastExpressionCompiler.Benchmarks.FullClr/BenchmarkDotNet.Artifacts/
