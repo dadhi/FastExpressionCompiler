@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp1.1;netcoreapp2.0</TargetFrameworks>
+    <TargetFrameworks>netcoreapp1.1;netcoreapp2.0;net46</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +16,12 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0" />
     <PackageReference Include="NUnit" Version="3.9.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.9.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net46'">
+    <Reference Include="Microsoft.CSharp">
+      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\Microsoft.CSharp.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

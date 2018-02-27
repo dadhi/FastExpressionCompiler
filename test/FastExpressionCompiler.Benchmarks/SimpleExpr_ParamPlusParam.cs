@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Linq.Expressions;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Attributes.Jobs;
 
 namespace FastExpressionCompiler.Benchmarks
 {
-    [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true)]
+    [ClrJob, CoreJob, MemoryDiagnoser, DisassemblyDiagnoser(printIL: true, recursiveDepth: 20)]
     public class SimpleExpr_ParamPlusParam
     {
         private static Expression<Func<int, int, int>> CreateSumExpr()

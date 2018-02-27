@@ -30,11 +30,12 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Can_execute_finally()
         {
-            var expr = Lambda<Action>(TryCatchFinally(
-                Throw(Constant(new DivideByZeroException())),
-                Throw(Constant(new InvalidDataSourceException())),
-                Catch(typeof(DivideByZeroException),
-                    Throw(Constant(new InvalidTimeZoneException())
+            var expr = Lambda<Action>(
+                TryCatchFinally(
+                    Throw(Constant(new DivideByZeroException())),
+                    Throw(Constant(new InvalidDataSourceException())),
+                    Catch(typeof(DivideByZeroException),
+                        Throw(Constant(new InvalidTimeZoneException())
                     )
                 )
             ));
@@ -85,36 +86,35 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(123, ff("123"));
         }
 
-        /*TODO: Add suport for usage of exception parameter
-        [Test]
-        public void Can_use_exception_parameter()
-        {
-            var parExcep = Parameter(typeof(Exception), "exc");
-            MethodInfo getExceptionMessage = typeof(Exception)
-                .GetProperty(nameof(Exception.Message), BindingFlags.Public | BindingFlags.Instance).GetMethod;
-            MethodInfo writeLine = typeof(Console).GetMethod(nameof(Console.WriteLine), new [] { typeof(string) });
+        //TODO: Add support for usage of exception parameter in void action
+        //[Test]
+        //public void Can_use_exception_parameter()
+        //{
+        //    var exPar = Parameter(typeof(Exception), "exc");
+        //    var getExceptionMessage = typeof(Exception)
+        //        .GetProperty(nameof(Exception.Message), BindingFlags.Public | BindingFlags.Instance).GetMethod;
+        //    var writeLine = typeof(Console).GetMethod(nameof(Console.WriteLine), new [] { typeof(string) });
 
-            var expr = Lambda<Action>(TryCatch(
-                Throw(Constant(new DivideByZeroException())),
-                Catch(
-                    parExcep,
-                    Call(
-                        writeLine,
-                        Call(parExcep, getExceptionMessage)
-                    )
-                )
-            ));
+        //    var expr = Lambda<Action>(TryCatch(
+        //        Throw(Constant(new DivideByZeroException())),
+        //        Catch(
+        //            exPar,
+        //            Call(
+        //                writeLine,
+        //                Call(exPar, getExceptionMessage)
+        //            )
+        //        )
+        //    ));
 
-            var func = expr.CompileFast(true);
-            Assert.IsNotNull(func);
-            Assert.DoesNotThrow(()=> func());
-        }*/
+        //    var func = expr.CompileFast(true);
+        //    Assert.IsNotNull(func);
+        //    Assert.DoesNotThrow(()=> func());
+        //}
 
-        /*TODO: Add suport of try-catch expression in non-void method.
         [Test]
         public void Can_return_from_catch_block()
         {
-            Expression<Func<bool>> expr = Lambda<Func<bool>>(TryCatch(
+            var expr = Lambda<Func<bool>>(TryCatch(
                 Block(
                     Throw(Constant(new DivideByZeroException())),
                     Constant(false)
@@ -129,7 +129,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.IsNotNull(func);
             Assert.IsTrue(func());
-        }*/
+        }
 
         [Test]
         public void Can_throw_an_exception()
