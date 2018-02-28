@@ -616,20 +616,12 @@ namespace FastExpressionCompiler
             public static readonly MethodInfo[] CreateMethods =
                 _methods as MethodInfo[] ?? _methods.ToArray();
 
-            public static Closure<T1> CreateClosure<T1>(T1 v1)
-            {
-                return new Closure<T1>(v1);
-            }
+            public static Closure<T1> CreateClosure<T1>(T1 v1) => new Closure<T1>(v1);
 
-            public static Closure<T1, T2> CreateClosure<T1, T2>(T1 v1, T2 v2)
-            {
-                return new Closure<T1, T2>(v1, v2);
-            }
+            public static Closure<T1, T2> CreateClosure<T1, T2>(T1 v1, T2 v2) => new Closure<T1, T2>(v1, v2);
 
-            public static Closure<T1, T2, T3> CreateClosure<T1, T2, T3>(T1 v1, T2 v2, T3 v3)
-            {
-                return new Closure<T1, T2, T3>(v1, v2, v3);
-            }
+            public static Closure<T1, T2, T3> CreateClosure<T1, T2, T3>(T1 v1, T2 v2, T3 v3) => 
+                new Closure<T1, T2, T3>(v1, v2, v3);
 
             public static Closure<T1, T2, T3, T4> CreateClosure<T1, T2, T3, T4>(T1 v1, T2 v2, T3 v3, T4 v4)
             {
@@ -1596,6 +1588,9 @@ namespace FastExpressionCompiler
             private static bool EmitParameter(
                 object paramExprObj, Type paramType, object[] paramExprs, ILGenerator il, ClosureInfo closure)
             {
+                if ((paramExprObj as ParameterExpression)?.IsByRef == true) // ref, and out parameters are not supported yet
+                    return false;
+
                 var paramIndex = paramExprs.GetFirstIndex(paramExprObj);
 
                 // if parameter is passed, then just load it on stack
