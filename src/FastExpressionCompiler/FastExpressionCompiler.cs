@@ -1829,7 +1829,7 @@ namespace FastExpressionCompiler
                 }
                 else if (constantActualType == typeof(float))
                 {
-                    il.Emit(OpCodes.Ldc_R8, (float)constantValue);
+                    il.Emit(OpCodes.Ldc_R4, (float)constantValue);
                 }
                 else if (constantActualType == typeof(double))
                 {

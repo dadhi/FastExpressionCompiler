@@ -104,6 +104,23 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(XByte.A, f());
         }
 
+        [Test(Description = "Support all types and operations from System.Numerics")]
+        public void Can_return_constant()
+        {
+            Assert.AreEqual(ExpressionCompiler.Compile(() => 1u)(), 1u);
+            Assert.AreEqual(ExpressionCompiler.Compile(() => (short)1)(), (short)1);
+            Assert.AreEqual(ExpressionCompiler.Compile(() => 1L)(), 1L);
+            Assert.AreEqual(ExpressionCompiler.Compile(() => 1uL)(), 1uL);
+            Assert.AreEqual(ExpressionCompiler.Compile(() => (byte)1)(), (byte)1);
+            Assert.AreEqual(ExpressionCompiler.Compile(() => (sbyte)1)(), (sbyte)1);
+            Assert.AreEqual(ExpressionCompiler.Compile(() => 1)(), 1);
+            Assert.AreEqual(ExpressionCompiler.Compile(() => 1.1f)(), 1.1f);
+            Assert.AreEqual(ExpressionCompiler.Compile(() => 1.1d)(), 1.1d);
+            Assert.AreEqual(ExpressionCompiler.Compile(() => 1.1M)(), 1.1M);
+            Assert.AreEqual(ExpressionCompiler.Compile(() => 'c')(), 'c');
+            Assert.AreEqual(ExpressionCompiler.Compile(() => true)(), true);
+        }
+
         public enum XByte : byte { A }
     }
 }
