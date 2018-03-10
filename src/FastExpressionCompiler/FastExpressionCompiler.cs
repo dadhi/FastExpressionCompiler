@@ -3022,11 +3022,12 @@ namespace FastExpressionCompiler
                 return Empty<Type>();
 
             if (paramExprs.Count == 1)
-                return new[] { paramExprs[0].GetResultType() };
+                return paramExprs[0].IsByRef ? new[] { paramExprs[0].GetResultType().MakeByRefType() } : new[] { paramExprs[0].GetResultType() };
 
             var paramTypes = new Type[paramExprs.Count];
             for (var i = 0; i < paramTypes.Length; i++)
-                paramTypes[i] = paramExprs[i].GetResultType();
+                paramTypes[i] = paramExprs[i].IsByRef ? paramExprs[i].GetResultType().MakeByRefType() : paramExprs[i].GetResultType();
+
             return paramTypes;
         }
 
