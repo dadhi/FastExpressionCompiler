@@ -147,11 +147,11 @@ namespace FastExpressionCompiler.UnitTests
             // This expression represents the conditional block.
             var ifThenElseExpr = IfThenElse(
                 Constant(test),
-                Call(this.GetType(),
+                Call(GetType(),
                     "WriteLine", Type.EmptyTypes,
                     Constant("The condition is true.")
                 ),
-                Call(this.GetType(),
+                Call(GetType(),
                     "WriteLine", Type.EmptyTypes,
                     Constant("The condition is false.")
                 )

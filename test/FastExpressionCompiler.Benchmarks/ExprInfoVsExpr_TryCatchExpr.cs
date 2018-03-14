@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.Benchmarks
     public class ExprInfoVsExpr_TryCatchExpr
     {
         private static Expression<Func<string, int>> Expr = CreateExpr();
+        private static ExpressionInfo<Func<string, int>> ExprInfo = CreateExprInfo();
 
         // Test expression
         // (string a) => {
@@ -42,28 +43,28 @@ namespace FastExpressionCompiler.Benchmarks
             );
         }
 
-        //private static ExpressionInfo<Func<string, int>> CreateExprInfo()
-        //{
-        //    var aParamExpr = E.Parameter(typeof(string), "a");
-        //    var exParamExpr = E.Parameter(typeof(Exception), "ex");
+        private static ExpressionInfo<Func<string, int>> CreateExprInfo()
+        {
+            var aParamExpr = E.Parameter(typeof(string), "a");
+            var exParamExpr = E.Parameter(typeof(Exception), "ex");
 
-        //    return E.Lambda<Func<string, int>>(
-        //        E.TryCatch(
-        //            E.Call(typeof(int).GetTypeInfo()
-        //                    .DeclaredMethods.First(m => m.Name == nameof(int.Parse)),
-        //                aParamExpr),
-        //            E.Catch(exParamExpr,
-        //                E.Property(
-        //                    E.Property(exParamExpr, typeof(Exception).GetTypeInfo()
-        //                        .DeclaredProperties.First(p => p.Name == nameof(Exception.Message))),
-        //                    typeof(string).GetTypeInfo()
-        //                        .DeclaredProperties.First(p => p.Name == nameof(string.Length))
-        //                )
-        //            )
-        //        ),
-        //        aParamExpr
-        //    );
-        //}
+            return E.Lambda<Func<string, int>>(
+                E.TryCatch(
+                    E.Call(typeof(int).GetTypeInfo()
+                            .DeclaredMethods.First(m => m.Name == nameof(int.Parse)),
+                        aParamExpr),
+                    E.Catch(exParamExpr,
+                        E.Property(
+                            E.Property(exParamExpr, typeof(Exception).GetTypeInfo()
+                                .DeclaredProperties.First(p => p.Name == nameof(Exception.Message))),
+                            typeof(string).GetTypeInfo()
+                                .DeclaredProperties.First(p => p.Name == nameof(string.Length))
+                        )
+                    )
+                ),
+                aParamExpr
+            );
+        }
 
         [MemoryDiagnoser]
         public class Compile
@@ -71,8 +72,11 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark]
             public object Expr_Compile() => Expr.Compile();
 
-            [Benchmark(Baseline = true)]
+            [Benchmark()]
             public object Expr_CompileFast() => Expr.CompileFast();
+
+            [Benchmark(Baseline = true)]
+            public object ExprInfo_CompileFast() => ExprInfo.CompileFast();
         }
 
         [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true)]
