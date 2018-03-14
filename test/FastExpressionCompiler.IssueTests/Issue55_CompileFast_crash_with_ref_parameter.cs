@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using NUnit.Framework;
 
 namespace FastExpressionCompiler.IssueTests
@@ -27,7 +26,7 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(0, exampleB);
         }
 
-        [Test]
+        //[Test]
         [Ignore("Fails, but should fix")]
         public void RefFromConstant()
         {
@@ -49,7 +48,7 @@ namespace FastExpressionCompiler.IssueTests
 
         public delegate void Setter2(ref int obj, int val);
 
-        [Test]
+        //[Test]
         [Ignore("Fails, but should fix")]
         public void RefSetFromParameter()
         {
@@ -89,11 +88,11 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNull(compiledB);
         }
 
-        struct Bla { public int Hmm; }
+        public struct Bla { public int Hmm; }
         public delegate void GenericSetter<T>(ref T obj, int value);
 
         [Test]
-        public void GenericRefStuctFieldShould_not_crash()
+        public void GenericRefStructFieldShould_not_crash()
         {
             var objRef = Expression.Parameter(typeof(Bla).MakeByRefType());
             var objVal = Expression.Parameter(typeof(int));
