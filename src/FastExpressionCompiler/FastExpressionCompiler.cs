@@ -578,13 +578,10 @@ namespace FastExpressionCompiler
 
             public bool IsLocalVar(object varParamExpr)
             {
-                for (var block = CurrentBlock; !block.IsEmpty; block = block.Parent)
-                {
-                    var varIndex = block.VarExprs.GetFirstIndex(varParamExpr);
-                    if (varIndex != -1)
-                        return true;
-                }
-                return false;
+                var i = -1;
+                for (var block = CurrentBlock; i == -1 && !block.IsEmpty; block = block.Parent)
+                    i = block.VarExprs.GetFirstIndex(varParamExpr);
+                return i != -1;
             }
 
             public LocalBuilder GetDefinedLocalVarOrDefault(object varParamExpr)
@@ -998,12 +995,7 @@ namespace FastExpressionCompiler
                         && TryCollectBoundConstants(ref closure, condExpr.IfFalse, condExpr.IfFalse.NodeType, condExpr.IfFalse.Type, paramExprs);
 
                 case ExpressionType.Block:
-                    var blockExpr = (BlockExpression)exprObj;
-                    closure = closure ?? new ClosureInfo();
-                    closure.PushBlock(blockExpr.Result, blockExpr.Variables.ToArray(), Tools.Empty<LocalBuilder>());
-                    var result = TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs);
-                    closure.PopBlock();
-                    return result;
+                    return TryCollectBlockBoundConstants(ref closure, exprObj, paramExprs);
 
                 case ExpressionType.Index:
                     var indexExpr = (IndexExpression)exprObj;
@@ -1013,7 +1005,9 @@ namespace FastExpressionCompiler
                         && TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs);
 
                 case ExpressionType.Try:
-                    return TryCollectTryExprConstants(ref closure, exprObj, paramExprs);
+                    return exprObj is TryExpression
+                        ? TryCollectTryExprConstants(ref closure, (TryExpression)exprObj, paramExprs)
+                        : TryCollectTryExprInfoConstants(ref closure, (TryExpressionInfo)exprObj, paramExprs);
 
                 case ExpressionType.Default:
                     return true;
@@ -1021,6 +1015,28 @@ namespace FastExpressionCompiler
                 default:
                     return TryCollectUnaryOrBinaryExprConstants(ref closure, exprObj, paramExprs);
             }
+        }
+
+        private static bool TryCollectBlockBoundConstants(ref ClosureInfo closure, object exprObj, object[] paramExprs)
+        {
+            closure = closure ?? new ClosureInfo();
+            var blockExpr = exprObj as BlockExpression;
+            if (blockExpr != null)
+            {
+                closure.PushBlock(blockExpr.Result, blockExpr.Variables.ToArray(), Tools.Empty<LocalBuilder>());
+                if (!TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs))
+                    return false;
+            }
+            else
+            {
+                var blockExprInfo = (BlockExpressionInfo)exprObj;
+                closure.PushBlock(blockExprInfo.Result, blockExprInfo.Variables, Tools.Empty<LocalBuilder>());
+                if (!TryCollectBoundConstants(ref closure, blockExprInfo.Expressions, paramExprs))
+                    return false;
+            }
+
+            closure.PopBlock();
+            return true;
         }
 
         private static bool TryCollectBoundConstants(ref ClosureInfo closure,
@@ -1148,46 +1164,76 @@ namespace FastExpressionCompiler
 
         }
 
-        private static bool TryCollectTryExprConstants(ref ClosureInfo closure, object exprObj, object[] paramExprs)
+        private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr, object[] paramExprs)
         {
-            var tryExpr = (TryExpression)exprObj;
             if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.NodeType, tryExpr.Type, paramExprs))
                 return false;
 
             var catchBlocks = tryExpr.Handlers;
             for (var i = 0; i < catchBlocks.Count; i++)
             {
-                var block = catchBlocks[i];
-                var blockBody = block.Body;
-
-                var blockExceptionVar = block.Variable;
-                if (blockExceptionVar != null)
+                var catchBlock = catchBlocks[i];
+                var catchBody = catchBlock.Body;
+                var catchExVar = catchBlock.Variable;
+                if (catchExVar != null)
                 {
                     closure = closure ?? new ClosureInfo();
-                    closure.PushBlock(blockBody, new[] { blockExceptionVar }, Tools.Empty<LocalBuilder>());
-
-                    if (!TryCollectBoundConstants(ref closure,
-                        blockExceptionVar, blockExceptionVar.NodeType, blockExceptionVar.Type, paramExprs))
+                    closure.PushBlock(catchBody, new[] { catchExVar }, Tools.Empty<LocalBuilder>());
+                    if (!TryCollectBoundConstants(ref closure, catchExVar, catchExVar.NodeType, catchBlock.Test, paramExprs))
                         return false;
                 }
 
-                if (block.Filter != null && !TryCollectBoundConstants(ref closure,
-                        block.Filter, block.Filter.NodeType, block.Filter.Type, paramExprs))
+                var filterExpr = catchBlock.Filter;
+                if (filterExpr != null &&
+                    !TryCollectBoundConstants(ref closure, filterExpr, filterExpr.NodeType, filterExpr.Type, paramExprs))
                     return false;
 
-                if (!TryCollectBoundConstants(ref closure,
-                    blockBody, blockBody.NodeType, block.Test, paramExprs))
+                if (!TryCollectBoundConstants(ref closure, catchBody, catchBody.NodeType, catchBody.Type, paramExprs))
                     return false;
 
-                if (blockExceptionVar != null)
+                if (catchExVar != null)
                     closure.PopBlock();
             }
 
-            if (tryExpr.Finally != null && !TryCollectBoundConstants(ref closure,
-                    tryExpr.Finally, tryExpr.Finally.NodeType, tryExpr.Finally.Type, paramExprs))
+            var finallyExpr = tryExpr.Finally;
+            return finallyExpr == null
+                || TryCollectBoundConstants(ref closure, finallyExpr, finallyExpr.NodeType, finallyExpr.Type, paramExprs);
+        }
+
+        private static bool TryCollectTryExprInfoConstants(ref ClosureInfo closure, TryExpressionInfo tryExpr, object[] paramExprs)
+        {
+            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.GetNodeType(), tryExpr.Type, paramExprs))
                 return false;
 
-            return true;
+            var catchBlocks = tryExpr.Handlers;
+            for (var i = 0; i < catchBlocks.Length; i++)
+            {
+                var catchBlock = catchBlocks[i];
+                var catchBody = catchBlock.Body;
+                var catchExVar = catchBlock.Variable;
+                if (catchExVar != null)
+                {
+                    closure = closure ?? new ClosureInfo();
+                    closure.PushBlock(catchBody, new[] { catchExVar }, Tools.Empty<LocalBuilder>());
+                    if (!TryCollectBoundConstants(ref closure, catchExVar, catchExVar.NodeType, catchBlock.Test, paramExprs))
+                        return false;
+                }
+
+                var filterExpr = catchBlock.Filter;
+                if (filterExpr != null &&
+                    !TryCollectBoundConstants(ref closure, filterExpr, filterExpr.NodeType, filterExpr.Type, paramExprs))
+                    return false;
+
+                if (!TryCollectBoundConstants(ref closure, catchBody, catchBody.NodeType, catchBody.Type, paramExprs))
+                    return false;
+
+                if (catchExVar != null)
+                    closure.PopBlock();
+            }
+
+            var finallyExpr = tryExpr.Finally;
+            return finallyExpr == null
+                   || TryCollectBoundConstants(ref closure, finallyExpr, finallyExpr.NodeType, finallyExpr.Type, paramExprs);
         }
 
         private static bool TryCollectUnaryOrBinaryExprConstants(ref ClosureInfo closure, object exprObj, object[] paramExprs)
@@ -1355,7 +1401,9 @@ namespace FastExpressionCompiler
                             : EmitTryCatchFinallyBlockInfo((TryExpressionInfo)exprObj, exprType, paramExprs, il, closure);
 
                     case ExpressionType.Throw:
-                        return EmitThrow((UnaryExpression)exprObj, paramExprs, il, closure);
+                        return exprObj is UnaryExpression
+                            ? EmitThrow((UnaryExpression)exprObj, paramExprs, il, closure)
+                            : EmitThrowInfo((UnaryExpressionInfo)exprObj, paramExprs, il, closure);
 
                     case ExpressionType.Default:
                         return EmitDefault((DefaultExpression)exprObj, il);
@@ -1640,12 +1688,19 @@ namespace FastExpressionCompiler
             private static bool EmitThrow(
                 UnaryExpression exprObj, object[] paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                var exceptionExpr = exprObj.Operand;
-                if (!TryEmit(exceptionExpr, exceptionExpr.NodeType, exceptionExpr.Type, paramExprs, il, closure))
-                    return false;
+                var exExpr = exprObj.Operand;
+                var ok = TryEmit(exExpr, exExpr.NodeType, exExpr.Type, paramExprs, il, closure);
+                il.ThrowException(exExpr.Type);
+                return ok;
+            }
 
-                il.ThrowException(exceptionExpr.Type);
-                return true;
+            private static bool EmitThrowInfo(
+                UnaryExpressionInfo exprObj, object[] paramExprs, ILGenerator il, ClosureInfo closure)
+            {
+                var exExpr = exprObj.Operand;
+                var ok = TryEmit(exExpr, exExpr.NodeType, exExpr.Type, paramExprs, il, closure);
+                il.ThrowException(exExpr.Type);
+                return ok;
             }
 
             private static bool EmitParameter(
@@ -1654,9 +1709,8 @@ namespace FastExpressionCompiler
                 if ((paramExprObj as ParameterExpression)?.IsByRef == true) // ref, and out parameters are not supported yet
                     return false;
 
-                var paramIndex = paramExprs.GetFirstIndex(paramExprObj);
-
                 // if parameter is passed, then just load it on stack
+                var paramIndex = paramExprs.GetFirstIndex(paramExprObj);
                 if (paramIndex != -1)
                 {
                     if (closure != null && closure.HasBoundClosure)
@@ -3070,7 +3124,7 @@ namespace FastExpressionCompiler
                 return Empty<Type>();
 
             if (paramExprs.Count == 1)
-                return paramExprs[0].IsByRef ? new[] { paramExprs[0].GetResultType().MakeByRefType() } : new[] { paramExprs[0].GetResultType() };
+                return new[] { paramExprs[0].IsByRef ? paramExprs[0].GetResultType().MakeByRefType() : paramExprs[0].GetResultType() };
 
             var paramTypes = new Type[paramExprs.Count];
             for (var i = 0; i < paramTypes.Length; i++)
@@ -3358,20 +3412,27 @@ namespace FastExpressionCompiler
         public static ExpressionInfo Divide(ExpressionInfo left, ExpressionInfo right) =>
             new ArithmeticBinaryExpressionInfo(ExpressionType.Divide, left, right, left.Type);
 
-        public static ExpressionInfo Block(params object[] expressions) =>
-            new BlockExpressionInfo(Tools.Empty<ParameterExpressionInfo>(), expressions);
+        public static BlockExpressionInfo Block(params object[] expressions) =>
+            new BlockExpressionInfo(expressions[expressions.Length - 1].GetResultType(),
+                Tools.Empty<ParameterExpressionInfo>(), expressions);
 
-        public static ExpressionInfo TryCatch(object body, params CatchBlockInfo[] handlers) =>
+        public static TryExpressionInfo TryCatch(object body, params CatchBlockInfo[] handlers) =>
             new TryExpressionInfo(body, null, handlers);
 
-        public static ExpressionInfo TryCatchFinally(object body, ExpressionInfo @finally, params CatchBlockInfo[] handlers) =>
+        public static TryExpressionInfo TryCatchFinally(object body, ExpressionInfo @finally, params CatchBlockInfo[] handlers) =>
             new TryExpressionInfo(body, @finally, handlers);
 
-        public static ExpressionInfo TryFinally(object body, ExpressionInfo @finally) =>
+        public static TryExpressionInfo TryFinally(object body, ExpressionInfo @finally) =>
             new TryExpressionInfo(body, @finally, null);
 
         public static CatchBlockInfo Catch(ParameterExpressionInfo variable, ExpressionInfo body) =>
-            new CatchBlockInfo(variable, body, null, null);
+            new CatchBlockInfo(variable, body, null, variable.Type);
+
+        public static CatchBlockInfo Catch(Type test, ExpressionInfo body) =>
+            new CatchBlockInfo(null, body, null, test);
+
+        public static UnaryExpressionInfo Throw(ExpressionInfo value) =>
+            new UnaryExpressionInfo(ExpressionType.Throw, value, typeof(void));
     }
 
     public class UnaryExpressionInfo : ExpressionInfo
@@ -3647,7 +3708,7 @@ namespace FastExpressionCompiler
         }
     }
 
-    internal class BlockExpressionInfo : ExpressionInfo
+    public class BlockExpressionInfo : ExpressionInfo
     {
         public override ExpressionType NodeType => ExpressionType.Block;
 
@@ -3660,12 +3721,12 @@ namespace FastExpressionCompiler
         public override Expression ToExpression() =>
             Expression.Block(Expressions.Project(Tools.ToExpression));
 
-        public BlockExpressionInfo(ParameterExpressionInfo[] variables, object[] expressions)
+        public BlockExpressionInfo(Type type, ParameterExpressionInfo[] variables, object[] expressions)
         {
             Variables = variables;
             Expressions = expressions;
-            Result = expressions.Length == 1 ? expressions[0] : expressions[expressions.Length - 1];
-            Type = Result.GetResultType();
+            Result = expressions[expressions.Length - 1];
+            Type = type;
         }
     }
 

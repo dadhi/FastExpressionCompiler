@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark]
             public object Expr_Compile() => Expr.Compile();
 
-            [Benchmark()]
+            [Benchmark]
             public object Expr_CompileFast() => Expr.CompileFast();
 
             [Benchmark(Baseline = true)]
