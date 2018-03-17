@@ -3475,15 +3475,21 @@ namespace FastExpressionCompiler
 
     public class ArithmeticBinaryExpressionInfo : BinaryExpressionInfo
     {
-        public override Expression ToExpression() =>
-            NodeType == ExpressionType.Add      ? Expression.Add(Left.ToExpression(), Right.ToExpression()) :
-            NodeType == ExpressionType.Subtract ? Expression.Subtract(Left.ToExpression(), Right.ToExpression()) :
-            NodeType == ExpressionType.Multiply ? Expression.Multiply(Left.ToExpression(), Right.ToExpression()) :
-            NodeType == ExpressionType.Divide   ? Expression.Divide(Left.ToExpression(), Right.ToExpression()) :
-            throw new NotSupportedException($"Not valid {NodeType} for arithmetic binary expression.");
-
         public ArithmeticBinaryExpressionInfo(ExpressionType nodeType, object left, object right, Type type)
             : base(nodeType, left, right, type) { }
+
+        public override Expression ToExpression()
+        {
+            if (NodeType == ExpressionType.Add)
+                return Expression.Add(Left.ToExpression(), Right.ToExpression());
+            if (NodeType == ExpressionType.Subtract)
+                return Expression.Subtract(Left.ToExpression(), Right.ToExpression());
+            if (NodeType == ExpressionType.Multiply)
+                return Expression.Multiply(Left.ToExpression(), Right.ToExpression());
+            if (NodeType == ExpressionType.Divide)
+                return Expression.Divide(Left.ToExpression(), Right.ToExpression());
+            throw new NotSupportedException($"Not valid {NodeType} for arithmetic binary expression.");
+        }
     }
 
     public class ArrayIndexExpressionInfo : BinaryExpressionInfo
