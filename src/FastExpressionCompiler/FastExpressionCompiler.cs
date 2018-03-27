@@ -612,10 +612,10 @@ namespace FastExpressionCompiler
 
             public static Closure<T1, T2> CreateClosure<T1, T2>(T1 v1, T2 v2) => new Closure<T1, T2>(v1, v2);
 
-            public static Closure<T1, T2, T3> CreateClosure<T1, T2, T3>(T1 v1, T2 v2, T3 v3) => 
+            public static Closure<T1, T2, T3> CreateClosure<T1, T2, T3>(T1 v1, T2 v2, T3 v3) =>
                 new Closure<T1, T2, T3>(v1, v2, v3);
 
-            public static Closure<T1, T2, T3, T4> CreateClosure<T1, T2, T3, T4>(T1 v1, T2 v2, T3 v3, T4 v4) => 
+            public static Closure<T1, T2, T3, T4> CreateClosure<T1, T2, T3, T4>(T1 v1, T2 v2, T3 v3, T4 v4) =>
                 new Closure<T1, T2, T3, T4>(v1, v2, v3, v4);
 
             public static Closure<T1, T2, T3, T4, T5> CreateClosure<T1, T2, T3, T4, T5>(T1 v1, T2 v2, T3 v3, T4 v4,
@@ -625,19 +625,19 @@ namespace FastExpressionCompiler
                 T4 v4, T5 v5, T6 v6) => new Closure<T1, T2, T3, T4, T5, T6>(v1, v2, v3, v4, v5, v6);
 
             public static Closure<T1, T2, T3, T4, T5, T6, T7> CreateClosure<T1, T2, T3, T4, T5, T6, T7>(T1 v1, T2 v2,
-                T3 v3, T4 v4, T5 v5, T6 v6, T7 v7) => 
+                T3 v3, T4 v4, T5 v5, T6 v6, T7 v7) =>
                 new Closure<T1, T2, T3, T4, T5, T6, T7>(v1, v2, v3, v4, v5, v6, v7);
 
             public static Closure<T1, T2, T3, T4, T5, T6, T7, T8> CreateClosure<T1, T2, T3, T4, T5, T6, T7, T8>(
-                T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8) => 
+                T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8) =>
                 new Closure<T1, T2, T3, T4, T5, T6, T7, T8>(v1, v2, v3, v4, v5, v6, v7, v8);
 
             public static Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9> CreateClosure<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
-                T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9) => 
+                T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9) =>
                 new Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9>(v1, v2, v3, v4, v5, v6, v7, v8, v9);
 
             public static Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> CreateClosure<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
-                T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9, T10 v10) => 
+                T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9, T10 v10) =>
                 new Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
         }
 
@@ -1366,7 +1366,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.LessThanOrEqual:
                     case ExpressionType.Equal:
                     case ExpressionType.NotEqual:
-                        return EmitComparison((BinaryExpression)exprObj, exprNodeType, paramExprs, il, closure);
+                        return EmitComparison(exprObj, exprNodeType, paramExprs, il, closure);
 
                     case ExpressionType.Add:
                     case ExpressionType.AddChecked:
@@ -1396,7 +1396,7 @@ namespace FastExpressionCompiler
                             EmitBlockInfo((BlockExpressionInfo)exprObj, paramExprs, il, closure);
 
                     case ExpressionType.Try:
-                        return exprObj is TryExpression 
+                        return exprObj is TryExpression
                             ? EmitTryCatchFinallyBlock((TryExpression)exprObj, exprType, paramExprs, il, closure)
                             : EmitTryCatchFinallyBlockInfo((TryExpressionInfo)exprObj, exprType, paramExprs, il, closure);
 
@@ -1406,7 +1406,7 @@ namespace FastExpressionCompiler
                             : EmitThrowInfo((UnaryExpressionInfo)exprObj, paramExprs, il, closure);
 
                     case ExpressionType.Default:
-                        return EmitDefault((DefaultExpression)exprObj, il);
+                        return EmitDefault(exprObj, il);
 
                     case ExpressionType.Index:
                         return EmitIndex((IndexExpression)exprObj, paramExprs, il, closure);
@@ -1472,25 +1472,27 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitDefault(DefaultExpression exprObj, ILGenerator il)
+            private static bool EmitDefault(object exprObj, ILGenerator il)
             {
-                var type = exprObj.Type;
-
+                var type = exprObj.GetResultType();
                 if (type == typeof(void))
                     return true;
-                else if (type == typeof(string))
+
+                if (type == typeof(string))
                     il.Emit(OpCodes.Ldnull);
-                else if (type == typeof(bool) ||
-                        type == typeof(byte) ||
-                        type == typeof(char) ||
-                        type == typeof(sbyte) ||
-                        type == typeof(int) ||
-                        type == typeof(uint) ||
-                        type == typeof(short) ||
-                        type == typeof(ushort))
+                else if (
+                    type == typeof(bool) ||
+                    type == typeof(byte) ||
+                    type == typeof(char) ||
+                    type == typeof(sbyte) ||
+                    type == typeof(int) ||
+                    type == typeof(uint) ||
+                    type == typeof(short) ||
+                    type == typeof(ushort))
                     il.Emit(OpCodes.Ldc_I4_0);
-                else if (type == typeof(long) ||
-                        type == typeof(ulong))
+                else if (
+                    type == typeof(long) ||
+                    type == typeof(ulong))
                 {
                     il.Emit(OpCodes.Ldc_I4_0);
                     il.Emit(OpCodes.Conv_I8);
@@ -1500,12 +1502,7 @@ namespace FastExpressionCompiler
                 else if (type == typeof(double))
                     il.Emit(OpCodes.Ldc_R8, default(double));
                 else if (type.GetTypeInfo().IsValueType)
-                {
-                    LocalBuilder lb = il.DeclareLocal(type);
-                    il.Emit(OpCodes.Ldloca, lb);
-                    il.Emit(OpCodes.Initobj, type);
-                    il.Emit(OpCodes.Ldloc, lb);
-                }
+                    il.Emit(OpCodes.Ldloc, InitValueTypeVariable(il, type));
                 else
                     il.Emit(OpCodes.Ldnull);
 
@@ -1553,7 +1550,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stloc_S, returnResult);
                     il.Emit(OpCodes.Leave_S, returnLabel);
                 }
-                
+
                 var catchBlocks = tryExpr.Handlers;
                 for (var i = 0; i < catchBlocks.Count; i++)
                 {
@@ -1847,7 +1844,7 @@ namespace FastExpressionCompiler
 
                 else if (targetType.IsNullable()) // Conversion to Nullable: new Nullable<T>(T val);
                     il.Emit(OpCodes.Newobj, targetType.GetConstructorByArgs(targetType.GetWrappedTypeFromNullable()));
-                
+
                 else if (targetType == typeof(int))
                     il.Emit(OpCodes.Conv_I4);
                 else if (targetType == typeof(float))
@@ -1881,7 +1878,10 @@ namespace FastExpressionCompiler
                 var constantValue = constExprInfo != null ? constExprInfo.Value : ((ConstantExpression)exprObj).Value;
                 if (constantValue == null)
                 {
-                    il.Emit(OpCodes.Ldnull);
+                    if (exprType.GetTypeInfo().IsValueType) // handles the conversion of null to Nullable<T>
+                        il.Emit(OpCodes.Ldloc, InitValueTypeVariable(il, exprType));
+                    else
+                        il.Emit(OpCodes.Ldnull);
                     return true;
                 }
 
@@ -1969,6 +1969,14 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static LocalBuilder InitValueTypeVariable(ILGenerator il, Type exprType, LocalBuilder existingVar = null)
+            {
+                var valVar = existingVar ?? il.DeclareLocal(exprType);
+                il.Emit(OpCodes.Ldloca, valVar);
+                il.Emit(OpCodes.Initobj, exprType);
+                return valVar;
+            }
+
             // if itemType is null, then itemExprObj should be not null
             private static void LoadClosureFieldOrItem(ClosureInfo closure, ILGenerator il, int itemIndex,
                 Type itemType, object itemExprObj = null)
@@ -2026,9 +2034,7 @@ namespace FastExpressionCompiler
                     if (!exprType.GetTypeInfo().IsValueType)
                         return false; // null constructor and not a value type, better fallback
 
-                    var valueVar = resultValueVar ?? il.DeclareLocal(exprType);
-                    il.Emit(OpCodes.Ldloca, valueVar);
-                    il.Emit(OpCodes.Initobj, exprType);
+                    var valueVar = InitValueTypeVariable(il, exprType, resultValueVar);
                     if (resultValueVar == null)
                         il.Emit(OpCodes.Ldloc, valueVar);
                 }
@@ -2830,14 +2836,32 @@ namespace FastExpressionCompiler
             }
 
             private static bool EmitComparison(
-                BinaryExpression expr, ExpressionType exprNodeType,
-                object[] paramExprs, ILGenerator il, ClosureInfo closure)
+                object exprObj, ExpressionType exprNodeType, object[] paramExprs, ILGenerator il, ClosureInfo closure)
             {
-                if (!EmitBinary(expr, paramExprs, il, closure))
+                if (!EmitBinary(exprObj, paramExprs, il, closure))
                     return false;
 
-                var leftOpType = expr.Left.Type;
+                // todo: for now handling only parameters of the same type
+                // todo: for now Nullable is not supported ()
+                Type leftOpType, rightOpType;
+                var expr = exprObj as BinaryExpression;
+                if (expr != null)
+                {
+                    leftOpType = expr.Left.Type;
+                    rightOpType = expr.Right.Type;
+                }
+                else
+                {
+                    var exprInfo = (BinaryExpressionInfo)exprObj;
+                    leftOpType = exprInfo.Left.GetResultType();
+                    rightOpType = exprInfo.Right.GetResultType();
+                }
+
+                if (leftOpType != rightOpType || leftOpType.IsNullable())
+                    return false;
+
                 var leftOpTypeInfo = leftOpType.GetTypeInfo();
+
                 if (!leftOpTypeInfo.IsPrimitive &&
                     !leftOpTypeInfo.IsEnum)
                 {
@@ -2878,7 +2902,7 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                // emit for primitives
+                // handle primitives comparison
                 switch (exprNodeType)
                 {
                     case ExpressionType.Equal:
@@ -3268,7 +3292,7 @@ namespace FastExpressionCompiler
             value == null && type == null ? _nullExprInfo
                 : new ConstantExpressionInfo(value, type ?? value.GetType());
 
-        private static readonly ConstantExpressionInfo 
+        private static readonly ConstantExpressionInfo
             _nullExprInfo = new ConstantExpressionInfo(null, typeof(object));
 
         /// <summary>Analog of Expression.New</summary>
@@ -3521,7 +3545,7 @@ namespace FastExpressionCompiler
         public readonly MemberAssignmentInfo[] Bindings;
 
         public override Expression ToExpression() =>
-            Expression.MemberInit(NewExpressionInfo.ToNewExpression(), 
+            Expression.MemberInit(NewExpressionInfo.ToNewExpression(),
                 Bindings.Project(b => b.ToMemberAssignment()));
 
         public MemberInitExpressionInfo(NewExpressionInfo newExpressionInfo, MemberAssignmentInfo[] bindings)
@@ -3758,7 +3782,7 @@ namespace FastExpressionCompiler
             for (var i = 0; i < hs.Length; ++i)
                 catchBlocks[i] = hs[i].ToCatchBlock();
             return catchBlocks;
-        } 
+        }
 
         public TryExpressionInfo(object body, ExpressionInfo @finally, CatchBlockInfo[] handlers)
         {
@@ -3768,7 +3792,7 @@ namespace FastExpressionCompiler
             Finally = @finally;
         }
     }
-    
+
     public sealed class CatchBlockInfo
     {
         public readonly ParameterExpressionInfo Variable;
