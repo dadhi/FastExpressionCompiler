@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.7.0</VersionPrefix>
+    <VersionPrefix>1.7.1</VersionPrefix>
     <TargetFrameworks>net45;netstandard1.3</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -12,44 +12,12 @@
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
+      v1.7.1
+      - fixed: #67 Equality comparison with nullables throws at delegate-invoke
       v1.7.0
       - added: #56 Add ExpressionInfo.TryCatch, Block and Throw
       - fixed: #55 CompileFast crash with ref parameter
       - fixed: #60 Support all types and operations from System.Numerics
-      v1.6.0
-      - added: ExpressionInfo.ToString()
-      - added: Overload to compile most generic ExpressionInfo to lambda
-      - fixed: #49 Why the result is incorrect?
-      - fixed: ExpressionInfo to Expression conversion in cirtain cases
-      v1.5.0
-      - added: #10 TryExpression support
-      - added: #18 Support Expression.Block
-      - added: #30 Expression.Assign for array indexer
-      - added: #32 Support Expression.Condition
-      - added: #35 Coalescence operator ??
-      - added: #34 Arithmetic operations
-      - added: #42 Add conversion from ExpressionInfo to Expression
-      - added: FastCompile methods for ExpressionInfo
-      - fixed: #44 Conversion to Nullable{T} throws InvalidProgramException
-      - fixed: Creation of dynamic method for un-typed delegate
-      v1.4.0:
-      - added: NetStandard 2.0 target
-      - added: #17: Expression(Info).Assign support for parameters, fields and members
-      - added: Support for ExpressionInfo.Invoke
-      v1.3.0:
-      - added: #20 Allow ExpressionInfo.MemberInit for non-New expressions
-      - fixed: #19 Nested CallExpression causes System.AccessViolationException
-      - fixed: ValueType member access
-      - fixed: False positive in TryCollectBoundConstants for not yet supported expression types
-      v1.2.2:
-      - fixed: #16: FastCompile with fallback could return null
-      v1.2.1:
-      - Lowering full .NET support to .NET 4.5
-      v1.2.0:
-      - fixed: #14, #15: Support general equality mechanism, e.g. Equals and equality operator
-      - added: #11: Support for ExpressionInfo NewArray, MemberInit, ArrayIndex, Convert, MemberAccess
-      - added: #12: Add extension method CompileFast to simplify migration from Compile
-      - added: #13: Allow Expression as child of multi-child ExpressionInfo
     </PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
     <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
