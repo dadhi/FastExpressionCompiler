@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.7.1</VersionPrefix>
+    <VersionPrefix>1.7.2</VersionPrefix>
     <TargetFrameworks>net45;netstandard1.3</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -22,7 +22,7 @@
     <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
     <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
   </PropertyGroup>
-
+ 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
   </ItemGroup>
@@ -32,15 +32,12 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    <Reference Include="System.Reflection" />
-    <Reference Include="System.Linq" />
-    <Reference Include="System.Linq.Expressions" />
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="FastExpressionCompiler.*.ncrunchproject" />
+    <None Remove="**\*.orig" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE" />
   </ItemGroup>
 
 </Project>
