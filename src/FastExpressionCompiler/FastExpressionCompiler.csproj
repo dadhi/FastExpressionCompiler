@@ -9,7 +9,6 @@
     <Product>FastExpressionCompiler</Product>
     <Authors>Maksim Volkau</Authors>
     <Copyright>Copyright © 2016 Maksim Volkau</Copyright>
-    framework for .NET</Summary>
     <NeutralLanguage>en-US</NeutralLanguage>
     <Title>FastExpressionCompiler</Title>
     <Summary>FastExpressionCompiler is up to ~20 times faster than Expression.Compile()</Summary> 
