@@ -2,16 +2,23 @@
 
   <PropertyGroup>
     <VersionPrefix>1.7.2</VersionPrefix>
-    <TargetFrameworks>net45;netstandard1.3</TargetFrameworks>
+    <TargetFrameworks>netstandard1.3;net45</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>FastExpressionCompiler</AssemblyName>
+    <Product>FastExpressionCompiler</Product>
     <Authors>Maksim Volkau</Authors>
     <Copyright>Copyright © 2016 Maksim Volkau</Copyright>
+    framework for .NET</Summary>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <Title>FastExpressionCompiler</Title>
+    <Summary>FastExpressionCompiler is up to ~20 times faster than Expression.Compile()</Summary> 
     <Description>FastExpressionCompiler is up to ~20 times faster than Expression.Compile()</Description>
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
+      v1.7.2
+      - fixed: #70 Can't install nuget because of reference to System.Linq.dll
       v1.7.1
       - fixed: #67 Equality comparison with nullables throws at delegate-invoke
       v1.7.0
@@ -20,7 +27,7 @@
       - fixed: #60 Support all types and operations from System.Numerics
     </PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
-    <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
   </PropertyGroup>
  
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
