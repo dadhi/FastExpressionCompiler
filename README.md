@@ -5,6 +5,8 @@
 [Expression Tree]: https://msdn.microsoft.com/en-us/library/mt654263.aspx
 [Marten]: https://github.com/JasperFx/marten
 [Rebus]: https://github.com/rebus-org/Rebus
+[StructureMap]: https://github.com/structuremap/structuremap
+[Lamar]: https://github.com/JasperFx/lamar
 
 [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)
 [![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
@@ -219,7 +221,7 @@ __Note:__ The way to simplify your life when working with expressions is C# 6 `u
 Originally the project is part of [DryIoc], 
 then split for more general adoption.
 
-Some users: [Marten], [Rebus], [ExpressionToCodeLib]
+Some users: [Marten], [Rebus], [ExpressionToCodeLib], [StructureMap], [Lamar]
 
 What is supported:
 
