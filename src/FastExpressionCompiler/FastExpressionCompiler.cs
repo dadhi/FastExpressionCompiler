@@ -106,7 +106,8 @@ namespace FastExpressionCompiler
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1, T2> CompileFast<T1, T2>(this Expression<Action<T1, T2>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            lambdaExpr.CompileFast<Action<T1, T2>>(ifFastFailedReturnNull);
+            TryCompile<Action<T1, T2>>(lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(T1), typeof(T2) }, typeof(void))
+            ?? (ifFastFailedReturnNull ? null : lambdaExpr.Compile());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1, T2, T3> CompileFast<T1, T2, T3>(this Expression<Action<T1, T2, T3>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
@@ -215,19 +216,13 @@ namespace FastExpressionCompiler
         /// <summary>Compiles expression to delegate by emitting the IL. 
         /// If sub-expressions are not supported by emitter, then the method returns null.
         /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
-        /// <param name="bodyExpr">Lambda body.</param>
-        /// <param name="paramExprs">Lambda parameter expressions.</param>
-        /// <param name="paramTypes">The types of parameters.</param>
-        /// <param name="returnType">The return type.</param>
-        /// <returns>Result delegate or null, if unable to compile.</returns>
         public static TDelegate TryCompile<TDelegate>(
-            Expression bodyExpr, IList<ParameterExpression> paramExprs, Type[] paramTypes,
-            Type returnType) where TDelegate : class
+            Expression bodyExpr, IList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
+            where TDelegate : class
         {
-            var paramArray = paramExprs as ParameterExpression[] ?? paramExprs.ToArray(); // todo: Improve, better remove
             ClosureInfo ignored = null;
             return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
-                paramTypes, returnType, bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramArray);
+                paramTypes, returnType, bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramExprs.AsArray());
         }
 
         /// <summary>Tries to compile lambda expression info.</summary>
@@ -252,8 +247,8 @@ namespace FastExpressionCompiler
         /// If sub-expressions are not supported by emitter, then the method returns null.
         /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
         public static TDelegate TryCompile<TDelegate>(
-            ExpressionInfo bodyExpr, IList<ParameterExpression> paramExprs, Type[] paramTypes,
-            Type returnType) where TDelegate : class
+            ExpressionInfo bodyExpr, IList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
+            where TDelegate : class
         {
             var paramArray = paramExprs as ParameterExpression[] ?? paramExprs.ToArray();
             ClosureInfo ignored = null;
@@ -265,21 +260,19 @@ namespace FastExpressionCompiler
         /// If sub-expressions are not supported by emitter, then the method returns null.
         /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
         public static TDelegate TryCompile<TDelegate>(
-            ExpressionInfo bodyExpr, IList<ParameterExpressionInfo> paramExprs, Type[] paramTypes,
-            Type returnType) where TDelegate : class
+            ExpressionInfo bodyExpr, IList<ParameterExpressionInfo> paramExprs, Type[] paramTypes, Type returnType)
+            where TDelegate : class
         {
-            var paramArray = paramExprs as ParameterExpressionInfo[] ?? paramExprs.ToArray();
             ClosureInfo ignored = null;
             return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
-                paramTypes, returnType, bodyExpr, bodyExpr.NodeType, returnType, paramArray);
+                paramTypes, returnType, bodyExpr, bodyExpr.NodeType, returnType, paramExprs.AsArray());
         }
 
         /// <summary>Compiles expression to delegate by emitting the IL. 
         /// If sub-expressions are not supported by emitter, then the method returns null.
         /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
         public static TDelegate TryCompile<TDelegate>(
-            object bodyExpr, object[] paramExprs, Type[] paramTypes,
-            Type returnType) where TDelegate : class
+            object bodyExpr, object[] paramExprs, Type[] paramTypes, Type returnType) where TDelegate : class
         {
             ClosureInfo ignored = null;
             return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
@@ -306,8 +299,14 @@ namespace FastExpressionCompiler
             var methodWithClosure = new DynamicMethod(string.Empty, returnType, closureAndParamTypes,
                 closureInfo.ClosureType, skipVisibility: true);
 
-            if (!TryEmit(methodWithClosure, exprObj, exprNodeType, exprType, paramExprs, closureInfo))
+            var il = methodWithClosure.GetILGenerator();
+            if (!EmittingVisitor.TryEmit(exprObj, exprNodeType, exprType, paramExprs, il, closureInfo))
                 return null;
+
+            if (returnType == typeof(void) && exprType != typeof(void))
+                il.Emit(OpCodes.Pop); // discard the return value on stack (#71)
+
+            il.Emit(OpCodes.Ret);
 
             // include closure as the first parameter, BUT don't bound to it. It will be bound later in EmitNestedLambda.
             if (isNestedLambda)
@@ -320,31 +319,27 @@ namespace FastExpressionCompiler
             return methodWithClosure.CreateDelegate(delegateType, closureObject);
         }
 
-        private static object TryCompileStaticDelegate(Type delegateType, Type[] paramTypes, Type returnType, object exprObj,
-            ExpressionType exprNodeType, Type exprType, object[] paramExprs)
+        private static object TryCompileStaticDelegate(
+            Type delegateType, Type[] paramTypes, Type returnType,
+            object exprObj, ExpressionType exprNodeType, Type exprType, object[] paramExprs)
         {
             var method = new DynamicMethod(string.Empty, returnType, paramTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
 
-            if (!TryEmit(method, exprObj, exprNodeType, exprType, paramExprs, null))
+            var il = method.GetILGenerator();
+            if (!EmittingVisitor.TryEmit(exprObj, exprNodeType, exprType, paramExprs, il, null))
                 return null;
 
-            // create a specific delegate if user requested delegate is untyped, otherwise CreateMethod will fail
+            if (returnType == typeof(void) && exprType != typeof(void))
+                il.Emit(OpCodes.Pop); // discard the return value on stack (#71)
+
+            il.Emit(OpCodes.Ret);
+
+            // Infers the delegate if user requested delegate is untyped, otherwise CreateMethod will fail
             if (delegateType == typeof(Delegate))
                 delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
 
             return method.CreateDelegate(delegateType);
-        }
-
-        private static bool TryEmit(DynamicMethod method,
-            object exprObj, ExpressionType exprNodeType, Type exprType, object[] paramExprs, ClosureInfo closureInfo)
-        {
-            var il = method.GetILGenerator();
-            if (!EmittingVisitor.TryEmit(exprObj, exprNodeType, exprType, paramExprs, il, closureInfo))
-                return false;
-
-            il.Emit(OpCodes.Ret); // emits return from generated method
-            return true;
         }
 
         private static Type[] GetClosureAndParamTypes(Type[] paramTypes, Type closureType)
@@ -3120,6 +3115,8 @@ namespace FastExpressionCompiler
         public static Type GetResultType(this object exprObj) =>
             (exprObj as Expression)?.Type ?? ((ExpressionInfo)exprObj).Type;
 
+        public static T[] AsArray<T>(this IEnumerable<T> xs) => xs as T[] ?? xs.ToArray();
+
         private static class EmptyArray<T>
         {
             public static readonly T[] Value = new T[0];
@@ -3148,15 +3145,16 @@ namespace FastExpressionCompiler
                 return Empty<Type>();
 
             if (paramExprs.Count == 1)
-                return new[] { paramExprs[0].IsByRef ? paramExprs[0].GetResultType().MakeByRefType() : paramExprs[0].GetResultType() };
+                return new[] { paramExprs[0].IsByRef ? paramExprs[0].Type.MakeByRefType() : paramExprs[0].Type };
 
             var paramTypes = new Type[paramExprs.Count];
             for (var i = 0; i < paramTypes.Length; i++)
-                paramTypes[i] = paramExprs[i].IsByRef ? paramExprs[i].GetResultType().MakeByRefType() : paramExprs[i].GetResultType();
+                paramTypes[i] = paramExprs[i].IsByRef ? paramExprs[i].Type.MakeByRefType() : paramExprs[i].Type;
 
             return paramTypes;
         }
 
+        // todo: Add ByRef handling
         public static Type[] GetParamExprTypes(IList<object> paramExprs)
         {
             if (paramExprs == null || paramExprs.Count == 0)
@@ -3636,6 +3634,10 @@ namespace FastExpressionCompiler
     {
         public override ExpressionType NodeType => ExpressionType.NewArrayInit;
         public override Type Type { get; }
+
+        // todo: That it is a ReadOnlyCollection<Expression> in original NewArrayExpression. 
+        // I made it a ICollection for now to use Arguments as input, without changing Arguments type
+        public ICollection<object> Expressions => Arguments;
 
         public override Expression ToExpression() =>
             Expression.NewArrayInit(_elementType, ArgumentsToExpressions());
