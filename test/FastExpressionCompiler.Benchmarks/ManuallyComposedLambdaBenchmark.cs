@@ -3,7 +3,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Attributes.Exporters;
 
 namespace FastExpressionCompiler.Benchmarks
 {
@@ -39,7 +38,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly Expression<Func<B, X>> _expr = ComposeManualExprWithParams();
 
-        [MarkdownExporter, MemoryDiagnoser]
+        [MemoryDiagnoser]
         public class CompileManuallyComposed
         {
             [Benchmark]
@@ -51,15 +50,15 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark(Baseline = true)]
             public Func<B, X> CompileFastExpression()
             {
-                return ExpressionCompiler.Compile<Func<B, X>>(_expr);
+                return _expr.CompileFast();
             }
         }
 
-        [MarkdownExporter, MemoryDiagnoser]
+        [MemoryDiagnoser]
         public class InvokeManuallyComposed
         {
             private static readonly Func<B, X> _lambdaCompiled = _expr.Compile();
-            private static readonly Func<B, X> _lambdaCompiledFast = ExpressionCompiler.Compile<Func<B, X>>(_expr);
+            private static readonly Func<B, X> _lambdaCompiledFast = _expr.CompileFast();
 
             private static readonly A _aa = new A();
             private static readonly B _bb = new B();
