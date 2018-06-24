@@ -57,12 +57,16 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
             where TDelegate : class =>
-            TryCompile<TDelegate>(lambdaExpr) ??
-            (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.Compile());
+            TryCompile<TDelegate>(lambdaExpr) ?? (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.Compile());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false) =>
             lambdaExpr.CompileFast<Delegate>(ifFastFailedReturnNull);
+
+        /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        public static TDelegate CompileFast<TDelegate>(this Expression<TDelegate> lambdaExpr, bool ifFastFailedReturnNull = false)
+            where TDelegate : class =>
+            TryCompile<TDelegate>(lambdaExpr) ?? (ifFastFailedReturnNull ? null : lambdaExpr.Compile());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<R> CompileFast<R>(this Expression<Func<R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
@@ -148,12 +152,16 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression info to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this LambdaExpressionInfo lambdaExpr, bool ifFastFailedReturnNull = false)
             where TDelegate : class =>
-            TryCompile<TDelegate>(lambdaExpr) ??
-            (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.ToLambdaExpression().Compile());
+            TryCompile<TDelegate>(lambdaExpr) ?? (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.ToLambdaExpression().Compile());
 
         /// <summary>Compiles lambda expression info to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Delegate CompileFast(this LambdaExpressionInfo lambdaExpr, bool ifFastFailedReturnNull = false) =>
             lambdaExpr.CompileFast<Delegate>(ifFastFailedReturnNull);
+
+        /// <summary>Compiles lambda expression info to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        public static TDelegate CompileFast<TDelegate>(this ExpressionInfo<TDelegate> lambdaExpr, bool ifFastFailedReturnNull = false)
+            where TDelegate : class =>
+            TryCompile(lambdaExpr) ?? (ifFastFailedReturnNull ? null : lambdaExpr.ToLambdaExpression().Compile());
 
         /// <summary>Compiles lambda expression info to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<R> CompileFast<R>(this ExpressionInfo<Func<R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
