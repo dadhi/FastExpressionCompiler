@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using BenchmarkDotNet.Running;
+﻿using BenchmarkDotNet.Running;
 
 namespace FastExpressionCompiler.Benchmarks
 {
@@ -7,14 +6,14 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            //var b = new ObjectExecutorBenchmark_AsyncExecutor_InvokeAsync();
-            //b.ObjExec_CompiledFast().Wait();
-
             //BenchmarkRunner.Run<ObjectExecutorBenchmark_CreateSyncExecutor>();
-            BenchmarkRunner.Run<ObjectExecutorBenchmark_CreateAsyncExecutor>();
+            //BenchmarkRunner.Run<ObjectExecutorBenchmark_CreateAsyncExecutor>();
 
             //BenchmarkRunner.Run<ObjectExecutorBenchmark_AsyncExecutor_InvokeSync>();
-            //BenchmarkRunner.Run<ObjectExecutorBenchmark_AsyncExecutor_InvokeAsync>();
+            BenchmarkRunner.Run<ObjectExecutorBenchmark_AsyncExecutor_InvokeAsync_WithoutAwait>();
+
+            // todo: This need to be fixed
+            //BenchmarkRunner.Run<ObjectExecutorBenchmark_AsyncExecutor_InvokeAsync_WithAwait>();
 
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Compile>();
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Invoke>();

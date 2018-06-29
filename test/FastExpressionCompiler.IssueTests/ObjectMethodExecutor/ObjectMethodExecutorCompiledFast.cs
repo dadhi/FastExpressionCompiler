@@ -9,7 +9,7 @@ using FastExpressionCompiler;
 
 namespace Microsoft.Extensions.Internal
 {
-    internal class ObjectMethodExecutorCompiledFast
+    public class ObjectMethodExecutorCompiledFast
     {
         private readonly object[] _parameterDefaultValues;
         private readonly MethodExecutorAsync _executorAsync;

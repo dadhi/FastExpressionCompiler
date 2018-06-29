@@ -8,7 +8,7 @@ using System.Reflection;
 
 namespace Microsoft.Extensions.Internal
 {
-    internal class ObjectMethodExecutor
+    public class ObjectMethodExecutor
     {
         private readonly object[] _parameterDefaultValues;
         private readonly MethodExecutorAsync _executorAsync;

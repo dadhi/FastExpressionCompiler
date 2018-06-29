@@ -6,7 +6,8 @@ dotnet restore
 
 if test "$TRAVIS_OS_NAME" != "osx";
 then 
-dotnet test test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.IssueTests.csproj -c Release -f netcoreapp1.1;
+# todo: Until .Net Core 2 / 2.1 support
+# dotnet test test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.IssueTests.csproj -c Release -f netcoreapp1.1;
 dotnet test test/FastExpressionCompiler.UnitTests/FastExpressionCompiler.UnitTests.csproj -c Release -f netcoreapp1.1;
 fi
 
