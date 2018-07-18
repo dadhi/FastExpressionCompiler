@@ -49,7 +49,7 @@ namespace Microsoft.Extensions.Internal
 
             if (IsMethodAsync)
             {
-                _executorAsync = GetExecutorAsyncViaSingleCompile(methodInfo, targetTypeInfo, coercedAwaitableInfo);
+                _executorAsync = GetExecutorAsync(methodInfo, targetTypeInfo, coercedAwaitableInfo);
             }
 
             _parameterDefaultValues = parameterDefaultValues;
@@ -267,7 +267,7 @@ namespace Microsoft.Extensions.Internal
                             awaitableInfo.AwaiterGetResultMethod),
                         Expression.Constant(null)
                     ),
-                    getResultParam).CompileFast();
+                    getResultParam).Compile();
             }
             else
             {
@@ -279,7 +279,7 @@ namespace Microsoft.Extensions.Internal
                             Expression.Convert(getResultParam, awaitableInfo.AwaiterType),
                             awaitableInfo.AwaiterGetResultMethod),
                         typeof(object)),
-                    getResultParam).CompileFast();
+                    getResultParam).Compile();
             }
 
             // var onCompletedFunc = (object awaiter, Action continuation) => {
@@ -333,146 +333,6 @@ namespace Microsoft.Extensions.Internal
                 Expression.Constant(getResultFunc),
                 Expression.Constant(onCompletedFunc),
                 Expression.Constant(unsafeOnCompletedFunc, typeof(Action<object, Action>)));
-
-            var lambda = Expression.Lambda<MethodExecutorAsync>(returnValueExpression, targetParameter, parametersParameter);
-            return lambda.CompileFast();
-        }
-
-        private static MethodExecutorAsync GetExecutorAsyncViaSingleCompile(
-            MethodInfo methodInfo,
-            TypeInfo targetTypeInfo,
-            CoercedAwaitableInfo coercedAwaitableInfo)
-        {
-            // Parameters to executor
-            var targetParameter = Expression.Parameter(typeof(object), "target");
-            var parametersParameter = Expression.Parameter(typeof(object[]), "parameters");
-
-            // Build parameter list
-            var parameters = new List<Expression>();
-            var paramInfos = methodInfo.GetParameters();
-            for (int i = 0; i < paramInfos.Length; i++)
-            {
-                var paramInfo = paramInfos[i];
-                var valueObj = Expression.ArrayIndex(parametersParameter, Expression.Constant(i));
-                var valueCast = Expression.Convert(valueObj, paramInfo.ParameterType);
-
-                // valueCast is "(Ti) parameters[i]"
-                parameters.Add(valueCast);
-            }
-
-            // Call method
-            var instanceCast = Expression.Convert(targetParameter, targetTypeInfo.AsType());
-            var methodCall = Expression.Call(instanceCast, methodInfo, parameters);
-
-            // Using the method return value, construct an ObjectMethodExecutorAwaitable based on
-            // the info we have about its implementation of the awaitable pattern. Note that all
-            // the funcs/actions we construct here are precompiled, so that only one instance of
-            // each is preserved throughout the lifetime of the ObjectMethodExecutor.
-
-            // var getAwaiterFunc = (object awaitable) =>
-            //     (object)((CustomAwaitableType)awaitable).GetAwaiter();
-            var customAwaitableParam = Expression.Parameter(typeof(object), "awaitable");
-            var awaitableInfo = coercedAwaitableInfo.AwaitableInfo;
-            var postCoercionMethodReturnType = coercedAwaitableInfo.CoercerResultType ?? methodInfo.ReturnType;
-            var getAwaiterFuncExpr = Expression.Lambda<Func<object, object>>(
-                Expression.Convert(
-                    Expression.Call(
-                        Expression.Convert(customAwaitableParam, postCoercionMethodReturnType),
-                        awaitableInfo.GetAwaiterMethod),
-                    typeof(object)),
-                customAwaitableParam);
-
-            // var isCompletedFunc = (object awaiter) =>
-            //     ((CustomAwaiterType)awaiter).IsCompleted;
-            var isCompletedParam = Expression.Parameter(typeof(object), "awaiter");
-            var isCompletedFuncExpr = Expression.Lambda<Func<object, bool>>(
-                Expression.MakeMemberAccess(
-                    Expression.Convert(isCompletedParam, awaitableInfo.AwaiterType),
-                    awaitableInfo.AwaiterIsCompletedProperty),
-                isCompletedParam);
-
-            var getResultParam = Expression.Parameter(typeof(object), "awaiter");
-            Expression<Func<object, object>> getResultFuncExpr;
-            if (awaitableInfo.ResultType == typeof(void))
-            {
-                // var getResultFunc = (object awaiter) =>
-                // {
-                //     ((CustomAwaiterType)awaiter).GetResult(); // We need to invoke this to surface any exceptions
-                //     return (object)null;
-                // };
-                getResultFuncExpr = Expression.Lambda<Func<object, object>>(
-                    Expression.Block(
-                        Expression.Call(
-                            Expression.Convert(getResultParam, awaitableInfo.AwaiterType),
-                            awaitableInfo.AwaiterGetResultMethod),
-                        Expression.Constant(null)
-                    ),
-                    getResultParam);
-            }
-            else
-            {
-                // var getResultFunc = (object awaiter) =>
-                //     (object)((CustomAwaiterType)awaiter).GetResult();
-                getResultFuncExpr = Expression.Lambda<Func<object, object>>(
-                    Expression.Convert(
-                        Expression.Call(
-                            Expression.Convert(getResultParam, awaitableInfo.AwaiterType),
-                            awaitableInfo.AwaiterGetResultMethod),
-                        typeof(object)),
-                    getResultParam);
-            }
-
-            // var onCompletedFunc = (object awaiter, Action continuation) => {
-            //     ((CustomAwaiterType)awaiter).OnCompleted(continuation);
-            // };
-            var onCompletedParam1 = Expression.Parameter(typeof(object), "awaiter");
-            var onCompletedParam2 = Expression.Parameter(typeof(Action), "continuation");
-            var onCompletedFuncExpr = Expression.Lambda<Action<object, Action>>(
-                Expression.Call(
-                    Expression.Convert(onCompletedParam1, awaitableInfo.AwaiterType),
-                    awaitableInfo.AwaiterOnCompletedMethod,
-                    onCompletedParam2),
-                onCompletedParam1,
-                onCompletedParam2);
-
-            Expression<Action<object, Action>> unsafeOnCompletedFuncExpr = null;
-            if (awaitableInfo.AwaiterUnsafeOnCompletedMethod != null)
-            {
-                // var unsafeOnCompletedFunc = (object awaiter, Action continuation) => {
-                //     ((CustomAwaiterType)awaiter).UnsafeOnCompleted(continuation);
-                // };
-                var unsafeOnCompletedParam1 = Expression.Parameter(typeof(object), "awaiter");
-                var unsafeOnCompletedParam2 = Expression.Parameter(typeof(Action), "continuation");
-                unsafeOnCompletedFuncExpr = Expression.Lambda<Action<object, Action>>(
-                    Expression.Call(
-                        Expression.Convert(unsafeOnCompletedParam1, awaitableInfo.AwaiterType),
-                        awaitableInfo.AwaiterUnsafeOnCompletedMethod,
-                        unsafeOnCompletedParam2),
-                    unsafeOnCompletedParam1,
-                    unsafeOnCompletedParam2);
-            }
-
-            // If we need to pass the method call result through a coercer function to get an
-            // awaitable, then do so.
-            var coercedMethodCallExpr = coercedAwaitableInfo.RequiresCoercion
-                ? Expression.Invoke(coercedAwaitableInfo.CoercerExpression, methodCall)
-                : (Expression)methodCall;
-
-            // return new ObjectMethodExecutorAwaitable(
-            //     (object)coercedMethodCall,
-            //     getAwaiterFunc,
-            //     isCompletedFunc,
-            //     getResultFunc,
-            //     onCompletedFunc,
-            //     unsafeOnCompletedFunc);
-            var returnValueExpression = Expression.New(
-                _objectMethodExecutorAwaitableConstructor,
-                Expression.Convert(coercedMethodCallExpr, typeof(object)),
-                getAwaiterFuncExpr,
-                isCompletedFuncExpr,
-                getResultFuncExpr,
-                onCompletedFuncExpr,
-                unsafeOnCompletedFuncExpr);
 
             var lambda = Expression.Lambda<MethodExecutorAsync>(returnValueExpression, targetParameter, parametersParameter);
             return lambda.CompileFast();

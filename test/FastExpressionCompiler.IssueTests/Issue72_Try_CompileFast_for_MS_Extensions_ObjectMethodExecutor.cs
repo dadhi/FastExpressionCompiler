@@ -38,8 +38,8 @@ namespace FastExpressionCompiler.IssueTests
             var sumTask = (Task<int>)executor.Execute(this, new object[] { 1, 2 });
             Assert.AreEqual(3, sumTask.Result);
 
-            //var sum = executor.ExecuteAsync(this, new object[] { 1, 2 });
-            //Assert.AreEqual(3, sum.GetAwaiter().GetResult());
+            var sum = executor.ExecuteAsync(this, new object[] { 1, 2 });
+            Assert.AreEqual(3, sum.GetAwaiter().GetResult());
         }
 
         [Test] // this is for comparison
@@ -53,7 +53,7 @@ namespace FastExpressionCompiler.IssueTests
         // - I have also tried to replace all `struct` in ObjectMethodExecutor and helpers with `class` with no success
         //
         [Test]
-        [Ignore("FIX ME!")]
+        //[Ignore("FIX ME!")]
         public async Task AsyncExecutor_CompiledFast_ExecuteAsync_WithAwait()
         {
             await _execCompiledFast.ExecuteAsync(this, _parameters);
