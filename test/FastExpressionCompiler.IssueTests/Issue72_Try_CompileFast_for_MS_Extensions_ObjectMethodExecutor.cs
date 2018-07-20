@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Internal;
 using NUnit.Framework;
@@ -27,6 +29,30 @@ namespace FastExpressionCompiler.IssueTests
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(TestMethodName), _ti);
 
         private static readonly object[] _parameters = { 1, 2 };
+
+        [Test]
+        public void ObjectToStructConversionAndBackShouldWork()
+        {
+            //(object awaiter) => (object)((TaskAwaiter<int>)awaiter).GetResult();
+
+            var awaiterParamExpr = Expression.Parameter(typeof(object), "awaiter");
+            
+            var expr = Expression.Lambda<Func<object, object>>(
+                Expression.Convert(
+                    Expression.Call(
+                        Expression.Convert(awaiterParamExpr, typeof(TaskAwaiter<int>)),
+                        typeof(TaskAwaiter<int>).GetTypeInfo()
+                            .GetDeclaredMethod(nameof(TaskAwaiter<int>.GetResult))),
+                    typeof(object)),
+                awaiterParamExpr);
+
+            var result = expr.CompileFast();
+            Assert.IsNotNull(result);
+
+            var awaiter = FooInt(1, 2).GetAwaiter();
+            var sum = (int)result(awaiter);
+            Assert.AreEqual(3, sum);
+        }
 
         [Test]
         public void FastCompiledOK()

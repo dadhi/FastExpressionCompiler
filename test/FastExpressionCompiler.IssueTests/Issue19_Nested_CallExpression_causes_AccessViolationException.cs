@@ -16,18 +16,16 @@ namespace FastExpressionCompiler.IssueTests
             var predicate = Lambda<Func<Test, Test>>(
                 MemberInit(
                     New(typeof(Test)),
-                    Bind(typeof(Test).GetTypeInfo().GetProperty("Name"),
+                    Bind(typeof(Test).GetTypeInfo().GetDeclaredProperty("Name"),
                         Call(
-                            Call(
-                                _innerMethod.MakeGenericMethod(typeof(int)),
+                            Call(_innerMethod.MakeGenericMethod(typeof(int)),
                                 Property(param, "Id")
                             ),
                             _toStringMethod
                         )
                     )
                 ),
-                param
-            );
+                param);
 
             // build
             var fn = predicate.Compile();

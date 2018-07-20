@@ -225,10 +225,10 @@ namespace FastExpressionCompiler.UnitTests
         {
             Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 / arg2;
 
-            var divideFunc = expr.CompileFast(true);
+            var func = expr.CompileFast(true);
 
-            Assert.IsNotNull(divideFunc);
-            Assert.AreEqual(divideFunc(7, 3), 2);
+            Assert.IsNotNull(func);
+            Assert.AreEqual(func(7, 3), 2);
         }
 
         [Test]

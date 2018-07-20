@@ -8,23 +8,34 @@ namespace FastExpressionCompiler.UnitTests
     public class ValueTypeTests
     {
         [Test]
-        public void Should_support_struct_params()
+        public void Should_support_struct_params_with_field_access()
         {
             Expression<Func<A, int>> expr = a => a.N;
 
-            var getN = expr.CompileFast(true);
+            var f = expr.CompileFast(true);
 
-            Assert.AreEqual(42, getN(new A { N = 42 }));
+            Assert.AreEqual(42, f(new A { N = 42 }));
         }
 
         [Test]
-        public void Should_support_struct_methods_requiring_boxing()
+        public void Should_support_virtual_calls_on_struct_arguments()
         {
             Expression<Func<A, string>> expr = a => a.ToString();
 
-            var getN = expr.CompileFast(true);
+            var f = expr.CompileFast(true);
 
-            Assert.AreEqual("42", getN(new A { N = 42 }));
+            Assert.AreEqual("42", f(new A { N = 42 }));
+        }
+
+        [Test]
+        public void Should_support_virtual_calls_with_parameters_on_struct_arguments()
+        {
+            object aa = new A();
+            Expression<Func<A, bool>> expr = a => a.Equals(aa);
+
+            var f = expr.CompileFast(true);
+
+            Assert.AreEqual(false, f(new A { N = 42 }));
         }
 
         [Test]
