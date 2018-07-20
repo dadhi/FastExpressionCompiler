@@ -6,14 +6,11 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            //BenchmarkRunner.Run<ObjectExecutorBenchmark_CreateSyncExecutor>();
-            BenchmarkRunner.Run<ObjectExecutorBenchmark_CreateAsyncExecutor>();
+            //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Compile>();
+            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Compile>();
 
-            //BenchmarkRunner.Run<ObjectExecutorBenchmark_AsyncExecutor_InvokeSync>();
-            //BenchmarkRunner.Run<ObjectExecutorBenchmark_AsyncExecutor_InvokeAsync_WithoutAwait>();
-
-            // todo: This need to be fixed
-            //BenchmarkRunner.Run<ObjectExecutorBenchmark_AsyncExecutor_InvokeAsync_WithAwait>();
+            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Execute>();
+            BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
 
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Compile>();
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Invoke>();

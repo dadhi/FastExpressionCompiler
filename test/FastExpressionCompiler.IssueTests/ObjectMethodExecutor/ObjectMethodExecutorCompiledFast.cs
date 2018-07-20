@@ -267,7 +267,7 @@ namespace Microsoft.Extensions.Internal
                             awaitableInfo.AwaiterGetResultMethod),
                         Expression.Constant(null)
                     ),
-                    getResultParam).Compile();
+                    getResultParam).CompileFast();
             }
             else
             {
@@ -279,7 +279,7 @@ namespace Microsoft.Extensions.Internal
                             Expression.Convert(getResultParam, awaitableInfo.AwaiterType),
                             awaitableInfo.AwaiterGetResultMethod),
                         typeof(object)),
-                    getResultParam).Compile();
+                    getResultParam).CompileFast();
             }
 
             // var onCompletedFunc = (object awaiter, Action continuation) => {
