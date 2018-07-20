@@ -7,10 +7,11 @@ namespace FastExpressionCompiler.Benchmarks
         public static void Main()
         {
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Compile>();
-            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Compile>();
+            BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Execute>();
 
+            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Compile>();
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Execute>();
-            BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
+            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
 
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Compile>();
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Invoke>();

@@ -23,6 +23,29 @@ namespace FastExpressionCompiler.Benchmarks
     }
 
     [MemoryDiagnoser]
+    public class ObjectExecutor_SyncMethod_Execute
+    {
+        public string Foo(int a, int b) => (a + b).ToString();
+
+        private static readonly Type _t = typeof(ObjectExecutor_SyncMethod_Execute);
+
+        private static readonly ObjectMethodExecutor _compiled =
+            ObjectMethodExecutor.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
+
+        private static readonly ObjectMethodExecutorCompiledFast _compiledFast =
+            ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
+
+        private static readonly object[] _parameters = { 1, 2 };
+
+        [Benchmark]
+        public object Compiled() => _compiled.Execute(this, _parameters);
+
+        [Benchmark(Baseline = true)]
+        public object CompiledFast() => _compiledFast.Execute(this, _parameters);
+    }
+
+
+    [MemoryDiagnoser]
     public class ObjectExecutor_AsyncMethod_Compile
     {
         public async Task<string> Foo(int a, int b) => await Task.FromResult((a + b).ToString());
@@ -30,11 +53,11 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly Type _t = typeof(ObjectExecutor_AsyncMethod_Compile);
 
         [Benchmark]
-        public object ObjExec() =>
+        public object Compiled() =>
             ObjectMethodExecutor.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
 
         [Benchmark(Baseline = true)]
-        public object ObjExec_CompiledFast() =>
+        public object CompiledFast() =>
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
     }
 
@@ -45,19 +68,19 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly Type _t = typeof(ObjectExecutor_AsyncMethod_Execute);
 
-        private static readonly ObjectMethodExecutor _executor =
+        private static readonly ObjectMethodExecutor _compiled =
             ObjectMethodExecutor.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
 
-        private static readonly ObjectMethodExecutorCompiledFast _executorFastCompiled =
+        private static readonly ObjectMethodExecutorCompiledFast _compiledFast =
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
 
         private static readonly object[] _parameters = { 1, 2 };
 
         [Benchmark]
-        public object ObjExec() => ((Task<string>)_executor.Execute(this, _parameters)).Result;
+        public object Compiled() => ((Task<string>)_compiled.Execute(this, _parameters)).Result;
 
         [Benchmark(Baseline = true)]
-        public object ObjExec_CompiledFast() => ((Task<string>)_executorFastCompiled.Execute(this, _parameters)).Result;
+        public object CompiledFast() => ((Task<string>)_compiledFast.Execute(this, _parameters)).Result;
     }
 
     [MemoryDiagnoser]
@@ -67,18 +90,18 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly Type _t = typeof(ObjectExecutor_AsyncMethod_ExecuteAsync);
 
-        private static readonly ObjectMethodExecutor _exec =
+        private static readonly ObjectMethodExecutor _compiled =
             ObjectMethodExecutor.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
 
-        private static readonly ObjectMethodExecutorCompiledFast _execFastCompiled =
+        private static readonly ObjectMethodExecutorCompiledFast _compiledFast =
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
 
         private static readonly object[] _parameters = { 1, 2 };
 
         [Benchmark]
-        public async Task ObjExec() => await _exec.ExecuteAsync(this, _parameters);
+        public async Task Compiled() => await _compiled.ExecuteAsync(this, _parameters);
 
         [Benchmark(Baseline = true)]
-        public async Task ObjExec_CompiledFast() => await _execFastCompiled.ExecuteAsync(this, _parameters);
+        public async Task CompiledFast() => await _compiledFast.ExecuteAsync(this, _parameters);
     }
 }
