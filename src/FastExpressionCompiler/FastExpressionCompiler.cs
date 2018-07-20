@@ -1871,12 +1871,27 @@ namespace FastExpressionCompiler
                 if (targetType == sourceType)
                     return true; // do nothing, no conversion is needed
 
+                // check implicit / explicit conversion operators on the target type first, #73
+                var targetTypeInfo = targetType.GetTypeInfo();
+                var convertOpMethod = 
+                    targetTypeInfo.GetDeclaredMethod("op_Implicit") ??
+                    targetTypeInfo.GetDeclaredMethod("op_Explicit");
+                if (convertOpMethod != null)
+                {
+                    var sourceParams = convertOpMethod.GetParameters();
+                    if (sourceParams.Length != 1)
+                        return false;
+                    if (sourceParams[0].ParameterType == sourceType)
+                        return EmitMethodCall(il, convertOpMethod);
+                    // todo: proceed to try other casts? seems ok for now but may be add more explicit / implicit operators
+                }
+
                 if (targetType == typeof(object))
                 {
                     if (sourceType.GetTypeInfo().IsValueType)
                         il.Emit(OpCodes.Box, sourceType); // for value type to object, just box a value
                 }
-                else if (sourceType == typeof(object) && targetType.GetTypeInfo().IsValueType)
+                else if (sourceType == typeof(object) && targetTypeInfo.IsValueType)
                     il.Emit(OpCodes.Unbox_Any, targetType);
 
                 else if (targetType.IsNullable()) // Conversion to Nullable: new Nullable<T>(T val);
@@ -1903,7 +1918,9 @@ namespace FastExpressionCompiler
                 else if (targetType == typeof(double))
                     il.Emit(OpCodes.Conv_R8);
                 else
+                {
                     il.Emit(OpCodes.Castclass, targetType);
+                }
 
                 return true;
             }
