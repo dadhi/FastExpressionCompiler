@@ -1363,7 +1363,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Parameter:
                         return EmitParameter(exprObj, exprType, paramExprs, il, closure, stack);
                     case ExpressionType.Convert:
-                        return EmitConvert(exprObj, exprType, paramExprs, il, closure, stack);
+                        return TryEmitConvert(exprObj, exprType, paramExprs, il, closure, stack);
                     case ExpressionType.ArrayIndex:
                         return EmitArrayIndex(exprObj, exprType, paramExprs, il, closure, stack);
                     case ExpressionType.Constant:
@@ -1847,17 +1847,17 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitConvert(object exprObj, Type targetType,
+            private static bool TryEmitConvert(object exprObj, Type targetType,
                 object[] paramExprs, ILGenerator il, ClosureInfo closure, EvalStack stack)
             {
                 var exprInfo = exprObj as UnaryExpressionInfo;
                 Type sourceType;
                 if (exprInfo != null)
                 {
-                    var opInfo = exprInfo.Operand;
-                    if (!TryEmit(opInfo, opInfo.NodeType, opInfo.Type, paramExprs, il, closure, stack))
+                    var opExpr = exprInfo.Operand;
+                    if (!TryEmit(opExpr, opExpr.NodeType, opExpr.Type, paramExprs, il, closure, stack))
                         return false;
-                    sourceType = opInfo.Type;
+                    sourceType = opExpr.Type;
                 }
                 else
                 {
@@ -1871,32 +1871,38 @@ namespace FastExpressionCompiler
                 if (targetType == sourceType)
                     return true; // do nothing, no conversion is needed
 
-                // check implicit / explicit conversion operators on the target type first, #73
-                var targetTypeInfo = targetType.GetTypeInfo();
-                var convertOpMethod = 
-                    targetTypeInfo.GetDeclaredMethod("op_Implicit") ??
-                    targetTypeInfo.GetDeclaredMethod("op_Explicit");
-                if (convertOpMethod != null)
-                {
-                    var sourceParams = convertOpMethod.GetParameters();
-                    if (sourceParams.Length != 1)
-                        return false;
-                    if (sourceParams[0].ParameterType == sourceType)
-                        return EmitMethodCall(il, convertOpMethod);
-                    // todo: proceed to try other casts? seems ok for now but may be add more explicit / implicit operators
-                }
-
                 if (targetType == typeof(object))
                 {
+                    // for value type to object, just box a value, otherwise do nothing - everything is object anyway
                     if (sourceType.GetTypeInfo().IsValueType)
-                        il.Emit(OpCodes.Box, sourceType); // for value type to object, just box a value
+                        il.Emit(OpCodes.Box, sourceType);
+                    return true;
                 }
-                else if (sourceType == typeof(object) && targetTypeInfo.IsValueType)
+
+                // check implicit / explicit conversion operators on source and target types - #73
+                var sourceTypeInfo = sourceType.GetTypeInfo();
+                if (!sourceTypeInfo.IsPrimitive)
+                {
+                    var convertOpMethod = FirstConvertOperatorOrDefault(sourceTypeInfo, targetType, sourceType);
+                    if (convertOpMethod != null)
+                        return EmitMethodCall(il, convertOpMethod);
+                }
+
+                var targetTypeInfo = targetType.GetTypeInfo();
+                if (!targetTypeInfo.IsPrimitive)
+                {
+                    var convertOpMethod = FirstConvertOperatorOrDefault(targetTypeInfo, targetType, sourceType);
+                    if (convertOpMethod != null)
+                        return EmitMethodCall(il, convertOpMethod);
+                }
+
+                if (sourceType == typeof(object) && targetTypeInfo.IsValueType)
                     il.Emit(OpCodes.Unbox_Any, targetType);
-
-                else if (targetType.IsNullable()) // Conversion to Nullable: new Nullable<T>(T val);
-                    il.Emit(OpCodes.Newobj, targetType.GetConstructorByArgs(targetType.GetWrappedTypeFromNullable()));
-
+                
+                // Conversion to Nullable: new Nullable<T>(T val);
+                else if (targetTypeInfo.IsGenericType && targetTypeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
+                    il.Emit(OpCodes.Newobj, targetType.GetConstructorByArgs(targetTypeInfo.GenericTypeArguments[0]));
+                
                 else if (targetType == typeof(int))
                     il.Emit(OpCodes.Conv_I4);
                 else if (targetType == typeof(float))
@@ -1917,13 +1923,17 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Conv_U8);
                 else if (targetType == typeof(double))
                     il.Emit(OpCodes.Conv_R8);
-                else
-                {
-                    il.Emit(OpCodes.Castclass, targetType);
-                }
 
+                else // cast as the last resort and let's it fail if unlucky
+                    il.Emit(OpCodes.Castclass, targetType);
                 return true;
             }
+
+            private static MethodInfo FirstConvertOperatorOrDefault(TypeInfo typeInfo, Type targetType, Type sourceType) =>
+                typeInfo.DeclaredMethods.GetFirst(m =>
+                    m.IsStatic && m.ReturnType == targetType && 
+                    (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
+                    m.GetParameters()[0].ParameterType == sourceType);
 
             private static bool EmitConstant(object exprObj, Type exprType, 
                 ILGenerator il, ClosureInfo closure)
@@ -3149,16 +3159,12 @@ namespace FastExpressionCompiler
         }
     }
 
-    // Helpers targeting the performance.
-    // Extensions method names may be a bit funny (non standard), 
-    // it is done to prevent conflicts with helpers with standard names
+    // Helpers targeting the performance. Extensions method names may be a bit funny (non standard), 
+    // in order to prevent conflicts with YOUR helpers with standard names
     internal static class Tools
     {
         public static bool IsNullable(this Type type) =>
             type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>);
-
-        public static Type GetWrappedTypeFromNullable(this Type type) =>
-            type.GetTypeInfo().GenericTypeArguments[0];
 
         public static ConstructorInfo GetConstructorByArgs(this Type type, params Type[] args) =>
             type.GetTypeInfo().DeclaredConstructors.GetFirst(c => c.GetParameters().Project(p => p.ParameterType).SequenceEqual(args));
