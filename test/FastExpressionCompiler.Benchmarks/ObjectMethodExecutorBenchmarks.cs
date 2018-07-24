@@ -6,6 +6,7 @@ using Microsoft.Extensions.Internal;
 
 namespace FastExpressionCompiler.Benchmarks
 {
+    [CoreJob, ClrJob]
     [MemoryDiagnoser]
     public class ObjectExecutor_SyncMethod_Compile
     {
@@ -14,14 +15,15 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly Type _t = typeof(ObjectExecutor_SyncMethod_Compile);
 
         [Benchmark]
-        public object ObjExec() =>
+        public object Compile() =>
             ObjectMethodExecutor.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
 
         [Benchmark(Baseline = true)]
-        public object ObjExec_CompiledFast() =>
+        public object CompileFast() =>
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
     }
 
+    [CoreJob, ClrJob]
     [MemoryDiagnoser]
     public class ObjectExecutor_SyncMethod_Execute
     {
@@ -44,7 +46,7 @@ namespace FastExpressionCompiler.Benchmarks
         public object CompiledFast() => _compiledFast.Execute(this, _parameters);
     }
 
-
+    [CoreJob, ClrJob]
     [MemoryDiagnoser]
     public class ObjectExecutor_AsyncMethod_Compile
     {
@@ -53,14 +55,15 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly Type _t = typeof(ObjectExecutor_AsyncMethod_Compile);
 
         [Benchmark]
-        public object Compiled() =>
+        public object Compile() =>
             ObjectMethodExecutor.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
 
         [Benchmark(Baseline = true)]
-        public object CompiledFast() =>
+        public object CompileFast() =>
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
     }
 
+    [CoreJob, ClrJob]
     [MemoryDiagnoser]
     public class ObjectExecutor_AsyncMethod_Execute
     {
@@ -83,6 +86,7 @@ namespace FastExpressionCompiler.Benchmarks
         public object CompiledFast() => ((Task<string>)_compiledFast.Execute(this, _parameters)).Result;
     }
 
+    [CoreJob, ClrJob]
     [MemoryDiagnoser]
     public class ObjectExecutor_AsyncMethod_ExecuteAsync
     {

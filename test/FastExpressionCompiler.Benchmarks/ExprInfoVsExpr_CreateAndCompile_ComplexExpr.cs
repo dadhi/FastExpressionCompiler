@@ -1,10 +1,9 @@
 ﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Attributes.Exporters;
 using FastExpressionCompiler.UnitTests;
 
 namespace FastExpressionCompiler.Benchmarks
 {
-    [MemoryDiagnoser, MarkdownExporter]
+    [MemoryDiagnoser]
     public class ExprInfoVsExpr_CreateAndCompile_ComplexExpr
     {
         [Benchmark]
@@ -26,7 +25,7 @@ namespace FastExpressionCompiler.Benchmarks
         }
     }
 
-    [MemoryDiagnoser, MarkdownExporter]
+    [MemoryDiagnoser]
     public class ExprInfoVsExpr_Create_ComplexExpr
     {
         [Benchmark]

@@ -1,7 +1,6 @@
 using System;
 using System.Linq.Expressions;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Attributes.Exporters;
 
 namespace FastExpressionCompiler.Benchmarks
 {
@@ -21,7 +20,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
 
-        [MarkdownExporter, MemoryDiagnoser]
+        [MemoryDiagnoser]
         public class CompileWithNestedLambda
         {
             [Benchmark]

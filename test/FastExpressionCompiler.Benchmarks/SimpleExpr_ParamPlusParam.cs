@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Attributes.Jobs;
 
 namespace FastExpressionCompiler.Benchmarks
 {

@@ -3,11 +3,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Attributes.Exporters;
 
 namespace FastExpressionCompiler.Benchmarks
 {
-    [MemoryDiagnoser, MarkdownExporter]
+    [MemoryDiagnoser]
     public class ExprInfoVsExpr_CreateAndCompile_SimpleExpr
     {
         public class A { }
