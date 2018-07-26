@@ -248,7 +248,8 @@ namespace FastExpressionCompiler
                 Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.Body.Type);
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
-        public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr, object closure, params ConstantExpression[] closureConstants)
+        public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr, 
+            object closure, params ConstantExpression[] closureConstants)
             where TDelegate : class
         {
             var closureInfo = new ClosureInfo(closure, closureConstants);
@@ -325,25 +326,16 @@ namespace FastExpressionCompiler
             object exprObj, ExpressionType exprNodeType, Type exprType, object[] paramExprs,
             bool isNestedLambda = false)
         {
-            var closure = closureInfo?.PreConstructedClosure;
-            if (closure == null && !TryCollectBoundConstants(ref closureInfo, exprObj, exprNodeType, paramExprs))
+            object closure;
+            if (closureInfo?.IsClosureConstructed == true)
+                closure = closureInfo?.Closure;
+            else if (TryCollectBoundConstants(ref closureInfo, exprObj, exprNodeType, paramExprs))
+                closure = closureInfo?.ConstructClosureTypeAndObject(constructTypeOnly: isNestedLambda);
+            else
                 return null;
 
-            Type[] methodParamTypes;
-            if (closure != null)
-            {
-                methodParamTypes = GetClosureAndParamTypes(paramTypes, closureInfo.ClosureType);
-            }
-            else if (closureInfo?.HasClosureItems == true)
-            {
-                closure = closureInfo.ConstructClosureTypeAndObject(constructTypeOnly: isNestedLambda);
-                methodParamTypes = GetClosureAndParamTypes(paramTypes, closureInfo.ClosureType);
-            }
-            else
-            {
-                methodParamTypes = paramTypes;
-                closureInfo = null;
-            }
+            var closureType = closureInfo?.ClosureType;
+            var methodParamTypes = closureType == null ? paramTypes : GetClosureAndParamTypes(paramTypes, closureType);
 
             var method = new DynamicMethod(string.Empty, returnType, methodParamTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
@@ -408,11 +400,15 @@ namespace FastExpressionCompiler
         // Track the info required to build a closure object + some context information not directly related to closure.
         private sealed class ClosureInfo
         {
-            // Externally constructed closure object.
-            public readonly object PreConstructedClosure;
+            public bool IsClosureConstructed;
 
-            // Type of constructed closure, is known after ConstructClosure call
+            // Constructed closure object.
+            public object Closure;
+
+            // Type of constructed closure, may be available even without closure object (in case of nested lambda)
             public Type ClosureType;
+
+            public bool HasClosure => ClosureType != null;
 
             // Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public object[] Constants;
@@ -429,7 +425,7 @@ namespace FastExpressionCompiler
 
             // FieldInfos are needed to load field of closure object on stack in emitter.
             // It is also an indicator that we use typed Closure object and not an array.
-            public FieldInfo[] Fields;
+            public FieldInfo[] ClosureFields;
 
             // Helper to decide whether we are inside the block or not
             public BlockInfo CurrentBlock = BlockInfo.Empty;
@@ -442,23 +438,21 @@ namespace FastExpressionCompiler
             // Populates info directly with provided closure object and constants.
             public ClosureInfo(object preConstructedClosure, object[] closureConstantExpressions)
             {
-                PreConstructedClosure = preConstructedClosure;
-                Constants = closureConstantExpressions;
+                IsClosureConstructed = true;
 
-                var closedItemCount = closureConstantExpressions.Length;
-                ClosedItemCount = closedItemCount;
+                if (preConstructedClosure == null)
+                    return;
+
+                Closure = preConstructedClosure;
+                Constants = closureConstantExpressions;
+                ClosedItemCount = closureConstantExpressions.Length; // should be the same as Fields.Length below
 
                 var closureType = preConstructedClosure.GetType();
                 ClosureType = closureType;
+                ClosureFields = closureType.GetTypeInfo().DeclaredFields.AsArray();
 
-                Fields = closureType.GetTypeInfo().DeclaredFields.AsArray();
+                // todo: verify that Fields types are correspond to `closureConstantExpressions`
             }
-
-            // Tells that we should construct a bounded closure object for the compiled delegate,
-            // also indicates that we have to shift when we are operating on arguments 
-            // because the first argument should be the closure.
-            public bool HasClosureItems =>
-                Constants.Length != 0 || NestedLambdas.Length != 0 || NonPassedParameters.Length != 0;
 
             public void AddConstant(object expr)
             {
@@ -490,23 +484,24 @@ namespace FastExpressionCompiler
 
             public object ConstructClosureTypeAndObject(bool constructTypeOnly)
             {
+                IsClosureConstructed = true;
+
                 var constants = Constants;
                 var nonPassedParams = NonPassedParameters;
                 var nestedLambdas = NestedLambdas;
+                if (constants.Length == 0 && nonPassedParams.Length == 0 && nestedLambdas.Length == 0)
+                    return null;
 
                 var constPlusParamCount = constants.Length + nonPassedParams.Length;
                 var totalItemCount = constPlusParamCount + nestedLambdas.Length;
-
                 ClosedItemCount = totalItemCount;
-
-                var closureCreateMethods = Closure.CreateMethods;
 
                 // Construct the array based closure when number of values is bigger than
                 // number of fields in biggest supported Closure class.
+                var closureCreateMethods = ExpressionCompiler.Closure.CreateMethods;
                 if (totalItemCount > closureCreateMethods.Length)
                 {
                     ClosureType = typeof(ArrayClosure);
-
                     if (constructTypeOnly)
                         return null;
 
@@ -525,7 +520,7 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < nestedLambdas.Length; i++)
                             items[constPlusParamCount + i] = nestedLambdas[i].Lambda;
 
-                    return new ArrayClosure(items);
+                    return Closure = new ArrayClosure(items);
                 }
 
                 // Construct the Closure Type and optionally Closure object with closed values stored as fields:
@@ -584,9 +579,12 @@ namespace FastExpressionCompiler
                 var createClosure = createClosureMethod.MakeGenericMethod(fieldTypes);
                 ClosureType = createClosure.ReturnType;
 
-                Fields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
+                ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
 
-                return fieldValues == null ? null : createClosure.Invoke(null, fieldValues);
+                if (fieldValues == null)
+                    return null;
+                
+                return Closure = createClosure.Invoke(null, fieldValues);
             }
 
             public void PushBlock(object blockResultExpr, object[] blockVarExprs, LocalBuilder[] localVars) =>
@@ -1638,7 +1636,7 @@ namespace FastExpressionCompiler
                 var paramIndex = paramExprs.GetFirstIndex(paramExprObj);
                 if (paramIndex != -1)
                 {
-                    if (closure != null && closure.HasClosureItems)
+                    if (closure?.HasClosure == true)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
                     var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType;
@@ -1903,7 +1901,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldtoken, (Type)constantValue);
                     il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
                 }
-                else if (closure != null && closure.HasClosureItems)
+                else if (closure?.HasClosure == true)
                 {
                     var constantIndex = closure.Constants.GetFirstIndex(exprObj);
                     if (constantIndex == -1)
@@ -1933,8 +1931,9 @@ namespace FastExpressionCompiler
             {
                 il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
 
-                if (closure.Fields != null)
-                    il.Emit(OpCodes.Ldfld, closure.Fields[itemIndex]);
+                var closureFields = closure.ClosureFields;
+                if (closureFields != null)
+                    il.Emit(OpCodes.Ldfld, closureFields[itemIndex]);
                 else
                 {
                     // for ArrayClosure load an array field
@@ -2238,7 +2237,7 @@ namespace FastExpressionCompiler
                         var paramIndex = paramExprs.GetFirstIndex(left);
                         if (paramIndex != -1)
                         {
-                            if (closure != null && closure.HasClosureItems)
+                            if (closure?.HasClosure == true)
                                 paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
                             if (paramIndex >= byte.MaxValue)
@@ -2288,11 +2287,11 @@ namespace FastExpressionCompiler
                                 return false;
 
                             var valueVar = il.DeclareLocal(exprType); // store left value in variable
-                            if (closure.Fields != null)
+                            if (closure.ClosureFields != null)
                             {
                                 il.Emit(OpCodes.Dup);
                                 il.Emit(OpCodes.Stloc, valueVar);
-                                il.Emit(OpCodes.Stfld, closure.Fields[paramInClosureIndex]);
+                                il.Emit(OpCodes.Stfld, closure.ClosureFields[paramInClosureIndex]);
                                 il.Emit(OpCodes.Ldloc, valueVar);
                             }
                             else
@@ -2309,7 +2308,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            var isArrayClosure = closure.Fields == null;
+                            var isArrayClosure = closure.ClosureFields == null;
                             if (isArrayClosure)
                             {
                                 il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField); // load array field
@@ -2326,7 +2325,7 @@ namespace FastExpressionCompiler
                                 il.Emit(OpCodes.Stelem_Ref); // put the variable into array
                             }
                             else
-                                il.Emit(OpCodes.Stfld, closure.Fields[paramInClosureIndex]);
+                                il.Emit(OpCodes.Stfld, closure.ClosureFields[paramInClosureIndex]);
                         }
                         return true;
 
@@ -2578,7 +2577,7 @@ namespace FastExpressionCompiler
                     return true;
 
                 // If closure is array-based, the create a new array to represent closure for the nested lambda
-                var isNestedArrayClosure = nestedClosureInfo.Fields == null;
+                var isNestedArrayClosure = nestedClosureInfo.ClosureFields == null;
                 if (isNestedArrayClosure)
                 {
                     EmitLoadConstantInt(il, nestedClosureInfo.ClosedItemCount); // size of array

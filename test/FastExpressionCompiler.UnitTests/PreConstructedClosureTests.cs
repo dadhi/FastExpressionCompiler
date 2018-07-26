@@ -40,5 +40,15 @@ namespace FastExpressionCompiler.UnitTests
             public readonly X X;
             public ClosureX(X x) { X = x; }
         }
+
+        [Test]
+        public void Can_prevent_closure_creation_when_compiling_a_static_delegate()
+        {
+            Expression<Func<X>> expr = () => new X();
+
+            var f = expr.TryCompile<Func<X>>(closure: null);
+
+            Assert.IsInstanceOf<X>(f());
+        }
     }
 }
