@@ -46,7 +46,7 @@ namespace FastExpressionCompiler.Benchmarks
         public object CompiledFast() => _compiledFast.Execute(this, _parameters);
     }
 
-    [ClrJob]
+    [ClrJob, CoreJob]
     [MemoryDiagnoser]
     public class ObjectExecutor_AsyncMethod_Compile
     {
