@@ -1929,8 +1929,7 @@ namespace FastExpressionCompiler
             }
 
             // if itemType is null, then itemExprObj should be not null
-            private static void LoadClosureFieldOrItem(ClosureInfo closure, ILGenerator il, int itemIndex,
-                Type itemType, object itemExprObj = null)
+            private static void LoadClosureFieldOrItem(ClosureInfo closure, ILGenerator il, int itemIndex, Type itemType)
             {
                 il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
 
@@ -1946,8 +1945,6 @@ namespace FastExpressionCompiler
 
                     // load item from index
                     il.Emit(OpCodes.Ldelem_Ref);
-
-                    itemType = itemType ?? itemExprObj.GetResultType();
                     il.Emit(itemType.GetTypeInfo().IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 }
             }
@@ -2659,8 +2656,7 @@ namespace FastExpressionCompiler
                             if (outerParamIndex == -1)
                                 return false; // impossible, better to throw?
 
-                            LoadClosureFieldOrItem(closure, il, outerConstants.Length + outerParamIndex,
-                                nestedUsedParamType, nestedUsedParam);
+                            LoadClosureFieldOrItem(closure, il, outerConstants.Length + outerParamIndex, nestedUsedParamType);
                         }
                     }
 
