@@ -32,7 +32,6 @@ namespace FastExpressionCompiler
     using System.Linq.Expressions;
     using System.Reflection;
     using System.Reflection.Emit;
-    using System.Diagnostics;
 
     /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
     /// Partial to extend with your things when used as source file.</summary>
@@ -248,6 +247,17 @@ namespace FastExpressionCompiler
             TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters,
                 Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.Body.Type);
 
+        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
+        public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr, object closure, params ConstantExpression[] closureConstants)
+            where TDelegate : class
+        {
+            var closureInfo = new ClosureInfo(closure, closureConstants);
+            var bodyExpr = lambdaExpr.Body;
+            var paramExprs = lambdaExpr.Parameters;
+            return (TDelegate)TryCompile(ref closureInfo, typeof(TDelegate), Tools.GetParamExprTypes(paramExprs), 
+                bodyExpr.Type, bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramExprs.AsArray());
+        }
+
         /// <summary>Compiles expression to delegate by emitting the IL. 
         /// If sub-expressions are not supported by emitter, then the method returns null.
         /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
@@ -261,9 +271,6 @@ namespace FastExpressionCompiler
         }
 
         /// <summary>Tries to compile lambda expression info.</summary>
-        /// <typeparam name="TDelegate">The compatible delegate type, otherwise case will throw.</typeparam>
-        /// <param name="lambdaExpr">Lambda expression to compile.</param>
-        /// <returns>Compiled delegate or null.</returns>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpressionInfo lambdaExpr)
             where TDelegate : class =>
             TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters,
@@ -286,16 +293,13 @@ namespace FastExpressionCompiler
             ExpressionInfo bodyExpr, IList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
             where TDelegate : class
         {
-            var paramArray = paramExprs as ParameterExpression[] ?? paramExprs.ToArray();
             ClosureInfo ignored = null;
             return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
-                paramTypes, returnType, bodyExpr, bodyExpr.NodeType, returnType, paramArray);
+                paramTypes, returnType, bodyExpr, bodyExpr.NodeType, returnType, paramExprs.AsArray());
         }
 
         // todo: Not used, candidate for removal
-        /// <summary>Compiles expression to delegate by emitting the IL. 
-        /// If sub-expressions are not supported by emitter, then the method returns null.
-        /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
+        /// <summary>Obsolete</summary>
         public static TDelegate TryCompile<TDelegate>(
             ExpressionInfo bodyExpr, IList<ParameterExpressionInfo> paramExprs, Type[] paramTypes, Type returnType)
             where TDelegate : class
@@ -321,17 +325,24 @@ namespace FastExpressionCompiler
             object exprObj, ExpressionType exprNodeType, Type exprType, object[] paramExprs,
             bool isNestedLambda = false)
         {
-            if (!TryCollectBoundConstants(ref closureInfo, exprObj, exprNodeType, exprType, paramExprs))
+            var closure = closureInfo?.PreConstructedClosure;
+            if (closure == null && !TryCollectBoundConstants(ref closureInfo, exprObj, exprNodeType, paramExprs))
                 return null;
 
-            object closureObject = null;
-            var methodParamTypes = paramTypes;
-            if (closureInfo == null || !closureInfo.HasBoundClosure)
-                closureInfo = null;
+            Type[] methodParamTypes;
+            if (closure != null)
+            {
+                methodParamTypes = GetClosureAndParamTypes(paramTypes, closureInfo.ClosureType);
+            }
+            else if (closureInfo?.HasClosureItems == true)
+            {
+                closure = closureInfo.ConstructClosureTypeAndObject(constructTypeOnly: isNestedLambda);
+                methodParamTypes = GetClosureAndParamTypes(paramTypes, closureInfo.ClosureType);
+            }
             else
             {
-                closureObject = closureInfo.ConstructClosureTypeAndObject(constructTypeOnly: isNestedLambda);
-                methodParamTypes = GetClosureAndParamTypes(paramTypes, closureInfo.ClosureType);
+                methodParamTypes = paramTypes;
+                closureInfo = null;
             }
 
             var method = new DynamicMethod(string.Empty, returnType, methodParamTypes,
@@ -353,7 +364,7 @@ namespace FastExpressionCompiler
             else if (delegateType == typeof(Delegate))
                 delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
 
-            return method.CreateDelegate(delegateType, closureObject);
+            return method.CreateDelegate(delegateType, closure);
         }
 
         private static Type[] GetClosureAndParamTypes(Type[] paramTypes, Type closureType)
@@ -409,26 +420,18 @@ namespace FastExpressionCompiler
             }
         }
 
-        [DebuggerDisplay("Expression={ConstantExpr}")]
-        private struct ConstantInfo
-        {
-            public readonly object ConstantExpr;
-            public readonly object Value;
-            public readonly Type Type;
-            public ConstantInfo(object constantExpr, object value, Type type)
-            {
-                ConstantExpr = constantExpr;
-                Value = value;
-                Type = type;
-            }
-        }
-
         // todo: Consolidate together with IL, ParamObjects and EvalStack into single context passed with TryEmit methods
         // Track the info required to build a closure object + some context information not directly related to closure.
         private sealed class ClosureInfo
         {
-            // Closed values used by expression and by its nested lambdas
-            public ConstantInfo[] Constants = Tools.Empty<ConstantInfo>();
+            // Externally constructed closure object.
+            public readonly object PreConstructedClosure;
+
+            // Type of constructed closure, is known after ConstructClosure call
+            public Type ClosureType;
+
+            // Constant expressions to find an index (by reference) of constant expression from compiled expression.
+            public object[] Constants;
 
             // Parameters not passed through lambda parameter list But used inside lambda body.
             // The top expression should not! contain non passed parameters. 
@@ -437,37 +440,47 @@ namespace FastExpressionCompiler
             // All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas = Tools.Empty<NestedLambdaInfo>();
 
-            // FieldInfos are needed to load field of closure object on stack in emitter
-            // It is also an indicator that we use typed Closure object and not an array
-            public FieldInfo[] Fields { get; private set; }
-
-            // Type of constructed closure, is known after ConstructClosure call
-            public Type ClosureType { get; private set; }
-
             // Known after ConstructClosure call
-            public int ClosedItemCount { get; private set; }
+            public int ClosedItemCount;
 
-            // Helper member to decide when we are inside in a block or not
+            // FieldInfos are needed to load field of closure object on stack in emitter.
+            // It is also an indicator that we use typed Closure object and not an array.
+            public FieldInfo[] Fields;
+
+            // Helper to decide whether we are inside the block or not
             public BlockInfo CurrentBlock = BlockInfo.Empty;
+
+            public ClosureInfo()
+            {
+                Constants = Tools.Empty<object>();
+            }
+
+            // Populates info directly with provided closure object and constants.
+            public ClosureInfo(object preConstructedClosure, object[] closureConstantExpressions)
+            {
+                PreConstructedClosure = preConstructedClosure;
+                Constants = closureConstantExpressions;
+
+                var closedItemCount = closureConstantExpressions.Length;
+                ClosedItemCount = closedItemCount;
+
+                var closureType = preConstructedClosure.GetType();
+                ClosureType = closureType;
+
+                Fields = closureType.GetTypeInfo().DeclaredFields.AsArray();
+            }
 
             // Tells that we should construct a bounded closure object for the compiled delegate,
             // also indicates that we have to shift when we are operating on arguments 
-            // because the first argument should be the closure
-            public bool HasBoundClosure =>
+            // because the first argument should be the closure.
+            public bool HasClosureItems =>
                 Constants.Length != 0 || NestedLambdas.Length != 0 || NonPassedParameters.Length != 0;
 
-            public void AddConstant(object expr, object value, Type type)
+            public void AddConstant(object expr)
             {
                 if (Constants.Length == 0 ||
-                    Constants.GetFirstIndex(it => it.ConstantExpr == expr) == -1)
-                    Constants = Constants.WithLast(new ConstantInfo(expr, value, type));
-            }
-
-            public void AddConstant(ConstantInfo info)
-            {
-                if (Constants.Length == 0 ||
-                    Constants.GetFirstIndex(it => it.ConstantExpr == info.ConstantExpr) == -1)
-                    Constants = Constants.WithLast(info);
+                    Constants.GetFirstIndex(expr) == -1)
+                    Constants = Constants.WithLast(expr);
             }
 
             public void AddNonPassedParam(object exprObj)
@@ -516,7 +529,11 @@ namespace FastExpressionCompiler
                     var items = new object[totalItemCount];
                     if (constants.Length != 0)
                         for (var i = 0; i < constants.Length; i++)
-                            items[i] = constants[i].Value;
+                        {
+                            var constant = constants[i];
+                            var constantExpr = constant as ConstantExpression;
+                            items[i] = constantExpr?.Value ?? ((ConstantExpressionInfo)constant).Value;
+                        }
 
                     // skip non passed parameters as it is only for nested lambdas
 
@@ -534,7 +551,7 @@ namespace FastExpressionCompiler
                 {
                     if (constants.Length != 0)
                         for (var i = 0; i < constants.Length; i++)
-                            fieldTypes[i] = constants[i].Type;
+                            fieldTypes[i] = constants[i].GetResultType();
 
                     if (nonPassedParams.Length != 0)
                         for (var i = 0; i < nonPassedParams.Length; i++)
@@ -551,9 +568,19 @@ namespace FastExpressionCompiler
                     if (constants.Length != 0)
                         for (var i = 0; i < constants.Length; i++)
                         {
-                            var constantExpr = constants[i];
-                            fieldTypes[i] = constantExpr.Type;
-                            fieldValues[i] = constantExpr.Value;
+                            var constant = constants[i];
+                            var constantExpr = constant as ConstantExpression;
+                            if (constantExpr != null)
+                            {
+                                fieldTypes[i] = constantExpr.Type;
+                                fieldValues[i] = constantExpr.Value;
+                            }
+                            else
+                            {
+                                var constantExprInfo = (ConstantExpressionInfo)constant;
+                                fieldTypes[i] = constantExprInfo.Type;
+                                fieldValues[i] = constantExprInfo.Value;
+                            }
                         }
 
                     if (nonPassedParams.Length != 0)
@@ -573,8 +600,7 @@ namespace FastExpressionCompiler
                 var createClosure = createClosureMethod.MakeGenericMethod(fieldTypes);
                 ClosureType = createClosure.ReturnType;
 
-                var fields = ClosureType.GetTypeInfo().DeclaredFields;
-                Fields = fields as FieldInfo[] ?? fields.ToArray();
+                Fields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
 
                 return fieldValues == null ? null : createClosure.Invoke(null, fieldValues);
             }
@@ -622,118 +648,88 @@ namespace FastExpressionCompiler
 
         #region Closures
 
-        internal static class Closure
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
+        public static class Closure
         {
-            private static readonly IEnumerable<MethodInfo> _methods =
-                typeof(Closure).GetTypeInfo().DeclaredMethods;
+            private static readonly IEnumerable<MethodInfo> _methods = typeof(Closure).GetTypeInfo().DeclaredMethods;
+            internal static readonly MethodInfo[] CreateMethods = _methods.AsArray();
 
-            public static readonly MethodInfo[] CreateMethods =
-                _methods as MethodInfo[] ?? _methods.ToArray();
+            public static Closure<T1> Create<T1>(T1 v1) => new Closure<T1>(v1);
 
-            public static Closure<T1> CreateClosure<T1>(T1 v1) => new Closure<T1>(v1);
+            public static Closure<T1, T2> Create<T1, T2>(T1 v1, T2 v2) => new Closure<T1, T2>(v1, v2);
 
-            public static Closure<T1, T2> CreateClosure<T1, T2>(T1 v1, T2 v2) => new Closure<T1, T2>(v1, v2);
-
-            public static Closure<T1, T2, T3> CreateClosure<T1, T2, T3>(T1 v1, T2 v2, T3 v3) =>
+            public static Closure<T1, T2, T3> Create<T1, T2, T3>(T1 v1, T2 v2, T3 v3) =>
                 new Closure<T1, T2, T3>(v1, v2, v3);
 
-            public static Closure<T1, T2, T3, T4> CreateClosure<T1, T2, T3, T4>(T1 v1, T2 v2, T3 v3, T4 v4) =>
+            public static Closure<T1, T2, T3, T4> Create<T1, T2, T3, T4>(T1 v1, T2 v2, T3 v3, T4 v4) =>
                 new Closure<T1, T2, T3, T4>(v1, v2, v3, v4);
 
-            public static Closure<T1, T2, T3, T4, T5> CreateClosure<T1, T2, T3, T4, T5>(T1 v1, T2 v2, T3 v3, T4 v4,
+            public static Closure<T1, T2, T3, T4, T5> Create<T1, T2, T3, T4, T5>(T1 v1, T2 v2, T3 v3, T4 v4,
                 T5 v5) => new Closure<T1, T2, T3, T4, T5>(v1, v2, v3, v4, v5);
 
-            public static Closure<T1, T2, T3, T4, T5, T6> CreateClosure<T1, T2, T3, T4, T5, T6>(T1 v1, T2 v2, T3 v3,
+            public static Closure<T1, T2, T3, T4, T5, T6> Create<T1, T2, T3, T4, T5, T6>(T1 v1, T2 v2, T3 v3,
                 T4 v4, T5 v5, T6 v6) => new Closure<T1, T2, T3, T4, T5, T6>(v1, v2, v3, v4, v5, v6);
 
-            public static Closure<T1, T2, T3, T4, T5, T6, T7> CreateClosure<T1, T2, T3, T4, T5, T6, T7>(T1 v1, T2 v2,
+            public static Closure<T1, T2, T3, T4, T5, T6, T7> Create<T1, T2, T3, T4, T5, T6, T7>(T1 v1, T2 v2,
                 T3 v3, T4 v4, T5 v5, T6 v6, T7 v7) =>
                 new Closure<T1, T2, T3, T4, T5, T6, T7>(v1, v2, v3, v4, v5, v6, v7);
 
-            public static Closure<T1, T2, T3, T4, T5, T6, T7, T8> CreateClosure<T1, T2, T3, T4, T5, T6, T7, T8>(
+            public static Closure<T1, T2, T3, T4, T5, T6, T7, T8> Create<T1, T2, T3, T4, T5, T6, T7, T8>(
                 T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8) =>
                 new Closure<T1, T2, T3, T4, T5, T6, T7, T8>(v1, v2, v3, v4, v5, v6, v7, v8);
 
-            public static Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9> CreateClosure<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+            public static Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
                 T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9) =>
                 new Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9>(v1, v2, v3, v4, v5, v6, v7, v8, v9);
 
-            public static Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> CreateClosure<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+            public static Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
                 T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9, T10 v10) =>
                 new Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10);
         }
 
-        internal sealed class Closure<T1>
+        public sealed class Closure<T1>
         {
             public T1 V1;
-
-            public Closure(T1 v1)
-            {
-                V1 = v1;
-            }
+            public Closure(T1 v1) { V1 = v1; }
         }
 
-        internal sealed class Closure<T1, T2>
+        public sealed class Closure<T1, T2>
         {
             public T1 V1;
             public T2 V2;
-
-            public Closure(T1 v1, T2 v2)
-            {
-                V1 = v1;
-                V2 = v2;
-            }
+            public Closure(T1 v1, T2 v2) { V1 = v1; V2 = v2; }
         }
 
-        internal sealed class Closure<T1, T2, T3>
+        public sealed class Closure<T1, T2, T3>
         {
             public T1 V1;
             public T2 V2;
             public T3 V3;
 
-            public Closure(T1 v1, T2 v2, T3 v3)
-            {
-                V1 = v1;
-                V2 = v2;
-                V3 = v3;
-            }
+            public Closure(T1 v1, T2 v2, T3 v3) { V1 = v1; V2 = v2; V3 = v3; }
         }
 
-        internal sealed class Closure<T1, T2, T3, T4>
+        public sealed class Closure<T1, T2, T3, T4>
         {
             public T1 V1;
             public T2 V2;
             public T3 V3;
             public T4 V4;
-
-            public Closure(T1 v1, T2 v2, T3 v3, T4 v4)
-            {
-                V1 = v1;
-                V2 = v2;
-                V3 = v3;
-                V4 = v4;
-            }
+            public Closure(T1 v1, T2 v2, T3 v3, T4 v4) { V1 = v1; V2 = v2; V3 = v3; V4 = v4; }
         }
 
-        internal sealed class Closure<T1, T2, T3, T4, T5>
+        public sealed class Closure<T1, T2, T3, T4, T5>
         {
             public T1 V1;
             public T2 V2;
             public T3 V3;
             public T4 V4;
             public T5 V5;
-
-            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5)
-            {
-                V1 = v1;
-                V2 = v2;
-                V3 = v3;
-                V4 = v4;
-                V5 = v5;
-            }
+            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5) { V1 = v1; V2 = v2; V3 = v3; V4 = v4; V5 = v5; }
         }
 
-        internal sealed class Closure<T1, T2, T3, T4, T5, T6>
+        public sealed class Closure<T1, T2, T3, T4, T5, T6>
         {
             public T1 V1;
             public T2 V2;
@@ -741,19 +737,10 @@ namespace FastExpressionCompiler
             public T4 V4;
             public T5 V5;
             public T6 V6;
-
-            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6)
-            {
-                V1 = v1;
-                V2 = v2;
-                V3 = v3;
-                V4 = v4;
-                V5 = v5;
-                V6 = v6;
-            }
+            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6) { V1 = v1; V2 = v2; V3 = v3; V4 = v4; V5 = v5; V6 = v6; }
         }
 
-        internal sealed class Closure<T1, T2, T3, T4, T5, T6, T7>
+        public sealed class Closure<T1, T2, T3, T4, T5, T6, T7>
         {
             public T1 V1;
             public T2 V2;
@@ -762,20 +749,10 @@ namespace FastExpressionCompiler
             public T5 V5;
             public T6 V6;
             public T7 V7;
-
-            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7)
-            {
-                V1 = v1;
-                V2 = v2;
-                V3 = v3;
-                V4 = v4;
-                V5 = v5;
-                V6 = v6;
-                V7 = v7;
-            }
+            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7) { V1 = v1; V2 = v2; V3 = v3; V4 = v4; V5 = v5; V6 = v6; V7 = v7; }
         }
 
-        internal sealed class Closure<T1, T2, T3, T4, T5, T6, T7, T8>
+        public sealed class Closure<T1, T2, T3, T4, T5, T6, T7, T8>
         {
             public T1 V1;
             public T2 V2;
@@ -785,21 +762,10 @@ namespace FastExpressionCompiler
             public T6 V6;
             public T7 V7;
             public T8 V8;
-
-            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8)
-            {
-                V1 = v1;
-                V2 = v2;
-                V3 = v3;
-                V4 = v4;
-                V5 = v5;
-                V6 = v6;
-                V7 = v7;
-                V8 = v8;
-            }
+            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8) { V1 = v1; V2 = v2; V3 = v3; V4 = v4; V5 = v5; V6 = v6; V7 = v7; V8 = v8; }
         }
 
-        internal sealed class Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9>
+        public sealed class Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9>
         {
             public T1 V1;
             public T2 V2;
@@ -811,21 +777,10 @@ namespace FastExpressionCompiler
             public T8 V8;
             public T9 V9;
 
-            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9)
-            {
-                V1 = v1;
-                V2 = v2;
-                V3 = v3;
-                V4 = v4;
-                V5 = v5;
-                V6 = v6;
-                V7 = v7;
-                V8 = v8;
-                V9 = v9;
-            }
+            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9) { V1 = v1; V2 = v2; V3 = v3; V4 = v4; V5 = v5; V6 = v6; V7 = v7; V8 = v8; V9 = v9; }
         }
 
-        internal sealed class Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
+        public sealed class Closure<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
         {
             public T1 V1;
             public T2 V2;
@@ -837,34 +792,20 @@ namespace FastExpressionCompiler
             public T8 V8;
             public T9 V9;
             public T10 V10;
-
-            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9, T10 v10)
-            {
-                V1 = v1;
-                V2 = v2;
-                V3 = v3;
-                V4 = v4;
-                V5 = v5;
-                V6 = v6;
-                V7 = v7;
-                V8 = v8;
-                V9 = v9;
-                V10 = v10;
-            }
+            public Closure(T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8, T9 v9, T10 v10) { V1 = v1; V2 = v2; V3 = v3; V4 = v4; V5 = v5; V6 = v6; V7 = v7; V8 = v8; V9 = v9; V10 = v10; }
         }
 
-        internal sealed class ArrayClosure
+        public sealed class ArrayClosure
         {
             public readonly object[] Constants;
 
             public static FieldInfo ArrayField = typeof(ArrayClosure).GetTypeInfo().DeclaredFields.GetFirst(f => !f.IsStatic);
             public static ConstructorInfo Constructor = typeof(ArrayClosure).GetTypeInfo().DeclaredConstructors.GetFirst();
 
-            public ArrayClosure(object[] constants)
-            {
-                Constants = constants;
-            }
+            public ArrayClosure(object[] constants) { Constants = constants; }
         }
+
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
         #endregion
 
@@ -872,11 +813,11 @@ namespace FastExpressionCompiler
 
         private struct NestedLambdaInfo
         {
-            public ClosureInfo ClosureInfo;
+            public readonly ClosureInfo ClosureInfo;
 
-            public object LambdaExpr; // to find the lambda in bigger parent expression
-            public object Lambda;
-            public bool IsAction;
+            public readonly object LambdaExpr; // to find the lambda in bigger parent expression
+            public readonly object Lambda;
+            public readonly bool IsAction;
 
             public NestedLambdaInfo(ClosureInfo closureInfo, object lambdaExpr, object lambda, bool isAction)
             {
@@ -892,15 +833,15 @@ namespace FastExpressionCompiler
             private static readonly IEnumerable<MethodInfo> _methods =
                 typeof(CurryClosureFuncs).GetTypeInfo().DeclaredMethods;
 
-            public static readonly MethodInfo[] Methods = _methods as MethodInfo[] ?? _methods.ToArray();
+            public static readonly MethodInfo[] Methods = _methods.AsArray();
 
-            public static Func<R> Curry<C, R>(Func<C, R> f, C c) { return () => f(c); }
-            public static Func<T1, R> Curry<C, T1, R>(Func<C, T1, R> f, C c) { return t1 => f(c, t1); }
-            public static Func<T1, T2, R> Curry<C, T1, T2, R>(Func<C, T1, T2, R> f, C c) { return (t1, t2) => f(c, t1, t2); }
-            public static Func<T1, T2, T3, R> Curry<C, T1, T2, T3, R>(Func<C, T1, T2, T3, R> f, C c) { return (t1, t2, t3) => f(c, t1, t2, t3); }
-            public static Func<T1, T2, T3, T4, R> Curry<C, T1, T2, T3, T4, R>(Func<C, T1, T2, T3, T4, R> f, C c) { return (t1, t2, t3, t4) => f(c, t1, t2, t3, t4); }
-            public static Func<T1, T2, T3, T4, T5, R> Curry<C, T1, T2, T3, T4, T5, R>(Func<C, T1, T2, T3, T4, T5, R> f, C c) { return (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5); }
-            public static Func<T1, T2, T3, T4, T5, T6, R> Curry<C, T1, T2, T3, T4, T5, T6, R>(Func<C, T1, T2, T3, T4, T5, T6, R> f, C c) { return (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6); }
+            public static Func<R> Curry<C, R>(Func<C, R> f, C c) => () => f(c);
+            public static Func<T1, R> Curry<C, T1, R>(Func<C, T1, R> f, C c) => t1 => f(c, t1);
+            public static Func<T1, T2, R> Curry<C, T1, T2, R>(Func<C, T1, T2, R> f, C c) => (t1, t2) => f(c, t1, t2);
+            public static Func<T1, T2, T3, R> Curry<C, T1, T2, T3, R>(Func<C, T1, T2, T3, R> f, C c) => (t1, t2, t3) => f(c, t1, t2, t3);
+            public static Func<T1, T2, T3, T4, R> Curry<C, T1, T2, T3, T4, R>(Func<C, T1, T2, T3, T4, R> f, C c) => (t1, t2, t3, t4) => f(c, t1, t2, t3, t4);
+            public static Func<T1, T2, T3, T4, T5, R> Curry<C, T1, T2, T3, T4, T5, R>(Func<C, T1, T2, T3, T4, T5, R> f, C c) => (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5);
+            public static Func<T1, T2, T3, T4, T5, T6, R> Curry<C, T1, T2, T3, T4, T5, T6, R>(Func<C, T1, T2, T3, T4, T5, T6, R> f, C c) => (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6);
         }
 
         internal static class CurryClosureActions
@@ -908,15 +849,15 @@ namespace FastExpressionCompiler
             private static readonly IEnumerable<MethodInfo> _methods =
                 typeof(CurryClosureActions).GetTypeInfo().DeclaredMethods;
 
-            public static readonly MethodInfo[] Methods = _methods as MethodInfo[] ?? _methods.ToArray();
+            public static readonly MethodInfo[] Methods = _methods.AsArray();
 
-            internal static Action Curry<C>(Action<C> a, C c) { return () => a(c); }
-            internal static Action<T1> Curry<C, T1>(Action<C, T1> f, C c) { return t1 => f(c, t1); }
-            internal static Action<T1, T2> Curry<C, T1, T2>(Action<C, T1, T2> f, C c) { return (t1, t2) => f(c, t1, t2); }
-            internal static Action<T1, T2, T3> Curry<C, T1, T2, T3>(Action<C, T1, T2, T3> f, C c) { return (t1, t2, t3) => f(c, t1, t2, t3); }
-            internal static Action<T1, T2, T3, T4> Curry<C, T1, T2, T3, T4>(Action<C, T1, T2, T3, T4> f, C c) { return (t1, t2, t3, t4) => f(c, t1, t2, t3, t4); }
-            internal static Action<T1, T2, T3, T4, T5> Curry<C, T1, T2, T3, T4, T5>(Action<C, T1, T2, T3, T4, T5> f, C c) { return (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5); }
-            internal static Action<T1, T2, T3, T4, T5, T6> Curry<C, T1, T2, T3, T4, T5, T6>(Action<C, T1, T2, T3, T4, T5, T6> f, C c) { return (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6); }
+            internal static Action Curry<C>(Action<C> a, C c) => () => a(c);
+            internal static Action<T1> Curry<C, T1>(Action<C, T1> f, C c) => t1 => f(c, t1);
+            internal static Action<T1, T2> Curry<C, T1, T2>(Action<C, T1, T2> f, C c) => (t1, t2) => f(c, t1, t2);
+            internal static Action<T1, T2, T3> Curry<C, T1, T2, T3>(Action<C, T1, T2, T3> f, C c) => (t1, t2, t3) => f(c, t1, t2, t3);
+            internal static Action<T1, T2, T3, T4> Curry<C, T1, T2, T3, T4>(Action<C, T1, T2, T3, T4> f, C c) => (t1, t2, t3, t4) => f(c, t1, t2, t3, t4);
+            internal static Action<T1, T2, T3, T4, T5> Curry<C, T1, T2, T3, T4, T5>(Action<C, T1, T2, T3, T4, T5> f, C c) => (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5);
+            internal static Action<T1, T2, T3, T4, T5, T6> Curry<C, T1, T2, T3, T4, T5, T6>(Action<C, T1, T2, T3, T4, T5, T6> f, C c) => (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6);
         }
 
         #endregion
@@ -937,7 +878,7 @@ namespace FastExpressionCompiler
 
         // @paramExprs is required for nested lambda compilation
         private static bool TryCollectBoundConstants(ref ClosureInfo closure,
-            object exprObj, ExpressionType exprNodeType, Type exprType, object[] paramExprs)
+            object exprObj, ExpressionType exprNodeType, object[] paramExprs)
         {
             if (exprObj == null)
                 return false;
@@ -948,7 +889,7 @@ namespace FastExpressionCompiler
                     var constExprInfo = exprObj as ConstantExpressionInfo;
                     var value = constExprInfo != null ? constExprInfo.Value : ((ConstantExpression)exprObj).Value;
                     if (value is Delegate || IsBoundConstant(value))
-                        (closure ?? (closure = new ClosureInfo())).AddConstant(exprObj, value, exprType);
+                        (closure ?? (closure = new ClosureInfo())).AddConstant(exprObj);
                     return true;
 
                 case ExpressionType.Parameter:
@@ -968,18 +909,18 @@ namespace FastExpressionCompiler
                     {
                         var maExpr = memberExprInfo.Expression;
                         return maExpr == null
-                            || TryCollectBoundConstants(ref closure, maExpr, maExpr.GetNodeType(), maExpr.GetResultType(), paramExprs);
+                            || TryCollectBoundConstants(ref closure, maExpr, maExpr.GetNodeType(), paramExprs);
                     }
 
                     var memberExpr = ((MemberExpression)exprObj).Expression;
                     return memberExpr == null
-                        || TryCollectBoundConstants(ref closure, memberExpr, memberExpr.NodeType, memberExpr.Type, paramExprs);
+                        || TryCollectBoundConstants(ref closure, memberExpr, memberExpr.NodeType, paramExprs);
 
                 case ExpressionType.New:
                     var newExprInfo = exprObj as NewExpressionInfo;
                     return newExprInfo != null
                         ? TryCollectBoundConstants(ref closure, newExprInfo.Arguments, paramExprs)
-                        : TryCollectBoundConstants(ref closure, ((NewExpression)(Expression)exprObj).Arguments, paramExprs);
+                        : TryCollectBoundConstants(ref closure, ((NewExpression)exprObj).Arguments, paramExprs);
 
                 case ExpressionType.NewArrayBounds:
                 case ExpressionType.NewArrayInit:
@@ -999,22 +940,22 @@ namespace FastExpressionCompiler
                     if (invokeExpr != null)
                     {
                         var lambda = invokeExpr.Expression;
-                        return TryCollectBoundConstants(ref closure, lambda, lambda.NodeType, lambda.Type, paramExprs)
+                        return TryCollectBoundConstants(ref closure, lambda, lambda.NodeType, paramExprs)
                             && TryCollectBoundConstants(ref closure, invokeExpr.Arguments, paramExprs);
                     }
                     else
                     {
                         var invokeInfo = (InvocationExpressionInfo)exprObj;
                         var lambda = invokeInfo.ExprToInvoke;
-                        return TryCollectBoundConstants(ref closure, lambda, lambda.NodeType, lambda.Type, paramExprs)
+                        return TryCollectBoundConstants(ref closure, lambda, lambda.NodeType, paramExprs)
                             && TryCollectBoundConstants(ref closure, invokeInfo.Arguments, paramExprs);
                     }
 
                 case ExpressionType.Conditional:
                     var condExpr = (ConditionalExpression)exprObj;
-                    return TryCollectBoundConstants(ref closure, condExpr.Test, condExpr.Test.NodeType, condExpr.Type, paramExprs)
-                        && TryCollectBoundConstants(ref closure, condExpr.IfTrue, condExpr.IfTrue.NodeType, condExpr.Type, paramExprs)
-                        && TryCollectBoundConstants(ref closure, condExpr.IfFalse, condExpr.IfFalse.NodeType, condExpr.IfFalse.Type, paramExprs);
+                    return TryCollectBoundConstants(ref closure, condExpr.Test, condExpr.Test.NodeType, paramExprs)
+                        && TryCollectBoundConstants(ref closure, condExpr.IfTrue, condExpr.IfTrue.NodeType, paramExprs)
+                        && TryCollectBoundConstants(ref closure, condExpr.IfFalse, condExpr.IfFalse.NodeType, paramExprs);
 
                 case ExpressionType.Block:
                     return TryCollectBlockBoundConstants(ref closure, exprObj, paramExprs);
@@ -1023,7 +964,7 @@ namespace FastExpressionCompiler
                     var indexExpr = (IndexExpression)exprObj;
                     var obj = indexExpr.Object;
                     return obj == null
-                        || TryCollectBoundConstants(ref closure, indexExpr.Object, indexExpr.Object.NodeType, indexExpr.Object.Type, paramExprs)
+                        || TryCollectBoundConstants(ref closure, indexExpr.Object, indexExpr.Object.NodeType, paramExprs)
                         && TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs);
 
                 case ExpressionType.Try:
@@ -1045,7 +986,7 @@ namespace FastExpressionCompiler
             var blockExpr = exprObj as BlockExpression;
             if (blockExpr != null)
             {
-                closure.PushBlock(blockExpr.Result, blockExpr.Variables.ToArray(), Tools.Empty<LocalBuilder>());
+                closure.PushBlock(blockExpr.Result, blockExpr.Variables.AsArray(), Tools.Empty<LocalBuilder>());
                 if (!TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs))
                     return false;
             }
@@ -1067,8 +1008,7 @@ namespace FastExpressionCompiler
             for (var i = 0; i < exprObjects.Length; i++)
             {
                 var exprObj = exprObjects[i];
-                var e = exprObj.GetExprInfo();
-                if (!TryCollectBoundConstants(ref closure, exprObj, e.NodeType, e.Type, paramExprs))
+                if (!TryCollectBoundConstants(ref closure, exprObj, exprObj.GetNodeType(), paramExprs))
                     return false;
             }
             return true;
@@ -1099,7 +1039,7 @@ namespace FastExpressionCompiler
             else
             {
                 var lambdaExpr = (LambdaExpression)exprObj;
-                object[] lambdaParamExprs = lambdaExpr.Parameters.ToArray();
+                object[] lambdaParamExprs = lambdaExpr.Parameters.AsArray();
                 var bodyExpr = lambdaExpr.Body;
                 bodyType = bodyExpr.Type;
                 compiledLambda = TryCompile(ref nestedClosure,
@@ -1152,14 +1092,14 @@ namespace FastExpressionCompiler
             if (memberInitExprInfo != null)
             {
                 var miNewInfo = memberInitExprInfo.ExpressionInfo;
-                if (!TryCollectBoundConstants(ref closure, miNewInfo, miNewInfo.NodeType, miNewInfo.Type, paramExprs))
+                if (!TryCollectBoundConstants(ref closure, miNewInfo, miNewInfo.NodeType, paramExprs))
                     return false;
 
                 var memberBindingInfos = memberInitExprInfo.Bindings;
                 for (var i = 0; i < memberBindingInfos.Length; i++)
                 {
                     var maInfo = memberBindingInfos[i].Expression;
-                    if (!TryCollectBoundConstants(ref closure, maInfo, maInfo.NodeType, maInfo.Type, paramExprs))
+                    if (!TryCollectBoundConstants(ref closure, maInfo, maInfo.NodeType, paramExprs))
                         return false;
                 }
                 return true;
@@ -1168,7 +1108,7 @@ namespace FastExpressionCompiler
             {
                 var memberInitExpr = (MemberInitExpression)exprObj;
                 var miNewExpr = memberInitExpr.NewExpression;
-                if (!TryCollectBoundConstants(ref closure, miNewExpr, miNewExpr.NodeType, miNewExpr.Type, paramExprs))
+                if (!TryCollectBoundConstants(ref closure, miNewExpr, miNewExpr.NodeType, paramExprs))
                     return false;
 
                 var memberBindings = memberInitExpr.Bindings;
@@ -1177,7 +1117,7 @@ namespace FastExpressionCompiler
                     var memberBinding = memberBindings[i];
                     var maExpr = ((MemberAssignment)memberBinding).Expression;
                     if (memberBinding.BindingType == MemberBindingType.Assignment &&
-                        !TryCollectBoundConstants(ref closure, maExpr, maExpr.NodeType, maExpr.Type, paramExprs))
+                        !TryCollectBoundConstants(ref closure, maExpr, maExpr.NodeType, paramExprs))
                         return false;
                 }
             }
@@ -1187,7 +1127,7 @@ namespace FastExpressionCompiler
 
         private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr, object[] paramExprs)
         {
-            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.NodeType, tryExpr.Type, paramExprs))
+            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.NodeType, paramExprs))
                 return false;
 
             var catchBlocks = tryExpr.Handlers;
@@ -1200,16 +1140,16 @@ namespace FastExpressionCompiler
                 {
                     closure = closure ?? new ClosureInfo();
                     closure.PushBlock(catchBody, new[] { catchExVar }, Tools.Empty<LocalBuilder>());
-                    if (!TryCollectBoundConstants(ref closure, catchExVar, catchExVar.NodeType, catchBlock.Test, paramExprs))
+                    if (!TryCollectBoundConstants(ref closure, catchExVar, catchExVar.NodeType, paramExprs))
                         return false;
                 }
 
                 var filterExpr = catchBlock.Filter;
                 if (filterExpr != null &&
-                    !TryCollectBoundConstants(ref closure, filterExpr, filterExpr.NodeType, filterExpr.Type, paramExprs))
+                    !TryCollectBoundConstants(ref closure, filterExpr, filterExpr.NodeType, paramExprs))
                     return false;
 
-                if (!TryCollectBoundConstants(ref closure, catchBody, catchBody.NodeType, catchBody.Type, paramExprs))
+                if (!TryCollectBoundConstants(ref closure, catchBody, catchBody.NodeType, paramExprs))
                     return false;
 
                 if (catchExVar != null)
@@ -1218,12 +1158,12 @@ namespace FastExpressionCompiler
 
             var finallyExpr = tryExpr.Finally;
             return finallyExpr == null
-                || TryCollectBoundConstants(ref closure, finallyExpr, finallyExpr.NodeType, finallyExpr.Type, paramExprs);
+                || TryCollectBoundConstants(ref closure, finallyExpr, finallyExpr.NodeType, paramExprs);
         }
 
         private static bool TryCollectTryExprInfoConstants(ref ClosureInfo closure, TryExpressionInfo tryExpr, object[] paramExprs)
         {
-            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.GetNodeType(), tryExpr.Type, paramExprs))
+            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, tryExpr.Body.GetNodeType(), paramExprs))
                 return false;
 
             var catchBlocks = tryExpr.Handlers;
@@ -1236,16 +1176,16 @@ namespace FastExpressionCompiler
                 {
                     closure = closure ?? new ClosureInfo();
                     closure.PushBlock(catchBody, new[] { catchExVar }, Tools.Empty<LocalBuilder>());
-                    if (!TryCollectBoundConstants(ref closure, catchExVar, catchExVar.NodeType, catchBlock.Test, paramExprs))
+                    if (!TryCollectBoundConstants(ref closure, catchExVar, catchExVar.NodeType, paramExprs))
                         return false;
                 }
 
                 var filterExpr = catchBlock.Filter;
                 if (filterExpr != null &&
-                    !TryCollectBoundConstants(ref closure, filterExpr, filterExpr.NodeType, filterExpr.Type, paramExprs))
+                    !TryCollectBoundConstants(ref closure, filterExpr, filterExpr.NodeType, paramExprs))
                     return false;
 
-                if (!TryCollectBoundConstants(ref closure, catchBody, catchBody.NodeType, catchBody.Type, paramExprs))
+                if (!TryCollectBoundConstants(ref closure, catchBody, catchBody.NodeType, paramExprs))
                     return false;
 
                 if (catchExVar != null)
@@ -1253,8 +1193,7 @@ namespace FastExpressionCompiler
             }
 
             var finallyExpr = tryExpr.Finally;
-            return finallyExpr == null
-                   || TryCollectBoundConstants(ref closure, finallyExpr, finallyExpr.NodeType, finallyExpr.Type, paramExprs);
+            return finallyExpr == null || TryCollectBoundConstants(ref closure, finallyExpr, finallyExpr.NodeType, paramExprs);
         }
 
         private static bool TryCollectUnaryOrBinaryExprConstants(ref ClosureInfo closure, object exprObj, object[] paramExprs)
@@ -1263,38 +1202,24 @@ namespace FastExpressionCompiler
             {
                 var unaryExprInfo = exprObj as UnaryExpressionInfo;
                 if (unaryExprInfo != null)
-                {
-                    var opInfo = unaryExprInfo.Operand;
-                    return TryCollectBoundConstants(ref closure, opInfo, opInfo.NodeType, opInfo.Type, paramExprs);
-                }
+                    return TryCollectBoundConstants(ref closure, unaryExprInfo.Operand, unaryExprInfo.Operand.NodeType, paramExprs);
 
                 var binInfo = exprObj as BinaryExpressionInfo;
                 if (binInfo != null)
-                {
-                    var left = binInfo.Left;
-                    var right = binInfo.Right;
-                    return TryCollectBoundConstants(ref closure, left, left.GetNodeType(), left.GetResultType(), paramExprs)
-                        && TryCollectBoundConstants(ref closure, right, right.GetNodeType(), right.GetResultType(), paramExprs);
-                }
+                    return TryCollectBoundConstants(ref closure, binInfo.Left, binInfo.Left.GetNodeType(), paramExprs)
+                        && TryCollectBoundConstants(ref closure, binInfo.Right, binInfo.Right.GetNodeType(), paramExprs);
 
                 return false;
             }
 
             var unaryExpr = exprObj as UnaryExpression;
             if (unaryExpr != null)
-            {
-                var opExpr = unaryExpr.Operand;
-                return TryCollectBoundConstants(ref closure, opExpr, opExpr.NodeType, opExpr.Type, paramExprs);
-            }
+                return TryCollectBoundConstants(ref closure, unaryExpr.Operand, unaryExpr.Operand.NodeType, paramExprs);
 
             var binaryExpr = exprObj as BinaryExpression;
             if (binaryExpr != null)
-            {
-                var leftExpr = binaryExpr.Left;
-                var rightExpr = binaryExpr.Right;
-                return TryCollectBoundConstants(ref closure, leftExpr, leftExpr.NodeType, leftExpr.Type, paramExprs)
-                    && TryCollectBoundConstants(ref closure, rightExpr, rightExpr.NodeType, rightExpr.Type, paramExprs);
-            }
+                return TryCollectBoundConstants(ref closure, binaryExpr.Left, binaryExpr.Left.NodeType, paramExprs)
+                    && TryCollectBoundConstants(ref closure, binaryExpr.Right, binaryExpr.Right.NodeType, paramExprs);
 
             return false;
         }
@@ -1306,15 +1231,15 @@ namespace FastExpressionCompiler
             {
                 var objInfo = callInfo.Object;
                 return (objInfo == null
-                    || TryCollectBoundConstants(ref closure, objInfo, objInfo.NodeType, objInfo.Type, paramExprs))
+                    || TryCollectBoundConstants(ref closure, objInfo, objInfo.NodeType, paramExprs))
                     && TryCollectBoundConstants(ref closure, callInfo.Arguments, paramExprs);
             }
 
             var callExpr = (MethodCallExpression)exprObj;
             var objExpr = callExpr.Object;
             return (objExpr == null
-                    || TryCollectBoundConstants(ref closure, objExpr, objExpr.NodeType, objExpr.Type, paramExprs))
-                   && TryCollectBoundConstants(ref closure, callExpr.Arguments, paramExprs);
+                || TryCollectBoundConstants(ref closure, objExpr, objExpr.NodeType, paramExprs))
+                && TryCollectBoundConstants(ref closure, callExpr.Arguments, paramExprs);
         }
 
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, IList<Expression> exprs, object[] paramExprs)
@@ -1322,7 +1247,7 @@ namespace FastExpressionCompiler
             for (var i = 0; i < exprs.Count; i++)
             {
                 var expr = exprs[i];
-                if (!TryCollectBoundConstants(ref closure, expr, expr.NodeType, expr.Type, paramExprs))
+                if (!TryCollectBoundConstants(ref closure, expr, expr.NodeType, paramExprs))
                     return false;
             }
             return true;
@@ -1540,7 +1465,7 @@ namespace FastExpressionCompiler
                 object[] paramExprs, ILGenerator il, ClosureInfo closure, EvalStack parent)
             {
                 closure = closure ?? new ClosureInfo();
-                closure.PushBlockAndConstructLocalVars(blockExpr.Result, blockExpr.Variables.ToArray(), il);
+                closure.PushBlockAndConstructLocalVars(blockExpr.Result, blockExpr.Variables.AsArray(), il);
                 var ok = EmitMany(blockExpr.Expressions, paramExprs, il, closure, parent.Push(ExpressionType.Block));
                 closure.PopBlock();
                 return ok;
@@ -1729,7 +1654,7 @@ namespace FastExpressionCompiler
                 var paramIndex = paramExprs.GetFirstIndex(paramExprObj);
                 if (paramIndex != -1)
                 {
-                    if (closure != null && closure.HasBoundClosure)
+                    if (closure != null && closure.HasClosureItems)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
                     var asAddress = parent.NodeType == ExpressionType.Call && paramType.GetTypeInfo().IsValueType;
@@ -1994,9 +1919,9 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldtoken, (Type)constantValue);
                     il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
                 }
-                else if (closure != null && closure.HasBoundClosure)
+                else if (closure != null && closure.HasClosureItems)
                 {
-                    var constantIndex = closure.Constants.GetFirstIndex(it => it.ConstantExpr == exprObj);
+                    var constantIndex = closure.Constants.GetFirstIndex(exprObj);
                     if (constantIndex == -1)
                         return false;
                     LoadClosureFieldOrItem(closure, il, constantIndex, exprType);
@@ -2337,7 +2262,7 @@ namespace FastExpressionCompiler
                         var paramIndex = paramExprs.GetFirstIndex(left);
                         if (paramIndex != -1)
                         {
-                            if (closure != null && closure.HasBoundClosure)
+                            if (closure != null && closure.HasClosureItems)
                                 paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
                             if (paramIndex >= byte.MaxValue)
@@ -2693,7 +2618,7 @@ namespace FastExpressionCompiler
                         var nestedConstant = nestedConstants[nestedConstIndex];
 
                         // Find constant index in the outer closure
-                        var outerConstIndex = outerConstants.GetFirstIndex(it => it.ConstantExpr == nestedConstant.ConstantExpr);
+                        var outerConstIndex = outerConstants.GetFirstIndex(nestedConstant);
                         if (outerConstIndex == -1)
                             return false; // some error is here
 
@@ -2704,12 +2629,13 @@ namespace FastExpressionCompiler
                             EmitLoadConstantInt(il, nestedConstIndex);
                         }
 
-                        LoadClosureFieldOrItem(closure, il, outerConstIndex, nestedConstant.Type);
+                        var nestedConstantType = nestedConstant.GetResultType();
+                        LoadClosureFieldOrItem(closure, il, outerConstIndex, nestedConstantType);
 
                         if (isNestedArrayClosure)
                         {
-                            if (nestedConstant.Type.GetTypeInfo().IsValueType)
-                                il.Emit(OpCodes.Box, nestedConstant.Type);
+                            if (nestedConstantType.GetTypeInfo().IsValueType)
+                                il.Emit(OpCodes.Box, nestedConstantType);
                             il.Emit(OpCodes.Stelem_Ref); // store the item in array
                         }
                     }
@@ -3128,11 +3054,8 @@ namespace FastExpressionCompiler
             return new ExprInfo(exprObj, exprInfo.NodeType, exprInfo.Type);
         }
 
-        public static ExprInfo GetOperandExprInfo(this object exprObj)
-        {
-            var expr = exprObj as UnaryExpression;
-            return expr != null ? expr.Operand.GetExprInfo() : ((UnaryExpressionInfo)exprObj).Operand.GetExprInfo();
-        }
+        public static ExprInfo GetOperandExprInfo(this object exprObj) => 
+            (exprObj as UnaryExpression)?.Operand.GetExprInfo() ?? ((UnaryExpressionInfo)exprObj).Operand.GetExprInfo();
 
         public static ExpressionType GetNodeType(this object exprObj) =>
             (exprObj as Expression)?.NodeType ?? ((ExpressionInfo)exprObj).NodeType;

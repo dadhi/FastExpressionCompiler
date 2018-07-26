@@ -46,7 +46,7 @@ namespace FastExpressionCompiler.Benchmarks
         public object CompiledFast() => _compiledFast.Execute(this, _parameters);
     }
 
-    [CoreJob, ClrJob]
+    [ClrJob]
     [MemoryDiagnoser]
     public class ObjectExecutor_AsyncMethod_Compile
     {
@@ -61,6 +61,10 @@ namespace FastExpressionCompiler.Benchmarks
         [Benchmark(Baseline = true)]
         public object CompileFast() =>
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
+
+        [Benchmark]
+        public object CompileFast2() =>
+            ObjectMethodExecutorCompiledFastClosure.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
     }
 
     [CoreJob, ClrJob]
