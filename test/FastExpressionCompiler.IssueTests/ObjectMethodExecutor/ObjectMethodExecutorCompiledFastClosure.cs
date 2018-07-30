@@ -240,7 +240,7 @@ namespace Microsoft.Extensions.Internal
                         Expression.Convert(customAwaitableParam, postCoercionMethodReturnType),
                         awaitableInfo.GetAwaiterMethod),
                     typeof(object)),
-                customAwaitableParam).CompileFast();
+                customAwaitableParam).TryCompileWithPreCreatedClosure<Func<object, object>>(null, null);
 
             // var isCompletedFunc = (object awaiter) =>
             //     ((CustomAwaiterType)awaiter).IsCompleted;
@@ -249,7 +249,7 @@ namespace Microsoft.Extensions.Internal
                 Expression.MakeMemberAccess(
                     Expression.Convert(isCompletedParam, awaitableInfo.AwaiterType),
                     awaitableInfo.AwaiterIsCompletedProperty),
-                isCompletedParam).CompileFast();
+                isCompletedParam).TryCompileWithPreCreatedClosure<Func<object, bool>>(null, null);
 
             var getResultParam = Expression.Parameter(typeof(object), "awaiter");
             Func<object, object> getResultFunc;
@@ -267,7 +267,7 @@ namespace Microsoft.Extensions.Internal
                             awaitableInfo.AwaiterGetResultMethod),
                         Expression.Constant(null)
                     ),
-                    getResultParam).CompileFast();
+                    getResultParam).TryCompileWithPreCreatedClosure<Func<object, object>>(null, null);
             }
             else
             {
@@ -279,7 +279,7 @@ namespace Microsoft.Extensions.Internal
                             Expression.Convert(getResultParam, awaitableInfo.AwaiterType),
                             awaitableInfo.AwaiterGetResultMethod),
                         typeof(object)),
-                    getResultParam).CompileFast();
+                    getResultParam).TryCompileWithPreCreatedClosure<Func<object, object>>(null, null);
             }
 
             // var onCompletedFunc = (object awaiter, Action continuation) => {
@@ -293,7 +293,7 @@ namespace Microsoft.Extensions.Internal
                     awaitableInfo.AwaiterOnCompletedMethod,
                     onCompletedParam2),
                 onCompletedParam1,
-                onCompletedParam2).CompileFast();
+                onCompletedParam2).TryCompileWithPreCreatedClosure<Action<object, Action>>(null, null);
 
             Action<object, Action> unsafeOnCompletedFunc = null;
             if (awaitableInfo.AwaiterUnsafeOnCompletedMethod != null)
@@ -309,7 +309,7 @@ namespace Microsoft.Extensions.Internal
                         awaitableInfo.AwaiterUnsafeOnCompletedMethod,
                         unsafeOnCompletedParam2),
                     unsafeOnCompletedParam1,
-                    unsafeOnCompletedParam2).CompileFast();
+                    unsafeOnCompletedParam2).TryCompileWithPreCreatedClosure<Action<object, Action>>(null, null);
             }
 
             // If we need to pass the method call result through a coercer function to get an
@@ -330,6 +330,7 @@ namespace Microsoft.Extensions.Internal
             var getResultFuncConst = Expression.Constant(getResultFunc);
             var onCompletedFuncConst = Expression.Constant(onCompletedFunc);
             var unsafeOnCompletedFuncConst = Expression.Constant(unsafeOnCompletedFunc, typeof(Action<object, Action>));
+
             var returnValueExpression = Expression.New(
                 _objectMethodExecutorAwaitableConstructor,
                 Expression.Convert(coercedMethodCall, typeof(object)),
@@ -341,15 +342,15 @@ namespace Microsoft.Extensions.Internal
 
             var lambda = Expression.Lambda<MethodExecutorAsync>(returnValueExpression, targetParameter, parametersParameter);
 
-
-            var c = ExpressionCompiler.Closure.Create(
+            var closure = ExpressionCompiler.Closure.Create(
                 getAwaiterFunc, 
                 isCompletedFunc, 
                 getResultFunc, 
                 onCompletedFunc,
                 unsafeOnCompletedFunc);
 
-            return lambda.TryCompile<MethodExecutorAsync>(c, 
+            return lambda.TryCompileWithPreCreatedClosure<MethodExecutorAsync>(
+                closure,
                 getAwaiterFuncConst, 
                 isCompletedFuncConst,
                 getResultFuncConst,

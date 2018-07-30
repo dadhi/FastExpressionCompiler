@@ -247,16 +247,40 @@ namespace FastExpressionCompiler
             TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters,
                 Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.Body.Type);
 
-        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
-        public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr, 
-            object closure, params ConstantExpression[] closureConstants)
+        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/> 
+        /// with the provided closure object and constant expressions (or lack there of) -
+        /// Constant expression should be the in order of Fields in closure object!
+        /// Note 1: Use it on your own risk - FEC won't verify the expression is compile-able with passed closure, it is up to you!
+        /// Note 2: The expression with NESTED LAMBDA IS NOT SUPPORTED!
+        /// Note 3: You may pass <c>null</c> as closure and constants to indicate static (closure-less) expression.</summary>
+        public static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(this LambdaExpression lambdaExpr, 
+            object closure, params ConstantExpression[] closureConstantsExprs)
             where TDelegate : class
         {
-            var closureInfo = new ClosureInfo(closure, closureConstants);
+            var closureInfo = new ClosureInfo(closure, closureConstantsExprs);
             var bodyExpr = lambdaExpr.Body;
+            var returnType = bodyExpr.Type;
             var paramExprs = lambdaExpr.Parameters;
             return (TDelegate)TryCompile(ref closureInfo, typeof(TDelegate), Tools.GetParamExprTypes(paramExprs), 
-                bodyExpr.Type, bodyExpr, bodyExpr.NodeType, bodyExpr.Type, paramExprs.AsArray());
+                returnType, bodyExpr, bodyExpr.NodeType, returnType, paramExprs.AsArray());
+        }
+
+        /// <summary>Tries to compile lambda expression INFO to <typeparamref name="TDelegate"/> 
+        /// with the provided closure object and constant expressions (or lack there of) -
+        /// Constant expression should be the in order of Fields in closure object!
+        /// Note 1: Use it on your own risk - FEC won't verify the expression is compile-able with passed closure, it is up to you!
+        /// Note 2: The expression with NESTED LAMBDA IS NOT SUPPORTED!
+        /// Note 3: You may pass <c>null</c> as closure and constants to indicate static (closure-less) expression.</summary>
+        public static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(this LambdaExpressionInfo lambdaExpr,
+            object closure, params object[] closureConstantsExprs)
+            where TDelegate : class
+        {
+            var closureInfo = new ClosureInfo(closure, closureConstantsExprs);
+            var bodyExpr = lambdaExpr.Body;
+            var returnType = bodyExpr.GetResultType();
+            var paramExprs = lambdaExpr.Parameters;
+            return (TDelegate)TryCompile(ref closureInfo, typeof(TDelegate), Tools.GetParamExprTypes(paramExprs),
+                returnType, bodyExpr, bodyExpr.GetNodeType(), returnType, paramExprs.AsArray());
         }
 
         /// <summary>Compiles expression to delegate by emitting the IL. 
@@ -436,18 +460,18 @@ namespace FastExpressionCompiler
             }
 
             // Populates info directly with provided closure object and constants.
-            public ClosureInfo(object preConstructedClosure, object[] closureConstantExpressions)
+            public ClosureInfo(object closure, object[] closureConstantExpressions)
             {
                 IsClosureConstructed = true;
 
-                if (preConstructedClosure == null)
+                if (closure == null)
                     return;
 
-                Closure = preConstructedClosure;
+                Closure = closure;
                 Constants = closureConstantExpressions;
                 ClosedItemCount = closureConstantExpressions.Length; // should be the same as Fields.Length below
 
-                var closureType = preConstructedClosure.GetType();
+                var closureType = closure.GetType();
                 ClosureType = closureType;
                 ClosureFields = closureType.GetTypeInfo().DeclaredFields.AsArray();
 
@@ -688,7 +712,6 @@ namespace FastExpressionCompiler
             public T1 V1;
             public T2 V2;
             public T3 V3;
-
             public Closure(T1 v1, T2 v2, T3 v3) { V1 = v1; V2 = v2; V3 = v3; }
         }
 
@@ -781,7 +804,7 @@ namespace FastExpressionCompiler
         {
             public readonly object[] Constants;
 
-            public static FieldInfo ArrayField = typeof(ArrayClosure).GetTypeInfo().DeclaredFields.GetFirst(f => !f.IsStatic);
+            public static FieldInfo ArrayField = typeof(ArrayClosure).GetTypeInfo().GetDeclaredField(nameof(Constants));
             public static ConstructorInfo Constructor = typeof(ArrayClosure).GetTypeInfo().DeclaredConstructors.GetFirst();
 
             public ArrayClosure(object[] constants) { Constants = constants; }
@@ -1926,7 +1949,6 @@ namespace FastExpressionCompiler
                 return valVar;
             }
 
-            // if itemType is null, then itemExprObj should be not null
             private static void LoadClosureFieldOrItem(ClosureInfo closure, ILGenerator il, int itemIndex, Type itemType)
             {
                 il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
@@ -2560,19 +2582,15 @@ namespace FastExpressionCompiler
                 if (outerNestedLambdaIndex == -1)
                     return false;
 
-                var nestedLambdaInfo = outerNestedLambdas[outerNestedLambdaIndex];
-                var nestedLambda = nestedLambdaInfo.Lambda;
-
-                var outerConstants = closure.Constants;
-                var outerNonPassedParams = closure.NonPassedParameters;
+                var nestedLambda = outerNestedLambdas[outerNestedLambdaIndex];
 
                 // Load compiled lambda on stack counting the offset
-                outerNestedLambdaIndex += outerConstants.Length + outerNonPassedParams.Length;
+                outerNestedLambdaIndex += closure.Constants.Length + closure.NonPassedParameters.Length;
 
-                LoadClosureFieldOrItem(closure, il, outerNestedLambdaIndex, nestedLambda.GetType());
+                LoadClosureFieldOrItem(closure, il, outerNestedLambdaIndex, nestedLambda.Lambda.GetType());
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
-                var nestedClosureInfo = nestedLambdaInfo.ClosureInfo;
+                var nestedClosureInfo = nestedLambda.ClosureInfo;
                 if (nestedClosureInfo == null)
                     return true;
 
@@ -2593,7 +2611,7 @@ namespace FastExpressionCompiler
                         var nestedConstant = nestedConstants[nestedConstIndex];
 
                         // Find constant index in the outer closure
-                        var outerConstIndex = outerConstants.GetFirstIndex(nestedConstant);
+                        var outerConstIndex = closure.Constants.GetFirstIndex(nestedConstant);
                         if (outerConstIndex == -1)
                             return false; // some error is here
 
@@ -2641,7 +2659,7 @@ namespace FastExpressionCompiler
                     }
                     else // load parameter from outer closure or from the locals
                     {
-                        if (outerNonPassedParams.Length == 0)
+                        if (closure.NonPassedParameters.Length == 0)
                             return false; // impossible, better to throw?
 
                         var variable = closure.GetDefinedLocalVarOrDefault(nestedUsedParam);
@@ -2651,11 +2669,11 @@ namespace FastExpressionCompiler
                         }
                         else // it's a parameter from outer closure
                         {
-                            var outerParamIndex = outerNonPassedParams.GetFirstIndex(nestedUsedParam);
+                            var outerParamIndex = closure.NonPassedParameters.GetFirstIndex(nestedUsedParam);
                             if (outerParamIndex == -1)
                                 return false; // impossible, better to throw?
 
-                            LoadClosureFieldOrItem(closure, il, outerConstants.Length + outerParamIndex, nestedUsedParamType);
+                            LoadClosureFieldOrItem(closure, il, closure.Constants.Length + outerParamIndex, nestedUsedParamType);
                         }
                     }
 
@@ -2688,7 +2706,7 @@ namespace FastExpressionCompiler
                             EmitLoadConstantInt(il, nestedConstants.Length + nestedNonPassedParams.Length + nestedLambdaIndex);
                         }
 
-                        outerLambdaIndex += outerConstants.Length + outerNonPassedParams.Length;
+                        outerLambdaIndex += closure.Constants.Length + closure.NonPassedParameters.Length;
 
                         LoadClosureFieldOrItem(closure, il, outerLambdaIndex, nestedNestedLambda.Lambda.GetType());
 
@@ -2704,7 +2722,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Newobj,
                         nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
-                EmitMethodCall(il, GetCurryClosureMethod(nestedLambda, nestedLambdaInfo.IsAction));
+                EmitMethodCall(il, GetCurryClosureMethod(nestedLambda.Lambda, nestedLambda.IsAction));
                 return true;
             }
 
@@ -3165,7 +3183,6 @@ namespace FastExpressionCompiler
             var arr = source as T[];
             if (arr == null)
                 return source.FirstOrDefault(predicate);
-
             var index = arr.GetFirstIndex(predicate);
             return index == -1 ? default(T) : arr[index];
         }

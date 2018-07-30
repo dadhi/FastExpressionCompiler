@@ -58,12 +58,12 @@ namespace FastExpressionCompiler.Benchmarks
         public object Compile() =>
             ObjectMethodExecutor.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
 
-        [Benchmark(Baseline = true)]
+        [Benchmark]
         public object CompileFast() =>
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
 
-        [Benchmark]
-        public object CompileFast2() =>
+        [Benchmark(Baseline = true)]
+        public object CompileFastWithPreCreatedClosure() =>
             ObjectMethodExecutorCompiledFastClosure.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
     }
 
@@ -92,6 +92,7 @@ namespace FastExpressionCompiler.Benchmarks
 
     [CoreJob, ClrJob]
     [MemoryDiagnoser]
+    [MarkdownExporter]
     public class ObjectExecutor_AsyncMethod_ExecuteAsync
     {
         public async Task<string> Foo(int a, int b) => await Task.FromResult((a + b).ToString());
@@ -103,13 +104,19 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly ObjectMethodExecutorCompiledFast _compiledFast =
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
+        
+        private static readonly ObjectMethodExecutorCompiledFastClosure _compiledFastWithPrecreatedClosure =
+            ObjectMethodExecutorCompiledFastClosure.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
 
         private static readonly object[] _parameters = { 1, 2 };
 
         [Benchmark]
         public async Task Compiled() => await _compiled.ExecuteAsync(this, _parameters);
 
-        [Benchmark(Baseline = true)]
+        [Benchmark]
         public async Task CompiledFast() => await _compiledFast.ExecuteAsync(this, _parameters);
+
+        [Benchmark(Baseline = true)]
+        public async Task CompiledFastWithPreCreatedClosure() => await _compiledFastWithPrecreatedClosure.ExecuteAsync(this, _parameters);
     }
 }

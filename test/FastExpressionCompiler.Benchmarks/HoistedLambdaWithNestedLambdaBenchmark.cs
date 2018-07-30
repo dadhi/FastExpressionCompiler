@@ -6,10 +6,8 @@ namespace FastExpressionCompiler.Benchmarks
 {
     public class HoistedLambdaWithNestedLambdaBenchmark
     {
-        public static X CreateX(Func<A, B, X> factory, Lazy<A> a, B b)
-        {
-            return factory(a.Value, b);
-        }
+        public static X CreateX(Func<A, B, X> factory, Lazy<A> a, B b) => 
+            factory(a.Value, b);
 
         private static Expression<Func<X>> GetHoistedExpr()
         {
@@ -21,47 +19,39 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
 
         [MemoryDiagnoser]
-        public class CompileWithNestedLambda
+        [MarkdownExporter]
+        [ClrJob, CoreJob]
+        public class Compilation
         {
             [Benchmark]
-            public Func<X> ExpressionCompile()
-            {
-                return _hoistedExpr.Compile();
-            }
+            public Func<X> ExpressionCompile() => _hoistedExpr.Compile();
 
             [Benchmark(Baseline = true)]
-            public Func<X> ExpressionFastCompile()
-            {
-                return _hoistedExpr.CompileFast();
-            }
+            public Func<X> ExpressionFastCompile() => _hoistedExpr.CompileFast();
         }
 
         [MemoryDiagnoser]
-        public class InvokeWithNestedLambda
+        [MarkdownExporter]
+        [ClrJob, CoreJob]
+        public class Invocation
         {
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
             private static readonly Func<X> _lambdaCompiledFast = _hoistedExpr.CompileFast();
 
-            A aa = new A();
-            B bb = new B();
+            private readonly A _aa = new A();
+            private readonly B _bb = new B();
 
             [Benchmark]
-            public X DirectMethodCall()
-            {
-                return CreateX((a, b) => new X(a, b), new Lazy<A>(() => aa), bb);
-            }
+            public X DirectMethodCall() => 
+                CreateX((a, b) => new X(a, b), new Lazy<A>(() => _aa), _bb);
 
             [Benchmark]
-            public X CompiledLambda()
-            {
-                return _lambdaCompiled();
-            }
+            public X CompiledLambda() => 
+                _lambdaCompiled();
 
             [Benchmark(Baseline = true)]
-            public X FastCompiledLambda()
-            {
-                return _lambdaCompiledFast();
-            }
+            public X FastCompiledLambda() => 
+                _lambdaCompiledFast();
         }
 
         #region SUT

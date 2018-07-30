@@ -1,12 +1,15 @@
 # FastExpressionCompiler
 
-[DryIoc]: https://bitbucket.org/dadhi/dryioc
+[DryIoc]: https://github.com/dadhi/DryIoc
 [ExpressionToCodeLib]: https://github.com/EamonNerbonne/ExpressionToCode
-[Expression Tree]: https://msdn.microsoft.com/en-us/library/mt654263.aspx
+[ExpressionTree]: https://msdn.microsoft.com/en-us/library/mt654263.aspx
 [Marten]: https://github.com/JasperFx/marten
 [Rebus]: https://github.com/rebus-org/Rebus
 [StructureMap]: https://github.com/structuremap/structuremap
 [Lamar]: https://github.com/JasperFx/lamar
+
+[NServiceBus]: https://github.com/Particular/NServiceBus/issues/5070
+[Moq]: https://github.com/moq/moq4/issues/504#issuecomment-406714210
 
 [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)
 [![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
@@ -17,9 +20,11 @@
 
 Supported platforms: __.NET 4.5+__, __.NET Standard 1.3__
 
-## Why
+Originally developed as part of [DryIoc], so give it a look :-)
 
-[Expression tree] compilation is used by wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
+## The problem
+
+[ExpressionTree] compilation is used by wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
 But `Expression.Compile()` is just slow. 
 Moreover, the compiled delegate may be slower than manually created delegate because of the [reasons](https://blogs.msdn.microsoft.com/seteplia/2017/02/01/dissecting-the-new-constraint-in-c-a-perfect-example-of-a-leaky-abstraction/):
 
@@ -32,9 +37,19 @@ The compiled delegate may be _in some cases_ up to ~15 times faster than one pro
 __Note:__ The actual performance in your case will depend on multiple factors: 
 how complex is expression, does it have a closure over the values, does it have a nested lambdas, etc.
 
+
+
 ## How to install
 
 Either from [NuGet](https://www.nuget.org/packages/FastExpressionCompiler) or grab a single [FastExpressionCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) file.
+
+
+## Users
+
+Some known: [Marten], [Rebus], [StructureMap], [Lamar], [ExpressionToCodeLib]
+
+Considered by: [NServiceBus], [Moq]
+
 
 ## Benchmarks
 
@@ -216,35 +231,14 @@ __Note:__ The way to simplify your life when working with expressions is C# 6 `u
     var x = expr.CompileFast()(new B());
 ```
 
-## State
 
-Originally the project is part of [DryIoc], 
-then split for more general adoption.
+## Implementation
 
-Some users: [Marten], [Rebus], [ExpressionToCodeLib], [StructureMap], [Lamar]
-
-What is supported:
-
-- Manually created or hoisted lambda expressions with closure
-- Nested lambdas
-- Constructor and method calls, lambda invocation
-- Property and member access
-- Equality and `?:`, `??`, `?.` operators
-- Expression.Assign, Block and TryCatch
-- Ariphmetic operators
-
-Complete list of supported expression types may be found in this [switch](https://github.com/dadhi/FastExpressionCompiler/blob/95ff639f19aedc729eb2b77f514b35d2f3995205/src/FastExpressionCompiler/FastExpressionCompiler.cs#L1250)
-
-__Note:__ If the currently not supported expressions may be wrapped in a method or property, then it will make them supported.
-
-
-## How
-
-The idea is to provide fast compilation of selected/supported expression types,
-and fall back to normal `Expression.Compile()` for the not (yet) supported types.
+The idea is to provide fast compilation for selected (aka supported) expression types,
+and fallback to system `Expression.Compile()` for the not (yet) supported types.
 
 Compilation is done by visiting expression nodes and __emitting the IL__. 
-The supporting code preserved as minimalistic as possible for perf. 
+The supporting code preserved as minimalistic as possible for performance. 
 
 Expression is visited in two rounds:
 
@@ -253,3 +247,12 @@ Expression is visited in two rounds:
 
 If some processing round visits a not supported expression node, 
 then compilation is aborted, and null is returned enabling the fallback to normal `Expression.Compile()`.
+
+### Additional optimizations
+
+1. Using `ExpressionInfo` instead of `Expression` for more faster and less memory greedy constructing of expression.  
+Won't speed-up compilation alone But will speed-up construction+compilation.
+2. Using `expr.TryCompileWithPreCreatedClosure` and `expr.TryCompileWithoutClosure` when you know the 
+expression at hand and may optimize for delegate with closure or for "static" delegate.
+
+Both optimizations are visible in benchmark results above.
