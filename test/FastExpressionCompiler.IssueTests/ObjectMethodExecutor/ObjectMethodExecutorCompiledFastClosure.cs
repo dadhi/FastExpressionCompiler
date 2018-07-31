@@ -240,7 +240,7 @@ namespace Microsoft.Extensions.Internal
                         Expression.Convert(customAwaitableParam, postCoercionMethodReturnType),
                         awaitableInfo.GetAwaiterMethod),
                     typeof(object)),
-                customAwaitableParam).TryCompileWithPreCreatedClosure<Func<object, object>>(null, null);
+                customAwaitableParam).TryCompileWithoutClosure<Func<object, object>>();
 
             // var isCompletedFunc = (object awaiter) =>
             //     ((CustomAwaiterType)awaiter).IsCompleted;
@@ -249,7 +249,7 @@ namespace Microsoft.Extensions.Internal
                 Expression.MakeMemberAccess(
                     Expression.Convert(isCompletedParam, awaitableInfo.AwaiterType),
                     awaitableInfo.AwaiterIsCompletedProperty),
-                isCompletedParam).TryCompileWithPreCreatedClosure<Func<object, bool>>(null, null);
+                isCompletedParam).TryCompileWithoutClosure<Func<object, bool>>();
 
             var getResultParam = Expression.Parameter(typeof(object), "awaiter");
             Func<object, object> getResultFunc;
@@ -267,7 +267,7 @@ namespace Microsoft.Extensions.Internal
                             awaitableInfo.AwaiterGetResultMethod),
                         Expression.Constant(null)
                     ),
-                    getResultParam).TryCompileWithPreCreatedClosure<Func<object, object>>(null, null);
+                    getResultParam).TryCompileWithoutClosure<Func<object, object>>();
             }
             else
             {
@@ -279,7 +279,7 @@ namespace Microsoft.Extensions.Internal
                             Expression.Convert(getResultParam, awaitableInfo.AwaiterType),
                             awaitableInfo.AwaiterGetResultMethod),
                         typeof(object)),
-                    getResultParam).TryCompileWithPreCreatedClosure<Func<object, object>>(null, null);
+                    getResultParam).TryCompileWithoutClosure<Func<object, object>>();
             }
 
             // var onCompletedFunc = (object awaiter, Action continuation) => {
@@ -293,7 +293,7 @@ namespace Microsoft.Extensions.Internal
                     awaitableInfo.AwaiterOnCompletedMethod,
                     onCompletedParam2),
                 onCompletedParam1,
-                onCompletedParam2).TryCompileWithPreCreatedClosure<Action<object, Action>>(null, null);
+                onCompletedParam2).TryCompileWithoutClosure<Action<object, Action>>();
 
             Action<object, Action> unsafeOnCompletedFunc = null;
             if (awaitableInfo.AwaiterUnsafeOnCompletedMethod != null)
@@ -309,7 +309,7 @@ namespace Microsoft.Extensions.Internal
                         awaitableInfo.AwaiterUnsafeOnCompletedMethod,
                         unsafeOnCompletedParam2),
                     unsafeOnCompletedParam1,
-                    unsafeOnCompletedParam2).TryCompileWithPreCreatedClosure<Action<object, Action>>(null, null);
+                    unsafeOnCompletedParam2).TryCompileWithoutClosure<Action<object, Action>>();
             }
 
             // If we need to pass the method call result through a coercer function to get an

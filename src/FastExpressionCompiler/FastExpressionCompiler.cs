@@ -253,7 +253,7 @@ namespace FastExpressionCompiler
         /// Note 1: Use it on your own risk - FEC won't verify the expression is compile-able with passed closure, it is up to you!
         /// Note 2: The expression with NESTED LAMBDA IS NOT SUPPORTED!
         /// Note 3: You may pass <c>null</c> as closure and constants to indicate static (closure-less) expression.</summary>
-        public static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(this LambdaExpression lambdaExpr, 
+        public static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(this LambdaExpression lambdaExpr,
             object closure, params ConstantExpression[] closureConstantsExprs)
             where TDelegate : class
         {
@@ -261,9 +261,13 @@ namespace FastExpressionCompiler
             var bodyExpr = lambdaExpr.Body;
             var returnType = bodyExpr.Type;
             var paramExprs = lambdaExpr.Parameters;
-            return (TDelegate)TryCompile(ref closureInfo, typeof(TDelegate), Tools.GetParamExprTypes(paramExprs), 
+            return (TDelegate)TryCompile(ref closureInfo, typeof(TDelegate), Tools.GetParamExprTypes(paramExprs),
                 returnType, bodyExpr, bodyExpr.NodeType, returnType, paramExprs.AsArray());
         }
+
+        /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
+        public static TDelegate TryCompileWithoutClosure<TDelegate>(this LambdaExpression lambdaExpr)
+            where TDelegate : class => lambdaExpr.TryCompileWithPreCreatedClosure<TDelegate>(null, null);
 
         /// <summary>Tries to compile lambda expression INFO to <typeparamref name="TDelegate"/> 
         /// with the provided closure object and constant expressions (or lack there of) -
@@ -282,6 +286,10 @@ namespace FastExpressionCompiler
             return (TDelegate)TryCompile(ref closureInfo, typeof(TDelegate), Tools.GetParamExprTypes(paramExprs),
                 returnType, bodyExpr, bodyExpr.GetNodeType(), returnType, paramExprs.AsArray());
         }
+
+        /// <summary>Tries to compile expression info to "static" delegate, skipping the step of collecting the closure object.</summary>
+        public static TDelegate TryCompileWithoutClosure<TDelegate>(this LambdaExpressionInfo lambdaExpr)
+            where TDelegate : class => lambdaExpr.TryCompileWithPreCreatedClosure<TDelegate>(null, null);
 
         /// <summary>Compiles expression to delegate by emitting the IL. 
         /// If sub-expressions are not supported by emitter, then the method returns null.
@@ -2587,7 +2595,8 @@ namespace FastExpressionCompiler
                 // Load compiled lambda on stack counting the offset
                 outerNestedLambdaIndex += closure.Constants.Length + closure.NonPassedParameters.Length;
 
-                LoadClosureFieldOrItem(closure, il, outerNestedLambdaIndex, nestedLambda.Lambda.GetType());
+                var lambdaType = nestedLambda.Lambda.GetType();
+                LoadClosureFieldOrItem(closure, il, outerNestedLambdaIndex, lambdaType);
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
                 var nestedClosureInfo = nestedLambda.ClosureInfo;
@@ -2722,13 +2731,13 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Newobj,
                         nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
-                EmitMethodCall(il, GetCurryClosureMethod(nestedLambda.Lambda, nestedLambda.IsAction));
+                EmitMethodCall(il, GetCurryClosureMethod(lambdaType, nestedLambda.IsAction));
                 return true;
             }
 
-            private static MethodInfo GetCurryClosureMethod(object lambda, bool isAction)
+            private static MethodInfo GetCurryClosureMethod(Type lambdaType, bool isAction)
             {
-                var lambdaTypeArgs = lambda.GetType().GetTypeInfo().GenericTypeArguments;
+                var lambdaTypeArgs = lambdaType.GetTypeInfo().GenericTypeArguments;
                 return isAction
                     ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
                     : CurryClosureFuncs.Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
