@@ -481,9 +481,8 @@ namespace FastExpressionCompiler
 
                 var closureType = closure.GetType();
                 ClosureType = closureType;
-                ClosureFields = closureType.GetTypeInfo().DeclaredFields.AsArray();
-
                 // todo: verify that Fields types are correspond to `closureConstantExpressions`
+                ClosureFields = closureType.GetTypeInfo().DeclaredFields.AsArray();
             }
 
             public void AddConstant(object expr)
@@ -1079,8 +1078,7 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < nestedNonPassedParams.Length; i++)
                 {
                     var nestedNonPassedParam = nestedNonPassedParams[i];
-                    if (paramExprs.Length == 0 ||
-                        paramExprs.GetFirstIndex(nestedNonPassedParam) == -1)
+                    if (paramExprs.GetFirstIndex(nestedNonPassedParam) == -1)
                         closure.AddNonPassedParam(nestedNonPassedParam);
                 }
 
@@ -1957,7 +1955,8 @@ namespace FastExpressionCompiler
                 return valVar;
             }
 
-            private static void LoadClosureFieldOrItem(ClosureInfo closure, ILGenerator il, int itemIndex, Type itemType)
+            private static void LoadClosureFieldOrItem(ClosureInfo closure, ILGenerator il, int itemIndex, 
+                Type itemType, object itemExprObj = null)
             {
                 il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
 
@@ -1974,6 +1973,7 @@ namespace FastExpressionCompiler
 
                     // load item from index
                     il.Emit(OpCodes.Ldelem_Ref);
+                    itemType = itemType ?? itemExprObj.GetResultType();
                     il.Emit(itemType.GetTypeInfo().IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 }
             }
@@ -2590,16 +2590,19 @@ namespace FastExpressionCompiler
                 if (outerNestedLambdaIndex == -1)
                     return false;
 
-                var nestedLambda = outerNestedLambdas[outerNestedLambdaIndex];
+                var nestedLambdaInfo = outerNestedLambdas[outerNestedLambdaIndex];
+                var nestedLambda = nestedLambdaInfo.Lambda;
+
+                var outerConstants = closure.Constants;
+                var outerNonPassedParams = closure.NonPassedParameters;
 
                 // Load compiled lambda on stack counting the offset
-                outerNestedLambdaIndex += closure.Constants.Length + closure.NonPassedParameters.Length;
+                outerNestedLambdaIndex += outerConstants.Length + outerNonPassedParams.Length;
 
-                var lambdaType = nestedLambda.Lambda.GetType();
-                LoadClosureFieldOrItem(closure, il, outerNestedLambdaIndex, lambdaType);
+                LoadClosureFieldOrItem(closure, il, outerNestedLambdaIndex, nestedLambda.GetType());
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
-                var nestedClosureInfo = nestedLambda.ClosureInfo;
+                var nestedClosureInfo = nestedLambdaInfo.ClosureInfo;
                 if (nestedClosureInfo == null)
                     return true;
 
@@ -2620,7 +2623,7 @@ namespace FastExpressionCompiler
                         var nestedConstant = nestedConstants[nestedConstIndex];
 
                         // Find constant index in the outer closure
-                        var outerConstIndex = closure.Constants.GetFirstIndex(nestedConstant);
+                        var outerConstIndex = outerConstants.GetFirstIndex(nestedConstant);
                         if (outerConstIndex == -1)
                             return false; // some error is here
 
@@ -2668,7 +2671,7 @@ namespace FastExpressionCompiler
                     }
                     else // load parameter from outer closure or from the locals
                     {
-                        if (closure.NonPassedParameters.Length == 0)
+                        if (outerNonPassedParams.Length == 0)
                             return false; // impossible, better to throw?
 
                         var variable = closure.GetDefinedLocalVarOrDefault(nestedUsedParam);
@@ -2678,11 +2681,12 @@ namespace FastExpressionCompiler
                         }
                         else // it's a parameter from outer closure
                         {
-                            var outerParamIndex = closure.NonPassedParameters.GetFirstIndex(nestedUsedParam);
+                            var outerParamIndex = outerNonPassedParams.GetFirstIndex(nestedUsedParam);
                             if (outerParamIndex == -1)
                                 return false; // impossible, better to throw?
 
-                            LoadClosureFieldOrItem(closure, il, closure.Constants.Length + outerParamIndex, nestedUsedParamType);
+                            LoadClosureFieldOrItem(closure, il, outerConstants.Length + outerParamIndex, 
+                                nestedUsedParamType, nestedUsedParam);
                         }
                     }
 
@@ -2715,7 +2719,7 @@ namespace FastExpressionCompiler
                             EmitLoadConstantInt(il, nestedConstants.Length + nestedNonPassedParams.Length + nestedLambdaIndex);
                         }
 
-                        outerLambdaIndex += closure.Constants.Length + closure.NonPassedParameters.Length;
+                        outerLambdaIndex += outerConstants.Length + outerNonPassedParams.Length;
 
                         LoadClosureFieldOrItem(closure, il, outerLambdaIndex, nestedNestedLambda.Lambda.GetType());
 
@@ -2728,16 +2732,14 @@ namespace FastExpressionCompiler
                 if (isNestedArrayClosure)
                     il.Emit(OpCodes.Newobj, ArrayClosure.Constructor);
                 else
-                    il.Emit(OpCodes.Newobj,
-                        nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                    il.Emit(OpCodes.Newobj, nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
-                EmitMethodCall(il, GetCurryClosureMethod(lambdaType, nestedLambda.IsAction));
-                return true;
+                return EmitMethodCall(il, GetCurryClosureMethod(nestedLambda, nestedLambdaInfo.IsAction));
             }
 
-            private static MethodInfo GetCurryClosureMethod(Type lambdaType, bool isAction)
+            private static MethodInfo GetCurryClosureMethod(object lambda, bool isAction)
             {
-                var lambdaTypeArgs = lambdaType.GetTypeInfo().GenericTypeArguments;
+                var lambdaTypeArgs = lambda.GetType().GetTypeInfo().GenericTypeArguments;
                 return isAction
                     ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
                     : CurryClosureFuncs.Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
