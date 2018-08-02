@@ -551,7 +551,7 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < nestedLambdas.Length; i++)
                             items[constPlusParamCount + i] = nestedLambdas[i].Lambda;
 
-                    return Closure = new ArrayClosure(items);
+                    return new ArrayClosure(items);
                 }
 
                 // Construct the Closure Type and optionally Closure object with closed values stored as fields:
@@ -612,10 +612,7 @@ namespace FastExpressionCompiler
 
                 ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
 
-                if (fieldValues == null)
-                    return null;
-                
-                return Closure = createClosure.Invoke(null, fieldValues);
+                return constructTypeOnly ? null : createClosure.Invoke(null, fieldValues);
             }
 
             public void PushBlock(object blockResultExpr, object[] blockVarExprs, LocalBuilder[] localVars) =>
@@ -876,16 +873,13 @@ namespace FastExpressionCompiler
 
         #region Collect Bound Constants
 
-        private static bool IsBoundConstant(object value)
+        private static bool IsClosureBoundConstant(object value)
         {
             if (value == null)
                 return false;
 
             var typeInfo = value.GetType().GetTypeInfo();
-            return !typeInfo.IsPrimitive
-                   && !(value is string)
-                   && !(value is Type)
-                   && !typeInfo.IsEnum;
+            return !typeInfo.IsPrimitive && !typeInfo.IsEnum && !(value is string) && !(value is Type);
         }
 
         // @paramExprs is required for nested lambda compilation
@@ -900,7 +894,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.Constant:
                     var constExprInfo = exprObj as ConstantExpressionInfo;
                     var value = constExprInfo != null ? constExprInfo.Value : ((ConstantExpression)exprObj).Value;
-                    if (value is Delegate || IsBoundConstant(value))
+                    if (value is Delegate || IsClosureBoundConstant(value))
                         (closure ?? (closure = new ClosureInfo())).AddConstant(exprObj);
                     return true;
 
@@ -1072,7 +1066,7 @@ namespace FastExpressionCompiler
 
             // if nested non passed parameter is no matched with any outer passed parameter, 
             // then ensure it goes to outer non passed parameter.
-            // But check that have non passed parameter in root expression is invalid.
+            // But check that having a non-passed parameter in root expression is invalid.
             var nestedNonPassedParams = nestedClosure.NonPassedParameters;
             if (nestedNonPassedParams.Length != 0)
                 for (var i = 0; i < nestedNonPassedParams.Length; i++)
@@ -1094,7 +1088,6 @@ namespace FastExpressionCompiler
                     closure.AddNestedLambda(nestedNestedLambdas[i]);
 
             return true;
-
         }
 
         private static bool TryCollectMemberInitExprConstants(ref ClosureInfo closure, object exprObj, object[] paramExprs)

@@ -11,12 +11,9 @@ namespace FastExpressionCompiler.Benchmarks
         private static Expression<Func<B, X>> ComposeManualExprWithParams(Expression aConstExpr)
         {
             var bParamExpr = Expression.Parameter(typeof(B), "b");
-
-            var expr = Expression.Lambda<Func<B, X>>(
+            return Expression.Lambda<Func<B, X>>(
                 Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(), aConstExpr, bParamExpr),
                 bParamExpr);
-
-            return expr;
         }
 
         public class A { }
