@@ -67,7 +67,7 @@ namespace FastExpressionCompiler.Benchmarks
         }
 
         [MemoryDiagnoser]
-        public class Compile
+        public class Compilation
         {
             [Benchmark]
             public object Expr_Compile() => Expr.Compile();
@@ -80,7 +80,7 @@ namespace FastExpressionCompiler.Benchmarks
         }
 
         [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true)]
-        public class Invoke
+        public class Invocation
         {
             private static Func<string, int> _compiled = Expr.Compile();
             private static Func<string, int> _compiledFast = Expr.CompileFast();
