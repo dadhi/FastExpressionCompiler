@@ -28,7 +28,9 @@ namespace FastExpressionCompiler.IssueTests
             var instance = new TestTarget();
 
             var expr = CreateWriter<TestTarget>();
-            var write = expr.CompileFast();
+
+            // both ExpressionCompiler.Compile and .CompileFast should work with action
+            var write = ExpressionCompiler.Compile<Action<TestTarget, Guid>>(expr);
 
             write(instance, id);
 

@@ -245,7 +245,7 @@ namespace FastExpressionCompiler
         public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr)
             where TDelegate : class =>
             TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters,
-                Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.Body.Type);
+                Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType);
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/> 
         /// with the provided closure object and constant expressions (or lack there of) -
@@ -1482,7 +1482,8 @@ namespace FastExpressionCompiler
                 }
 
                 il.BeginExceptionBlock();
-                if (!TryEmit(tryExpr.Body, tryExpr.Body.NodeType, tryExpr.Body.Type, paramExprs, il, ref closure, ExpressionType.Try))
+                var tryBodyExpr = tryExpr.Body;
+                if (!TryEmit(tryBodyExpr, tryBodyExpr.NodeType, tryBodyExpr.Type, paramExprs, il, ref closure, ExpressionType.Try))
                     return false;
 
                 if (isNonVoid)

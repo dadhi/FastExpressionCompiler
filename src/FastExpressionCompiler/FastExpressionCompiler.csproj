@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <VersionPrefix>1.10.0</VersionPrefix>
+    <VersionPrefix>1.10.1</VersionPrefix>
     <TargetFrameworks>net45;netstandard1.3</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -11,11 +11,13 @@
     <Copyright>Copyright © 2016 Maksim Volkau</Copyright>
     <NeutralLanguage>en-US</NeutralLanguage>
     <Title>FastExpressionCompiler</Title>
-    <Summary>FastExpressionCompiler is up to ~20 times faster than Expression.Compile()</Summary> 
-    <Description>FastExpressionCompiler is up to ~20 times faster than Expression.Compile()</Description>
+    <Summary>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Summary> 
+    <DescriptionFastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
     <PackageId>FastExpressionCompiler</PackageId>
     <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
     <PackageReleaseNotes>
+      v1.10.1
+      - fixed: #76 Expression.Convert causing signature or security transparency is not compatible exception
       v1.10.0
       - fixed: #75 Allow to provide pre-constructed closure object into TryCompile enhancement
       v1.9.0
