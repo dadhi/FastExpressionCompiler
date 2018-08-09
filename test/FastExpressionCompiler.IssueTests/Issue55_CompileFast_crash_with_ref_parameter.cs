@@ -26,8 +26,53 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(0, exampleB);
         }
 
-        //[Test]
-        [Ignore("Fails, but should fix")]
+        // will retain next methods under well defined names
+        // 1. newcomvers may look into il
+        // 2. may call thes for test comparison
+        // 3. as documentation of what is covered
+        private void Set7Constant(ref int objRef)
+        {
+            const int objVal = 7; 
+            objRef = objVal;
+        }
+
+        private void Set1124144112Constant(ref int objRef)
+        {
+            const int objVal = 1124144112;
+            objRef = objVal;
+        }
+
+        private static void SetXXXXXConstant(ref int objRef)
+        {
+            const int objVal = 1124144112;
+            objRef = objVal;
+        }
+
+        private void Set1124144112Constant(ref int objRef, ref int objRef2)
+        {
+            const int objVal = 1124144112;
+            objRef = objVal;
+            objRef2 = 7;
+        }
+
+        private int ReadIntoVar(ref int objRef)
+        {
+            var read = objRef;
+            return read;
+        }
+
+        private void ReadIntoVassr( int objRef)
+        {
+            var x = 0;
+        }
+
+        private int ReadIntoVas131231231312sr(int objRef)
+        {
+            var x = objRef;
+            return x;
+        }
+
+        [Test]
         public void RefFromConstant()
         {
             var objRef = Expression.Parameter(typeof(int).MakeByRefType());
@@ -48,8 +93,7 @@ namespace FastExpressionCompiler.IssueTests
 
         public delegate void Setter2(ref int obj, int val);
 
-        //[Test]
-        [Ignore("Fails, but should fix")]
+        [Test]
         public void RefSetFromParameter()
         {
             var objRef = Expression.Parameter(typeof(int).MakeByRefType());
