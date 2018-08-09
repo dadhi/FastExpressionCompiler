@@ -237,7 +237,7 @@ namespace FastExpressionCompiler
         public static Action<T1, T2, T3, T4, T5, T6> CompileFast<T1, T2, T3, T4, T5, T6>(
             this ExpressionInfo<Action<T1, T2, T3, T4, T5, T6>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
             TryCompile<Action<T1, T2, T3, T4, T5, T6>>(lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6) }, typeof(void))
-            ?? (ifFastFailedReturnNull? null : lambdaExpr.ToLambdaExpression().Compile());
+            ?? (ifFastFailedReturnNull ? null : lambdaExpr.ToLambdaExpression().Compile());
 
         #endregion
 
@@ -371,11 +371,16 @@ namespace FastExpressionCompiler
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = method.GetILGenerator();
-            if (!EmittingVisitor.TryEmit(exprObj, exprNodeType, exprType, paramExprs, il, 
+            if (!EmittingVisitor.TryEmit(exprObj, exprNodeType, exprType, paramExprs, il,
                 ref closureInfo, ExpressionType.Default))
                 return null;
 
-            if (returnType == typeof(void) && exprType != typeof(void) && paramTypes.GetFirstIndex(x => x.IsByRef) > 0)
+            if (returnType == typeof(void) && exprType != typeof(void)
+                &&
+                // TODO: fix it, why body has return of ref if there is, if 2 refs then gots object
+                (paramTypes.GetFirstIndex(x => x.IsByRef) <= 0
+                || paramTypes.GetFirst(x => x.IsByRef) != exprType)
+                )
                 il.Emit(OpCodes.Pop); // discard the return value on stack (#71)
 
             il.Emit(OpCodes.Ret);
