@@ -375,7 +375,7 @@ namespace FastExpressionCompiler
                 ref closureInfo, ExpressionType.Default))
                 return null;
 
-            if (returnType == typeof(void) && exprType != typeof(void) && !paramTypes.Any(x => x.IsByRef))
+            if (returnType == typeof(void) && exprType != typeof(void) && paramTypes.GetFirstIndex(x => x.IsByRef) > 0)
                 il.Emit(OpCodes.Pop); // discard the return value on stack (#71)
 
             il.Emit(OpCodes.Ret);
@@ -2254,16 +2254,14 @@ namespace FastExpressionCompiler
                             if (paramIndex >= byte.MaxValue)
                                 return false;
 
-                            var parameterExpression = (ParameterExpression)left; 
-                            var isByRef = parameterExpression.IsByRef;
-                            if (isByRef)
+                            if ((left as ParameterExpression)?.IsByRef == true)
                                 EmitLoadParamArg(il, paramIndex, false);
                             
                             if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
                                 return false;
 
-                            if (isByRef)
-                                EmitByRefStore(il, parameterExpression.Type);
+                            if ((left as ParameterExpression)?.IsByRef == true)
+                                EmitByRefStore(il, (left as ParameterExpression).Type);
                             else
                             {
                                 if (shouldPushResult)
@@ -2429,13 +2427,13 @@ namespace FastExpressionCompiler
 
             private static void EmitByRefStore(ILGenerator il, Type type)
             {
-                if (type == typeof(int))
+                if (type == typeof(int) || type == typeof(uint))
                     il.Emit(OpCodes.Stind_I4);
                 else if (type == typeof(byte))
                     il.Emit(OpCodes.Stind_I1);
-                else if (type == typeof(short))
+                else if (type == typeof(short) || type == typeof(ushort))
                     il.Emit(OpCodes.Stind_I2);
-                else if (type == typeof(long))
+                else if (type == typeof(long) || type == typeof(ulong))
                     il.Emit(OpCodes.Stind_I8);
                 else if (type == typeof(float))
                     il.Emit(OpCodes.Stind_R4);
@@ -2443,7 +2441,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stind_R8);
                 else if (type == typeof(object))
                     il.Emit(OpCodes.Stind_Ref);
-                else if (type == typeof(IntPtr))
+                else if (type == typeof(IntPtr) || type == typeof(UIntPtr))
                     il.Emit(OpCodes.Stind_I);
                 else
                     throw new NotImplementedException();
