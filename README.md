@@ -127,9 +127,9 @@ Frequency=2437501 Hz, Resolution=410.2562 ns, Timer=TSC
 ### Hoisted expression with constructor and two arguments in closure
 
 ```csharp
-    var a = new A();
-    var b = new B();
-    Expression<Func<X>> e = () => new X(a, b);
+var a = new A();
+var b = new B();
+Expression<Func<X>> e = () => new X(a, b);
 ```
 
 Compiling expression:
@@ -158,20 +158,20 @@ Invoking compiled delegate comparing to direct constructor call:
 ### Hoisted expression with static method and two nested lambdas and two arguments in closure
 
 ```csharp
-    var a = new A();
-    var b = new B();
-    Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy<A>(() => a), b);
+var a = new A();
+var b = new B();
+Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy<A>(() => a), b);
 ```
 
 Compiling expression:
 
-|                Method |  Job | Runtime |        Mean |      Error |     StdDev | Scaled | ScaledSD |   Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|---------------------- |----- |-------- |------------:|-----------:|-----------:|-------:|---------:|--------:|-------:|-------:|----------:|
-|     ExpressionCompile |  Clr |     Clr | 1,120.60 us | 18.4641 us | 16.3680 us |  17.55 |     0.39 | 13.6719 | 1.9531 |      - |   23.2 KB |
-| ExpressionFastCompile |  Clr |     Clr |    63.87 us |  1.2301 us |  1.1506 us |   1.00 |     0.00 |  5.1270 | 2.5635 | 0.1221 |   7.91 KB |
-|                       |      |         |             |            |            |        |          |         |        |        |           |
-|     ExpressionCompile | Core |    Core |   941.99 us | 13.1721 us | 12.3212 us |  17.76 |     0.32 |  7.8125 | 1.9531 |      - |  12.12 KB |
-| ExpressionFastCompile | Core |    Core |    53.06 us |  0.8499 us |  0.7097 us |   1.00 |     0.00 |  5.0659 | 2.5024 | 0.1831 |   7.74 KB |
+|      Method |  Job | Runtime |        Mean |      Error |     StdDev | Scaled | ScaledSD |   Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------ |----- |-------- |------------:|-----------:|-----------:|-------:|---------:|--------:|-------:|-------:|----------:|
+|     Compile |  Clr |     Clr | 1,120.60 us | 18.4641 us | 16.3680 us |  17.55 |     0.39 | 13.6719 | 1.9531 |      - |   23.2 KB |
+| FastCompile |  Clr |     Clr |    63.87 us |  1.2301 us |  1.1506 us |   1.00 |     0.00 |  5.1270 | 2.5635 | 0.1221 |   7.91 KB |
+|             |      |         |             |            |            |        |          |         |        |        |           |
+|     Compile | Core |    Core |   941.99 us | 13.1721 us | 12.3212 us |  17.76 |     0.32 |  7.8125 | 1.9531 |      - |  12.12 KB |
+| FastCompile | Core |    Core |    53.06 us |  0.8499 us |  0.7097 us |   1.00 |     0.00 |  5.0659 | 2.5024 | 0.1831 |   7.74 KB |
 
 Invoking compiled delegate comparing to direct method call:
 
@@ -189,13 +189,12 @@ Invoking compiled delegate comparing to direct method call:
 ### Manually composed expression with parameters and closure
 
 ```csharp
-    var a = new A();
-    var bParamExpr = Expression.Parameter(typeof(B), "b");
-
-    var expr = Expression.Lambda(
-        Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
-            Expression.Constant(a, typeof(A)), bParamExpr),
-        bParamExpr);
+var a = new A();
+var bParamExpr = Expression.Parameter(typeof(B), "b");
+var expr = Expression.Lambda(
+    Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
+        Expression.Constant(a, typeof(A)), bParamExpr),
+    bParamExpr);
 ```
 
 Compiling expression:
@@ -233,8 +232,9 @@ it __won't do any node compatibility verification__ for the tree as the `Express
 Hopefully, you are checking the expression arguments yourself, and not waiting for `Expression` exceptions to blow up.
 
 __Note:__ At the moment `ExpressionInfo` is not supported for all supported expression types
-(#46).
+([#46](https://github.com/dadhi/FastExpressionCompiler/issues/46)).
 
+[Sample expression](https://github.com/dadhi/FastExpressionCompiler/blob/8cab34992be52e5f0f18805f21e0e6faab69493a/test/FastExpressionCompiler.UnitTests/ExpressionInfoTests.cs#L145)
 
 Creating expression:
 
