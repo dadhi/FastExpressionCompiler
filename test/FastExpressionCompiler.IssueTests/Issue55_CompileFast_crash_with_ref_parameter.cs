@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.IssueTests
     // 1. multi ref set values
     // 2. `out` (out must be set - validate?)
     // 3. IntPtr and object ref tests
+    // 4. check support of `in` https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/in-parameter-modifier
     [TestFixture]
     public class Issue55_CompileFast_crash_with_ref_parameter
     {
