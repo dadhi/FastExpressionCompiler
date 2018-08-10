@@ -3277,7 +3277,7 @@ namespace FastExpressionCompiler
         /// <summary>Analog of Expression.Parameter</summary>
         /// <remarks>For now it is return just an `Expression.Parameter`</remarks>
         public static ParameterExpressionInfo Parameter(Type type, string name = null) =>
-            new ParameterExpressionInfo(type, name, false);
+            new ParameterExpressionInfo(type, name, false); // TODO: #46
 
         /// <summary>Analog of Expression.Constant</summary>
         public static ConstantExpressionInfo Constant(object value, Type type = null) =>
