@@ -375,12 +375,8 @@ namespace FastExpressionCompiler
                 ref closureInfo, ExpressionType.Default))
                 return null;
 
-            if (returnType == typeof(void) && exprType != typeof(void)
-                &&
-                // TODO: fix it, why body has return of ref if there is, if 2 refs then gots object
-                (paramTypes.GetFirstIndex(x => x.IsByRef) <= 0
-                || paramTypes.GetFirst(x => x.IsByRef) != exprType)
-                )
+            // user requested delegate without return, but inner lambda returns 
+            if (returnType == typeof(void) && exprType != typeof(void) && !IsByReferenceReturn(paramTypes, exprObj))
                 il.Emit(OpCodes.Pop); // discard the return value on stack (#71)
 
             il.Emit(OpCodes.Ret);
@@ -393,6 +389,38 @@ namespace FastExpressionCompiler
                 delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
 
             return method.CreateDelegate(delegateType, closure);
+        }
+
+        // if expression body last statement is assign of by ref, then it gets as return in type, but not on stack
+        private static bool IsByReferenceReturn(Type[] paramTypes, object exprObj)
+        {
+            for (var i = 0; i < paramTypes.Length; i++)
+            {
+                if (paramTypes[i].IsByRef)
+                {
+                    var expression = exprObj.ToExpression();
+                    switch (expression.NodeType)
+                    {
+                        case ExpressionType.Block:
+                            var block = expression as BlockExpression;
+                            var last = block.Expressions[block.Expressions.Count - 1];
+                            switch (last.NodeType)
+                            {
+                                case ExpressionType.Assign:
+                                    var binaryStatement = last as BinaryExpression;
+                                    return Tools.IsByRefParameter(binaryStatement.Left);
+                            }
+                            break;
+                        case ExpressionType.Assign:
+                            var binary = expression as BinaryExpression;
+                            return Tools.IsByRefParameter(binary.Left);
+                        default:
+                            continue;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static Type[] GetClosureAndParamTypes(Type[] paramTypes, Type closureType)
@@ -1639,7 +1667,7 @@ namespace FastExpressionCompiler
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
             {
                 // ref, and out parameters are not supported yet
-                if ((paramExprObj as ParameterExpression)?.IsByRef == true)
+                if (Tools.IsByRefParameter(paramExprObj))
                     return false;
 
                 // if parameter is passed, then just load it on stack
@@ -2259,14 +2287,14 @@ namespace FastExpressionCompiler
                             if (paramIndex >= byte.MaxValue)
                                 return false;
 
-                            if ((left as ParameterExpression)?.IsByRef == true)
+                            if (Tools.IsByRefParameter(left))
                                 EmitLoadParamArg(il, paramIndex, false);
-                            
+
                             if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
                                 return false;
 
-                            if ((left as ParameterExpression)?.IsByRef == true)
-                                EmitByRefStore(il, (left as ParameterExpression).Type);
+                            if (Tools.IsByRefParameter(left))
+                                EmitByRefStore(il, left.ToExpression().Type);
                             else
                             {
                                 if (shouldPushResult)
@@ -2428,7 +2456,7 @@ namespace FastExpressionCompiler
                     default: // not yet support assignment targets
                         return false;
                 }
-            }
+            }          
 
             private static void EmitByRefStore(ILGenerator il, Type type)
             {
@@ -3071,6 +3099,8 @@ namespace FastExpressionCompiler
             return new ExprInfo(exprObj, exprInfo.NodeType, exprInfo.Type);
         }
 
+        public static bool IsByRefParameter(object exprObj) => (exprObj as ParameterExpression)?.IsByRef ?? (exprObj as ParameterExpressionInfo)?.IsByRef == true;
+
         public static ExprInfo GetOperandExprInfo(this object exprObj) => 
             (exprObj as UnaryExpression)?.Operand.GetExprInfo() ?? ((UnaryExpressionInfo)exprObj).Operand.GetExprInfo();
 
@@ -3247,7 +3277,7 @@ namespace FastExpressionCompiler
         /// <summary>Analog of Expression.Parameter</summary>
         /// <remarks>For now it is return just an `Expression.Parameter`</remarks>
         public static ParameterExpressionInfo Parameter(Type type, string name = null) =>
-            new ParameterExpressionInfo(type, name);
+            new ParameterExpressionInfo(type, name, false);
 
         /// <summary>Analog of Expression.Constant</summary>
         public static ConstantExpressionInfo Constant(object value, Type type = null) =>
@@ -3527,6 +3557,8 @@ namespace FastExpressionCompiler
 
         public readonly string Name;
 
+        public readonly bool IsByRef;
+
         public override Expression ToExpression() => ParamExpr;
 
         public ParameterExpression ParamExpr =>
@@ -3534,14 +3566,15 @@ namespace FastExpressionCompiler
 
         public static implicit operator ParameterExpression(ParameterExpressionInfo info) => info.ParamExpr;
 
-        public ParameterExpressionInfo(Type type, string name)
+        public ParameterExpressionInfo(Type type, string name, bool isByRef)
         {
             Type = type;
             Name = name;
+            IsByRef = isByRef;
         }
 
         public ParameterExpressionInfo(ParameterExpression paramExpr)
-            : this(paramExpr.Type, paramExpr.Name)
+            : this(paramExpr.Type, paramExpr.Name, paramExpr.IsByRef)
         {
             _parameter = paramExpr;
         }

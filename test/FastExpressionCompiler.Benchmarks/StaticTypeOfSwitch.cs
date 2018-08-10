@@ -7,7 +7,7 @@ namespace FastExpressionCompiler.Benchmarks
 
     [CoreJob, ClrJob]
     [MemoryDiagnoser]
-    public class StaticTypeOf
+    public class StaticTypeOfSwitch
     {
         private static OpCode OpCodeForTypeByTypeOf(Type type)
         {
@@ -25,11 +25,11 @@ namespace FastExpressionCompiler.Benchmarks
                 throw new NotImplementedException();
         }
 
-        private static  Type intT = typeof(int);
-        private static  Type byteT = typeof(byte);
-        private static  Type shortT = typeof(short);
-        private static  Type longT = typeof(long);
-        private static Type floatT = typeof(float);
+        private readonly static Type intT = typeof(int);
+        private readonly static Type byteT = typeof(byte);
+        private readonly static Type shortT = typeof(short);
+        private readonly static Type longT = typeof(long);
+        private readonly static Type floatT = typeof(float);
 
         private static OpCode OpCodeForTypeByStatitcType(Type type)
         {

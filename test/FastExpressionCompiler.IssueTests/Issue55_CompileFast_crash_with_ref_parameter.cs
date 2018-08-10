@@ -6,6 +6,10 @@ using System.Collections.Generic;
 
 namespace FastExpressionCompiler.IssueTests
 {
+    // TODO:
+    // 1. multi ref set values
+    // 2. `out` (out must be set - validate?)
+    // 3. IntPtr and object ref tests
     [TestFixture]
     public class Issue55_CompileFast_crash_with_ref_parameter
     {
@@ -121,6 +125,34 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void BlockWithNonRefStatementLast()
+        {
+            void SetSmallConstant(ref uint localByRef)
+            {
+                localByRef = 3;
+                var x = 0.0;
+            }
+            var objRef = Parameter(typeof(uint).MakeByRefType());
+            var variable = Variable(typeof(double));      
+            var lambda = Lambda<ActionRef<uint>>(Block(new[] { variable }, Assign(objRef, Constant((uint)3)), Assign(variable, Constant(0.0))), objRef);
+
+            var compiledA = lambda.Compile();
+            var exampleA = default(uint);
+            compiledA(ref exampleA);
+            Assert.AreEqual(3, exampleA);
+
+            var compiledB = lambda.CompileFast<ActionRef<uint>>(true);
+            var exampleB = default(uint);
+            compiledB(ref exampleB);
+            Assert.AreEqual(3, exampleB);
+
+            ActionRef<uint> direct = SetSmallConstant;
+            var exampleC = default(uint);
+            direct(ref exampleC);
+            Assert.AreEqual(3, exampleC);
+        }
+
+        [Test]
         public void RefReturnToVoid()
         {
             ushort SetSmallConstant(ref uint localByRef)
@@ -176,12 +208,13 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(0, exampleC);
         }
 
+
         [Test]
         public void RefRefReturnToVoid()
         {
-            object SetSmallConstant(ref int a1, ref float a2)
+            string SetSmallConstant(ref int a1, ref float a2)
             {
-                return default(object);
+                return default(string);
             }
             var objRef = Parameter(typeof(int).MakeByRefType());
             var objRef2 = Parameter(typeof(float).MakeByRefType());
@@ -256,37 +289,6 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(42_123_666, exampleC);
         }
 
-
-
-        // will retain next methods under well defined names
-        // 1. newcomvers may look into il
-        // 2. may call thes for test comparison
-        // 3. as documentation of what is covered
-
-        private void Set1124144112Constant(ref int objRef, ref int objRef2)
-        {
-            const int objVal = 1124144112;
-            objRef = objVal;
-            objRef2 = 7;
-        }
-
-        private int ReadIntoVar(ref int objRef)
-        {
-            var read = objRef;
-            return read;
-        }
-
-        private void ReadIntoVassr(int objRef)
-        {
-            var x = 0;
-        }
-
-        private int ReadIntoVas131231231312sr(int objRef)
-        {
-            var x = objRef;
-            return x;
-        }
-
         [Test]
         public void RefSetFromParameter()
         {
@@ -305,8 +307,6 @@ namespace FastExpressionCompiler.IssueTests
             compiledB(ref exampleB, 7);
             Assert.AreEqual(7, exampleB);
         }
-
-
 
         [Test]
         public void NonGenericSetterFieldShould_not_crash()
