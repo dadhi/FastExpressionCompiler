@@ -237,7 +237,7 @@ namespace FastExpressionCompiler
         public static Action<T1, T2, T3, T4, T5, T6> CompileFast<T1, T2, T3, T4, T5, T6>(
             this ExpressionInfo<Action<T1, T2, T3, T4, T5, T6>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
             TryCompile<Action<T1, T2, T3, T4, T5, T6>>(lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6) }, typeof(void))
-            ?? (ifFastFailedReturnNull? null : lambdaExpr.ToLambdaExpression().Compile());
+            ?? (ifFastFailedReturnNull ? null : lambdaExpr.ToLambdaExpression().Compile());
 
         #endregion
 
@@ -371,11 +371,12 @@ namespace FastExpressionCompiler
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = method.GetILGenerator();
-            if (!EmittingVisitor.TryEmit(exprObj, exprNodeType, exprType, paramExprs, il, 
+            if (!EmittingVisitor.TryEmit(exprObj, exprNodeType, exprType, paramExprs, il,
                 ref closureInfo, ExpressionType.Default))
                 return null;
 
-            if (returnType == typeof(void) && exprType != typeof(void))
+            // user requested delegate without return, but inner lambda returns 
+            if (returnType == typeof(void) && exprType != typeof(void) && !IsByReferenceReturn(paramTypes, exprObj))
                 il.Emit(OpCodes.Pop); // discard the return value on stack (#71)
 
             il.Emit(OpCodes.Ret);
@@ -388,6 +389,38 @@ namespace FastExpressionCompiler
                 delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
 
             return method.CreateDelegate(delegateType, closure);
+        }
+
+        // if expression body last statement is assign of by ref, then it gets as return in type, but not on stack
+        private static bool IsByReferenceReturn(Type[] paramTypes, object exprObj)
+        {
+            for (var i = 0; i < paramTypes.Length; i++)
+            {
+                if (paramTypes[i].IsByRef)
+                {
+                    var expression = exprObj.ToExpression();
+                    switch (expression.NodeType)
+                    {
+                        case ExpressionType.Block:
+                            var block = expression as BlockExpression;
+                            var last = block.Expressions[block.Expressions.Count - 1];
+                            switch (last.NodeType)
+                            {
+                                case ExpressionType.Assign:
+                                    var binaryStatement = last as BinaryExpression;
+                                    return Tools.IsByRefParameter(binaryStatement.Left);
+                            }
+                            break;
+                        case ExpressionType.Assign:
+                            var binary = expression as BinaryExpression;
+                            return Tools.IsByRefParameter(binary.Left);
+                        default:
+                            continue;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static Type[] GetClosureAndParamTypes(Type[] paramTypes, Type closureType)
@@ -1634,7 +1667,7 @@ namespace FastExpressionCompiler
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
             {
                 // ref, and out parameters are not supported yet
-                if ((paramExprObj as ParameterExpression)?.IsByRef == true)
+                if (Tools.IsByRefParameter(paramExprObj))
                     return false;
 
                 // if parameter is passed, then just load it on stack
@@ -1645,7 +1678,7 @@ namespace FastExpressionCompiler
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
                     var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType;
-                    LoadParamArg(il, paramIndex, asAddress);
+                    EmitLoadParamArg(il, paramIndex, asAddress);
                     return true;
                 }
 
@@ -1674,7 +1707,8 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static void LoadParamArg(ILGenerator il, int paramIndex, bool asAddress)
+            // loads argument at paramIndex onto evaluation stack
+            private static void EmitLoadParamArg(ILGenerator il, int paramIndex, bool asAddress)
             {
                 if (asAddress)
                 {
@@ -2243,21 +2277,32 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Parameter:
                         var paramIndex = paramExprs.GetFirstIndex(left);
+
                         if (paramIndex != -1)
                         {
+
                             if (closure.HasClosure)
                                 paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
                             if (paramIndex >= byte.MaxValue)
                                 return false;
 
+                            if (Tools.IsByRefParameter(left))
+                                EmitLoadParamArg(il, paramIndex, false);
+
                             if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
                                 return false;
 
-                            if (shouldPushResult)
-                                il.Emit(OpCodes.Dup); // dup value to assign and return
+                            if (Tools.IsByRefParameter(left))
+                                EmitByRefStore(il, left.ToExpression().Type);
+                            else
+                            {
+                                if (shouldPushResult)
+                                    il.Emit(OpCodes.Dup); // dup value to assign and return
 
-                            il.Emit(OpCodes.Starg_S, paramIndex);
+                                il.Emit(OpCodes.Starg_S, paramIndex);
+                            }
+
                             return true;
                         }
 
@@ -2411,6 +2456,28 @@ namespace FastExpressionCompiler
                     default: // not yet support assignment targets
                         return false;
                 }
+            }          
+
+            private static void EmitByRefStore(ILGenerator il, Type type)
+            {
+                if (type == typeof(int) || type == typeof(uint))
+                    il.Emit(OpCodes.Stind_I4);
+                else if (type == typeof(byte))
+                    il.Emit(OpCodes.Stind_I1);
+                else if (type == typeof(short) || type == typeof(ushort))
+                    il.Emit(OpCodes.Stind_I2);
+                else if (type == typeof(long) || type == typeof(ulong))
+                    il.Emit(OpCodes.Stind_I8);
+                else if (type == typeof(float))
+                    il.Emit(OpCodes.Stind_R4);
+                else if (type == typeof(double))
+                    il.Emit(OpCodes.Stind_R8);
+                else if (type == typeof(object))
+                    il.Emit(OpCodes.Stind_Ref);
+                else if (type == typeof(IntPtr) || type == typeof(UIntPtr))
+                    il.Emit(OpCodes.Stind_I);
+                else
+                    throw new NotImplementedException();
             }
 
             private static bool TryEmitIndexAssign(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
@@ -2643,7 +2710,7 @@ namespace FastExpressionCompiler
                     if (paramIndex != -1) // load param from input params
                     {
                         // +1 is set cause of added first closure argument
-                        LoadParamArg(il, 1 + paramIndex, false);
+                        EmitLoadParamArg(il, 1 + paramIndex, false);
                     }
                     else // load parameter from outer closure or from the locals
                     {
@@ -3032,6 +3099,8 @@ namespace FastExpressionCompiler
             return new ExprInfo(exprObj, exprInfo.NodeType, exprInfo.Type);
         }
 
+        public static bool IsByRefParameter(object exprObj) => (exprObj as ParameterExpression)?.IsByRef ?? (exprObj as ParameterExpressionInfo)?.IsByRef == true;
+
         public static ExprInfo GetOperandExprInfo(this object exprObj) => 
             (exprObj as UnaryExpression)?.Operand.GetExprInfo() ?? ((UnaryExpressionInfo)exprObj).Operand.GetExprInfo();
 
@@ -3208,7 +3277,7 @@ namespace FastExpressionCompiler
         /// <summary>Analog of Expression.Parameter</summary>
         /// <remarks>For now it is return just an `Expression.Parameter`</remarks>
         public static ParameterExpressionInfo Parameter(Type type, string name = null) =>
-            new ParameterExpressionInfo(type, name);
+            new ParameterExpressionInfo(type, name, false); // TODO: #46
 
         /// <summary>Analog of Expression.Constant</summary>
         public static ConstantExpressionInfo Constant(object value, Type type = null) =>
@@ -3488,6 +3557,8 @@ namespace FastExpressionCompiler
 
         public readonly string Name;
 
+        public readonly bool IsByRef;
+
         public override Expression ToExpression() => ParamExpr;
 
         public ParameterExpression ParamExpr =>
@@ -3495,14 +3566,15 @@ namespace FastExpressionCompiler
 
         public static implicit operator ParameterExpression(ParameterExpressionInfo info) => info.ParamExpr;
 
-        public ParameterExpressionInfo(Type type, string name)
+        public ParameterExpressionInfo(Type type, string name, bool isByRef)
         {
             Type = type;
             Name = name;
+            IsByRef = isByRef;
         }
 
         public ParameterExpressionInfo(ParameterExpression paramExpr)
-            : this(paramExpr.Type, paramExpr.Name)
+            : this(paramExpr.Type, paramExpr.Name, paramExpr.IsByRef)
         {
             _parameter = paramExpr;
         }

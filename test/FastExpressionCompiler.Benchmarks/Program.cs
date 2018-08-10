@@ -1,7 +1,9 @@
-﻿using BenchmarkDotNet.Running;
+﻿using System;
+using BenchmarkDotNet.Running;
 
 namespace FastExpressionCompiler.Benchmarks
 {
+    
     public class Program
     {
         public static void Main()
@@ -12,7 +14,8 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Compile>();
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Execute>();
             BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
-
+            //BenchmarkRunner.Run<StaticTypeOfSwitch>();
+        
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Compilation>();
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Invocation>();
 
