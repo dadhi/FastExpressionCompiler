@@ -1,16 +1,13 @@
 ﻿using System;
+using System.Linq;
 using System.Linq.Expressions;
-using static System.Linq.Expressions.Expression;
+using System.Reflection;
 using NUnit.Framework;
-using System.Collections.Generic;
+using static System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.IssueTests
 {
-    // TODO:
-    // 1. multi ref set values
-    // 2. `out` (out must be set - validate?)
-    // 3. IntPtr and object ref tests
-    // 4. check support of `in` https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/in-parameter-modifier
+    // considers in/out/ref in C# represented by ByRef in expressions (i.e. single representation for 3 C# keywords)
     [TestFixture]
     public class Issue55_CompileFast_crash_with_ref_parameter
     {
@@ -19,13 +16,14 @@ namespace FastExpressionCompiler.IssueTests
         delegate void ActionRef<T>(ref T a1);
         delegate void ActionRefIn<T1, in T2>(ref T1 obj, T2 value);
         delegate void ActionRefRef<T1, T2>(ref T1 obj, ref T2 value);
+        delegate TResult FuncRefRef<T1, T2, out TResult>(ref T1 obj, ref T2 value);
 
         struct StructWithIntField { public int IntField; }
 
         [Test]
         public void RefDoNothingShouldNoCrash()
         {
-            void DoNothing(ref int igonre) { };
+            void DoNothing(ref int ignore) { };
             var lambda = Lambda<ActionRef<int>>(Empty(), Parameter(typeof(int).MakeByRefType()));
 
             var compiledA = lambda.Compile();
@@ -69,6 +67,39 @@ namespace FastExpressionCompiler.IssueTests
             var exampleC = default(int);
             direct(ref exampleC);
             Assert.AreEqual(3, exampleC);
+        }
+        private static void SetMinus1(ref int localByRef) { localByRef = -1; }
+
+        [Test]
+        [Ignore("// what??? no chance")]
+        public void RefMethodCallingRefMethod()
+        {
+
+            void SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
+            {
+                var objVal = localByRef;
+                SetMinus1(ref localByRef);
+            }
+
+            var objRef = Parameter(typeof(int).MakeByRefType());
+            var variable = Variable(typeof(int));
+            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(SetMinus1));
+            var lambda = Lambda<ActionRef<int>>(Block(new[] { variable }, Assign(variable, objRef), Call(call, objRef)), objRef);
+
+            var compiledA = lambda.Compile();
+            var exampleA = default(int);
+            compiledA(ref exampleA);
+            Assert.AreEqual(-1, exampleA);
+
+            var compiledB = lambda.CompileFast<ActionRef<int>>(true);
+            var exampleB = default(int);
+            compiledB(ref exampleB);
+            Assert.AreEqual(-1, exampleB);
+
+            ActionRef<int> direct = SetIntoLocalVariableAndCallOtherRef;
+            var exampleC = default(int);
+            direct(ref exampleC);
+            Assert.AreEqual(-1, exampleC);
         }
 
         [Test]
@@ -134,7 +165,7 @@ namespace FastExpressionCompiler.IssueTests
                 var x = 0.0;
             }
             var objRef = Parameter(typeof(uint).MakeByRefType());
-            var variable = Variable(typeof(double));      
+            var variable = Variable(typeof(double));
             var lambda = Lambda<ActionRef<uint>>(Block(new[] { variable }, Assign(objRef, Constant((uint)3)), Assign(variable, Constant(0.0))), objRef);
 
             var compiledA = lambda.Compile();
@@ -184,7 +215,7 @@ namespace FastExpressionCompiler.IssueTests
         public void RefRefVoid()
         {
             void SetSmallConstant(ref int a1, ref float a2)
-            {             
+            {
             }
             var objRef = Parameter(typeof(int).MakeByRefType());
             var objRef2 = Parameter(typeof(float).MakeByRefType());
@@ -238,6 +269,76 @@ namespace FastExpressionCompiler.IssueTests
             var exampleC2 = default(float);
             direct(ref exampleC, ref exampleC2);
             Assert.AreEqual(0, exampleC);
+        }
+
+
+        [Test]
+        public void IntPtrZeroReturn()
+        {
+            Expression<Func<IntPtr>> lambda = () => IntPtr.Zero;
+            var compiled = lambda.CompileFast<Func<IntPtr>>(true);
+            Assert.AreEqual(IntPtr.Zero, compiled());
+        }
+
+        [Test]
+        public void NewIntPtr13Return()
+        {
+            Expression<Func<IntPtr>> lambda = () => new IntPtr(13);
+            var compiled = lambda.CompileFast<Func<IntPtr>>(true);
+            Assert.AreEqual(new IntPtr(13), compiled());
+        }
+
+        [Test]
+
+        public void RefSetSetForFields()
+        {
+            UIntPtr Set2RefsWithPtrAndNewObject(ref IntPtr a1, ref object a2)
+            {
+                a1 = IntPtr.Zero;
+                a2 = new object();
+                return UIntPtr.Zero;
+            }
+            var objRef1 = Parameter(typeof(IntPtr).MakeByRefType());
+            var objRef2 = Parameter(typeof(object).MakeByRefType());
+            var intPtrZero = typeof(IntPtr).GetTypeInfo().DeclaredFields.First(m => m.Name == nameof(IntPtr.Zero));
+            var uIntPtrZero = typeof(UIntPtr).GetTypeInfo().DeclaredFields.First(m => m.Name == nameof(UIntPtr.Zero));
+
+            var lambda = Lambda<FuncRefRef<IntPtr, object, UIntPtr>>(Block(
+                                                                Assign(objRef1, Field(null, intPtrZero)),
+                                                                Assign(objRef2, New(typeof(object))),
+                                                                Field(null, uIntPtrZero)
+                                                            ), objRef1, objRef2
+                                                       );
+
+            var compiledA = lambda.Compile();
+            var exampleA = default(IntPtr);
+            var exampleA2 = default(object);
+            compiledA(ref exampleA, ref exampleA2);
+            Assert.IsNotNull(exampleA2);
+
+            var compiledB = lambda.CompileFast<FuncRefRef<IntPtr, object, UIntPtr>>(true);
+            var exampleB = default(IntPtr);
+            var exampleB2 = default(object);
+            compiledB(ref exampleB, ref exampleB2);
+            Assert.IsNotNull(exampleB2);
+
+            var exampleC = default(IntPtr);
+            var exampleC2 = default(object);
+            Set2RefsWithPtrAndNewObject(ref exampleC, ref exampleC2);
+            Assert.IsNotNull(exampleC2);
+        }
+
+        [Test]
+        [Ignore("Maksim V. - may think about the case - should we support WRONG trees")]
+        public void ConstantFromStaticField()
+        {
+            // WRONG - not constant, but still works with LINQ, just do not support `wrong` in FEC, 
+            // C# generates for Zero proper ldsfld with static call
+            var lambda = Lambda<Func<IntPtr>>(Block(Constant(IntPtr.Zero)));
+            var compiledA = lambda.Compile();
+            Assert.AreEqual(IntPtr.Zero, compiledA());
+            var compiledB = lambda.CompileFast<Func<IntPtr>>(true);
+            Assert.IsNull(compiledB);
         }
 
         [Test]
