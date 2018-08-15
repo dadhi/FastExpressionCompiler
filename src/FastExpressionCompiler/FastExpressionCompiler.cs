@@ -1666,10 +1666,6 @@ namespace FastExpressionCompiler
             private static bool TryEmitParameter(object paramExprObj, Type paramType, 
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
             {
-                // ref, and out parameters are not supported yet
-                if (Tools.IsByRefParameter(paramExprObj))
-                    return false;
-
                 // if parameter is passed, then just load it on stack
                 var paramIndex = paramExprs.GetFirstIndex(paramExprObj);
                 if (paramIndex != -1)
@@ -1677,7 +1673,7 @@ namespace FastExpressionCompiler
                     if (closure.HasClosure)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
-                    var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType;
+                    var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType && !Tools.IsByRefParameter(paramExprObj);
                     EmitLoadParamArg(il, paramIndex, asAddress);
                     return true;
                 }
@@ -2317,6 +2313,9 @@ namespace FastExpressionCompiler
                         {
                             if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
                                 return false;
+
+                            if (Tools.IsByRefParameter(right))
+                                il.Emit(OpCodes.Ldind_I4);
 
                             if (shouldPushResult) // if we have to push the result back, dup the right value
                                 il.Emit(OpCodes.Dup);

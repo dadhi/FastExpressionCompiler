@@ -71,20 +71,13 @@ namespace FastExpressionCompiler.IssueTests
         private static void SetMinus1(ref int localByRef) { localByRef = -1; }
 
         [Test]
-        [Ignore("// what??? no chance")]
         public void RefMethodCallingRefMethod()
         {
-
-            void SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
-            {
-                var objVal = localByRef;
-                SetMinus1(ref localByRef);
-            }
-
+            void CallOtherRef(ref int localByRef) => SetMinus1(ref localByRef);
             var objRef = Parameter(typeof(int).MakeByRefType());
             var variable = Variable(typeof(int));
             var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(SetMinus1));
-            var lambda = Lambda<ActionRef<int>>(Block(new[] { variable }, Assign(variable, objRef), Call(call, objRef)), objRef);
+            var lambda = Lambda<ActionRef<int>>(Call(call, objRef), objRef);
 
             var compiledA = lambda.Compile();
             var exampleA = default(int);
@@ -96,10 +89,40 @@ namespace FastExpressionCompiler.IssueTests
             compiledB(ref exampleB);
             Assert.AreEqual(-1, exampleB);
 
-            ActionRef<int> direct = SetIntoLocalVariableAndCallOtherRef;
+            ActionRef<int> direct = CallOtherRef;
             var exampleC = default(int);
             direct(ref exampleC);
             Assert.AreEqual(-1, exampleC);
+        }
+
+        [Test]
+        public void RefMethodCallingRefMethodWithLocal()
+        {
+            void SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
+            {
+                var objVal = localByRef;
+                SetMinus1(ref objVal);
+            }
+
+            var objRef = Parameter(typeof(int).MakeByRefType());
+            var variable = Variable(typeof(int));
+            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(SetMinus1));
+            var lambda = Lambda<ActionRef<int>>(Block(new[] { variable }, Assign(variable, objRef), Call(call, variable)), objRef);
+
+            var compiledA = lambda.Compile();
+            var exampleA = default(int);
+            compiledA(ref exampleA);
+            Assert.AreEqual(0, exampleA);
+
+            var compiledB = lambda.CompileFast<ActionRef<int>>(true);
+            var exampleB = default(int);
+            compiledB(ref exampleB);
+            Assert.AreEqual(0, exampleB);
+
+            ActionRef<int> direct = SetIntoLocalVariableAndCallOtherRef;
+            var exampleC = default(int);
+            direct(ref exampleC);
+            Assert.AreEqual(0, exampleC);
         }
 
         [Test]
@@ -419,13 +442,15 @@ namespace FastExpressionCompiler.IssueTests
             var body = Assign(prop, objVal);
             var lambda = Lambda<ActionRefIn<StructWithIntField, int>>(body, objRef, objVal);
 
-            var compiledA = lambda.Compile();
-            var exampleA = default(StructWithIntField);
-            compiledA(ref exampleA, 7);
-            Assert.AreEqual(7, exampleA.IntField);
+            //var compiledA = lambda.Compile();
+            //var exampleA = default(StructWithIntField);
+            //compiledA(ref exampleA, 7);
+            //Assert.AreEqual(7, exampleA.IntField);
 
             var compiledB = lambda.CompileFast<ActionRefIn<StructWithIntField, int>>(true);
-            Assert.IsNull(compiledB);
+            var exampleB = default(StructWithIntField);
+            compiledB(ref exampleB, 7);
+            Assert.AreEqual(7, exampleB.IntField);
         }
 
 
@@ -444,7 +469,9 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(7, exampleA.IntField);
 
             var compiledB = lambda.CompileFast<ActionRefIn<StructWithIntField, int>>(true);
-            Assert.IsNull(compiledB);
+            var exampleB = default(StructWithIntField);
+            compiledB(ref exampleB, 7);
+            Assert.AreEqual(7, exampleB.IntField);
         }
     }
 }
