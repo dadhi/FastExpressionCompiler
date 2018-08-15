@@ -27,13 +27,13 @@ But `Expression.Compile()` is just slow.
 Moreover, the compiled delegate may be slower than manually created delegate because of the [reasons](https://blogs.msdn.microsoft.com/seteplia/2017/02/01/dissecting-the-new-constraint-in-c-a-perfect-example-of-a-leaky-abstraction/):
 
 _TL;DR;_
-> The question is, why is the compiled delegate way slower than a manually-written delegate? Expression.Compile creates a DynamicMethod and associates it with an anonymous assembly to run it in a sand-boxed environment. This makes it safe for a dynamic method to be emitted and executed by partially trusted code but adds some run-time overhead.
+> Expression.Compile creates a DynamicMethod and associates it with an anonymous assembly to run it in a sand-boxed environment. This makes it safe for a dynamic method to be emitted and executed by partially trusted code but adds some run-time overhead.
 
-`FastExpressionCompiler.ExpressionCompiler.CompileFast` is __10-40x times faster__ than `System.Linq.Expressions.Expression.Compile`.  
-The compiled delegate may be _in some cases_ 15x times faster than one produced by `Expression.Compile()`.
+`.CompileFast()` is __10-40x times faster__ than `.Compile()`.  
+The compiled delegate may be _in some cases_ 15x times faster than the one produced by `.Compile()`.
 
 __Note:__ The actual performance may vary depending on multiple factors: 
-Platform, How complex is expression, Does it have a closure over the values, Does it contain nested lambdas, Etc.
+platform, how complex is expression, does it have a closure over the values, does it contain nested lambdas, etc.
 
 
 ## How to install
@@ -50,65 +50,64 @@ Considering: [NServiceBus], [Moq]
 
 ## How to use
 
-Add reference to `FastExpressionCompiler and replace call to `.Compile()` with `CompileFast()` extension method.
+Add reference to _FastExpressionCompiler_ and replace call to `.Compile()` with `.CompileFast()` extension method.
 
-__Note:__ `CompileFast` overloads have an optional parameter `bool ifFastFailedReturnNull = false` 
-to disable fallback to `Compile` returning null.
+__Note:__ `CompileFast` has an optional parameter `bool ifFastFailedReturnNull = false` to disable fallback to `Compile`.
 
 ### Examples
 
 Hoisted lambda expression (created by compiler):
 
 ```csharp
-    var a = new A(); var b = new B();
-    Expression<Func<X>> expr = () => new X(a, b);
+var a = new A(); var b = new B();
+Expression<Func<X>> expr = () => new X(a, b);
 
-    var getX = expr.CompileFast();
-    var x = getX();
+var getX = expr.CompileFast();
+var x = getX();
 ```
 
 Manually composed lambda expression:
 
 ```csharp
-    var a = new A();
-    var bParamExpr = Expression.Parameter(typeof(B), "b");
-    var expr = Expression.Lambda(
-        Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
-            Expression.Constant(a, typeof(A)), bParamExpr),
-        bParamExpr);
+var a = new A();
+var bParamExpr = Expression.Parameter(typeof(B), "b");
+var expr = Expression.Lambda(
+    Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
+        Expression.Constant(a, typeof(A)), bParamExpr),
+    bParamExpr);
 
-    var getX = expr.CompileFast();
-    var x = getX(new B());
+var getX = expr.CompileFast();
+var x = getX(new B());
 ```
 
 Using `ExpressionInfo` instead of `Expression`:
 
 ```csharp
-    var a = new A();
-    var bParamExpr = ExpressionInfo.Parameter(typeof(B), "b");
-    var expr = ExpressionInfo.Lambda(
-        ExpressionInfo.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
-            ExpressionInfo.Constant(a, typeof(A)), bParamExpr),
-        bParamExpr);
+var a = new A();
+var bParamExpr = ExpressionInfo.Parameter(typeof(B), "b");
+var expr = ExpressionInfo.Lambda(
+    ExpressionInfo.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
+        ExpressionInfo.Constant(a, typeof(A)), bParamExpr),
+    bParamExpr);
 
-    var getX = expr.CompileFast();
-    var x = getX(new B());
+var getX = expr.CompileFast();
+var x = getX(new B());
 ```
 
 __Note:__ Simplify your life in C# 6+ with `using static`
 
 ```csharp
-    using static System.Linq.Expressions.Expression;
+using static System.Linq.Expressions.Expression;
 // or
 //  using static FastExpressionCompiler.ExpressionInfo;
 
-    var a = new A();
-    var bParamExpr = Parameter(typeof(B), "b");
-    var expr = Lambda(
-        New(typeof(X).GetTypeInfo().DeclaredConstructors.First(), Constant(a, typeof(A)), bParamExpr),
-        bParamExpr);
+var a = new A();
+var bParamExpr = Parameter(typeof(B), "b");
+var expr = Lambda(
+    New(typeof(X).GetTypeInfo().DeclaredConstructors.First(), Constant(a, typeof(A)), bParamExpr),
+    bParamExpr);
 
-    var x = expr.CompileFast()(new B());
+var x = expr.CompileFast()(new B());
 ```
 
 
@@ -128,9 +127,9 @@ Frequency=2437501 Hz, Resolution=410.2562 ns, Timer=TSC
 ### Hoisted expression with constructor and two arguments in closure
 
 ```csharp
-    var a = new A();
-    var b = new B();
-    Expression<Func<X>> e = () => new X(a, b);
+var a = new A();
+var b = new B();
+Expression<Func<X>> e = () => new X(a, b);
 ```
 
 Compiling expression:
@@ -159,20 +158,20 @@ Invoking compiled delegate comparing to direct constructor call:
 ### Hoisted expression with static method and two nested lambdas and two arguments in closure
 
 ```csharp
-    var a = new A();
-    var b = new B();
-    Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy<A>(() => a), b);
+var a = new A();
+var b = new B();
+Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy<A>(() => a), b);
 ```
 
 Compiling expression:
 
-|                Method |  Job | Runtime |        Mean |      Error |     StdDev | Scaled | ScaledSD |   Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|---------------------- |----- |-------- |------------:|-----------:|-----------:|-------:|---------:|--------:|-------:|-------:|----------:|
-|     ExpressionCompile |  Clr |     Clr | 1,120.60 us | 18.4641 us | 16.3680 us |  17.55 |     0.39 | 13.6719 | 1.9531 |      - |   23.2 KB |
-| ExpressionFastCompile |  Clr |     Clr |    63.87 us |  1.2301 us |  1.1506 us |   1.00 |     0.00 |  5.1270 | 2.5635 | 0.1221 |   7.91 KB |
-|                       |      |         |             |            |            |        |          |         |        |        |           |
-|     ExpressionCompile | Core |    Core |   941.99 us | 13.1721 us | 12.3212 us |  17.76 |     0.32 |  7.8125 | 1.9531 |      - |  12.12 KB |
-| ExpressionFastCompile | Core |    Core |    53.06 us |  0.8499 us |  0.7097 us |   1.00 |     0.00 |  5.0659 | 2.5024 | 0.1831 |   7.74 KB |
+|      Method |  Job | Runtime |        Mean |      Error |     StdDev | Scaled | ScaledSD |   Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------ |----- |-------- |------------:|-----------:|-----------:|-------:|---------:|--------:|-------:|-------:|----------:|
+|     Compile |  Clr |     Clr | 1,120.60 us | 18.4641 us | 16.3680 us |  17.55 |     0.39 | 13.6719 | 1.9531 |      - |   23.2 KB |
+| FastCompile |  Clr |     Clr |    63.87 us |  1.2301 us |  1.1506 us |   1.00 |     0.00 |  5.1270 | 2.5635 | 0.1221 |   7.91 KB |
+|             |      |         |             |            |            |        |          |         |        |        |           |
+|     Compile | Core |    Core |   941.99 us | 13.1721 us | 12.3212 us |  17.76 |     0.32 |  7.8125 | 1.9531 |      - |  12.12 KB |
+| FastCompile | Core |    Core |    53.06 us |  0.8499 us |  0.7097 us |   1.00 |     0.00 |  5.0659 | 2.5024 | 0.1831 |   7.74 KB |
 
 Invoking compiled delegate comparing to direct method call:
 
@@ -190,13 +189,12 @@ Invoking compiled delegate comparing to direct method call:
 ### Manually composed expression with parameters and closure
 
 ```csharp
-    var a = new A();
-    var bParamExpr = Expression.Parameter(typeof(B), "b");
-
-    var expr = Expression.Lambda(
-        Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
-            Expression.Constant(a, typeof(A)), bParamExpr),
-        bParamExpr);
+var a = new A();
+var bParamExpr = Expression.Parameter(typeof(B), "b");
+var expr = Expression.Lambda(
+    Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
+        Expression.Constant(a, typeof(A)), bParamExpr),
+    bParamExpr);
 ```
 
 Compiling expression:
@@ -234,8 +232,9 @@ it __won't do any node compatibility verification__ for the tree as the `Express
 Hopefully, you are checking the expression arguments yourself, and not waiting for `Expression` exceptions to blow up.
 
 __Note:__ At the moment `ExpressionInfo` is not supported for all supported expression types
-(#46).
+([#46](https://github.com/dadhi/FastExpressionCompiler/issues/46)).
 
+[Sample expression](https://github.com/dadhi/FastExpressionCompiler/blob/8cab34992be52e5f0f18805f21e0e6faab69493a/test/FastExpressionCompiler.UnitTests/ExpressionInfoTests.cs#L145)
 
 Creating expression:
 
@@ -266,7 +265,7 @@ Creating and compiling:
 The idea is to provide fast compilation for supported expression types,
 and fallback to system `Expression.Compile()` for not _yet_ supported types.
 
-__Note__: As of v1.9 most of the types are supported - open issue if something is not ;-)
+__Note__: As of v1.9 most of the types are supported, please open issue if something is not ;-)
 
 Compilation is done by visiting expression nodes and emitting the IL. 
 The code is tuned for performance and minimal memory consumption. 
@@ -277,7 +276,7 @@ Expression is visited in two rounds (you can skip the first one with up-front kn
 2. To emit the IL and create the delegate from a `DynamicMethod`
 
 If visitor finds a not supported expression node, 
-the compilation is aborted, and null is returned enabling the fallback to normal `Expression.Compile()`.
+the compilation is aborted, and null is returned enabling the fallback to normal `.Compile()`.
 
 ### Additional optimizations
 

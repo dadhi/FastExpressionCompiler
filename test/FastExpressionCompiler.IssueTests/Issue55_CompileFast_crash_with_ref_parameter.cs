@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
 using static System.Linq.Expressions.Expression;
@@ -70,7 +71,7 @@ namespace FastExpressionCompiler.IssueTests
         private static void SetMinus1(ref int localByRef) { localByRef = -1; }
 
         [Test]
-        [Ignore("Fails. Fix.")]
+        [Ignore("// what??? no chance")]
         public void RefMethodCallingRefMethod()
         {
 
@@ -270,11 +271,28 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(0, exampleC);
         }
 
+
         [Test]
-        [Ignore("Fails. Fix.")]
-        public void RefSetRefSet()
+        public void IntPtrZeroReturn()
         {
-            UIntPtr SetSmallConstant(ref IntPtr a1, ref object a2)
+            Expression<Func<IntPtr>> lambda = () => IntPtr.Zero;
+            var compiled = lambda.CompileFast<Func<IntPtr>>(true);
+            Assert.AreEqual(IntPtr.Zero, compiled());
+        }
+
+        [Test]
+        public void NewIntPtr13Return()
+        {
+            Expression<Func<IntPtr>> lambda = () => new IntPtr(13);
+            var compiled = lambda.CompileFast<Func<IntPtr>>(true);
+            Assert.AreEqual(new IntPtr(13), compiled());
+        }
+
+        [Test]
+
+        public void RefSetSetForFields()
+        {
+            UIntPtr Set2RefsWithPtrAndNewObject(ref IntPtr a1, ref object a2)
             {
                 a1 = IntPtr.Zero;
                 a2 = new object();
@@ -282,10 +300,13 @@ namespace FastExpressionCompiler.IssueTests
             }
             var objRef1 = Parameter(typeof(IntPtr).MakeByRefType());
             var objRef2 = Parameter(typeof(object).MakeByRefType());
+            var intPtrZero = typeof(IntPtr).GetTypeInfo().DeclaredFields.First(m => m.Name == nameof(IntPtr.Zero));
+            var uIntPtrZero = typeof(UIntPtr).GetTypeInfo().DeclaredFields.First(m => m.Name == nameof(UIntPtr.Zero));
+
             var lambda = Lambda<FuncRefRef<IntPtr, object, UIntPtr>>(Block(
-                                                                Assign(objRef1, Constant(IntPtr.Zero)),
+                                                                Assign(objRef1, Field(null, intPtrZero)),
                                                                 Assign(objRef2, New(typeof(object))),
-                                                                Constant(UIntPtr.Zero)
+                                                                Field(null, uIntPtrZero)
                                                             ), objRef1, objRef2
                                                        );
 
@@ -303,8 +324,21 @@ namespace FastExpressionCompiler.IssueTests
 
             var exampleC = default(IntPtr);
             var exampleC2 = default(object);
-            SetSmallConstant(ref exampleC, ref exampleC2);
+            Set2RefsWithPtrAndNewObject(ref exampleC, ref exampleC2);
             Assert.IsNotNull(exampleC2);
+        }
+
+        [Test]
+        [Ignore("Maksim V. - may think about the case - should we support WRONG trees")]
+        public void ConstantFromStaticField()
+        {
+            // WRONG - not constant, but still works with LINQ, just do not support `wrong` in FEC, 
+            // C# generates for Zero proper ldsfld with static call
+            var lambda = Lambda<Func<IntPtr>>(Block(Constant(IntPtr.Zero)));
+            var compiledA = lambda.Compile();
+            Assert.AreEqual(IntPtr.Zero, compiledA());
+            var compiledB = lambda.CompileFast<Func<IntPtr>>(true);
+            Assert.IsNull(compiledB);
         }
 
         [Test]
