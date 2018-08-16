@@ -2554,6 +2554,7 @@ namespace FastExpressionCompiler
                 return EmitMethodCall(il, method);
             }
 
+            // if call is done into byref method parameters there is no indicators in tree, so grab that from method
             private static IList<Expression> MakeByRefParameters(MethodCallExpression expr)
             {
                 IList<Expression> refed = null;
