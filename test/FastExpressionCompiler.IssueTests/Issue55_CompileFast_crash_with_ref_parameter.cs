@@ -124,8 +124,41 @@ namespace FastExpressionCompiler.IssueTests
             direct(ref exampleC);
             Assert.AreEqual(0, exampleC);
         }
+        private static void OutSetMinus1(out int localByRef) { localByRef = -1; }
 
-        private static void Set1AndMinus1(ref int ref1, ref int ref2) { ref1 = 1; ref2 = -1; }
+        [Test]
+        public void OutRefMethodCallingRefMethodWithLocal()
+        {
+            void SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
+            {
+                var objVal = localByRef;
+                OutSetMinus1(out objVal);
+            }
+
+            var objRef = Parameter(typeof(int).MakeByRefType());
+            var variable = Variable(typeof(int));
+            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(OutSetMinus1));
+            var lambda = Lambda<ActionRef<int>>(Block(new[] { variable }, Assign(variable, objRef), Call(call, variable)), objRef);
+
+            var compiledA = lambda.Compile();
+            var exampleA = default(int);
+            compiledA(ref exampleA);
+            Assert.AreEqual(0, exampleA);
+
+            var compiledB = lambda.CompileFast<ActionRef<int>>(true);
+            var exampleB = default(int);
+            compiledB(ref exampleB);
+            Assert.AreEqual(0, exampleB);
+
+            ActionRef<int> direct = SetIntoLocalVariableAndCallOtherRef;
+            var exampleC = default(int);
+            direct(ref exampleC);
+            Assert.AreEqual(0, exampleC);
+        }
+
+
+
+        private static void Set1AndMinus1(ref int ref1, ref int ref2) { ref2 = -1; ref1 = 1;  }
 
         [Test]
         public void RefMethodCallingRefMethodWithLocal2()
@@ -147,6 +180,120 @@ namespace FastExpressionCompiler.IssueTests
                                                     Assign(variable2, objRef),
                                                     Call(call, objRef, variable2),
                                                     variable2
+                                                    ),
+                                                objRef);
+
+            var compiledA = lambda.Compile();
+            var exampleA = default(int);
+            Assert.AreEqual(-1, compiledA(ref exampleA));
+            Assert.AreEqual(1, exampleA);
+
+            var compiledB = lambda.CompileFast<FuncRef<int, int>>(true);
+            var exampleB = default(int);
+            Assert.AreEqual(-1, compiledB(ref exampleB));
+            Assert.AreEqual(1, exampleB);
+
+            FuncRef<int, int> direct = SetIntoLocalVariableAndCallOtherRef;
+            var exampleC = default(int);
+            Assert.AreEqual(-1, direct(ref exampleC));
+            Assert.AreEqual(1, exampleC);
+        }
+
+        [Test]
+        public void RefMethodCallingRefMethodWithLoc123123al2()
+        {
+            int SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
+            {
+                var objVal1 = localByRef;
+                var objVal2 = localByRef;
+                Set1AndMinus1(ref localByRef, ref objVal2);
+                return -1;
+            }
+
+            var objRef = Parameter(typeof(int).MakeByRefType());
+            var variable1 = Variable(typeof(int));
+            var variable2 = Variable(typeof(int));
+            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(Set1AndMinus1));
+            var lambda = Lambda<FuncRef<int, int>>(Block(new[] { variable1, variable2 },
+                                                    Assign(variable1, objRef),
+                                                    Assign(variable2, objRef),
+                                                    Call(call, objRef, variable2),
+                                                    Constant(-1)
+                                                    ),
+                                                objRef);
+
+            var compiledA = lambda.Compile();
+            var exampleA = default(int);
+            Assert.AreEqual(-1, compiledA(ref exampleA));
+            Assert.AreEqual(1, exampleA);
+
+            var compiledB = lambda.CompileFast<FuncRef<int, int>>(true);
+            var exampleB = default(int);
+            Assert.AreEqual(-1, compiledB(ref exampleB));
+            Assert.AreEqual(1, exampleB);
+
+            FuncRef<int, int> direct = SetIntoLocalVariableAndCallOtherRef;
+            var exampleC = default(int);
+            Assert.AreEqual(-1, direct(ref exampleC));
+            Assert.AreEqual(1, exampleC);
+        }
+
+
+        [Test]
+        public void AAARefMeasdsdasdthodCallingRefMeth1312331231231231WithLoc123123al2()
+        {
+            int SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
+            {
+                var x = localByRef;
+                var z = localByRef;
+                Set1AndMinus1(ref x, ref localByRef);
+                return -1;
+            }
+
+            var objRef = Parameter(typeof(int).MakeByRefType());
+            var variable1 = Variable(typeof(int));
+            var variable2 = Variable(typeof(int));
+            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(Set1AndMinus1));
+            var lambda = Lambda<FuncRef<int, int>>(Block(new ParameterExpression[] { variable1, variable2 },
+                                                    Assign(variable1, objRef),
+                                                    Assign(variable2, objRef),
+                                                    Call(call, variable1, objRef),
+                                                    Constant(-1)
+                                                    ),
+                                                objRef);
+
+            var compiledA = lambda.Compile();
+            var exampleA = default(int);
+            Assert.AreEqual(-1, compiledA(ref exampleA));
+            Assert.AreEqual(1, exampleA);
+
+            var compiledB = lambda.CompileFast<FuncRef<int, int>>(true);
+            var exampleB = default(int);
+            Assert.AreEqual(-1, compiledB(ref exampleB));
+            Assert.AreEqual(1, exampleB);
+
+            FuncRef<int, int> direct = SetIntoLocalVariableAndCallOtherRef;
+            var exampleC = default(int);
+            Assert.AreEqual(-1, direct(ref exampleC));
+            Assert.AreEqual(1, exampleC);
+        }
+
+        [Test]
+        public void AAARefMethodCallingRefMeth1312331231231231WithLoc123123al2()
+        {
+            int SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
+            {
+                Set1AndMinus1(ref localByRef, ref localByRef);
+                return -1;
+            }
+
+            var objRef = Parameter(typeof(int).MakeByRefType());
+            var variable1 = Variable(typeof(int));
+            var variable2 = Variable(typeof(int));
+            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(Set1AndMinus1));
+            var lambda = Lambda<FuncRef<int, int>>(Block(new ParameterExpression[] { },
+                                                    Call(call, objRef, objRef),
+                                                    Constant(-1)
                                                     ),
                                                 objRef);
 
