@@ -1666,7 +1666,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitParameter(object paramExprObj, Type paramType, 
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
             {
-                // if parameter is passed, then just load it on stack
+                // if parameter is passed through, then just load it on stack
                 var paramIndex = paramExprs.GetFirstIndex(paramExprObj);
                 if (paramIndex != -1)
                 {
@@ -1688,6 +1688,12 @@ namespace FastExpressionCompiler
                 if (variable != null)
                 {
                     il.Emit(OpCodes.Ldloc, variable);
+                    return true;
+                }
+
+                if (Tools.IsByRefParameter(paramExprObj))
+                {
+                    il.Emit(OpCodes.Ldloca_S, 0);
                     return true;
                 }
 
@@ -2537,7 +2543,7 @@ namespace FastExpressionCompiler
                     }
 
                     if (expr.Arguments.Count != 0 && 
-                        !EmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Call))
+                        !EmitMany(MakeByRefParameters(expr), paramExprs, il, ref closure, ExpressionType.Call))
                         return false;
                 }
 
@@ -2546,6 +2552,27 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Constrained, objType);
 
                 return EmitMethodCall(il, method);
+            }
+
+            private static IList<Expression> MakeByRefParameters(MethodCallExpression expr)
+            {
+                IList<Expression> refed = null;
+                var receivingParameters = expr.Method.GetParameters();
+
+                for (int i = 0; i < expr.Method.GetParameters().Length; i++)
+                {
+                    if (expr.Method.GetParameters()[i].ParameterType.IsByRef)
+                    {
+                        if (refed == null)
+                            refed = new List<Expression>(expr.Arguments);
+                        var passed = expr.Arguments[i] as ParameterExpression;
+                        if (!passed.IsByRef)
+                        {
+                            refed[i] = Expression.Parameter(passed.Type.MakeByRefType(), passed.Name);
+                        }
+                    }
+                }
+                return refed ?? expr.Arguments;
             }
 
             private static void StoreAsVarAndLoadItsAddress(ILGenerator il, Type varType)
