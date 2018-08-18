@@ -256,5 +256,19 @@ namespace FastExpressionCompiler.IssueTests
 
             Assert.AreEqual(Enum2.Value2, compiled(Enum3.Value2));
         }
+
+        [Test]
+        public void AccessViolationException_on_nullable_char_convert_to_object()
+        {
+            var body = Expression.Convert(
+                Expression.Constant(' ', typeof(char?)),
+                typeof(object));
+
+            var expr = Expression.Lambda<Func<object>>(body);
+
+            var compiled = expr.CompileFast();
+
+            Assert.AreEqual(' ', compiled());
+        }
     }
 }
