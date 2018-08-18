@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading;
 using NUnit.Framework;
 
 namespace FastExpressionCompiler.IssueTests
@@ -39,7 +40,15 @@ namespace FastExpressionCompiler.IssueTests
         {
         }
 
-        interface IDataReader
+        public interface IDataRecord
+        {
+            Guid GetGuid(int i);
+            int GetInt32(int i);
+            object GetValue(int i);
+            bool IsDBNull(int i);
+        }
+
+        interface IDataReader : IDataRecord
         {
         }
 
@@ -58,9 +67,16 @@ namespace FastExpressionCompiler.IssueTests
 
         class SQLiteDataReader : IDataReader
         {
+            private readonly bool _dbNull;
+
+            public SQLiteDataReader(bool dbNull)
+            {
+                _dbNull = dbNull;
+            }
+
             public bool IsDBNull(int idx)
             {
-                return false;
+                return _dbNull;
             }
 
             public int GetInt32(int idx)
@@ -71,6 +87,11 @@ namespace FastExpressionCompiler.IssueTests
             public Guid GetGuid(int idx)
             {
                 return new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883");
+            }
+
+            public object GetValue(int idx)
+            {
+                return DBNull.Value;
             }
         }
 
@@ -219,7 +240,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = lambda.CompileFast();
 
             // NRE during execution of nested function
-            var res = compiled(new QueryRunner(), new SQLiteDataReader());
+            var res = compiled(new QueryRunner(), new SQLiteDataReader(false));
 
             Assert.IsNotNull(res);
             Assert.AreEqual(InheritanceTests.TypeCodeEnum.A, res.TypeCode);
@@ -269,6 +290,83 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = expr.CompileFast();
 
             Assert.AreEqual(' ', compiled());
+        }
+
+        public static int CheckNullValue(IDataRecord reader, object context)
+        {
+            if (reader.IsDBNull(0))
+                throw new InvalidOperationException(
+                    $"Function {context} returns non-nullable value, but result is NULL. Use nullable version of the function instead.");
+            return 0;
+        }
+
+        public static object ConvertDefault(object value, Type conversionType)
+        {
+            try
+            {
+                return Convert.ChangeType(value, conversionType
+#if !NETSTANDARD1_6
+                    , Thread.CurrentThread.CurrentCulture
+#endif
+                    );
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Cannot convert value '{value}' to type '{conversionType.FullName}'", ex);
+            }
+        }
+
+        [Test]
+        public void linq2db_InvalidProgramException()
+        {
+            var a1 = Expression.Parameter(typeof(IQueryRunner), "qr");
+            var a2 = Expression.Parameter(typeof(IDataContext), "dctx");
+            var a3 = Expression.Parameter(typeof(IDataReader), "rd");
+            var a4 = Expression.Parameter(typeof(Expression), "expr");
+            var a5 = Expression.Parameter(typeof(object[]), "ps");
+
+            var ldr = Expression.Variable(typeof(SQLiteDataReader), "ldr");
+            var mapperBody = Expression.Block(
+                new[] { ldr },
+                Expression.Assign(ldr, Expression.Convert(a3, typeof(SQLiteDataReader))),
+                Expression.Convert(
+                    Expression.Block(
+                        Expression.Call(GetType().GetMethod(nameof(CheckNullValue)), a3, Expression.Constant("Average")),
+                        Expression.Condition(
+                            Expression.Call(ldr, nameof(SQLiteDataReader.IsDBNull), null, Expression.Constant(0)),
+                            Expression.Constant(0d),
+                            Expression.Convert(
+                                Expression.Call(
+                                    GetType().GetMethod(nameof(ConvertDefault)),
+                                    Expression.Convert(
+                                        Expression.Convert(
+                                            Expression.Call(ldr, nameof(SQLiteDataReader.GetValue), null, Expression.Constant(0)),
+                                            typeof(object)),
+                                        typeof(object)),
+                                    Expression.Constant(typeof(double))),
+                                typeof(double)))),
+                    typeof(object)));
+
+            var mapper = Expression.Lambda<Func<IQueryRunner, IDataContext, IDataReader, Expression, object[], object>>(mapperBody, a1, a2, a3, a4, a5);
+
+            var p1 = Expression.Parameter(typeof(IQueryRunner), "qr");
+            var p2 = Expression.Parameter(typeof(IDataReader), "dr");
+
+
+            var body = Expression.Invoke(
+                mapper,
+                p1,
+                Expression.Property(p1, nameof(IQueryRunner.DataContext)),
+                p2,
+                Expression.Property(p1, nameof(IQueryRunner.Expression)),
+                Expression.Property(p1, nameof(IQueryRunner.Parameters)));
+
+            var lambda = Expression.Lambda<Func<IQueryRunner, IDataReader, object>>(body, p1, p2);
+
+
+            var compiled = lambda.CompileFast();
+
+            Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
         }
     }
 }
