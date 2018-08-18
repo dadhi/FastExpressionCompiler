@@ -226,5 +226,35 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
         }
 
+        enum Enum2
+        {
+            Value1 = 1,
+            Value2 = 2,
+        }
+
+        enum Enum3
+        {
+            Value1 = 1,
+            Value2 = 2,
+        }
+
+        [Test]
+        public void Enum_to_enum_conversion()
+        {
+            var from = typeof(Enum3);
+            var to = typeof(Enum2);
+
+            var p = Expression.Parameter(from, "p");
+
+            var body = Expression.Convert(
+                Expression.Convert(p, typeof(int)),
+                to);
+
+            var expr = Expression.Lambda<Func<Enum3, Enum2>>(body, p);
+
+            var compiled = expr.CompileFast();
+
+            Assert.AreEqual(Enum2.Value2, compiled(Enum3.Value2));
+        }
     }
 }
