@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using NUnit.Framework;
 
@@ -25,6 +26,204 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = expr.CompileFast();
 
             Assert.AreEqual(10, compiled("10"));
+        }
+
+        interface IQueryRunner
+        {
+            IDataContext DataContext { get; }
+            Expression Expression { get; }
+            object[] Parameters { get; }
+        }
+
+        interface IDataContext
+        {
+        }
+
+        interface IDataReader
+        {
+        }
+
+        class DataContext : IDataContext
+        {
+        }
+
+        class QueryRunner : IQueryRunner
+        {
+            IDataContext IQueryRunner.DataContext => new DataContext();
+
+            Expression IQueryRunner.Expression => Expression.Constant(null);
+
+            object[] IQueryRunner.Parameters => Array.Empty<object>();
+        }
+
+        class SQLiteDataReader : IDataReader
+        {
+            public bool IsDBNull(int idx)
+            {
+                return false;
+            }
+
+            public int GetInt32(int idx)
+            {
+                return 1;
+            }
+
+            public Guid GetGuid(int idx)
+            {
+                return new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883");
+            }
+        }
+
+        class InheritanceTests
+        {
+            public enum TypeCodeEnum
+            {
+                Base,
+                A,
+                A1,
+                A2,
+            }
+
+            public abstract class InheritanceBase
+            {
+                public Guid GuidValue { get; set; }
+
+                public virtual TypeCodeEnum TypeCode
+                {
+                    get { return TypeCodeEnum.Base; }
+                }
+            }
+
+            public abstract class InheritanceA : InheritanceBase
+            {
+                public List<InheritanceB> Bs { get; set; }
+
+                public override TypeCodeEnum TypeCode
+                {
+                    get { return TypeCodeEnum.A; }
+                }
+            }
+
+            public class InheritanceB : InheritanceBase
+            {
+            }
+
+            public class InheritanceA2 : InheritanceA
+            {
+                public override TypeCodeEnum TypeCode
+                {
+                    get { return TypeCodeEnum.A2; }
+                }
+            }
+
+            public class InheritanceA1 : InheritanceA
+            {
+                public override TypeCodeEnum TypeCode
+                {
+                    get { return TypeCodeEnum.A1; }
+                }
+            }
+        }
+
+        class TableBuilder
+        {
+            public class TableContext
+            {
+                public static object OnEntityCreated(IDataContext context, object entity)
+                {
+                    return entity;
+                }
+            }
+        }
+
+        public enum Test
+        {
+            One,
+            Two
+        }
+
+        [Test]
+        public void linq2db_NullReferenceException()
+        {
+            var a1 = Expression.Parameter(typeof(IQueryRunner), "qr");
+            var a2 = Expression.Parameter(typeof(IDataContext), "dctx");
+            var a3 = Expression.Parameter(typeof(IDataReader), "rd");
+            var a4 = Expression.Parameter(typeof(Expression), "expr");
+            var a5 = Expression.Parameter(typeof(object[]), "ps");
+
+            var ldr = Expression.Variable(typeof(SQLiteDataReader), "ldr");
+            var mapperBody = Expression.Block(
+                new[] { ldr },
+                Expression.Assign(ldr, Expression.Convert(a3, typeof(SQLiteDataReader)) ),
+                Expression.Condition(
+                    Expression.Equal(
+                        Expression.Condition(
+                            Expression.Call(ldr, nameof(SQLiteDataReader.IsDBNull), null, Expression.Constant(0)),
+                            Expression.Constant(InheritanceTests.TypeCodeEnum.Base),
+                            Expression.Convert(
+                                Expression.Call(ldr, nameof(SQLiteDataReader.GetInt32), null, Expression.Constant(0)),
+                                typeof(InheritanceTests.TypeCodeEnum))),
+                        Expression.Constant(InheritanceTests.TypeCodeEnum.A1)),
+                    Expression.Convert(
+                        Expression.Convert(
+                            Expression.Call(
+                                typeof(TableBuilder.TableContext).GetMethod(nameof(TableBuilder.TableContext.OnEntityCreated)),
+                                a2,
+                                Expression.MemberInit(
+                                    Expression.New(typeof(InheritanceTests.InheritanceA1)),
+                                    Expression.Bind(
+                                        typeof(InheritanceTests.InheritanceA1).GetProperty("GuidValue"),
+                                        Expression.Condition(
+                                            Expression.Call(ldr, nameof(SQLiteDataReader.IsDBNull), null, Expression.Constant(1)),
+                                            Expression.Constant(Guid.Empty),
+                                            Expression.Call(ldr, nameof(SQLiteDataReader.GetGuid), null, Expression.Constant(1))))
+                                    )
+                                ),
+                            typeof(InheritanceTests.InheritanceA1)),
+                        typeof(InheritanceTests.InheritanceA)),
+                    Expression.Convert(
+                        Expression.Convert(
+                            Expression.Call(
+                                typeof(TableBuilder.TableContext).GetMethod(nameof(TableBuilder.TableContext.OnEntityCreated)),
+                                a2,
+                                Expression.MemberInit(
+                                    Expression.New(typeof(InheritanceTests.InheritanceA2)),
+                                    Expression.Bind(
+                                        typeof(InheritanceTests.InheritanceA2).GetProperty("GuidValue"),
+                                        Expression.Condition(
+                                            Expression.Call(ldr, nameof(SQLiteDataReader.IsDBNull), null, Expression.Constant(1)),
+                                            Expression.Constant(Guid.Empty),
+                                            Expression.Call(ldr, nameof(SQLiteDataReader.GetGuid), null, Expression.Constant(1))))
+                                    )
+                                ),
+                            typeof(InheritanceTests.InheritanceA2)),
+                        typeof(InheritanceTests.InheritanceA))));
+
+            var mapper = Expression.Lambda<Func<IQueryRunner, IDataContext, IDataReader, Expression, object[], InheritanceTests.InheritanceA>>(mapperBody, a1, a2, a3, a4, a5);
+
+            var p1 = Expression.Parameter(typeof(IQueryRunner), "qr");
+            var p2 = Expression.Parameter(typeof(IDataReader), "dr");
+
+
+            var body = Expression.Invoke(
+                mapper,
+                p1,
+                Expression.Property(p1, nameof(IQueryRunner.DataContext)),
+                p2,
+                Expression.Property(p1, nameof(IQueryRunner.Expression)),
+                Expression.Property(p1, nameof(IQueryRunner.Parameters)));
+
+            var lambda = Expression.Lambda<Func<IQueryRunner, IDataReader, InheritanceTests.InheritanceA>>(body, p1, p2);
+
+
+            var compiled = lambda.CompileFast();
+
+            // NRE during execution of nested function
+            var res = compiled(new QueryRunner(), new SQLiteDataReader());
+
+            Assert.IsNotNull(res);
+            Assert.AreEqual(InheritanceTests.TypeCodeEnum.A, res.TypeCode);
+            Assert.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
         }
 
     }
