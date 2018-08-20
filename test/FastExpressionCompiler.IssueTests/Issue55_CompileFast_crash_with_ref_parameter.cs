@@ -16,6 +16,7 @@ namespace FastExpressionCompiler.IssueTests
         delegate void ActionRef<T>(ref T a1);
         delegate void ActionRefIn<T1, in T2>(ref T1 obj, T2 value);
         delegate void ActionRefRef<T1, T2>(ref T1 obj, ref T2 value);
+        delegate void ActionRefRefRef<T1, T2, T3>(ref T1 obj, ref T2 value, ref T3 ref3);
         delegate TResult FuncRefRef<T1, T2, out TResult>(ref T1 obj, ref T2 value);
 
         struct StructWithIntField { public int IntField; }
@@ -158,7 +159,7 @@ namespace FastExpressionCompiler.IssueTests
 
 
 
-        private static void Set1AndMinus1(ref int ref1, ref int ref2) { ref2 = -1; ref1 = 1;  }
+        private static void Set1AndMinus1(ref int ref1, ref int ref2) { ref2 = -1; ref1 = 1; }
 
         [Test]
         public void RefMethodCallingRefMethodWithLocal2()
@@ -276,6 +277,47 @@ namespace FastExpressionCompiler.IssueTests
             var exampleC = default(int);
             Assert.AreEqual(-1, direct(ref exampleC));
             Assert.AreEqual(1, exampleC);
+        }
+
+        private static void Set123(ref long ref1, ref byte ref2, ref short ref3) { ref1 = 1; ref2 = 2; ref3 = 3; }
+
+
+        [Test]
+        public void asdadsaad()
+        {
+            void SetIntoLocalVariableAndCallOtherRef(ref long ref1, ref byte ref2, ref short ref3)
+            {
+                Set123(ref ref1, ref ref2, ref ref3);
+            }
+
+            var ref1E = Parameter(typeof(long).MakeByRefType());
+            var ref2E = Parameter(typeof(byte).MakeByRefType());
+            var ref3E = Parameter(typeof(short).MakeByRefType());
+
+            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(Set123));
+            var lambda = Lambda<ActionRefRefRef<long, byte, short>>(Call(call, ref1E, ref2E, ref3E), ref1E, ref2E, ref3E);
+
+
+            void AssertLocal(ActionRefRefRef<long, byte, short> sut)
+            {
+                var example1 = default(long);
+                var example2 = default(byte);
+                var example3 = default(short);
+                sut(ref example1, ref example2, ref example3);
+                Assert.AreEqual(1, example1);
+                Assert.AreEqual(2, example2);
+                Assert.AreEqual(3, example3);
+            }
+
+
+            var compiledA = lambda.Compile();
+            AssertLocal(compiledA);
+
+            var compiledB = lambda.CompileFast<ActionRefRefRef<long, byte, short>>(true);
+            AssertLocal(compiledB);
+
+            ActionRefRefRef<long, byte, short> direct = SetIntoLocalVariableAndCallOtherRef;
+            AssertLocal(direct);
         }
 
         [Test]
