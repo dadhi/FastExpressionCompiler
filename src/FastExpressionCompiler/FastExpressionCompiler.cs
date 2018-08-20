@@ -1290,12 +1290,12 @@ namespace FastExpressionCompiler
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "Equals");
 
             public static bool TryEmit(object exprObj, ExpressionType exprNodeType, Type exprType,
-                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, int byRefIndex = -1)
             {
                 switch (exprNodeType)
                 {
                     case ExpressionType.Parameter:
-                        return TryEmitParameter(exprObj, exprType, paramExprs, il, ref closure, parent);
+                        return TryEmitParameter(exprObj, exprType, paramExprs, il, ref closure, parent, byRefIndex);
                     case ExpressionType.Convert:
                         return TryEmitConvert(exprObj, exprType, paramExprs, il, ref closure);
                     case ExpressionType.ArrayIndex:
@@ -1664,20 +1664,16 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitParameter(object paramExprObj, Type paramType, 
-                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, int byRefIndex = -1)
             {
-                // ref, and out parameters are not supported yet
-                if (Tools.IsByRefParameter(paramExprObj))
-                    return false;
-
-                // if parameter is passed, then just load it on stack
+                // if parameter is passed through, then just load it on stack
                 var paramIndex = paramExprs.GetFirstIndex(paramExprObj);
                 if (paramIndex != -1)
                 {
                     if (closure.HasClosure)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
-                    var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType;
+                    var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType && !Tools.IsByRefParameter(paramExprObj);
                     EmitLoadParamArg(il, paramIndex, asAddress);
                     return true;
                 }
@@ -1692,6 +1688,12 @@ namespace FastExpressionCompiler
                 if (variable != null)
                 {
                     il.Emit(OpCodes.Ldloc, variable);
+                    return true;
+                }
+
+                if (Tools.IsByRefParameter(paramExprObj))
+                {
+                    il.Emit(OpCodes.Ldloca_S, byRefIndex);
                     return true;
                 }
 
@@ -1767,7 +1769,7 @@ namespace FastExpressionCompiler
                 for (int i = 0, n = exprs.Count; i < n; i++)
                 {
                     var expr = exprs[i];
-                    if (!TryEmit(expr, expr.NodeType, expr.Type, paramExprs, il, ref closure, parent))
+                    if (!TryEmit(expr, expr.NodeType, expr.Type, paramExprs, il, ref closure, parent, i))
                         return false;
                 }
                 return true;
@@ -2318,6 +2320,9 @@ namespace FastExpressionCompiler
                             if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
                                 return false;
 
+                            if (Tools.IsByRefParameter(right))
+                                il.Emit(OpCodes.Ldind_I4);
+
                             if (shouldPushResult) // if we have to push the result back, dup the right value
                                 il.Emit(OpCodes.Dup);
 
@@ -2538,7 +2543,7 @@ namespace FastExpressionCompiler
                     }
 
                     if (expr.Arguments.Count != 0 && 
-                        !EmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Call))
+                        !EmitMany(MakeByRefParameters(expr), paramExprs, il, ref closure, ExpressionType.Call))
                         return false;
                 }
 
@@ -2547,6 +2552,31 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Constrained, objType);
 
                 return EmitMethodCall(il, method);
+            }
+
+
+            // if call is done into byref method parameters there is no indicators in tree, so grab that from method
+            // current approach is to copy into new list only if there are by ref with by ref parameters,
+            // possible approach to store hit map of small size (possible 256 bit #89) to check if parameter is by ref
+            // https://stackoverflow.com/questions/12658883/what-is-the-maximum-number-of-parameters-that-a-c-sharp-method-can-be-defined-as
+            private static IList<Expression> MakeByRefParameters(MethodCallExpression expr)
+            {
+                IList<Expression> refed = null;
+                var receivingParameters = expr.Method.GetParameters();
+                for (int i = 0; i < expr.Method.GetParameters().Length; i++)
+                {
+                    if (receivingParameters[i].ParameterType.IsByRef)
+                    {
+                        if (refed == null)
+                            refed = new List<Expression>(expr.Arguments);
+                        var passed = expr.Arguments[i] as ParameterExpression;
+                        if (!passed.IsByRef)
+                        {
+                            refed[i] = Expression.Parameter(passed.Type.MakeByRefType(), passed.Name);
+                        }
+                    }
+                }
+                return refed ?? expr.Arguments;
             }
 
             private static void StoreAsVarAndLoadItsAddress(ILGenerator il, Type varType)
