@@ -2273,15 +2273,17 @@ namespace FastExpressionCompiler
                                 return false;
 
                             if (Tools.IsByRefParameter(left))
+                            {
                                 EmitLoadParamArg(il, paramIndex, false);
-
-                            if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
-                                return false;
-
-                            if (Tools.IsByRefParameter(left))
+                                if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
+                                    return false;
                                 EmitByRefStore(il, left.ToExpression().Type);
+                            }
                             else
                             {
+                                if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
+                                    return false;
+
                                 if (shouldPushResult)
                                     il.Emit(OpCodes.Dup); // dup value to assign and return
 
