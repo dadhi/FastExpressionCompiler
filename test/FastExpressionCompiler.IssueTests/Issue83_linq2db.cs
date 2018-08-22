@@ -163,7 +163,7 @@ namespace FastExpressionCompiler.IssueTests
             Two
         }
 
-        [Test, Ignore("todo: fix")]
+        [Test]
         public void linq2db_NullReferenceException()
         {
             var a1 = Expression.Parameter(typeof(IQueryRunner), "qr");
@@ -238,13 +238,15 @@ namespace FastExpressionCompiler.IssueTests
 
 
             var compiled = lambda.CompileFast();
+            var compiled2 = lambda.Compile();
 
             // NRE during execution of nested function
             var res = compiled(new QueryRunner(), new SQLiteDataReader(false));
+            var res2 = compiled2(new QueryRunner(), new SQLiteDataReader(false));
 
             Assert.IsNotNull(res);
-            Assert.AreEqual(InheritanceTests.TypeCodeEnum.A, res.TypeCode);
-            Assert.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
+            Assert.AreEqual(res2.TypeCode, res.TypeCode);
+            Assert.AreEqual(res2.GuidValue, res.GuidValue);
         }
 
         enum Enum2
@@ -317,7 +319,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test, Ignore("todo: fix")]
+        [Test]
         public void linq2db_InvalidProgramException()
         {
             var a1 = Expression.Parameter(typeof(IQueryRunner), "qr");
