@@ -319,7 +319,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test]
+        [Test, Ignore("todo: fix")]
         public void linq2db_InvalidProgramException()
         {
             var a1 = Expression.Parameter(typeof(IQueryRunner), "qr");
