@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.IssueTests
     [TestFixture]
     public class Issue83_linq2db
     {
-        [Test, Ignore("todo: fix")]
+        [Test]
         public void String_to_number_conversion_using_convert_with_method()
         {
             var from = typeof(string);

@@ -1780,6 +1780,19 @@ namespace FastExpressionCompiler
             private static bool TryEmitConvert(object exprObj, Type targetType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
+                if (exprObj is UnaryExpressionInfo cei && cei.Method != null)
+                {
+                    if (!TryEmit(cei.Operand, cei.Operand.NodeType, cei.Operand.Type, paramExprs, il, ref closure, ExpressionType.Call, 0))
+                        return false;
+                    return EmitMethodCall(il, cei.Method);
+                }
+                if (exprObj is UnaryExpression ce && ce.Method != null)
+                {
+                    if (!TryEmit(ce.Operand, ce.Operand.NodeType, ce.Operand.Type, paramExprs, il, ref closure, ExpressionType.Call, 0))
+                        return false;
+                    return EmitMethodCall(il, ce.Method);
+                }
+
                 var e = exprObj.GetOperandExprInfo();
                 if (!TryEmit(e.Expr, e.NodeType, e.Type, paramExprs, il, ref closure, ExpressionType.Convert))
                     return false;
@@ -2583,7 +2596,6 @@ namespace FastExpressionCompiler
 
                 return EmitMethodCall(il, method);
             }
-
 
             // if call is done into byref method parameters there is no indicators in tree, so grab that from method
             // current approach is to copy into new list only if there are by ref with by ref parameters,
@@ -3594,6 +3606,8 @@ namespace FastExpressionCompiler
 
         public readonly ExpressionInfo Operand;
 
+        public readonly MethodInfo Method;
+
         public override Expression ToExpression()
         {
             if (NodeType == ExpressionType.Convert)
@@ -3606,6 +3620,13 @@ namespace FastExpressionCompiler
             NodeType = nodeType;
             Operand = operand;
             Type = type;
+        }
+
+        public UnaryExpressionInfo(ExpressionType nodeType, ExpressionInfo operand, MethodInfo method)
+        {
+            NodeType = nodeType;
+            Operand = operand;
+            Method = method;
         }
     }
 
