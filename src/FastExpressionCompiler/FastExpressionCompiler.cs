@@ -2294,27 +2294,28 @@ namespace FastExpressionCompiler
                                     if (expr.NodeType == ExpressionType.AddAssign)
                                         if (!TryEmit(expr, ExpressionType.Add, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
                                             return false;
-                                    if (expr.NodeType == ExpressionType.AddAssignChecked)
+                                    else if (expr.NodeType == ExpressionType.AddAssignChecked)
                                         if (!TryEmit(expr, ExpressionType.AddChecked, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
                                             return false;
-                                    if (expr.NodeType == ExpressionType.SubtractAssign)
+                                    else if(expr.NodeType == ExpressionType.SubtractAssign)
                                         if (!TryEmit(expr, ExpressionType.Subtract, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
                                             return false;
-                                    if (expr.NodeType == ExpressionType.SubtractAssignChecked)
+                                    else if(expr.NodeType == ExpressionType.SubtractAssignChecked)
                                         if (!TryEmit(expr, ExpressionType.SubtractChecked, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
                                             return false;
-                                    if (expr.NodeType == ExpressionType.MultiplyAssign)
+                                    else if(expr.NodeType == ExpressionType.MultiplyAssign)
                                         if (!TryEmit(expr, ExpressionType.Multiply, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
                                             return false;
-                                    if (expr.NodeType == ExpressionType.MultiplyAssignChecked)
+                                    else if(expr.NodeType == ExpressionType.MultiplyAssignChecked)
                                         if (!TryEmit(expr, ExpressionType.MultiplyChecked, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
                                             return false;
-                                    if (expr.NodeType == ExpressionType.DivideAssign)
+                                    else if(expr.NodeType == ExpressionType.DivideAssign)
                                         if (!TryEmit(expr, ExpressionType.Divide, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
                                             return false;
                                 }
                                 else if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
                                     return false;
+
                                 EmitByRefStore(il, left.ToExpression().Type);
                             }
                             else
