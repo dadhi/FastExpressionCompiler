@@ -1780,13 +1780,13 @@ namespace FastExpressionCompiler
             private static bool TryEmitConvert(object exprObj, Type targetType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
-                if (exprObj is UnaryExpressionInfo cei && cei.Method != null)
+                if (exprObj is UnaryExpressionInfo cei && cei.Method != null && cei.Method.Name != "op_Implicit" && cei.Method.Name != "op_Explicit")
                 {
                     if (!TryEmit(cei.Operand, cei.Operand.NodeType, cei.Operand.Type, paramExprs, il, ref closure, ExpressionType.Call, 0))
                         return false;
                     return EmitMethodCall(il, cei.Method);
                 }
-                if (exprObj is UnaryExpression ce && ce.Method != null)
+                if (exprObj is UnaryExpression ce && ce.Method != null && ce.Method.Name != "op_Implicit" && ce.Method.Name != "op_Explicit")
                 {
                     if (!TryEmit(ce.Operand, ce.Operand.NodeType, ce.Operand.Type, paramExprs, il, ref closure, ExpressionType.Call, 0))
                         return false;
