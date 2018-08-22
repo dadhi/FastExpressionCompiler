@@ -740,4 +740,5 @@ public void $Test$()&#xD;
 	<s:String x:Key="/Default/PatternsAndTemplates/StructuralSearch/RecentSearch/=201201120810459135/RecentSearchPlaceholder/=string/Properties/=ExactType/@EntryIndexedValue">True</s:String>
 	<s:String x:Key="/Default/PatternsAndTemplates/StructuralSearch/RecentSearch/=201201120810459135/RecentSearchPlaceholder/=string/Properties/=ExpressionType/@EntryIndexedValue"></s:String>
 	<s:String x:Key="/Default/PatternsAndTemplates/StructuralSearch/RecentSearch/=201201120810459135/RecentSearchPlaceholder/=string/Type/@EntryValue">ExpressionPlaceholder</s:String>
-	<s:String x:Key="/Default/PatternsAndTemplates/StructuralSearch/RecentSearch/=201201120810459135/SearchPattern/@EntryValue">"$string$"</s:String></wpf:ResourceDictionary>
+	<s:String x:Key="/Default/PatternsAndTemplates/StructuralSearch/RecentSearch/=201201120810459135/SearchPattern/@EntryValue">"$string$"</s:String>
+	<s:Boolean x:Key="/Default/UserDictionary/Words/=Exprs/@EntryIndexedValue">True</s:Boolean></wpf:ResourceDictionary>
