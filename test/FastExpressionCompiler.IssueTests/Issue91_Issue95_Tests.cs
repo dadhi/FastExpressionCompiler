@@ -28,6 +28,21 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test, Ignore("todo: fix")]
+        public void NullComparisonTest()
+        {
+            var pParam = Expression.Parameter(typeof(string), "p");
+
+            var condition = Expression.Condition(Expression.NotEqual(pParam, Expression.Constant(null)),
+                Expression.Constant(1),
+                Expression.Constant(0));
+            var lambda = Expression.Lambda<Func<string, int>>(condition, pParam);
+            var convert0 = lambda.Compile();
+            Assert.NotNull(convert0);
+            var convert1 = FastExpressionCompiler.ExpressionCompiler.CompileFast(lambda, true);
+            Assert.NotNull(convert1);
+        }
+
+        [Test, Ignore("todo: fix")]
         public void TestAddAssign()
         {
             var objRef = Expression.Parameter(typeof(double).MakeByRefType());

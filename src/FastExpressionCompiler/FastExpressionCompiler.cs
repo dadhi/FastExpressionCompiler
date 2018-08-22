@@ -2884,6 +2884,9 @@ namespace FastExpressionCompiler
                 {
                     leftOpType = expr.Left.Type;
                     rightOpType = expr.Right.Type;
+
+                    if (expr.Right is ConstantExpression c && c.Value == null && expr.Right.Type == typeof(object))
+                        rightOpType = leftOpType;
                 }
                 else
                 {
