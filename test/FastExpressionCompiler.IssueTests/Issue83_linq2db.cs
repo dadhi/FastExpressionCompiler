@@ -259,7 +259,7 @@ namespace FastExpressionCompiler.IssueTests
             Value2 = 2,
         }
 
-        [Test, Ignore("todo: fix")]
+        [Test]
         public void Enum_to_enum_conversion()
         {
             var from = typeof(Enum3);
