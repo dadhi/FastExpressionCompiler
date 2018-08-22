@@ -1329,6 +1329,13 @@ namespace FastExpressionCompiler
                     case ExpressionType.Conditional:
                         return TryEmitConditional((ConditionalExpression)exprObj, paramExprs, il, ref closure);
 
+                    case ExpressionType.AddAssign:
+                    case ExpressionType.AddAssignChecked:
+                    case ExpressionType.SubtractAssign:
+                    case ExpressionType.SubtractAssignChecked:
+                    case ExpressionType.MultiplyAssign:
+                    case ExpressionType.MultiplyAssignChecked:
+                    case ExpressionType.DivideAssign:
                     case ExpressionType.Assign:
                         return TryEmitAssign(exprObj, exprType, paramExprs, il, ref closure);
 
@@ -2275,7 +2282,19 @@ namespace FastExpressionCompiler
                             if (Tools.IsByRefParameter(left))
                             {
                                 EmitLoadParamArg(il, paramIndex, false);
-                                if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
+    
+                                if (expr != null && (expr.NodeType == ExpressionType.AddAssign
+                                                     || expr.NodeType == ExpressionType.AddAssignChecked
+                                                     || expr.NodeType == ExpressionType.SubtractAssign
+                                                     || expr.NodeType == ExpressionType.SubtractAssignChecked
+                                                     || expr.NodeType == ExpressionType.MultiplyAssign
+                                                     || expr.NodeType == ExpressionType.MultiplyAssignChecked
+                                                     || expr.NodeType == ExpressionType.DivideAssign))
+                                {
+                                    if (!TryEmit(expr, ExpressionType.Add, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
+                                        return false;
+                                }
+                                else if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
                                     return false;
                                 EmitByRefStore(il, left.ToExpression().Type);
                             }
@@ -2952,30 +2971,37 @@ namespace FastExpressionCompiler
                 switch (exprNodeType)
                 {
                     case ExpressionType.Add:
+                    case ExpressionType.AddAssign:
                         il.Emit(OpCodes.Add);
                         return true;
 
                     case ExpressionType.AddChecked:
+                    case ExpressionType.AddAssignChecked:
                         il.Emit(IsUnsigned(exprType) ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf);
                         return true;
 
                     case ExpressionType.Subtract:
+                    case ExpressionType.SubtractAssign:
                         il.Emit(OpCodes.Sub);
                         return true;
 
                     case ExpressionType.SubtractChecked:
+                    case ExpressionType.SubtractAssignChecked:
                         il.Emit(IsUnsigned(exprType) ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf);
                         return true;
 
                     case ExpressionType.Multiply:
+                    case ExpressionType.MultiplyAssign:
                         il.Emit(OpCodes.Mul);
                         return true;
 
                     case ExpressionType.MultiplyChecked:
+                    case ExpressionType.MultiplyAssignChecked:
                         il.Emit(IsUnsigned(exprType) ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf);
                         return true;
 
                     case ExpressionType.Divide:
+                    case ExpressionType.DivideAssign:
                         il.Emit(OpCodes.Div);
                         return true;
                 }
@@ -3131,11 +3157,47 @@ namespace FastExpressionCompiler
         internal static bool IsByRefAssign(object exprObj)
         {
             var exprInfo = exprObj as BinaryExpressionInfo;
-            if (exprInfo != null && exprInfo.NodeType == ExpressionType.Assign)
+            if (exprInfo != null && (exprInfo.NodeType == ExpressionType.Assign
+                                        || exprInfo.NodeType == ExpressionType.AddAssign
+                                        || exprInfo.NodeType == ExpressionType.AddAssignChecked
+                                        || exprInfo.NodeType == ExpressionType.AndAssign
+                                        || exprInfo.NodeType == ExpressionType.DivideAssign
+                                        || exprInfo.NodeType == ExpressionType.ExclusiveOrAssign
+                                        || exprInfo.NodeType == ExpressionType.LeftShiftAssign
+                                        || exprInfo.NodeType == ExpressionType.ModuloAssign
+                                        || exprInfo.NodeType == ExpressionType.MultiplyAssign
+                                        || exprInfo.NodeType == ExpressionType.MultiplyAssignChecked
+                                        || exprInfo.NodeType == ExpressionType.OrAssign
+                                        || exprInfo.NodeType == ExpressionType.PostDecrementAssign
+                                        || exprInfo.NodeType == ExpressionType.PostIncrementAssign
+                                        || exprInfo.NodeType == ExpressionType.PowerAssign
+                                        || exprInfo.NodeType == ExpressionType.PreDecrementAssign
+                                        || exprInfo.NodeType == ExpressionType.PreIncrementAssign
+                                        || exprInfo.NodeType == ExpressionType.RightShiftAssign
+                                        || exprInfo.NodeType == ExpressionType.SubtractAssign
+                                        || exprInfo.NodeType == ExpressionType.SubtractAssignChecked))
                 return IsByRefParameter(exprInfo.Left);
 
             var expr = exprObj as BinaryExpression;
-            if (expr != null && expr.NodeType == ExpressionType.Assign)
+            if (expr != null && (expr.NodeType == ExpressionType.Assign 
+                                 || expr.NodeType == ExpressionType.AddAssign
+                                 || expr.NodeType == ExpressionType.AddAssignChecked
+                                 || expr.NodeType == ExpressionType.AndAssign
+                                 || expr.NodeType == ExpressionType.DivideAssign
+                                 || expr.NodeType == ExpressionType.ExclusiveOrAssign
+                                 || expr.NodeType == ExpressionType.LeftShiftAssign
+                                 || expr.NodeType == ExpressionType.ModuloAssign
+                                 || expr.NodeType == ExpressionType.MultiplyAssign
+                                 || expr.NodeType == ExpressionType.MultiplyAssignChecked
+                                 || expr.NodeType == ExpressionType.OrAssign
+                                 || expr.NodeType == ExpressionType.PostDecrementAssign
+                                 || expr.NodeType == ExpressionType.PostIncrementAssign
+                                 || expr.NodeType == ExpressionType.PowerAssign
+                                 || expr.NodeType == ExpressionType.PreDecrementAssign
+                                 || expr.NodeType == ExpressionType.PreIncrementAssign
+                                 || expr.NodeType == ExpressionType.RightShiftAssign
+                                 || expr.NodeType == ExpressionType.SubtractAssign
+                                 || expr.NodeType == ExpressionType.SubtractAssignChecked))
                 return IsByRefParameter(expr.Left);
 
             return false;
