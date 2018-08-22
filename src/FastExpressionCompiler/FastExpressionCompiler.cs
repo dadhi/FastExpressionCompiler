@@ -396,27 +396,10 @@ namespace FastExpressionCompiler
         {
             for (var i = 0; i < paramTypes.Length; i++)
             {
-                if (paramTypes[i].IsByRef)
+                if (paramTypes[i].IsByRef) // any
                 {
-                    var expression = exprObj.ToExpression();
-                    switch (expression.NodeType)
-                    {
-                        case ExpressionType.Block:
-                            var block = expression as BlockExpression;
-                            var last = block.Expressions[block.Expressions.Count - 1];
-                            switch (last.NodeType)
-                            {
-                                case ExpressionType.Assign:
-                                    var binaryStatement = last as BinaryExpression;
-                                    return Tools.IsByRefParameter(binaryStatement.Left);
-                            }
-                            break;
-                        case ExpressionType.Assign:
-                            var binary = expression as BinaryExpression;
-                            return Tools.IsByRefParameter(binary.Left);
-                        default:
-                            continue;
-                    }
+                    exprObj = Tools.GetLastBlockExpression(exprObj) ?? exprObj;
+                    return Tools.IsByRefAssign(exprObj);
                 }
             }
 
@@ -1290,12 +1273,12 @@ namespace FastExpressionCompiler
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "Equals");
 
             public static bool TryEmit(object exprObj, ExpressionType exprNodeType, Type exprType,
-                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, int byRefIndex = -1)
             {
                 switch (exprNodeType)
                 {
                     case ExpressionType.Parameter:
-                        return TryEmitParameter(exprObj, exprType, paramExprs, il, ref closure, parent);
+                        return TryEmitParameter(exprObj, exprType, paramExprs, il, ref closure, parent, byRefIndex);
                     case ExpressionType.Convert:
                         return TryEmitConvert(exprObj, exprType, paramExprs, il, ref closure);
                     case ExpressionType.ArrayIndex:
@@ -1664,20 +1647,16 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitParameter(object paramExprObj, Type paramType, 
-                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, int byRefIndex = -1)
             {
-                // ref, and out parameters are not supported yet
-                if (Tools.IsByRefParameter(paramExprObj))
-                    return false;
-
-                // if parameter is passed, then just load it on stack
+                // if parameter is passed through, then just load it on stack
                 var paramIndex = paramExprs.GetFirstIndex(paramExprObj);
                 if (paramIndex != -1)
                 {
                     if (closure.HasClosure)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
-                    var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType;
+                    var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType && !Tools.IsByRefParameter(paramExprObj);
                     EmitLoadParamArg(il, paramIndex, asAddress);
                     return true;
                 }
@@ -1692,6 +1671,12 @@ namespace FastExpressionCompiler
                 if (variable != null)
                 {
                     il.Emit(OpCodes.Ldloc, variable);
+                    return true;
+                }
+
+                if (Tools.IsByRefParameter(paramExprObj))
+                {
+                    il.Emit(OpCodes.Ldloca_S, byRefIndex);
                     return true;
                 }
 
@@ -1761,19 +1746,19 @@ namespace FastExpressionCompiler
                     && TryEmit(rightExpr, rightExpr.NodeType, rightExpr.Type, paramExprs, il, ref closure, parent);
             }
 
-            private static bool EmitMany(IList<Expression> exprs, 
+            private static bool EmitMany(IReadOnlyList<Expression> exprs, 
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
             {
                 for (int i = 0, n = exprs.Count; i < n; i++)
                 {
                     var expr = exprs[i];
-                    if (!TryEmit(expr, expr.NodeType, expr.Type, paramExprs, il, ref closure, parent))
+                    if (!TryEmit(expr, expr.NodeType, expr.Type, paramExprs, il, ref closure, parent, i))
                         return false;
                 }
                 return true;
             }
 
-            private static bool EmitMany(IList<object> exprObjects,
+            private static bool EmitMany(IReadOnlyList<object> exprObjects,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
             {
                 for (int i = 0, n = exprObjects.Count; i < n; i++)
@@ -2288,15 +2273,17 @@ namespace FastExpressionCompiler
                                 return false;
 
                             if (Tools.IsByRefParameter(left))
+                            {
                                 EmitLoadParamArg(il, paramIndex, false);
-
-                            if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
-                                return false;
-
-                            if (Tools.IsByRefParameter(left))
+                                if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
+                                    return false;
                                 EmitByRefStore(il, left.ToExpression().Type);
+                            }
                             else
                             {
+                                if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
+                                    return false;
+
                                 if (shouldPushResult)
                                     il.Emit(OpCodes.Dup); // dup value to assign and return
 
@@ -2317,6 +2304,9 @@ namespace FastExpressionCompiler
                         {
                             if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
                                 return false;
+
+                            if (Tools.IsByRefParameter(right))
+                                il.Emit(OpCodes.Ldind_I4);
 
                             if (shouldPushResult) // if we have to push the result back, dup the right value
                                 il.Emit(OpCodes.Dup);
@@ -2538,7 +2528,7 @@ namespace FastExpressionCompiler
                     }
 
                     if (expr.Arguments.Count != 0 && 
-                        !EmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Call))
+                        !EmitMany(MakeByRefParameters(expr), paramExprs, il, ref closure, ExpressionType.Call))
                         return false;
                 }
 
@@ -2547,6 +2537,32 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Constrained, objType);
 
                 return EmitMethodCall(il, method);
+            }
+
+
+            // if call is done into byref method parameters there is no indicators in tree, so grab that from method
+            // current approach is to copy into new list only if there are by ref with by ref parameters,
+            // possible approach to store hit map of small size (possible 256 bit #89) to check if parameter is by ref
+            // https://stackoverflow.com/questions/12658883/what-is-the-maximum-number-of-parameters-that-a-c-sharp-method-can-be-defined-as
+            private static IReadOnlyList<Expression> MakeByRefParameters(MethodCallExpression expr)
+            {
+                List<Expression> refed = null;
+                var receivingParameters = expr.Method.GetParameters();
+                var exprParameters = expr.Method.GetParameters();
+                for (int i = 0; i < exprParameters.Length; i++)
+                {
+                    if (receivingParameters[i].ParameterType.IsByRef)
+                    {
+                        if (refed == null)
+                            refed = new List<Expression>(expr.Arguments);
+                        var passed = expr.Arguments[i] as ParameterExpression;
+                        if (!passed?.IsByRef == true)
+                        {
+                            refed[i] = Expression.Parameter(passed.Type.MakeByRefType(), passed.Name);
+                        }
+                    }
+                }
+                return (IReadOnlyList<Expression>)refed ?? expr.Arguments;
             }
 
             private static void StoreAsVarAndLoadItsAddress(ILGenerator il, Type varType)
@@ -3099,7 +3115,33 @@ namespace FastExpressionCompiler
             return new ExprInfo(exprObj, exprInfo.NodeType, exprInfo.Type);
         }
 
-        public static bool IsByRefParameter(object exprObj) => (exprObj as ParameterExpression)?.IsByRef ?? (exprObj as ParameterExpressionInfo)?.IsByRef == true;
+        internal static object GetLastBlockExpression(object exprObj)
+        {
+            var blockInfo = exprObj as BlockExpressionInfo;
+            if (blockInfo != null)
+                return blockInfo.Expressions[blockInfo.Expressions.Length - 1];
+
+            var block = exprObj as BlockExpression;
+            if (block != null)
+                return block.Expressions[block.Expressions.Count - 1];
+
+            return null;
+        }
+
+        internal static bool IsByRefAssign(object exprObj)
+        {
+            var exprInfo = exprObj as BinaryExpressionInfo;
+            if (exprInfo != null && exprInfo.NodeType == ExpressionType.Assign)
+                return IsByRefParameter(exprInfo.Left);
+
+            var expr = exprObj as BinaryExpression;
+            if (expr != null && expr.NodeType == ExpressionType.Assign)
+                return IsByRefParameter(expr.Left);
+
+            return false;
+        }
+
+        internal static bool IsByRefParameter(object exprObj) => (exprObj as ParameterExpression)?.IsByRef ?? (exprObj as ParameterExpressionInfo)?.IsByRef == true;
 
         public static ExprInfo GetOperandExprInfo(this object exprObj) => 
             (exprObj as UnaryExpression)?.Operand.GetExprInfo() ?? ((UnaryExpressionInfo)exprObj).Operand.GetExprInfo();
@@ -3144,7 +3186,10 @@ namespace FastExpressionCompiler
 
             var paramTypes = new Type[paramExprs.Count];
             for (var i = 0; i < paramTypes.Length; i++)
-                paramTypes[i] = paramExprs[i].IsByRef ? paramExprs[i].Type.MakeByRefType() : paramExprs[i].Type;
+            {
+                var parameterExpr = paramExprs[i];
+                paramTypes[i] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
+            }
 
             return paramTypes;
         }
