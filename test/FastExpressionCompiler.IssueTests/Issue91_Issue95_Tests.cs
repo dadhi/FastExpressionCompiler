@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         delegate void ActionRef<T>(ref T a1);
 
-        [Test, Ignore("todo: fix")]
+        [Test]
         public void RefAssign()
         {
             var objRef = Expression.Parameter(typeof(double).MakeByRefType());
@@ -27,7 +27,7 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(8.0, exampleB);
         }
 
-        [Test, Ignore("todo: fix")]
+        [Test]
         public void NullComparisonTest()
         {
             var pParam = Expression.Parameter(typeof(string), "p");
@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.IssueTests
             Assert.NotNull(convert1);
         }
 
-        [Test, Ignore("todo: fix")]
+        [Test]
         public void TestAddAssign()
         {
             var objRef = Expression.Parameter(typeof(double).MakeByRefType());
