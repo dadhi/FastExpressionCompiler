@@ -1323,7 +1323,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Conditional:
                         return TryEmitConditional((ConditionalExpression)exprObj, paramExprs, il, ref closure);
 
-                    case ExpressionType arithmeticAssign when Tools.IsArithmeticAssign(arithmeticAssign):
+                    case ExpressionType arithmeticAssign when Tools.GetArithmeticAssignOrSelf(arithmeticAssign) != arithmeticAssign:
                     case ExpressionType.Assign: 
                         return TryEmitAssign(exprObj, exprType, paramExprs, il, ref closure);
 
@@ -1800,20 +1800,12 @@ namespace FastExpressionCompiler
             private static bool TryEmitConvert(object exprObj, Type targetType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
-                if (exprObj is UnaryExpressionInfo cei && cei.Method != null && cei.Method.Name != "op_Implicit" && cei.Method.Name != "op_Explicit")
-                {
-                    if (!TryEmit(cei.Operand, cei.Operand.NodeType, cei.Operand.Type, paramExprs, il, ref closure, ExpressionType.Call, 0))
-                        return false;
-                    return EmitMethodCall(il, cei.Method);
-                }
-                if (exprObj is UnaryExpression ce && ce.Method != null && ce.Method.Name != "op_Implicit" && ce.Method.Name != "op_Explicit")
-                {
-                    if (!TryEmit(ce.Operand, ce.Operand.NodeType, ce.Operand.Type, paramExprs, il, ref closure, ExpressionType.Call, 0))
-                        return false;
-                    return EmitMethodCall(il, ce.Method);
-                }
-
                 var e = exprObj.GetOperandExprInfo();
+
+                var m = exprObj is UnaryExpression ue ? ue.Method : ((UnaryExpressionInfo)exprObj).Method;
+                if (m != null && m.Name[2] != '_' && m.Name != "op_Implicit" && m.Name != "op_Explicit")
+                    return TryEmit(e.Expr, e.NodeType, e.Type, paramExprs, il, ref closure, ExpressionType.Call, 0) && EmitMethodCall(il, m);
+
                 if (!TryEmit(e.Expr, e.NodeType, e.Type, paramExprs, il, ref closure, ExpressionType.Convert))
                     return false;
 
@@ -2280,7 +2272,7 @@ namespace FastExpressionCompiler
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
                 object left, right;
-                ExpressionType leftNodeType, rightNodeType;
+                ExpressionType leftNodeType, rightNodeType, nodeType;
 
                 var expr = exprObj as BinaryExpression;
                 if (expr != null)
@@ -2289,6 +2281,7 @@ namespace FastExpressionCompiler
                     right = expr.Right;
                     leftNodeType = expr.Left.NodeType;
                     rightNodeType = expr.Right.NodeType;
+                    nodeType = expr.NodeType;
                 }
                 else
                 {
@@ -2297,6 +2290,7 @@ namespace FastExpressionCompiler
                     right = info.Right;
                     leftNodeType = left.GetNodeType();
                     rightNodeType = right.GetNodeType();
+                    nodeType = info.NodeType;
                 }
 
                 // if this assignment is part of a single body-less expression or the result of a block
@@ -2322,32 +2316,11 @@ namespace FastExpressionCompiler
                             {
                                 EmitLoadParamArg(il, paramIndex, false);
     
-                                if (expr != null && Tools.IsArithmeticAssign(expr.NodeType))
+                                var newExprType = Tools.GetArithmeticAssignOrSelf(nodeType);
+                                if (newExprType != nodeType)
                                 {
-                                    if (expr.NodeType == ExpressionType.AddAssign)
-                                        if (!TryEmit(expr, ExpressionType.Add, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
-                                            return false;
-                                    else if (expr.NodeType == ExpressionType.AddAssignChecked)
-                                        if (!TryEmit(expr, ExpressionType.AddChecked, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
-                                            return false;
-                                    else if(expr.NodeType == ExpressionType.SubtractAssign)
-                                        if (!TryEmit(expr, ExpressionType.Subtract, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
-                                            return false;
-                                    else if(expr.NodeType == ExpressionType.SubtractAssignChecked)
-                                        if (!TryEmit(expr, ExpressionType.SubtractChecked, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
-                                            return false;
-                                    else if(expr.NodeType == ExpressionType.MultiplyAssign)
-                                        if (!TryEmit(expr, ExpressionType.Multiply, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
-                                            return false;
-                                    else if(expr.NodeType == ExpressionType.MultiplyAssignChecked)
-                                        if (!TryEmit(expr, ExpressionType.MultiplyChecked, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
-                                            return false;
-                                    else if(expr.NodeType == ExpressionType.DivideAssign)
-                                        if (!TryEmit(expr, ExpressionType.Divide, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
-                                            return false;
-                                    else if (expr.NodeType == ExpressionType.ModuloAssign)
-                                        if (!TryEmit(expr, ExpressionType.Modulo, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
-                                            return false;
+                                    if (!TryEmit(exprObj, newExprType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
+                                        return false;
                                 }
                                 else if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
                                     return false;
@@ -3227,46 +3200,51 @@ namespace FastExpressionCompiler
             || arithmetic == ExpressionType.Modulo;
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        internal static bool IsArithmeticAssign(ExpressionType arithmetic) =>
-            arithmetic == ExpressionType.AddAssign
-            || arithmetic == ExpressionType.AddAssignChecked
-            || arithmetic == ExpressionType.SubtractAssign
-            || arithmetic == ExpressionType.SubtractAssignChecked
-            || arithmetic == ExpressionType.MultiplyAssign
-            || arithmetic == ExpressionType.MultiplyAssignChecked
-            || arithmetic == ExpressionType.DivideAssign
-            || arithmetic == ExpressionType.ModuloAssign;
+        internal static ExpressionType GetArithmeticAssignOrSelf(ExpressionType arithmetic)
+        {
+            switch (arithmetic)
+            {
+                case ExpressionType.AddAssign: return ExpressionType.Add;
+                case ExpressionType.AddAssignChecked: return ExpressionType.AddChecked;
+                case ExpressionType.SubtractAssign: return ExpressionType.Subtract;
+                case ExpressionType.SubtractAssignChecked: return ExpressionType.SubtractChecked;
+                case ExpressionType.MultiplyAssign: return ExpressionType.Multiply;
+                case ExpressionType.MultiplyAssignChecked: return ExpressionType.MultiplyChecked;
+                case ExpressionType.DivideAssign: return ExpressionType.Divide;
+                case ExpressionType.ModuloAssign: return ExpressionType.Modulo;
+            }
+
+            return arithmetic;
+        }
 
         internal static bool IsByRefAssign(object exprObj)
         {
-            var exprInfo = exprObj as BinaryExpressionInfo;
-            if (exprInfo != null && (exprInfo.NodeType == ExpressionType.Assign || IsArithmeticAssign(exprInfo.NodeType)
-                                        || exprInfo.NodeType == ExpressionType.AndAssign
-                                        || exprInfo.NodeType == ExpressionType.ExclusiveOrAssign
-                                        || exprInfo.NodeType == ExpressionType.LeftShiftAssign
-                                        || exprInfo.NodeType == ExpressionType.OrAssign
-                                        || exprInfo.NodeType == ExpressionType.PostDecrementAssign
-                                        || exprInfo.NodeType == ExpressionType.PostIncrementAssign
-                                        || exprInfo.NodeType == ExpressionType.PowerAssign
-                                        || exprInfo.NodeType == ExpressionType.PreDecrementAssign
-                                        || exprInfo.NodeType == ExpressionType.PreIncrementAssign
-                                        || exprInfo.NodeType == ExpressionType.RightShiftAssign))
-                return IsByRefParameter(exprInfo.Left);
+            ExpressionType? nodeType = null;
+            object left = null;
+            if (exprObj is BinaryExpression expr)
+            {
+                nodeType = expr.NodeType;
+                left = expr.Left;
+            }
+            else if (exprObj is BinaryExpressionInfo exprInfo)
+            {
+                nodeType = exprInfo.NodeType;
+                left = exprInfo.Left;
+            }
 
-            var expr = exprObj as BinaryExpression;
-            if (expr != null && (expr.NodeType == ExpressionType.Assign || IsArithmeticAssign(expr.NodeType)
-                                        || exprInfo.NodeType == ExpressionType.AndAssign
-                                        || exprInfo.NodeType == ExpressionType.ExclusiveOrAssign
-                                        || exprInfo.NodeType == ExpressionType.LeftShiftAssign
-                                        || exprInfo.NodeType == ExpressionType.OrAssign
-                                        || exprInfo.NodeType == ExpressionType.PostDecrementAssign
-                                        || exprInfo.NodeType == ExpressionType.PostIncrementAssign
-                                        || exprInfo.NodeType == ExpressionType.PowerAssign
-                                        || exprInfo.NodeType == ExpressionType.PreDecrementAssign
-                                        || exprInfo.NodeType == ExpressionType.PreIncrementAssign
-                                        || exprInfo.NodeType == ExpressionType.RightShiftAssign))
-                return IsByRefParameter(expr.Left);
-
+            if (nodeType.HasValue && (nodeType == ExpressionType.Assign 
+                                        || (GetArithmeticAssignOrSelf(nodeType.Value) != nodeType.Value)
+                                        || nodeType == ExpressionType.AndAssign
+                                        || nodeType == ExpressionType.ExclusiveOrAssign
+                                        || nodeType == ExpressionType.LeftShiftAssign
+                                        || nodeType == ExpressionType.OrAssign
+                                        || nodeType == ExpressionType.PostDecrementAssign
+                                        || nodeType == ExpressionType.PostIncrementAssign
+                                        || nodeType == ExpressionType.PowerAssign
+                                        || nodeType == ExpressionType.PreDecrementAssign
+                                        || nodeType == ExpressionType.PreIncrementAssign
+                                        || nodeType == ExpressionType.RightShiftAssign))
+                return IsByRefParameter(left);
             return false;
         }
 
