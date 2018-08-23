@@ -3019,6 +3019,7 @@ namespace FastExpressionCompiler
                         : exprNodeType == ExpressionType.Subtract ? "op_Subtraction"
                         : exprNodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
                         : exprNodeType == ExpressionType.Multiply ? "op_Multiply"
+                        : exprNodeType == ExpressionType.MultiplyChecked ? "op_Multiply"
                         : exprNodeType == ExpressionType.Divide ? "op_Division"
                         : exprNodeType == ExpressionType.Modulo ? "op_Modulus"
                         : null;
