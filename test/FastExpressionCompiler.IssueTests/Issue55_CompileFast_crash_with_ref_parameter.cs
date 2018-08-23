@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Numerics;
 using System.Reflection;
 using NUnit.Framework;
 using static System.Linq.Expressions.Expression;
@@ -27,20 +28,42 @@ namespace FastExpressionCompiler.IssueTests
             void DoNothing(ref int ignore) { };
             var lambda = Lambda<ActionRef<int>>(Empty(), Parameter(typeof(int).MakeByRefType()));
 
+            void LocalAssert(ActionRef<int> invoke)
+            {
+                var exampleA = default(int);
+                invoke(ref exampleA);
+                Assert.AreEqual(0, exampleA);
+            }
             var compiledA = lambda.Compile();
-            var exampleA = default(int);
-            compiledA(ref exampleA);
-            Assert.AreEqual(0, exampleA);
+            LocalAssert(compiledA);
 
             var compiledB = lambda.CompileFast<ActionRef<int>>(true);
-            var exampleB = default(int);
-            compiledB(ref exampleB);
-            Assert.AreEqual(0, exampleB);
+            LocalAssert(compiledB);
 
             ActionRef<int> direct = DoNothing;
-            var exampleC = default(int);
-            direct(ref exampleC);
-            Assert.AreEqual(0, exampleC);
+            LocalAssert(direct);
+        }
+
+        [Test]
+        public void RefDoNothingShouldNoCrashCustomStruct()
+        {
+            void DoNothing(ref BigInteger ignore) { };
+            var lambda = Lambda<ActionRef<BigInteger>>(Empty(), Parameter(typeof(BigInteger).MakeByRefType()));
+
+            void LocalAssert(ActionRef<BigInteger> invoke)
+            {
+                var exampleA = default(BigInteger);
+                invoke(ref exampleA);
+                Assert.AreEqual(new BigInteger(0), exampleA);
+            }
+            var compiledA = lambda.Compile();
+            LocalAssert(compiledA);
+
+            var compiledB = lambda.CompileFast<ActionRef<BigInteger>>(true);
+            LocalAssert(compiledB);
+
+            ActionRef<BigInteger> direct = DoNothing;
+            LocalAssert(direct);
         }
 
         [Test]
@@ -80,20 +103,49 @@ namespace FastExpressionCompiler.IssueTests
             var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(SetMinus1));
             var lambda = Lambda<ActionRef<int>>(Call(call, objRef), objRef);
 
+            void LocalAssert(ActionRef<int> invoke)
+            {
+                var exampleA = default(int);
+                invoke(ref exampleA);
+                Assert.AreEqual(-1, exampleA);
+            }
+
             var compiledA = lambda.Compile();
-            var exampleA = default(int);
-            compiledA(ref exampleA);
-            Assert.AreEqual(-1, exampleA);
+            LocalAssert(compiledA);
 
             var compiledB = lambda.CompileFast<ActionRef<int>>(true);
-            var exampleB = default(int);
-            compiledB(ref exampleB);
-            Assert.AreEqual(-1, exampleB);
+            LocalAssert(compiledB);
 
             ActionRef<int> direct = CallOtherRef;
-            var exampleC = default(int);
-            direct(ref exampleC);
-            Assert.AreEqual(-1, exampleC);
+            LocalAssert(direct);
+        }
+
+        private static void SetMinusBigInteger1(ref BigInteger localByRef) { localByRef = new BigInteger(-1); }
+
+        [Test]
+        public void RefMethodCallingRefMethodCustomStuct()
+        {
+            void CallOtherRef(ref BigInteger localByRef) => SetMinusBigInteger1(ref localByRef);
+            var objRef = Parameter(typeof(BigInteger).MakeByRefType());
+            var variable = Variable(typeof(BigInteger));
+            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(SetMinusBigInteger1));
+            var lambda = Lambda<ActionRef<BigInteger>>(Call(call, objRef), objRef);
+
+            void LocalAssert(ActionRef<BigInteger> invoke)
+            {
+                var exampleA = default(BigInteger);
+                invoke(ref exampleA);
+                Assert.AreEqual(new BigInteger(- 1), exampleA);
+            }
+
+            var compiledA = lambda.Compile();
+            LocalAssert(compiledA);
+
+            var compiledB = lambda.CompileFast<ActionRef<BigInteger>>(true);
+            LocalAssert(compiledB);
+
+            ActionRef<BigInteger> direct = CallOtherRef;
+            LocalAssert(direct);
         }
 
         [Test]
@@ -407,6 +459,8 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(3, exampleC);
         }
 
+
+
         [Test]
         public void BlockWithNonRefStatementLast()
         {
@@ -687,6 +741,62 @@ namespace FastExpressionCompiler.IssueTests
             var exampleB = default(StructWithIntField);
             compiledB(ref exampleB, 7);
             Assert.AreEqual(7, exampleB.IntField);
+        }
+
+        [Test]
+        public void RefAssign()
+        {
+            void AddSet(ref double byRef)
+            {
+                byRef = byRef + 3.0;
+            }
+            var objRef = Parameter(typeof(double).MakeByRefType());
+            var lambda = Lambda<ActionRef<double>>(Assign(objRef, Add(objRef, Constant(3.0))), objRef);
+
+            void LocalAssert(ActionRef<double> invoke)
+            {
+                var exampleA = 5.0;
+                invoke(ref exampleA);
+                Assert.AreEqual(8.0, exampleA);
+            }
+
+            var compiledA = lambda.Compile();
+            LocalAssert(compiledA);
+
+            var compiledB = lambda.CompileFast<ActionRef<double>>(true);
+            LocalAssert(compiledB);
+
+            ActionRef<double> direct = AddSet;
+            LocalAssert(direct);
+        }
+
+        [Test]
+        public void RefAssignCustomStruct()
+        {
+            void AddSet(ref BigInteger byRef)
+            {
+                byRef = byRef + new BigInteger(3);
+            }
+            var objRef = Parameter(typeof(BigInteger).MakeByRefType());
+            var ctor = typeof(BigInteger).GetTypeInfo().DeclaredConstructors
+                .Single(x => x.GetParameters().Count() == 1 && x.GetParameters().FirstOrDefault()?.ParameterType == typeof(int));
+            var lambda = Lambda<ActionRef<BigInteger>>(Assign(objRef, Add(objRef, New(ctor, Constant(3)))), objRef);
+
+            void LocalAssert(ActionRef<BigInteger> invoke)
+            {
+                BigInteger exampleA = 5;
+                invoke(ref exampleA);
+                Assert.AreEqual(new BigInteger(8), exampleA);
+            }
+
+            var compiledA = lambda.Compile();
+            LocalAssert(compiledA);
+
+            var compiledB = lambda.CompileFast<ActionRef<BigInteger>>(true);
+            LocalAssert(compiledB);
+
+            ActionRef<BigInteger> direct = AddSet;
+            LocalAssert(direct);
         }
     }
 }
