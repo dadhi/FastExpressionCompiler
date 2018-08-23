@@ -887,7 +887,7 @@ namespace FastExpressionCompiler
 
         #region Collect Bound Constants
 
-        private static bool IsClosureBoundConstant(object value, TypeInfo type) => 
+        private static bool IsClosureBoundConstant(object value, TypeInfo type) =>
             value is Delegate ||
             !type.IsPrimitive && !type.IsEnum && !(value is string) && !(value is Type);
 
@@ -1310,13 +1310,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.NotEqual:
                         return TryEmitComparison(exprObj, exprNodeType, paramExprs, il, ref closure);
 
-                    case ExpressionType.Add:
-                    case ExpressionType.AddChecked:
-                    case ExpressionType.Subtract:
-                    case ExpressionType.SubtractChecked:
-                    case ExpressionType.Multiply:
-                    case ExpressionType.MultiplyChecked:
-                    case ExpressionType.Divide:
+                    case ExpressionType arithmetic when IsArithmetic(arithmetic):
                         return TryEmitArithmeticOperation(exprObj, exprType, exprNodeType, paramExprs, il, ref closure);
 
                     case ExpressionType.AndAlso:
@@ -1362,6 +1356,18 @@ namespace FastExpressionCompiler
                         return false;
                 }
             }
+
+            //TODO: test what is faster? Copy and inline switch? Switch in method? Ors in method?
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            private static bool IsArithmetic(ExpressionType arithmetic) =>
+                arithmetic == ExpressionType.Add
+                || arithmetic == ExpressionType.AddChecked
+                || arithmetic == ExpressionType.Subtract
+                || arithmetic == ExpressionType.SubtractChecked
+                || arithmetic == ExpressionType.Multiply
+                || arithmetic == ExpressionType.MultiplyChecked
+                || arithmetic == ExpressionType.Divide
+                || arithmetic == ExpressionType.Modulo;
 
             private static bool TryEmitIndex(IndexExpression exprObj, Type elemType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
@@ -1662,9 +1668,12 @@ namespace FastExpressionCompiler
                 {
                     if (closure.HasClosure)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
-
-                    var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType && !Tools.IsByRefParameter(paramExprObj);
+                    var isByRef = Tools.IsByRefParameter(paramExprObj);
+                    var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType && !isByRef;
                     EmitLoadParamArg(il, paramIndex, asAddress);
+                    if (isByRef && IsArithmetic(parent))
+                        EmitDereference(il, paramType);
+
                     return true;
                 }
 
@@ -1697,6 +1706,35 @@ namespace FastExpressionCompiler
                 LoadClosureFieldOrItem(ref closure, il, closureItemIndex, paramType);
 
                 return true;
+            }
+
+            private static void EmitDereference(ILGenerator il, Type type)
+            {
+                if (type == typeof(Int32))
+                    il.Emit(OpCodes.Ldind_I4);
+                else if (type == typeof(Int64))
+                    il.Emit(OpCodes.Ldind_I8);
+                else if (type == typeof(Int16))
+                    il.Emit(OpCodes.Ldind_I2);
+                else if (type == typeof(SByte))
+                    il.Emit(OpCodes.Ldind_I1);
+                else if (type == typeof(Single))
+                    il.Emit(OpCodes.Ldind_R4);
+                else if (type == typeof(Double))
+                    il.Emit(OpCodes.Ldind_R8);
+                else if (type == typeof(IntPtr))
+                    il.Emit(OpCodes.Ldind_I);
+                else if (type == typeof(UIntPtr))
+                    il.Emit(OpCodes.Ldind_I);
+                else if (type == typeof(Byte))
+                    il.Emit(OpCodes.Ldind_U1);
+                else if (type == typeof(UInt16))
+                    il.Emit(OpCodes.Ldind_U2);
+                else if (type == typeof(UInt32))
+                    il.Emit(OpCodes.Ldind_U4);
+                else
+                    il.Emit(OpCodes.Ldobj, type);
+                //TODO: UInt64 as there is no OpCodes? Ldind_Ref?
             }
 
             // loads argument at paramIndex onto evaluation stack
@@ -2524,8 +2562,8 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stind_Ref);
                 else if (type == typeof(IntPtr) || type == typeof(UIntPtr))
                     il.Emit(OpCodes.Stind_I);
-                else
-                    throw new NotImplementedException();
+                else  
+                    il.Emit(OpCodes.Stobj, type);
             }
 
             private static bool TryEmitIndexAssign(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
@@ -2990,7 +3028,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitArithmeticOperation(object exprObj, Type exprType, ExpressionType exprNodeType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
-                if (!EmitBinary(exprObj, paramExprs, il, ref closure, ExpressionType.Default))
+                if (!EmitBinary(exprObj, paramExprs, il, ref closure, exprNodeType))
                     return false;
 
                 var exprTypeInfo = exprType.GetTypeInfo();
@@ -3003,6 +3041,7 @@ namespace FastExpressionCompiler
                         : exprNodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
                         : exprNodeType == ExpressionType.Multiply ? "op_Multiply"
                         : exprNodeType == ExpressionType.Divide ? "op_Division"
+                        : exprNodeType == ExpressionType.Modulo ? "op_Modulus"
                         : null;
 
                     var method = methodName != null ? exprTypeInfo.GetDeclaredMethod(methodName) : null;
