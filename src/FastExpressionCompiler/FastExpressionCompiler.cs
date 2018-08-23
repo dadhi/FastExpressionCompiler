@@ -1310,7 +1310,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.NotEqual:
                         return TryEmitComparison(exprObj, exprNodeType, paramExprs, il, ref closure);
 
-                    case ExpressionType arithmetic when IsArithmetic(arithmetic):
+                    case ExpressionType arithmetic when Tools.IsArithmetic(arithmetic):
                         return TryEmitArithmeticOperation(exprObj, exprType, exprNodeType, paramExprs, il, ref closure);
 
                     case ExpressionType.AndAlso:
@@ -1323,14 +1323,8 @@ namespace FastExpressionCompiler
                     case ExpressionType.Conditional:
                         return TryEmitConditional((ConditionalExpression)exprObj, paramExprs, il, ref closure);
 
-                    case ExpressionType.AddAssign:
-                    case ExpressionType.AddAssignChecked:
-                    case ExpressionType.SubtractAssign:
-                    case ExpressionType.SubtractAssignChecked:
-                    case ExpressionType.MultiplyAssign:
-                    case ExpressionType.MultiplyAssignChecked:
-                    case ExpressionType.DivideAssign:
-                    case ExpressionType.Assign:
+                    case ExpressionType arithmeticAssign when Tools.IsArithmeticAssign(arithmeticAssign):
+                    case ExpressionType.Assign: 
                         return TryEmitAssign(exprObj, exprType, paramExprs, il, ref closure);
 
                     case ExpressionType.Block:
@@ -1356,18 +1350,6 @@ namespace FastExpressionCompiler
                         return false;
                 }
             }
-
-            //TODO: test what is faster? Copy and inline switch? Switch in method? Ors in method?
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            private static bool IsArithmetic(ExpressionType arithmetic) =>
-                arithmetic == ExpressionType.Add
-                || arithmetic == ExpressionType.AddChecked
-                || arithmetic == ExpressionType.Subtract
-                || arithmetic == ExpressionType.SubtractChecked
-                || arithmetic == ExpressionType.Multiply
-                || arithmetic == ExpressionType.MultiplyChecked
-                || arithmetic == ExpressionType.Divide
-                || arithmetic == ExpressionType.Modulo;
 
             private static bool TryEmitIndex(IndexExpression exprObj, Type elemType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
@@ -1671,7 +1653,7 @@ namespace FastExpressionCompiler
                     var isByRef = Tools.IsByRefParameter(paramExprObj);
                     var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType && !isByRef;
                     EmitLoadParamArg(il, paramIndex, asAddress);
-                    if (isByRef && IsArithmetic(parent))
+                    if (isByRef && Tools.IsArithmetic(parent))
                         EmitDereference(il, paramType);
 
                     return true;
@@ -2340,13 +2322,7 @@ namespace FastExpressionCompiler
                             {
                                 EmitLoadParamArg(il, paramIndex, false);
     
-                                if (expr != null && (expr.NodeType == ExpressionType.AddAssign
-                                                     || expr.NodeType == ExpressionType.AddAssignChecked
-                                                     || expr.NodeType == ExpressionType.SubtractAssign
-                                                     || expr.NodeType == ExpressionType.SubtractAssignChecked
-                                                     || expr.NodeType == ExpressionType.MultiplyAssign
-                                                     || expr.NodeType == ExpressionType.MultiplyAssignChecked
-                                                     || expr.NodeType == ExpressionType.DivideAssign))
+                                if (expr != null && Tools.IsArithmeticAssign(expr.NodeType))
                                 {
                                     if (expr.NodeType == ExpressionType.AddAssign)
                                         if (!TryEmit(expr, ExpressionType.Add, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
@@ -2368,6 +2344,9 @@ namespace FastExpressionCompiler
                                             return false;
                                     else if(expr.NodeType == ExpressionType.DivideAssign)
                                         if (!TryEmit(expr, ExpressionType.Divide, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
+                                            return false;
+                                    else if (expr.NodeType == ExpressionType.ModuloAssign)
+                                        if (!TryEmit(expr, ExpressionType.Modulo, expr.Type, paramExprs, il, ref closure, ExpressionType.Assign))
                                             return false;
                                 }
                                 else if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
@@ -3234,50 +3213,57 @@ namespace FastExpressionCompiler
             return null;
         }
 
+        //TODO: test what is faster? Copy and inline switch? Switch in method? Ors in method?
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        internal static bool IsArithmetic(ExpressionType arithmetic) =>
+            arithmetic == ExpressionType.Add
+            || arithmetic == ExpressionType.AddChecked
+            || arithmetic == ExpressionType.Subtract
+            || arithmetic == ExpressionType.SubtractChecked
+            || arithmetic == ExpressionType.Multiply
+            || arithmetic == ExpressionType.MultiplyChecked
+            || arithmetic == ExpressionType.Divide
+            || arithmetic == ExpressionType.Modulo;
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        internal static bool IsArithmeticAssign(ExpressionType arithmetic) =>
+            arithmetic == ExpressionType.AddAssign
+            || arithmetic == ExpressionType.AddAssignChecked
+            || arithmetic == ExpressionType.SubtractAssign
+            || arithmetic == ExpressionType.SubtractAssignChecked
+            || arithmetic == ExpressionType.MultiplyAssign
+            || arithmetic == ExpressionType.MultiplyAssignChecked
+            || arithmetic == ExpressionType.DivideAssign
+            || arithmetic == ExpressionType.ModuloAssign;
+
         internal static bool IsByRefAssign(object exprObj)
         {
             var exprInfo = exprObj as BinaryExpressionInfo;
-            if (exprInfo != null && (exprInfo.NodeType == ExpressionType.Assign
-                                        || exprInfo.NodeType == ExpressionType.AddAssign
-                                        || exprInfo.NodeType == ExpressionType.AddAssignChecked
+            if (exprInfo != null && (exprInfo.NodeType == ExpressionType.Assign || IsArithmeticAssign(exprInfo.NodeType)
                                         || exprInfo.NodeType == ExpressionType.AndAssign
-                                        || exprInfo.NodeType == ExpressionType.DivideAssign
                                         || exprInfo.NodeType == ExpressionType.ExclusiveOrAssign
                                         || exprInfo.NodeType == ExpressionType.LeftShiftAssign
-                                        || exprInfo.NodeType == ExpressionType.ModuloAssign
-                                        || exprInfo.NodeType == ExpressionType.MultiplyAssign
-                                        || exprInfo.NodeType == ExpressionType.MultiplyAssignChecked
                                         || exprInfo.NodeType == ExpressionType.OrAssign
                                         || exprInfo.NodeType == ExpressionType.PostDecrementAssign
                                         || exprInfo.NodeType == ExpressionType.PostIncrementAssign
                                         || exprInfo.NodeType == ExpressionType.PowerAssign
                                         || exprInfo.NodeType == ExpressionType.PreDecrementAssign
                                         || exprInfo.NodeType == ExpressionType.PreIncrementAssign
-                                        || exprInfo.NodeType == ExpressionType.RightShiftAssign
-                                        || exprInfo.NodeType == ExpressionType.SubtractAssign
-                                        || exprInfo.NodeType == ExpressionType.SubtractAssignChecked))
+                                        || exprInfo.NodeType == ExpressionType.RightShiftAssign))
                 return IsByRefParameter(exprInfo.Left);
 
             var expr = exprObj as BinaryExpression;
-            if (expr != null && (expr.NodeType == ExpressionType.Assign 
-                                 || expr.NodeType == ExpressionType.AddAssign
-                                 || expr.NodeType == ExpressionType.AddAssignChecked
-                                 || expr.NodeType == ExpressionType.AndAssign
-                                 || expr.NodeType == ExpressionType.DivideAssign
-                                 || expr.NodeType == ExpressionType.ExclusiveOrAssign
-                                 || expr.NodeType == ExpressionType.LeftShiftAssign
-                                 || expr.NodeType == ExpressionType.ModuloAssign
-                                 || expr.NodeType == ExpressionType.MultiplyAssign
-                                 || expr.NodeType == ExpressionType.MultiplyAssignChecked
-                                 || expr.NodeType == ExpressionType.OrAssign
-                                 || expr.NodeType == ExpressionType.PostDecrementAssign
-                                 || expr.NodeType == ExpressionType.PostIncrementAssign
-                                 || expr.NodeType == ExpressionType.PowerAssign
-                                 || expr.NodeType == ExpressionType.PreDecrementAssign
-                                 || expr.NodeType == ExpressionType.PreIncrementAssign
-                                 || expr.NodeType == ExpressionType.RightShiftAssign
-                                 || expr.NodeType == ExpressionType.SubtractAssign
-                                 || expr.NodeType == ExpressionType.SubtractAssignChecked))
+            if (expr != null && (expr.NodeType == ExpressionType.Assign || IsArithmeticAssign(expr.NodeType)
+                                        || exprInfo.NodeType == ExpressionType.AndAssign
+                                        || exprInfo.NodeType == ExpressionType.ExclusiveOrAssign
+                                        || exprInfo.NodeType == ExpressionType.LeftShiftAssign
+                                        || exprInfo.NodeType == ExpressionType.OrAssign
+                                        || exprInfo.NodeType == ExpressionType.PostDecrementAssign
+                                        || exprInfo.NodeType == ExpressionType.PostIncrementAssign
+                                        || exprInfo.NodeType == ExpressionType.PowerAssign
+                                        || exprInfo.NodeType == ExpressionType.PreDecrementAssign
+                                        || exprInfo.NodeType == ExpressionType.PreIncrementAssign
+                                        || exprInfo.NodeType == ExpressionType.RightShiftAssign))
                 return IsByRefParameter(expr.Left);
 
             return false;
