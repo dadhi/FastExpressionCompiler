@@ -164,6 +164,39 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Can_modulus_custom()
+        {
+            Expression<Func<BigInteger, BigInteger, BigInteger>> expr = (arg1, arg2) => arg1 % arg2;
+
+            var multiplyFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(multiplyFunc);
+            Assert.AreEqual(new BigInteger(1), multiplyFunc(7, 6));
+        }
+
+        [Test, Ignore("Fix it")]
+        public void Can_modulus()
+        {
+            Expression<Func<short, short, long>> expr = (arg1, arg2) => arg1 % arg2;
+
+            var multiplyFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(multiplyFunc);
+            Assert.AreEqual(1, multiplyFunc(7, 6));
+        }
+
+        [Test, Ignore("Fix all bit operations OR XOR AND")]
+        public void Can_bitor_1()
+        {
+            Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 | arg2;
+
+            var multiplyFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(multiplyFunc);
+            Assert.AreEqual(1, multiplyFunc(1, 1));
+        }
+
+        [Test]
         public void Can_multiply_bytes()
         {
             Expression<Func<byte, byte, int>> expr = (arg1, arg2) => arg1 * arg2;

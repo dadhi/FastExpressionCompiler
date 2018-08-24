@@ -887,7 +887,7 @@ namespace FastExpressionCompiler
 
         #region Collect Bound Constants
 
-        private static bool IsClosureBoundConstant(object value, TypeInfo type) => 
+        private static bool IsClosureBoundConstant(object value, TypeInfo type) =>
             value is Delegate ||
             !type.IsPrimitive && !type.IsEnum && !(value is string) && !(value is Type);
 
@@ -1310,13 +1310,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.NotEqual:
                         return TryEmitComparison(exprObj, exprNodeType, paramExprs, il, ref closure);
 
-                    case ExpressionType.Add:
-                    case ExpressionType.AddChecked:
-                    case ExpressionType.Subtract:
-                    case ExpressionType.SubtractChecked:
-                    case ExpressionType.Multiply:
-                    case ExpressionType.MultiplyChecked:
-                    case ExpressionType.Divide:
+                    case ExpressionType arithmetic when Tools.IsArithmetic(arithmetic):
                         return TryEmitArithmeticOperation(exprObj, exprType, exprNodeType, paramExprs, il, ref closure);
 
                     case ExpressionType.AndAlso:
@@ -1329,7 +1323,8 @@ namespace FastExpressionCompiler
                     case ExpressionType.Conditional:
                         return TryEmitConditional((ConditionalExpression)exprObj, paramExprs, il, ref closure);
 
-                    case ExpressionType.Assign:
+                    case ExpressionType arithmeticAssign when Tools.GetArithmeticAssignOrSelf(arithmeticAssign) != arithmeticAssign:
+                    case ExpressionType.Assign: 
                         return TryEmitAssign(exprObj, exprType, paramExprs, il, ref closure);
 
                     case ExpressionType.Block:
@@ -1655,9 +1650,12 @@ namespace FastExpressionCompiler
                 {
                     if (closure.HasClosure)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
-
-                    var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType && !Tools.IsByRefParameter(paramExprObj);
+                    var isByRef = Tools.IsByRefParameter(paramExprObj);
+                    var asAddress = parent == ExpressionType.Call && paramType.GetTypeInfo().IsValueType && !isByRef;
                     EmitLoadParamArg(il, paramIndex, asAddress);
+                    if (isByRef && Tools.IsArithmetic(parent))
+                        EmitDereference(il, paramType);
+
                     return true;
                 }
 
@@ -1690,6 +1688,35 @@ namespace FastExpressionCompiler
                 LoadClosureFieldOrItem(ref closure, il, closureItemIndex, paramType);
 
                 return true;
+            }
+
+            private static void EmitDereference(ILGenerator il, Type type)
+            {
+                if (type == typeof(Int32))
+                    il.Emit(OpCodes.Ldind_I4);
+                else if (type == typeof(Int64))
+                    il.Emit(OpCodes.Ldind_I8);
+                else if (type == typeof(Int16))
+                    il.Emit(OpCodes.Ldind_I2);
+                else if (type == typeof(SByte))
+                    il.Emit(OpCodes.Ldind_I1);
+                else if (type == typeof(Single))
+                    il.Emit(OpCodes.Ldind_R4);
+                else if (type == typeof(Double))
+                    il.Emit(OpCodes.Ldind_R8);
+                else if (type == typeof(IntPtr))
+                    il.Emit(OpCodes.Ldind_I);
+                else if (type == typeof(UIntPtr))
+                    il.Emit(OpCodes.Ldind_I);
+                else if (type == typeof(Byte))
+                    il.Emit(OpCodes.Ldind_U1);
+                else if (type == typeof(UInt16))
+                    il.Emit(OpCodes.Ldind_U2);
+                else if (type == typeof(UInt32))
+                    il.Emit(OpCodes.Ldind_U4);
+                else
+                    il.Emit(OpCodes.Ldobj, type);
+                //TODO: UInt64 as there is no OpCodes? Ldind_Ref?
             }
 
             // loads argument at paramIndex onto evaluation stack
@@ -1774,6 +1801,11 @@ namespace FastExpressionCompiler
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
                 var e = exprObj.GetOperandExprInfo();
+
+                var m = exprObj is UnaryExpression ue ? ue.Method : ((UnaryExpressionInfo)exprObj).Method;
+                if (m != null && m.Name[2] != '_' && m.Name != "op_Implicit" && m.Name != "op_Explicit")
+                    return TryEmit(e.Expr, e.NodeType, e.Type, paramExprs, il, ref closure, ExpressionType.Call, 0) && EmitMethodCall(il, m);
+
                 if (!TryEmit(e.Expr, e.NodeType, e.Type, paramExprs, il, ref closure, ExpressionType.Convert))
                     return false;
 
@@ -1812,30 +1844,36 @@ namespace FastExpressionCompiler
                 // Conversion to Nullable: new Nullable<T>(T val);
                 else if (targetTypeInfo.IsGenericType && targetTypeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
                     il.Emit(OpCodes.Newobj, targetType.GetConstructorByArgs(targetTypeInfo.GenericTypeArguments[0]));
-                
-                else if (targetType == typeof(int))
-                    il.Emit(OpCodes.Conv_I4);
-                else if (targetType == typeof(float))
-                    il.Emit(OpCodes.Conv_R4);
-                else if (targetType == typeof(uint))
-                    il.Emit(OpCodes.Conv_U4);
-                else if (targetType == typeof(sbyte))
-                    il.Emit(OpCodes.Conv_I1);
-                else if (targetType == typeof(byte))
-                    il.Emit(OpCodes.Conv_U1);
-                else if (targetType == typeof(short))
-                    il.Emit(OpCodes.Conv_I2);
-                else if (targetType == typeof(ushort))
-                    il.Emit(OpCodes.Conv_U2);
-                else if (targetType == typeof(long))
-                    il.Emit(OpCodes.Conv_I8);
-                else if (targetType == typeof(ulong))
-                    il.Emit(OpCodes.Conv_U8);
-                else if (targetType == typeof(double))
-                    il.Emit(OpCodes.Conv_R8);
+                else
+                {
+                    if (targetType.GetTypeInfo().IsEnum)
+                        targetType = Enum.GetUnderlyingType(targetType);
 
-                else // cast as the last resort and let's it fail if unlucky
-                    il.Emit(OpCodes.Castclass, targetType);
+                    if (targetType == typeof(int))
+                        il.Emit(OpCodes.Conv_I4);
+                    else if (targetType == typeof(float))
+                        il.Emit(OpCodes.Conv_R4);
+                    else if (targetType == typeof(uint))
+                        il.Emit(OpCodes.Conv_U4);
+                    else if (targetType == typeof(sbyte))
+                        il.Emit(OpCodes.Conv_I1);
+                    else if (targetType == typeof(byte))
+                        il.Emit(OpCodes.Conv_U1);
+                    else if (targetType == typeof(short))
+                        il.Emit(OpCodes.Conv_I2);
+                    else if (targetType == typeof(ushort))
+                        il.Emit(OpCodes.Conv_U2);
+                    else if (targetType == typeof(long))
+                        il.Emit(OpCodes.Conv_I8);
+                    else if (targetType == typeof(ulong))
+                        il.Emit(OpCodes.Conv_U8);
+                    else if (targetType == typeof(double))
+                        il.Emit(OpCodes.Conv_R8);
+
+                    else // cast as the last resort and let's it fail if unlucky
+                        il.Emit(OpCodes.Castclass, targetType);
+                }
+
                 return true;
             }
 
@@ -2234,7 +2272,7 @@ namespace FastExpressionCompiler
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
                 object left, right;
-                ExpressionType leftNodeType, rightNodeType;
+                ExpressionType leftNodeType, rightNodeType, nodeType;
 
                 var expr = exprObj as BinaryExpression;
                 if (expr != null)
@@ -2243,6 +2281,7 @@ namespace FastExpressionCompiler
                     right = expr.Right;
                     leftNodeType = expr.Left.NodeType;
                     rightNodeType = expr.Right.NodeType;
+                    nodeType = expr.NodeType;
                 }
                 else
                 {
@@ -2251,6 +2290,7 @@ namespace FastExpressionCompiler
                     right = info.Right;
                     leftNodeType = left.GetNodeType();
                     rightNodeType = right.GetNodeType();
+                    nodeType = info.NodeType;
                 }
 
                 // if this assignment is part of a single body-less expression or the result of a block
@@ -2275,8 +2315,16 @@ namespace FastExpressionCompiler
                             if (Tools.IsByRefParameter(left))
                             {
                                 EmitLoadParamArg(il, paramIndex, false);
-                                if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
+    
+                                var newExprType = Tools.GetArithmeticAssignOrSelf(nodeType);
+                                if (newExprType != nodeType)
+                                {
+                                    if (!TryEmit(exprObj, newExprType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
+                                        return false;
+                                }
+                                else if (!TryEmit(right, rightNodeType, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
                                     return false;
+
                                 EmitByRefStore(il, left.ToExpression().Type);
                             }
                             else
@@ -2466,8 +2514,8 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stind_Ref);
                 else if (type == typeof(IntPtr) || type == typeof(UIntPtr))
                     il.Emit(OpCodes.Stind_I);
-                else
-                    throw new NotImplementedException();
+                else  
+                    il.Emit(OpCodes.Stobj, type);
             }
 
             private static bool TryEmitIndexAssign(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
@@ -2538,7 +2586,6 @@ namespace FastExpressionCompiler
 
                 return EmitMethodCall(il, method);
             }
-
 
             // if call is done into byref method parameters there is no indicators in tree, so grab that from method
             // current approach is to copy into new list only if there are by ref with by ref parameters,
@@ -2845,6 +2892,9 @@ namespace FastExpressionCompiler
                 {
                     leftOpType = expr.Left.Type;
                     rightOpType = expr.Right.Type;
+
+                    if (expr.Right is ConstantExpression c && c.Value == null && expr.Right.Type == typeof(object))
+                        rightOpType = leftOpType;
                 }
                 else
                 {
@@ -2930,7 +2980,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitArithmeticOperation(object exprObj, Type exprType, ExpressionType exprNodeType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
-                if (!EmitBinary(exprObj, paramExprs, il, ref closure, ExpressionType.Default))
+                if (!EmitBinary(exprObj, paramExprs, il, ref closure, exprNodeType))
                     return false;
 
                 var exprTypeInfo = exprType.GetTypeInfo();
@@ -2942,7 +2992,9 @@ namespace FastExpressionCompiler
                         : exprNodeType == ExpressionType.Subtract ? "op_Subtraction"
                         : exprNodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
                         : exprNodeType == ExpressionType.Multiply ? "op_Multiply"
+                        : exprNodeType == ExpressionType.MultiplyChecked ? "op_Multiply"
                         : exprNodeType == ExpressionType.Divide ? "op_Division"
+                        : exprNodeType == ExpressionType.Modulo ? "op_Modulus"
                         : null;
 
                     var method = methodName != null ? exprTypeInfo.GetDeclaredMethod(methodName) : null;
@@ -2952,30 +3004,37 @@ namespace FastExpressionCompiler
                 switch (exprNodeType)
                 {
                     case ExpressionType.Add:
+                    case ExpressionType.AddAssign:
                         il.Emit(OpCodes.Add);
                         return true;
 
                     case ExpressionType.AddChecked:
+                    case ExpressionType.AddAssignChecked:
                         il.Emit(IsUnsigned(exprType) ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf);
                         return true;
 
                     case ExpressionType.Subtract:
+                    case ExpressionType.SubtractAssign:
                         il.Emit(OpCodes.Sub);
                         return true;
 
                     case ExpressionType.SubtractChecked:
+                    case ExpressionType.SubtractAssignChecked:
                         il.Emit(IsUnsigned(exprType) ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf);
                         return true;
 
                     case ExpressionType.Multiply:
+                    case ExpressionType.MultiplyAssign:
                         il.Emit(OpCodes.Mul);
                         return true;
 
                     case ExpressionType.MultiplyChecked:
+                    case ExpressionType.MultiplyAssignChecked:
                         il.Emit(IsUnsigned(exprType) ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf);
                         return true;
 
                     case ExpressionType.Divide:
+                    case ExpressionType.DivideAssign:
                         il.Emit(OpCodes.Div);
                         return true;
                 }
@@ -3128,16 +3187,64 @@ namespace FastExpressionCompiler
             return null;
         }
 
+        //TODO: test what is faster? Copy and inline switch? Switch in method? Ors in method?
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        internal static bool IsArithmetic(ExpressionType arithmetic) =>
+            arithmetic == ExpressionType.Add
+            || arithmetic == ExpressionType.AddChecked
+            || arithmetic == ExpressionType.Subtract
+            || arithmetic == ExpressionType.SubtractChecked
+            || arithmetic == ExpressionType.Multiply
+            || arithmetic == ExpressionType.MultiplyChecked
+            || arithmetic == ExpressionType.Divide
+            || arithmetic == ExpressionType.Modulo;
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        internal static ExpressionType GetArithmeticAssignOrSelf(ExpressionType arithmetic)
+        {
+            switch (arithmetic)
+            {
+                case ExpressionType.AddAssign: return ExpressionType.Add;
+                case ExpressionType.AddAssignChecked: return ExpressionType.AddChecked;
+                case ExpressionType.SubtractAssign: return ExpressionType.Subtract;
+                case ExpressionType.SubtractAssignChecked: return ExpressionType.SubtractChecked;
+                case ExpressionType.MultiplyAssign: return ExpressionType.Multiply;
+                case ExpressionType.MultiplyAssignChecked: return ExpressionType.MultiplyChecked;
+                case ExpressionType.DivideAssign: return ExpressionType.Divide;
+                case ExpressionType.ModuloAssign: return ExpressionType.Modulo;
+            }
+
+            return arithmetic;
+        }
+
         internal static bool IsByRefAssign(object exprObj)
         {
-            var exprInfo = exprObj as BinaryExpressionInfo;
-            if (exprInfo != null && exprInfo.NodeType == ExpressionType.Assign)
-                return IsByRefParameter(exprInfo.Left);
+            ExpressionType? nodeType = null;
+            object left = null;
+            if (exprObj is BinaryExpression expr)
+            {
+                nodeType = expr.NodeType;
+                left = expr.Left;
+            }
+            else if (exprObj is BinaryExpressionInfo exprInfo)
+            {
+                nodeType = exprInfo.NodeType;
+                left = exprInfo.Left;
+            }
 
-            var expr = exprObj as BinaryExpression;
-            if (expr != null && expr.NodeType == ExpressionType.Assign)
-                return IsByRefParameter(expr.Left);
-
+            if (nodeType.HasValue && (nodeType == ExpressionType.Assign 
+                                        || (GetArithmeticAssignOrSelf(nodeType.Value) != nodeType.Value)
+                                        || nodeType == ExpressionType.AndAssign
+                                        || nodeType == ExpressionType.ExclusiveOrAssign
+                                        || nodeType == ExpressionType.LeftShiftAssign
+                                        || nodeType == ExpressionType.OrAssign
+                                        || nodeType == ExpressionType.PostDecrementAssign
+                                        || nodeType == ExpressionType.PostIncrementAssign
+                                        || nodeType == ExpressionType.PowerAssign
+                                        || nodeType == ExpressionType.PreDecrementAssign
+                                        || nodeType == ExpressionType.PreIncrementAssign
+                                        || nodeType == ExpressionType.RightShiftAssign))
+                return IsByRefParameter(left);
             return false;
         }
 
@@ -3503,6 +3610,8 @@ namespace FastExpressionCompiler
 
         public readonly ExpressionInfo Operand;
 
+        public readonly MethodInfo Method;
+
         public override Expression ToExpression()
         {
             if (NodeType == ExpressionType.Convert)
@@ -3515,6 +3624,13 @@ namespace FastExpressionCompiler
             NodeType = nodeType;
             Operand = operand;
             Type = type;
+        }
+
+        public UnaryExpressionInfo(ExpressionType nodeType, ExpressionInfo operand, MethodInfo method)
+        {
+            NodeType = nodeType;
+            Operand = operand;
+            Method = method;
         }
     }
 
