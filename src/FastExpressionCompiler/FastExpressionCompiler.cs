@@ -1385,14 +1385,13 @@ namespace FastExpressionCompiler
                 }
                 il.MarkLabel(lbl.Value);
 
-                if (exprObj.DefaultValue != null)
-                    if (!TryEmit(exprObj.DefaultValue, exprObj.DefaultValue.NodeType, exprObj.DefaultValue.Type, paramExprs, il, ref closure, ExpressionType.Label))
-                        return false;
+                if (exprObj.DefaultValue != null && !TryEmit(exprObj.DefaultValue, exprObj.DefaultValue.NodeType, exprObj.DefaultValue.Type, paramExprs, il, ref closure, ExpressionType.Label))
+                    return false;
                 return true;
             }
 
             private static bool TryEmitGoto(GotoExpression exprObj, Type elemType,
-                object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure) //todo : GotoExpression.Value 
             {
                 var lbl = closure.Labels.FirstOrDefault(x => x.Key == exprObj.Target);
                 if (lbl.Key != exprObj.Target)
@@ -1402,13 +1401,12 @@ namespace FastExpressionCompiler
                 }
 
                 if (exprObj.Kind == GotoExpressionKind.Goto)
+                {
                     il.Emit(OpCodes.Br, lbl.Value);
-                else
-                    return false;
+                    return true;
+                }
 
-                return true;
-
-                //todo : GotoExpression.Value 
+                return false;
             }
 
             private static bool TryEmitIndex(IndexExpression exprObj, Type elemType,
