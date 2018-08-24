@@ -364,6 +364,10 @@ namespace FastExpressionCompiler
             else
                 return null;
 
+            if (closureInfo.LabelCount > 0)
+                closureInfo.Labels = new KeyValuePair<object, Label>[closureInfo.LabelCount];
+            closureInfo.LabelCount = 0;
+
             var closureType = closureInfo.ClosureType;
             var methodParamTypes = closureType == null ? paramTypes : GetClosureAndParamTypes(paramTypes, closureType);
 
@@ -476,8 +480,9 @@ namespace FastExpressionCompiler
             // Helper to decide whether we are inside the block or not
             public BlockInfo CurrentBlock;
 
+            public int LabelCount;
             // Dictionary for the used Labels in IL
-            public Dictionary<object, Label> Labels;
+            public KeyValuePair<object, Label>[] Labels;
 
             // Populates info directly with provided closure object and constants.
             public ClosureInfo(bool isConstructed, object closure = null, object[] closureConstantExpressions = null)
@@ -488,6 +493,7 @@ namespace FastExpressionCompiler
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 CurrentBlock = BlockInfo.Empty;
                 Labels = null;
+                LabelCount = 0;
 
                 if (closure == null)
                 {
@@ -994,6 +1000,9 @@ namespace FastExpressionCompiler
                     return true;
 
                 case ExpressionType.Label:
+                    closure.LabelCount++;
+                    return true;
+
                 case ExpressionType.Goto:
                     return true;
 
@@ -1368,14 +1377,13 @@ namespace FastExpressionCompiler
             private static bool TryEmitLabel(LabelExpression exprObj, Type elemType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
-                if (closure.Labels == null)
-                    closure.Labels = new Dictionary<object, Label>();
-                if (!closure.Labels.TryGetValue(exprObj.Target, out Label lbl))
+                var lbl = closure.Labels.FirstOrDefault(x => x.Key == exprObj.Target);
+                if (lbl.Key != exprObj.Target)
                 {
-                    lbl = il.DefineLabel();
-                    closure.Labels.Add(exprObj.Target, lbl);
+                    lbl = new KeyValuePair<object, Label>(exprObj.Target, il.DefineLabel());
+                    closure.Labels[closure.LabelCount++] = lbl;
                 }
-                il.MarkLabel(lbl);
+                il.MarkLabel(lbl.Value);
 
                 if (exprObj.DefaultValue != null)
                     if (!TryEmit(exprObj.DefaultValue, exprObj.DefaultValue.NodeType, exprObj.DefaultValue.Type, paramExprs, il, ref closure, ExpressionType.Label))
@@ -1386,16 +1394,15 @@ namespace FastExpressionCompiler
             private static bool TryEmitGoto(GotoExpression exprObj, Type elemType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
-                if (closure.Labels == null)
-                    closure.Labels = new Dictionary<object, Label>();
-                if (!closure.Labels.TryGetValue(exprObj.Target, out Label lbl))
+                var lbl = closure.Labels.FirstOrDefault(x => x.Key == exprObj.Target);
+                if (lbl.Key != exprObj.Target)
                 {
-                    lbl = il.DefineLabel();
-                    closure.Labels.Add(exprObj.Target, lbl);
+                    lbl = new KeyValuePair<object, Label>(exprObj.Target, il.DefineLabel());
+                    closure.Labels[closure.LabelCount++] = lbl;
                 }
 
                 if (exprObj.Kind == GotoExpressionKind.Goto)
-                    il.Emit(OpCodes.Br, lbl);
+                    il.Emit(OpCodes.Br, lbl.Value);
                 else
                     return false;
 
