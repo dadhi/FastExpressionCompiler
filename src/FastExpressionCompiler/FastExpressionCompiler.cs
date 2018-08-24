@@ -1377,9 +1377,10 @@ namespace FastExpressionCompiler
                 }
                 il.MarkLabel(lbl);
 
+                if (exprObj.DefaultValue != null)
+                    if (!TryEmit(exprObj.DefaultValue, exprObj.DefaultValue.NodeType, exprObj.DefaultValue.Type, paramExprs, il, ref closure, ExpressionType.Label))
+                        return false;
                 return true;
-
-                //todo : LabelExpression.DefaultValue 
             }
 
             private static bool TryEmitGoto(GotoExpression exprObj, Type elemType,
