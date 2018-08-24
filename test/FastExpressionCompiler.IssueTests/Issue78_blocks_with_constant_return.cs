@@ -40,7 +40,6 @@ namespace FastExpressionCompiler.IssueTests
             var assign = Assign(varr, Constant(7));
             var lambda = Lambda<Func<int>>(Block(new List<ParameterExpression> { varr }, assign, Label(Label(typeof(int)), varr)));
             var compiled = lambda.Compile();
-            lambda.SaveToAssembly("f:\\aa.dll");
             var value1 = compiled();
             Assert.AreEqual(7, value1);
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
