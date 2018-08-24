@@ -476,6 +476,9 @@ namespace FastExpressionCompiler
             // Helper to decide whether we are inside the block or not
             public BlockInfo CurrentBlock;
 
+            // Dictionary for the used Labels in IL
+            public Dictionary<object, Label> Labels;
+
             // Populates info directly with provided closure object and constants.
             public ClosureInfo(bool isConstructed, object closure = null, object[] closureConstantExpressions = null)
             {
@@ -484,6 +487,7 @@ namespace FastExpressionCompiler
                 NonPassedParameters = Tools.Empty<object>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 CurrentBlock = BlockInfo.Empty;
+                Labels = null;
 
                 if (closure == null)
                 {
@@ -989,6 +993,10 @@ namespace FastExpressionCompiler
                 case ExpressionType.Default:
                     return true;
 
+                case ExpressionType.Label:
+                case ExpressionType.Goto:
+                    return true;
+
                 default:
                     return TryCollectUnaryOrBinaryExprConstants(ref closure, exprObj, paramExprs);
             }
@@ -1273,7 +1281,7 @@ namespace FastExpressionCompiler
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "Equals");
 
             public static bool TryEmit(object exprObj, ExpressionType exprNodeType, Type exprType,
-                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, int byRefIndex = -1)
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent,  int byRefIndex = -1)
             {
                 switch (exprNodeType)
                 {
@@ -1346,9 +1354,53 @@ namespace FastExpressionCompiler
                     case ExpressionType.Index:
                         return TryEmitIndex((IndexExpression)exprObj, exprType, paramExprs, il, ref closure);
 
+                    case ExpressionType.Goto:
+                        return TryEmitGoto((GotoExpression)exprObj, exprType, paramExprs, il, ref closure);
+
+                    case ExpressionType.Label:
+                        return TryEmitLabel((LabelExpression)exprObj, exprType, paramExprs, il, ref closure);
+
                     default:
                         return false;
                 }
+            }
+
+            private static bool TryEmitLabel(LabelExpression exprObj, Type elemType,
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
+            {
+                if (closure.Labels == null)
+                    closure.Labels = new Dictionary<object, Label>();
+                if (!closure.Labels.TryGetValue(exprObj.Target, out Label lbl))
+                {
+                    lbl = il.DefineLabel();
+                    closure.Labels.Add(exprObj.Target, lbl);
+                }
+                il.MarkLabel(lbl);
+
+                return true;
+
+                //todo : LabelExpression.DefaultValue 
+            }
+
+            private static bool TryEmitGoto(GotoExpression exprObj, Type elemType,
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
+            {
+                if (closure.Labels == null)
+                    closure.Labels = new Dictionary<object, Label>();
+                if (!closure.Labels.TryGetValue(exprObj.Target, out Label lbl))
+                {
+                    lbl = il.DefineLabel();
+                    closure.Labels.Add(exprObj.Target, lbl);
+                }
+
+                if (exprObj.Kind == GotoExpressionKind.Goto)
+                    il.Emit(OpCodes.Br, lbl);
+                else
+                    return false;
+
+                return true;
+
+                //todo : GotoExpression.Value 
             }
 
             private static bool TryEmitIndex(IndexExpression exprObj, Type elemType,
