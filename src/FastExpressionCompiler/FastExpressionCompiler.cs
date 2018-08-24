@@ -1868,6 +1868,13 @@ namespace FastExpressionCompiler
 
                 if (targetType == typeof(object))
                 {
+                    var nullableType = Nullable.GetUnderlyingType(sourceType);
+                    if (nullableType != null)
+                    {
+                        il.Emit(OpCodes.Newobj, sourceType.GetTypeInfo().DeclaredConstructors.First());
+                        il.Emit(OpCodes.Box, sourceType);
+                        return true;
+                    }
                     // for value type to object, just box a value, otherwise do nothing - everything is object anyway
                     if (sourceType.GetTypeInfo().IsValueType)
                         il.Emit(OpCodes.Box, sourceType);
