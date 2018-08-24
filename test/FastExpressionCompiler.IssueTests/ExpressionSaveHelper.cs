@@ -6,6 +6,7 @@ using System.Reflection.Emit;
 
 namespace FastExpressionCompiler.IssueTests
 {
+#if NET46
     public static class ExpressionSaveHelper
     {
         public static void SaveToAssembly<T>(this Expression<T> lambda, string file)
@@ -20,4 +21,5 @@ namespace FastExpressionCompiler.IssueTests
             dynamicAssembly.Save(Path.GetFileName(file));
         }
     }
+#endif
 }
