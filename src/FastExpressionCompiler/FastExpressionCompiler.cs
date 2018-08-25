@@ -1307,7 +1307,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Constant:
                         return TryEmitConstant(exprObj, exprType, il, ref closure);
                     case ExpressionType.Call:
-                        return TryEmitMethodCall(exprObj, paramExprs, il, ref closure);
+                        return TryEmitMethodCall(exprObj, paramExprs, il, ref closure, parent);
                     case ExpressionType.MemberAccess:
                         return TryEmitMemberAccess(exprObj, paramExprs, il, ref closure);
                     case ExpressionType.New:
@@ -2613,7 +2613,7 @@ namespace FastExpressionCompiler
                 return setMethod != null && EmitMethodCall(il, setMethod);
             }
 
-            private static bool TryEmitMethodCall(object exprObj, object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
+            private static bool TryEmitMethodCall(object exprObj, object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
             {
                 var isValueTypeObj = false;
                 Type objType = null;
@@ -2660,7 +2660,13 @@ namespace FastExpressionCompiler
                 if (isValueTypeObj && method.IsVirtual)
                     il.Emit(OpCodes.Constrained, objType);
 
-                return EmitMethodCall(il, method);
+                if (!EmitMethodCall(il, method))
+                    return false;
+
+                if (parent == ExpressionType.Block && method.ReturnType != typeof(void))
+                    il.Emit(OpCodes.Pop);
+
+                return true;
             }
 
             // if call is done into byref method parameters there is no indicators in tree, so grab that from method
