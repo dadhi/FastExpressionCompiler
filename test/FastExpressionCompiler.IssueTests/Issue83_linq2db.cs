@@ -318,7 +318,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test, Ignore("todo: fix")]
+        [Test]
         public void linq2db_InvalidProgramException()
         {
             var a1 = Expression.Parameter(typeof(IQueryRunner), "qr");
@@ -369,6 +369,63 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = lambda.CompileFast();
 
             Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
+        }
+
+        [Test]
+        public void TestDoubleConvertSupported()
+        {
+            var lambda = Expression.Lambda<Func<object>>(Expression.Convert(
+                Expression.Convert(
+                    Expression.Constant("aa"),
+                    typeof(object)),
+                typeof(object)));
+
+
+            var compiled1 = lambda.Compile();
+            var compiled2 = lambda.CompileFast(true);
+
+            Assert.AreEqual("aa", compiled1());
+            Assert.AreEqual("aa", compiled2());
+        }
+
+        [Test]
+        public void TestFirstLambda()
+        {
+            var a1 = Expression.Parameter(typeof(IQueryRunner), "qr");
+            var a2 = Expression.Parameter(typeof(IDataContext), "dctx");
+            var a3 = Expression.Parameter(typeof(IDataReader), "rd");
+            var a4 = Expression.Parameter(typeof(Expression), "expr");
+            var a5 = Expression.Parameter(typeof(object[]), "ps");
+
+            var ldr = Expression.Variable(typeof(SQLiteDataReader), "ldr");
+            var mapperBody = Expression.Block(
+                new[] { ldr },
+                Expression.Assign(ldr, Expression.Convert(a3, typeof(SQLiteDataReader))),
+                Expression.Convert(
+                    Expression.Block(
+                        Expression.Call(GetType().GetMethod(nameof(CheckNullValue)), a3, Expression.Constant("Average")),
+                        Expression.Condition(
+                            Expression.Call(ldr, nameof(SQLiteDataReader.IsDBNull), null, Expression.Constant(0)),
+                            Expression.Constant(0d),
+                            Expression.Convert(
+                                Expression.Call(
+                                    GetType().GetMethod(nameof(ConvertDefault)),
+                                    Expression.Convert(
+                                        Expression.Convert(
+                                            Expression.Call(ldr, nameof(SQLiteDataReader.GetValue), null, Expression.Constant(0)),
+                                            typeof(object)),
+                                        typeof(object)),
+                                    Expression.Constant(typeof(double))),
+                                typeof(double)))),
+                    typeof(object)));
+
+            var mapper = Expression.Lambda<Func<IQueryRunner, IDataContext, IDataReader, Expression, object[], object>>(mapperBody, a1, a2, a3, a4, a5);
+
+            var compiled1 = mapper.Compile();
+            var compiled2 = mapper.CompileFast(true);
+
+            Assert.Throws<NullReferenceException>(() => compiled1(null, null, null, null, null));
+            Assert.Throws<NullReferenceException>(() => compiled2(null, null, null, null, null));
         }
     }
 }
