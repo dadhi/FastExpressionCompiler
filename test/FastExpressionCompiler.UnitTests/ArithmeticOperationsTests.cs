@@ -185,7 +185,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(1, multiplyFunc(7, 6));
         }
 
-        [Test, Ignore("Fix all bit operations OR XOR AND")]
+        [Test]
         public void Can_bitor_1()
         {
             Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 | arg2;
@@ -193,7 +193,56 @@ namespace FastExpressionCompiler.UnitTests
             var multiplyFunc = expr.CompileFast(true);
 
             Assert.IsNotNull(multiplyFunc);
+            Assert.AreEqual(1, multiplyFunc(1, 0));
             Assert.AreEqual(1, multiplyFunc(1, 1));
+        }
+
+        [Test]
+        public void Can_bitand_1()
+        {
+            Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 & arg2;
+
+            var multiplyFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(multiplyFunc);
+            Assert.AreEqual(1, multiplyFunc(1, 1));
+            Assert.AreEqual(0, multiplyFunc(1, 0));
+        }
+
+        [Test]
+        public void Can_bitxor_1()
+        {
+            Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 ^ arg2;
+
+            var multiplyFuncO = expr.Compile();
+            var multiplyFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(multiplyFunc);
+            Assert.AreEqual(multiplyFuncO(231, 785), multiplyFunc(231, 785));
+        }
+
+        [Test]
+        public void Can_shift_left_1()
+        {
+            Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 >> arg2;
+
+            var multiplyFuncO = expr.Compile();
+            var multiplyFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(multiplyFunc);
+            Assert.AreEqual(multiplyFuncO(231, 785), multiplyFunc(231, 785));
+        }
+
+        [Test]
+        public void Can_shift_right_1()
+        {
+            Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 << arg2;
+
+            var multiplyFuncO = expr.Compile();
+            var multiplyFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(multiplyFunc);
+            Assert.AreEqual(multiplyFuncO(231, 785), multiplyFunc(231, 785));
         }
 
         [Test]

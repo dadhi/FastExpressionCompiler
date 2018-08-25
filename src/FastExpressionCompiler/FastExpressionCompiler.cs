@@ -3149,6 +3149,31 @@ namespace FastExpressionCompiler
                     case ExpressionType.ModuloAssign:
                         il.Emit(OpCodes.Rem);
                         return true;
+
+                    case ExpressionType.And:
+                    case ExpressionType.AndAssign:
+                        il.Emit(OpCodes.And);
+                        return true;
+
+                    case ExpressionType.Or:
+                    case ExpressionType.OrAssign:
+                        il.Emit(OpCodes.Or);
+                        return true;
+
+                    case ExpressionType.ExclusiveOr:
+                    case ExpressionType.ExclusiveOrAssign:
+                        il.Emit(OpCodes.Xor);
+                        return true;
+
+                    case ExpressionType.LeftShift:
+                    case ExpressionType.LeftShiftAssign:
+                        il.Emit(OpCodes.Shl);
+                        return true;
+
+                    case ExpressionType.RightShift:
+                    case ExpressionType.RightShiftAssign:
+                        il.Emit(OpCodes.Shr);
+                        return true;
                 }
 
                 return false;
@@ -3310,7 +3335,12 @@ namespace FastExpressionCompiler
             || arithmetic == ExpressionType.MultiplyChecked
             || arithmetic == ExpressionType.Divide
             || arithmetic == ExpressionType.Modulo
-            || arithmetic == ExpressionType.Power;
+            || arithmetic == ExpressionType.Power
+            || arithmetic == ExpressionType.And
+            || arithmetic == ExpressionType.Or
+            || arithmetic == ExpressionType.ExclusiveOr
+            || arithmetic == ExpressionType.LeftShift
+            || arithmetic == ExpressionType.RightShift;
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         internal static ExpressionType GetArithmeticAssignOrSelf(ExpressionType arithmetic)
@@ -3326,6 +3356,11 @@ namespace FastExpressionCompiler
                 case ExpressionType.DivideAssign: return ExpressionType.Divide;
                 case ExpressionType.ModuloAssign: return ExpressionType.Modulo;
                 case ExpressionType.PowerAssign: return ExpressionType.Power;
+                case ExpressionType.AndAssign: return ExpressionType.And;
+                case ExpressionType.OrAssign: return ExpressionType.Or;
+                case ExpressionType.ExclusiveOrAssign: return ExpressionType.ExclusiveOr;
+                case ExpressionType.LeftShiftAssign: return ExpressionType.LeftShift;
+                case ExpressionType.RightShiftAssign: return ExpressionType.RightShift;
             }
 
             return arithmetic;
@@ -3348,15 +3383,10 @@ namespace FastExpressionCompiler
 
             if (nodeType.HasValue && (nodeType == ExpressionType.Assign 
                                         || (GetArithmeticAssignOrSelf(nodeType.Value) != nodeType.Value)
-                                        || nodeType == ExpressionType.AndAssign
-                                        || nodeType == ExpressionType.ExclusiveOrAssign
-                                        || nodeType == ExpressionType.LeftShiftAssign
-                                        || nodeType == ExpressionType.OrAssign
                                         || nodeType == ExpressionType.PostDecrementAssign
                                         || nodeType == ExpressionType.PostIncrementAssign
                                         || nodeType == ExpressionType.PreDecrementAssign
-                                        || nodeType == ExpressionType.PreIncrementAssign
-                                        || nodeType == ExpressionType.RightShiftAssign))
+                                        || nodeType == ExpressionType.PreIncrementAssign))
                 return IsByRefParameter(left);
             return false;
         }
