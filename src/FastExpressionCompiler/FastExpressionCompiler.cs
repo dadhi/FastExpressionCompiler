@@ -364,6 +364,10 @@ namespace FastExpressionCompiler
             else
                 return null;
 
+            if (closureInfo.LabelCount > 0)
+                closureInfo.Labels = new KeyValuePair<object, Label>[closureInfo.LabelCount];
+            closureInfo.LabelCount = 0;
+
             var closureType = closureInfo.ClosureType;
             var methodParamTypes = closureType == null ? paramTypes : GetClosureAndParamTypes(paramTypes, closureType);
 
@@ -476,6 +480,10 @@ namespace FastExpressionCompiler
             // Helper to decide whether we are inside the block or not
             public BlockInfo CurrentBlock;
 
+            public int LabelCount;
+            // Dictionary for the used Labels in IL
+            public KeyValuePair<object, Label>[] Labels;
+
             // Populates info directly with provided closure object and constants.
             public ClosureInfo(bool isConstructed, object closure = null, object[] closureConstantExpressions = null)
             {
@@ -484,6 +492,8 @@ namespace FastExpressionCompiler
                 NonPassedParameters = Tools.Empty<object>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 CurrentBlock = BlockInfo.Empty;
+                Labels = null;
+                LabelCount = 0;
 
                 if (closure == null)
                 {
@@ -986,6 +996,17 @@ namespace FastExpressionCompiler
                         ? TryCollectTryExprConstants(ref closure, (TryExpression)exprObj, paramExprs)
                         : TryCollectTryExprInfoConstants(ref closure, (TryExpressionInfo)exprObj, paramExprs);
 
+                case ExpressionType.Label:
+                    closure.LabelCount++;
+                    var defaultValueExpr = ((LabelExpression)exprObj).DefaultValue;
+                    return defaultValueExpr == null
+                           || TryCollectBoundConstants(ref closure, defaultValueExpr, defaultValueExpr.NodeType, paramExprs);
+
+                case ExpressionType.Goto:
+                    var gotoValueExpr = ((GotoExpression)exprObj).Value;
+                    return gotoValueExpr == null
+                           || TryCollectBoundConstants(ref closure, gotoValueExpr, gotoValueExpr.NodeType, paramExprs);
+
                 case ExpressionType.Default:
                     return true;
 
@@ -1273,7 +1294,7 @@ namespace FastExpressionCompiler
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "Equals");
 
             public static bool TryEmit(object exprObj, ExpressionType exprNodeType, Type exprType,
-                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, int byRefIndex = -1)
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent,  int byRefIndex = -1)
             {
                 switch (exprNodeType)
                 {
@@ -1346,9 +1367,56 @@ namespace FastExpressionCompiler
                     case ExpressionType.Index:
                         return TryEmitIndex((IndexExpression)exprObj, exprType, paramExprs, il, ref closure);
 
+                    case ExpressionType.Goto:
+                        return TryEmitGoto((GotoExpression)exprObj, exprType, paramExprs, il, ref closure);
+
+                    case ExpressionType.Label:
+                        return TryEmitLabel((LabelExpression)exprObj, exprType, paramExprs, il, ref closure);
+
                     default:
                         return false;
                 }
+            }
+
+            private static bool TryEmitLabel(LabelExpression exprObj, Type elemType,
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
+            {
+                var lbl = closure.Labels.FirstOrDefault(x => x.Key == exprObj.Target);
+                if (lbl.Key != exprObj.Target)
+                {
+                    lbl = new KeyValuePair<object, Label>(exprObj.Target, il.DefineLabel());
+                    closure.Labels[closure.LabelCount++] = lbl;
+                }
+                il.MarkLabel(lbl.Value);
+
+                if (exprObj.DefaultValue != null && !TryEmit(exprObj.DefaultValue, exprObj.DefaultValue.NodeType, exprObj.DefaultValue.Type, paramExprs, il, ref closure, ExpressionType.Label))
+                    return false;
+                return true;
+            }
+
+            private static bool TryEmitGoto(GotoExpression exprObj, Type elemType,
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure) //todo : GotoExpression.Value 
+            {
+                if (closure.Labels == null)
+                    throw new InvalidOperationException("cannot jump, no labels found");
+
+                var lbl = closure.Labels.FirstOrDefault(x => x.Key == exprObj.Target);
+                if (lbl.Key != exprObj.Target)
+                {
+                    if(closure.Labels.Length == closure.LabelCount - 1)
+                        throw new InvalidOperationException("Cannot jump, not all labels found");
+
+                    lbl = new KeyValuePair<object, Label>(exprObj.Target, il.DefineLabel());
+                    closure.Labels[closure.LabelCount++] = lbl;
+                }
+
+                if (exprObj.Kind == GotoExpressionKind.Goto)
+                {
+                    il.Emit(OpCodes.Br, lbl.Value);
+                    return true;
+                }
+
+                return false;
             }
 
             private static bool TryEmitIndex(IndexExpression exprObj, Type elemType,
@@ -1815,6 +1883,13 @@ namespace FastExpressionCompiler
 
                 if (targetType == typeof(object))
                 {
+                    var nullableType = Nullable.GetUnderlyingType(sourceType);
+                    if (nullableType != null)
+                    {
+                        il.Emit(OpCodes.Newobj, sourceType.GetTypeInfo().DeclaredConstructors.First());
+                        il.Emit(OpCodes.Box, sourceType);
+                        return true;
+                    }
                     // for value type to object, just box a value, otherwise do nothing - everything is object anyway
                     if (sourceType.GetTypeInfo().IsValueType)
                         il.Emit(OpCodes.Box, sourceType);

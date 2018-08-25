@@ -281,7 +281,6 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        [Ignore("Test kills test runner process")]
         public void AccessViolationException_on_nullable_char_convert_to_object()
         {
             var body = Expression.Convert(
