@@ -2062,6 +2062,17 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldtoken, (Type)constantValue);
                         il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
                     }
+                    else if (constantType == typeof(IntPtr))
+                    {
+                        il.Emit(OpCodes.Ldc_I8, ((IntPtr)constantValue).ToInt64());
+                    }
+                    else if (constantType == typeof(UIntPtr))
+                    {
+                        unchecked
+                        {
+                            il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)constantValue).ToUInt64());
+                        }
+                    }
                     else return false;
                 }
 
