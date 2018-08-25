@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq.Expressions;
 using NUnit.Framework;
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.IssueTests
 {
@@ -25,6 +27,16 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Expression.Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
             Assert.NotNull(fastCompiled);
+        }
+
+        [Test]
+        public void UnkownLabelShouldThrow()
+        {
+            var lambda = Expression.Lambda(
+                Expression.Return(Expression.Label(), Expression.Constant(1)));
+
+            Assert.Throws<InvalidOperationException>(() => lambda.Compile());
+            Assert.Throws<InvalidOperationException>(() => lambda.CompileFast(true));
         }
     }
 }

@@ -996,14 +996,18 @@ namespace FastExpressionCompiler
                         ? TryCollectTryExprConstants(ref closure, (TryExpression)exprObj, paramExprs)
                         : TryCollectTryExprInfoConstants(ref closure, (TryExpressionInfo)exprObj, paramExprs);
 
-                case ExpressionType.Default:
-                    return true;
-
                 case ExpressionType.Label:
                     closure.LabelCount++;
-                    return true;
+                    var defaultValueExpr = ((LabelExpression)exprObj).DefaultValue;
+                    return defaultValueExpr == null
+                           || TryCollectBoundConstants(ref closure, defaultValueExpr, defaultValueExpr.NodeType, paramExprs);
 
                 case ExpressionType.Goto:
+                    var gotoValueExpr = ((GotoExpression)exprObj).Value;
+                    return gotoValueExpr == null
+                           || TryCollectBoundConstants(ref closure, gotoValueExpr, gotoValueExpr.NodeType, paramExprs);
+
+                case ExpressionType.Default:
                     return true;
 
                 default:
@@ -1393,9 +1397,15 @@ namespace FastExpressionCompiler
             private static bool TryEmitGoto(GotoExpression exprObj, Type elemType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure) //todo : GotoExpression.Value 
             {
+                if (closure.Labels == null)
+                    throw new InvalidOperationException("cannot jump, no labels found");
+
                 var lbl = closure.Labels.FirstOrDefault(x => x.Key == exprObj.Target);
                 if (lbl.Key != exprObj.Target)
                 {
+                    if(closure.Labels.Length == closure.LabelCount - 1)
+                        throw new InvalidOperationException("Cannot jump, not all labels found");
+
                     lbl = new KeyValuePair<object, Label>(exprObj.Target, il.DefineLabel());
                     closure.Labels[closure.LabelCount++] = lbl;
                 }

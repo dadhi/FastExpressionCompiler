@@ -131,7 +131,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(string.Concat(s, "ccc"), dlg());
         }
 
-        [Test]
+        [Test, Ignore("Return & Label are now supported")]
         public void CompileFast_should_return_null_when_option_is_set_and_expression_type_is_not_supported()
         {
             Assert.IsNull(Lambda(
