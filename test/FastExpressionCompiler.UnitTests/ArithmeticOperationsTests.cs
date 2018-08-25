@@ -174,7 +174,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(new BigInteger(1), multiplyFunc(7, 6));
         }
 
-        [Test, Ignore("Fix it")]
+        [Test]
         public void Can_modulus()
         {
             Expression<Func<short, short, long>> expr = (arg1, arg2) => arg1 % arg2;

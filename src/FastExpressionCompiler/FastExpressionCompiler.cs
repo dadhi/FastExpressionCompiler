@@ -3144,6 +3144,11 @@ namespace FastExpressionCompiler
                     case ExpressionType.DivideAssign:
                         il.Emit(OpCodes.Div);
                         return true;
+
+                    case ExpressionType.Modulo:
+                    case ExpressionType.ModuloAssign:
+                        il.Emit(OpCodes.Rem);
+                        return true;
                 }
 
                 return false;
