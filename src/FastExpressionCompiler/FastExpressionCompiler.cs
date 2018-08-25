@@ -305,7 +305,9 @@ namespace FastExpressionCompiler
         public static TDelegate TryCompile<TDelegate>(this LambdaExpressionInfo lambdaExpr)
             where TDelegate : class =>
             TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters,
-                Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.Body.GetResultType());
+                Tools.GetParamExprTypes(lambdaExpr.Parameters), 
+                lambdaExpr.Type.GetTypeInfo().GetDeclaredMethod("Invoke").ReturnType,
+                lambdaExpr.Body.GetNonRefResultType());
 
         /// <summary>Tries to compile lambda expression info.</summary>
         public static Delegate TryCompile(this LambdaExpressionInfo lambdaExpr) =>
@@ -349,6 +351,17 @@ namespace FastExpressionCompiler
             var ignored = new ClosureInfo(false);
             return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
                 paramTypes, returnType, bodyExpr, bodyExpr.GetNodeType(), returnType, paramExprs);
+        }
+
+        /// <summary>Compiles expression to delegate by emitting the IL. 
+        /// If sub-expressions are not supported by emitter, then the method returns null.
+        /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
+        public static TDelegate TryCompile<TDelegate>(
+            object bodyExpr, object[] paramExprs, Type[] paramTypes, Type returnType, Type exprType) where TDelegate : class
+        {
+            var ignored = new ClosureInfo(false);
+            return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
+                paramTypes, returnType, bodyExpr, bodyExpr.GetNodeType(), exprType, paramExprs);
         }
 
         private static object TryCompile(ref ClosureInfo closureInfo,
@@ -3075,7 +3088,9 @@ namespace FastExpressionCompiler
                 if (!EmitBinary(exprObj, paramExprs, il, ref closure, exprNodeType))
                     return false;
 
+
                 var exprTypeInfo = exprType.GetTypeInfo();
+
                 if (!exprTypeInfo.IsPrimitive)
                 {
                     var methodName
@@ -3352,6 +3367,12 @@ namespace FastExpressionCompiler
         public static Type GetResultType(this object exprObj) =>
             (exprObj as Expression)?.Type ?? ((ExpressionInfo)exprObj).Type;
 
+        public static Type GetNonRefResultType(this object exprObj)
+        {
+            var rType = exprObj.GetResultType();
+            return rType.IsByRef ? rType.GetElementType() : rType;
+        }
+
         public static T[] AsArray<T>(this IEnumerable<T> xs) => xs as T[] ?? xs.ToArray();
 
         private static class EmptyArray<T>
@@ -3401,11 +3422,24 @@ namespace FastExpressionCompiler
                 return Empty<Type>();
 
             if (paramExprs.Count == 1)
-                return new[] { paramExprs[0].GetResultType() };
+            {
+                if (paramExprs[0] is ParameterExpression parExpr)
+                    return new[] {parExpr.Type};
+                var ei = ((ParameterExpressionInfo)paramExprs[0]);
+                return new[] {ei.IsByRef ? ei.Type.MakeByRefType() : ei.Type};
+            }
 
             var paramTypes = new Type[paramExprs.Count];
             for (var i = 0; i < paramTypes.Length; i++)
-                paramTypes[i] = paramExprs[i].GetResultType();
+            {
+                if (paramExprs[i] is ParameterExpression parExpr)
+                    paramTypes[i] = parExpr.Type;
+                else
+                {
+                    var ei = ((ParameterExpressionInfo)paramExprs[i]);
+                    paramTypes[i] = ei.IsByRef ? ei.Type.MakeByRefType() : ei.Type;
+                }
+            }
             return paramTypes;
         }
 
@@ -3522,7 +3556,7 @@ namespace FastExpressionCompiler
         /// <summary>Analog of Expression.Parameter</summary>
         /// <remarks>For now it is return just an `Expression.Parameter`</remarks>
         public static ParameterExpressionInfo Parameter(Type type, string name = null) =>
-            new ParameterExpressionInfo(type, name, false); // TODO: #46
+            new ParameterExpressionInfo(type.IsByRef ? type.GetElementType() : type, name, type.IsByRef);
 
         /// <summary>Analog of Expression.Constant</summary>
         public static ConstantExpressionInfo Constant(object value, Type type = null) =>
@@ -3825,12 +3859,6 @@ namespace FastExpressionCompiler
             Type = type;
             Name = name;
             IsByRef = isByRef;
-        }
-
-        public ParameterExpressionInfo(ParameterExpression paramExpr)
-            : this(paramExpr.Type, paramExpr.Name, paramExpr.IsByRef)
-        {
-            _parameter = paramExpr;
         }
 
         private ParameterExpression _parameter;
