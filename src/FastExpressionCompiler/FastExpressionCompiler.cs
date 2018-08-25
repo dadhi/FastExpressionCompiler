@@ -1330,7 +1330,8 @@ namespace FastExpressionCompiler
                     case ExpressionType.Equal:
                     case ExpressionType.NotEqual:
                         return TryEmitComparison(exprObj, exprNodeType, paramExprs, il, ref closure);
-
+                    case ExpressionType.Power:
+                        return TryEmitPowerOperation(exprObj, exprType, exprNodeType, paramExprs, il, ref closure);
                     case ExpressionType arithmetic when Tools.IsArithmetic(arithmetic):
                         return TryEmitArithmeticOperation(exprObj, exprType, exprNodeType, paramExprs, il, ref closure);
 
@@ -3052,6 +3053,16 @@ namespace FastExpressionCompiler
                 return false;
             }
 
+            private static bool TryEmitPowerOperation(object exprObj, Type exprType, ExpressionType exprNodeType,
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
+            {
+                if (!EmitBinary(exprObj, paramExprs, il, ref closure, exprNodeType))
+                    return false;
+
+                 var method = typeof(Math).GetTypeInfo().GetDeclaredMethod("Pow");
+                    return EmitMethodCall(il, method);
+            }
+
             private static bool TryEmitArithmeticOperation(object exprObj, Type exprType, ExpressionType exprNodeType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
@@ -3272,7 +3283,8 @@ namespace FastExpressionCompiler
             || arithmetic == ExpressionType.Multiply
             || arithmetic == ExpressionType.MultiplyChecked
             || arithmetic == ExpressionType.Divide
-            || arithmetic == ExpressionType.Modulo;
+            || arithmetic == ExpressionType.Modulo
+            || arithmetic == ExpressionType.Power;
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         internal static ExpressionType GetArithmeticAssignOrSelf(ExpressionType arithmetic)
@@ -3287,6 +3299,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.MultiplyAssignChecked: return ExpressionType.MultiplyChecked;
                 case ExpressionType.DivideAssign: return ExpressionType.Divide;
                 case ExpressionType.ModuloAssign: return ExpressionType.Modulo;
+                case ExpressionType.PowerAssign: return ExpressionType.Power;
             }
 
             return arithmetic;
@@ -3315,7 +3328,6 @@ namespace FastExpressionCompiler
                                         || nodeType == ExpressionType.OrAssign
                                         || nodeType == ExpressionType.PostDecrementAssign
                                         || nodeType == ExpressionType.PostIncrementAssign
-                                        || nodeType == ExpressionType.PowerAssign
                                         || nodeType == ExpressionType.PreDecrementAssign
                                         || nodeType == ExpressionType.PreIncrementAssign
                                         || nodeType == ExpressionType.RightShiftAssign))
