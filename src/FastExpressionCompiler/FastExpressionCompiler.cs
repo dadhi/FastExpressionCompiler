@@ -305,7 +305,9 @@ namespace FastExpressionCompiler
         public static TDelegate TryCompile<TDelegate>(this LambdaExpressionInfo lambdaExpr)
             where TDelegate : class =>
             TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters,
-                Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.Body.GetResultType());
+                Tools.GetParamExprTypes(lambdaExpr.Parameters), 
+                lambdaExpr.Type.GetTypeInfo().GetDeclaredMethod("Invoke").ReturnType,
+                lambdaExpr.Body.GetNonRefResultType());
 
         /// <summary>Tries to compile lambda expression info.</summary>
         public static Delegate TryCompile(this LambdaExpressionInfo lambdaExpr) =>
@@ -349,6 +351,17 @@ namespace FastExpressionCompiler
             var ignored = new ClosureInfo(false);
             return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
                 paramTypes, returnType, bodyExpr, bodyExpr.GetNodeType(), returnType, paramExprs);
+        }
+
+        /// <summary>Compiles expression to delegate by emitting the IL. 
+        /// If sub-expressions are not supported by emitter, then the method returns null.
+        /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
+        public static TDelegate TryCompile<TDelegate>(
+            object bodyExpr, object[] paramExprs, Type[] paramTypes, Type returnType, Type exprType) where TDelegate : class
+        {
+            var ignored = new ClosureInfo(false);
+            return (TDelegate)TryCompile(ref ignored, typeof(TDelegate),
+                paramTypes, returnType, bodyExpr, bodyExpr.GetNodeType(), exprType, paramExprs);
         }
 
         private static object TryCompile(ref ClosureInfo closureInfo,
@@ -2049,6 +2062,17 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldtoken, (Type)constantValue);
                         il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
                     }
+                    else if (constantType == typeof(IntPtr))
+                    {
+                        il.Emit(OpCodes.Ldc_I8, ((IntPtr)constantValue).ToInt64());
+                    }
+                    else if (constantType == typeof(UIntPtr))
+                    {
+                        unchecked
+                        {
+                            il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)constantValue).ToUInt64());
+                        }
+                    }
                     else return false;
                 }
 
@@ -3075,7 +3099,9 @@ namespace FastExpressionCompiler
                 if (!EmitBinary(exprObj, paramExprs, il, ref closure, exprNodeType))
                     return false;
 
+
                 var exprTypeInfo = exprType.GetTypeInfo();
+
                 if (!exprTypeInfo.IsPrimitive)
                 {
                     var methodName
@@ -3128,6 +3154,36 @@ namespace FastExpressionCompiler
                     case ExpressionType.Divide:
                     case ExpressionType.DivideAssign:
                         il.Emit(OpCodes.Div);
+                        return true;
+
+                    case ExpressionType.Modulo:
+                    case ExpressionType.ModuloAssign:
+                        il.Emit(OpCodes.Rem);
+                        return true;
+
+                    case ExpressionType.And:
+                    case ExpressionType.AndAssign:
+                        il.Emit(OpCodes.And);
+                        return true;
+
+                    case ExpressionType.Or:
+                    case ExpressionType.OrAssign:
+                        il.Emit(OpCodes.Or);
+                        return true;
+
+                    case ExpressionType.ExclusiveOr:
+                    case ExpressionType.ExclusiveOrAssign:
+                        il.Emit(OpCodes.Xor);
+                        return true;
+
+                    case ExpressionType.LeftShift:
+                    case ExpressionType.LeftShiftAssign:
+                        il.Emit(OpCodes.Shl);
+                        return true;
+
+                    case ExpressionType.RightShift:
+                    case ExpressionType.RightShiftAssign:
+                        il.Emit(OpCodes.Shr);
                         return true;
                 }
 
@@ -3290,7 +3346,12 @@ namespace FastExpressionCompiler
             || arithmetic == ExpressionType.MultiplyChecked
             || arithmetic == ExpressionType.Divide
             || arithmetic == ExpressionType.Modulo
-            || arithmetic == ExpressionType.Power;
+            || arithmetic == ExpressionType.Power
+            || arithmetic == ExpressionType.And
+            || arithmetic == ExpressionType.Or
+            || arithmetic == ExpressionType.ExclusiveOr
+            || arithmetic == ExpressionType.LeftShift
+            || arithmetic == ExpressionType.RightShift;
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         internal static ExpressionType GetArithmeticAssignOrSelf(ExpressionType arithmetic)
@@ -3306,6 +3367,11 @@ namespace FastExpressionCompiler
                 case ExpressionType.DivideAssign: return ExpressionType.Divide;
                 case ExpressionType.ModuloAssign: return ExpressionType.Modulo;
                 case ExpressionType.PowerAssign: return ExpressionType.Power;
+                case ExpressionType.AndAssign: return ExpressionType.And;
+                case ExpressionType.OrAssign: return ExpressionType.Or;
+                case ExpressionType.ExclusiveOrAssign: return ExpressionType.ExclusiveOr;
+                case ExpressionType.LeftShiftAssign: return ExpressionType.LeftShift;
+                case ExpressionType.RightShiftAssign: return ExpressionType.RightShift;
             }
 
             return arithmetic;
@@ -3328,15 +3394,10 @@ namespace FastExpressionCompiler
 
             if (nodeType.HasValue && (nodeType == ExpressionType.Assign 
                                         || (GetArithmeticAssignOrSelf(nodeType.Value) != nodeType.Value)
-                                        || nodeType == ExpressionType.AndAssign
-                                        || nodeType == ExpressionType.ExclusiveOrAssign
-                                        || nodeType == ExpressionType.LeftShiftAssign
-                                        || nodeType == ExpressionType.OrAssign
                                         || nodeType == ExpressionType.PostDecrementAssign
                                         || nodeType == ExpressionType.PostIncrementAssign
                                         || nodeType == ExpressionType.PreDecrementAssign
-                                        || nodeType == ExpressionType.PreIncrementAssign
-                                        || nodeType == ExpressionType.RightShiftAssign))
+                                        || nodeType == ExpressionType.PreIncrementAssign))
                 return IsByRefParameter(left);
             return false;
         }
@@ -3351,6 +3412,12 @@ namespace FastExpressionCompiler
 
         public static Type GetResultType(this object exprObj) =>
             (exprObj as Expression)?.Type ?? ((ExpressionInfo)exprObj).Type;
+
+        public static Type GetNonRefResultType(this object exprObj)
+        {
+            var rType = exprObj.GetResultType();
+            return rType.IsByRef ? rType.GetElementType() : rType;
+        }
 
         public static T[] AsArray<T>(this IEnumerable<T> xs) => xs as T[] ?? xs.ToArray();
 
@@ -3401,11 +3468,24 @@ namespace FastExpressionCompiler
                 return Empty<Type>();
 
             if (paramExprs.Count == 1)
-                return new[] { paramExprs[0].GetResultType() };
+            {
+                if (paramExprs[0] is ParameterExpression parExpr)
+                    return new[] {parExpr.Type};
+                var ei = ((ParameterExpressionInfo)paramExprs[0]);
+                return new[] {ei.IsByRef ? ei.Type.MakeByRefType() : ei.Type};
+            }
 
             var paramTypes = new Type[paramExprs.Count];
             for (var i = 0; i < paramTypes.Length; i++)
-                paramTypes[i] = paramExprs[i].GetResultType();
+            {
+                if (paramExprs[i] is ParameterExpression parExpr)
+                    paramTypes[i] = parExpr.Type;
+                else
+                {
+                    var ei = ((ParameterExpressionInfo)paramExprs[i]);
+                    paramTypes[i] = ei.IsByRef ? ei.Type.MakeByRefType() : ei.Type;
+                }
+            }
             return paramTypes;
         }
 
@@ -3522,7 +3602,7 @@ namespace FastExpressionCompiler
         /// <summary>Analog of Expression.Parameter</summary>
         /// <remarks>For now it is return just an `Expression.Parameter`</remarks>
         public static ParameterExpressionInfo Parameter(Type type, string name = null) =>
-            new ParameterExpressionInfo(type, name, false); // TODO: #46
+            new ParameterExpressionInfo(type.IsByRef ? type.GetElementType() : type, name, type.IsByRef);
 
         /// <summary>Analog of Expression.Constant</summary>
         public static ConstantExpressionInfo Constant(object value, Type type = null) =>
@@ -3825,12 +3905,6 @@ namespace FastExpressionCompiler
             Type = type;
             Name = name;
             IsByRef = isByRef;
-        }
-
-        public ParameterExpressionInfo(ParameterExpression paramExpr)
-            : this(paramExpr.Type, paramExpr.Name, paramExpr.IsByRef)
-        {
-            _parameter = paramExpr;
         }
 
         private ParameterExpression _parameter;
