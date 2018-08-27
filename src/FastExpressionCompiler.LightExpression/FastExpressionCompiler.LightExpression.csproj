@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <VersionPrefix>1.0.0-preview-01</VersionPrefix>
+        <TargetFrameworks>net45;netstandard1.3</TargetFrameworks>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <AssemblyName>FastExpressionCompiler.LightExpression</AssemblyName>
+        <Product>FastExpressionCompiler.LightExpression</Product>
+        <Authors>Maksim Volkau</Authors>
+        <Copyright>Copyright © 2018 Maksim Volkau</Copyright>
+        <NeutralLanguage>en-US</NeutralLanguage>
+        <Title>FastExpressionCompiler.LightExpression</Title>
+        <Summary>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Summary>
+        <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
+        <PackageId>FastExpressionCompiler</PackageId>
+        <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
+        <PackageReleaseNotes>
+            v1.0.0
+            - added: First release
+        </PackageReleaseNotes>
+        <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
+        <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+    </PropertyGroup>
+
+</Project>
