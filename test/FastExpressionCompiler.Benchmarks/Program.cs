@@ -8,14 +8,16 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
+            BenchmarkRunner.Run<MultipleNestedLambdaExprVsExprSharing>();
+
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Compile>();
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Execute>();
 
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Compile>();
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Execute>();
-            BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
+            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
             //BenchmarkRunner.Run<StaticTypeOfSwitch>();
-        
+
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Compilation>();
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Invocation>();
 
