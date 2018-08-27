@@ -8,6 +8,8 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
+            BenchmarkRunner.Run<MultipleNestedLambdaExprVsExprSharing>();
+
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Compile>();
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Execute>();
 
