@@ -460,7 +460,7 @@ namespace FastExpressionCompiler
             }
         }
 
-        // todo: Consolidate together with IL, ParamObjects and parent ExperssionType into single context passed with TryEmit methods
+        // todo: Consolidate together with IL, ParamObjects and parent ExpressionType into single context passed with TryEmit methods
         // Track the info required to build a closure object + some context information not directly related to closure.
         private struct ClosureInfo
         {
@@ -1344,7 +1344,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.NotEqual:
                         return TryEmitComparison(exprObj, exprNodeType, paramExprs, il, ref closure);
                     case ExpressionType.Power:
-                        return TryEmitPowerOperation(exprObj, exprType, exprNodeType, paramExprs, il, ref closure);
+                        return TryEmitPowerOperation(exprObj, exprNodeType, paramExprs, il, ref closure);
                     case ExpressionType arithmetic when Tools.IsArithmetic(arithmetic):
                         return TryEmitArithmeticOperation(exprObj, exprType, exprNodeType, paramExprs, il, ref closure);
 
@@ -1382,17 +1382,17 @@ namespace FastExpressionCompiler
                         return TryEmitIndex((IndexExpression)exprObj, exprType, paramExprs, il, ref closure);
 
                     case ExpressionType.Goto:
-                        return TryEmitGoto((GotoExpression)exprObj, exprType, paramExprs, il, ref closure);
+                        return TryEmitGoto((GotoExpression)exprObj, il, ref closure);
 
                     case ExpressionType.Label:
-                        return TryEmitLabel((LabelExpression)exprObj, exprType, paramExprs, il, ref closure);
+                        return TryEmitLabel((LabelExpression)exprObj, paramExprs, il, ref closure);
 
                     default:
                         return false;
                 }
             }
 
-            private static bool TryEmitLabel(LabelExpression exprObj, Type elemType,
+            private static bool TryEmitLabel(LabelExpression exprObj,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
                 var lbl = closure.Labels.FirstOrDefault(x => x.Key == exprObj.Target);
@@ -1401,27 +1401,29 @@ namespace FastExpressionCompiler
                     lbl = new KeyValuePair<object, Label>(exprObj.Target, il.DefineLabel());
                     closure.Labels[closure.LabelCount++] = lbl;
                 }
+
                 il.MarkLabel(lbl.Value);
 
-                if (exprObj.DefaultValue != null && !TryEmit(exprObj.DefaultValue, exprObj.DefaultValue.NodeType, exprObj.DefaultValue.Type, paramExprs, il, ref closure, ExpressionType.Label))
-                    return false;
-                return true;
+                var defaultVal = exprObj.DefaultValue;
+                return defaultVal == null
+                    || TryEmit(defaultVal, defaultVal.NodeType, defaultVal.Type, paramExprs, il, ref closure, ExpressionType.Label);
             }
 
-            private static bool TryEmitGoto(GotoExpression exprObj, Type elemType,
-                object[] paramExprs, ILGenerator il, ref ClosureInfo closure) //todo : GotoExpression.Value 
+            // todo : GotoExpression.Value 
+            private static bool TryEmitGoto(GotoExpression exprObj, ILGenerator il, ref ClosureInfo closure)
             {
-                if (closure.Labels == null)
-                    throw new InvalidOperationException("cannot jump, no labels found");
+                var labels = closure.Labels;
+                if (labels == null)
+                    throw new InvalidOperationException("Cannot jump, no labels found");
 
-                var lbl = closure.Labels.FirstOrDefault(x => x.Key == exprObj.Target);
+                var lbl = labels.FirstOrDefault(x => x.Key == exprObj.Target);
                 if (lbl.Key != exprObj.Target)
                 {
-                    if(closure.Labels.Length == closure.LabelCount - 1)
+                    if(labels.Length == closure.LabelCount - 1)
                         throw new InvalidOperationException("Cannot jump, not all labels found");
 
                     lbl = new KeyValuePair<object, Label>(exprObj.Target, il.DefineLabel());
-                    closure.Labels[closure.LabelCount++] = lbl;
+                    labels[closure.LabelCount++] = lbl;
                 }
 
                 if (exprObj.Kind == GotoExpressionKind.Goto)
@@ -2791,6 +2793,7 @@ namespace FastExpressionCompiler
             private static MethodInfo TryGetPropertyGetMethod(PropertyInfo prop) => 
                 prop.DeclaringType.GetTypeInfo().GetDeclaredMethod("get_" + prop.Name);
 
+            // ReSharper disable once FunctionComplexityOverflow
             private static bool TryEmitNestedLambda(object lambdaExpr,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
@@ -3083,22 +3086,16 @@ namespace FastExpressionCompiler
                 return false;
             }
 
-            private static bool TryEmitPowerOperation(object exprObj, Type exprType, ExpressionType exprNodeType,
-                object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
-            {
-                if (!EmitBinary(exprObj, paramExprs, il, ref closure, exprNodeType))
-                    return false;
-
-                 var method = typeof(Math).GetTypeInfo().GetDeclaredMethod("Pow");
-                    return EmitMethodCall(il, method);
-            }
+            private static bool TryEmitPowerOperation(object exprObj, ExpressionType exprNodeType,
+                object[] paramExprs, ILGenerator il, ref ClosureInfo closure) => 
+                EmitBinary(exprObj, paramExprs, il, ref closure, exprNodeType) && 
+                EmitMethodCall(il, typeof(Math).GetTypeInfo().GetDeclaredMethod("Pow"));
 
             private static bool TryEmitArithmeticOperation(object exprObj, Type exprType, ExpressionType exprNodeType,
                 object[] paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
                 if (!EmitBinary(exprObj, paramExprs, il, ref closure, exprNodeType))
                     return false;
-
 
                 var exprTypeInfo = exprType.GetTypeInfo();
 
@@ -3329,10 +3326,7 @@ namespace FastExpressionCompiler
                 return blockInfo.Expressions[blockInfo.Expressions.Length - 1];
 
             var block = exprObj as BlockExpression;
-            if (block != null)
-                return block.Expressions[block.Expressions.Count - 1];
-
-            return null;
+            return block?.Expressions[block.Expressions.Count - 1];
         }
 
         //TODO: test what is faster? Copy and inline switch? Switch in method? Ors in method?

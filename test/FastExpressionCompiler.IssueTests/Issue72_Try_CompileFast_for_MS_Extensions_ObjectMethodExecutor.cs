@@ -79,7 +79,6 @@ namespace FastExpressionCompiler.IssueTests
         // - I have also tried to replace all `struct` in ObjectMethodExecutor and helpers with `class` with no success
         //
         [Test]
-        //[Ignore("FIX ME!")]
         public async Task AsyncExecutor_CompiledFast_ExecuteAsync_WithAwait()
         {
             await _execCompiledFast.ExecuteAsync(this, _parameters);

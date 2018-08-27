@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq.Expressions;
 using NUnit.Framework;
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.IssueTests
@@ -11,29 +9,32 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void BlockWithGotoIsSupported()
         {
-            LabelTarget returnTarget = Expression.Label("aaa");
+            var returnTarget = Label("aaa");
 
-            BlockExpression blockExpr =
-                Expression.Block(
-                    Expression.Call(typeof(Console).GetMethod("WriteLine", new[] {typeof(string)}),
-                        Expression.Constant("GoTo")),
-                    Expression.Goto(returnTarget),
-                    Expression.Call(typeof(Console).GetMethod("WriteLine", new[] {typeof(string)}),
-                        Expression.Constant("Other Work")),
-                    Expression.Label(returnTarget),
-                    Expression.Constant(7)
+            var writeLineMethod = typeof(Console).GetMethod("WriteLine", new[] { typeof(string) });
+            Assert.IsNotNull(writeLineMethod);
+
+            var blockExpr =
+                Block(
+                    Call(writeLineMethod,
+                        Constant("GoTo")),
+                    Goto(returnTarget),
+                    Call(writeLineMethod,
+                        Constant("Other Work")),
+                    Label(returnTarget),
+                    Constant(7)
                 );
 
-            var lambda = Expression.Lambda<Func<int>>(blockExpr);
+            var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
             Assert.NotNull(fastCompiled);
         }
 
         [Test]
-        public void UnkownLabelShouldThrow()
+        public void UnknownLabelShouldThrow()
         {
-            var lambda = Expression.Lambda(
-                Expression.Return(Expression.Label(), Expression.Constant(1)));
+            var lambda = Lambda(
+                Return(Label(), Constant(1)));
 
             Assert.Throws<InvalidOperationException>(() => lambda.Compile());
             Assert.Throws<InvalidOperationException>(() => lambda.CompileFast(true));

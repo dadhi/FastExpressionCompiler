@@ -5,6 +5,8 @@ using System.Numerics;
 using System.Reflection;
 using NUnit.Framework;
 using static System.Linq.Expressions.Expression;
+#pragma warning disable 649
+#pragma warning disable 219
 
 namespace FastExpressionCompiler.IssueTests
 {

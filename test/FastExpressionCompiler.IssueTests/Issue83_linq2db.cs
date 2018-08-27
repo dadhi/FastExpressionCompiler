@@ -4,6 +4,8 @@ using System.Linq.Expressions;
 using System.Threading;
 using NUnit.Framework;
 
+#pragma warning disable IDE1006 // Naming Styles for linq2db
+
 namespace FastExpressionCompiler.IssueTests
 {
     [TestFixture]
