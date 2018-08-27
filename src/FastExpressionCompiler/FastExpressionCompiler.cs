@@ -3012,10 +3012,56 @@ namespace FastExpressionCompiler
                     rightOpType = exprInfo.Right.GetResultType();
                 }
 
-                if (leftOpType != rightOpType || leftOpType.IsNullable())
+                if (leftOpType != rightOpType || leftOpType.IsNullable() && !rightOpType.IsNullable() || !leftOpType.IsNullable() && rightOpType.IsNullable())
                     return false;
 
+                Label? nullLbl = null;
+                if (leftOpType.IsNullable())
+                {
+                    nullLbl =  il.DefineLabel();
+                    var rVar = il.DeclareLocal(rightOpType);
+                    il.Emit(OpCodes.Stloc, rVar);
+                    var lVar = il.DeclareLocal(leftOpType);
+                    il.Emit(OpCodes.Dup);
+                    il.Emit(OpCodes.Stloc, lVar);
+                    var mth = leftOpType.GetTypeInfo().GetDeclaredMethod("get_HasValue");
+                    if (!EmitMethodCall(il, mth))
+                        return false;
+                    il.Emit(OpCodes.Dup); // duplicate first HasValue result, so it's still available later
+                    il.Emit(OpCodes.Ldloc, rVar);
+                    if (!EmitMethodCall(il, mth))
+                        return false;
+                    il.Emit(OpCodes.Ceq);
+                    //il.Emit(OpCodes.Dup); // duplicate compare result
+                    if (exprNodeType == ExpressionType.Equal)
+                        il.Emit(OpCodes.Brfalse_S, nullLbl.Value); // check hasvalue is equal
+                    //else if (exprNodeType == ExpressionType.NotEqual)
+                    //    il.Emit(OpCodes.Brfalse_S, nullLbl.Value); // check hasvalue is equal
+                    else
+                        return false;
+                    //il.Emit(OpCodes.Pop); // remove duplicated compare result, now has value duplication is again on the stack
+                    if (exprNodeType == ExpressionType.Equal)
+                    {
+                        il.Emit(OpCodes.Brfalse_S, nullLbl.Value); // check one hasvalue is true
+                    }
+                    else
+                        return false;
+
+                    var mthValue = leftOpType.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault")
+                        .First(x => x.GetParameters().Length == 0);
+                    il.Emit(OpCodes.Ldloc, lVar);
+                    if (!EmitMethodCall(il, mthValue))
+                        return false;
+
+                    il.Emit(OpCodes.Ldloc, rVar);
+                    if (!EmitMethodCall(il, mthValue))
+                        return false;
+
+                    leftOpType = Nullable.GetUnderlyingType(leftOpType);
+                }
+
                 var leftOpTypeInfo = leftOpType.GetTypeInfo();
+
                 if (!leftOpTypeInfo.IsPrimitive && !leftOpTypeInfo.IsEnum)
                 {
                     var methodName
@@ -3047,6 +3093,14 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ceq);
                     }
 
+                    if (nullLbl.HasValue)
+                    {
+                        var end = il.DefineLabel();
+                        il.Emit(OpCodes.Br_S, end);
+                        il.MarkLabel(nullLbl.Value);
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.MarkLabel(end);
+                    }
                     return true;
                 }
 
@@ -3055,35 +3109,48 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Equal:
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
 
                     case ExpressionType.NotEqual:
                         il.Emit(OpCodes.Ceq);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
 
                     case ExpressionType.LessThan:
                         il.Emit(OpCodes.Clt);
-                        return true;
+                        break;
 
                     case ExpressionType.GreaterThan:
                         il.Emit(OpCodes.Cgt);
-                        return true;
+                        break;
 
                     case ExpressionType.LessThanOrEqual:
                         il.Emit(OpCodes.Cgt);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
 
                     case ExpressionType.GreaterThanOrEqual:
                         il.Emit(OpCodes.Clt);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
+
+                    default:
+                        return false;
                 }
-                return false;
+
+                if (nullLbl.HasValue)
+                {
+                    var end = il.DefineLabel();
+                    il.Emit(OpCodes.Br_S, end);
+                    il.MarkLabel(nullLbl.Value);
+                    il.Emit(OpCodes.Ldc_I4_0);
+                    il.MarkLabel(end);
+                }
+
+                return true;
             }
 
             private static bool TryEmitPowerOperation(object exprObj, ExpressionType exprNodeType,
