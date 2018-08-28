@@ -51,20 +51,20 @@ namespace FastExpressionCompiler.Benchmarks
             return expr.TryCompile<Func<Action<string>>>();
         }
 
-        [Benchmark(Baseline = true)]
-        public object CreateExpressionInfo_and_FastCompile()
-        {
-            //Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
+        //[Benchmark(Baseline = true)]
+        //public object CreateExpressionInfo_and_FastCompile()
+        //{
+        //    //Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
 
-            var aParam = Expression.Parameter(typeof(string), "a");
-            var expr = ExpressionInfo.Lambda(
-                ExpressionInfo.Lambda(
-                    ExpressionInfo.Call(ExpressionInfo.Constant(_s), _setValueMethod, aParam),
-                    aParam
-                )
-            );
+        //    var aParam = Expression.Parameter(typeof(string), "a");
+        //    var expr = ExpressionInfo.Lambda(
+        //        ExpressionInfo.Lambda(
+        //            ExpressionInfo.Call(ExpressionInfo.Constant(_s), _setValueMethod, aParam),
+        //            aParam
+        //        )
+        //    );
 
-            return expr.TryCompile<Func<Action<string>>>();
-        }
+        //    return expr.TryCompile<Func<Action<string>>>();
+        //}
     }
 }

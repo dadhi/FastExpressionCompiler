@@ -34,7 +34,6 @@ namespace FastExpressionCompiler.Benchmarks
             return expr.Compile();
         }
 
-
         [Benchmark]
         public object CreateExpression_and_FastCompile()
         {
@@ -42,12 +41,12 @@ namespace FastExpressionCompiler.Benchmarks
             return expr.TryCompile<Func<object>>();
         }
 
-        [Benchmark(Baseline = true)]
-        public object CreateExpressionInfo_and_FastCompile()
-        {
-            var expr = ExpressionInfo.Lambda(ExpressionInfo.New(_xCtor, ExpressionInfo.New(_aCtor), ExpressionInfo.New(_bCtor)));
-            return expr.TryCompile<Func<object>>();
-        }
+        //[Benchmark(Baseline = true)]
+        //public object CreateExpressionInfo_and_FastCompile()
+        //{
+        //    var expr = ExpressionInfo.Lambda(ExpressionInfo.New(_xCtor, ExpressionInfo.New(_aCtor), ExpressionInfo.New(_bCtor)));
+        //    return expr.TryCompile<Func<object>>();
+        //}
 
         [Benchmark]
         public object ManualEmit()

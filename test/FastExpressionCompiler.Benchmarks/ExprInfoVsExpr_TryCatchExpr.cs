@@ -4,14 +4,12 @@ using System.Linq.Expressions;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using static System.Linq.Expressions.Expression;
-using E = FastExpressionCompiler.ExpressionInfo;
 
 namespace FastExpressionCompiler.Benchmarks
 {
     public class ExprInfoVsExpr_TryCatchExpr
     {
         private static Expression<Func<string, int>> Expr = CreateExpr();
-        private static ExpressionInfo<Func<string, int>> ExprInfo = CreateExprInfo();
 
         // Test expression
         // (string a) => {
@@ -43,40 +41,17 @@ namespace FastExpressionCompiler.Benchmarks
             );
         }
 
-        private static ExpressionInfo<Func<string, int>> CreateExprInfo()
-        {
-            var aParamExpr = E.Parameter(typeof(string), "a");
-            var exParamExpr = E.Parameter(typeof(Exception), "ex");
-
-            return E.Lambda<Func<string, int>>(
-                E.TryCatch(
-                    E.Call(typeof(int).GetTypeInfo()
-                            .DeclaredMethods.First(m => m.Name == nameof(int.Parse)),
-                        aParamExpr),
-                    E.Catch(exParamExpr,
-                        E.Property(
-                            E.Property(exParamExpr, typeof(Exception).GetTypeInfo()
-                                .DeclaredProperties.First(p => p.Name == nameof(Exception.Message))),
-                            typeof(string).GetTypeInfo()
-                                .DeclaredProperties.First(p => p.Name == nameof(string.Length))
-                        )
-                    )
-                ),
-                aParamExpr
-            );
-        }
-
         [MemoryDiagnoser]
         public class Compilation
         {
             [Benchmark]
             public object Expr_Compile() => Expr.Compile();
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public object Expr_CompileFast() => Expr.CompileFast();
 
-            [Benchmark(Baseline = true)]
-            public object ExprInfo_CompileFast() => ExprInfo.CompileFast();
+            //[Benchmark(Baseline = true)]
+            //public object ExprInfo_CompileFast() => ExprInfo.CompileFast();
         }
 
         [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true)]
@@ -91,6 +66,5 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark(Baseline = true)]
             public object Invoke_CompiledFast() => _compiledFast.Invoke("123");
         }
-
     }
 }
