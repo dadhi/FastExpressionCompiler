@@ -1322,8 +1322,13 @@ namespace FastExpressionCompiler
 
                     EmitLoadParamArg(il, paramIndex, asAddress);
 
-                    if (paramExpr.IsByRef && Tools.IsArithmetic(parent))
-                        EmitDereference(il, paramType);
+                    if (paramExpr.IsByRef)
+                    {
+                        if (parent == ExpressionType.Coalesce)
+                            il.Emit(OpCodes.Ldind_Ref); // Coalesce on for ref types
+                        else if (Tools.IsArithmetic(parent))
+                            EmitDereference(il, paramType);
+                    }
 
                     return true;
                 }

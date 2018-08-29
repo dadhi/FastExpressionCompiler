@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Numerics;
@@ -137,7 +138,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var exampleA = default(BigInteger);
                 invoke(ref exampleA);
-                Assert.AreEqual(new BigInteger(- 1), exampleA);
+                Assert.AreEqual(new BigInteger(-1), exampleA);
             }
 
             var compiledA = lambda.Compile();
@@ -799,6 +800,40 @@ namespace FastExpressionCompiler.IssueTests
 
             ActionRef<BigInteger> direct = AddSet;
             LocalAssert(direct);
+        }
+
+        [Test]
+        public void CoalesceIntoByRef()
+        {
+            void DynamicDeserializer(ref object value) =>
+                value = value ?? new object();
+
+            void DynamicDeserializerGeneric<T>(ref T value) where T:class, new () =>
+                value = value ?? new T();
+
+            var specificType = typeof(object);
+            var valueRef = Parameter(typeof(object).MakeByRefType(), "value");
+            var newObj = Coalesce(valueRef, New(specificType.GetConstructor(Type.EmptyTypes)));
+            var xVar = Variable(specificType, "x");
+            var lambda = Lambda<ActionRef<object>>(
+                    Block(new[] { xVar }, Assign(valueRef, newObj)),
+                    valueRef
+                );
+
+            var compiledFast = lambda.CompileFast(true);
+            var compiled = lambda.Compile();
+
+            void LocalAssert(ActionRef<object> invoke)
+            {
+                var obj = default(object);
+                invoke(ref obj);
+                Assert.AreNotEqual(default(object), obj);
+            }
+
+            LocalAssert(compiled);
+            LocalAssert(DynamicDeserializer);
+            LocalAssert(DynamicDeserializerGeneric);
+            LocalAssert(compiledFast);
         }
     }
 }
