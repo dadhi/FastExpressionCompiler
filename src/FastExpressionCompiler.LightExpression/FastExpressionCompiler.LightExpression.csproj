@@ -2,17 +2,19 @@
 
     <PropertyGroup>
         <VersionPrefix>1.0.0-preview-01</VersionPrefix>
-        <TargetFrameworks>net45;netstandard1.3</TargetFrameworks>
+        <TargetFrameworks>net45;netstandard1.3;netstandard2.0</TargetFrameworks>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <AssemblyName>FastExpressionCompiler.LightExpression</AssemblyName>
         <Product>FastExpressionCompiler.LightExpression</Product>
+        <RootNamespace>FastExpressionCompiler.LightExpression</RootNamespace>
         <Authors>Maksim Volkau</Authors>
         <Copyright>Copyright © 2018 Maksim Volkau</Copyright>
         <NeutralLanguage>en-US</NeutralLanguage>
         <Title>FastExpressionCompiler.LightExpression</Title>
         <Summary>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Summary>
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
+        
         <PackageId>FastExpressionCompiler</PackageId>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes>
@@ -21,6 +23,45 @@
         </PackageReleaseNotes>
         <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
         <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <DebugType>embedded</DebugType>
+        <DebugSymbols>true</DebugSymbols>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs" />
+        <None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE" />
+        <None Remove="FastExpressionCompiler.*.ncrunchproject*" />
+        <None Remove="**\*.orig" />
+        <None Remove="dist\*" />
+    </ItemGroup>
+
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    </ItemGroup>
+
+    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+    </ItemGroup>
+
+    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFramework)'=='net45'">
+        <AssemblyTitle>FastExpressionCompiler.LightExpression .NET 4.5</AssemblyTitle>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFramework)'=='netstandard1.3'">
+        <AssemblyTitle>FastExpressionCompiler.LightExpression .NET Standard 1.3</AssemblyTitle>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFramework)'=='netstandard2.0'">
+        <AssemblyTitle>FastExpressionCompiler.LightExpression .NET Standard 2.0</AssemblyTitle>
     </PropertyGroup>
 
 </Project>

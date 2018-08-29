@@ -1,61 +1,67 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <VersionPrefix>1.10.1</VersionPrefix>
-    <TargetFrameworks>net45;netstandard1.3</TargetFrameworks>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <AssemblyName>FastExpressionCompiler</AssemblyName>
-    <Product>FastExpressionCompiler</Product>
-    <Authors>Maksim Volkau</Authors>
-    <Copyright>Copyright © 2016 Maksim Volkau</Copyright>
-    <NeutralLanguage>en-US</NeutralLanguage>
-    <Title>FastExpressionCompiler</Title>
-    <Summary>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Summary> 
-    <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
-    <PackageId>FastExpressionCompiler</PackageId>
-    <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
-    <PackageReleaseNotes>
-      v1.10.1
-      - fixed: #76 Expression.Convert causing signature or security transparency is not compatible exception
-      v1.10.0
-      - fixed: #75 Allow to provide pre-constructed closure object into TryCompile enhancement
-      v1.9.0
-      - fixed: #72 Try CompileFast for MS.Extensions.ObjectMethodExecutor
-      - fixed: #73 Tried with Moq and some tests failed
-      - added: Support for implicit / explicit conversion in Expression.Convert
-      v1.8.0
-      - added: missing Expressions property to NewArrayExpressionInfo
-      - fixed: #71 In Action delegates - Cannot bind to the target method because its signature or security transparency is not compatible with that of the delegate type
-      - changed: small performance optimizations
-      v1.7.2
-      - fixed: #70 Can't install nuget because of reference to System.Linq.dll
-      v1.7.1
-      - fixed: #67 Equality comparison with nullables throws at delegate-invoke
-      v1.7.0
-      - added: #56 Add ExpressionInfo.TryCatch, Block and Throw
-      - fixed: #55 CompileFast crash with ref parameter
-      - fixed: #60 Support all types and operations from System.Numerics
-    </PackageReleaseNotes>
-    <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
-    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
-  </PropertyGroup>
+    <PropertyGroup>
+        <VersionPrefix>1.10.1</VersionPrefix>
+        <TargetFrameworks>net45;netstandard1.3;netstandard2.0</TargetFrameworks>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <AssemblyName>FastExpressionCompiler</AssemblyName>
+        <Product>FastExpressionCompiler</Product>
+        <Authors>Maksim Volkau</Authors>
+        <Copyright>Copyright © 2016 Maksim Volkau</Copyright>
+        <NeutralLanguage>en-US</NeutralLanguage>
+        <Title>FastExpressionCompiler</Title>
+        <Summary>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Summary>
+        <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
+        <PackageId>FastExpressionCompiler</PackageId>
+        <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
+        <PackageReleaseNotes>
+            v1.10.1
+            - fixed: #76 Expression.Convert causing signature or security transparency is not compatible exception
+            v1.10.0
+            - fixed: #75 Allow to provide pre-constructed closure object into TryCompile enhancement
+            v1.9.0
+            - fixed: #72 Try CompileFast for MS.Extensions.ObjectMethodExecutor
+            - fixed: #73 Tried with Moq and some tests failed
+            - added: Support for implicit / explicit conversion in Expression.Convert
+            v1.8.0
+            - added: missing Expressions property to NewArrayExpressionInfo
+            - fixed: #71 In Action delegates - Cannot bind to the target method because its signature or security transparency is not compatible with that of the delegate type
+            - changed: small performance optimizations
+            v1.7.2
+            - fixed: #70 Can't install nuget because of reference to System.Linq.dll
+            v1.7.1
+            - fixed: #67 Equality comparison with nullables throws at delegate-invoke
+            v1.7.0
+            - added: #56 Add ExpressionInfo.TryCatch, Block and Throw
+            - fixed: #55 CompileFast crash with ref parameter
+            - fixed: #60 Support all types and operations from System.Numerics
+        </PackageReleaseNotes>
+        <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
+        <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+    </PropertyGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-  </ItemGroup>
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <DebugType>embedded</DebugType>
+        <DebugSymbols>true</DebugSymbols>
+    </PropertyGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
-    <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Remove="FastExpressionCompiler.*.ncrunchproject" />
+        <None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE" />
+        <None Remove="**\*.orig" />
+        <None Remove="dist\*" />
+    </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-    <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
-  </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="FastExpressionCompiler.*.ncrunchproject" />
-    <None Remove="**\*.orig" />
-    <None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE" />
-  </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+    </ItemGroup>
+
+    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+    </ItemGroup>
 
 </Project>

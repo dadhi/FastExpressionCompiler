@@ -26,7 +26,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.Benc
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.IssueTests", "test\FastExpressionCompiler.IssueTests\FastExpressionCompiler.IssueTests.csproj", "{2485E7E3-A778-4CEF-98E5-8E02D218E612}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastExpressionCompiler.LightExpression", "src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj", "{EEA5F74E-EED6-4257-A0DF-38400DD9A239}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.LightExpression", "src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj", "{EEA5F74E-EED6-4257-A0DF-38400DD9A239}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
