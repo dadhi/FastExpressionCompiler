@@ -1,6 +1,13 @@
-version: 1.4.0-preview.{build}
+version: 2.0.0-preview-{build}
+os: Visual Studio 2017
+
 test: off
+
 build_script:
 - cmd: build.bat
+
+skip_commits:
+  message: /skip .*/
+
 artifacts:
 - path: ./src/FastExpressionCompiler/dist/*.nupkg
