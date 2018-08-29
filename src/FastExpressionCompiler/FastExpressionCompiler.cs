@@ -2806,10 +2806,8 @@ namespace FastExpressionCompiler
 
         public static T GetFirst<T>(this IEnumerable<T> source)
         {
-            var arr = source as T[];
-            return arr == null
-                ? source.FirstOrDefault()
-                : arr.Length != 0 ? arr[0] : default(T);
+            var list = source as IReadOnlyList<T>;
+            return list == null ? source.FirstOrDefault() : list.Count != 0 ? list[0] : default(T);
         }
 
         public static T GetFirst<T>(this IEnumerable<T> source, Func<T, bool> predicate)

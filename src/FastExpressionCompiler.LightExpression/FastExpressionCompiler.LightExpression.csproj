@@ -25,6 +25,8 @@
         <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
 
+        <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
+
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -51,9 +53,6 @@
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
     </ItemGroup>
 
-    <PropertyGroup>
-        <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
-    </PropertyGroup>
     <PropertyGroup Condition="'$(TargetFramework)'=='net45'">
         <AssemblyTitle>FastExpressionCompiler.LightExpression .NET 4.5</AssemblyTitle>
     </PropertyGroup>
