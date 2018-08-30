@@ -170,8 +170,7 @@ namespace FastExpressionCompiler.LightExpression
             new ArithmeticBinaryExpression(ExpressionType.Divide, left, right, left.Type);
 
         public static BlockExpression Block(params Expression[] expressions) =>
-            new BlockExpression(expressions[expressions.Length - 1].Type,
-                Tools.Empty<ParameterExpression>(), expressions);
+            new BlockExpression(expressions[expressions.Length - 1].Type, Tools.Empty<ParameterExpression>(), expressions);
 
         public static TryExpression TryCatch(Expression body, params CatchBlock[] handlers) =>
             new TryExpression(body, null, handlers);
@@ -665,14 +664,14 @@ namespace FastExpressionCompiler.LightExpression
 
         public Type ReturnType => Body.Type;
         public readonly Expression Body;
-        public readonly IReadOnlyList<ParameterExpression> Parameters;
+        public readonly ParameterExpression[] Parameters;
 
         public override SysExpr ToExpression() => ToLambdaExpression();
 
         public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
             SysExpr.Lambda(Body.ToExpression(), Parameters.Map(p => p.ParamExpr));
 
-        internal LambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters)
+        internal LambdaExpression(Type delegateType, Expression body, ParameterExpression[] parameters)
         {
             Body = body;
             Parameters = parameters;
