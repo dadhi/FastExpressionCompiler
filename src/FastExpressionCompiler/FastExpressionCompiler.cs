@@ -2738,6 +2738,9 @@ nullCheck:
                     case 8:
                         il.Emit(OpCodes.Ldc_I4_8);
                         break;
+                    case -128-127:
+                        il.Emit(OpCodes.Ldc_I4_S);
+                        break;
                     default:
                         il.Emit(OpCodes.Ldc_I4, i);
                         break;
