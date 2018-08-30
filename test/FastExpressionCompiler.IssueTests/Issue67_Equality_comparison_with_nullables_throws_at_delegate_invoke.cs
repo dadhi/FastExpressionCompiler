@@ -64,7 +64,7 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(f2(new Foo() { PropP = new Point(4, 7) }), f(new Foo() { PropP = new Point(4, 7) }));
         }
 
-        [Test, Ignore("Not yet supported")]
+        [Test]
         public void Comparing_nullable_unequal_works()
         {
             var int32Comparand = 1;
@@ -85,7 +85,7 @@ namespace FastExpressionCompiler.IssueTests
         public void Comparing_nullable_is_some_types_not_supported_yet_But_should_not_fail()
         {
             var int32Comparand = 1;
-            Expression<Func<Foo, bool>> e = foo => foo.Prop != int32Comparand;
+            Expression<Func<Foo, bool>> e = foo => foo.Prop > int32Comparand;
 
             var f = e.CompileFast(true);
             Assert.IsNull(f);

@@ -2492,11 +2492,12 @@ nullCheck:
                             il.Emit(OpCodes.And); // both results need to be true
                             break;
 
-                        //case ExpressionType.NotEqual:
-                        //    il.Emit(OpCodes.Ceq);
-                        //    il.Emit(OpCodes.Ldc_I4_0);
-                        //    il.Emit(OpCodes.Ceq);
-                        //    break;
+                        case ExpressionType.NotEqual:
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Ldc_I4_0);
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Or);
+                            break;
 
                         //case ExpressionType.LessThan:
                         //    il.Emit(OpCodes.Clt);
