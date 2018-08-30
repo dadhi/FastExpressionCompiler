@@ -1035,6 +1035,12 @@ namespace FastExpressionCompiler
                     case ExpressionType.Conditional:
                         return TryEmitConditional((ConditionalExpression)expr, paramExprs, il, ref closure);
 
+                    case ExpressionType.PostIncrementAssign:
+                    case ExpressionType.PreIncrementAssign:
+                    case ExpressionType.PostDecrementAssign:
+                    case ExpressionType.PreDecrementAssign:
+                        return TryEmitIncDecAssign((UnaryExpression)expr, il, ref closure);
+
                     case ExpressionType arithmeticAssign 
                         when Tools.GetArithmeticFromArithmeticAssignOrSelf(arithmeticAssign) != arithmeticAssign:
                     case ExpressionType.Assign:
@@ -1834,6 +1840,51 @@ namespace FastExpressionCompiler
                 if (field == null)
                     return false;
                 il.Emit(OpCodes.Stfld, field);
+                return true;
+            }
+
+            private static bool TryEmitIncDecAssign(UnaryExpression expr, ILGenerator il, ref ClosureInfo closure)
+            {
+                var left = expr.Operand;
+                var nodeType = expr.NodeType;
+
+                var leftParamExpr = (ParameterExpression)left;
+
+                var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex(leftParamExpr);
+                if (varIdx == -1)
+                {
+                    return false;
+                }
+
+                il.Emit(OpCodes.Ldloc, closure.CurrentBlock.LocalVars[varIdx]);
+
+                if (nodeType == ExpressionType.PreIncrementAssign)
+                {
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Emit(OpCodes.Add);
+                    il.Emit(OpCodes.Dup);
+                }
+                else if (nodeType == ExpressionType.PostIncrementAssign)
+                {
+                    il.Emit(OpCodes.Dup);
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Emit(OpCodes.Add);
+                }
+                else if (nodeType == ExpressionType.PreDecrementAssign)
+                {
+                    il.Emit(OpCodes.Ldc_I4_M1);
+                    il.Emit(OpCodes.Add);
+                    il.Emit(OpCodes.Dup);
+                }
+                else if (nodeType == ExpressionType.PostDecrementAssign)
+                {
+                    il.Emit(OpCodes.Dup);
+                    il.Emit(OpCodes.Ldc_I4_M1);
+                    il.Emit(OpCodes.Add);
+                }
+
+                il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
+
                 return true;
             }
 
