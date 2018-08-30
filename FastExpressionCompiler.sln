@@ -28,6 +28,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.Issu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.LightExpression", "src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj", "{EEA5F74E-EED6-4257-A0DF-38400DD9A239}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.LightExpression.UnitTests", "test\FastExpressionCompiler.LightExpression.UnitTests\FastExpressionCompiler.LightExpression.UnitTests.csproj", "{B32A8C70-AF61-4766-8F6F-110825E155D4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,6 +56,10 @@ Global
 		{EEA5F74E-EED6-4257-A0DF-38400DD9A239}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EEA5F74E-EED6-4257-A0DF-38400DD9A239}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EEA5F74E-EED6-4257-A0DF-38400DD9A239}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B32A8C70-AF61-4766-8F6F-110825E155D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B32A8C70-AF61-4766-8F6F-110825E155D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B32A8C70-AF61-4766-8F6F-110825E155D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B32A8C70-AF61-4766-8F6F-110825E155D4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -64,6 +70,7 @@ Global
 		{826AB601-2B08-48BF-9F1F-337190A8DDB9} = {AA457CA0-4D92-4922-9C5C-6F9575957AE7}
 		{2485E7E3-A778-4CEF-98E5-8E02D218E612} = {AA457CA0-4D92-4922-9C5C-6F9575957AE7}
 		{EEA5F74E-EED6-4257-A0DF-38400DD9A239} = {B1CBFC5C-9B4F-4C54-A61E-4422B8D0300B}
+		{B32A8C70-AF61-4766-8F6F-110825E155D4} = {AA457CA0-4D92-4922-9C5C-6F9575957AE7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E0034036-4006-4AA3-8322-F3F461C3C444}

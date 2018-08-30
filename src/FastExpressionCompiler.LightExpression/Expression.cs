@@ -663,7 +663,7 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType => ExpressionType.Lambda;
         public override Type Type { get; }
 
-        public Type ReturnType => Type;
+        public Type ReturnType => Body.Type;
         public readonly Expression Body;
         public readonly IReadOnlyList<ParameterExpression> Parameters;
 
@@ -679,7 +679,7 @@ namespace FastExpressionCompiler.LightExpression
             var bodyType = body.Type;
             Type = delegateType != null && delegateType != typeof(Delegate)
                 ? delegateType
-                : Tools.GetFuncOrActionType(Tools.GetParamExprTypes(parameters.Map(e => (ParameterExpression)e)), bodyType);
+                : Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters.Map(e => (ParameterExpression)e)), bodyType);
         }
     }
 

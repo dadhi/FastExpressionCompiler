@@ -2,10 +2,11 @@
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
-using static FastExpressionCompiler.ExpressionInfo;
 
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.LightExpression.UnitTests
 {
+    using static Expression;
+
     [TestFixture]
     public class MemberInitExpressionInfoTests
     {
@@ -20,7 +21,7 @@ namespace FastExpressionCompiler.UnitTests
                     Bind(typeof(A).GetTypeInfo().DeclaredFields.First(m => m.Name == "N"),
                         Constant(42))));
 
-            var f = ExpressionCompiler.TryCompile(expr);
+            var f = expr.CompileFast();
 
             Assert.AreEqual(42, f().N);
         }
@@ -36,7 +37,7 @@ namespace FastExpressionCompiler.UnitTests
                     Bind(typeof(A).GetTypeInfo().DeclaredFields.First(m => m.Name == "R"),
                         Constant(24))));
 
-            var f = ExpressionCompiler.TryCompile(expr);
+            var f = expr.CompileFast();
 
             Assert.AreEqual(24, f().R);
         }

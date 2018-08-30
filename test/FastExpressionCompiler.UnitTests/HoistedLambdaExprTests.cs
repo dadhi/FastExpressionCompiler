@@ -13,7 +13,7 @@ namespace FastExpressionCompiler.UnitTests
             var a = new A();
             Expression<Func<X>> getXExpr = () => X.Get(it => new X(it), new Lazy<A>(() => a));
 
-            var getX = ExpressionCompiler.Compile(getXExpr);
+            var getX = getXExpr.CompileFast(true);
 
             var x = getX();
             Assert.AreSame(a, x.A);

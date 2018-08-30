@@ -42,29 +42,12 @@ namespace FastExpressionCompiler
     // ReSharper disable once PartialTypeWithSinglePart
     public static partial class ExpressionCompiler
     {
-        #region Obsolete APIs
-
-        /// <summary>Obsolete: replaced by CompileFast extension method</summary>
-        public static Func<T> Compile<T>(Expression<Func<T>> lambdaExpr) =>
-            lambdaExpr.CompileFast<Func<T>>();
-
-        /// <summary>Obsolete: replaced by CompileFast extension method</summary>
-        public static TDelegate Compile<TDelegate>(LambdaExpression lambdaExpr)
-            where TDelegate : class =>
-            TryCompile<TDelegate>(lambdaExpr) ?? (TDelegate)(object)lambdaExpr
-#if LIGHT_EXPRESSION
-                .ToLambdaExpression()
-#endif
-                .Compile();
-
-        #endregion
-
         #region Expression.CompileFast overloads for Delegate, Funcs, and Actions
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
-            where TDelegate : class =>
-            TryCompile<TDelegate>(lambdaExpr) ?? (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr
+        public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false) where TDelegate : class =>
+            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters, Tools.GetParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType) ??
+            (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr
 #if LIGHT_EXPRESSION
                 .ToLambdaExpression()
 #endif
@@ -81,11 +64,9 @@ namespace FastExpressionCompiler
 #endif
             .Compile();
 
-
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this Expression<TDelegate> lambdaExpr, bool ifFastFailedReturnNull = false)
-            where TDelegate : class =>
-            TryCompile<TDelegate>(lambdaExpr) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
+            where TDelegate : class => ((LambdaExpression)lambdaExpr).CompileFast<TDelegate>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<R> CompileFast<R>(this Expression<Func<R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
@@ -166,11 +147,9 @@ namespace FastExpressionCompiler
 
         #endregion
 
-        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>.</summary>
-        public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr)
-            where TDelegate : class =>
-            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters,
-                Tools.GetParamExprTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType);
+        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/></summary>
+        public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr) where TDelegate : class =>
+            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters, Tools.GetParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType);
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/> 
         /// with the provided closure object and constant expressions (or lack there of) -
@@ -185,8 +164,7 @@ namespace FastExpressionCompiler
             var bodyExpr = lambdaExpr.Body;
             var returnType = bodyExpr.Type;
             var paramExprs = lambdaExpr.Parameters;
-            return (TDelegate)TryCompile(ref closureInfo, typeof(TDelegate), 
-                Tools.GetParamExprTypes(paramExprs), returnType, bodyExpr, returnType, paramExprs);
+            return (TDelegate)TryCompile(ref closureInfo, typeof(TDelegate), Tools.GetParamTypes(paramExprs), returnType, bodyExpr, returnType, paramExprs);
         }
 
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
@@ -867,7 +845,7 @@ namespace FastExpressionCompiler
             var bodyExpr = lambdaExpr.Body;
             var bodyType = bodyExpr.Type;
             var compiledLambda = TryCompile(ref nestedClosure,
-                lambdaExpr.Type, Tools.GetParamExprTypes(lambdaParamExprs), bodyType, bodyExpr, bodyType,
+                lambdaExpr.Type, Tools.GetParamTypes(lambdaParamExprs), bodyType, bodyExpr, bodyType,
                 lambdaParamExprs, isNestedLambda: true);
 
             if (compiledLambda == null)
@@ -907,7 +885,11 @@ namespace FastExpressionCompiler
 
         private static bool TryCollectMemberInitExprConstants(ref ClosureInfo closure, MemberInitExpression expr, IReadOnlyList<ParameterExpression> paramExprs)
         {
-            var newExpr = expr.NewExpression;
+            var newExpr = expr.NewExpression
+#if LIGHT_EXPRESSION
+                          ?? expr.Expression;
+#endif
+                ;
             if (!TryCollectBoundConstants(ref closure, newExpr, paramExprs))
                 return false;
 
@@ -1790,7 +1772,16 @@ namespace FastExpressionCompiler
                 if (exprType.GetTypeInfo().IsValueType)
                     valueVar = il.DeclareLocal(exprType);
 
-                if (!TryEmitNew(expr.NewExpression, exprType, paramExprs, il, ref closure, valueVar))
+                var newExpr = expr.NewExpression;
+#if LIGHT_EXPRESSION
+                if (newExpr == null)
+                {
+                    if (!TryEmit(expr.Expression, exprType, paramExprs, il, ref closure, ExpressionType.MemberInit/*, valueVar*/)) // todo: fix me
+                        return false;
+                }
+                else
+#endif
+                if (!TryEmitNew(newExpr, exprType, paramExprs, il, ref closure, valueVar))
                     return false;
 
                 var bindings = expr.Bindings;
@@ -2729,7 +2720,7 @@ namespace FastExpressionCompiler
             return result;
         }
 
-        public static Type[] GetParamExprTypes(IReadOnlyList<ParameterExpression> paramExprs)
+        public static Type[] GetParamTypes(IReadOnlyList<ParameterExpression> paramExprs)
         {
             if (paramExprs == null || paramExprs.Count == 0)
                 return Empty<Type>();

@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
-using static FastExpressionCompiler.ExpressionInfo;
+using static FastExpressionCompiler.LightExpression.Expression;
 
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.LightExpression.UnitTests
 {
     [TestFixture]
     public class ExpressionInfoTests
@@ -18,7 +17,7 @@ namespace FastExpressionCompiler.UnitTests
                     New(typeof(X).GetTypeInfo().GetConstructors()[0],
                         New(typeof(Y).GetTypeInfo().GetConstructors()[0])));
 
-            var func = funcExpr.TryCompile<Func<X>>();
+            var func = funcExpr.CompileFast<Func<X>>(true);
             Assert.IsNotNull(func);
 
             var x = func();
@@ -41,7 +40,7 @@ namespace FastExpressionCompiler.UnitTests
             var thisType = GetType().GetTypeInfo();
             var funcExpr = Lambda(Property(thisType.GetProperty(nameof(PropX))));
 
-            var func = funcExpr.TryCompile<Func<X>>();
+            var func = funcExpr.CompileFast<Func<X>>(true);
             Assert.IsNotNull(func);
 
             var x = func();
@@ -56,7 +55,7 @@ namespace FastExpressionCompiler.UnitTests
                 Lambda(Call(thisType.GetMethod(nameof(GetX)),
                     Property(thisType.GetProperty(nameof(PropX)))));
 
-            var func = funcExpr.TryCompile<Func<X>>();
+            var func = funcExpr.CompileFast<Func<X>>(true);
             Assert.IsNotNull(func);
 
             var x = func();
@@ -72,13 +71,13 @@ namespace FastExpressionCompiler.UnitTests
             // The same hoisted expression: 
             //Expression<Func<string, string>> expr = a => GetS(() => a);
 
-            var aParam = Expression.Parameter(typeof(string), "a");
+            var aParam = Parameter(typeof(string), "a");
             var expr = Lambda(
                 Call(GetType().GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(GetS)),
                     Lambda(aParam)),
                 aParam);
 
-            var f = expr.TryCompile<Func<string, string>>();
+            var f = expr.CompileFast<Func<string, string>>();
 
             Assert.AreEqual("a", f("a"));
         }
@@ -94,7 +93,7 @@ namespace FastExpressionCompiler.UnitTests
             //Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
 
             var s = new S();
-            var aParam = Expression.Parameter(typeof(string), "a");
+            var aParam = Parameter(typeof(string), "a");
             var expr = Lambda(
                 Lambda(
                     Call(
@@ -104,7 +103,7 @@ namespace FastExpressionCompiler.UnitTests
                     aParam)
                 );
 
-            var f = expr.TryCompile<Func<Action<string>>>();
+            var f = expr.CompileFast<Func<Action<string>>>();
 
             f()("a");
             Assert.AreEqual("a", s.Value);
@@ -144,29 +143,29 @@ namespace FastExpressionCompiler.UnitTests
 
         public static Expression<Func<object[], object>> CreateComplexExpression()
         {
-            var stateParamExpr = Expression.Parameter(typeof(object[]));
+            var stateParamExpr = Parameter(typeof(object[]));
 
-            var funcExpr = Expression.Lambda<Func<object[], object>>(
-                Expression.MemberInit(
-                    Expression.New(_ctorOfA,
-                        Expression.New(_ctorOfB),
-                        Expression.Convert(Expression.ArrayIndex(stateParamExpr, Expression.Constant(11)), typeof(string)),
-                        Expression.NewArrayInit(typeof(ID),
-                            Expression.New(_ctorOfD1),
-                            Expression.New(_ctorOfD2))),
-                    Expression.Bind(_propAProp,
-                        Expression.New(_ctorOfP,
-                            Expression.New(_ctorOfB))),
-                    Expression.Bind(_fieldABop,
-                        Expression.New(_ctorOfB))),
+            var funcExpr = Lambda<Func<object[], object>>(
+                MemberInit(
+                    New(_ctorOfA,
+                        New(_ctorOfB),
+                        Convert(ArrayIndex(stateParamExpr, Constant(11)), typeof(string)),
+                        NewArrayInit(typeof(ID),
+                            New(_ctorOfD1),
+                            New(_ctorOfD2))),
+                    Bind(_propAProp,
+                        New(_ctorOfP,
+                            New(_ctorOfB))),
+                    Bind(_fieldABop,
+                        New(_ctorOfB))),
                 stateParamExpr);
 
             return funcExpr;
         }
 
-        public static ExpressionInfo<Func<object[], object>> CreateComplexExpressionInfo()
+        public static Expression<Func<object[], object>> CreateComplexExpressionInfo()
         {
-            var stateParamExpr = Expression.Parameter(typeof(object[]));
+            var stateParamExpr = Parameter(typeof(object[]));
 
             var expr = Lambda<Func<object[], object>>(
                 MemberInit(
@@ -192,7 +191,7 @@ namespace FastExpressionCompiler.UnitTests
         public void Can_compile_complex_expr_with_Array_Properties_and_Casts()
         {
             var expr = CreateComplexExpressionInfo();
-            var func = expr.TryCompile();
+            var func = expr.CompileFast(true);
             func(new object[12]);
         }
 
@@ -215,9 +214,7 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Can_embed_normal_Expression_into_ExpressionInfo_eg_as_Constructor_argument()
         {
-            var func = Lambda(
-                New(_ctorOfP,
-                    Expression.New(_ctorOfB))).TryCompile<Func<P>>();
+            var func = Lambda(New(_ctorOfP, New(_ctorOfB))).CompileFast<Func<P>>();
 
             Assert.IsInstanceOf<P>(func());
         }
