@@ -1440,7 +1440,7 @@ namespace FastExpressionCompiler
                 {
                     var expr = exprs[i];
                     if (parent != ExpressionType.Block || 
-                        (expr.NodeType != ExpressionType.Constant && expr.NodeType != ExpressionType.Parameter) || i == exprs.Count - 1)
+                        (expr.NodeType != ExpressionType.Constant && expr.NodeType != ExpressionType.Parameter) || i == exprs.Count - 1) // In a Block, Constants or Paramters are only compiled to IL if they are the last Expression in it. 
                         if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, i))
                             return false;
                 }
@@ -2394,7 +2394,7 @@ namespace FastExpressionCompiler
                 if (expr.Right is ConstantExpression c && c.Value == null && expr.Right.Type == typeof(object))
                     rightOpType = leftOpType;
 
-                if (leftOpType != rightOpType) // || leftOpType.IsNullable())
+                if (leftOpType != rightOpType)
                     return false;
 
                 LocalBuilder lVar = null, rVar = null;
@@ -2738,8 +2738,8 @@ nullCheck:
                     case 8:
                         il.Emit(OpCodes.Ldc_I4_8);
                         break;
-                    case -128-127:
-                        il.Emit(OpCodes.Ldc_I4_S);
+                    case int n when (n > -129 && n < 127):
+                        il.Emit(OpCodes.Ldc_I4_S, i);
                         break;
                     default:
                         il.Emit(OpCodes.Ldc_I4, i);
