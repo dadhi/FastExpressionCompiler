@@ -970,11 +970,18 @@ namespace FastExpressionCompiler
         /// to normal and slow Expression.Compile.</summary>
         private static class EmittingVisitor
         {
+#if NETSTANDARD
             private static readonly MethodInfo _getTypeFromHandleMethod = typeof(Type).GetTypeInfo()
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "GetTypeFromHandle");
 
             private static readonly MethodInfo _objectEqualsMethod = typeof(object).GetTypeInfo()
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "Equals");
+#else
+            private static readonly MethodInfo _getTypeFromHandleMethod =
+                ((Func<RuntimeTypeHandle, Type>)Type.GetTypeFromHandle).Method;
+
+            private static readonly MethodInfo _objectEqualsMethod = ((Func<Object, Object, bool>)Object.Equals).Method;
+#endif
 
             public static bool TryEmit(Expression expr, Type exprType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, 
