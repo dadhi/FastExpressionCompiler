@@ -14,18 +14,10 @@ namespace FastExpressionCompiler.Benchmarks
             return Expression.Lambda<Func<int, int, int>>(Expression.Add(aExp, bExp), aExp, bExp);
         }
 
-        private static ExpressionInfo<Func<int, int, int>> CreateSumExprInfo()
-        {
-            var aExp = ExpressionInfo.Parameter(typeof(int), "a");
-            var bExp = ExpressionInfo.Parameter(typeof(int), "b");
-            return ExpressionInfo.Lambda<Func<int, int, int>>(
-                ExpressionInfo.Add(aExp, bExp), aExp, bExp);
-        }
-
         private static Func<int, int, int> SumExpr_Lambda = (a, b) => a + b;
         private static Func<int, int, int> SumExpr_Compiled = CreateSumExpr().Compile();
         private static Func<int, int, int> SumExpr_CompiledFast = CreateSumExpr().CompileFast();
-        private static Func<int, int, int> SumExprInfo_CompiledFast = CreateSumExprInfo().CompileFast();
+        //private static Func<int, int, int> SumExprInfo_CompiledFast = CreateSumExprInfo().CompileFast();
 
         private static int A = 66;
         private static int B = 34;
@@ -42,7 +34,7 @@ namespace FastExpressionCompiler.Benchmarks
         [Benchmark(OperationsPerInvoke = 50)]
         public int Expr_CompileFast() => SumExpr_CompiledFast(A, B);
 
-        [Benchmark(OperationsPerInvoke = 50)]
-        public int ExpressionInfo_CompileFast() => SumExprInfo_CompiledFast(A, B);
+        //[Benchmark(OperationsPerInvoke = 50)]
+        //public int ExpressionInfo_CompileFast() => SumExprInfo_CompiledFast(A, B);
     }
 }

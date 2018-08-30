@@ -20,11 +20,11 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Can_sum_with_manual_expr()
+        public void Can_sum_with_ExprInfo()
         {
-            var a = Parameter(typeof(int), "a");
-            var b = Parameter(typeof(int), "b");
-            var expr = Lambda<Func<int, int, int>>(Add(a, b), a, b);
+            var a = ExpressionInfo.Parameter(typeof(int), "a");
+            var b = ExpressionInfo.Parameter(typeof(int), "b");
+            var expr = ExpressionInfo.Lambda<Func<int, int, int>>(ExpressionInfo.Add(a, b), a, b);
             var sumFunc = expr.CompileFast(true);
 
             Assert.IsNotNull(sumFunc);

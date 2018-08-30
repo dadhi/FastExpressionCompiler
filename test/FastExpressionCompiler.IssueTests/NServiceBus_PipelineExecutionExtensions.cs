@@ -1,6 +1,4 @@
-﻿#define USE_EXPRESSION_INFO // I am here!
-
-namespace NServiceBus
+﻿namespace NServiceBus
 {
     using System;
     using System.Collections.Generic;
@@ -11,13 +9,8 @@ namespace NServiceBus
     using Pipeline;
 
     using FastExpressionCompiler;
-#if USE_EXPRESSION_INFO
-    using Expr = FastExpressionCompiler.ExpressionInfo;
-    using static FastExpressionCompiler.ExpressionInfo;
-#else
     using Expr = System.Linq.Expressions.Expression;
     using static System.Linq.Expressions.Expression;
-#endif
 
     static class PipelineExecutionExtensions
     {
