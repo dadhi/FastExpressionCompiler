@@ -2360,18 +2360,43 @@ namespace FastExpressionCompiler
             private static bool TryEmitComparison(BinaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
-                if (!EmitBinary(expr, paramExprs, il, ref closure, ExpressionType.Default))
-                    return false;
-
                 // todo: for now, handling only parameters of the same type
                 // todo: for now, Nullable is not supported
                 var leftOpType = expr.Left.Type;
+                var leftIsNull = leftOpType.IsNullable();
                 var rightOpType = expr.Right.Type;
                 if (expr.Right is ConstantExpression c && c.Value == null && expr.Right.Type == typeof(object))
                     rightOpType = leftOpType;
 
-                if (leftOpType != rightOpType || leftOpType.IsNullable())
+                if (leftOpType != rightOpType) // || leftOpType.IsNullable())
                     return false;
+
+                LocalBuilder lVar = null, rVar = null;
+                if (!TryEmit(expr.Left, expr.Left.Type, paramExprs, il, ref closure, ExpressionType.Default))
+                    return false;
+                if (leftIsNull)
+                {
+                    lVar = il.DeclareLocal(leftOpType);
+                    il.Emit(OpCodes.Stloc_S, lVar);
+                    il.Emit(OpCodes.Ldloca_S, lVar);
+                    var mthValue = leftOpType.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault").First(x => x.GetParameters().Length == 0);
+                    if (!EmitMethodCall(il, mthValue))
+                        return false;
+                    leftOpType = Nullable.GetUnderlyingType(leftOpType);
+                }
+
+                if (!TryEmit(expr.Right, expr.Right.Type, paramExprs, il, ref closure, ExpressionType.Default))
+                    return false;
+                if (rightOpType.IsNullable())
+                {
+                    rVar = il.DeclareLocal(rightOpType);
+                    il.Emit(OpCodes.Stloc_S, rVar);
+                    il.Emit(OpCodes.Ldloca_S, rVar);
+                    var mthValue = rightOpType.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault").First(x => x.GetParameters().Length == 0);
+                    if (!EmitMethodCall(il, mthValue))
+                        return false;
+                }
+
 
                 var exprNodeType = expr.NodeType;
                 var leftOpTypeInfo = leftOpType.GetTypeInfo();
@@ -2406,6 +2431,9 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ceq);
                     }
 
+                    if (leftIsNull)
+                        goto nullCheck;
+
                     return true;
                 }
 
@@ -2414,35 +2442,87 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Equal:
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
 
                     case ExpressionType.NotEqual:
                         il.Emit(OpCodes.Ceq);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
 
                     case ExpressionType.LessThan:
                         il.Emit(OpCodes.Clt);
-                        return true;
+                        break;
 
                     case ExpressionType.GreaterThan:
                         il.Emit(OpCodes.Cgt);
-                        return true;
+                        break;
 
                     case ExpressionType.LessThanOrEqual:
                         il.Emit(OpCodes.Cgt);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
 
                     case ExpressionType.GreaterThanOrEqual:
                         il.Emit(OpCodes.Clt);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
+
+                    default:
+                        return false;
                 }
-                return false;
+
+nullCheck:
+                if (leftIsNull)
+                {
+                    il.Emit(OpCodes.Ldloca_S, lVar);
+                    var mth = expr.Left.Type.GetTypeInfo().GetDeclaredMethod("get_HasValue");
+                    if (!EmitMethodCall(il, mth))
+                        return false;
+                    il.Emit(OpCodes.Ldloca_S, rVar);
+                    if (!EmitMethodCall(il, mth))
+                        return false;
+
+                    switch (exprNodeType)
+                    {
+                        case ExpressionType.Equal:
+                            il.Emit(OpCodes.Ceq); // compare both HasValue calls
+                            il.Emit(OpCodes.And); // both results need to be true
+                            break;
+
+                        //case ExpressionType.NotEqual:
+                        //    il.Emit(OpCodes.Ceq);
+                        //    il.Emit(OpCodes.Ldc_I4_0);
+                        //    il.Emit(OpCodes.Ceq);
+                        //    break;
+
+                        //case ExpressionType.LessThan:
+                        //    il.Emit(OpCodes.Clt);
+                        //    break;
+
+                        //case ExpressionType.GreaterThan:
+                        //    il.Emit(OpCodes.Cgt);
+                        //    break;
+
+                        //case ExpressionType.LessThanOrEqual:
+                        //    il.Emit(OpCodes.Cgt);
+                        //    il.Emit(OpCodes.Ldc_I4_0);
+                        //    il.Emit(OpCodes.Ceq);
+                        //    break;
+
+                        //case ExpressionType.GreaterThanOrEqual:
+                        //    il.Emit(OpCodes.Clt);
+                        //    il.Emit(OpCodes.Ldc_I4_0);
+                        //    il.Emit(OpCodes.Ceq);
+                        //    break;
+
+                        default:
+                            return false;
+                    }
+                }
+                return true;
             }
 
             private static bool TryEmitArithmeticOperation(
