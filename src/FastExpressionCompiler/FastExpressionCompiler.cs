@@ -970,11 +970,18 @@ namespace FastExpressionCompiler
         /// to normal and slow Expression.Compile.</summary>
         private static class EmittingVisitor
         {
+#if !NETSTANDARD2_0 && !NET45
             private static readonly MethodInfo _getTypeFromHandleMethod = typeof(Type).GetTypeInfo()
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "GetTypeFromHandle");
 
             private static readonly MethodInfo _objectEqualsMethod = typeof(object).GetTypeInfo()
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "Equals");
+#else
+            private static readonly MethodInfo _getTypeFromHandleMethod =
+                ((Func<RuntimeTypeHandle, Type>)Type.GetTypeFromHandle).Method;
+
+            private static readonly MethodInfo _objectEqualsMethod = ((Func<Object, Object, bool>)Object.Equals).Method;
+#endif
 
             public static bool TryEmit(Expression expr, Type exprType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, 
@@ -1432,8 +1439,10 @@ namespace FastExpressionCompiler
                 for (int i = 0, n = exprs.Count; i < n; i++)
                 {
                     var expr = exprs[i];
-                    if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, i))
-                        return false;
+                    if (parent != ExpressionType.Block || 
+                        (expr.NodeType != ExpressionType.Constant && expr.NodeType != ExpressionType.Parameter) || i == exprs.Count - 1) // In a Block, Constants or Paramters are only compiled to IL if they are the last Expression in it. 
+                        if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, i))
+                            return false;
                 }
                 return true;
             }
@@ -1881,6 +1890,23 @@ namespace FastExpressionCompiler
                             }
 
                             return true;
+                        }
+                        else
+                        {
+                            var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
+                            if (arithmeticNodeType != nodeType)
+                            {
+                                var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex(leftParamExpr);
+                                if (varIdx != -1)
+                                {
+                                    if (!TryEmitArithmeticOperation(expr, arithmeticNodeType, exprType, paramExprs, il, ref closure))
+                                        return false;
+
+                                    il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
+
+                                    return true;
+                                }
+                            }
                         }
 
                         // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
@@ -2360,18 +2386,43 @@ namespace FastExpressionCompiler
             private static bool TryEmitComparison(BinaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
-                if (!EmitBinary(expr, paramExprs, il, ref closure, ExpressionType.Default))
-                    return false;
-
                 // todo: for now, handling only parameters of the same type
                 // todo: for now, Nullable is not supported
                 var leftOpType = expr.Left.Type;
+                var leftIsNull = leftOpType.IsNullable();
                 var rightOpType = expr.Right.Type;
                 if (expr.Right is ConstantExpression c && c.Value == null && expr.Right.Type == typeof(object))
                     rightOpType = leftOpType;
 
-                if (leftOpType != rightOpType || leftOpType.IsNullable())
+                if (leftOpType != rightOpType)
                     return false;
+
+                LocalBuilder lVar = null, rVar = null;
+                if (!TryEmit(expr.Left, expr.Left.Type, paramExprs, il, ref closure, ExpressionType.Default))
+                    return false;
+                if (leftIsNull)
+                {
+                    lVar = il.DeclareLocal(leftOpType);
+                    il.Emit(OpCodes.Stloc_S, lVar);
+                    il.Emit(OpCodes.Ldloca_S, lVar);
+                    var mthValue = leftOpType.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault").First(x => x.GetParameters().Length == 0);
+                    if (!EmitMethodCall(il, mthValue))
+                        return false;
+                    leftOpType = Nullable.GetUnderlyingType(leftOpType);
+                }
+
+                if (!TryEmit(expr.Right, expr.Right.Type, paramExprs, il, ref closure, ExpressionType.Default))
+                    return false;
+                if (rightOpType.IsNullable())
+                {
+                    rVar = il.DeclareLocal(rightOpType);
+                    il.Emit(OpCodes.Stloc_S, rVar);
+                    il.Emit(OpCodes.Ldloca_S, rVar);
+                    var mthValue = rightOpType.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault").First(x => x.GetParameters().Length == 0);
+                    if (!EmitMethodCall(il, mthValue))
+                        return false;
+                }
+
 
                 var exprNodeType = expr.NodeType;
                 var leftOpTypeInfo = leftOpType.GetTypeInfo();
@@ -2406,6 +2457,9 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ceq);
                     }
 
+                    if (leftIsNull)
+                        goto nullCheck;
+
                     return true;
                 }
 
@@ -2414,35 +2468,78 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Equal:
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
 
                     case ExpressionType.NotEqual:
                         il.Emit(OpCodes.Ceq);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
 
                     case ExpressionType.LessThan:
                         il.Emit(OpCodes.Clt);
-                        return true;
+                        break;
 
                     case ExpressionType.GreaterThan:
                         il.Emit(OpCodes.Cgt);
-                        return true;
+                        break;
 
                     case ExpressionType.LessThanOrEqual:
                         il.Emit(OpCodes.Cgt);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
 
                     case ExpressionType.GreaterThanOrEqual:
                         il.Emit(OpCodes.Clt);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
-                        return true;
+                        break;
+
+                    default:
+                        return false;
                 }
-                return false;
+
+nullCheck:
+                if (leftIsNull)
+                {
+                    il.Emit(OpCodes.Ldloca_S, lVar);
+                    var mth = expr.Left.Type.GetTypeInfo().GetDeclaredMethod("get_HasValue");
+                    if (!EmitMethodCall(il, mth))
+                        return false;
+                    il.Emit(OpCodes.Ldloca_S, rVar);
+                    if (!EmitMethodCall(il, mth))
+                        return false;
+
+                    switch (exprNodeType)
+                    {
+                        case ExpressionType.Equal:
+                            il.Emit(OpCodes.Ceq); // compare both HasValue calls
+                            il.Emit(OpCodes.And); // both results need to be true
+                            break;
+
+                        case ExpressionType.NotEqual:
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Ldc_I4_0);
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Or);
+                            break;
+
+                        case ExpressionType.LessThan:
+                        case ExpressionType.GreaterThan:
+                        case ExpressionType.LessThanOrEqual:
+                        case ExpressionType.GreaterThanOrEqual:
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Ldc_I4_1);
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.And);
+                            break;
+
+                        default:
+                            return false;
+                    }
+                }
+                return true;
             }
 
             private static bool TryEmitArithmeticOperation(
@@ -2640,6 +2737,9 @@ namespace FastExpressionCompiler
                         break;
                     case 8:
                         il.Emit(OpCodes.Ldc_I4_8);
+                        break;
+                    case int n when (n > -129 && n < 128):
+                        il.Emit(OpCodes.Ldc_I4_S, (sbyte)i);
                         break;
                     default:
                         il.Emit(OpCodes.Ldc_I4, i);
