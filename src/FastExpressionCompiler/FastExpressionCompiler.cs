@@ -970,7 +970,7 @@ namespace FastExpressionCompiler
         /// to normal and slow Expression.Compile.</summary>
         private static class EmittingVisitor
         {
-#if NETSTANDARD
+#if !NETSTANDARD2_0 && !NET45
             private static readonly MethodInfo _getTypeFromHandleMethod = typeof(Type).GetTypeInfo()
                 .DeclaredMethods.First(m => m.IsStatic && m.Name == "GetTypeFromHandle");
 
