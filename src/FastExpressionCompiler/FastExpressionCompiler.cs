@@ -2738,8 +2738,8 @@ nullCheck:
                     case 8:
                         il.Emit(OpCodes.Ldc_I4_8);
                         break;
-                    case int n when (n > -129 && n < 127):
-                        il.Emit(OpCodes.Ldc_I4_S, i);
+                    case int n when (n > -129 && n < 128):
+                        il.Emit(OpCodes.Ldc_I4_S, (sbyte)i);
                         break;
                     default:
                         il.Emit(OpCodes.Ldc_I4, i);
