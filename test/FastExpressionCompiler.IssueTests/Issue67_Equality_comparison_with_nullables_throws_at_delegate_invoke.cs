@@ -78,17 +78,138 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
             Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
             Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+
+            int? int32Comparand2 = null;
+            Expression<Func<Foo, bool>> e2 = foo => foo.Prop != int32Comparand;
+
+            var fa = e2.CompileFast(true);
+            var fa2 = e2.Compile();
+            Assert.IsNotNull(fa);
+
+            Assert.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
+            Assert.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
-
         [Test]
-        public void Comparing_nullable_is_some_types_not_supported_yet_But_should_not_fail()
+        public void Comparing_nullable_greater_works()
         {
             var int32Comparand = 1;
             Expression<Func<Foo, bool>> e = foo => foo.Prop > int32Comparand;
 
             var f = e.CompileFast(true);
-            Assert.IsNull(f);
+            var f2 = e.Compile();
+            Assert.IsNotNull(f);
+
+            Assert.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
+            Assert.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
+            Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
+            Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
+            Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+
+            int? int32Comparand2 = null;
+            Expression<Func<Foo, bool>> e2 = foo => foo.Prop > int32Comparand;
+
+            var fa = e2.CompileFast(true);
+            var fa2 = e2.Compile();
+            Assert.IsNotNull(fa);
+
+            Assert.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
+            Assert.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
+        }
+
+        [Test]
+        public void Comparing_nullable_greaterOrEqual_works()
+        {
+            var int32Comparand = 1;
+            Expression<Func<Foo, bool>> e = foo => foo.Prop >= int32Comparand;
+
+            var f = e.CompileFast(true);
+            var f2 = e.Compile();
+            Assert.IsNotNull(f);
+
+            Assert.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
+            Assert.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
+            Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
+            Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
+            Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+
+            int? int32Comparand2 = null;
+            Expression<Func<Foo, bool>> e2 = foo => foo.Prop >= int32Comparand;
+
+            var fa = e2.CompileFast(true);
+            var fa2 = e2.Compile();
+            Assert.IsNotNull(fa);
+
+            Assert.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
+            Assert.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
+        }
+
+        [Test]
+        public void Comparing_nullable_less_works()
+        {
+            var int32Comparand = 1;
+            Expression<Func<Foo, bool>> e = foo => foo.Prop < int32Comparand;
+
+            var f = e.CompileFast(true);
+            var f2 = e.Compile();
+            Assert.IsNotNull(f);
+
+            Assert.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
+            Assert.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
+            Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
+            Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
+            Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+
+            int? int32Comparand2 = null;
+            Expression<Func<Foo, bool>> e2 = foo => foo.Prop < int32Comparand;
+
+            var fa = e2.CompileFast(true);
+            var fa2 = e2.Compile();
+            Assert.IsNotNull(fa);
+
+            Assert.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
+            Assert.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
+        }
+
+        [Test]
+        public void Comparing_nullable_lessOrEqual_works()
+        {
+            var int32Comparand = 1;
+            Expression<Func<Foo, bool>> e = foo => foo.Prop <= int32Comparand;
+
+            var f = e.CompileFast(true);
+            var f2 = e.Compile();
+            Assert.IsNotNull(f);
+
+            Assert.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
+            Assert.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
+            Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
+            Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
+            Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+
+            int? int32Comparand2 = null;
+            Expression<Func<Foo, bool>> e2 = foo => foo.Prop <= int32Comparand;
+
+            var fa = e2.CompileFast(true);
+            var fa2 = e2.Compile();
+            Assert.IsNotNull(fa);
+
+            Assert.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
+            Assert.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
+            Assert.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
         [Test]

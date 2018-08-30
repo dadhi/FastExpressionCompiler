@@ -2499,25 +2499,15 @@ nullCheck:
                             il.Emit(OpCodes.Or);
                             break;
 
-                        //case ExpressionType.LessThan:
-                        //    il.Emit(OpCodes.Clt);
-                        //    break;
-
-                        //case ExpressionType.GreaterThan:
-                        //    il.Emit(OpCodes.Cgt);
-                        //    break;
-
-                        //case ExpressionType.LessThanOrEqual:
-                        //    il.Emit(OpCodes.Cgt);
-                        //    il.Emit(OpCodes.Ldc_I4_0);
-                        //    il.Emit(OpCodes.Ceq);
-                        //    break;
-
-                        //case ExpressionType.GreaterThanOrEqual:
-                        //    il.Emit(OpCodes.Clt);
-                        //    il.Emit(OpCodes.Ldc_I4_0);
-                        //    il.Emit(OpCodes.Ceq);
-                        //    break;
+                        case ExpressionType.LessThan:
+                        case ExpressionType.GreaterThan:
+                        case ExpressionType.LessThanOrEqual:
+                        case ExpressionType.GreaterThanOrEqual:
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Ldc_I4_1);
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.And);
+                            break;
 
                         default:
                             return false;
