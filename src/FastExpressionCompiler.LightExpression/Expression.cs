@@ -49,43 +49,40 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Converts to Expression and outputs its as string</summary>
         public override string ToString() => ToExpression().ToString();
 
-        /// <summary>Analog of Expression.Parameter</summary>
-        /// <remarks>For now it is return just an `Expression.Parameter`</remarks>
         public static ParameterExpression Parameter(Type type, string name = null) =>
             new ParameterExpression(type.IsByRef ? type.GetElementType() : type, name, type.IsByRef);
 
-        /// <summary>Analog of Expression.Constant</summary>
+        public static ParameterExpression Variable(Type type, string name = null) => Parameter(type, name);
+
         public static ConstantExpression Constant(object value, Type type = null) =>
             value == null && type == null ? _nullExprInfo
                 : new ConstantExpression(value, type ?? value.GetType());
 
-        private static readonly ConstantExpression
-            _nullExprInfo = new ConstantExpression(null, typeof(object));
+        private static readonly ConstantExpression _nullExprInfo = new ConstantExpression(null, typeof(object));
 
-        /// <summary>Analog of Expression.New</summary>
         public static NewExpression New(ConstructorInfo ctor) =>
             new NewExpression(ctor, Tools.Empty<Expression>());
 
-        /// <summary>Analog of Expression.New</summary>
         public static NewExpression New(ConstructorInfo ctor, params Expression[] arguments) =>
             new NewExpression(ctor, arguments);
 
-        /// <summary>Static method call</summary>
         public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
             new MethodCallExpression(null, method, arguments);
 
-        /// <summary>Instance method call</summary>
-        public static MethodCallExpression Call(
-            Expression instance, MethodInfo method, params Expression[] arguments) =>
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) =>
             new MethodCallExpression(instance, method, arguments);
 
-        /// <summary>Static property</summary>
         public static PropertyExpression Property(PropertyInfo property) =>
             new PropertyExpression(null, property);
 
-        /// <summary>Instance property</summary>
         public static PropertyExpression Property(Expression instance, PropertyInfo property) =>
             new PropertyExpression(instance, property);
+
+        public static MemberExpression Property(Expression expression, string propertyName) => 
+            Property(expression, GetPropertyInfoByName(propertyName, expression.Type));
+
+        private static PropertyInfo GetPropertyInfoByName(string propertyName, Type type) => 
+            type.GetTypeInfo().GetDeclaredProperty(propertyName);
 
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, params Expression[] arguments) =>
             new IndexExpression(instance, indexer, arguments);
@@ -107,6 +104,12 @@ namespace FastExpressionCompiler.LightExpression
 
         public static FieldExpression Field(Expression instance, FieldInfo field) =>
             new FieldExpression(instance, field);
+
+        public static FieldExpression Field(Expression instance, string fieldName) => 
+            new FieldExpression(instance, GetFieldInfoByName(fieldName, instance.Type));
+
+        private static FieldInfo GetFieldInfoByName(string fieldName, Type type) =>
+            type.GetTypeInfo().GetDeclaredField(fieldName);
 
         public static LambdaExpression Lambda(Expression body) =>
             new LambdaExpression(null, body, Tools.Empty<ParameterExpression>());
@@ -140,7 +143,12 @@ namespace FastExpressionCompiler.LightExpression
             new MemberInitExpression(instanceExpr, assignments);
 
         public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
-            new NewArrayExpression(type, initializers);
+            new NewArrayExpression(ExpressionType.NewArrayInit, type.MakeArrayType(), initializers);
+
+        public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
+            new NewArrayExpression(ExpressionType.NewArrayBounds, 
+                bounds.Length == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Length), 
+                bounds);
 
         public static BinaryExpression Assign(Expression left, Expression right) =>
             new AssignBinaryExpression(left, right, left.Type);
@@ -169,8 +177,14 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression Divide(Expression left, Expression right) =>
             new ArithmeticBinaryExpression(ExpressionType.Divide, left, right, left.Type);
 
-        public static BlockExpression Block(params Expression[] expressions) =>
-            new BlockExpression(expressions[expressions.Length - 1].Type, Tools.Empty<ParameterExpression>(), expressions);
+        public static BlockExpression Block(params Expression[] expressions) => 
+            Block(Tools.Empty<ParameterExpression>(), expressions);
+
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
+            Block(expressions[expressions.Length - 1].Type, variables.AsReadOnlyList(), expressions);
+
+        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
+            new BlockExpression(type, variables.AsReadOnlyList(), expressions);
 
         public static TryExpression TryCatch(Expression body, params CatchBlock[] handlers) =>
             new TryExpression(body, null, handlers);
@@ -392,22 +406,24 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class NewArrayExpression : ArgumentsExpression
     {
-        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+        public override ExpressionType NodeType { get; }
         public override Type Type { get; }
 
         // todo: That it is a ReadOnlyCollection<Expression> in original NewArrayExpression. 
         // I made it a ICollection for now to use Arguments as input, without changing Arguments type
         public IReadOnlyList<Expression> Expressions => Arguments;
 
-        public override SysExpr ToExpression() => SysExpr.NewArrayInit(_elementType, ArgumentsToExpressions());
+        public override SysExpr ToExpression() => NodeType == ExpressionType.NewArrayInit
+            // ReSharper disable once AssignNullToNotNullAttribute
+            ? SysExpr.NewArrayInit(Type.GetElementType(), ArgumentsToExpressions())
+            // ReSharper disable once AssignNullToNotNullAttribute
+            : SysExpr.NewArrayBounds(Type.GetElementType(), ArgumentsToExpressions());
 
-        internal NewArrayExpression(Type elementType, IReadOnlyList<Expression> elements) : base(elements)
+        internal NewArrayExpression(ExpressionType expressionType, Type arrayType, IReadOnlyList<Expression> elements) : base(elements)
         {
-            Type = elementType.MakeArrayType();
-            _elementType = elementType;
+            NodeType = expressionType;
+            Type = arrayType;
         }
-
-        private readonly Type _elementType;
     }
 
     public class MethodCallExpression : ArgumentsExpression

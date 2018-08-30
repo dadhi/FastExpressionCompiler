@@ -1,27 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>net46;netcoreapp1.1;netcoreapp2.0</TargetFrameworks>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFrameworks>net46;netcoreapp1.1;netcoreapp2.0</TargetFrameworks>
+        <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="FastExpressionCompiler.LightExpression.UnitTests.v3.ncrunchproject" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Remove="*.ncrunchproject" />
+        <Compile Include="..\FastExpressionCompiler.UnitTests\AssignTests.cs" Exclude="..\FastExpressionCompiler.UnitTests\ArithmeticOperationsTests.cs" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.2" />
-    <PackageReference Include="NUnit" Version="3.10.1" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.2" />
+        <PackageReference Include="NUnit" Version="3.10.1" />
+        <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
+    </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net46'">
-    <Reference Include="Microsoft.CSharp">
-      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6\Microsoft.CSharp.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net46'">
+        <Reference Include="Microsoft.CSharp">
+            <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6\Microsoft.CSharp.dll</HintPath>
+        </Reference>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
+    </ItemGroup>
 
 </Project>

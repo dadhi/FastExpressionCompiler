@@ -2,9 +2,13 @@
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
 using static System.Linq.Expressions.Expression;
-
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class AssignTests
@@ -44,8 +48,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             var a = new Test();
             var expr = Lambda<Func<int>>(
-               Assign(Property(Constant(a), "Prop"),
-                  Constant(5)));
+               Assign(Property(Constant(a), "Prop"), Constant(5)));
 
             var f = expr.CompileFast(true);
 
