@@ -1439,8 +1439,10 @@ namespace FastExpressionCompiler
                 for (int i = 0, n = exprs.Count; i < n; i++)
                 {
                     var expr = exprs[i];
-                    if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, i))
-                        return false;
+                    if (parent != ExpressionType.Block || 
+                        (expr.NodeType != ExpressionType.Constant && expr.NodeType != ExpressionType.Parameter) || i == exprs.Count - 1)
+                        if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, i))
+                            return false;
                 }
                 return true;
             }
@@ -1888,6 +1890,23 @@ namespace FastExpressionCompiler
                             }
 
                             return true;
+                        }
+                        else
+                        {
+                            var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
+                            if (arithmeticNodeType != nodeType)
+                            {
+                                var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex(leftParamExpr);
+                                if (varIdx != -1)
+                                {
+                                    if (!TryEmitArithmeticOperation(expr, arithmeticNodeType, exprType, paramExprs, il, ref closure))
+                                        return false;
+
+                                    il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
+
+                                    return true;
+                                }
+                            }
                         }
 
                         // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,

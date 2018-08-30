@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(compiled(), fastCompiled());
         }
 
-        [Test, Ignore("Needs fix")]
+        [Test]
         public void VariableAssignIsSupportedWithUneededConstant()
         {
             var eVar = Variable(typeof(int));
@@ -43,7 +43,25 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(compiled(), fastCompiled());
         }
 
-        [Test, Ignore("Needs fix")]
+        [Test]
+        public void VariableAssignIsSupportedWithConstantReturn()
+        {
+            var eVar = Variable(typeof(int));
+            var blockExpr =
+                Block(new[] { eVar },
+                    Assign(eVar, Constant(7)),
+                    eVar,
+                    Constant(9)
+                );
+
+            var lambda = Lambda<Func<int>>(blockExpr);
+            var fastCompiled = lambda.CompileFast(true);
+            var compiled = lambda.Compile();
+            Assert.NotNull(fastCompiled);
+            Assert.AreEqual(compiled(), fastCompiled());
+        }
+
+        [Test]
         public void VariableAddAssignIsSupported()
         {
             var eVar = Variable(typeof(int));
