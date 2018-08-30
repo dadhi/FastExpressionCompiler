@@ -845,7 +845,7 @@ namespace FastExpressionCompiler
             var bodyExpr = lambdaExpr.Body;
             var bodyType = bodyExpr.Type;
             var compiledLambda = TryCompile(ref nestedClosure,
-                lambdaExpr.Type, Tools.GetParamTypes(lambdaParamExprs), bodyType, bodyExpr, bodyType,
+                lambdaExpr.Type, Tools.GetParamTypes(lambdaParamExprs), lambdaExpr.ReturnType, bodyExpr, bodyType,
                 lambdaParamExprs, isNestedLambda: true);
 
             if (compiledLambda == null)

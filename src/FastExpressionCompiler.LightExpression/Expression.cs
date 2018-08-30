@@ -342,11 +342,8 @@ namespace FastExpressionCompiler.LightExpression
         public readonly string Name;
         public readonly bool IsByRef;
 
-        public override SysExpr ToExpression() => ParamExpr;
-
-        public static implicit operator System.Linq.Expressions.ParameterExpression(ParameterExpression pe) => pe.ParamExpr;
-
-        public System.Linq.Expressions.ParameterExpression ParamExpr => _parameter ?? (_parameter = SysExpr.Parameter(Type, Name));
+        public override SysExpr ToExpression() => ToParamExpr();
+        public System.Linq.Expressions.ParameterExpression ToParamExpr() => SysExpr.Parameter(Type, Name);
 
         internal ParameterExpression(Type type, string name, bool isByRef)
         {
@@ -354,8 +351,6 @@ namespace FastExpressionCompiler.LightExpression
             Name = name;
             IsByRef = isByRef;
         }
-
-        private System.Linq.Expressions.ParameterExpression _parameter;
     }
 
     public sealed class ConstantExpression : Expression
@@ -633,7 +628,7 @@ namespace FastExpressionCompiler.LightExpression
             Test = test;
         }
 
-        internal System.Linq.Expressions.CatchBlock ToCatchBlock() => SysExpr.Catch(Variable.ParamExpr, Body.ToExpression());
+        internal System.Linq.Expressions.CatchBlock ToCatchBlock() => SysExpr.Catch(Variable.ToParamExpr(), Body.ToExpression());
     }
 
     public sealed class LabelExpression : Expression
@@ -678,30 +673,37 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType => ExpressionType.Lambda;
         public override Type Type { get; }
 
-        public Type ReturnType => Body.Type;
+        public readonly Type ReturnType;
         public readonly Expression Body;
         public readonly ParameterExpression[] Parameters;
 
         public override SysExpr ToExpression() => ToLambdaExpression();
 
         public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
-            SysExpr.Lambda(Body.ToExpression(), Parameters.Map(p => p.ParamExpr));
+            SysExpr.Lambda(Body.ToExpression(), Parameters.Map(p => p.ToParamExpr()));
 
         internal LambdaExpression(Type delegateType, Expression body, ParameterExpression[] parameters)
         {
             Body = body;
             Parameters = parameters;
-            var bodyType = body.Type;
-            Type = delegateType != null && delegateType != typeof(Delegate)
-                ? delegateType
-                : Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters.Map(e => (ParameterExpression)e)), bodyType);
+
+            if (delegateType == null || delegateType == typeof(Delegate))
+            {
+                ReturnType = body.Type;
+                Type = Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), ReturnType);
+            }
+            else
+            {
+                ReturnType = delegateType.GetTypeInfo().GetDeclaredMethod("Invoke").ReturnType;
+                Type = delegateType;
+            }
         }
     }
 
     public sealed class Expression<TDelegate> : LambdaExpression
     {
         public new System.Linq.Expressions.Expression<TDelegate> ToLambdaExpression() =>
-            SysExpr.Lambda<TDelegate>(Body.ToExpression(), Parameters.Map(p => p.ParamExpr));
+            SysExpr.Lambda<TDelegate>(Body.ToExpression(), Parameters.Map(p => p.ToParamExpr()));
 
         internal Expression(Expression body, ParameterExpression[] parameters)
             : base(typeof(TDelegate), body, parameters) { }
