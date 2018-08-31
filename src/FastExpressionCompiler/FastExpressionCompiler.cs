@@ -1039,7 +1039,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.PreIncrementAssign:
                     case ExpressionType.PostDecrementAssign:
                     case ExpressionType.PreDecrementAssign:
-                        return TryEmitIncDecAssign((UnaryExpression)expr, il, ref closure);
+                        return TryEmitIncDecAssign((UnaryExpression)expr, il, ref closure, parent);
 
                     case ExpressionType arithmeticAssign 
                         when Tools.GetArithmeticFromArithmeticAssignOrSelf(arithmeticAssign) != arithmeticAssign:
@@ -1446,7 +1446,7 @@ namespace FastExpressionCompiler
                 {
                     var expr = exprs[i];
                     if (parent != ExpressionType.Block || 
-                        (expr.NodeType != ExpressionType.Constant && expr.NodeType != ExpressionType.Parameter) || i == exprs.Count - 1) // In a Block, Constants or Paramters are only compiled to IL if they are the last Expression in it. 
+                        (expr.NodeType != ExpressionType.Constant && expr.NodeType != ExpressionType.Parameter) || closure.CurrentBlock.ResultExpr == expr) // In a Block, Constants or Paramters are only compiled to IL if they are the last Expression in it. 
                         if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, i))
                             return false;
                 }
@@ -1843,7 +1843,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitIncDecAssign(UnaryExpression expr, ILGenerator il, ref ClosureInfo closure)
+            private static bool TryEmitIncDecAssign(UnaryExpression expr, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
             {
                 var left = expr.Operand;
                 var nodeType = expr.NodeType;
@@ -1862,11 +1862,13 @@ namespace FastExpressionCompiler
                 {
                     il.Emit(OpCodes.Ldc_I4_1);
                     il.Emit(OpCodes.Add);
-                    il.Emit(OpCodes.Dup);
+                    if (parent != ExpressionType.Block || closure.CurrentBlock.ResultExpr == expr)
+                        il.Emit(OpCodes.Dup);
                 }
                 else if (nodeType == ExpressionType.PostIncrementAssign)
                 {
-                    il.Emit(OpCodes.Dup);
+                    if (parent != ExpressionType.Block || closure.CurrentBlock.ResultExpr == expr)
+                        il.Emit(OpCodes.Dup);
                     il.Emit(OpCodes.Ldc_I4_1);
                     il.Emit(OpCodes.Add);
                 }
@@ -1874,11 +1876,13 @@ namespace FastExpressionCompiler
                 {
                     il.Emit(OpCodes.Ldc_I4_M1);
                     il.Emit(OpCodes.Add);
-                    il.Emit(OpCodes.Dup);
+                    if (parent != ExpressionType.Block || closure.CurrentBlock.ResultExpr == expr)
+                        il.Emit(OpCodes.Dup);
                 }
                 else if (nodeType == ExpressionType.PostDecrementAssign)
                 {
-                    il.Emit(OpCodes.Dup);
+                    if (parent != ExpressionType.Block || closure.CurrentBlock.ResultExpr == expr)
+                        il.Emit(OpCodes.Dup);
                     il.Emit(OpCodes.Ldc_I4_M1);
                     il.Emit(OpCodes.Add);
                 }
@@ -2172,7 +2176,7 @@ namespace FastExpressionCompiler
                 if (!EmitMethodCall(il, method))
                     return false;
 
-                if (parent == ExpressionType.Block && method.ReturnType != typeof(void))
+                if (parent == ExpressionType.Block && closure.CurrentBlock.ResultExpr != expr && method.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);
 
                 return true;

@@ -144,7 +144,10 @@ namespace FastExpressionCompiler.IssueTests
             var fastCompiled = lambda.CompileFast(true);
             var compiled = lambda.Compile();
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(compiled(), fastCompiled());
+            j = 88;
+            var ex = compiled();
+            j = 88;
+            Assert.AreEqual(ex, fastCompiled());
         }
 
         [Test]
