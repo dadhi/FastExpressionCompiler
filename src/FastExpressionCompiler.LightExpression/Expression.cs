@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using SysExpr = System.Linq.Expressions.Expression;
@@ -66,11 +67,14 @@ namespace FastExpressionCompiler.LightExpression
         public static NewExpression New(ConstructorInfo ctor, params Expression[] arguments) =>
             new NewExpression(ctor, arguments);
 
-        public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
-            new MethodCallExpression(null, method, arguments);
-
         public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) =>
             new MethodCallExpression(instance, method, arguments);
+
+        public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
+            Call(null, method, arguments);
+
+        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) => 
+            Call(null, type.FindMethod(true, methodName, typeArguments, arguments), arguments);
 
         public static PropertyExpression Property(PropertyInfo property) =>
             new PropertyExpression(null, property);
@@ -79,10 +83,7 @@ namespace FastExpressionCompiler.LightExpression
             new PropertyExpression(instance, property);
 
         public static MemberExpression Property(Expression expression, string propertyName) => 
-            Property(expression, GetPropertyInfoByName(propertyName, expression.Type));
-
-        private static PropertyInfo GetPropertyInfoByName(string propertyName, Type type) => 
-            type.GetTypeInfo().GetDeclaredProperty(propertyName);
+            Property(expression, expression.Type.FindProperty(propertyName));
 
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, params Expression[] arguments) =>
             new IndexExpression(instance, indexer, arguments);
@@ -106,10 +107,7 @@ namespace FastExpressionCompiler.LightExpression
             new FieldExpression(instance, field);
 
         public static FieldExpression Field(Expression instance, string fieldName) => 
-            new FieldExpression(instance, GetFieldInfoByName(fieldName, instance.Type));
-
-        private static FieldInfo GetFieldInfoByName(string fieldName, Type type) =>
-            type.GetTypeInfo().GetDeclaredField(fieldName);
+            new FieldExpression(instance, instance.Type.FindField(fieldName));
 
         public static LambdaExpression Lambda(Expression body) =>
             new LambdaExpression(null, body, Tools.Empty<ParameterExpression>());
@@ -164,6 +162,17 @@ namespace FastExpressionCompiler.LightExpression
 
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Type type) =>
             new ConditionalExpression(test, ifTrue, ifFalse, type);
+
+        public static ConditionalExpression IfThen(Expression test, Expression ifTrue) => 
+            Condition(test, ifTrue, Empty(), typeof(void));
+
+        public static DefaultExpression Empty() => new DefaultExpression(typeof(void));
+
+        public static DefaultExpression Default(Type type) => 
+            type == typeof(void) ? Empty() : new DefaultExpression(type);
+
+        public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) => 
+            Condition(test, ifTrue, ifFalse, typeof(void));
 
         public static Expression Add(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Add, left, right, left.Type);
@@ -344,6 +353,38 @@ namespace FastExpressionCompiler.LightExpression
 
             return false;
         }
+
+        internal static MethodInfo FindMethod(this Type type, bool isStatic,
+            string methodName, Type[] typeArguments, Expression[] arguments) => 
+            type.GetTypeInfo().DeclaredMethods.GetFirst(m =>
+            {
+                if (isStatic && !m.IsStatic)
+                    return false;
+
+                if (m.Name != methodName)
+                    return false;
+
+                var mTypeArgs = m.GetGenericArguments();
+                typeArguments = typeArguments ?? Type.EmptyTypes;
+                if (mTypeArgs.Length != typeArguments.Length ||
+                    mTypeArgs.Length != 0 && !mTypeArgs.SequenceEqual(typeArguments))
+                    return false;
+
+                var mParams = m.GetParameters();
+                arguments = arguments ?? Tools.Empty<Expression>();
+
+                if (mParams.Length != arguments.Length ||
+                    mParams.Length != 0 && !mParams.Map(p => p.ParameterType).SequenceEqual(arguments.Map(a => a.Type)))
+                    return false;
+
+                return true;
+            });
+
+        internal static PropertyInfo FindProperty(this Type type, string propertyName) =>
+            type.GetTypeInfo().GetDeclaredProperty(propertyName);
+
+        internal static FieldInfo FindField(this Type type, string fieldName) =>
+            type.GetTypeInfo().GetDeclaredField(fieldName);
     }
 
     public class UnaryExpression : Expression
@@ -565,7 +606,8 @@ namespace FastExpressionCompiler.LightExpression
         public readonly MethodInfo Method;
         public readonly Expression Object;
 
-        public override SysExpr ToExpression() => SysExpr.Call(Object?.ToExpression(), Method, ArgumentsToExpressions());
+        public override SysExpr ToExpression() => 
+            SysExpr.Call(Object?.ToExpression(), Method, ArgumentsToExpressions());
 
         internal MethodCallExpression(Expression @object, MethodInfo method, params Expression[] arguments)
             : base(arguments)
@@ -650,6 +692,19 @@ namespace FastExpressionCompiler.LightExpression
         internal InvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type) : base(arguments)
         {
             Expression = expression;
+            Type = type;
+        }
+    }
+
+    public sealed class DefaultExpression : Expression
+    {
+        public override ExpressionType NodeType => ExpressionType.Default;
+        public override Type Type { get; }
+
+        public override SysExpr ToExpression() => Type == typeof(void) ? SysExpr.Empty() : SysExpr.Default(Type);
+
+        internal DefaultExpression(Type type)
+        {
             Type = type;
         }
     }

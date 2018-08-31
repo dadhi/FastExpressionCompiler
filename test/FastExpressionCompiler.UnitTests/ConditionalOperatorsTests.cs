@@ -1,13 +1,19 @@
 ﻿using NUnit.Framework;
 using System;
+
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class ConditionalOperatorsTests
     {
+#if !LIGHT_EXPRESSION
         [Test]
         public void Logical_and()
         {
@@ -130,6 +136,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(dlg);
             Assert.AreEqual(string.Concat(s, "ccc"), dlg());
         }
+#endif
 
         [Test, Ignore("Return & Label are now supported")]
         public void CompileFast_should_return_null_when_option_is_set_and_expression_type_is_not_supported()
