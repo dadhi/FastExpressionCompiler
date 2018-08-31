@@ -1035,6 +1035,12 @@ namespace FastExpressionCompiler
                     case ExpressionType.Conditional:
                         return TryEmitConditional((ConditionalExpression)expr, paramExprs, il, ref closure);
 
+                    case ExpressionType.PostIncrementAssign:
+                    case ExpressionType.PreIncrementAssign:
+                    case ExpressionType.PostDecrementAssign:
+                    case ExpressionType.PreDecrementAssign:
+                        return TryEmitIncDecAssign((UnaryExpression)expr, il, ref closure, parent);
+
                     case ExpressionType arithmeticAssign 
                         when Tools.GetArithmeticFromArithmeticAssignOrSelf(arithmeticAssign) != arithmeticAssign:
                     case ExpressionType.Assign:
@@ -1440,7 +1446,7 @@ namespace FastExpressionCompiler
                 {
                     var expr = exprs[i];
                     if (parent != ExpressionType.Block || 
-                        (expr.NodeType != ExpressionType.Constant && expr.NodeType != ExpressionType.Parameter) || i == exprs.Count - 1) // In a Block, Constants or Paramters are only compiled to IL if they are the last Expression in it. 
+                        (expr.NodeType != ExpressionType.Constant && expr.NodeType != ExpressionType.Parameter) || closure.CurrentBlock.ResultExpr == expr) // In a Block, Constants or Paramters are only compiled to IL if they are the last Expression in it. 
                         if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, i))
                             return false;
                 }
@@ -1837,6 +1843,55 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static bool TryEmitIncDecAssign(UnaryExpression expr, ILGenerator il, ref ClosureInfo closure, ExpressionType parent)
+            {
+                var left = expr.Operand;
+                var nodeType = expr.NodeType;
+
+                var leftParamExpr = (ParameterExpression)left;
+
+                var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex(leftParamExpr);
+                if (varIdx == -1)
+                {
+                    return false;
+                }
+
+                il.Emit(OpCodes.Ldloc, closure.CurrentBlock.LocalVars[varIdx]);
+
+                if (nodeType == ExpressionType.PreIncrementAssign)
+                {
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Emit(OpCodes.Add);
+                    if (parent != ExpressionType.Block || closure.CurrentBlock.ResultExpr == expr)
+                        il.Emit(OpCodes.Dup);
+                }
+                else if (nodeType == ExpressionType.PostIncrementAssign)
+                {
+                    if (parent != ExpressionType.Block || closure.CurrentBlock.ResultExpr == expr)
+                        il.Emit(OpCodes.Dup);
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Emit(OpCodes.Add);
+                }
+                else if (nodeType == ExpressionType.PreDecrementAssign)
+                {
+                    il.Emit(OpCodes.Ldc_I4_M1);
+                    il.Emit(OpCodes.Add);
+                    if (parent != ExpressionType.Block || closure.CurrentBlock.ResultExpr == expr)
+                        il.Emit(OpCodes.Dup);
+                }
+                else if (nodeType == ExpressionType.PostDecrementAssign)
+                {
+                    if (parent != ExpressionType.Block || closure.CurrentBlock.ResultExpr == expr)
+                        il.Emit(OpCodes.Dup);
+                    il.Emit(OpCodes.Ldc_I4_M1);
+                    il.Emit(OpCodes.Add);
+                }
+
+                il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
+
+                return true;
+            }
+
             private static bool TryEmitAssign(BinaryExpression expr, Type exprType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
@@ -2121,7 +2176,7 @@ namespace FastExpressionCompiler
                 if (!EmitMethodCall(il, method))
                     return false;
 
-                if (parent == ExpressionType.Block && method.ReturnType != typeof(void))
+                if (parent == ExpressionType.Block && closure.CurrentBlock.ResultExpr != expr && method.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);
 
                 return true;
