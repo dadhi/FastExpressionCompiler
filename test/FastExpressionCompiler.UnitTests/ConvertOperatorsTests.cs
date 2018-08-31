@@ -1,13 +1,19 @@
 ﻿using System;
-using System.Linq.Expressions;
 using NUnit.Framework;
-using static System.Linq.Expressions.Expression;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class ConvertOperatorsTests
     {
+#if !LIGHT_EXPRESSION
         [Test]
         public void Target_type_implicit_operator()
         {
@@ -40,6 +46,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.AreEqual("X:hey", y.S);
         }
+#endif
 
         [Test]
         public void Target_type_explicit_operator_in_action()

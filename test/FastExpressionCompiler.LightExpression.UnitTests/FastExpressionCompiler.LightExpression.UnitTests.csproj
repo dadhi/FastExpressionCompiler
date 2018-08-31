@@ -7,8 +7,15 @@
 
     <ItemGroup>
         <None Remove="*.ncrunchproject" />
-        <Compile Include="..\FastExpressionCompiler.UnitTests\AssignTests.cs;..\FastExpressionCompiler.UnitTests\BlockTests.cs;..\FastExpressionCompiler.UnitTests\CoalesceTests.cs;..\FastExpressionCompiler.UnitTests\ConditionalOperatorsTests.cs"
-                 Exclude="..\FastExpressionCompiler.UnitTests\ArithmeticOperationsTests.cs" />
+        <Compile Include="..\FastExpressionCompiler.UnitTests\**\*.cs" Exclude="..\FastExpressionCompiler.UnitTests\obj\**\*.*" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="..\FastExpressionCompiler.UnitTests\ArithmeticOperationsTests.cs" />
+      <Compile Remove="..\FastExpressionCompiler.UnitTests\ConstantAndConversionTests.cs" />
+      <Compile Remove="..\FastExpressionCompiler.UnitTests\HoistedLambdaExprTests.cs" />
+      <Compile Remove="..\FastExpressionCompiler.UnitTests\NestedLambdaTests.cs" />
+      <Compile Remove="..\FastExpressionCompiler.UnitTests\ValueTypeTests.cs" />
     </ItemGroup>
 
     <ItemGroup>

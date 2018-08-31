@@ -186,6 +186,24 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression Divide(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Divide, left, right, left.Type);
 
+        public static Expression Equal(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.Equal, left, right, left.Type);
+
+        public static Expression GreaterThan(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.GreaterThan, left, right, left.Type);
+
+        public static Expression GreaterThanOrEqual(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.GreaterThanOrEqual, left, right, left.Type);
+
+        public static Expression LessThan(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.LessThan, left, right, left.Type);
+
+        public static Expression LessThanOrEqual(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.LessThanOrEqual, left, right, left.Type);
+
+        public static Expression NotEqual(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, left.Type);
+
         public static BlockExpression Block(params Expression[] expressions) => 
             Block(Tools.Empty<ParameterExpression>(), expressions);
 
