@@ -1,8 +1,16 @@
 ﻿using System;
+using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
-using static System.Linq.Expressions.Expression;
 
-namespace FastExpressionCompiler.IssueTests
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
+namespace FastExpressionCompiler.UnitTests
+#endif
 {
     class Issue102_Label_and_Goto_Expression
     {
@@ -11,7 +19,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var returnTarget = Label("aaa");
 
-            var writeLineMethod = typeof(Console).GetMethod("WriteLine", new[] { typeof(string) });
+            var writeLineMethod = typeof(Console).GetTypeInfo().DeclaredMethods.First(x => x.Name == "WriteLine" && x.GetParameters().Length == 1 && x.GetParameters()[0].ParameterType == typeof(string));
             Assert.IsNotNull(writeLineMethod);
 
             var blockExpr =
@@ -36,7 +44,6 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda(
                 Return(Label(), Constant(1)));
 
-            Assert.Throws<InvalidOperationException>(() => lambda.Compile());
             Assert.Throws<InvalidOperationException>(() => lambda.CompileFast(true));
         }
     }

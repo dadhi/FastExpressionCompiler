@@ -1,14 +1,21 @@
 ﻿using System;
-using System.Linq.Expressions;
 using System.Text;
 using NUnit.Framework;
 #pragma warning disable 659
 
-namespace FastExpressionCompiler.IssueTests
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
+namespace FastExpressionCompiler.UnitTests
+#endif
 {
-    [TestFixture]
+[TestFixture]
     public class Issue14_String_constant_comparisons_fail
     {
+#if !LIGHT_EXPRESSION
         [Test]
         public void String_equality_should_work()
         {
@@ -36,15 +43,16 @@ namespace FastExpressionCompiler.IssueTests
             // this is needed because for the string literal above it does reference comparison, and here it does op_Equality
             Assert.IsFalse(isHello(new StringBuilder("Hello").ToString())); 
         }
+#endif
 
         [Test]
         public void Guid_equality_should_work()
         {
             var expectedId = Guid.NewGuid();
-            var expectedIdExpr = Expression.Constant(expectedId);
+            var expectedIdExpr = Constant(expectedId);
 
-            var idParamExpr = Expression.Parameter(typeof(Guid), "id");
-            var isExpectedIdExpr = Expression.Lambda(Expression.Equal(idParamExpr, expectedIdExpr), idParamExpr);
+            var idParamExpr = Parameter(typeof(Guid), "id");
+            var isExpectedIdExpr = Lambda(Equal(idParamExpr, expectedIdExpr), idParamExpr);
 
             var isExpectedId = isExpectedIdExpr.CompileFast<Func<Guid, bool>>(true);
 
@@ -55,10 +63,10 @@ namespace FastExpressionCompiler.IssueTests
         public void Guid_not_equality_should_work()
         {
             var expectedId = Guid.NewGuid();
-            var expectedIdExpr = Expression.Constant(expectedId);
+            var expectedIdExpr = Constant(expectedId);
 
-            var idParamExpr = Expression.Parameter(typeof(Guid), "id");
-            var isExpectedIdExpr = Expression.Lambda(Expression.NotEqual(idParamExpr, expectedIdExpr), idParamExpr);
+            var idParamExpr = Parameter(typeof(Guid), "id");
+            var isExpectedIdExpr = Lambda(NotEqual(idParamExpr, expectedIdExpr), idParamExpr);
 
             var isExpectedId = isExpectedIdExpr.CompileFast<Func<Guid, bool>>(true);
 
@@ -68,10 +76,10 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Enum_equality_should_work()
         {
-            var expectedExpr = Expression.Constant(Blah.Bar, typeof(Blah));
+            var expectedExpr = Constant(Blah.Bar, typeof(Blah));
 
-            var paramExpr = Expression.Parameter(typeof(Blah), "x");
-            var isExpectedExpr = Expression.Lambda(Expression.Equal(paramExpr, expectedExpr), paramExpr);
+            var paramExpr = Parameter(typeof(Blah), "x");
+            var isExpectedExpr = Lambda(Equal(paramExpr, expectedExpr), paramExpr);
 
             var isExpected = isExpectedExpr.CompileFast<Func<Blah, bool>>(true);
 
@@ -85,10 +93,10 @@ namespace FastExpressionCompiler.IssueTests
         public void Class_Equals_equality_should_work()
         {
             var expected = new Pooh(42);
-            var expectedExpr = Expression.Constant(expected, typeof(Pooh));
+            var expectedExpr = Constant(expected, typeof(Pooh));
 
-            var paramExpr = Expression.Parameter(typeof(Pooh), "x");
-            var isExpectedExpr = Expression.Lambda(Expression.Equal(paramExpr, expectedExpr), paramExpr);
+            var paramExpr = Parameter(typeof(Pooh), "x");
+            var isExpectedExpr = Lambda(Equal(paramExpr, expectedExpr), paramExpr);
 
             var isExpected = isExpectedExpr.CompileFast<Func<Pooh, bool>>(true);
 

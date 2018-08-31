@@ -1,10 +1,16 @@
 ﻿using NUnit.Framework;
 using System;
-using static System.Linq.Expressions.Expression;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
-    [TestFixture]
+[TestFixture]
     public class DefaultTests
     {
         [Test]

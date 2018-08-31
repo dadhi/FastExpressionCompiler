@@ -1,9 +1,15 @@
 ﻿using System;
-using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
 
-namespace FastExpressionCompiler.IssueTests
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
+namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class Jit
@@ -35,7 +41,7 @@ namespace FastExpressionCompiler.IssueTests
         public void MultiplePropertiesSuccess()
         {
             var expr = BuildExpression<object, object>(typeof(Person), "Boss.Name.First");
-            var dlg = expr.Compile();
+            var dlg = expr.CompileFast();
 
             var data = new Person()
             {
@@ -73,7 +79,7 @@ namespace FastExpressionCompiler.IssueTests
         public void SinglePropertySuccess()
         {
             var expr = BuildExpression<object, object>(typeof(Person), "Age");
-            var dlg = expr.Compile();
+            var dlg = expr.CompileFast();
 
             var data = new Person()
             {
@@ -105,8 +111,8 @@ namespace FastExpressionCompiler.IssueTests
             var targetType = typeof(TTarget);
             var valueType = typeof(TValue);
 
-            var targetParameter = Expression.Parameter(targetType, "target");
-            var valueParameter = Expression.Parameter(valueType, "value");
+            var targetParameter = Parameter(targetType, "target");
+            var valueParameter = Parameter(valueType, "value");
 
             Expression current = targetParameter;
 
@@ -132,7 +138,7 @@ namespace FastExpressionCompiler.IssueTests
             // '(target, value) => ((declaringType)target).PropertyOrField[.PropertyOrField ...] = value'
             // '(target, value) => target.PropertyOrField[.PropertyOrField ...] = value'
 
-            var lambda = Expression.Lambda<Action<TTarget, TValue>>(assignment,
+            var lambda = Lambda<Action<TTarget, TValue>>(assignment,
                 $"Setter_{declaringType.Name}_{path.Replace('.', '_')}", new[] { targetParameter, valueParameter });
 
             return lambda;
@@ -153,7 +159,7 @@ namespace FastExpressionCompiler.IssueTests
                     throw new ArgumentException($"A {member.MemberType} member is not supported. Expected a Property or Field member.");
                 }
 
-                expression = field == null ? Expression.Property(expression, property) : Expression.Field(expression, field);
+                expression = field == null ? Property(expression, property) : Field(expression, field);
             }
             return expression;
         }

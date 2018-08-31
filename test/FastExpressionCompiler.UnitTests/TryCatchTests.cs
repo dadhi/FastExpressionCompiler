@@ -3,11 +3,16 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
-    [TestFixture]
+[TestFixture]
     public class TryCatchTests
     {
         [Test]
@@ -75,9 +80,6 @@ namespace FastExpressionCompiler.UnitTests
 
             // Test that expression is valid with system Compile
             var fExpr = Lambda<Func<string, int>>(expr, aParamExpr);
-
-            var f = fExpr.Compile();
-            Assert.AreEqual(41, f("A"));
 
             var ff = fExpr.CompileFast(ifFastFailedReturnNull: true);
             Assert.IsNotNull(ff);

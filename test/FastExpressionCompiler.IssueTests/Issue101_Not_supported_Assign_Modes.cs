@@ -1,10 +1,15 @@
 ﻿using System;
-using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
-using static System.Linq.Expressions.Expression;
 
-namespace FastExpressionCompiler.IssueTests
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
+namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class Issue101_Not_supported_Assign_Modes
@@ -20,9 +25,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
-            var compiled = lambda.Compile();
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(compiled(), fastCompiled());
+            Assert.AreEqual(1, fastCompiled());
         }
 
         [Test]
@@ -36,9 +40,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
-            var compiled = lambda.Compile();
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(compiled(), fastCompiled());
+            Assert.AreEqual(0, fastCompiled());
         }
 
         [Test]
@@ -52,9 +55,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
-            var compiled = lambda.Compile();
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(compiled(), fastCompiled());
+            Assert.AreEqual(-1, fastCompiled());
         }
 
         [Test]
@@ -68,9 +70,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
-            var compiled = lambda.Compile();
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(compiled(), fastCompiled());
+            Assert.AreEqual(0, fastCompiled());
         }
 
         [Test]
@@ -84,9 +85,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<short>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
-            var compiled = lambda.Compile();
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(compiled(), fastCompiled());
+            Assert.AreEqual(1, fastCompiled());
         }
 
         [Test]
@@ -102,9 +102,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
-            var compiled = lambda.Compile();
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(compiled(), fastCompiled());
+            Assert.AreEqual(3, fastCompiled());
         }
 
         [Test]
@@ -124,9 +123,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
-            var compiled = lambda.Compile();
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(compiled(), fastCompiled());
+            Assert.AreEqual(1, fastCompiled());
         }
 
         [Test]
@@ -142,12 +140,9 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
-            var compiled = lambda.Compile();
             Assert.NotNull(fastCompiled);
             j = 88;
-            var ex = compiled();
-            j = 88;
-            Assert.AreEqual(ex, fastCompiled());
+            Assert.AreEqual(88, fastCompiled());
         }
 
         [Test]
@@ -164,9 +159,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
-            var compiled = lambda.Compile();
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(compiled(), fastCompiled());
+            Assert.AreEqual(1, fastCompiled());
         }
     }
 }
