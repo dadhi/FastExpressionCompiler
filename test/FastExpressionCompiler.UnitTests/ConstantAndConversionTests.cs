@@ -121,6 +121,21 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(ExpressionCompiler.CompileFast(() => true)(), true);
         }
 
+        [Test(Description = "Support all types and operations from System.Numerics")]
+        public void Can_return_constant2()
+        {
+            for (int n = -200; n < 200; n++)
+            {
+                var blockExpr =
+                    Expression.Block(
+                        Expression.Constant(n)
+                    );
+                var lambda = Expression.Lambda<Func<int>>(blockExpr);
+                var fastCompiled = lambda.CompileFast(true);
+                Assert.AreEqual(n, fastCompiled());
+            }
+        }
+
         public enum XByte : byte { A }
     }
 }
