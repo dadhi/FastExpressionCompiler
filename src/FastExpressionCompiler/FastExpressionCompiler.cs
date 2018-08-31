@@ -962,7 +962,7 @@ namespace FastExpressionCompiler
             private static readonly MethodInfo _getTypeFromHandleMethod =
                 ((Func<RuntimeTypeHandle, Type>)Type.GetTypeFromHandle).Method;
 
-            private static readonly MethodInfo _objectEqualsMethod = ((Func<Object, Object, bool>)Object.Equals).Method;
+            private static readonly MethodInfo _objectEqualsMethod = ((Func<object, object, bool>)object.Equals).Method;
 #endif
 
             public static bool TryEmit(Expression expr, Type exprType,
@@ -2804,6 +2804,8 @@ nullCheck:
     // in order to prevent conflicts with YOUR helpers with standard names
     internal static class Tools
     {
+        public static bool IsValueType(this Type type) => type.GetTypeInfo().IsValueType;
+
         public static bool IsNullable(this Type type) =>
             type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>);
 

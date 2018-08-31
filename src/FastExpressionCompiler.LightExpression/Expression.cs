@@ -88,7 +88,7 @@ namespace FastExpressionCompiler.LightExpression
             new IndexExpression(instance, indexer, arguments);
 
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) => 
-            new IndexExpression(instance, indexer, arguments.AsArray());
+            new IndexExpression(instance, indexer, arguments.AsReadOnlyList());
 
         public static IndexExpression MakeIndex(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) => 
             indexer != null ? Property(instance, indexer, arguments) : ArrayAccess(instance, arguments);
@@ -97,7 +97,7 @@ namespace FastExpressionCompiler.LightExpression
             new IndexExpression(array, null, indexes);
 
         public static IndexExpression ArrayAccess(Expression array, IEnumerable<Expression> indexes) => 
-            new IndexExpression(array, null, indexes.AsArray());
+            new IndexExpression(array, null, indexes.AsReadOnlyList());
 
         public static FieldExpression Field(FieldInfo field) =>
             new FieldExpression(null, field);
@@ -166,16 +166,16 @@ namespace FastExpressionCompiler.LightExpression
             new ConditionalExpression(test, ifTrue, ifFalse, type);
 
         public static Expression Add(Expression left, Expression right) =>
-            new ArithmeticBinaryExpression(ExpressionType.Add, left, right, left.Type);
+            new SimpleBinaryExpression(ExpressionType.Add, left, right, left.Type);
 
         public static Expression Substract(Expression left, Expression right) =>
-            new ArithmeticBinaryExpression(ExpressionType.Subtract, left, right, left.Type);
+            new SimpleBinaryExpression(ExpressionType.Subtract, left, right, left.Type);
 
         public static Expression Multiply(Expression left, Expression right) =>
-            new ArithmeticBinaryExpression(ExpressionType.Multiply, left, right, left.Type);
+            new SimpleBinaryExpression(ExpressionType.Multiply, left, right, left.Type);
 
         public static Expression Divide(Expression left, Expression right) =>
-            new ArithmeticBinaryExpression(ExpressionType.Divide, left, right, left.Type);
+            new SimpleBinaryExpression(ExpressionType.Divide, left, right, left.Type);
 
         public static BlockExpression Block(params Expression[] expressions) => 
             Block(Tools.Empty<ParameterExpression>(), expressions);
@@ -224,6 +224,126 @@ namespace FastExpressionCompiler.LightExpression
 
         public static GotoExpression Goto(LabelTarget target, Expression value = null, Type type = null) => 
             MakeGoto(GotoExpressionKind.Goto, target, value, type);
+
+        public static BinaryExpression Coalesce(Expression left, Expression right) => Coalesce(left, right, null);
+
+        public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) => 
+            conversion == null ?
+                new SimpleBinaryExpression(ExpressionType.Coalesce, left, right, GetCoalesceType(left.Type, right.Type)) : 
+                (BinaryExpression)new CoalesceConversionBinaryExpression(left, right, conversion);
+
+        private static Type GetCoalesceType(Type left, Type right)
+        {
+            var leftNonNullable = left.UnpackNullableOrSelf();
+            if (leftNonNullable != left && right.IsImplicitlyConvertibleTo(leftNonNullable))
+                return leftNonNullable;
+
+            if (right.IsImplicitlyConvertibleTo(left))
+                return left;
+
+            if (leftNonNullable.IsImplicitlyConvertibleTo(right))
+                return right;
+
+            throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
+        }
+    }
+
+    internal static class TypeTools
+    {
+        internal static Type UnpackNullableOrSelf(this Type type) => 
+            type.IsNullable() ? type.GetTypeInfo().GenericTypeArguments[0] : type;
+
+        internal static bool IsImplicitlyConvertibleTo(this Type source, Type target) =>
+            source == target ||
+            target.GetTypeInfo().IsAssignableFrom(source.GetTypeInfo()) ||
+            source.IsImplicitlyBoxingConvertibleTo(target) ||
+            source.IsImplicitlyNumericConvertibleTo(target);
+
+        internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) => 
+            source.IsValueType() &&
+            (target == typeof(object) || 
+             target == typeof(ValueType)) || 
+             source.GetTypeInfo().IsEnum && target == typeof(Enum);
+
+        internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
+        {
+            if (source == typeof(Char))
+                return 
+                    target == typeof(UInt16) || 
+                    target == typeof(Int32) || 
+                    target == typeof(UInt32) || 
+                    target == typeof(Int64) || 
+                    target == typeof(UInt64) || 
+                    target == typeof(Single) || 
+                    target == typeof(Double) || 
+                    target == typeof(Decimal);
+
+            if (source == typeof(SByte))
+                return
+                    target == typeof(Int16) ||
+                    target == typeof(Int32) ||
+                    target == typeof(Int64) ||
+                    target == typeof(Single) ||
+                    target == typeof(Double) ||
+                    target == typeof(Decimal);
+
+            if (source == typeof(Byte))
+                return
+                    target == typeof(Int16) ||
+                    target == typeof(UInt16) ||
+                    target == typeof(Int32) ||
+                    target == typeof(UInt32) ||
+                    target == typeof(Int64) ||
+                    target == typeof(UInt64) ||
+                    target == typeof(Single) ||
+                    target == typeof(Double) ||
+                    target == typeof(Decimal);
+
+            if (source == typeof(Int16))
+                return
+                    target == typeof(Int32) ||
+                    target == typeof(Int64) ||
+                    target == typeof(Single) ||
+                    target == typeof(Double) ||
+                    target == typeof(Decimal);
+
+            if (source == typeof(UInt16))
+                return
+                    target == typeof(Int32) ||
+                    target == typeof(UInt32) ||
+                    target == typeof(Int64) ||
+                    target == typeof(UInt64) ||
+                    target == typeof(Single) ||
+                    target == typeof(Double) ||
+                    target == typeof(Decimal);
+
+            if (source == typeof(Int32))
+                return
+                    target == typeof(Int64) ||
+                    target == typeof(Single) ||
+                    target == typeof(Double) ||
+                    target == typeof(Decimal);
+
+            if (source == typeof(UInt32))
+                return
+                    target == typeof(UInt32) ||
+                    target == typeof(UInt64) ||
+                    target == typeof(Single) ||
+                    target == typeof(Double) ||
+                    target == typeof(Decimal);
+
+            if (source == typeof(Int64) ||
+                source == typeof(UInt64))
+                return
+                    target == typeof(Single) ||
+                    target == typeof(Double) ||
+                    target == typeof(Decimal);
+
+            if (source == typeof(Single))
+                return target == typeof(Double);
+
+            return false;
+        }
     }
 
     public class UnaryExpression : Expression
@@ -273,26 +393,42 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class ArithmeticBinaryExpression : BinaryExpression
+    public sealed class SimpleBinaryExpression : BinaryExpression
     {
         public override SysExpr ToExpression()
         {
-            if (NodeType == ExpressionType.Add)
-                return SysExpr.Add(Left.ToExpression(), Right.ToExpression());
-            if (NodeType == ExpressionType.Subtract)
-                return SysExpr.Subtract(Left.ToExpression(), Right.ToExpression());
-            if (NodeType == ExpressionType.Multiply)
-                return SysExpr.Multiply(Left.ToExpression(), Right.ToExpression());
-            if (NodeType == ExpressionType.Divide)
-                return SysExpr.Divide(Left.ToExpression(), Right.ToExpression());
-
-            // todo: others 
-
-            throw new NotSupportedException($"Not a valid {NodeType} for arithmetic binary expression.");
+            switch (NodeType) {
+                case ExpressionType.Add:
+                    return SysExpr.Add(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.Subtract:
+                    return SysExpr.Subtract(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.Multiply:
+                    return SysExpr.Multiply(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.Divide:
+                    return SysExpr.Divide(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.Coalesce:
+                    return SysExpr.Coalesce(Left.ToExpression(), Right.ToExpression());
+                default:
+                    throw new NotSupportedException($"Not a valid {NodeType} for arithmetic binary expression.");
+            }
         }
 
-        internal ArithmeticBinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type)
+        internal SimpleBinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type)
             : base(nodeType, left, right, type) { }
+    }
+
+    public class CoalesceConversionBinaryExpression : BinaryExpression
+    {
+        public readonly LambdaExpression Conversion;
+
+        public override SysExpr ToExpression() =>
+            SysExpr.Coalesce(Left.ToExpression(), Right.ToExpression(), Conversion.ToLambdaExpression());
+
+        internal CoalesceConversionBinaryExpression(Expression left, Expression right, LambdaExpression conversion)
+            : base(ExpressionType.Coalesce, left, right, null)
+        {
+            Conversion = conversion;
+        }
     }
 
     public sealed class ArrayIndexExpression : BinaryExpression

@@ -1,8 +1,13 @@
 ﻿using NUnit.Framework;
 using System;
-using static System.Linq.Expressions.Expression;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class CoalesceTests

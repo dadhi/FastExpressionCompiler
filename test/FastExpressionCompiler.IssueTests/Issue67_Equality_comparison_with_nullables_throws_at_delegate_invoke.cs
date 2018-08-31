@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Linq.Expressions;
 using NUnit.Framework;
-using static System.Linq.Expressions.Expression;
+#pragma warning disable 219
 
 namespace FastExpressionCompiler.IssueTests
 {

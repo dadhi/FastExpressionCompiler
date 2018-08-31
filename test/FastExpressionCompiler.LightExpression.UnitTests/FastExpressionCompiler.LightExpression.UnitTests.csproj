@@ -7,7 +7,7 @@
 
     <ItemGroup>
         <None Remove="*.ncrunchproject" />
-        <Compile Include="..\FastExpressionCompiler.UnitTests\AssignTests.cs;..\FastExpressionCompiler.UnitTests\BlockTests.cs" 
+        <Compile Include="..\FastExpressionCompiler.UnitTests\AssignTests.cs;..\FastExpressionCompiler.UnitTests\BlockTests.cs;..\FastExpressionCompiler.UnitTests\CoalesceTests.cs" 
                  Exclude="..\FastExpressionCompiler.UnitTests\ArithmeticOperationsTests.cs" />
     </ItemGroup>
 
