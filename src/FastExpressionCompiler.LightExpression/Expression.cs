@@ -77,10 +77,10 @@ namespace FastExpressionCompiler.LightExpression
             Call(null, method, arguments);
 
         public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) => 
-            Call(null, type.FindMethod(true, methodName, typeArguments, arguments), arguments);
+            Call(null, type.FindMethod(methodName, typeArguments, arguments, isStatic: true), arguments);
 
         public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments) =>
-            new MethodCallExpression(instance, instance.Type.FindMethod(true, methodName, typeArguments, arguments), arguments);
+            new MethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, arguments), arguments);
 
         public static MemberExpression Property(PropertyInfo property) =>
             new PropertyExpression(null, property);
@@ -422,30 +422,32 @@ namespace FastExpressionCompiler.LightExpression
             return false;
         }
 
-        internal static MethodInfo FindMethod(this Type type, bool isStatic,
-            string methodName, Type[] typeArguments, Expression[] arguments) => 
+        internal static MethodInfo FindMethod(this Type type,
+            string methodName, Type[] typeArgs, Expression[] args, bool isStatic = false) =>
             type.GetTypeInfo().DeclaredMethods.GetFirst(m =>
             {
-                if (isStatic && !m.IsStatic)
-                    return false;
+                if (isStatic == m.IsStatic && methodName == m.Name)
+                {
+                    typeArgs = typeArgs ?? Type.EmptyTypes;
+                    var mTypeArgs = m.GetGenericArguments();
+                    if (typeArgs.Length == mTypeArgs.Length &&
+                        (typeArgs.Length == 0 ||
+                         typeArgs.Length == 1 && typeArgs[0] == mTypeArgs[0] ||
+                         typeArgs.Length == 2 && typeArgs[0] == mTypeArgs[0] && typeArgs[1] == mTypeArgs[1] ||
+                         typeArgs.SequenceEqual(mTypeArgs)))
+                    {
+                        args = args ?? Tools.Empty<Expression>();
+                        var mArgs = m.GetParameters();
+                        if (args.Length == mArgs.Length &&
+                            (args.Length == 0 ||
+                             args.Length == 1 && args[0].Type == mArgs[0].ParameterType ||
+                             args.Length == 2 && args[0].Type == mArgs[0].ParameterType && args[1].Type == mArgs[1].ParameterType ||
+                             args.Map(a => a.Type).SequenceEqual(mArgs.Map(p => p.ParameterType))))
+                            return true;
+                    }
+                }
 
-                if (m.Name != methodName)
-                    return false;
-
-                var mTypeArgs = m.GetGenericArguments();
-                typeArguments = typeArguments ?? Type.EmptyTypes;
-                if (mTypeArgs.Length != typeArguments.Length ||
-                    mTypeArgs.Length != 0 && !mTypeArgs.SequenceEqual(typeArguments))
-                    return false;
-
-                var mParams = m.GetParameters();
-                arguments = arguments ?? Tools.Empty<Expression>();
-
-                if (mParams.Length != arguments.Length ||
-                    mParams.Length != 0 && !mParams.Map(p => p.ParameterType).SequenceEqual(arguments.Map(a => a.Type)))
-                    return false;
-
-                return true;
+                return false;
             });
 
         internal static PropertyInfo FindProperty(this Type type, string propertyName) =>

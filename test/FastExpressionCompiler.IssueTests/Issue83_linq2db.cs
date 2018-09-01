@@ -181,7 +181,7 @@ namespace FastExpressionCompiler.UnitTests
             Two
         }
 
-        [Test][Ignore("fixme in LE")]
+        [Test]
         public void linq2db_NullReferenceException()
         {
             var a1 = Parameter(typeof(IQueryRunner), "qr");

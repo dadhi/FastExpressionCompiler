@@ -8,14 +8,15 @@
     <ItemGroup>
         <None Remove="*.ncrunchproject" />
         <Compile Include="..\FastExpressionCompiler.UnitTests\**\*.cs" Exclude="..\FastExpressionCompiler.UnitTests\obj\**\*.*" />
+        <Compile Remove="..\FastExpressionCompiler.UnitTests\ArithmeticOperationsTests.cs" />
+        <Compile Remove="..\FastExpressionCompiler.UnitTests\ConstantAndConversionTests.cs" />
+        <Compile Remove="..\FastExpressionCompiler.UnitTests\HoistedLambdaExprTests.cs" />
+        <Compile Remove="..\FastExpressionCompiler.UnitTests\NestedLambdaTests.cs" />
+        <Compile Remove="..\FastExpressionCompiler.UnitTests\ValueTypeTests.cs" />
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Remove="..\FastExpressionCompiler.UnitTests\ArithmeticOperationsTests.cs" />
-      <Compile Remove="..\FastExpressionCompiler.UnitTests\ConstantAndConversionTests.cs" />
-      <Compile Remove="..\FastExpressionCompiler.UnitTests\HoistedLambdaExprTests.cs" />
-      <Compile Remove="..\FastExpressionCompiler.UnitTests\NestedLambdaTests.cs" />
-      <Compile Remove="..\FastExpressionCompiler.UnitTests\ValueTypeTests.cs" />
+        <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -28,10 +29,6 @@
         <Reference Include="Microsoft.CSharp">
             <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6\Microsoft.CSharp.dll</HintPath>
         </Reference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
     </ItemGroup>
 
 </Project>

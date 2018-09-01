@@ -8,18 +8,17 @@
     <ItemGroup>
         <None Remove="*.ncrunchproject" />
         <Compile Include="..\FastExpressionCompiler.IssueTests\**\*.cs" Exclude="..\FastExpressionCompiler.IssueTests\obj\**\*.*" />
+
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\ObjectMethodExecutor\**" />
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue14_String_constant_comparisons_fail.cs" />
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke.cs" />
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor.cs" />
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\NServiceBus_PipelineExecutionExtensions.cs" />
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\NServiceBus_PipelineExecutionExtensions.SUT.cs" />
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Remove="..\FastExpressionCompiler.IssueTests\ObjectMethodExecutor\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue14_String_constant_comparisons_fail.cs" />
-      <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke.cs" />
-      <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor.cs" />
-      <Compile Remove="..\FastExpressionCompiler.IssueTests\NServiceBus_PipelineExecutionExtensions.cs" />
-      <Compile Remove="..\FastExpressionCompiler.IssueTests\NServiceBus_PipelineExecutionExtensions.SUT.cs" />
+        <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -32,10 +31,6 @@
         <Reference Include="Microsoft.CSharp">
             <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6\Microsoft.CSharp.dll</HintPath>
         </Reference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
     </ItemGroup>
 
 </Project>
