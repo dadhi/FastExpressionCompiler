@@ -1,26 +1,18 @@
 ﻿using System;
-using System.Linq.Expressions;
 using NUnit.Framework;
 
-namespace FastExpressionCompiler.IssueTests
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
+namespace FastExpressionCompiler.UnitTests
+#endif
 {
-    [TestFixture]
+[TestFixture]
     public class Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception
     {
-        [Test]
-        public void When_using_expression_compilation()
-        {
-            var id = Guid.NewGuid();
-            var instance = new TestTarget();
-
-            var expression = CreateWriter<TestTarget>();
-            var write = expression.Compile();
-
-            write(instance, id);
-
-            Assert.AreEqual(instance.ID, new CustomID(id));
-        }
-
         [Test]
         public void When_using_fast_expression_compilation()
         {

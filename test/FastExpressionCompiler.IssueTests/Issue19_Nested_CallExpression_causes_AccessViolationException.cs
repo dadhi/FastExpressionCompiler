@@ -1,12 +1,18 @@
 ﻿using System;
-using System.Linq.Expressions;
+using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
-using static System.Linq.Expressions.Expression;
 
-namespace FastExpressionCompiler.IssueTests
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
+namespace FastExpressionCompiler.UnitTests
+#endif
 {
-    [TestFixture]
+[TestFixture]
     public class Issue19_Nested_CallExpression_causes_AccessViolationException
     {
         [Test]
@@ -28,31 +34,22 @@ namespace FastExpressionCompiler.IssueTests
                 param);
 
             // build
-            var fn = predicate.Compile();
             var ffn = predicate.CompileFast();
 
             // test
             var entity = new Test();
-
-            var fnRes = fn(entity);
-            Assert.AreEqual(fnRes.Name, fnRes.Id.ToString());
-
+        
             var ffnRes = ffn(entity);
             Assert.AreEqual(ffnRes.Name, ffnRes.Id.ToString());
         }
 
-        static readonly MethodInfo _toStringMethod = MethodOf(() => new object().ToString());
-        static readonly MethodInfo _innerMethod = MethodOf(() => InnerCall(default(int))).GetGenericMethodDefinition();
+        static readonly MethodInfo _toStringMethod = typeof(object).GetTypeInfo().DeclaredMethods.First(x => x.Name == "ToString" && x.GetParameters().Length == 0);
+
+        static readonly MethodInfo _innerMethod = typeof(Issue19_Nested_CallExpression_causes_AccessViolationException).GetTypeInfo().GetMethod("InnerCall");
 
         public static TReturn InnerCall<TReturn>(TReturn input)
         {
             return input; // here we would do some transformation
-        }
-
-        public static MethodInfo MethodOf(Expression<Func<object>> func)
-        {
-            var mi = GetMemberInfo(func);
-            return mi is PropertyInfo ? ((PropertyInfo)mi).GetGetMethod() : (MethodInfo)mi;
         }
 
         public static MemberInfo GetMemberInfo(LambdaExpression func)
@@ -62,7 +59,7 @@ namespace FastExpressionCompiler.IssueTests
             if (ex is UnaryExpression)
                 ex = ((UnaryExpression)ex).Operand;
 
-            if (ex.NodeType == ExpressionType.New)
+            if (ex.NodeType == System.Linq.Expressions.ExpressionType.New)
                 return ((NewExpression)ex).Constructor;
 
             return
