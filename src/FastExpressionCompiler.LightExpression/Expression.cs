@@ -506,9 +506,18 @@ namespace FastExpressionCompiler.LightExpression
         protected BinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type)
         {
             NodeType = nodeType;
-            Type = type;
+           
             Left = left;
             Right = right;
+
+            if (nodeType == ExpressionType.Equal || nodeType == ExpressionType.NotEqual || 
+                nodeType == ExpressionType.GreaterThan || nodeType == ExpressionType.GreaterThanOrEqual || 
+                nodeType == ExpressionType.LessThan || nodeType == ExpressionType.LessThanOrEqual)
+            {
+                Type = typeof(bool);
+            }
+            else
+                Type = type;
         }
     }
 
