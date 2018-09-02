@@ -93,9 +93,6 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(123, ff("123"));
         }
 
-#if !LIGHT_EXPRESSION
-
-        //TODO: Add support for usage of exception parameter in void action
         [Test]
         public void Can_use_exception_parameter()
         {
@@ -115,12 +112,11 @@ namespace FastExpressionCompiler.UnitTests
                 )
             ));
 
-            var fcunc = expr.Compile();
             var func = expr.CompileFast(true);
             Assert.IsNotNull(func);
             Assert.DoesNotThrow(() => func());
         }
-#endif
+
         [Test]
         public void Can_return_from_catch_block()
         {
