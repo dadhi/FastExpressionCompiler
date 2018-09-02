@@ -71,7 +71,7 @@ namespace FastExpressionCompiler.UnitTests
                 Catch(exParamExpr,
                     Property(
                         Property(exParamExpr, typeof(Exception).GetTypeInfo()
-                            .DeclaredProperties.First(p => p.Name == nameof(Exception.Message))),
+                            .DeclaredProperties.First(p => p.Name == nameof(Exception.Source))),
                         typeof(string).GetTypeInfo()
                             .DeclaredProperties.First(p => p.Name == nameof(string.Length))
                     )
@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.UnitTests
             var ff = fExpr.CompileFast(ifFastFailedReturnNull: true);
             Assert.IsNotNull(ff);
 
-            Assert.AreEqual(41, ff("A"));
+            Assert.AreEqual(8, ff("A"));
             Assert.AreEqual(123, ff("123"));
         }
 
