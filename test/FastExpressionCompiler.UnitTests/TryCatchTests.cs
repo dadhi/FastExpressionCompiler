@@ -65,17 +65,22 @@ namespace FastExpressionCompiler.UnitTests
 
             var expr = TryCatch(
                 Call(typeof(int).GetTypeInfo()
-                    .DeclaredMethods.First(m => m.Name == nameof(int.Parse)),
+                        .DeclaredMethods.First(m => m.Name == nameof(int.Parse)),
                     aParamExpr
                 ),
                 Catch(exParamExpr,
-                    Property(
-                        Property(exParamExpr, typeof(Exception).GetTypeInfo()
-                            .DeclaredProperties.First(p => p.Name == nameof(Exception.Source))),
-                        typeof(string).GetTypeInfo()
-                            .DeclaredProperties.First(p => p.Name == nameof(string.Length))
-                    )
-                )
+                    Condition(
+                        GreaterThan(
+                            Property(
+                                Property(exParamExpr, typeof(Exception).GetTypeInfo()
+                                    .DeclaredProperties.First(p => p.Name == nameof(Exception.Message))),
+                                typeof(string).GetTypeInfo()
+                                    .DeclaredProperties.First(p => p.Name == nameof(string.Length))
+                            ),
+                            Constant(0)),
+                        Constant(47),
+                        Constant(0)
+                    ))
             );
 
             // Test that expression is valid with system Compile
@@ -84,35 +89,38 @@ namespace FastExpressionCompiler.UnitTests
             var ff = fExpr.CompileFast(ifFastFailedReturnNull: true);
             Assert.IsNotNull(ff);
 
-            Assert.AreEqual(8, ff("A"));
+            Assert.AreEqual(47, ff("A"));
             Assert.AreEqual(123, ff("123"));
         }
 
+#if !LIGHT_EXPRESSION
+
         //TODO: Add support for usage of exception parameter in void action
-        //[Test]
-        //public void Can_use_exception_parameter()
-        //{
-        //    var exPar = Parameter(typeof(Exception), "exc");
-        //    var getExceptionMessage = typeof(Exception)
-        //        .GetProperty(nameof(Exception.Message), BindingFlags.Public | BindingFlags.Instance).GetMethod;
-        //    var writeLine = typeof(Console).GetMethod(nameof(Console.WriteLine), new [] { typeof(string) });
+        [Test]
+        public void Can_use_exception_parameter()
+        {
+            var exPar = Parameter(typeof(Exception), "exc");
+            var getExceptionMessage = typeof(Exception)
+                .GetProperty(nameof(Exception.Message), BindingFlags.Public | BindingFlags.Instance).GetMethod;
+            var writeLine = typeof(Console).GetMethod(nameof(Console.WriteLine), new[] { typeof(string) });
 
-        //    var expr = Lambda<Action>(TryCatch(
-        //        Throw(Constant(new DivideByZeroException())),
-        //        Catch(
-        //            exPar,
-        //            Call(
-        //                writeLine,
-        //                Call(exPar, getExceptionMessage)
-        //            )
-        //        )
-        //    ));
+            var expr = Lambda<Action>(TryCatch(
+                Throw(Constant(new DivideByZeroException())),
+                Catch(
+                    exPar,
+                    Call(
+                        writeLine,
+                        Call(exPar, getExceptionMessage)
+                    )
+                )
+            ));
 
-        //    var func = expr.CompileFast(true);
-        //    Assert.IsNotNull(func);
-        //    Assert.DoesNotThrow(()=> func());
-        //}
-
+            var fcunc = expr.Compile();
+            var func = expr.CompileFast(true);
+            Assert.IsNotNull(func);
+            Assert.DoesNotThrow(() => func());
+        }
+#endif
         [Test]
         public void Can_return_from_catch_block()
         {

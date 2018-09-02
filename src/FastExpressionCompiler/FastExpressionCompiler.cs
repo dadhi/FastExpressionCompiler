@@ -1272,7 +1272,10 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Leave_S, returnLabel);
                     }
                     else
-                        il.Emit(OpCodes.Pop);
+                    {
+                        if (catchBodyExpr.Type != typeof(void))
+                            il.Emit(OpCodes.Pop);
+                    }
                 }
 
                 var finallyExpr = tryExpr.Finally;
