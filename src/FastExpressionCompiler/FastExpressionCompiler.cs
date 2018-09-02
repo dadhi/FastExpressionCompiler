@@ -2437,6 +2437,32 @@ namespace FastExpressionCompiler
                 return invokeMethod != null && EmitMethodCall(il, invokeMethod);
             }
 
+            private static bool TryEmitInvertedNullComparison(Expression expr,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
+            {
+                if (expr is BinaryExpression b)
+                {
+                    if (expr.NodeType != ExpressionType.Equal && expr.NodeType != ExpressionType.NotEqual)
+                        return false;
+                    if (b.Right is ConstantExpression r && r.Value == null)
+                    {
+                        if (!TryEmit(b.Left, b.Left.Type, paramExprs, il, ref closure, ExpressionType.Default))
+                            return false;
+                    }
+                    else if (b.Left is ConstantExpression l && l.Value == null)
+                    {
+                        if (!TryEmit(b.Right, b.Right.Type, paramExprs, il, ref closure, ExpressionType.Default))
+                            return false;
+                    }
+                    else
+                        return false;
+
+                    return true;
+                }
+
+                return false;
+            }
+
             private static bool TryEmitComparison(BinaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
@@ -2730,11 +2756,15 @@ nullCheck:
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
                 var testExpr = expr.Test;
-                if (!TryEmit(testExpr, testExpr.Type, paramExprs, il, ref closure, ExpressionType.Conditional))
+                var usedInverted = false;
+
+                if (TryEmitInvertedNullComparison(testExpr, paramExprs, il, ref closure))
+                    usedInverted = true;
+                else if (!TryEmit(testExpr, testExpr.Type, paramExprs, il, ref closure, ExpressionType.Conditional))
                     return false;
 
                 var labelIfFalse = il.DefineLabel();
-                il.Emit(OpCodes.Brfalse, labelIfFalse);
+                il.Emit(usedInverted && testExpr.NodeType == ExpressionType.Equal ? OpCodes.Brtrue : OpCodes.Brfalse, labelIfFalse);
 
                 var ifTrueExpr = expr.IfTrue;
                 if (!TryEmit(ifTrueExpr, ifTrueExpr.Type, paramExprs, il, ref closure, ExpressionType.Conditional))
