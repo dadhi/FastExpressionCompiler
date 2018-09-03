@@ -206,12 +206,8 @@ namespace FastExpressionCompiler
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = method.GetILGenerator();
-            if (!EmittingVisitor.TryEmit(expr, exprType, paramExprs, il, ref closureInfo, ExpressionType.Default, true))
+            if (!EmittingVisitor.TryEmit(expr, exprType, paramExprs, il, ref closureInfo, ExpressionType.Default, returnType != typeof(void)))
                 return null;
-
-            // user requested delegate without return, but inner lambda returns 
-            if (returnType == typeof(void) && exprType != typeof(void) && !IsByReferenceReturn(paramTypes, expr))
-                il.Emit(OpCodes.Pop); // discard the return value on stack (#71)
 
             il.Emit(OpCodes.Ret);
 
@@ -985,13 +981,13 @@ namespace FastExpressionCompiler
                 switch (expr.NodeType)
                 {
                     case ExpressionType.Parameter:
-                        return TryEmitParameter((ParameterExpression)expr, exprType, paramExprs, il, ref closure, parent, byRefIndex);
+                        return TryEmitParameter((ParameterExpression)expr, exprType, paramExprs, il, ref closure, parent, shouldReturnValue, byRefIndex);
                     case ExpressionType.Convert:
                         return TryEmitConvert((UnaryExpression)expr, exprType, paramExprs, il, ref closure, shouldReturnValue);
                     case ExpressionType.ArrayIndex:
                         return TryEmitArrayIndex((BinaryExpression)expr, exprType, paramExprs, il, ref closure, shouldReturnValue);
                     case ExpressionType.Constant:
-                        return TryEmitConstant((ConstantExpression)expr, exprType, il, ref closure);
+                        return TryEmitConstant((ConstantExpression)expr, exprType, il, ref closure, shouldReturnValue);
                     case ExpressionType.Call:
                         return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, parent, shouldReturnValue);
                     case ExpressionType.MemberAccess:
@@ -1322,8 +1318,11 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitParameter(ParameterExpression paramExpr, Type paramType, 
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, int byRefIndex = -1)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, bool shouldReturnValue, int byRefIndex = -1)
             {
+                if (!shouldReturnValue)
+                    return true;
+
                 // if parameter is passed through, then just load it on stack
                 var paramIndex = paramExprs.GetFirstIndex(paramExpr);
                 if (paramIndex != -1)
@@ -1451,10 +1450,8 @@ namespace FastExpressionCompiler
                 for (int i = 0, n = exprs.Count; i < n; i++)
                 {
                     var expr = exprs[i];
-                    if (parent != ExpressionType.Block || 
-                        (expr.NodeType != ExpressionType.Constant && expr.NodeType != ExpressionType.Parameter) || closure.CurrentBlock.ResultExpr == expr) // In a Block, Constants or Paramters are only compiled to IL if they are the last Expression in it. 
-                        if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, shouldReturnValue && (closure.CurrentBlock.ResultExpr == expr), i))
-                            return false;
+                    if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, shouldReturnValue && (parent != ExpressionType.Block || (closure.CurrentBlock.ResultExpr == expr)), i))
+                        return false;
                 }
                 return true;
             }
@@ -1462,6 +1459,9 @@ namespace FastExpressionCompiler
             private static bool TryEmitConvert(UnaryExpression expr, Type targetType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, bool shouldReturnValue)
             {
+                if (!shouldReturnValue)
+                    return true;
+
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
@@ -1554,8 +1554,11 @@ namespace FastExpressionCompiler
                     m.GetParameters()[0].ParameterType == sourceType);
 
             private static bool TryEmitConstant(ConstantExpression expr, Type exprType, ILGenerator il, 
-                ref ClosureInfo closure)
+                ref ClosureInfo closure, bool shouldReturnValue)
             {
+                if (!shouldReturnValue)
+                    return true;
+
                 var constantValue = expr.Value;
                 if (constantValue == null)
                 {
@@ -1922,7 +1925,6 @@ namespace FastExpressionCompiler
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
-                var shouldPushResult = shouldReturnValue && (closure.CurrentBlock.IsEmpty || closure.CurrentBlock.ResultExpr == expr);
                 switch (leftNodeType)
                 {
                     case ExpressionType.Parameter:
@@ -1944,20 +1946,20 @@ namespace FastExpressionCompiler
                                 var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
                                 if (arithmeticNodeType != nodeType)
                                 {
-                                    if (!TryEmitArithmeticOperation(expr, arithmeticNodeType, exprType, paramExprs, il, ref closure, shouldReturnValue))
+                                    if (!TryEmitArithmeticOperation(expr, arithmeticNodeType, exprType, paramExprs, il, ref closure, true))
                                         return false;
                                 }
-                                else if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, shouldReturnValue))
+                                else if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true))
                                     return false;
 
                                 EmitByRefStore(il, leftParamExpr.Type);
                             }
                             else
                             {
-                                if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, shouldReturnValue))
+                                if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true))
                                     return false;
 
-                                if (shouldPushResult)
+                                if (shouldReturnValue)
                                     il.Emit(OpCodes.Dup); // dup value to assign and return
 
                                 il.Emit(OpCodes.Starg_S, paramIndex);
@@ -1973,7 +1975,7 @@ namespace FastExpressionCompiler
                                 var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex(leftParamExpr);
                                 if (varIdx != -1)
                                 {
-                                    if (!TryEmitArithmeticOperation(expr, arithmeticNodeType, exprType, paramExprs, il, ref closure, shouldReturnValue))
+                                    if (!TryEmitArithmeticOperation(expr, arithmeticNodeType, exprType, paramExprs, il, ref closure, true))
                                         return false;
 
                                     il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
@@ -1992,13 +1994,13 @@ namespace FastExpressionCompiler
                         var localVariable = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
                         if (localVariable != null)
                         {
-                            if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, shouldReturnValue))
+                            if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true))
                                 return false;
 
                             if ((right as ParameterExpression)?.IsByRef == true)
                                 il.Emit(OpCodes.Ldind_I4);
 
-                            if (shouldPushResult) // if we have to push the result back, dup the right value
+                            if (shouldReturnValue) // if we have to push the result back, dup the right value
                                 il.Emit(OpCodes.Dup);
 
                             il.Emit(OpCodes.Stloc, localVariable);
@@ -2014,9 +2016,9 @@ namespace FastExpressionCompiler
 
                         il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
 
-                        if (shouldPushResult)
+                        if (shouldReturnValue)
                         {
-                            if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, shouldReturnValue))
+                            if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true))
                                 return false;
 
                             var valueVar = il.DeclareLocal(exprType); // store left value in variable
@@ -2048,7 +2050,7 @@ namespace FastExpressionCompiler
                                 EmitLoadConstantInt(il, paramInClosureIndex); // load array item index
                             }
 
-                            if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, shouldReturnValue))
+                            if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true))
                                 return false;
 
                             if (isArrayClosure)
@@ -2069,13 +2071,13 @@ namespace FastExpressionCompiler
 
                         var objExpr = memberExpr.Expression;
                         if (objExpr != null && 
-                            !TryEmit(objExpr, objExpr.Type, paramExprs, il, ref closure, ExpressionType.Assign, shouldReturnValue))
+                            !TryEmit(objExpr, objExpr.Type, paramExprs, il, ref closure, ExpressionType.Assign, true))
                             return false;
 
-                        if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, shouldReturnValue))
+                        if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true))
                             return false;
 
-                        if (!shouldPushResult)
+                        if (!shouldReturnValue)
                             return EmitMemberAssign(il, member);
 
                         il.Emit(OpCodes.Dup);
@@ -2094,21 +2096,21 @@ namespace FastExpressionCompiler
 
                         var obj = indexExpr.Object;
                         if (obj != null && 
-                            !TryEmit(obj, obj.Type, paramExprs, il, ref closure, ExpressionType.Assign, shouldReturnValue))
+                            !TryEmit(obj, obj.Type, paramExprs, il, ref closure, ExpressionType.Assign, true))
                             return false;
 
                         var argLength = indexExpr.Arguments.Count;
                         for (var i = 0; i < argLength; i++)
                         {
                             var arg = indexExpr.Arguments[i];
-                            if (!TryEmit(arg, arg.Type, paramExprs, il, ref closure, ExpressionType.Assign, shouldReturnValue))
+                            if (!TryEmit(arg, arg.Type, paramExprs, il, ref closure, ExpressionType.Assign, true))
                                 return false;
                         }
 
-                        if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, shouldReturnValue))
+                        if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true))
                             return false;
 
-                        if (!shouldPushResult)
+                        if (!shouldReturnValue)
                             return TryEmitIndexAssign(indexExpr, obj?.Type, exprType, il);
 
                         var variable = il.DeclareLocal(exprType); // store value in variable to return
@@ -2176,7 +2178,7 @@ namespace FastExpressionCompiler
                 if (objExpr != null)
                 {
                     objType = objExpr.Type;
-                    if (!TryEmit(objExpr, objType, paramExprs, il, ref closure, ExpressionType.Call, shouldReturnValue))
+                    if (!TryEmit(objExpr, objType, paramExprs, il, ref closure, ExpressionType.Call, true))
                         return false;
 
                     isValueTypeObj = objType.GetTypeInfo().IsValueType;
@@ -2185,7 +2187,7 @@ namespace FastExpressionCompiler
                 }
 
                 if (expr.Arguments.Count != 0 &&
-                    !EmitMany(MakeByRefParameters(expr), paramExprs, il, ref closure, ExpressionType.Call, shouldReturnValue))
+                    !EmitMany(MakeByRefParameters(expr), paramExprs, il, ref closure, ExpressionType.Call, true))
                     return false;
 
                 var method = expr.Method;
@@ -2195,7 +2197,7 @@ namespace FastExpressionCompiler
                 if (!EmitMethodCall(il, method))
                     return false;
 
-                if (parent == ExpressionType.Block && closure.CurrentBlock.ResultExpr != expr && method.ReturnType != typeof(void))
+                if (!shouldReturnValue && method.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);
 
                 return true;
@@ -2821,9 +2823,9 @@ nullCheck:
                 var testExpr = expr.Test;
                 var usedInverted = false;
 
-                if (TryEmitInvertedNullComparison(testExpr, paramExprs, il, ref closure, shouldReturnValue))
+                if (TryEmitInvertedNullComparison(testExpr, paramExprs, il, ref closure, true))
                     usedInverted = true;
-                else if (!TryEmit(testExpr, testExpr.Type, paramExprs, il, ref closure, ExpressionType.Conditional, shouldReturnValue))
+                else if (!TryEmit(testExpr, testExpr.Type, paramExprs, il, ref closure, ExpressionType.Conditional, true))
                     return false;
 
                 var labelIfFalse = il.DefineLabel();
