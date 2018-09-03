@@ -160,5 +160,53 @@ namespace FastExpressionCompiler.UnitTests
             Assert.NotNull(fastCompiled);
             Assert.AreEqual("B", fastCompiled(false));
         }
+
+        [Test]
+        public void SwitchIsSupported5()
+        {
+            var eVar = Parameter(typeof(string));
+            var blockExpr =
+                Switch(eVar,
+                    Constant("C"),
+                    SwitchCase(Constant("A"), Constant("A")),
+                    SwitchCase(Constant("B"), Constant("B"))
+                );
+
+            var lambda = Lambda<Func<string, string>>(blockExpr, eVar);
+            var fastCompiled = lambda.CompileFast(true);
+            Assert.NotNull(fastCompiled);
+            Assert.AreEqual("A", fastCompiled("A"));
+            Assert.AreEqual("C", fastCompiled("Z"));
+        }
+
+        class Helper
+        {
+            public string V { get; set; }
+        }
+
+        [Test]
+        public void SwitchIsSupported6()
+        {
+            var eVar = Parameter(typeof(Helper));
+            var blockExpr =
+                Switch(Property(eVar, "V"),
+                    Constant("C"),
+                    SwitchCase(Constant("A"), Constant("A")),
+                    SwitchCase(Constant("B"), Constant("B")),
+                    SwitchCase(Constant("C"), Constant("C")),
+                    SwitchCase(Constant("D"), Constant("D")),
+                    SwitchCase(Constant("E"), Constant("E")),
+                    SwitchCase(Constant("F"), Constant("F")),
+                    SwitchCase(Constant("G"), Constant("G")),
+                    SwitchCase(Constant("H"), Constant("H")),
+                    SwitchCase(Constant("I"), Constant("I"))
+                );
+
+            var lambda = Lambda<Func<Helper, string>>(blockExpr, eVar);
+            var fastCompiled = lambda.CompileFast(true);
+            Assert.NotNull(fastCompiled);
+            Assert.AreEqual("A", fastCompiled(new Helper() { V = "A" }));
+            Assert.AreEqual("C", fastCompiled(new Helper() { V = "Z" }));
+        }
     }
 }

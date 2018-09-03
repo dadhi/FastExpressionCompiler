@@ -2497,7 +2497,7 @@ namespace FastExpressionCompiler
                         if (!TryEmitComparison(expr.SwitchValue, switchCaseTestValue, ExpressionType.Equal, paramExprs, il, ref closure, shouldReturnValue))
                             return false;
                         //il.Emit(OpCodes.Beq_S, labels[index]);
-                        il.Emit(OpCodes.Brtrue_S, labels[index]);
+                        il.Emit(OpCodes.Brtrue, labels[index]);
                     }
                 }
 
