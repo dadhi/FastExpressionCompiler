@@ -973,7 +973,7 @@ namespace FastExpressionCompiler.LightExpression
 
     public class SwitchCase
     {
-        public readonly ReadOnlyCollection<Expression> TestValues;
+        public readonly IReadOnlyList<Expression> TestValues;
         public readonly Expression Body;
 
         public System.Linq.Expressions.SwitchCase ToSwitchCase() =>
@@ -982,7 +982,7 @@ namespace FastExpressionCompiler.LightExpression
         public SwitchCase(Expression body, IEnumerable<Expression> testValues)
         {
             Body = body;
-            TestValues = new ReadOnlyCollection<Expression>(testValues.ToArray());
+            TestValues = testValues.AsReadOnlyList();
         }
     }
 
@@ -992,10 +992,10 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type { get; }
 
         public override SysExpr ToExpression() => SysExpr.Switch(SwitchValue.ToExpression(), DefaultBody.ToExpression(),
-            Comparison, Cases.Select(x => x.ToSwitchCase()));
+            Comparison, Cases.Map(x => x.ToSwitchCase()));
 
         public readonly Expression SwitchValue;
-        public readonly ReadOnlyCollection<SwitchCase> Cases;
+        public readonly IReadOnlyList<SwitchCase> Cases;
         public readonly Expression DefaultBody;
         public readonly MethodInfo Comparison;
 
@@ -1007,7 +1007,7 @@ namespace FastExpressionCompiler.LightExpression
             SwitchValue = switchValue;
             DefaultBody = defaultBody;
             Comparison = comparison;
-            Cases = new ReadOnlyCollection<SwitchCase>(cases.ToArray());
+            Cases = cases.AsReadOnlyList();
         }
     }
 

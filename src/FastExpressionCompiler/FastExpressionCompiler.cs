@@ -1042,13 +1042,6 @@ namespace FastExpressionCompiler
                         return TryEmitAssign((BinaryExpression)expr, exprType, paramExprs, il, ref closure);
 
                     case ExpressionType.Block:
-                    //{
-                    //    var blockExpr = (BlockExpression)expr;
-                    //    closure.PushBlockAndConstructLocalVars(blockExpr.Result, blockExpr.Variables, il);
-                    //    var ok = EmitMany(blockExpr.Expressions, paramExprs, il, ref closure, ExpressionType.Block);
-                    //    closure.PopBlock();
-                    //    return ok;
-                    //    }
                         return TryEmitBlock((BlockExpression)expr, paramExprs, il, ref closure);
 
                     case ExpressionType.Try:
