@@ -446,7 +446,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 #endif
 
-        [Test, Ignore("fixme")]
+        [Test]
         public void Jit_compiler_internal_limitation()
         {
             var objParam = Parameter(typeof(object), "obj");
@@ -479,7 +479,8 @@ namespace FastExpressionCompiler.UnitTests
                         Assign(Field(varClass3, nameof(TestClass3.Class4)), varClass4))),
                 Assign(
                     Field(varClass4, nameof(TestClass4.Field1)),
-                    Convert(valueParam, typeof(int))));
+                    Convert(valueParam, typeof(int)))
+                );
 
             var expr = Lambda<Action<object, object>>(body, objParam, valueParam);
 
