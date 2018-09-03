@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -301,6 +302,27 @@ namespace FastExpressionCompiler.LightExpression
 
         public static GotoExpression Goto(LabelTarget target, Expression value = null, Type type = null) => 
             MakeGoto(GotoExpressionKind.Goto, target, value, type);
+
+        public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, params SwitchCase[] cases) =>
+            new SwitchExpression(defaultBody.Type, switchValue, defaultBody, null, cases);
+
+        public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
+            new SwitchExpression(defaultBody.Type, switchValue, defaultBody, comparison, cases);
+
+        public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
+            new SwitchExpression(type, switchValue, defaultBody, comparison, cases);
+
+        public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
+            new SwitchExpression(type, switchValue, defaultBody, comparison, cases);
+
+        public static SwitchExpression Switch(Expression switchValue, params SwitchCase[] cases) =>
+            new SwitchExpression(null, switchValue, null, null, cases);
+
+        public static SwitchCase SwitchCase(Expression body, IEnumerable<Expression> testValues) =>
+            new SwitchCase(body, testValues);
+
+        public static SwitchCase SwitchCase(Expression body, params Expression[] testValues) =>
+            new SwitchCase(body, testValues);
 
         public static BinaryExpression Coalesce(Expression left, Expression right) => Coalesce(left, right, null);
 
@@ -946,6 +968,46 @@ namespace FastExpressionCompiler.LightExpression
             Kind = kind;
             Value = value;
             Target = target;
+        }
+    }
+
+    public class SwitchCase
+    {
+        public readonly IReadOnlyList<Expression> TestValues;
+        public readonly Expression Body;
+
+        public System.Linq.Expressions.SwitchCase ToSwitchCase() =>
+            SysExpr.SwitchCase(Body.ToExpression(), TestValues.Select(x => x.ToExpression()));
+
+        public SwitchCase(Expression body, IEnumerable<Expression> testValues)
+        {
+            Body = body;
+            TestValues = testValues.AsReadOnlyList();
+        }
+    }
+
+    public class SwitchExpression : Expression
+    {
+        public override ExpressionType NodeType { get; }
+        public override Type Type { get; }
+
+        public override SysExpr ToExpression() => SysExpr.Switch(SwitchValue.ToExpression(), DefaultBody.ToExpression(),
+            Comparison, Cases.Map(x => x.ToSwitchCase()));
+
+        public readonly Expression SwitchValue;
+        public readonly IReadOnlyList<SwitchCase> Cases;
+        public readonly Expression DefaultBody;
+        public readonly MethodInfo Comparison;
+
+
+        public SwitchExpression(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases)
+        {
+            NodeType = ExpressionType.Switch;
+            Type = type;
+            SwitchValue = switchValue;
+            DefaultBody = defaultBody;
+            Comparison = comparison;
+            Cases = cases.AsReadOnlyList();
         }
     }
 
