@@ -2465,19 +2465,11 @@ namespace FastExpressionCompiler
                     if (expr.NodeType != ExpressionType.Equal && expr.NodeType != ExpressionType.NotEqual)
                         return false;
                     if (b.Right is ConstantExpression r && r.Value == null)
-                    {
-                        if (!TryEmit(b.Left, b.Left.Type, paramExprs, il, ref closure, ExpressionType.Default))
-                            return false;
-                    }
+                        return TryEmit(b.Left, b.Left.Type, paramExprs, il, ref closure, ExpressionType.Default);
                     else if (b.Left is ConstantExpression l && l.Value == null)
-                    {
-                        if (!TryEmit(b.Right, b.Right.Type, paramExprs, il, ref closure, ExpressionType.Default))
-                            return false;
-                    }
-                    else
-                        return false;
+                        return TryEmit(b.Right, b.Right.Type, paramExprs, il, ref closure, ExpressionType.Default);
 
-                    return true;
+                    return false;
                 }
 
                 return false;
