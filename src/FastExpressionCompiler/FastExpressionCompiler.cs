@@ -195,6 +195,7 @@ namespace FastExpressionCompiler
                 var nestedLambdaExprs = closureInfo.NestedLambdaExprs;
                 if (nestedLambdaExprs.Length != 0)
                 {
+                    // todo: wip
                     closureInfo.NestedLambdas = new NestedLambdaInfo[nestedLambdaExprs.Length];
                     for (var i = 0; i < nestedLambdaExprs.Length; ++i)
                     {
@@ -888,11 +889,17 @@ namespace FastExpressionCompiler
             var nestedNestedLambdaExprs = nestedClosure.NestedLambdaExprs;
             if (nestedNestedLambdaExprs.Length != 0)
             {
+                var fixedNestedLambdaCount = closure.NestedLambdaExprs.Length;
                 for (var i = 0; i < nestedNestedLambdaExprs.Length; i++)
                 {
                     var nestedNestedLambdaExpr = nestedNestedLambdaExprs[i];
-                    var nestedNestedIndex = closure.NestedLambdaExprs.GetFirstIndex(nestedNestedLambdaExpr);
-                    if (nestedNestedIndex == -1)
+
+                    var j = closure.NestedLambdaExprs.Length - 1;
+                    for (; j >= fixedNestedLambdaCount; --j)
+                        if (ReferenceEquals(closure.NestedLambdaExprs[j], nestedNestedLambdaExpr))
+                            break;
+
+                    if (j < fixedNestedLambdaCount)
                     {
                         closure.NestedLambdaExprs = closure.NestedLambdaExprs.WithLast(nestedNestedLambdaExpr);
                         closure.NestedLambdas = closure.NestedLambdas.WithLast(nestedClosure.NestedLambdas[i]);
