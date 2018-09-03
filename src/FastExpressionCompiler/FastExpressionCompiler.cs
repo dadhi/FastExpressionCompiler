@@ -818,6 +818,19 @@ namespace FastExpressionCompiler
                     var gotoValueExpr = ((GotoExpression)expr).Value;
                     return gotoValueExpr == null || TryCollectBoundConstants(ref closure, gotoValueExpr, paramExprs);
 
+                case ExpressionType.Switch:
+                    var switchExpression = ((SwitchExpression)expr);
+                    if (!TryCollectBoundConstants(ref closure, switchExpression.SwitchValue, paramExprs))
+                        return false;
+                    if (switchExpression.DefaultBody != null && !TryCollectBoundConstants(ref closure, switchExpression.DefaultBody, paramExprs))
+                        return false;
+                    foreach(var sc in switchExpression.Cases)
+                    {
+                        if (!TryCollectBoundConstants(ref closure, sc.Body, paramExprs))
+                            return false;
+                    }
+                    return true;
+
                 case ExpressionType.Default:
                     return true;
 
@@ -1029,6 +1042,13 @@ namespace FastExpressionCompiler
                         return TryEmitAssign((BinaryExpression)expr, exprType, paramExprs, il, ref closure);
 
                     case ExpressionType.Block:
+                    //{
+                    //    var blockExpr = (BlockExpression)expr;
+                    //    closure.PushBlockAndConstructLocalVars(blockExpr.Result, blockExpr.Variables, il);
+                    //    var ok = EmitMany(blockExpr.Expressions, paramExprs, il, ref closure, ExpressionType.Block);
+                    //    closure.PopBlock();
+                    //    return ok;
+                    //    }
                         return TryEmitBlock((BlockExpression)expr, paramExprs, il, ref closure);
 
                     case ExpressionType.Try:
@@ -1048,6 +1068,9 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Label:
                         return TryEmitLabel((LabelExpression)expr, paramExprs, il, ref closure);
+
+                    case ExpressionType.Switch:
+                        return TryEmitSwitch((SwitchExpression)expr, paramExprs, il, ref closure);
 
                     default:
                         return false;
@@ -1464,7 +1487,8 @@ namespace FastExpressionCompiler
                     var nullableType = Nullable.GetUnderlyingType(sourceType);
                     if (nullableType != null)
                     {
-                        il.Emit(OpCodes.Newobj, sourceType.GetTypeInfo().DeclaredConstructors.First());
+                        if (Nullable.GetUnderlyingType(expr.Operand.Type) == null)
+                            il.Emit(OpCodes.Newobj, sourceType.GetTypeInfo().DeclaredConstructors.First());
                         il.Emit(OpCodes.Box, sourceType);
                         return true;
                     }
@@ -1639,9 +1663,12 @@ namespace FastExpressionCompiler
                     else return false;
                 }
 
+                var ulType = Nullable.GetUnderlyingType(exprType);
+                if (ulType != null)
+                    il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.First());
                 // todo: consider how to remove boxing where it is not required
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
-                if (exprType == typeof(object) && constantType.GetTypeInfo().IsValueType)
+                else if (exprType == typeof(object) && constantType.GetTypeInfo().IsValueType)
                     il.Emit(OpCodes.Box, constantValue.GetType()); // using normal type for Enum instead of underlying type
 
                 return true;
@@ -2463,22 +2490,74 @@ namespace FastExpressionCompiler
                 return false;
             }
 
+            private static bool TryEmitSwitch(SwitchExpression expr,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
+            {
+                //todo:
+                //use switch statement for int comparison (if int differnce is less or equal 3 -> use il switch)
+                //TryEmitComparison should not emit "ceq" so we could use Beq_S instead of Brtrue_S (not always possible (nullables))
+                //if switch SwitchValue is a nullable parameter, we should call getValue only once and store the result.
+
+                var endLabel = il.DefineLabel();
+                var labels = new Label[expr.Cases.Count];
+                for (var index = 0; index < expr.Cases.Count; index++)
+                {
+                    var switchCase = expr.Cases[index];
+                    labels[index] = il.DefineLabel();
+
+                    foreach (var switchCaseTestValue in switchCase.TestValues)
+                    {
+                        if (!TryEmitComparison(expr.SwitchValue, switchCaseTestValue, ExpressionType.Equal, paramExprs, il, ref closure))
+                            return false;
+                        //il.Emit(OpCodes.Beq_S, labels[index]);
+                        il.Emit(OpCodes.Brtrue_S, labels[index]);
+                    }
+                }
+
+                if (expr.DefaultBody != null)
+                {
+                    if (!TryEmit(expr.DefaultBody, expr.DefaultBody.Type, paramExprs, il, ref closure, ExpressionType.Switch))
+                        return false;
+                    il.Emit(OpCodes.Br, endLabel);
+                }
+
+                for (var index = 0; index < expr.Cases.Count; index++)
+                {
+                    var switchCase = expr.Cases[index];
+                    il.MarkLabel(labels[index]);
+                    if (!TryEmit(switchCase.Body, switchCase.Body.Type, paramExprs, il, ref closure, ExpressionType.Switch))
+                        return false;
+                    if (index != expr.Cases.Count - 1)
+                        il.Emit(OpCodes.Br, endLabel);
+                }
+
+                il.MarkLabel(endLabel);
+
+                return true;
+            }
+
             private static bool TryEmitComparison(BinaryExpression expr,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
+            {
+                return TryEmitComparison(expr.Left, expr.Right, expr.NodeType, paramExprs, il, ref closure);
+            }
+
+            private static bool TryEmitComparison(Expression exprLeft, Expression exprRight, ExpressionType expressionType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
                 // todo: for now, handling only parameters of the same type
                 // todo: for now, Nullable is not supported
-                var leftOpType = expr.Left.Type;
+                var leftOpType = exprLeft.Type;
                 var leftIsNull = leftOpType.IsNullable();
-                var rightOpType = expr.Right.Type;
-                if (expr.Right is ConstantExpression c && c.Value == null && expr.Right.Type == typeof(object))
+                var rightOpType = exprRight.Type;
+                if (exprRight is ConstantExpression c && c.Value == null && exprRight.Type == typeof(object))
                     rightOpType = leftOpType;
 
                 if (leftOpType != rightOpType)
                     return false;
 
                 LocalBuilder lVar = null, rVar = null;
-                if (!TryEmit(expr.Left, expr.Left.Type, paramExprs, il, ref closure, ExpressionType.Default))
+                if (!TryEmit(exprLeft, exprLeft.Type, paramExprs, il, ref closure, ExpressionType.Default))
                     return false;
                 if (leftIsNull)
                 {
@@ -2491,7 +2570,7 @@ namespace FastExpressionCompiler
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
 
-                if (!TryEmit(expr.Right, expr.Right.Type, paramExprs, il, ref closure, ExpressionType.Default))
+                if (!TryEmit(exprRight, exprRight.Type, paramExprs, il, ref closure, ExpressionType.Default))
                     return false;
                 if (rightOpType.IsNullable())
                 {
@@ -2504,17 +2583,16 @@ namespace FastExpressionCompiler
                 }
 
 
-                var exprNodeType = expr.NodeType;
                 var leftOpTypeInfo = leftOpType.GetTypeInfo();
                 if (!leftOpTypeInfo.IsPrimitive && !leftOpTypeInfo.IsEnum)
                 {
                     var methodName
-                        = exprNodeType == ExpressionType.Equal ? "op_Equality"
-                        : exprNodeType == ExpressionType.NotEqual ? "op_Inequality"
-                        : exprNodeType == ExpressionType.GreaterThan ? "op_GreaterThan"
-                        : exprNodeType == ExpressionType.GreaterThanOrEqual ? "op_GreaterThanOrEqual"
-                        : exprNodeType == ExpressionType.LessThan ? "op_LessThan"
-                        : exprNodeType == ExpressionType.LessThanOrEqual ? "op_LessThanOrEqual" : null;
+                        = expressionType == ExpressionType.Equal ? "op_Equality"
+                        : expressionType == ExpressionType.NotEqual ? "op_Inequality"
+                        : expressionType == ExpressionType.GreaterThan ? "op_GreaterThan"
+                        : expressionType == ExpressionType.GreaterThanOrEqual ? "op_GreaterThanOrEqual"
+                        : expressionType == ExpressionType.LessThan ? "op_LessThan"
+                        : expressionType == ExpressionType.LessThanOrEqual ? "op_LessThanOrEqual" : null;
 
                     if (methodName == null)
                         return false;
@@ -2527,11 +2605,11 @@ namespace FastExpressionCompiler
                     if (method != null)
                         return EmitMethodCall(il, method);
                     
-                    if (exprNodeType != ExpressionType.Equal && exprNodeType != ExpressionType.NotEqual)
+                    if (expressionType != ExpressionType.Equal && expressionType != ExpressionType.NotEqual)
                         return false;
 
                     EmitMethodCall(il, _objectEqualsMethod);
-                    if (exprNodeType == ExpressionType.NotEqual) // invert result for not equal
+                    if (expressionType == ExpressionType.NotEqual) // invert result for not equal
                     {
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
@@ -2544,7 +2622,7 @@ namespace FastExpressionCompiler
                 }
 
                 // handle primitives comparison
-                switch (exprNodeType)
+                switch (expressionType)
                 {
                     case ExpressionType.Equal:
                         il.Emit(OpCodes.Ceq);
@@ -2584,14 +2662,14 @@ nullCheck:
                 if (leftIsNull)
                 {
                     il.Emit(OpCodes.Ldloca_S, lVar);
-                    var mth = expr.Left.Type.GetTypeInfo().GetDeclaredMethod("get_HasValue");
+                    var mth = exprLeft.Type.GetTypeInfo().GetDeclaredMethod("get_HasValue");
                     if (!EmitMethodCall(il, mth))
                         return false;
                     il.Emit(OpCodes.Ldloca_S, rVar);
                     if (!EmitMethodCall(il, mth))
                         return false;
 
-                    switch (exprNodeType)
+                    switch (expressionType)
                     {
                         case ExpressionType.Equal:
                             il.Emit(OpCodes.Ceq); // compare both HasValue calls
