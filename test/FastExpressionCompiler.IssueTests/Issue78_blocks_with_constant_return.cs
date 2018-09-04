@@ -42,5 +42,30 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(fastCompiled);
             Assert.AreEqual(7, fastCompiled());
         }
+
+        [Test]
+        public void Block1()
+        {
+            var ret = Block(Constant(7));
+            var lambda = Lambda<Action>(ret);
+            var fastCompiled = lambda.CompileFast(true);
+            Assert.IsNotNull(fastCompiled);
+            fastCompiled();
+        }
+
+#if !LIGHT_EXPRESSION
+
+        [Test]
+        public void Block2()
+        {
+            var p = Parameter(typeof(object));
+            var ret = Block(Convert(p, typeof(string)));
+            var lambda = Lambda<Action<object>>(ret, p);
+            var fastCompiled = lambda.CompileFast(true);
+            Assert.IsNotNull(fastCompiled);
+            Assert.DoesNotThrow(() => fastCompiled("a"));
+            Assert.Throws<InvalidCastException>(() => fastCompiled(1));
+        }
+#endif
     }
 }
