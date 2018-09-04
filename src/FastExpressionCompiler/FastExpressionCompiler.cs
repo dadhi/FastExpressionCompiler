@@ -1459,21 +1459,31 @@ namespace FastExpressionCompiler
             private static bool TryEmitConvert(UnaryExpression expr, Type targetType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, bool shouldReturnValue)
             {
-                if (!shouldReturnValue)
-                    return true;
-
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
-                    return TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Call, shouldReturnValue, 0) 
-                        && EmitMethodCall(il, method);
+                {
+                    if (!TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Call, true, 0)
+                        || !EmitMethodCall(il, method))
+                        return false;
 
-                if (!TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Convert, shouldReturnValue))
+                    if (!shouldReturnValue)
+                        il.Emit(OpCodes.Pop);
+
+                    return true;
+                }
+
+                if (!TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Convert, true))
                     return false;
 
                 var sourceType = opExpr.Type;
                 if (targetType == sourceType)
+                {
+                    if (!shouldReturnValue)
+                        il.Emit(OpCodes.Pop);
+
                     return true; // do nothing, no conversion needed
+                }
 
                 if (targetType == typeof(object))
                 {
@@ -1483,11 +1493,19 @@ namespace FastExpressionCompiler
                         if (Nullable.GetUnderlyingType(expr.Operand.Type) == null)
                             il.Emit(OpCodes.Newobj, sourceType.GetTypeInfo().DeclaredConstructors.First());
                         il.Emit(OpCodes.Box, sourceType);
+
+                        if (!shouldReturnValue)
+                            il.Emit(OpCodes.Pop);
+
                         return true;
                     }
                     // for value type to object, just box a value, otherwise do nothing - everything is object anyway
                     if (sourceType.GetTypeInfo().IsValueType)
                         il.Emit(OpCodes.Box, sourceType);
+
+                    if (!shouldReturnValue)
+                        il.Emit(OpCodes.Pop);
+
                     return true;
                 }
 
@@ -1497,7 +1515,13 @@ namespace FastExpressionCompiler
                 {
                     var convertOpMethod = FirstConvertOperatorOrDefault(sourceTypeInfo, targetType, sourceType);
                     if (convertOpMethod != null)
-                        return EmitMethodCall(il, convertOpMethod);
+                    {
+                        if (!EmitMethodCall(il, convertOpMethod))
+                            return false;
+                        if (!shouldReturnValue)
+                            il.Emit(OpCodes.Pop);
+                        return true;
+                    }
                 }
 
                 var targetTypeInfo = targetType.GetTypeInfo();
@@ -1505,7 +1529,13 @@ namespace FastExpressionCompiler
                 {
                     var convertOpMethod = FirstConvertOperatorOrDefault(targetTypeInfo, targetType, sourceType);
                     if (convertOpMethod != null)
-                        return EmitMethodCall(il, convertOpMethod);
+                    {
+                        if (!EmitMethodCall(il, convertOpMethod))
+                            return false;
+                        if (!shouldReturnValue)
+                            il.Emit(OpCodes.Pop);
+                        return true;
+                    }
                 }
 
                 if (sourceType == typeof(object) && targetTypeInfo.IsValueType)
@@ -1543,6 +1573,9 @@ namespace FastExpressionCompiler
                     else // cast as the last resort and let's it fail if unlucky
                         il.Emit(OpCodes.Castclass, targetType);
                 }
+
+                if (!shouldReturnValue)
+                    il.Emit(OpCodes.Pop);
 
                 return true;
             }
