@@ -2514,9 +2514,10 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, bool shouldReturnValue)
             {
                 //todo:
-                //use switch statement for int comparison (if int differnce is less or equal 3 -> use il switch)
-                //TryEmitComparison should not emit "ceq" so we could use Beq_S instead of Brtrue_S (not always possible (nullables))
-                //if switch SwitchValue is a nullable parameter, we should call getValue only once and store the result.
+                //- use switch statement for int comparison (if int differnce is less or equal 3 -> use il switch)
+                //- TryEmitComparison should not emit "ceq" so we could use Beq_S instead of Brtrue_S (not always possible (nullables))
+                //- if switch SwitchValue is a nullable parameter, we should call getValue only once and store the result.
+                //- use comparison methods (when defined)
 
                 var endLabel = il.DefineLabel();
                 var labels = new Label[expr.Cases.Count];
