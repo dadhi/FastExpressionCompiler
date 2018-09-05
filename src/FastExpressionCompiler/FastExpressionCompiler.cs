@@ -280,38 +280,6 @@ namespace FastExpressionCompiler
             }
         }
 
-        // if expression body last statement is assign of by ref, then it gets as return in type, but not on stack
-        private static bool IsByReferenceReturn(Type[] paramTypes, Expression expr)
-        {
-            for (var i = 0; i < paramTypes.Length; i++)
-            {
-                if (!paramTypes[i].IsByRef)
-                    continue;
-
-                var blockExpr = expr as BlockExpression;
-                if (blockExpr != null)
-                {
-                    var blockStatements = blockExpr.Expressions;
-                    if (blockStatements.Count != 0) // get the last statement from the block
-                        expr = blockStatements[blockStatements.Count - 1];
-                }
-
-                var leftVar = (expr as BinaryExpression)?.Left as ParameterExpression;
-                if (leftVar == null || !leftVar.IsByRef)
-                    return false;
-
-                var nodeType = expr.NodeType;
-                return nodeType == ExpressionType.Assign
-                       || nodeType == ExpressionType.PostDecrementAssign
-                       || nodeType == ExpressionType.PostIncrementAssign
-                       || nodeType == ExpressionType.PreDecrementAssign
-                       || nodeType == ExpressionType.PreIncrementAssign
-                       || Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType) != nodeType;
-            }
-
-            return false;
-        }
-
         private static Type[] GetClosureAndParamTypes(Type[] paramTypes, Type closureType)
         {
             var paramCount = paramTypes.Length;
@@ -1018,7 +986,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Constant:
                         return TryEmitConstant((ConstantExpression)expr, exprType, il, ref closure, shouldReturnValue);
                     case ExpressionType.Call:
-                        return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, parent, shouldReturnValue);
+                        return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, shouldReturnValue);
                     case ExpressionType.MemberAccess:
                         return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, shouldReturnValue);
                     case ExpressionType.New:
@@ -2211,7 +2179,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitMethodCall(MethodCallExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, bool shouldReturnValue)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, bool shouldReturnValue)
             {
                 var isValueTypeObj = false;
                 Type objType = null;
@@ -2244,22 +2212,21 @@ namespace FastExpressionCompiler
             // https://stackoverflow.com/questions/12658883/what-is-the-maximum-number-of-parameters-that-a-c-sharp-method-can-be-defined-as
             private static IReadOnlyList<Expression> MakeByRefParameters(MethodCallExpression expr)
             {
-                List<Expression> refed = null;
-                var receivingParameters = expr.Method.GetParameters();
-                var exprParameters = expr.Method.GetParameters();
-                for (var i = 0; i < exprParameters.Length; i++)
+                List<Expression> someByRefArguments = null;
+                var methodParams = expr.Method.GetParameters();
+                for (var i = 0; i < methodParams.Length; i++)
                 {
-                    if (receivingParameters[i].ParameterType.IsByRef)
+                    if (methodParams[i].ParameterType.IsByRef)
                     {
-                        if (refed == null)
-                            refed = new List<Expression>(expr.Arguments);
+                        if (someByRefArguments == null) // copy arguments
+                            someByRefArguments = new List<Expression>(expr.Arguments);
 
-                        var passed = expr.Arguments[i] as ParameterExpression;
-                        if (passed != null && !passed.IsByRef)
-                            refed[i] = Expression.Parameter(passed.Type.MakeByRefType(), passed.Name);
+                        var paramExpr = expr.Arguments[i] as ParameterExpression;
+                        if (paramExpr != null && !paramExpr.IsByRef)
+                            someByRefArguments[i] = Expression.Parameter(paramExpr.Type.MakeByRefType(), paramExpr.Name);
                     }
                 }
-                return (IReadOnlyList<Expression>)refed ?? expr.Arguments;
+                return (IReadOnlyList<Expression>)someByRefArguments ?? expr.Arguments;
             }
 
             private static void StoreAsVarAndLoadItsAddress(ILGenerator il, Type varType)
@@ -2690,6 +2657,7 @@ nullCheck:
                     var mth = exprLeft.Type.GetTypeInfo().GetDeclaredMethod("get_HasValue");
                     if (!EmitMethodCall(il, mth, true))
                         return false;
+                    // ReSharper disable once AssignNullToNotNullAttribute
                     il.Emit(OpCodes.Ldloca_S, rVar);
                     if (!EmitMethodCall(il, mth, true))
                         return false;
