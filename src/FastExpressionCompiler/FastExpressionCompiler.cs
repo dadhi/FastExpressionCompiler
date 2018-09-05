@@ -1125,7 +1125,7 @@ namespace FastExpressionCompiler
                 if (exprObj.Indexer != null)
                 {
                     var propGetMethod = TryGetPropertyGetMethod(exprObj.Indexer);
-                    return propGetMethod != null && EmitMethodCall(il, propGetMethod, true);
+                    return propGetMethod != null && EmitMethodCall(il, propGetMethod);
                 }
 
                 if (exprObj.Arguments.Count == 1) // one dimensional array
@@ -1139,7 +1139,7 @@ namespace FastExpressionCompiler
                 
                 // multi dimensional array
                 var getMethod = instType?.GetTypeInfo().GetDeclaredMethod("Get");
-                return getMethod != null && EmitMethodCall(il, getMethod, true);
+                return getMethod != null && EmitMethodCall(il, getMethod);
             }
 
             private static bool TryEmitCoalesceOperator(BinaryExpression exprObj, 
@@ -1459,7 +1459,8 @@ namespace FastExpressionCompiler
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
-                    return TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Call, true, 0) && EmitMethodCall(il, method, shouldReturnValue);
+                    return TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Call, true, 0) && 
+                           EmitMethodCall(il, method, !shouldReturnValue);
 
                 if (!TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Convert, true))
                     return false;
@@ -1469,7 +1470,6 @@ namespace FastExpressionCompiler
                 {
                     if (!shouldReturnValue)
                         il.Emit(OpCodes.Pop);
-
                     return true; // do nothing, no conversion needed
                 }
 
@@ -1503,7 +1503,7 @@ namespace FastExpressionCompiler
                 {
                     var convertOpMethod = FirstConvertOperatorOrDefault(sourceTypeInfo, targetType, sourceType);
                     if (convertOpMethod != null)
-                        return EmitMethodCall(il, convertOpMethod, shouldReturnValue);
+                        return EmitMethodCall(il, convertOpMethod, !shouldReturnValue);
                 }
 
                 var targetTypeInfo = targetType.GetTypeInfo();
@@ -1511,7 +1511,7 @@ namespace FastExpressionCompiler
                 {
                     var convertOpMethod = FirstConvertOperatorOrDefault(targetTypeInfo, targetType, sourceType);
                     if (convertOpMethod != null)
-                        return EmitMethodCall(il, convertOpMethod, shouldReturnValue);
+                        return EmitMethodCall(il, convertOpMethod, !shouldReturnValue);
                 }
 
                 if (sourceType == typeof(object) && targetTypeInfo.IsValueType)
@@ -1864,12 +1864,13 @@ namespace FastExpressionCompiler
                 if (prop != null)
                 {
                     var setMethod = prop.DeclaringType.GetTypeInfo().GetDeclaredMethod("set_" + prop.Name);
-                    return setMethod != null && EmitMethodCall(il, setMethod, true);
+                    return setMethod != null && EmitMethodCall(il, setMethod);
                 }
 
                 var field = member as FieldInfo;
                 if (field == null)
                     return false;
+
                 il.Emit(OpCodes.Stfld, field);
                 return true;
             }
@@ -2175,7 +2176,7 @@ namespace FastExpressionCompiler
 
                 // multi dimensional array
                 var setMethod = instType?.GetTypeInfo().GetDeclaredMethod("Set");
-                return setMethod != null && EmitMethodCall(il, setMethod, true);
+                return setMethod != null && EmitMethodCall(il, setMethod);
             }
 
             private static bool TryEmitMethodCall(MethodCallExpression expr,
@@ -2203,7 +2204,7 @@ namespace FastExpressionCompiler
                 if (isValueTypeObj && method.IsVirtual)
                     il.Emit(OpCodes.Constrained, objType);
 
-                return EmitMethodCall(il, method, shouldReturnValue);
+                return EmitMethodCall(il, method, !shouldReturnValue);
             }
 
             // if call is done into byref method parameters there is no indicators in tree, so grab that from method
@@ -2265,7 +2266,7 @@ namespace FastExpressionCompiler
                 if (prop != null)
                 {
                     var propGetMethod = TryGetPropertyGetMethod(prop);
-                    return propGetMethod != null && EmitMethodCall(il, propGetMethod, true);
+                    return propGetMethod != null && EmitMethodCall(il, propGetMethod);
                 }
 
                 var field = member as FieldInfo;
@@ -2436,12 +2437,10 @@ namespace FastExpressionCompiler
                 }
 
                 // Create nested closure object composed of all constants, params, lambdas loaded on stack
-                if (isNestedArrayClosure)
-                    il.Emit(OpCodes.Newobj, ArrayClosure.Constructor);
-                else
-                    il.Emit(OpCodes.Newobj, nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                il.Emit(OpCodes.Newobj, isNestedArrayClosure ? ArrayClosure.Constructor
+                    : nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
-                return EmitMethodCall(il, GetCurryClosureMethod(nestedLambda, nestedLambdaInfo.IsAction), true);
+                return EmitMethodCall(il, GetCurryClosureMethod(nestedLambda, nestedLambdaInfo.IsAction));
             }
 
             private static MethodInfo GetCurryClosureMethod(object lambda, bool isAction)
@@ -2460,7 +2459,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 var invokeMethod = expr.Expression.Type.GetTypeInfo().GetDeclaredMethod("Invoke");
-                return invokeMethod != null && EmitMethodCall(il, invokeMethod, true);
+                return invokeMethod != null && EmitMethodCall(il, invokeMethod);
             }
 
             private static bool TryEmitInvertedNullComparison(Expression expr,
@@ -2557,7 +2556,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stloc_S, lVar);
                     il.Emit(OpCodes.Ldloca_S, lVar);
                     var mthValue = leftOpType.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault").First(x => x.GetParameters().Length == 0);
-                    if (!EmitMethodCall(il, mthValue, true))
+                    if (!EmitMethodCall(il, mthValue))
                         return false;
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
@@ -2570,7 +2569,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stloc_S, rVar);
                     il.Emit(OpCodes.Ldloca_S, rVar);
                     var mthValue = rightOpType.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault").First(x => x.GetParameters().Length == 0);
-                    if (!EmitMethodCall(il, mthValue, true))
+                    if (!EmitMethodCall(il, mthValue))
                         return false;
                 }
 
@@ -2595,12 +2594,12 @@ namespace FastExpressionCompiler
                         m.GetParameters().All(p => p.ParameterType == leftOpType));
 
                     if (method != null)
-                        return EmitMethodCall(il, method, true);
+                        return EmitMethodCall(il, method);
                     
                     if (expressionType != ExpressionType.Equal && expressionType != ExpressionType.NotEqual)
                         return false;
 
-                    EmitMethodCall(il, _objectEqualsMethod, true);
+                    EmitMethodCall(il, _objectEqualsMethod);
                     if (expressionType == ExpressionType.NotEqual) // invert result for not equal
                     {
                         il.Emit(OpCodes.Ldc_I4_0);
@@ -2654,12 +2653,12 @@ nullCheck:
                 if (leftIsNull)
                 {
                     il.Emit(OpCodes.Ldloca_S, lVar);
-                    var mth = exprLeft.Type.GetTypeInfo().GetDeclaredMethod("get_HasValue");
-                    if (!EmitMethodCall(il, mth, true))
+                    var hasValueMethod = exprLeft.Type.GetTypeInfo().GetDeclaredMethod("get_HasValue");
+                    if (!EmitMethodCall(il, hasValueMethod))
                         return false;
                     // ReSharper disable once AssignNullToNotNullAttribute
                     il.Emit(OpCodes.Ldloca_S, rVar);
-                    if (!EmitMethodCall(il, mth, true))
+                    if (!EmitMethodCall(il, hasValueMethod))
                         return false;
 
                     switch (expressionType)
@@ -2718,7 +2717,7 @@ nullCheck:
                         return false;
 
                     var method = exprTypeInfo.GetDeclaredMethod(methodName);
-                    return method != null && EmitMethodCall(il, method, true);
+                    return method != null && EmitMethodCall(il, method);
                 }
 
                 switch (exprNodeType)
@@ -2789,7 +2788,7 @@ nullCheck:
                         return true;
 
                     case ExpressionType.Power:
-                        return EmitMethodCall(il, typeof(Math).GetTypeInfo().GetDeclaredMethod("Pow"), true);
+                        return EmitMethodCall(il, typeof(Math).GetTypeInfo().GetDeclaredMethod("Pow"));
                 }
 
                 return false;
@@ -2853,11 +2852,13 @@ nullCheck:
                 return true;
             }
 
-            private static bool EmitMethodCall(ILGenerator il, MethodInfo method, bool shouldReturnValue)
+            private static bool EmitMethodCall(ILGenerator il, MethodInfo method, bool ignoreMethodResult = false)
             {
                 il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
-                if (!shouldReturnValue && method.ReturnType != typeof(void))
+
+                if (ignoreMethodResult && method.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);
+
                 return true;
             }
 
