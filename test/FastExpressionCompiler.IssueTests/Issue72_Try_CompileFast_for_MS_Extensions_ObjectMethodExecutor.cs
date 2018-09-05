@@ -28,9 +28,6 @@ namespace FastExpressionCompiler.IssueTests
         private static readonly ObjectMethodExecutorCompiledFast _execCompiledFast =
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(TestMethodName), _ti);
 
-        private static readonly ObjectMethodExecutorCompiledFastInParallel _execCompiledFastInParallel =
-            ObjectMethodExecutorCompiledFastInParallel.Create(_t.GetMethod(TestMethodName), _ti);
-
         private static readonly object[] _parameters = { 1, 2 };
 
         [Test]
@@ -87,12 +84,6 @@ namespace FastExpressionCompiler.IssueTests
         public void AsyncExecutor_CompiledFast_ExecuteAsync_WithoutAwait()
         {
             _execCompiledFast.ExecuteAsync(this, _parameters);
-        }
-
-        [Test]
-        public async Task AsyncExecutor_CompiledFastInParallel_ExecuteAsync_WithAwait()
-        {
-            await _execCompiledFastInParallel.ExecuteAsync(this, _parameters);
         }
     }
 }

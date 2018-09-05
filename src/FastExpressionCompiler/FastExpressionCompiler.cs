@@ -36,7 +36,6 @@ namespace FastExpressionCompiler
     using System.Linq.Expressions;
     using System.Reflection;
     using System.Reflection.Emit;
-    using System.Threading.Tasks;
 
     /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
     /// Partial to extend with your things when used as source file.</summary>
@@ -238,86 +237,6 @@ namespace FastExpressionCompiler
                 delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
 
             return method.CreateDelegate(delegateType, closureObject);
-        }
-
-        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/></summary>
-        public static async Task<TDelegate> TryCompileInParallelAsync<TDelegate>(this LambdaExpression lambdaExpr)
-            where TDelegate : class =>
-            (TDelegate)(await lambdaExpr.TryCompileNestedLambdasInParallelAsync().ConfigureAwait(false)).Value;
-
-        private static async Task<KeyValuePair<ClosureInfo, object>>
-            TryCompileNestedLambdasInParallelAsync(this LambdaExpression lambdaExpr, bool isNestedLambda = false)
-        {
-            var closureInfo = new ClosureInfo(false);
-            var lambdaParamExprs = lambdaExpr.Parameters;
-            if (!TryCollectBoundConstants(ref closureInfo, lambdaExpr.Body, lambdaParamExprs))
-                return default(KeyValuePair<ClosureInfo, object>);
-
-            var nestedLambdaExprs = closureInfo.NestedLambdaExprs;
-            if (nestedLambdaExprs.Length != 0)
-            {
-                var nestedLambdaTasks = new Task<KeyValuePair<ClosureInfo, object>>[nestedLambdaExprs.Length];
-                for (var nl = 0; nl < nestedLambdaExprs.Length; ++nl)
-                {
-                    var nestedLambdaExpr = nestedLambdaExprs[nl];
-                    nestedLambdaTasks[nl] = Task.Run(async () =>
-                        await nestedLambdaExpr.TryCompileNestedLambdasInParallelAsync(isNestedLambda: true)
-                        .ConfigureAwait(false));
-                }
-
-                await Task.WhenAll(nestedLambdaTasks).ConfigureAwait(false);
-
-                closureInfo.NestedLambdas = new NestedLambdaInfo[nestedLambdaExprs.Length];
-                for (var nl = 0; nl < nestedLambdaTasks.Length; nl++)
-                {
-                    var nestedLambdaResult = nestedLambdaTasks[nl].Result;
-                    if (nestedLambdaResult.Value == null)
-                        return nestedLambdaResult;
-
-                    var nestedClosureInfo = nestedLambdaResult.Key;
-
-                    var isAction = nestedLambdaExprs[nl].ReturnType == typeof(void);
-                    closureInfo.NestedLambdas[nl] = new NestedLambdaInfo(nestedClosureInfo, nestedLambdaResult.Value, isAction);
-
-                    if (nestedClosureInfo.HasClosure)
-                        CopyNestedClosureInfo(lambdaParamExprs, ref closureInfo, ref nestedClosureInfo);
-                }
-            }
-
-            var closureObject = closureInfo.ConstructClosureTypeAndObject(constructTypeOnly: isNestedLambda);
-
-            if (closureInfo.LabelCount > 0)
-                closureInfo.Labels = new KeyValuePair<object, Label>[closureInfo.LabelCount];
-            closureInfo.LabelCount = 0;
-
-            var closureType = closureInfo.ClosureType;
-            var lambdaParamTypes = Tools.GetParamTypes(lambdaParamExprs);
-            var methodParamTypes = closureType == null ? lambdaParamTypes : GetClosureAndParamTypes(lambdaParamTypes, closureType);
-
-            var lambdaReturnType = lambdaExpr.ReturnType;
-            var method = new DynamicMethod(string.Empty, lambdaReturnType, methodParamTypes, typeof(ExpressionCompiler), true);
-
-            var il = method.GetILGenerator();
-            var lambdaExprBody = lambdaExpr.Body;
-            if (!EmittingVisitor.TryEmit(lambdaExprBody, lambdaExprBody.Type, lambdaParamExprs, il,
-                ref closureInfo, ExpressionType.Default))
-                return default(KeyValuePair<ClosureInfo, object>);
-
-            // if the delegate is void but internal expression returns some result, then we should discard (pop) it #71
-            if (lambdaReturnType == typeof(void) && lambdaExprBody.Type != typeof(void) &&
-                !IsByReferenceReturn(lambdaParamTypes, lambdaExprBody))
-                il.Emit(OpCodes.Pop);
-
-            il.Emit(OpCodes.Ret);
-
-            // include closure as the first parameter, BUT don't bound to it. It will be bound later in EmitNestedLambda.
-            var delegateType = isNestedLambda 
-                ? Tools.GetFuncOrActionType(methodParamTypes, lambdaReturnType) 
-                : lambdaExpr.Type != typeof(Delegate) ? lambdaExpr.Type 
-                    : Tools.GetFuncOrActionType(lambdaParamTypes, lambdaReturnType);
-
-            var @delegate = method.CreateDelegate(delegateType, closureObject);
-            return new KeyValuePair<ClosureInfo, object>(closureInfo, @delegate);
         }
 
         private static void CopyNestedClosureInfo(IReadOnlyList<ParameterExpression> lambdaParamExprs,
