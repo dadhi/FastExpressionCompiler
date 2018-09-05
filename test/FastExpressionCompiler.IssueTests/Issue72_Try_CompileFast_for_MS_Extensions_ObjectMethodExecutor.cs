@@ -28,6 +28,9 @@ namespace FastExpressionCompiler.IssueTests
         private static readonly ObjectMethodExecutorCompiledFast _execCompiledFast =
             ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(TestMethodName), _ti);
 
+        private static readonly ObjectMethodExecutorCompiledFastInParallel _execCompiledFastInParallel =
+            ObjectMethodExecutorCompiledFastInParallel.Create(_t.GetMethod(TestMethodName), _ti);
+
         private static readonly object[] _parameters = { 1, 2 };
 
         [Test]
@@ -68,26 +71,28 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(3, sum.GetAwaiter().GetResult());
         }
 
-        [Test] // this is for comparison
+        [Test]
         public async Task AsyncExecutor_CompiledNormally_ExecuteAsync_WithAwait()
         {
             await _execCompiled.ExecuteAsync(this, _parameters);
         }
 
-        // Results so far:
-        // -  It does not work for any Foo.. method :(
-        // - I have also tried to replace all `struct` in ObjectMethodExecutor and helpers with `class` with no success
-        //
         [Test]
         public async Task AsyncExecutor_CompiledFast_ExecuteAsync_WithAwait()
         {
             await _execCompiledFast.ExecuteAsync(this, _parameters);
         }
 
-        [Test] // this works fine without await
+        [Test]
         public void AsyncExecutor_CompiledFast_ExecuteAsync_WithoutAwait()
         {
             _execCompiledFast.ExecuteAsync(this, _parameters);
+        }
+
+        [Test]
+        public async Task AsyncExecutor_CompiledFastInParallel_ExecuteAsync_WithAwait()
+        {
+            await _execCompiledFastInParallel.ExecuteAsync(this, _parameters);
         }
     }
 }
