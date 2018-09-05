@@ -1,18 +1,24 @@
 ﻿using System;
-using System.Linq.Expressions;
 using NUnit.Framework;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
-    [TestFixture]
+[TestFixture]
     public class PreConstructedClosureTests
     {
         [Test]
         public void Can_pass_closure_with_constant_to_TryCompile()
         {
             var x = new X();
-            var xConstExpr = Expression.Constant(x);
-            var expr = Expression.Lambda<Func<X>>(xConstExpr);
+            var xConstExpr = Constant(x);
+            var expr = Lambda<Func<X>>(xConstExpr);
 
             var c = ExpressionCompiler.Closure.Create(x);
             var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(c, xConstExpr);
@@ -26,8 +32,8 @@ namespace FastExpressionCompiler.UnitTests
         public void Can_pass_ANY_class_closure_with_constant_to_TryCompile()
         {
             var x = new X();
-            var xConstExpr = Expression.Constant(x);
-            var expr = Expression.Lambda<Func<X>>(xConstExpr);
+            var xConstExpr = Constant(x);
+            var expr = Lambda<Func<X>>(xConstExpr);
 
             var cx = new ClosureX(x);
             var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(cx, xConstExpr);
@@ -41,6 +47,7 @@ namespace FastExpressionCompiler.UnitTests
             public ClosureX(X x) { X = x; }
         }
 
+#if !LIGHT_EXPRESSION
         [Test]
         public void Can_prevent_closure_creation_when_compiling_a_static_delegate()
         {
@@ -63,6 +70,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsInstanceOf<Y>(y);
             Assert.AreSame(y.A, y.B);
         }
+#endif
 
         public class Y
         {

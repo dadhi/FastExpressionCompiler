@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -61,6 +62,9 @@ namespace FastExpressionCompiler.LightExpression
 
         private static readonly ConstantExpression _nullExprInfo = new ConstantExpression(null, typeof(object));
 
+        public static NewExpression New(Type type) =>
+            new NewExpression(type.GetTypeInfo().DeclaredConstructors.First(x => x.GetParameters().Length == 0), Tools.Empty<Expression>());
+
         public static NewExpression New(ConstructorInfo ctor) =>
             new NewExpression(ctor, Tools.Empty<Expression>());
 
@@ -74,12 +78,15 @@ namespace FastExpressionCompiler.LightExpression
             Call(null, method, arguments);
 
         public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) => 
-            Call(null, type.FindMethod(true, methodName, typeArguments, arguments), arguments);
+            Call(null, type.FindMethod(methodName, typeArguments, arguments, isStatic: true), arguments);
 
-        public static PropertyExpression Property(PropertyInfo property) =>
+        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments) =>
+            new MethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, arguments), arguments);
+
+        public static MemberExpression Property(PropertyInfo property) =>
             new PropertyExpression(null, property);
 
-        public static PropertyExpression Property(Expression instance, PropertyInfo property) =>
+        public static MemberExpression Property(Expression instance, PropertyInfo property) =>
             new PropertyExpression(instance, property);
 
         public static MemberExpression Property(Expression expression, string propertyName) => 
@@ -91,6 +98,11 @@ namespace FastExpressionCompiler.LightExpression
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) => 
             new IndexExpression(instance, indexer, arguments.AsReadOnlyList());
 
+        public static MemberExpression PropertyOrField(Expression expression, string propertyName) =>
+            expression.Type.FindProperty(propertyName) != null ? 
+                (MemberExpression) new PropertyExpression(expression, expression.Type.FindProperty(propertyName)) :
+                (MemberExpression) new FieldExpression(expression, expression.Type.FindField(propertyName));
+
         public static IndexExpression MakeIndex(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) => 
             indexer != null ? Property(instance, indexer, arguments) : ArrayAccess(instance, arguments);
 
@@ -100,13 +112,13 @@ namespace FastExpressionCompiler.LightExpression
         public static IndexExpression ArrayAccess(Expression array, IEnumerable<Expression> indexes) => 
             new IndexExpression(array, null, indexes.AsReadOnlyList());
 
-        public static FieldExpression Field(FieldInfo field) =>
+        public static MemberExpression Field(FieldInfo field) =>
             new FieldExpression(null, field);
 
-        public static FieldExpression Field(Expression instance, FieldInfo field) =>
+        public static MemberExpression Field(Expression instance, FieldInfo field) =>
             new FieldExpression(instance, field);
 
-        public static FieldExpression Field(Expression instance, string fieldName) => 
+        public static MemberExpression Field(Expression instance, string fieldName) => 
             new FieldExpression(instance, instance.Type.FindField(fieldName));
 
         public static LambdaExpression Lambda(Expression body) =>
@@ -121,10 +133,28 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression Convert(Expression operand, Type targetType) =>
             new UnaryExpression(ExpressionType.Convert, operand, targetType);
 
+        public static UnaryExpression Convert(Expression operand, Type targetType, MethodInfo method) =>
+            new UnaryExpression(ExpressionType.Convert, operand, targetType, method);
+
+        public static UnaryExpression PreIncrementAssign(Expression operand) =>
+            new UnaryExpression(ExpressionType.PreIncrementAssign, operand, (System.Type)null);
+
+        public static UnaryExpression PostIncrementAssign(Expression operand) =>
+            new UnaryExpression(ExpressionType.PostIncrementAssign, operand, (System.Type)null);
+
+        public static UnaryExpression PreDecrementAssign(Expression operand) =>
+            new UnaryExpression(ExpressionType.PreDecrementAssign, operand, (System.Type)null);
+
+        public static UnaryExpression PostDecrementAssign(Expression operand) =>
+            new UnaryExpression(ExpressionType.PostDecrementAssign, operand, (System.Type)null);
+
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body) =>
             new Expression<TDelegate>(body, Tools.Empty<ParameterExpression>());
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, params ParameterExpression[] parameters) =>
+            new Expression<TDelegate>(body, parameters);
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) =>
             new Expression<TDelegate>(body, parameters);
 
         public static BinaryExpression ArrayIndex(Expression array, Expression index) =>
@@ -150,6 +180,21 @@ namespace FastExpressionCompiler.LightExpression
 
         public static BinaryExpression Assign(Expression left, Expression right) =>
             new AssignBinaryExpression(left, right, left.Type);
+
+        public static BinaryExpression PowerAssign(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.PowerAssign, left, right, left.Type);
+
+        public static BinaryExpression AddAssign(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.AddAssign, left, right, left.Type);
+
+        public static BinaryExpression SubtractAssign(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.SubtractAssign, left, right, left.Type);
+
+        public static BinaryExpression MultiplyAssign(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.MultiplyAssign, left, right, left.Type);
+
+        public static BinaryExpression DivideAssign(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.DivideAssign, left, right, left.Type);
 
         public static InvocationExpression Invoke(Expression lambda, params Expression[] args) =>
             new InvocationExpression(lambda, args, lambda.Type);
@@ -186,6 +231,27 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression Divide(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Divide, left, right, left.Type);
 
+        public static Expression Power(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.Power, left, right, left.Type);
+
+        public static Expression Equal(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.Equal, left, right, left.Type);
+
+        public static Expression GreaterThan(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.GreaterThan, left, right, left.Type);
+
+        public static Expression GreaterThanOrEqual(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.GreaterThanOrEqual, left, right, left.Type);
+
+        public static Expression LessThan(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.LessThan, left, right, left.Type);
+
+        public static Expression LessThanOrEqual(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.LessThanOrEqual, left, right, left.Type);
+
+        public static Expression NotEqual(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, left.Type);
+
         public static BlockExpression Block(params Expression[] expressions) => 
             Block(Tools.Empty<ParameterExpression>(), expressions);
 
@@ -219,6 +285,9 @@ namespace FastExpressionCompiler.LightExpression
         public static LabelTarget Label(Type type = null, string name = null) => 
             SysExpr.Label(type ?? typeof(void), name);
 
+        public static LabelTarget Label(string name) =>
+            SysExpr.Label(typeof(void), name);
+
         public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type = null) => 
             new GotoExpression(kind, target, value, type ?? typeof(void));
 
@@ -233,6 +302,27 @@ namespace FastExpressionCompiler.LightExpression
 
         public static GotoExpression Goto(LabelTarget target, Expression value = null, Type type = null) => 
             MakeGoto(GotoExpressionKind.Goto, target, value, type);
+
+        public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, params SwitchCase[] cases) =>
+            new SwitchExpression(defaultBody.Type, switchValue, defaultBody, null, cases);
+
+        public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
+            new SwitchExpression(defaultBody.Type, switchValue, defaultBody, comparison, cases);
+
+        public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
+            new SwitchExpression(type, switchValue, defaultBody, comparison, cases);
+
+        public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
+            new SwitchExpression(type, switchValue, defaultBody, comparison, cases);
+
+        public static SwitchExpression Switch(Expression switchValue, params SwitchCase[] cases) =>
+            new SwitchExpression(null, switchValue, null, null, cases);
+
+        public static SwitchCase SwitchCase(Expression body, IEnumerable<Expression> testValues) =>
+            new SwitchCase(body, testValues);
+
+        public static SwitchCase SwitchCase(Expression body, params Expression[] testValues) =>
+            new SwitchCase(body, testValues);
 
         public static BinaryExpression Coalesce(Expression left, Expression right) => Coalesce(left, right, null);
 
@@ -354,30 +444,32 @@ namespace FastExpressionCompiler.LightExpression
             return false;
         }
 
-        internal static MethodInfo FindMethod(this Type type, bool isStatic,
-            string methodName, Type[] typeArguments, Expression[] arguments) => 
+        internal static MethodInfo FindMethod(this Type type,
+            string methodName, Type[] typeArgs, Expression[] args, bool isStatic = false) =>
             type.GetTypeInfo().DeclaredMethods.GetFirst(m =>
             {
-                if (isStatic && !m.IsStatic)
-                    return false;
+                if (isStatic == m.IsStatic && methodName == m.Name)
+                {
+                    typeArgs = typeArgs ?? Type.EmptyTypes;
+                    var mTypeArgs = m.GetGenericArguments();
+                    if (typeArgs.Length == mTypeArgs.Length &&
+                        (typeArgs.Length == 0 ||
+                         typeArgs.Length == 1 && typeArgs[0] == mTypeArgs[0] ||
+                         typeArgs.Length == 2 && typeArgs[0] == mTypeArgs[0] && typeArgs[1] == mTypeArgs[1] ||
+                         typeArgs.SequenceEqual(mTypeArgs)))
+                    {
+                        args = args ?? Tools.Empty<Expression>();
+                        var mArgs = m.GetParameters();
+                        if (args.Length == mArgs.Length &&
+                            (args.Length == 0 ||
+                             args.Length == 1 && args[0].Type == mArgs[0].ParameterType ||
+                             args.Length == 2 && args[0].Type == mArgs[0].ParameterType && args[1].Type == mArgs[1].ParameterType ||
+                             args.Map(a => a.Type).SequenceEqual(mArgs.Map(p => p.ParameterType))))
+                            return true;
+                    }
+                }
 
-                if (m.Name != methodName)
-                    return false;
-
-                var mTypeArgs = m.GetGenericArguments();
-                typeArguments = typeArguments ?? Type.EmptyTypes;
-                if (mTypeArgs.Length != typeArguments.Length ||
-                    mTypeArgs.Length != 0 && !mTypeArgs.SequenceEqual(typeArguments))
-                    return false;
-
-                var mParams = m.GetParameters();
-                arguments = arguments ?? Tools.Empty<Expression>();
-
-                if (mParams.Length != arguments.Length ||
-                    mParams.Length != 0 && !mParams.Map(p => p.ParameterType).SequenceEqual(arguments.Map(a => a.Type)))
-                    return false;
-
-                return true;
+                return false;
             });
 
         internal static PropertyInfo FindProperty(this Type type, string propertyName) =>
@@ -416,6 +508,14 @@ namespace FastExpressionCompiler.LightExpression
             Method = method;
             Type = Method.ReturnType; // todo: check that
         }
+
+        public UnaryExpression(ExpressionType nodeType, Expression operand, Type type, MethodInfo method)
+        {
+            NodeType = nodeType;
+            Operand = operand;
+            Method = method;
+            Type = type;
+        }
     }
 
     public abstract class BinaryExpression : Expression
@@ -428,9 +528,18 @@ namespace FastExpressionCompiler.LightExpression
         protected BinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type)
         {
             NodeType = nodeType;
-            Type = type;
+           
             Left = left;
             Right = right;
+
+            if (nodeType == ExpressionType.Equal || nodeType == ExpressionType.NotEqual || 
+                nodeType == ExpressionType.GreaterThan || nodeType == ExpressionType.GreaterThanOrEqual || 
+                nodeType == ExpressionType.LessThan || nodeType == ExpressionType.LessThanOrEqual)
+            {
+                Type = typeof(bool);
+            }
+            else
+                Type = type;
         }
     }
 
@@ -486,6 +595,9 @@ namespace FastExpressionCompiler.LightExpression
 
         internal AssignBinaryExpression(Expression left, Expression right, Type type)
             : base(ExpressionType.Assign, left, right, type) { }
+
+        internal AssignBinaryExpression(ExpressionType expressionType, Expression left, Expression right, Type type)
+            : base(expressionType, left, right, type) { }
     }
 
     public sealed class MemberInitExpression : Expression
@@ -856,6 +968,46 @@ namespace FastExpressionCompiler.LightExpression
             Kind = kind;
             Value = value;
             Target = target;
+        }
+    }
+
+    public class SwitchCase
+    {
+        public readonly IReadOnlyList<Expression> TestValues;
+        public readonly Expression Body;
+
+        public System.Linq.Expressions.SwitchCase ToSwitchCase() =>
+            SysExpr.SwitchCase(Body.ToExpression(), TestValues.Select(x => x.ToExpression()));
+
+        public SwitchCase(Expression body, IEnumerable<Expression> testValues)
+        {
+            Body = body;
+            TestValues = testValues.AsReadOnlyList();
+        }
+    }
+
+    public class SwitchExpression : Expression
+    {
+        public override ExpressionType NodeType { get; }
+        public override Type Type { get; }
+
+        public override SysExpr ToExpression() => SysExpr.Switch(SwitchValue.ToExpression(), DefaultBody.ToExpression(),
+            Comparison, Cases.Map(x => x.ToSwitchCase()));
+
+        public readonly Expression SwitchValue;
+        public readonly IReadOnlyList<SwitchCase> Cases;
+        public readonly Expression DefaultBody;
+        public readonly MethodInfo Comparison;
+
+
+        public SwitchExpression(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases)
+        {
+            NodeType = ExpressionType.Switch;
+            Type = type;
+            SwitchValue = switchValue;
+            DefaultBody = defaultBody;
+            Comparison = comparison;
+            Cases = cases.AsReadOnlyList();
         }
     }
 

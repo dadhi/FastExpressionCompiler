@@ -7,12 +7,13 @@
 
     <ItemGroup>
         <None Remove="*.ncrunchproject" />
-        <Compile Include="..\FastExpressionCompiler.UnitTests\**\*.cs" Exclude="..\FastExpressionCompiler.UnitTests\obj\**\*.*" />
-        <Compile Remove="..\FastExpressionCompiler.UnitTests\ArithmeticOperationsTests.cs" />
-        <Compile Remove="..\FastExpressionCompiler.UnitTests\ConstantAndConversionTests.cs" />
-        <Compile Remove="..\FastExpressionCompiler.UnitTests\HoistedLambdaExprTests.cs" />
-        <Compile Remove="..\FastExpressionCompiler.UnitTests\NestedLambdaTests.cs" />
-        <Compile Remove="..\FastExpressionCompiler.UnitTests\ValueTypeTests.cs" />
+        <Compile Include="..\FastExpressionCompiler.IssueTests\**\*.cs" Exclude="..\FastExpressionCompiler.IssueTests\obj\**\*.*" />
+
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\ObjectMethodExecutor\**" />
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke.cs" />
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor.cs" />
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\NServiceBus_PipelineExecutionExtensions.cs" />
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\NServiceBus_PipelineExecutionExtensions.SUT.cs" />
     </ItemGroup>
 
     <ItemGroup>

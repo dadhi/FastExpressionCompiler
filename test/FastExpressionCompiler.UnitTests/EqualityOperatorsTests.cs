@@ -1,12 +1,19 @@
 ﻿using System;
-using System.Linq.Expressions;
 using NUnit.Framework;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class EqualityOperatorsTests
     {
+#if !LIGHT_EXPRESSION
         [Test]
         public void Greater_or_equal_than_DateTime_parameter()
         {
@@ -27,30 +34,6 @@ namespace FastExpressionCompiler.UnitTests
             var f = e.CompileFast(true);
 
             Assert.IsFalse(f(DateTime.Now + TimeSpan.FromDays(1)));
-        }
-
-        [Test]
-        public void Greater_or_equal_than_DateTime_constant()
-        {
-            var dtNow = Expression.Constant(DateTime.Now);
-            var e = Expression.Lambda<Func<bool>>(
-                Expression.GreaterThanOrEqual(Expression.Constant(DateTime.Now), dtNow));
-
-            var f = e.CompileFast(true);
-
-            Assert.IsTrue(f());
-        }
-
-        [Test]
-        public void Less_or_equal_than_DateTime_constant()
-        {
-            var dtNow = Expression.Constant(DateTime.Now);
-            var e = Expression.Lambda<Func<bool>>(
-                Expression.LessThanOrEqual(dtNow, Expression.Constant(DateTime.Now)));
-
-            var f = e.CompileFast(true);
-
-            Assert.IsTrue(f());
         }
 
         [Test]
@@ -78,6 +61,31 @@ namespace FastExpressionCompiler.UnitTests
                 StartTime = "a", EndTime = "y"
             };
             Assert.IsTrue(f(tested));
+        }
+#endif
+
+        [Test]
+        public void Greater_or_equal_than_DateTime_constant()
+        {
+            var dtNow = Constant(DateTime.Now);
+            var e = Lambda<Func<bool>>(
+                GreaterThanOrEqual(Expression.Constant(DateTime.Now), dtNow));
+
+            var f = e.CompileFast(true);
+
+            Assert.IsTrue(f());
+        }
+
+        [Test]
+        public void Less_or_equal_than_DateTime_constant()
+        {
+            var dtNow = Constant(DateTime.Now);
+            var e = Lambda<Func<bool>>(
+                LessThanOrEqual(dtNow, Expression.Constant(DateTime.Now)));
+
+            var f = e.CompileFast(true);
+
+            Assert.IsTrue(f());
         }
 
         public class Entity

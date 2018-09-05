@@ -1,7 +1,13 @@
 ﻿using NUnit.Framework;
-using static System.Linq.Expressions.Expression;
 
-namespace FastExpressionCompiler.IssueTests
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
+namespace FastExpressionCompiler.UnitTests
+#endif
 {
     class Issue100_ExpressionInfo_wrong_return_type
     {
@@ -13,13 +19,9 @@ namespace FastExpressionCompiler.IssueTests
             var objRef = Parameter(typeof(double).MakeByRefType());
             var lambda = Lambda<ActionRef<double>>(Assign(objRef, Add(objRef, Constant((double)3.0))), objRef);
 
-            var compiledA = lambda.Compile();
             var compiledB = lambda.CompileFast(true);
-            var exampleA = 5.0;
             var exampleB = 5.0;
-            compiledA(ref exampleA);
             compiledB(ref exampleB);
-            Assert.AreEqual(8.0, exampleA);
             Assert.AreEqual(8.0, exampleB);
         }
     }
