@@ -2465,7 +2465,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 var invokeMethod = expr.Expression.Type.GetTypeInfo().GetDeclaredMethod("Invoke");
-                return invokeMethod != null && EmitMethodCall(il, invokeMethod);
+                return invokeMethod != null && EmitMethodCall(il, invokeMethod, !shouldReturnValue);
             }
 
             private static bool TryEmitInvertedNullComparison(Expression expr,

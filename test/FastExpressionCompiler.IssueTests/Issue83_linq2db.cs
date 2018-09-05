@@ -406,6 +406,31 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void TestLambdaInvokeSupported()
+        {
+            var lambda = Lambda<Func<string>>(Invoke(Lambda<Func<String>>(Constant("aa"))));
+
+            var compiled1 = lambda.Compile();
+            var compiled2 = lambda.CompileFast(true);
+
+            Assert.AreEqual("aa", compiled1());
+            Assert.AreEqual("aa", compiled2());
+        }
+
+        [Test]
+        public void TestLambdaInvokeSupported2()
+        {
+            var l = Lambda<Func<String>>(Constant("aa"));
+            var lambda = Lambda<Func<string>>(Block(Invoke(l), Invoke(l), Invoke(l)));
+
+            var compiled1 = lambda.Compile();
+            var compiled2 = lambda.CompileFast(true);
+
+            Assert.AreEqual("aa", compiled1());
+            Assert.AreEqual("aa", compiled2());
+        }
+
+        [Test]
         public void TestFirstLambda()
         {
             var a1 = Parameter(typeof(IQueryRunner), "qr");
