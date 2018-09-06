@@ -2461,7 +2461,7 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, bool shouldReturnValue, bool isMemberAccess)
             {
                 if (!TryEmit(expr.Expression, expr.Expression.Type, paramExprs, il, ref closure, ExpressionType.Invoke, shouldReturnValue, isMemberAccess) ||
-                    !EmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Invoke, shouldReturnValue, isMemberAccess))
+                    !EmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Invoke, true, isMemberAccess))
                     return false;
 
                 var invokeMethod = expr.Expression.Type.GetTypeInfo().GetDeclaredMethod("Invoke");

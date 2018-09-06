@@ -372,18 +372,85 @@ namespace FastExpressionCompiler.UnitTests
             var p2 = Parameter(typeof(IDataReader), "dr");
 
 
-            var body = Invoke(
-                mapper,
-                p1,
-                Property(p1, nameof(IQueryRunner.DataContext)),
-                p2,
-                Property(p1, nameof(IQueryRunner.Expression)),
-                Property(p1, nameof(IQueryRunner.Parameters)));
+            var body = Block(
+                    Invoke(
+                        mapper,
+                        p1,
+                        Property(p1, nameof(IQueryRunner.DataContext)),
+                        p2,
+                        Property(p1, nameof(IQueryRunner.Expression)),
+                        Property(p1, nameof(IQueryRunner.Parameters))));
 
             var lambda = Lambda<Func<IQueryRunner, IDataReader, object>>(body, p1, p2);
 
 
             var compiled = lambda.CompileFast();
+            var c = lambda.Compile();
+
+            Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
+        }
+
+        [Test]
+        public void linq2db_InvalidProgramException2()
+        {
+            var a1 = Parameter(typeof(IQueryRunner), "qr");
+            var a2 = Parameter(typeof(IDataContext), "dctx");
+            var a3 = Parameter(typeof(IDataReader), "rd");
+            var a4 = Parameter(typeof(Expression), "expr");
+            var a5 = Parameter(typeof(object[]), "ps");
+
+            var ldr = Variable(typeof(SQLiteDataReader), "ldr");
+            var mapperBody = Block(
+                new[] { ldr },
+                Assign(ldr, Convert(a3, typeof(SQLiteDataReader))),
+                Convert(
+                    Block(
+                        Call(GetType().GetMethod(nameof(CheckNullValue)), a3, Constant("Average")),
+                        Condition(
+                            Call(ldr, nameof(SQLiteDataReader.IsDBNull), null, Constant(0)),
+                            Constant(0d),
+                            Convert(
+                                Call(
+                                    GetType().GetMethod(nameof(ConvertDefault)),
+                                    Convert(
+                                        Convert(
+                                            Call(ldr, nameof(SQLiteDataReader.GetValue), null, Constant(0)),
+                                            typeof(object)),
+                                        typeof(object)),
+                                    Constant(typeof(double))),
+                                typeof(double)))),
+                    typeof(object)));
+
+            var mapper = Lambda<Func<IQueryRunner, IDataContext, IDataReader, Expression, object[], object>>(mapperBody, a1, a2, a3, a4, a5);
+
+            var p1 = Parameter(typeof(IQueryRunner), "qr");
+            var p2 = Parameter(typeof(IDataReader), "dr");
+
+
+            var body = Block(
+                    Invoke(
+                        mapper,
+                        p1,
+                        Property(p1, nameof(IQueryRunner.DataContext)),
+                        p2,
+                        Property(p1, nameof(IQueryRunner.Expression)),
+                        Property(p1, nameof(IQueryRunner.Parameters)))
+                        ,
+                    Invoke(
+                        mapper,
+                        p1,
+                        Property(p1, nameof(IQueryRunner.DataContext)),
+                        p2,
+                        Property(p1, nameof(IQueryRunner.Expression)),
+                        Property(p1, nameof(IQueryRunner.Parameters)))
+                        )
+                    ;
+
+            var lambda = Lambda<Func<IQueryRunner, IDataReader, object>>(body, p1, p2);
+
+
+            var compiled = lambda.CompileFast();
+            var c = lambda.Compile();
 
             Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
         }
@@ -421,6 +488,20 @@ namespace FastExpressionCompiler.UnitTests
         public void TestLambdaInvokeSupported2()
         {
             var l = Lambda<Func<String>>(Constant("aa"));
+            var lambda = Lambda<Func<string>>(Block(Invoke(l), Invoke(l), Invoke(l)));
+
+            var compiled1 = lambda.Compile();
+            var compiled2 = lambda.CompileFast(true);
+
+            Assert.AreEqual("aa", compiled1());
+            Assert.AreEqual("aa", compiled2());
+        }
+
+
+        [Test]
+        public void TestLambdaInvokeSupported3()
+        {
+            var l = Lambda<Func<String>>(Block(Constant("aa"), Constant("aa"), Constant("aa"),Constant("aa"),Constant("aa")));
             var lambda = Lambda<Func<string>>(Block(Invoke(l), Invoke(l), Invoke(l)));
 
             var compiled1 = lambda.Compile();
