@@ -406,6 +406,31 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void TestLambdaInvokeSupported()
+        {
+            var lambda = Lambda<Func<string>>(Invoke(Lambda<Func<String>>(Constant("aa"))));
+
+            var compiled1 = lambda.Compile();
+            var compiled2 = lambda.CompileFast(true);
+
+            Assert.AreEqual("aa", compiled1());
+            Assert.AreEqual("aa", compiled2());
+        }
+
+        [Test]
+        public void TestLambdaInvokeSupported2()
+        {
+            var l = Lambda<Func<String>>(Constant("aa"));
+            var lambda = Lambda<Func<string>>(Block(Invoke(l), Invoke(l), Invoke(l)));
+
+            var compiled1 = lambda.Compile();
+            var compiled2 = lambda.CompileFast(true);
+
+            Assert.AreEqual("aa", compiled1());
+            Assert.AreEqual("aa", compiled2());
+        }
+
+        [Test]
         public void TestFirstLambda()
         {
             var a1 = Parameter(typeof(IQueryRunner), "qr");
@@ -493,6 +518,108 @@ namespace FastExpressionCompiler.UnitTests
             Assert.That(obj.Class2.Class3.Class4.Field1, Is.EqualTo(42));
         }
 
+        [Test]
+        public void Struct_test()
+        {
+            var objParam = Parameter(typeof(object), "obj");
+            var valueParam = Parameter(typeof(object), "value");
+
+            var varClass2 = Variable(typeof(TestClass2));
+            var varStruct1 = Variable(typeof(TestStruct1));
+            var varClass3 = Variable(typeof(TestClass3));
+            var varClass4 = Variable(typeof(TestClass4));
+
+            var body = Block(
+                typeof(int),
+                new[] { varClass2, varStruct1, varClass3, varClass4 },
+                Assign(varClass2, Field(Convert(objParam, typeof(TestClass1)), nameof(TestClass1.Class2))),
+                IfThen(
+                    Equal(varClass2, Constant(null)),
+                    Block(
+                        Assign(varClass2, New(typeof(TestClass2))),
+                        Assign(Field(Convert(objParam, typeof(TestClass1)), nameof(TestClass1.Class2)), varClass2))),
+                Assign(varStruct1, Field(varClass2, nameof(TestClass2.Struct1))),
+                Assign(varClass3, Field(varStruct1, nameof(TestStruct1.Class3))),
+                IfThen(
+                    Equal(varClass3, Constant(null)),
+                    Block(
+                        Assign(varClass3, New(typeof(TestClass3))),
+                        Assign(Field(varStruct1, nameof(TestStruct1.Class3)), varClass3),
+                        Assign(Field(varClass2, nameof(TestClass2.Struct1)), varStruct1))
+                        ),
+                Assign(varClass4, Field(varClass3, nameof(TestClass3.Class4))),
+                IfThen(
+                    Equal(varClass4, Constant(null)),
+                    Block(
+                        Assign(varClass4, New(typeof(TestClass4))),
+                        Assign(Field(varClass3, nameof(TestClass3.Class4)), varClass4))),
+                Assign(
+                    Field(varClass4, nameof(TestClass4.Field1)),
+                    Convert(valueParam, typeof(int)))
+                );
+
+            var expr = Lambda<Action<object, object>>(body, objParam, valueParam);
+
+            var compiled = expr.CompileFast(true);
+
+            var obj = new TestClass1();
+
+            compiled(obj, 42);
+
+            Assert.That(obj.Class2.Struct1.Class3.Class4.Field1, Is.EqualTo(42));
+        }
+
+        [Test]
+        public void Struct_test2()
+        {
+            var objParam = Parameter(typeof(object), "obj");
+            var valueParam = Parameter(typeof(object), "value");
+
+            var varClass2 = Variable(typeof(TestClass2));
+            var varStruct1 = Variable(typeof(TestStruct1));
+            var varClass3 = Variable(typeof(TestClass3));
+            var varClass4 = Variable(typeof(TestClass4));
+
+            var body = Block(
+                typeof(int),
+                new[] { varClass2, varStruct1, varClass3, varClass4 },
+                Assign(varClass2, Field(Convert(objParam, typeof(TestClass1)), nameof(TestClass1.Class2))),
+                IfThen(
+                    Equal(varClass2, Constant(null)),
+                    Block(
+                        Assign(varClass2, New(typeof(TestClass2))),
+                        Assign(Field(Convert(objParam, typeof(TestClass1)), nameof(TestClass1.Class2)), varClass2))),
+                Assign(varStruct1, Property(varClass2, nameof(TestClass2.Struct1P))),
+                Assign(varClass3, Property(varStruct1, nameof(TestStruct1.Class3P))),
+                IfThen(
+                    Equal(varClass3, Constant(null)),
+                    Block(
+                        Assign(varClass3, New(typeof(TestClass3))),
+                        Assign(Property(varStruct1, nameof(TestStruct1.Class3P)), varClass3),
+                        Assign(Property(varClass2, nameof(TestClass2.Struct1P)), varStruct1))
+                        ),
+                Assign(varClass4, Field(varClass3, nameof(TestClass3.Class4))),
+                IfThen(
+                    Equal(varClass4, Constant(null)),
+                    Block(
+                        Assign(varClass4, New(typeof(TestClass4))),
+                        Assign(Field(varClass3, nameof(TestClass3.Class4)), varClass4))),
+                Assign(
+                    Field(varClass4, nameof(TestClass4.Field1)),
+                    Convert(valueParam, typeof(int)))
+                );
+
+            var expr = Lambda<Action<object, object>>(body, objParam, valueParam);
+
+            var compiled = expr.CompileFast(true);
+
+            var obj = new TestClass1();
+
+            compiled(obj, 42);
+
+            Assert.That(obj.Class2.Struct1P.Class3P.Class4.Field1, Is.EqualTo(42));
+        }
+
         class TestClass1
         {
             public int Prop1
@@ -514,6 +641,8 @@ namespace FastExpressionCompiler.UnitTests
         class TestClass2
         {
             public TestClass3 Class3;
+            public TestStruct1 Struct1;
+            public TestStruct1 Struct1P { get; set; }
         }
 
         class TestClass3
@@ -524,6 +653,13 @@ namespace FastExpressionCompiler.UnitTests
         class TestClass4
         {
             public int Field1;
+        }
+
+        struct TestStruct1
+        {
+            public TestClass3 Class3;
+
+            public TestClass3 Class3P { get; set; }
         }
 
     }
