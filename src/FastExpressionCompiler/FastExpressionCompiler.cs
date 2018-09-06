@@ -362,6 +362,7 @@ namespace FastExpressionCompiler
             // All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas;
             public LambdaExpression[] NestedLambdaExprs;
+            public int[] NestedLambdaInvocationCount;
 
             public int ClosedItemCount => Constants.Length + NonPassedParameters.Length + NestedLambdas.Length;
 
@@ -386,6 +387,7 @@ namespace FastExpressionCompiler
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 NestedLambdaExprs = Tools.Empty<LambdaExpression>();
+                NestedLambdaInvocationCount = Tools.Empty<int>();
                 CurrentBlock = BlockInfo.Empty;
                 Labels = null;
                 LabelCount = 0;
@@ -423,9 +425,18 @@ namespace FastExpressionCompiler
 
             public void AddNestedLambda(LambdaExpression lambdaExpr)
             {
-                if (NestedLambdaExprs.Length == 0 ||
-                    NestedLambdaExprs.GetFirstIndex(lambdaExpr) == -1)
+                if (NestedLambdaExprs.Length == 0) {
                     NestedLambdaExprs = NestedLambdaExprs.WithLast(lambdaExpr);
+                    NestedLambdaInvocationCount = NestedLambdaInvocationCount.WithLast(1);
+                } else {
+                    var idx = NestedLambdaExprs.GetFirstIndex(lambdaExpr);
+                    if (idx == -1) {
+                        NestedLambdaExprs = NestedLambdaExprs.WithLast(lambdaExpr);
+                        NestedLambdaInvocationCount = NestedLambdaInvocationCount.WithLast(1);
+                    } else {
+                        NestedLambdaInvocationCount[idx]++;
+                    }
+                }
             }
 
             public object ConstructClosureTypeAndObject(bool constructTypeOnly)
@@ -1150,7 +1161,7 @@ namespace FastExpressionCompiler
                         return EmitMemberInit((MemberInitExpression)expr, exprType, paramExprs, il, ref closure, parent,
                             ignoreResult, isMemberAccess);
                     case ExpressionType.Lambda:
-                        return TryEmitNestedLambda((LambdaExpression)expr, paramExprs, il, ref closure);
+                        return TryEmitNestedLambda((LambdaExpression)expr, paramExprs, il, ref closure, ignoreResult);
 
                     case ExpressionType.Invoke:
                         return TryInvokeLambda((InvocationExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
@@ -2414,8 +2425,11 @@ namespace FastExpressionCompiler
 
             // ReSharper disable once FunctionComplexityOverflow
             private static bool TryEmitNestedLambda(LambdaExpression lambdaExpr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, bool ignoreResult)
             {
+                if (ignoreResult)
+                    return true;
+
                 // First, find in closed compiled lambdas the one corresponding to the current lambda expression.
                 // Situation with not found lambda is not possible/exceptional,
                 // it means that we somehow skipped the lambda expression while collecting closure info.
@@ -2588,7 +2602,17 @@ namespace FastExpressionCompiler
                 bool ignoreResult, bool isMemberAccess)
             {
                 var lambda = expr.Expression;
-                return TryEmit(lambda, lambda.Type, paramExprs, il, ref closure, ExpressionType.Invoke, ignoreResult, isMemberAccess) 
+
+                var outerNestedLambdaExprs = closure.NestedLambdaExprs;
+                var outerNestedLambdaIndex = outerNestedLambdaExprs.GetFirstIndex(lambda);
+
+                if (closure.NestedLambdaInvocationCount[outerNestedLambdaIndex] == 1 && !closure.NestedLambdaExprs[outerNestedLambdaIndex].Parameters.Any())
+                {
+                    var nestedExpr = closure.NestedLambdaExprs[outerNestedLambdaIndex].Body;
+                    return TryEmit(nestedExpr, nestedExpr.Type, paramExprs, il, ref closure, ExpressionType.Lambda);
+                }
+
+                return TryEmit(lambda, lambda.Type, paramExprs, il, ref closure, ExpressionType.Invoke, false, isMemberAccess) 
                     && TryEmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Invoke, false, isMemberAccess) 
                     && EmitMethodCall(il, lambda.Type.GetTypeInfo().GetDeclaredMethod("Invoke"), ignoreResult);
             }
