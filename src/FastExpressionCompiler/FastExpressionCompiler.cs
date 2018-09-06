@@ -1277,10 +1277,8 @@ namespace FastExpressionCompiler
                 bool ignoreResult, bool isMemberAccess)
             {
                 if (expr.Object != null && 
-                    !TryEmit(expr.Object, expr.Object.Type, paramExprs, il, ref closure, ExpressionType.Index, ignoreResult, isMemberAccess))
-                    return false;
-
-                if (!TryEmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Index, ignoreResult, isMemberAccess))
+                    !TryEmit(expr.Object, expr.Object.Type, paramExprs, il, ref closure, ExpressionType.Index, ignoreResult, isMemberAccess) ||
+                    !TryEmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Index, ignoreResult, isMemberAccess))
                     return false;
 
                 if (expr.Indexer != null)
@@ -1516,9 +1514,7 @@ namespace FastExpressionCompiler
                 var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (variable != null)
                 {
-                    il.Emit(
-                        paramExpr.Type.GetTypeInfo().IsValueType && isMemberAccess ? OpCodes.Ldloca_S : OpCodes.Ldloc,
-                        variable);
+                    il.Emit(paramExpr.Type.IsValueType() && isMemberAccess ? OpCodes.Ldloca_S : OpCodes.Ldloc, variable);
                     return true;
                 }
 
@@ -2362,32 +2358,26 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 bool ignoreResult)
             {
-                var objType = default(Type);
-                var objNodeType = ExpressionType.Default;
-
-                var member = expr.Member;
-                var prop = member as PropertyInfo;
-
-                var objExpr = expr.Expression;
-                if (objExpr != null)
-                {
-                    objType = objExpr.Type;
-                    objNodeType = objExpr.NodeType;
-                    var parent = prop != null ? ExpressionType.Call : ExpressionType.MemberAccess;
-                    if (!TryEmit(objExpr, objType, paramExprs, il, ref closure, parent, ignoreResult, true))
-                        return false;
-                }
-
-                // Value type special treatment to load address of value instance in order to access a field or call a method.
-                // Parameter should be excluded because it already loads an address via Ldarga, and you don't need to.
-                // And for field access no need to load address, cause the field stored on stack nearby
-                if (objType != null && objNodeType != ExpressionType.Parameter && prop != null && objType.IsValueType())
-                    StoreAsVarAndLoadItsAddress(il, objType);
+                var prop = expr.Member as PropertyInfo;
+                var instanceExpr = expr.Expression;
+                if (instanceExpr != null &&
+                    !TryEmit(instanceExpr, instanceExpr.Type, paramExprs, il, ref closure,
+                        //prop != null ? ExpressionType.Call : ExpressionType.MemberAccess, 
+                        ExpressionType.MemberAccess, ignoreResult, true))
+                    return false;
 
                 if (prop != null)
-                    return EmitMethodCall(il, TryGetPropertyGetMethod(prop));
+                {
+                    // Value type special treatment to load address of value instance in order to access a field or call a method.
+                    // Parameter should be excluded because it already loads an address via Ldarga, and you don't need to.
+                    // And for field access no need to load address, cause the field stored on stack nearby
+                    if (instanceExpr != null && instanceExpr.NodeType != ExpressionType.Parameter && instanceExpr.Type.IsValueType())
+                        StoreAsVarAndLoadItsAddress(il, instanceExpr.Type);
 
-                var field = member as FieldInfo;
+                    return EmitMethodCall(il, TryGetPropertyGetMethod(prop));
+                }
+
+                var field = expr.Member as FieldInfo;
                 if (field != null)
                 {
                     il.Emit(field.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, field);
