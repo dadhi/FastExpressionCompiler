@@ -480,8 +480,8 @@ namespace FastExpressionCompiler.UnitTests
                                  typeof(int?).GetTypeInfo().DeclaredConstructors.First(x => x.GetParameters().Length == 1),
                                  Call(ldr, nameof(SQLiteDataReader.GetInt32), null, Constant(0))
                                  )
-                             )
-                          , Call(
+                             ),
+                           Call(
                               typeof(Issue83_linq2db).GetTypeInfo().GetMethod(nameof(Issue83_linq2db.GetDefault2)),
                               Condition(
                                  Call(ldr, nameof(SQLiteDataReader.IsDBNull), null, Constant(0)),
@@ -497,7 +497,19 @@ namespace FastExpressionCompiler.UnitTests
             var compiled = mapper.CompileFast();
             var c = mapper.Compile();
 
-            Assert.Throws<InvalidOperationException>(() => compiled(new SQLiteDataReader(true)));
+            compiled(new SQLiteDataReader(true));
+            c(new SQLiteDataReader(true));
+        }
+
+        [Test]
+        public void linq2db_InvalidProgramException4()
+        {
+            var mapperBody = Coalesce(Constant(null, typeof(int?)), Constant(7));
+            var mapper = Lambda<Func<int>>(mapperBody);
+            var compiled = mapper.CompileFast();
+            var c = mapper.Compile();
+            compiled();
+            c();
         }
 
         [Test]
