@@ -1310,6 +1310,29 @@ namespace FastExpressionCompiler
                     isMemberAccess))
                     return false;
 
+                var leftType = left.Type;
+                var leftTypeInfo = leftType.GetTypeInfo();
+                if (leftTypeInfo.IsValueType) // Nullable -> It's the only ValueType compareable to null
+                {
+                    var loc = il.DeclareLocal(leftType);
+                    il.Emit(OpCodes.Stloc_S, loc); 
+                    il.Emit(OpCodes.Ldloca_S, loc);
+                    var hasValueMethod = leftTypeInfo.GetDeclaredMethod("get_HasValue");
+                    if (!EmitMethodCall(il, hasValueMethod))
+                        return false;
+                    il.Emit(OpCodes.Brfalse, labelFalse);
+                    il.Emit(OpCodes.Ldloca_S, loc);
+                    var mthValue = leftTypeInfo.GetDeclaredMethods("GetValueOrDefault").GetFirst(x => x.GetParameters().Length == 0);
+                    if (!EmitMethodCall(il, mthValue))
+                        return false;
+                    il.Emit(OpCodes.Br, labelDone);
+                    il.MarkLabel(labelFalse);
+                    if (!TryEmit(right, right.Type, paramExprs, il, ref closure, ExpressionType.Coalesce, ignoreResult, isMemberAccess))
+                        return false;
+                    il.MarkLabel(labelDone);
+                    return true;
+                }
+
                 il.Emit(OpCodes.Dup); // duplicate left, if it's not null, after the branch this value will be on the top of the stack
                 il.Emit(OpCodes.Ldnull);
                 il.Emit(OpCodes.Ceq);
@@ -1317,8 +1340,7 @@ namespace FastExpressionCompiler
 
                 il.Emit(OpCodes.Pop); // left is null, pop its value from the stack
 
-                if (!TryEmit(right, right.Type, paramExprs, il, ref closure, ExpressionType.Coalesce, ignoreResult,
-                    isMemberAccess))
+                if (!TryEmit(right, right.Type, paramExprs, il, ref closure, ExpressionType.Coalesce, ignoreResult, isMemberAccess))
                     return false;
 
                 if (right.Type != exprObj.Type)
