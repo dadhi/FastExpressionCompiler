@@ -442,40 +442,6 @@ namespace FastExpressionCompiler.LightExpression
 
             return false;
         }
-
-        internal static MethodInfo FindMethod(this Type type,
-            string methodName, Type[] typeArgs, Expression[] args, bool isStatic = false) =>
-            type.GetTypeInfo().DeclaredMethods.GetFirst(m =>
-            {
-                if (isStatic == m.IsStatic && methodName == m.Name)
-                {
-                    typeArgs = typeArgs ?? Type.EmptyTypes;
-                    var mTypeArgs = m.GetGenericArguments();
-                    if (typeArgs.Length == mTypeArgs.Length &&
-                        (typeArgs.Length == 0 ||
-                         typeArgs.Length == 1 && typeArgs[0] == mTypeArgs[0] ||
-                         typeArgs.Length == 2 && typeArgs[0] == mTypeArgs[0] && typeArgs[1] == mTypeArgs[1] ||
-                         typeArgs.SequenceEqual(mTypeArgs)))
-                    {
-                        args = args ?? Tools.Empty<Expression>();
-                        var mArgs = m.GetParameters();
-                        if (args.Length == mArgs.Length &&
-                            (args.Length == 0 ||
-                             args.Length == 1 && args[0].Type == mArgs[0].ParameterType ||
-                             args.Length == 2 && args[0].Type == mArgs[0].ParameterType && args[1].Type == mArgs[1].ParameterType ||
-                             args.Map(a => a.Type).SequenceEqual(mArgs.Map(p => p.ParameterType))))
-                            return true;
-                    }
-                }
-
-                return false;
-            });
-
-        internal static PropertyInfo FindProperty(this Type type, string propertyName) =>
-            type.GetTypeInfo().GetDeclaredProperty(propertyName);
-
-        internal static FieldInfo FindField(this Type type, string fieldName) =>
-            type.GetTypeInfo().GetDeclaredField(fieldName);
     }
 
     public class UnaryExpression : Expression
