@@ -220,7 +220,24 @@ namespace FastExpressionCompiler
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = method.GetILGenerator();
-            if (!EmittingVisitor.TryEmit(expr, exprType, paramExprs, il, ref closureInfo, ExpressionType.Default, returnType != typeof(void), false))
+            if (exprType != returnType)
+            {
+                if (returnType == typeof(void))
+                {
+                    ;
+                }
+                else if (returnType == typeof(object))
+                {
+                    ;
+                }
+                else
+                {
+                    ;
+                }
+            }
+
+            if (!EmittingVisitor.TryEmit(expr, exprType, paramExprs, il, ref closureInfo, ExpressionType.Default, 
+                returnType != typeof(void), false))
                 return null;
 
             il.Emit(OpCodes.Ret);
@@ -972,35 +989,35 @@ namespace FastExpressionCompiler
 #endif
 
             public static bool TryEmit(Expression expr, Type exprType,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, bool shouldReturnValue, bool isMemberAccess,
-                int byRefIndex = -1)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent, 
+                bool ignoreResult, bool isMemberAccess, int byRefIndex = -1)
             {
                 switch (expr.NodeType)
                 {
                     case ExpressionType.Parameter:
-                        return TryEmitParameter((ParameterExpression)expr, exprType, paramExprs, il, ref closure, parent, shouldReturnValue, isMemberAccess, byRefIndex);
+                        return TryEmitParameter((ParameterExpression)expr, exprType, paramExprs, il, ref closure, parent, ignoreResult, isMemberAccess, byRefIndex);
                     case ExpressionType.Convert:
-                        return TryEmitConvert((UnaryExpression)expr, exprType, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitConvert((UnaryExpression)expr, exprType, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
                     case ExpressionType.ArrayIndex:
-                        return TryEmitArrayIndex((BinaryExpression)expr, exprType, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitArrayIndex((BinaryExpression)expr, exprType, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
                     case ExpressionType.Constant:
-                        return TryEmitConstant((ConstantExpression)expr, exprType, il, ref closure, shouldReturnValue);
+                        return TryEmitConstant((ConstantExpression)expr, exprType, il, ref closure, ignoreResult);
                     case ExpressionType.Call:
-                        return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
                     case ExpressionType.MemberAccess:
-                        return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, shouldReturnValue);
+                        return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, ignoreResult);
                     case ExpressionType.New:
-                        return TryEmitNew((NewExpression)expr, exprType, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitNew((NewExpression)expr, exprType, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
-                        return EmitNewArray((NewArrayExpression)expr, exprType, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return EmitNewArray((NewArrayExpression)expr, exprType, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
                     case ExpressionType.MemberInit:
-                        return EmitMemberInit((MemberInitExpression)expr, exprType, paramExprs, il, ref closure, parent, shouldReturnValue, isMemberAccess);
+                        return EmitMemberInit((MemberInitExpression)expr, exprType, paramExprs, il, ref closure, parent, ignoreResult, isMemberAccess);
                     case ExpressionType.Lambda:
                         return TryEmitNestedLambda((LambdaExpression)expr, paramExprs, il, ref closure);
 
                     case ExpressionType.Invoke:
-                        return TryInvokeLambda((InvocationExpression)expr, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryInvokeLambda((InvocationExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.GreaterThan:
                     case ExpressionType.GreaterThanOrEqual:
@@ -1008,20 +1025,20 @@ namespace FastExpressionCompiler
                     case ExpressionType.LessThanOrEqual:
                     case ExpressionType.Equal:
                     case ExpressionType.NotEqual:
-                        return TryEmitComparison((BinaryExpression)expr, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitComparison((BinaryExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType arithmeticExprType when Tools.IsArithmetic(arithmeticExprType):
-                        return TryEmitArithmeticOperation((BinaryExpression)expr, arithmeticExprType, exprType, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitArithmeticOperation((BinaryExpression)expr, arithmeticExprType, exprType, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.AndAlso:
                     case ExpressionType.OrElse:
-                        return TryEmitLogicalOperator((BinaryExpression)expr, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitLogicalOperator((BinaryExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.Coalesce:
-                        return TryEmitCoalesceOperator((BinaryExpression)expr, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitCoalesceOperator((BinaryExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.Conditional:
-                        return TryEmitConditional((ConditionalExpression)expr, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitConditional((ConditionalExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.PostIncrementAssign:
                     case ExpressionType.PreIncrementAssign:
@@ -1032,31 +1049,31 @@ namespace FastExpressionCompiler
                     case ExpressionType arithmeticAssign 
                         when Tools.GetArithmeticFromArithmeticAssignOrSelf(arithmeticAssign) != arithmeticAssign:
                     case ExpressionType.Assign:
-                        return TryEmitAssign((BinaryExpression)expr, exprType, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitAssign((BinaryExpression)expr, exprType, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.Block:
-                        return TryEmitBlock((BlockExpression)expr, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitBlock((BlockExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.Try:
-                        return TryEmitTryCatchFinallyBlock((TryExpression)expr, exprType, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitTryCatchFinallyBlock((TryExpression)expr, exprType, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.Throw:
-                        return TryEmitThrow((UnaryExpression)expr, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitThrow((UnaryExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.Default:
                         return exprType == typeof(void) || EmitDefault(exprType, il);
 
                     case ExpressionType.Index:
-                        return TryEmitIndex((IndexExpression)expr, exprType, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitIndex((IndexExpression)expr, exprType, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.Goto:
                         return TryEmitGoto((GotoExpression)expr, il, ref closure);
 
                     case ExpressionType.Label:
-                        return TryEmitLabel((LabelExpression)expr, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitLabel((LabelExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.Switch:
-                        return TryEmitSwitch((SwitchExpression)expr, paramExprs, il, ref closure, shouldReturnValue, isMemberAccess);
+                        return TryEmitSwitch((SwitchExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     default:
                         return false;
@@ -1931,7 +1948,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitAssign(BinaryExpression expr, Type exprType,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, bool shouldReturnValue, bool isMemberAccess)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, bool ignoreResult, bool isMemberAccess)
             {
                 var left = expr.Left;
                 var right = expr.Right;
@@ -1962,7 +1979,8 @@ namespace FastExpressionCompiler
                                 var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
                                 if (arithmeticNodeType != nodeType)
                                 {
-                                    if (!TryEmitArithmeticOperation(expr, arithmeticNodeType, exprType, paramExprs, il, ref closure, true, isMemberAccess))
+                                    if (!TryEmitArithmeticOperation(expr, arithmeticNodeType, exprType, paramExprs, il, ref closure, 
+                                        true, isMemberAccess))
                                         return false;
                                 }
                                 else if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true, isMemberAccess))
@@ -1975,7 +1993,7 @@ namespace FastExpressionCompiler
                                 if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true, isMemberAccess))
                                     return false;
 
-                                if (shouldReturnValue)
+                                if (ignoreResult)
                                     il.Emit(OpCodes.Dup); // dup value to assign and return
 
                                 il.Emit(OpCodes.Starg_S, paramIndex);
@@ -2016,7 +2034,7 @@ namespace FastExpressionCompiler
                             if ((right as ParameterExpression)?.IsByRef == true)
                                 il.Emit(OpCodes.Ldind_I4);
 
-                            if (shouldReturnValue) // if we have to push the result back, dup the right value
+                            if (ignoreResult) // if we have to push the result back, dup the right value
                                 il.Emit(OpCodes.Dup);
 
                             il.Emit(OpCodes.Stloc, localVariable);
@@ -2032,7 +2050,7 @@ namespace FastExpressionCompiler
 
                         il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
 
-                        if (shouldReturnValue)
+                        if (ignoreResult)
                         {
                             if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true, isMemberAccess))
                                 return false;
@@ -2093,7 +2111,7 @@ namespace FastExpressionCompiler
                         if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true, false))
                             return false;
 
-                        if (!shouldReturnValue)
+                        if (!ignoreResult)
                             return EmitMemberAssign(il, member);
 
                         il.Emit(OpCodes.Dup);
@@ -2126,7 +2144,7 @@ namespace FastExpressionCompiler
                         if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign, true, isMemberAccess))
                             return false;
 
-                        if (!shouldReturnValue)
+                        if (!ignoreResult)
                             return TryEmitIndexAssign(indexExpr, obj?.Type, exprType, il);
 
                         var variable = il.DeclareLocal(exprType); // store value in variable to return
@@ -2700,9 +2718,9 @@ nullCheck:
 
             private static bool TryEmitArithmeticOperation(
                 BinaryExpression expr, ExpressionType exprNodeType, Type exprType, 
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, bool shouldReturnValue, bool isMemberAccess)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, bool ignoreResult, bool isMemberAccess)
             {
-                if (!EmitBinary(expr, paramExprs, il, ref closure, parent: exprNodeType, shouldReturnValue: shouldReturnValue, isMemberAccess: isMemberAccess))
+                if (!EmitBinary(expr, paramExprs, il, ref closure, exprNodeType, ignoreResult, isMemberAccess))
                     return false;
 
                 var exprTypeInfo = exprType.GetTypeInfo();
@@ -3030,8 +3048,7 @@ nullCheck:
                     case 6: return typeof(Action<,,,,,>).MakeGenericType(paramTypes);
                     case 7: return typeof(Action<,,,,,,>).MakeGenericType(paramTypes);
                     default:
-                        throw new NotSupportedException(
-                            string.Format("Action with so many ({0}) parameters is not supported!", paramTypes.Length));
+                        throw new NotSupportedException($"Action with so many ({paramTypes.Length}) parameters is not supported!");
                 }
             }
 

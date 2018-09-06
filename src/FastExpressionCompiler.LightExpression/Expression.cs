@@ -26,7 +26,6 @@ THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -137,16 +136,16 @@ namespace FastExpressionCompiler.LightExpression
             new UnaryExpression(ExpressionType.Convert, operand, targetType, method);
 
         public static UnaryExpression PreIncrementAssign(Expression operand) =>
-            new UnaryExpression(ExpressionType.PreIncrementAssign, operand, (System.Type)null);
+            new UnaryExpression(ExpressionType.PreIncrementAssign, operand, operand.Type);
 
         public static UnaryExpression PostIncrementAssign(Expression operand) =>
-            new UnaryExpression(ExpressionType.PostIncrementAssign, operand, (System.Type)null);
+            new UnaryExpression(ExpressionType.PostIncrementAssign, operand, operand.Type);
 
         public static UnaryExpression PreDecrementAssign(Expression operand) =>
-            new UnaryExpression(ExpressionType.PreDecrementAssign, operand, (System.Type)null);
+            new UnaryExpression(ExpressionType.PreDecrementAssign, operand, operand.Type);
 
         public static UnaryExpression PostDecrementAssign(Expression operand) =>
-            new UnaryExpression(ExpressionType.PostDecrementAssign, operand, (System.Type)null);
+            new UnaryExpression(ExpressionType.PostDecrementAssign, operand, operand.Type);
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body) =>
             new Expression<TDelegate>(body, Tools.Empty<ParameterExpression>());
@@ -197,10 +196,10 @@ namespace FastExpressionCompiler.LightExpression
             new AssignBinaryExpression(ExpressionType.DivideAssign, left, right, left.Type);
 
         public static InvocationExpression Invoke(Expression lambda, params Expression[] args) =>
-            new InvocationExpression(lambda, args, lambda.Type);
+            new InvocationExpression(lambda, args, ((LambdaExpression)lambda).ReturnType);
 
         public static InvocationExpression Invoke(Expression lambda, IEnumerable<Expression> args) =>
-            new InvocationExpression(lambda, args.AsReadOnlyList(), lambda.Type);
+            new InvocationExpression(lambda, args.AsReadOnlyList(), ((LambdaExpression)lambda).ReturnType);
 
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) =>
             new ConditionalExpression(test, ifTrue, ifFalse);
@@ -506,7 +505,7 @@ namespace FastExpressionCompiler.LightExpression
             NodeType = nodeType;
             Operand = operand;
             Method = method;
-            Type = Method.ReturnType; // todo: check that
+            Type = Method.ReturnType;
         }
 
         public UnaryExpression(ExpressionType nodeType, Expression operand, Type type, MethodInfo method)
