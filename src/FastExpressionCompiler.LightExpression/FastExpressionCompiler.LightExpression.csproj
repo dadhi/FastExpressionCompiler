@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <VersionPrefix>1.0.0-preview-01</VersionPrefix>
+        <VersionPrefix>1.0.0</VersionPrefix>
         <TargetFrameworks>net45;netstandard1.3;netstandard2.0</TargetFrameworks>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -19,7 +19,8 @@
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes>
             v1.0.0
-            - added: First release
+            - Initial stable release - previously was a code compiling ExpressionInfo and a part of FastExpressionCompiler
+            - fixed:
         </PackageReleaseNotes>
         <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
         <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
