@@ -6,6 +6,7 @@ using System.Threading;
 using NUnit.Framework;
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
+#pragma warning disable 649 // Unaasigned fields
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -32,7 +33,7 @@ namespace FastExpressionCompiler.UnitTests
                 Convert(p, to, to.GetTypeInfo().DeclaredMethods.First(x=> x.Name == "Parse" && x.GetParameters().Length==1 && x.GetParameters()[0].ParameterType == from)),
                 Constant(0));
 
-            var expr = Expression.Lambda<Func<string, int>>(body, p);
+            var expr = Lambda<Func<string, int>>(body, p);
 
             var compiled = expr.CompileFast();
 
@@ -70,7 +71,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             IDataContext IQueryRunner.DataContext => new DataContext();
 
-            Expression IQueryRunner.Expression => Expression.Constant(null);
+            Expression IQueryRunner.Expression => Constant(null);
 
             object[] IQueryRunner.Parameters => Array.Empty<object>();
         }
@@ -724,6 +725,7 @@ namespace FastExpressionCompiler.UnitTests
             public TestClass3 Class3;
             public TestStruct1 Struct1;
             public TestStruct1 Struct1P { get; set; }
+
         }
 
         class TestClass3

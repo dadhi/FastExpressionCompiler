@@ -138,12 +138,12 @@ namespace FastExpressionCompiler.UnitTests
         }
 #endif
 
-        [Test, Ignore("Return & Label are now supported")]
+        [Test]
         public void CompileFast_should_return_null_when_option_is_set_and_expression_type_is_not_supported()
         {
-            Assert.IsNull(Lambda(
-                Return(Label(), Constant("null")))
-                .CompileFast(ifFastFailedReturnNull: true));
+            // exception is "Cannot jump, no labels found"
+            Assert.Throws<InvalidOperationException>(() => 
+                Lambda(Return(Label(), Constant("null"))).CompileFast(ifFastFailedReturnNull: true));
         }
 
         [Test]
