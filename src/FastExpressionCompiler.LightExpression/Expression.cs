@@ -394,6 +394,35 @@ namespace FastExpressionCompiler.LightExpression
              target == typeof(ValueType)) || 
              source.GetTypeInfo().IsEnum && target == typeof(Enum);
 
+        internal static MethodInfo FindMethod(this Type type,
+            string methodName, Type[] typeArgs, IReadOnlyList<Expression> args, bool isStatic = false) =>
+            type.GetTypeInfo().DeclaredMethods.GetFirst(m =>
+            {
+                if (isStatic == m.IsStatic && methodName == m.Name)
+                {
+                    typeArgs = typeArgs ?? Type.EmptyTypes;
+                    var mTypeArgs = m.GetGenericArguments();
+                    if (typeArgs.Length == mTypeArgs.Length &&
+                        (typeArgs.Length == 0 ||
+                         typeArgs.Length == 1 && typeArgs[0] == mTypeArgs[0] ||
+                         typeArgs.Length == 2 && typeArgs[0] == mTypeArgs[0] && typeArgs[1] == mTypeArgs[1] ||
+                         typeArgs.SequenceEqual(mTypeArgs)))
+                    {
+                        args = args ?? Tools.Empty<Expression>();
+                        var mArgs = m.GetParameters();
+                        return args.Count == mArgs.Length &&
+                               (args.Count == 0 ||
+                                args.Count == 1 && args[0].Type == mArgs[0].ParameterType ||
+                                args.Count == 2 && args[0].Type == mArgs[0].ParameterType &&
+                                args[1].Type == mArgs[1].ParameterType ||
+                                args.Map(a => a.Type).SequenceEqual(mArgs.Map(p => p.ParameterType)));
+                    }
+                }
+
+                return false;
+            });
+
+
         internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
         {
             if (source == typeof(Char))
