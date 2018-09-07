@@ -888,121 +888,152 @@ namespace FastExpressionCompiler
             !type.IsPrimitive && !type.IsEnum && !(value is string) && !(value is Type);
 
         // @paramExprs is required for nested lambda compilation
-        private static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr,
-            IReadOnlyList<ParameterExpression> paramExprs)
+        private static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr, IReadOnlyList<ParameterExpression> paramExprs)
         {
-            if (expr == null)
-                return false;
-
-            switch (expr.NodeType)
+            while (true)
             {
-                case ExpressionType.Constant:
-                    var constantExpr = (ConstantExpression)expr;
-                    var value = constantExpr.Value;
-                    if (value != null && IsClosureBoundConstant(value, value.GetType().GetTypeInfo()))
-                        closure.AddConstant(constantExpr);
-                    return true;
-
-                case ExpressionType.Parameter:
-                    // if parameter is used BUT is not in passed parameters and not in local variables,
-                    // it means parameter is provided by outer lambda and should be put in closure for current lambda
-                    if (paramExprs.GetFirstIndex(expr) == -1 && !closure.IsLocalVar(expr))
-                        closure.AddNonPassedParam((ParameterExpression)expr);
-                    return true;
-
-                case ExpressionType.Call:
-                    var methodCallExpr = (MethodCallExpression)expr;
-                    var objExpr = methodCallExpr.Object;
-                    return (objExpr == null
-                            || TryCollectBoundConstants(ref closure, objExpr, paramExprs))
-                           && TryCollectBoundConstants(ref closure, methodCallExpr.Arguments, paramExprs);
-
-                case ExpressionType.MemberAccess:
-                    var memberExpr = ((MemberExpression)expr).Expression;
-                    return memberExpr == null || TryCollectBoundConstants(ref closure, memberExpr, paramExprs);
-
-                case ExpressionType.New:
-                    return TryCollectBoundConstants(ref closure, ((NewExpression)expr).Arguments, paramExprs);
-
-                case ExpressionType.NewArrayBounds:
-                case ExpressionType.NewArrayInit:
-                    return TryCollectBoundConstants(ref closure, ((NewArrayExpression)expr).Expressions, paramExprs);
-
-                case ExpressionType.MemberInit:
-                    return TryCollectMemberInitExprConstants(ref closure, (MemberInitExpression)expr, paramExprs);
-
-                case ExpressionType.Lambda:
-                    closure.AddNestedLambda((LambdaExpression)expr);
-                    return true;
-
-                case ExpressionType.Invoke:
-                    var invokeExpr = (InvocationExpression)expr;
-                    // optimization #138: we are inlining invoked lambda body (only for lambdas without arguments)
-                    // therefore we skipping collecting the lambda and invocation arguments and got directly to lambda body.
-                    // This approach is repeated in `TryEmitInvoke`
-                    return invokeExpr.Expression is LambdaExpression lambdaExpr && lambdaExpr.Parameters.Count == 0
-                        ? TryCollectBoundConstants(ref closure, lambdaExpr.Body, paramExprs)
-                        : TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs) && 
-                          TryCollectBoundConstants(ref closure, invokeExpr.Arguments, paramExprs);
-
-                case ExpressionType.Conditional:
-                    var condExpr = (ConditionalExpression)expr;
-                    return TryCollectBoundConstants(ref closure, condExpr.Test, paramExprs)
-                           && TryCollectBoundConstants(ref closure, condExpr.IfTrue, paramExprs)
-                           && TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs);
-
-                case ExpressionType.Block:
-                    var blockExpr = (BlockExpression)expr;
-                    closure.PushBlock(blockExpr.Result, blockExpr.Variables, Tools.Empty<LocalBuilder>());
-                    if (!TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs))
-                        return false;
-                    closure.PopBlock();
-                    return true;
-
-                case ExpressionType.Index:
-                    var indexExpr = (IndexExpression)expr;
-                    return indexExpr.Object == null
-                           || TryCollectBoundConstants(ref closure, indexExpr.Object, paramExprs)
-                           && TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs);
-
-                case ExpressionType.Try:
-                    return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs);
-
-                case ExpressionType.Label:
-                    closure.LabelCount += 1;
-                    var defaultValueExpr = ((LabelExpression)expr).DefaultValue;
-                    return defaultValueExpr == null ||
-                           TryCollectBoundConstants(ref closure, defaultValueExpr, paramExprs);
-
-                case ExpressionType.Goto:
-                    var gotoValueExpr = ((GotoExpression)expr).Value;
-                    return gotoValueExpr == null || TryCollectBoundConstants(ref closure, gotoValueExpr, paramExprs);
-
-                case ExpressionType.Switch:
-                    var switchExpression = ((SwitchExpression)expr);
-                    if (!TryCollectBoundConstants(ref closure, switchExpression.SwitchValue, paramExprs))
-                        return false;
-                    if (switchExpression.DefaultBody != null &&
-                        !TryCollectBoundConstants(ref closure, switchExpression.DefaultBody, paramExprs))
-                        return false;
-                    foreach (var sc in switchExpression.Cases)
-                    {
-                        if (!TryCollectBoundConstants(ref closure, sc.Body, paramExprs))
-                            return false;
-                    }
-
-                    return true;
-
-                case ExpressionType.Default:
-                    return true;
-
-                default:
-                    if (expr is UnaryExpression unaryExpr)
-                        return TryCollectBoundConstants(ref closure, unaryExpr.Operand, paramExprs);
-                    if (expr is BinaryExpression binaryExpr)
-                        return TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs) && 
-                               TryCollectBoundConstants(ref closure, binaryExpr.Right, paramExprs);
+                if (expr == null)
                     return false;
+
+                switch (expr.NodeType)
+                {
+                    case ExpressionType.Constant:
+                        var constantExpr = (ConstantExpression)expr;
+                        var value = constantExpr.Value;
+                        if (value != null && IsClosureBoundConstant(value, value.GetType().GetTypeInfo()))
+                            closure.AddConstant(constantExpr);
+                        return true;
+
+                    case ExpressionType.Parameter:
+                        // if parameter is used BUT is not in passed parameters and not in local variables,
+                        // it means parameter is provided by outer lambda and should be put in closure for current lambda
+                        if (paramExprs.GetFirstIndex(expr) == -1 && !closure.IsLocalVar(expr))
+                            closure.AddNonPassedParam((ParameterExpression)expr);
+                        return true;
+
+                    case ExpressionType.Call:
+                        var methodCallExpr = (MethodCallExpression)expr;
+                        if (methodCallExpr.Arguments.Count != 0 &&
+                            !TryCollectBoundConstants(ref closure, methodCallExpr.Arguments, paramExprs))
+                            return false;
+                        if (methodCallExpr.Object == null)
+                            return true;
+                        expr = methodCallExpr.Object;
+                        continue;
+
+                    case ExpressionType.MemberAccess:
+                        var memberExpr = ((MemberExpression)expr).Expression;
+                        if (memberExpr == null)
+                            return true;
+                        expr = memberExpr;
+                        continue;
+
+                    case ExpressionType.New:
+                        return TryCollectBoundConstants(ref closure, ((NewExpression)expr).Arguments, paramExprs);
+
+                    case ExpressionType.NewArrayBounds:
+                    case ExpressionType.NewArrayInit:
+                        return TryCollectBoundConstants(ref closure, ((NewArrayExpression)expr).Expressions, paramExprs);
+
+                    case ExpressionType.MemberInit:
+                        return TryCollectMemberInitExprConstants(ref closure, (MemberInitExpression)expr, paramExprs);
+
+                    case ExpressionType.Lambda:
+                        closure.AddNestedLambda((LambdaExpression)expr);
+                        return true;
+
+                    case ExpressionType.Invoke:
+                        // optimization #138: we are inlining invoked lambda body (only for lambdas without arguments)
+                        // therefore we skipping collecting the lambda and invocation arguments and got directly to lambda body.
+                        // This approach is repeated in `TryEmitInvoke`
+                        var invokeExpr = (InvocationExpression)expr;
+                        if (invokeExpr.Expression is LambdaExpression lambdaExpr && lambdaExpr.Parameters.Count == 0)
+                        {
+                            expr = lambdaExpr.Body;
+                            continue;
+                        }
+
+                        if (invokeExpr.Arguments.Count != 0 &&
+                            !TryCollectBoundConstants(ref closure, invokeExpr.Arguments, paramExprs))
+                            return false;
+
+                        expr = invokeExpr.Expression;
+                        continue;
+
+                    case ExpressionType.Conditional:
+                        var condExpr = (ConditionalExpression)expr;
+                        if (!TryCollectBoundConstants(ref closure, condExpr.Test, paramExprs))
+                            return false;
+                        if (condExpr.IfFalse != null &&
+                            !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs))
+                            return false;
+                        expr = condExpr.IfTrue;
+                        continue;
+
+                    case ExpressionType.Block:
+                        var blockExpr = (BlockExpression)expr;
+                        closure.PushBlock(blockExpr.Result, blockExpr.Variables, Tools.Empty<LocalBuilder>());
+                        if (!TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs)) return false;
+                        closure.PopBlock();
+                        return true;
+
+                    case ExpressionType.Index:
+                        var indexExpr = (IndexExpression)expr;
+                        if (!TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs))
+                            return false;
+                        if (indexExpr.Object == null)
+                            return true;
+                        expr = indexExpr.Object;
+                        continue;
+
+                    case ExpressionType.Try:
+                        return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs);
+
+                    case ExpressionType.Label:
+                        closure.LabelCount += 1;
+                        var defaultValueExpr = ((LabelExpression)expr).DefaultValue;
+                        if (defaultValueExpr == null)
+                            return true;
+                        expr = defaultValueExpr;
+                        continue;
+
+                    case ExpressionType.Goto:
+                        var gotoValueExpr = ((GotoExpression)expr).Value;
+                        if (gotoValueExpr == null)
+                            return true;
+                        expr = gotoValueExpr;
+                        continue;
+
+                    case ExpressionType.Switch:
+                        var switchExpr = ((SwitchExpression)expr);
+                        if (!TryCollectBoundConstants(ref closure, switchExpr.SwitchValue, paramExprs) || 
+                            switchExpr.DefaultBody != null && !TryCollectBoundConstants(ref closure, switchExpr.DefaultBody, paramExprs))
+                            return false;
+                        for (var i = 0; i < switchExpr.Cases.Count; i++)
+                            if (!TryCollectBoundConstants(ref closure, switchExpr.Cases[i].Body, paramExprs))
+                                return false;
+                        return true;
+
+                    case ExpressionType.Default:
+                        return true;
+
+                    default:
+                        if (expr is UnaryExpression unaryExpr)
+                        {
+                            expr = unaryExpr.Operand;
+                            continue;
+                        }
+
+                        if (expr is BinaryExpression binaryExpr)
+                        {
+                            if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs))
+                                return false;
+                            expr = binaryExpr.Right;
+                            continue;
+                        }
+
+                        return false;
+                }
             }
         }
 
@@ -1314,7 +1345,7 @@ namespace FastExpressionCompiler
 
                 var leftType = left.Type;
                 var leftTypeInfo = leftType.GetTypeInfo();
-                if (leftTypeInfo.IsValueType) // Nullable -> It's the only ValueType compareable to null
+                if (leftTypeInfo.IsValueType) // Nullable -> It's the only ValueType comparable to null
                 {
                     var loc = il.DeclareLocal(leftType);
                     il.Emit(OpCodes.Stloc_S, loc); 
