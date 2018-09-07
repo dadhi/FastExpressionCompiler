@@ -3075,7 +3075,7 @@ namespace FastExpressionCompiler
                 .GetFirst(c => c.GetParameters().Map(p => p.ParameterType).SequenceEqual(args));
 
         internal static MethodInfo FindMethod(this Type type,
-            string methodName, Type[] typeArgs, Expression[] args, bool isStatic = false) =>
+            string methodName, Type[] typeArgs, IReadOnlyList<Expression> args, bool isStatic = false) =>
             type.GetTypeInfo().DeclaredMethods.GetFirst(m =>
             {
                 if (isStatic == m.IsStatic && methodName == m.Name)
@@ -3090,10 +3090,10 @@ namespace FastExpressionCompiler
                     {
                         args = args ?? Tools.Empty<Expression>();
                         var mArgs = m.GetParameters();
-                        if (args.Length == mArgs.Length &&
-                            (args.Length == 0 ||
-                             args.Length == 1 && args[0].Type == mArgs[0].ParameterType ||
-                             args.Length == 2 && args[0].Type == mArgs[0].ParameterType && args[1].Type == mArgs[1].ParameterType ||
+                        if (args.Count == mArgs.Length &&
+                            (args.Count == 0 ||
+                             args.Count == 1 && args[0].Type == mArgs[0].ParameterType ||
+                             args.Count == 2 && args[0].Type == mArgs[0].ParameterType && args[1].Type == mArgs[1].ParameterType ||
                              args.Map(a => a.Type).SequenceEqual(mArgs.Map(p => p.ParameterType))))
                             return true;
                     }

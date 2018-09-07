@@ -70,17 +70,38 @@ namespace FastExpressionCompiler.LightExpression
         public static NewExpression New(ConstructorInfo ctor, params Expression[] arguments) =>
             new NewExpression(ctor, arguments);
 
+        public static NewExpression New(ConstructorInfo ctor, IEnumerable<Expression> arguments) =>
+            new NewExpression(ctor, arguments.AsReadOnlyList());
+
         public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) =>
             new MethodCallExpression(instance, method, arguments);
+
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) =>
+            new MethodCallExpression(instance, method, arguments.AsReadOnlyList());
 
         public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
             Call(null, method, arguments);
 
+        public static MethodCallExpression Call(MethodInfo method, IEnumerable<Expression> arguments) =>
+            Call(null, method, arguments.AsReadOnlyList());
+
         public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) => 
             Call(null, type.FindMethod(methodName, typeArguments, arguments, isStatic: true), arguments);
 
+        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments)
+        {
+            var args = arguments.AsReadOnlyList();
+            return Call(null, type.FindMethod(methodName, typeArguments, args, isStatic: true), args);
+        }
+
         public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments) =>
             new MethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, arguments), arguments);
+
+        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments)
+        {
+            var args = arguments.AsReadOnlyList();
+            return new MethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, args), args);
+        }
 
         public static MemberExpression Property(PropertyInfo property) =>
             new PropertyExpression(null, property);
@@ -101,6 +122,15 @@ namespace FastExpressionCompiler.LightExpression
             expression.Type.FindProperty(propertyName) != null ? 
                 (MemberExpression) new PropertyExpression(expression, expression.Type.FindProperty(propertyName)) :
                 (MemberExpression) new FieldExpression(expression, expression.Type.FindField(propertyName));
+
+        public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member)
+        {
+            if (member is FieldInfo field)
+                return Field(expression, field);
+            if (member is PropertyInfo property)
+                return Property(expression, property);
+            throw new ArgumentException($"Member is not field or property: {member}", nameof(member));
+        }
 
         public static IndexExpression MakeIndex(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) => 
             indexer != null ? Property(instance, indexer, arguments) : ArrayAccess(instance, arguments);
@@ -646,7 +676,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public System.Linq.Expressions.NewExpression ToNewExpression() => SysExpr.New(Constructor, ArgumentsToExpressions());
 
-        internal NewExpression(ConstructorInfo constructor, params Expression[] arguments) : 
+        internal NewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : 
             base(arguments)
         {
             Constructor = constructor;
@@ -686,7 +716,7 @@ namespace FastExpressionCompiler.LightExpression
         public override SysExpr ToExpression() => 
             SysExpr.Call(Object?.ToExpression(), Method, ArgumentsToExpressions());
 
-        internal MethodCallExpression(Expression @object, MethodInfo method, params Expression[] arguments)
+        internal MethodCallExpression(Expression @object, MethodInfo method, IReadOnlyList<Expression> arguments)
             : base(arguments)
         {
             Object = @object;
