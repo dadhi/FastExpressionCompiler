@@ -456,6 +456,63 @@ namespace FastExpressionCompiler.UnitTests
             Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
         }
 
+        public static int GetDefault2(int n)
+        {
+            return n;
+        }
+
+        [Test]
+        public void linq2db_InvalidProgramException3()
+        {
+            var a3 = Parameter(typeof(IDataReader), "rd");
+
+            var ldr = Variable(typeof(SQLiteDataReader), "ldr");
+            var int123 = Variable(typeof(int), "int123");
+
+            var mapperBody = Block(
+                new[] { ldr, int123 },
+                Assign(ldr, Convert(a3, typeof(SQLiteDataReader))),
+                Assign(int123,
+                    Coalesce(
+                        Condition(
+                             Call(ldr, nameof(SQLiteDataReader.IsDBNull), null, Constant(0)),
+                             Constant(null, typeof(int?)),
+                             New(
+                                 typeof(int?).GetTypeInfo().DeclaredConstructors.First(x => x.GetParameters().Length == 1),
+                                 Call(ldr, nameof(SQLiteDataReader.GetInt32), null, Constant(0))
+                                 )
+                             ),
+                           Call(
+                              typeof(Issue83_linq2db).GetTypeInfo().GetMethod(nameof(Issue83_linq2db.GetDefault2)),
+                              Condition(
+                                 Call(ldr, nameof(SQLiteDataReader.IsDBNull), null, Constant(0)),
+                                 Constant(0),
+                                 Call(ldr, nameof(SQLiteDataReader.GetInt32), null, Constant(0))
+                                 )
+                             )
+                        )
+                        ));
+
+            var mapper = Lambda<Func<IDataReader, int>>(mapperBody, a3);
+
+            var compiled = mapper.CompileFast();
+            var c = mapper.Compile();
+
+            compiled(new SQLiteDataReader(true));
+            c(new SQLiteDataReader(true));
+        }
+
+        [Test]
+        public void linq2db_InvalidProgramException4()
+        {
+            var mapperBody = Coalesce(Constant(null, typeof(int?)), Constant(7));
+            var mapper = Lambda<Func<int>>(mapperBody);
+            var compiled = mapper.CompileFast();
+            var c = mapper.Compile();
+            compiled();
+            c();
+        }
+
         [Test]
         public void TestDoubleConvertSupported()
         {
