@@ -2638,6 +2638,9 @@ namespace FastExpressionCompiler
                     if (expr.NodeType != ExpressionType.Equal && expr.NodeType != ExpressionType.NotEqual)
                         return false;
 
+                    if (b.Left.Type.IsNullable() || b.Right.Type.IsNullable())
+                        return false;
+
                     return b.Right is ConstantExpression r && r.Value == null
                         ? TryEmit(b.Left, b.Left.Type, paramExprs, il, ref closure, ExpressionType.Default, ignoreResult, isMemberAccess)
                         : b.Left is ConstantExpression l && l.Value == null && 
