@@ -937,9 +937,13 @@ namespace FastExpressionCompiler
 
                 case ExpressionType.Invoke:
                     var invokeExpr = (InvocationExpression)expr;
-                    var lambda = invokeExpr.Expression;
-                    return TryCollectBoundConstants(ref closure, lambda, paramExprs)
-                           && TryCollectBoundConstants(ref closure, invokeExpr.Arguments, paramExprs);
+                    // optimization #138: we are inlining invoked lambda body (only for lambdas without arguments)
+                    // therefore we skipping collecting the lambda and invocation arguments and got directly to lambda body.
+                    // This approach is repeated in `TryEmitInvoke`
+                    return invokeExpr.Expression is LambdaExpression lambdaExpr && lambdaExpr.Parameters.Count == 0
+                        ? TryCollectBoundConstants(ref closure, lambdaExpr.Body, paramExprs)
+                        : TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs) && 
+                          TryCollectBoundConstants(ref closure, invokeExpr.Arguments, paramExprs);
 
                 case ExpressionType.Conditional:
                     var condExpr = (ConditionalExpression)expr;
@@ -993,13 +997,11 @@ namespace FastExpressionCompiler
                     return true;
 
                 default:
-                    var unaryExpr = expr as UnaryExpression;
-                    if (unaryExpr != null)
+                    if (expr is UnaryExpression unaryExpr)
                         return TryCollectBoundConstants(ref closure, unaryExpr.Operand, paramExprs);
-                    var binaryExpr = expr as BinaryExpression;
-                    if (binaryExpr != null)
-                        return TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs)
-                               && TryCollectBoundConstants(ref closure, binaryExpr.Right, paramExprs);
+                    if (expr is BinaryExpression binaryExpr)
+                        return TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs) && 
+                               TryCollectBoundConstants(ref closure, binaryExpr.Right, paramExprs);
                     return false;
             }
         }
@@ -1153,7 +1155,7 @@ namespace FastExpressionCompiler
                         return TryEmitNestedLambda((LambdaExpression)expr, paramExprs, il, ref closure);
 
                     case ExpressionType.Invoke:
-                        return TryInvokeLambda((InvocationExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
+                        return TryEmitInvoke((InvocationExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
 
                     case ExpressionType.GreaterThan:
                     case ExpressionType.GreaterThanOrEqual:
@@ -2583,14 +2585,17 @@ namespace FastExpressionCompiler
                     : CurryClosureFuncs.Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
             }
 
-            private static bool TryInvokeLambda(InvocationExpression expr,
+            private static bool TryEmitInvoke(InvocationExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 bool ignoreResult, bool isMemberAccess)
             {
                 var lambda = expr.Expression;
-                return TryEmit(lambda, lambda.Type, paramExprs, il, ref closure, ExpressionType.Invoke, ignoreResult, isMemberAccess) 
-                    && TryEmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Invoke, false, isMemberAccess) 
-                    && EmitMethodCall(il, lambda.Type.GetTypeInfo().GetDeclaredMethod("Invoke"), ignoreResult);
+                // optimization #138: we are inlining invoked lambda body (only for lambdas without arguments) 
+                return lambda is LambdaExpression lambdaExpr && lambdaExpr.Parameters.Count == 0 
+                    ? TryEmit(lambdaExpr.Body, lambdaExpr.Body.Type, paramExprs, il, ref closure, ExpressionType.Invoke, ignoreResult, isMemberAccess) 
+                    : (TryEmit(lambda, lambda.Type, paramExprs, il, ref closure, ExpressionType.Invoke, ignoreResult, isMemberAccess) && 
+                       TryEmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Invoke, false, isMemberAccess) && 
+                       EmitMethodCall(il, lambda.Type.FindDelegateInvokeMethod(), ignoreResult));
             }
 
             private static bool TryEmitInvertedNullComparison(Expression expr,
@@ -3073,6 +3078,9 @@ namespace FastExpressionCompiler
         internal static ConstructorInfo FindConstructor(this Type type, params Type[] args) =>
             type.GetTypeInfo().DeclaredConstructors
                 .GetFirst(c => c.GetParameters().Map(p => p.ParameterType).SequenceEqual(args));
+
+        internal static MethodInfo FindDelegateInvokeMethod(this Type type) =>
+            type.GetTypeInfo().GetDeclaredMethod("Invoke");
 
         internal static MethodInfo FindMethod(this Type type,
             string methodName, Type[] typeArgs, IReadOnlyList<Expression> args, bool isStatic = false) =>

@@ -225,11 +225,12 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression DivideAssign(Expression left, Expression right) =>
             new AssignBinaryExpression(ExpressionType.DivideAssign, left, right, left.Type);
 
-        public static InvocationExpression Invoke(Expression lambda, params Expression[] args) =>
-            new InvocationExpression(lambda, args, ((LambdaExpression)lambda).ReturnType);
-
         public static InvocationExpression Invoke(Expression lambda, IEnumerable<Expression> args) =>
-            new InvocationExpression(lambda, args.AsReadOnlyList(), ((LambdaExpression)lambda).ReturnType);
+            new InvocationExpression(lambda, args.AsReadOnlyList(),
+                (lambda as LambdaExpression)?.ReturnType ?? lambda.Type.FindDelegateInvokeMethod().ReturnType);
+
+        public static InvocationExpression Invoke(Expression lambda, params Expression[] args) =>
+            Invoke(lambda, (IEnumerable<Expression>)args);
 
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) =>
             new ConditionalExpression(test, ifTrue, ifFalse);
@@ -626,8 +627,8 @@ namespace FastExpressionCompiler.LightExpression
         public readonly string Name;
         public readonly bool IsByRef;
 
-        public override SysExpr ToExpression() => ToParamExpr();
-        public System.Linq.Expressions.ParameterExpression ToParamExpr() => SysExpr.Parameter(Type, Name);
+        public override SysExpr ToExpression() => ToParameterExpression();
+        public System.Linq.Expressions.ParameterExpression ToParameterExpression() => SysExpr.Parameter(Type, Name);
 
         internal ParameterExpression(Type type, string name, bool isByRef)
         {
@@ -926,7 +927,7 @@ namespace FastExpressionCompiler.LightExpression
             Test = test;
         }
 
-        internal System.Linq.Expressions.CatchBlock ToCatchBlock() => SysExpr.Catch(Variable.ToParamExpr(), Body.ToExpression());
+        internal System.Linq.Expressions.CatchBlock ToCatchBlock() => SysExpr.Catch(Variable.ToParameterExpression(), Body.ToExpression());
     }
 
     public sealed class LabelExpression : Expression
@@ -1013,14 +1014,14 @@ namespace FastExpressionCompiler.LightExpression
 
         public readonly Type ReturnType;
         public readonly Expression Body;
-        public readonly ParameterExpression[] Parameters;
+        public readonly IReadOnlyList<ParameterExpression> Parameters;
 
         public override SysExpr ToExpression() => ToLambdaExpression();
 
         public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
-            SysExpr.Lambda(Body.ToExpression(), Parameters.Map(p => p.ToParamExpr()));
+            SysExpr.Lambda(Body.ToExpression(), Parameters.Map(p => p.ToParameterExpression()));
 
-        internal LambdaExpression(Type delegateType, Expression body, ParameterExpression[] parameters)
+        internal LambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters)
         {
             Body = body;
             Parameters = parameters;
@@ -1032,7 +1033,7 @@ namespace FastExpressionCompiler.LightExpression
             }
             else
             {
-                ReturnType = delegateType.GetTypeInfo().GetDeclaredMethod("Invoke").ReturnType;
+                ReturnType = delegateType.FindDelegateInvokeMethod().ReturnType;
                 Type = delegateType;
             }
         }
@@ -1041,7 +1042,7 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class Expression<TDelegate> : LambdaExpression
     {
         public new System.Linq.Expressions.Expression<TDelegate> ToLambdaExpression() =>
-            SysExpr.Lambda<TDelegate>(Body.ToExpression(), Parameters.Map(p => p.ToParamExpr()));
+            SysExpr.Lambda<TDelegate>(Body.ToExpression(), Parameters.Map(p => p.ToParameterExpression()));
 
         internal Expression(Expression body, ParameterExpression[] parameters)
             : base(typeof(TDelegate), body, parameters) { }
