@@ -31,6 +31,29 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual("B", fastCompiled(2));
         }
 
+        public enum MyEnum
+        {
+           a,b,c 
+        }
+
+        [Test]
+        public void SwitchIsSupportedEnum()
+        {
+            var eVar = Parameter(typeof(MyEnum?));
+            var blockExpr =
+                Switch(eVar,
+                    Constant("Z"),
+                    SwitchCase(Constant("A"), Constant(MyEnum.a, typeof(MyEnum?))),
+                    SwitchCase(Constant("B"), Constant(MyEnum.b, typeof(MyEnum?))),
+                    SwitchCase(Constant("C"), Constant(MyEnum.c, typeof(MyEnum?)))
+                );
+
+            var lambda = Lambda<Func<MyEnum?, string>>(blockExpr, eVar);
+            var fastCompiled = lambda.CompileFast(true);
+            Assert.NotNull(fastCompiled);
+            Assert.AreEqual("B", fastCompiled(MyEnum.b));
+        }
+
         [Test]
         public void SwitchIsSupported11()
         {
