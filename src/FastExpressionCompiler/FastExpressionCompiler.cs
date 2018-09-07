@@ -183,11 +183,9 @@ namespace FastExpressionCompiler
             where TDelegate : class
         {
             var closureInfo = new ClosureInfo(true, closure, closureConstantsExprs);
-            var bodyExpr = lambdaExpr.Body;
-            var returnType = bodyExpr.Type;
-            var paramExprs = lambdaExpr.Parameters;
-            return (TDelegate)TryCompile(ref closureInfo, typeof(TDelegate), Tools.GetParamTypes(paramExprs),
-                returnType, bodyExpr, returnType, paramExprs);
+            return (TDelegate)TryCompile(ref closureInfo, 
+                typeof(TDelegate), Tools.GetParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType, 
+                lambdaExpr.Body, lambdaExpr.Body.Type, lambdaExpr.Parameters);
         }
 
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
