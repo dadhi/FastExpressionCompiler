@@ -1546,7 +1546,7 @@ namespace FastExpressionCompiler
                     if (closure.HasClosure)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
-                    var asAddress = parent == ExpressionType.Call && paramExpr.Type.IsValueType() && !paramExpr.IsByRef;
+                    var asAddress = (parent == ExpressionType.Call || parent == ExpressionType.MemberAccess) && paramExpr.Type.IsValueType() && !paramExpr.IsByRef;
                     EmitLoadParamArg(il, paramIndex, asAddress);
 
                     if (paramExpr.IsByRef)
