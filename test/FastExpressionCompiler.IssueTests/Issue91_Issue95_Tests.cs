@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Reflection;
+using System.Linq;
 using System.Reflection.Emit;
+using ILDebugging.Decoder;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -39,6 +40,16 @@ class Issue91_Issue95_Tests
             var lambda = Lambda<Func<string, int>>(condition, pParam);
             var convert1 = lambda.CompileFast(true);
             Assert.NotNull(convert1);
+            Assert.AreEqual(1, convert1("aaa"));
+
+            // Check TryEmitInvertedNullComparison is used
+            var il = ILReaderFactory.Create(convert1.Method).ToList();
+            Assert.AreEqual(il[0].OpCode, OpCodes.Ldarg_0);
+            Assert.AreEqual(il[1].OpCode, OpCodes.Brfalse);
+            Assert.AreEqual(il[2].OpCode, OpCodes.Ldc_I4_1);
+            Assert.AreEqual(il[3].OpCode, OpCodes.Br);
+            Assert.AreEqual(il[4].OpCode, OpCodes.Ldc_I4_0);
+            Assert.AreEqual(il[5].OpCode, OpCodes.Ret);
         }
 
         [Test]
