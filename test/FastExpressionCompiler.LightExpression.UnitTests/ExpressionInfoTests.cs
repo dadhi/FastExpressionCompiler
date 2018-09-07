@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using static FastExpressionCompiler.LightExpression.Expression;
+using SysExpr = System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
@@ -141,23 +142,23 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         private static PropertyInfo _propAProp = typeof(A).GetTypeInfo().DeclaredProperties.First(p => p.Name == "Prop");
         private static FieldInfo _fieldABop = typeof(A).GetTypeInfo().DeclaredFields.First(p => p.Name == "Bop");
 
-        public static Expression<Func<object[], object>> CreateComplexExpression()
+        public static System.Linq.Expressions.Expression<Func<object[], object>> CreateComplexExpression()
         {
-            var stateParamExpr = Parameter(typeof(object[]));
+            var stateParamExpr = SysExpr.Parameter(typeof(object[]));
 
-            var funcExpr = Lambda<Func<object[], object>>(
-                MemberInit(
-                    New(_ctorOfA,
-                        New(_ctorOfB),
-                        Convert(ArrayIndex(stateParamExpr, Constant(11)), typeof(string)),
-                        NewArrayInit(typeof(ID),
-                            New(_ctorOfD1),
-                            New(_ctorOfD2))),
-                    Bind(_propAProp,
-                        New(_ctorOfP,
-                            New(_ctorOfB))),
-                    Bind(_fieldABop,
-                        New(_ctorOfB))),
+            var funcExpr = SysExpr.Lambda<Func<object[], object>>(
+                SysExpr.MemberInit(
+                    SysExpr.New(_ctorOfA,
+                        SysExpr.New(_ctorOfB),
+                        SysExpr.Convert(SysExpr.ArrayIndex(stateParamExpr, SysExpr.Constant(11)), typeof(string)),
+                        SysExpr.NewArrayInit(typeof(ID),
+                            SysExpr.New(_ctorOfD1),
+                            SysExpr.New(_ctorOfD2))),
+                    SysExpr.Bind(_propAProp,
+                        SysExpr.New(_ctorOfP,
+                            SysExpr.New(_ctorOfB))),
+                    SysExpr.Bind(_fieldABop,
+                        SysExpr.New(_ctorOfB))),
                 stateParamExpr);
 
             return funcExpr;

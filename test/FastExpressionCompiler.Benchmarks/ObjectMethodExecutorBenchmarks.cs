@@ -65,10 +65,6 @@ namespace FastExpressionCompiler.Benchmarks
         [Benchmark(Baseline = true)]
         public object CompileFastWithPreCreatedClosure() =>
             ObjectMethodExecutorCompiledFastClosure.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
-
-        //[Benchmark]
-        //public object CompileFastInParallel() =>
-        //    ObjectMethodExecutorCompiledFastInParallel.Create(_t.GetMethod(nameof(Foo)), _t.GetTypeInfo());
     }
 
     [CoreJob, ClrJob]

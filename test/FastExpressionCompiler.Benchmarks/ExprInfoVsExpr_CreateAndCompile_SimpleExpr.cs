@@ -4,6 +4,9 @@ using System.Reflection;
 using System.Reflection.Emit;
 using BenchmarkDotNet.Attributes;
 
+using LEC = FastExpressionCompiler.LightExpression.ExpressionCompiler;
+using LE = FastExpressionCompiler.LightExpression.Expression;
+
 namespace FastExpressionCompiler.Benchmarks
 {
     [MemoryDiagnoser]
@@ -41,12 +44,12 @@ namespace FastExpressionCompiler.Benchmarks
             return expr.TryCompile<Func<object>>();
         }
 
-        //[Benchmark(Baseline = true)]
-        //public object CreateExpressionInfo_and_FastCompile()
-        //{
-        //    var expr = ExpressionInfo.Lambda(ExpressionInfo.New(_xCtor, ExpressionInfo.New(_aCtor), ExpressionInfo.New(_bCtor)));
-        //    return expr.TryCompile<Func<object>>();
-        //}
+        [Benchmark(Baseline = true)]
+        public object CreateExpressionInfo_and_FastCompile()
+        {
+            var expr = LE.Lambda(LE.New(_xCtor, LE.New(_aCtor), LE.New(_bCtor)));
+            return LEC.TryCompile<Func<object>>(expr);
+        }
 
         [Benchmark]
         public object ManualEmit()
