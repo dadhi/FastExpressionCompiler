@@ -608,6 +608,21 @@ namespace FastExpressionCompiler.UnitTests
             Assert.Throws<NullReferenceException>(() => compiled1(null, null, null, null, null));
             Assert.Throws<NullReferenceException>(() => compiled2(null, null, null, null, null));
         }
+
+        [Test]
+        public void TestConverterFailure()
+        {
+            var p = Parameter(typeof(int?), "p");
+
+            var mapperBody = Condition(Property(p, "HasValue"), Property(p, "Value"), Constant(-1));
+            var mapper = Lambda<Func<int?, int>>(mapperBody, p);
+
+            var compiled1 = mapper.Compile();
+            var compiled2 = mapper.CompileFast(true);
+
+            compiled1(null);
+            compiled2(null);
+        }
 #endif
 
         [Test]
