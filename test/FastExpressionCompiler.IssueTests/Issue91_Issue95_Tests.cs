@@ -43,13 +43,9 @@ class Issue91_Issue95_Tests
             Assert.AreEqual(1, convert1("aaa"));
 
             // Check TryEmitInvertedNullComparison is used
-            var il = ILReaderFactory.Create(convert1.Method).ToList();
-            Assert.AreEqual(il[0].OpCode, OpCodes.Ldarg_0);
-            Assert.AreEqual(il[1].OpCode, OpCodes.Brfalse);
-            Assert.AreEqual(il[2].OpCode, OpCodes.Ldc_I4_1);
-            Assert.AreEqual(il[3].OpCode, OpCodes.Br);
-            Assert.AreEqual(il[4].OpCode, OpCodes.Ldc_I4_0);
-            Assert.AreEqual(il[5].OpCode, OpCodes.Ret);
+            var il = ILReaderFactory.Create(convert1.Method);
+            CollectionAssert.AreEqual(il.Select(x => x.OpCode),
+                new[] {OpCodes.Ldarg_0, OpCodes.Brfalse, OpCodes.Ldc_I4_1, OpCodes.Br, OpCodes.Ldc_I4_0, OpCodes.Ret});
         }
 
         [Test]
