@@ -1,8 +1,14 @@
 ﻿using System;
-using System.Linq.Expressions;
 using NUnit.Framework;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class ValueTypeTests
@@ -99,9 +105,8 @@ namespace FastExpressionCompiler.UnitTests
             Expression<Action<string>> expr = a => s.SetValue(a);
 
             var lambda = expr.CompileFast(ifFastFailedReturnNull: true);
-
             lambda("a");
-            Assert.IsNull(s.Value);
+            Assert.AreEqual("a", s.Value);
         }
 
         public struct SS

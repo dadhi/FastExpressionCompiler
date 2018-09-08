@@ -1152,13 +1152,13 @@ namespace FastExpressionCompiler
 
             public static bool TryEmit(Expression expr, Type exprType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent,
-                bool ignoreResult = false, bool isMemberAccess = false, bool isMethodCallInstance = false, int byRefIndex = -1)
+                bool ignoreResult = false, bool isMemberAccess = false, bool isInstanceAccess = false, int byRefIndex = -1)
             {
                 switch (expr.NodeType)
                 {
                     case ExpressionType.Parameter:
                         return ignoreResult || TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure,
-                                   parent, isMemberAccess, isMethodCallInstance, byRefIndex);
+                                   parent, isMemberAccess, isInstanceAccess, byRefIndex);
                     case ExpressionType.Convert:
                         return TryEmitConvert((UnaryExpression)expr, exprType, paramExprs, il, ref closure,
                             ignoreResult, isMemberAccess);
@@ -1170,7 +1170,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Call:
                         return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, ignoreResult, isMemberAccess);
                     case ExpressionType.MemberAccess:
-                        return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, ignoreResult);
+                        return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, ignoreResult, isInstanceAccess);
                     case ExpressionType.New:
                         var newExpr = (NewExpression)expr;
                         return TryEmitMany(newExpr.Arguments, paramExprs, il, ref closure, ExpressionType.New, ignoreResult, isMemberAccess) 
@@ -1537,7 +1537,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitParameter(ParameterExpression paramExpr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                ExpressionType parent, bool isMemberAccess, bool isMethodCallInstance, int byRefIndex = -1)
+                ExpressionType parent, bool isMemberAccess, bool isInstanceAccess, int byRefIndex = -1)
             {
                 // if parameter is passed through, then just load it on stack
                 var paramIndex = paramExprs.GetFirstIndex(paramExpr);
@@ -1546,7 +1546,7 @@ namespace FastExpressionCompiler
                     if (closure.HasClosure)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
-                    var asAddress = ((parent == ExpressionType.Call && isMethodCallInstance) || parent == ExpressionType.MemberAccess) && paramExpr.Type.IsValueType() && !paramExpr.IsByRef;
+                    var asAddress = ((parent == ExpressionType.Call && isInstanceAccess) || parent == ExpressionType.MemberAccess) && paramExpr.Type.IsValueType() && !paramExpr.IsByRef;
                     EmitLoadParamArg(il, paramIndex, asAddress);
 
                     if (paramExpr.IsByRef)
@@ -2402,7 +2402,7 @@ namespace FastExpressionCompiler
                         return false;
 
                     isValueTypeObj = objType.GetTypeInfo().IsValueType;
-                    if (isValueTypeObj && objExpr.NodeType != ExpressionType.Parameter)
+                    if (isValueTypeObj && objExpr.NodeType != ExpressionType.Parameter && objExpr.NodeType != ExpressionType.MemberAccess)
                         StoreAsVarAndLoadItsAddress(il, objType);
                 }
 
@@ -2450,14 +2450,14 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitMemberAccess(MemberExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                bool ignoreResult)
+                bool ignoreResult, bool isInstanceAccess)
             {
                 var prop = expr.Member as PropertyInfo;
                 var instanceExpr = expr.Expression;
                 if (instanceExpr != null &&
                     !TryEmit(instanceExpr, instanceExpr.Type, paramExprs, il, ref closure,
                         //prop != null ? ExpressionType.Call : ExpressionType.MemberAccess, 
-                        ExpressionType.MemberAccess, ignoreResult, true))
+                        ExpressionType.MemberAccess, ignoreResult, true, true))
                     return false;
 
                 if (prop != null)
@@ -2474,7 +2474,7 @@ namespace FastExpressionCompiler
                 var field = expr.Member as FieldInfo;
                 if (field != null)
                 {
-                    il.Emit(field.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, field);
+                    il.Emit(field.IsStatic ? OpCodes.Ldsfld : (field.FieldType.GetTypeInfo().IsValueType && isInstanceAccess) ? OpCodes.Ldflda : OpCodes.Ldfld, field);
                     return true;
                 }
 
