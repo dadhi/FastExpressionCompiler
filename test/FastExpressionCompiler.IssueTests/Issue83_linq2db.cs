@@ -649,6 +649,27 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.AreEqual(c, d);
         }
+
+        public static string aa(int nr) {
+            return nr.ToString();
+        }
+
+        [Test]
+        public void TestLdArg()
+        {
+            var p = Parameter(typeof(int), "p");
+
+            var mapperBody = Call(typeof(Issue83_linq2db).GetTypeInfo().GetMethod("aa"), p);
+            var mapper = Lambda<Func<int, string>>(mapperBody, p);
+
+            var compiled1 = mapper.Compile();
+            var compiled2 = mapper.CompileFast(true);
+
+            var a = compiled1(5);
+            var b = compiled2(5);
+
+            Assert.AreEqual(a, b);
+        }
 #endif
 
         [Test]

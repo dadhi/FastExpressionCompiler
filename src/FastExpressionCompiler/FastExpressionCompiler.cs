@@ -1723,7 +1723,7 @@ namespace FastExpressionCompiler
                 // Conversion to Nullable: new Nullable<T>(T val);
                 else if (targetType.IsNullable())
                 {
-                    if (sourceType.IsNullable()) // Nullable -> It's the only ValueType comparable to null
+                    if (sourceType.IsNullable())
                     {
                         var labelFalse = il.DefineLabel();
                         var labelDone = il.DefineLabel();
