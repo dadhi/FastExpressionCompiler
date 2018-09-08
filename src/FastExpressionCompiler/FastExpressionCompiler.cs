@@ -1152,13 +1152,13 @@ namespace FastExpressionCompiler
 
             public static bool TryEmit(Expression expr, Type exprType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent,
-                bool ignoreResult = false, bool isMemberAccess = false, int byRefIndex = -1)
+                bool ignoreResult = false, bool isMemberAccess = false, bool isMethodCallInstance = false, int byRefIndex = -1)
             {
                 switch (expr.NodeType)
                 {
                     case ExpressionType.Parameter:
                         return ignoreResult || TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure,
-                                   parent, isMemberAccess, byRefIndex);
+                                   parent, isMemberAccess, isMethodCallInstance, byRefIndex);
                     case ExpressionType.Convert:
                         return TryEmitConvert((UnaryExpression)expr, exprType, paramExprs, il, ref closure,
                             ignoreResult, isMemberAccess);
@@ -1537,7 +1537,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitParameter(ParameterExpression paramExpr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                ExpressionType parent, bool isMemberAccess, int byRefIndex = -1)
+                ExpressionType parent, bool isMemberAccess, bool isMethodCallInstance, int byRefIndex = -1)
             {
                 // if parameter is passed through, then just load it on stack
                 var paramIndex = paramExprs.GetFirstIndex(paramExpr);
@@ -1546,7 +1546,7 @@ namespace FastExpressionCompiler
                     if (closure.HasClosure)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
-                    var asAddress = (parent == ExpressionType.Call || parent == ExpressionType.MemberAccess) && paramExpr.Type.IsValueType() && !paramExpr.IsByRef;
+                    var asAddress = ((parent == ExpressionType.Call && isMethodCallInstance) || parent == ExpressionType.MemberAccess) && paramExpr.Type.IsValueType() && !paramExpr.IsByRef;
                     EmitLoadParamArg(il, paramIndex, asAddress);
 
                     if (paramExpr.IsByRef)
@@ -1668,7 +1668,7 @@ namespace FastExpressionCompiler
                     var expr = exprs[i];
                     // ignore the result of expression if it is not the result expression, e.g. not the last expression in block
                     var ignore = ignoreResult || parent == ExpressionType.Block && expr != closure.CurrentBlock.ResultExpr;
-                    if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, ignore, isMemberAccess, i))
+                    if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, ignore, isMemberAccess, false, i))
                         return false;
                 }
 
@@ -1682,7 +1682,7 @@ namespace FastExpressionCompiler
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
-                    return TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Call, false, isMemberAccess, 0) 
+                    return TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Call, false, isMemberAccess, true, 0) 
                         && EmitMethodCall(il, method, ignoreResult);
 
                 if (!TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Convert, false, isMemberAccess))
@@ -2398,7 +2398,7 @@ namespace FastExpressionCompiler
                 if (objExpr != null)
                 {
                     objType = objExpr.Type;
-                    if (!TryEmit(objExpr, objType, paramExprs, il, ref closure, ExpressionType.Call, false, isMemberAccess))
+                    if (!TryEmit(objExpr, objType, paramExprs, il, ref closure, ExpressionType.Call, false, isMemberAccess, true))
                         return false;
 
                     isValueTypeObj = objType.GetTypeInfo().IsValueType;
