@@ -1722,39 +1722,78 @@ namespace FastExpressionCompiler
 
                 // Conversion to Nullable: new Nullable<T>(T val);
                 else if (targetType.IsNullable())
+                {
+                    if (sourceType.IsNullable()) // Nullable -> It's the only ValueType comparable to null
+                    {
+                        var labelFalse = il.DefineLabel();
+                        var labelDone = il.DefineLabel();
+                        var loc = il.DeclareLocal(sourceType);
+                        var locT = il.DeclareLocal(targetType);
+                        il.Emit(OpCodes.Stloc_S, loc);
+                        il.Emit(OpCodes.Ldloca_S, loc);
+                        var hasValueMethod = sourceTypeInfo.GetDeclaredMethod("get_HasValue");
+                        if (!EmitMethodCall(il, hasValueMethod))
+                            return false;
+                        il.Emit(OpCodes.Brfalse, labelFalse);
+                        il.Emit(OpCodes.Ldloca_S, loc);
+                        var mthValue = sourceTypeInfo.GetDeclaredMethods("GetValueOrDefault").GetFirst(x => x.GetParameters().Length == 0);
+                        if (!EmitMethodCall(il, mthValue))
+                            return false;
+                        TryEmitValueConvert(Nullable.GetUnderlyingType(targetType), il);
+                        il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetTypeInfo.GenericTypeArguments[0]));
+                        il.Emit(OpCodes.Stloc_S, locT);
+                        il.Emit(OpCodes.Br_S, labelDone);
+                        il.MarkLabel(labelFalse);
+                        il.Emit(OpCodes.Ldloca_S, locT);
+                        il.Emit(OpCodes.Initobj, targetType);
+                        il.MarkLabel(labelDone);
+                        il.Emit(OpCodes.Ldloc_S, locT);
+                        if (ignoreResult)
+                            il.Emit(OpCodes.Pop);
+                        return true;
+                    }
                     il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetTypeInfo.GenericTypeArguments[0]));
+                }
                 else
                 {
                     if (targetType.GetTypeInfo().IsEnum)
                         targetType = Enum.GetUnderlyingType(targetType);
 
-                    if (targetType == typeof(int))
-                        il.Emit(OpCodes.Conv_I4);
-                    else if (targetType == typeof(float))
-                        il.Emit(OpCodes.Conv_R4);
-                    else if (targetType == typeof(uint))
-                        il.Emit(OpCodes.Conv_U4);
-                    else if (targetType == typeof(sbyte))
-                        il.Emit(OpCodes.Conv_I1);
-                    else if (targetType == typeof(byte))
-                        il.Emit(OpCodes.Conv_U1);
-                    else if (targetType == typeof(short))
-                        il.Emit(OpCodes.Conv_I2);
-                    else if (targetType == typeof(ushort))
-                        il.Emit(OpCodes.Conv_U2);
-                    else if (targetType == typeof(long))
-                        il.Emit(OpCodes.Conv_I8);
-                    else if (targetType == typeof(ulong))
-                        il.Emit(OpCodes.Conv_U8);
-                    else if (targetType == typeof(double))
-                        il.Emit(OpCodes.Conv_R8);
-
-                    else // cast as the last resort and let's it fail if unlucky
+                    // cast as the last resort and let's it fail if unlucky
+                    if (!TryEmitValueConvert(targetType, il))
                         il.Emit(OpCodes.Castclass, targetType);
                 }
 
                 if (ignoreResult)
                     il.Emit(OpCodes.Pop);
+                return true;
+            }
+
+            private static bool TryEmitValueConvert(Type targetType, ILGenerator il)
+            {
+                if (targetType == typeof(int))
+                    il.Emit(OpCodes.Conv_I4);
+                else if (targetType == typeof(float))
+                    il.Emit(OpCodes.Conv_R4);
+                else if (targetType == typeof(uint))
+                    il.Emit(OpCodes.Conv_U4);
+                else if (targetType == typeof(sbyte))
+                    il.Emit(OpCodes.Conv_I1);
+                else if (targetType == typeof(byte))
+                    il.Emit(OpCodes.Conv_U1);
+                else if (targetType == typeof(short))
+                    il.Emit(OpCodes.Conv_I2);
+                else if (targetType == typeof(ushort))
+                    il.Emit(OpCodes.Conv_U2);
+                else if (targetType == typeof(long))
+                    il.Emit(OpCodes.Conv_I8);
+                else if (targetType == typeof(ulong))
+                    il.Emit(OpCodes.Conv_U8);
+                else if (targetType == typeof(double))
+                    il.Emit(OpCodes.Conv_R8);
+                else
+                    return false;
+
                 return true;
             }
 

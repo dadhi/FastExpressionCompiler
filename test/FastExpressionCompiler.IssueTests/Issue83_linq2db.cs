@@ -623,6 +623,32 @@ namespace FastExpressionCompiler.UnitTests
             compiled1(null);
             compiled2(null);
         }
+
+        class sPrp {
+            public short? v;
+        }
+
+        [Test]
+        public void TestConverterNullable()
+        {
+            var p = Parameter(typeof(sPrp), "p");
+
+            var mapperBody = /*Convert(*/Convert(Field(p, nameof(sPrp.v)), typeof(int?))/*, typeof(object))*/;
+            var mapper = Lambda<Func<sPrp, int?>>(mapperBody, p);
+
+            var compiled1 = mapper.Compile();
+            var compiled2 = mapper.CompileFast(true);
+
+            var a = compiled1(new sPrp() { v = short.MaxValue });
+            var b = compiled2(new sPrp() { v = short.MaxValue });
+
+            Assert.AreEqual(a, b);
+
+            var c = compiled1(new sPrp() { v = short.MinValue });
+            var d = compiled2(new sPrp() { v = short.MinValue });
+
+            Assert.AreEqual(c, d);
+        }
 #endif
 
         [Test]
