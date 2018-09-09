@@ -821,6 +821,48 @@ namespace FastExpressionCompiler.UnitTests
             Assert.That(obj.Class2.Struct1P.Class3P.Class4.Field1, Is.EqualTo(42));
         }
 
+        [Test]
+        public void NullableEnum()
+        {
+            var objParam = Parameter(typeof(TestClass2), "obj");
+            
+            var body = Block(
+                Assign(Field(objParam, nameof(TestClass2.NullEnum2)), Constant(Enum2.Value1, typeof(Enum2?)))
+                );
+
+            var expr = Lambda<Action<TestClass2>>(body, objParam);
+
+            var compiled = expr.CompileFast(true);
+
+            var obj = new TestClass2();
+
+            compiled(obj);
+
+            Assert.That(obj.NullEnum2, Is.EqualTo(Enum2.Value1));
+        }
+
+#if !LIGHT_EXPRESSION
+
+        [Test]
+        public void NullableEnum2()
+        {
+            var objParam = Parameter(typeof(TestClass2), "obj");
+
+            var body = Block(
+                Equal(Field(objParam, nameof(TestClass2.NullEnum2)), Constant(Enum2.Value1, typeof(Enum2?)))
+            );
+
+            var expr = Lambda<Action<TestClass2>>(body, objParam);
+
+
+            var c = expr.Compile();
+            var compiled = expr.CompileFast(true);
+
+            var obj = new TestClass2();
+
+            compiled(obj);
+        }
+#endif
         class TestClass1
         {
             public int Prop1
@@ -841,6 +883,7 @@ namespace FastExpressionCompiler.UnitTests
 
         class TestClass2
         {
+            public Enum2? NullEnum2;
             public TestClass3 Class3;
             public TestStruct1 Struct1;
             public TestStruct1 Struct1P { get; set; }

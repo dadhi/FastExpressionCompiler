@@ -352,6 +352,8 @@ namespace FastExpressionCompiler
 
             public bool HasClosure => ClosureType != null;
 
+            public bool LastEmitIsAddress;
+
             // Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public ConstantExpression[] Constants;
 
@@ -389,6 +391,7 @@ namespace FastExpressionCompiler
                 CurrentBlock = BlockInfo.Empty;
                 Labels = null;
                 LabelCount = 0;
+                LastEmitIsAddress = false;
 
                 if (closure == null)
                 {
@@ -1154,6 +1157,8 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent,
                 bool ignoreResult = false, bool isMemberAccess = false, bool isInstanceAccess = false, int byRefIndex = -1)
             {
+                closure.LastEmitIsAddress = false;
+
                 switch (expr.NodeType)
                 {
                     case ExpressionType.Parameter:
@@ -2296,7 +2301,7 @@ namespace FastExpressionCompiler
 
                         var objExpr = memberExpr.Expression;
                         if (objExpr != null &&
-                            !TryEmit(objExpr, objExpr.Type, paramExprs, il, ref closure, ExpressionType.Assign, false, true))
+                            !TryEmit(objExpr, objExpr.Type, paramExprs, il, ref closure, ExpressionType.Assign, false, true, true))
                             return false;
 
                         if (!TryEmit(right, exprType, paramExprs, il, ref closure, ExpressionType.Assign))
@@ -2402,8 +2407,7 @@ namespace FastExpressionCompiler
                         return false;
 
                     isValueTypeObj = objType.GetTypeInfo().IsValueType;
-                    if (isValueTypeObj && objExpr.NodeType != ExpressionType.Parameter 
-                                       && !((objExpr is MemberExpression f && f.Member is FieldInfo))) //if it's field expression ldflda already used
+                    if (isValueTypeObj && objExpr.NodeType != ExpressionType.Parameter && !closure.LastEmitIsAddress)
                         StoreAsVarAndLoadItsAddress(il, objType);
                 }
 
@@ -2414,6 +2418,8 @@ namespace FastExpressionCompiler
                 var method = expr.Method;
                 if (isValueTypeObj && method.IsVirtual)
                     il.Emit(OpCodes.Constrained, objType);
+
+                closure.LastEmitIsAddress = false;
 
                 return EmitMethodCall(il, method, ignoreResult);
             }
@@ -2458,7 +2464,7 @@ namespace FastExpressionCompiler
                 if (instanceExpr != null &&
                     !TryEmit(instanceExpr, instanceExpr.Type, paramExprs, il, ref closure,
                         //prop != null ? ExpressionType.Call : ExpressionType.MemberAccess, 
-                        ExpressionType.MemberAccess, ignoreResult, true, true))
+                        ExpressionType.MemberAccess, false, true, true))
                     return false;
 
                 if (prop != null)
@@ -2466,16 +2472,23 @@ namespace FastExpressionCompiler
                     // Value type special treatment to load address of value instance in order to access a field or call a method.
                     // Parameter should be excluded because it already loads an address via Ldarga, and you don't need to.
                     // And for field access no need to load address, cause the field stored on stack nearby
-                    if (instanceExpr != null && instanceExpr.NodeType != ExpressionType.Parameter && instanceExpr.Type.IsValueType() && (!isInstanceAccess || instanceExpr.NodeType != ExpressionType.MemberAccess))
+                    if (instanceExpr != null && !closure.LastEmitIsAddress && instanceExpr.NodeType != ExpressionType.Parameter && instanceExpr.Type.IsValueType())
                         StoreAsVarAndLoadItsAddress(il, instanceExpr.Type);
 
+                    closure.LastEmitIsAddress = false;
                     return EmitMethodCall(il, TryGetPropertyGetMethod(prop));
                 }
 
                 var field = expr.Member as FieldInfo;
                 if (field != null)
                 {
-                    il.Emit(field.IsStatic ? OpCodes.Ldsfld : (field.FieldType.GetTypeInfo().IsValueType && isInstanceAccess) ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                    if(field.IsStatic)
+                        il.Emit(OpCodes.Ldsfld, field);
+                    else
+                    {
+                        closure.LastEmitIsAddress = (field.FieldType.GetTypeInfo().IsValueType && isInstanceAccess);
+                        il.Emit(closure.LastEmitIsAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                    }
                     return true;
                 }
 
@@ -2758,7 +2771,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 LocalBuilder lVar = null, rVar = null;
-                if (!TryEmit(exprLeft, exprLeft.Type, paramExprs, il, ref closure, ExpressionType.Default, ignoreResult, isMemberAccess))
+                if (!TryEmit(exprLeft, exprLeft.Type, paramExprs, il, ref closure, ExpressionType.Default, false, isMemberAccess))
                     return false;
 
                 if (leftIsNull)
@@ -2774,7 +2787,7 @@ namespace FastExpressionCompiler
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
 
-                if (!TryEmit(exprRight, exprRight.Type, paramExprs, il, ref closure, ExpressionType.Default, ignoreResult, isMemberAccess))
+                if (!TryEmit(exprRight, exprRight.Type, paramExprs, il, ref closure, ExpressionType.Default, false, isMemberAccess))
                     return false;
 
                 if (rightOpType.IsNullable())
@@ -2821,6 +2834,9 @@ namespace FastExpressionCompiler
 
                     if (leftIsNull)
                         goto nullCheck;
+
+                    if(ignoreResult)
+                        il.Emit(OpCodes.Pop);
 
                     return true;
                 }
@@ -2902,6 +2918,9 @@ namespace FastExpressionCompiler
                             return false;
                     }
                 }
+
+                if (ignoreResult)
+                    il.Emit(OpCodes.Pop);
 
                 return true;
             }
