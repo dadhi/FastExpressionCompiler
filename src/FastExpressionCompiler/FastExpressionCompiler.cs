@@ -2402,7 +2402,8 @@ namespace FastExpressionCompiler
                         return false;
 
                     isValueTypeObj = objType.GetTypeInfo().IsValueType;
-                    if (isValueTypeObj && objExpr.NodeType != ExpressionType.Parameter && objExpr.NodeType != ExpressionType.MemberAccess)
+                    if (isValueTypeObj && objExpr.NodeType != ExpressionType.Parameter 
+                                       && !((objExpr is MemberExpression f && f.Member is FieldInfo))) //if it's field expression ldflda already used
                         StoreAsVarAndLoadItsAddress(il, objType);
                 }
 
@@ -2465,7 +2466,7 @@ namespace FastExpressionCompiler
                     // Value type special treatment to load address of value instance in order to access a field or call a method.
                     // Parameter should be excluded because it already loads an address via Ldarga, and you don't need to.
                     // And for field access no need to load address, cause the field stored on stack nearby
-                    if (instanceExpr != null && instanceExpr.NodeType != ExpressionType.Parameter && instanceExpr.Type.IsValueType())
+                    if (instanceExpr != null && instanceExpr.NodeType != ExpressionType.Parameter && instanceExpr.Type.IsValueType() && (!isInstanceAccess || instanceExpr.NodeType != ExpressionType.MemberAccess))
                         StoreAsVarAndLoadItsAddress(il, instanceExpr.Type);
 
                     return EmitMethodCall(il, TryGetPropertyGetMethod(prop));
