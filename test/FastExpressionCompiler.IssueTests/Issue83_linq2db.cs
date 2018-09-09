@@ -841,8 +841,6 @@ namespace FastExpressionCompiler.UnitTests
             Assert.That(obj.NullEnum2, Is.EqualTo(Enum2.Value1));
         }
 
-#if !LIGHT_EXPRESSION
-
         [Test]
         public void NullableEnum2()
         {
@@ -855,14 +853,49 @@ namespace FastExpressionCompiler.UnitTests
             var expr = Lambda<Action<TestClass2>>(body, objParam);
 
 
-            var c = expr.Compile();
             var compiled = expr.CompileFast(true);
 
             var obj = new TestClass2();
 
             compiled(obj);
         }
-#endif
+
+        [Test]
+        public void NewNullableTest()
+        {
+            var body = New(typeof(int?).GetTypeInfo().DeclaredConstructors.First(), Constant(6, typeof(int)));
+
+            var expr = Lambda<Func<int?>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            compiled();
+        }
+
+        [Test]
+        public void ConvertNullableTest()
+        {
+            var body = Convert(ConvertChecked(Constant(long.MaxValue-1, typeof(long)), typeof(int)), typeof(int?));
+
+            var expr = Lambda<Func<int?>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+           Assert.Throws<OverflowException>(()=> compiled());
+        }
+
+        [Test]
+        public void ConvertNullable2Test()
+        {
+            var body = Convert(ConvertChecked(Constant(5l, typeof(long)), typeof(int)), typeof(int?));
+
+            var expr = Lambda<Func<int?>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            compiled();
+        }
+
         class TestClass1
         {
             public int Prop1

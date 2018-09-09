@@ -1165,6 +1165,7 @@ namespace FastExpressionCompiler
                         return ignoreResult || TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure,
                                    parent, isMemberAccess, isInstanceAccess, byRefIndex);
                     case ExpressionType.Convert:
+                    case ExpressionType.ConvertChecked:
                         return TryEmitConvert((UnaryExpression)expr, exprType, paramExprs, il, ref closure,
                             ignoreResult, isMemberAccess);
                     case ExpressionType.ArrayIndex:
@@ -1744,7 +1745,7 @@ namespace FastExpressionCompiler
                         var mthValue = sourceTypeInfo.GetDeclaredMethods("GetValueOrDefault").GetFirst(x => x.GetParameters().Length == 0);
                         if (!EmitMethodCall(il, mthValue))
                             return false;
-                        TryEmitValueConvert(Nullable.GetUnderlyingType(targetType), il);
+                        TryEmitValueConvert(Nullable.GetUnderlyingType(targetType), il, expr.NodeType == ExpressionType.ConvertChecked);
                         il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetTypeInfo.GenericTypeArguments[0]));
                         il.Emit(OpCodes.Stloc_S, locT);
                         il.Emit(OpCodes.Br_S, labelDone);
@@ -1765,7 +1766,7 @@ namespace FastExpressionCompiler
                         targetType = Enum.GetUnderlyingType(targetType);
 
                     // cast as the last resort and let's it fail if unlucky
-                    if (!TryEmitValueConvert(targetType, il))
+                    if (!TryEmitValueConvert(targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                         il.Emit(OpCodes.Castclass, targetType);
                 }
 
@@ -1774,26 +1775,26 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitValueConvert(Type targetType, ILGenerator il)
+            private static bool TryEmitValueConvert(Type targetType, ILGenerator il, bool @checked)
             {
                 if (targetType == typeof(int))
-                    il.Emit(OpCodes.Conv_I4);
+                    il.Emit(@checked ? OpCodes.Conv_Ovf_I4 : OpCodes.Conv_I4);
                 else if (targetType == typeof(float))
                     il.Emit(OpCodes.Conv_R4);
                 else if (targetType == typeof(uint))
-                    il.Emit(OpCodes.Conv_U4);
+                    il.Emit(@checked ? OpCodes.Conv_Ovf_U4 : OpCodes.Conv_U4);
                 else if (targetType == typeof(sbyte))
-                    il.Emit(OpCodes.Conv_I1);
+                    il.Emit(@checked ? OpCodes.Conv_Ovf_I1 : OpCodes.Conv_I1);
                 else if (targetType == typeof(byte))
-                    il.Emit(OpCodes.Conv_U1);
+                    il.Emit(@checked ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
                 else if (targetType == typeof(short))
-                    il.Emit(OpCodes.Conv_I2);
+                    il.Emit(@checked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
                 else if (targetType == typeof(ushort))
-                    il.Emit(OpCodes.Conv_U2);
+                    il.Emit(@checked ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
                 else if (targetType == typeof(long))
-                    il.Emit(OpCodes.Conv_I8);
+                    il.Emit(@checked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
                 else if (targetType == typeof(ulong))
-                    il.Emit(OpCodes.Conv_U8);
+                    il.Emit(@checked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8);
                 else if (targetType == typeof(double))
                     il.Emit(OpCodes.Conv_R8);
                 else

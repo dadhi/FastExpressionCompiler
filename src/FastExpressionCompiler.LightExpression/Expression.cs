@@ -165,6 +165,12 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression Convert(Expression operand, Type targetType, MethodInfo method) =>
             new UnaryExpression(ExpressionType.Convert, operand, targetType, method);
 
+        public static UnaryExpression ConvertChecked(Expression operand, Type targetType) =>
+            new UnaryExpression(ExpressionType.ConvertChecked, operand, targetType);
+
+        public static UnaryExpression ConvertChecked(Expression operand, Type targetType, MethodInfo method) =>
+            new UnaryExpression(ExpressionType.ConvertChecked, operand, targetType, method);
+
         public static UnaryExpression PreIncrementAssign(Expression operand) =>
             new UnaryExpression(ExpressionType.PreIncrementAssign, operand, operand.Type);
 
