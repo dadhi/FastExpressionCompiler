@@ -1789,7 +1789,7 @@ namespace FastExpressionCompiler
                     il.Emit(@checked ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
                 else if (targetType == typeof(short))
                     il.Emit(@checked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
-                else if (targetType == typeof(ushort))
+                else if (targetType == typeof(ushort) || targetType == typeof(char))
                     il.Emit(@checked ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
                 else if (targetType == typeof(long))
                     il.Emit(@checked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);

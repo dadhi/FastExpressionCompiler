@@ -896,6 +896,34 @@ namespace FastExpressionCompiler.UnitTests
             compiled();
         }
 
+        [Test]
+        public void ConvertTest()
+        {
+            var body = ConvertChecked(Constant(0x10, typeof(int)), typeof(char));
+
+            var expr = Lambda<Func<char>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled();
+
+            Assert.AreEqual('\x10', ret);
+        }
+
+        [Test]
+        public void ConvertTest2()
+        {
+            var body = ConvertChecked(Constant('\x10', typeof(char)), typeof(int));
+
+            var expr = Lambda<Func<int>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled();
+
+            Assert.AreEqual(0x10, ret);
+        }
+
         class TestClass1
         {
             public int Prop1
