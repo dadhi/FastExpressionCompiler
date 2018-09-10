@@ -921,6 +921,21 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Test4Bool()
+        {
+            var p = Parameter(typeof(bool));
+            var body = Not(p);
+
+            var expr = Lambda<Func<bool, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled(false);
+
+            Assert.AreEqual(true, ret);
+        }
+
+        [Test]
         public void ConvertNullableTest()
         {
             var body = Convert(ConvertChecked(Constant(long.MaxValue-1, typeof(long)), typeof(int)), typeof(int?));
