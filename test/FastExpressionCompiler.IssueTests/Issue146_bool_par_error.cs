@@ -21,13 +21,13 @@ namespace FastExpressionCompiler.UnitTests
         {
             public bool a<b>(b i)
             {
-                return object.Equals(i, false);
+                return Equals(i, false);
             }
         }
 
         
         [Test]
-        public void Test3Bool()
+        public void Test1()
         {
             var objParam = Parameter(typeof(MyObject), "myObj");
             var boolParam = Parameter(typeof(bool), "isSomething");
@@ -44,6 +44,35 @@ namespace FastExpressionCompiler.UnitTests
             var ret = func.Invoke(new MyObject(), false);
 
             Assert.AreEqual(true, ret);
+        }
+
+
+        private class MyClass
+        {
+            public bool MyMethod<T>(bool i)
+            {
+                Console.WriteLine("Got " + i);
+
+                return Equals(i, false);
+            }
+        }
+
+        [Test]
+        public void Test2()
+        {
+            var objParam = Parameter(typeof(MyClass), "myObj");
+            var boolParam = Parameter(typeof(bool), "isSomething");
+            var myMethod = typeof(MyClass).GetMethod("MyMethod").MakeGenericMethod(typeof(object));
+            var call = Call(objParam, myMethod, boolParam);
+
+            var lambda = Lambda<Func<MyClass, bool, bool>>(
+                call,
+                objParam,
+                boolParam);
+
+            var func = lambda.CompileFast();
+
+            func.Invoke(new MyClass(), false);
         }
     }
 }
