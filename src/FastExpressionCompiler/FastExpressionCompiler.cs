@@ -1164,10 +1164,13 @@ namespace FastExpressionCompiler
                     case ExpressionType.Parameter:
                         return ignoreResult || TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure,
                                    parent, isMemberAccess, isInstanceAccess, byRefIndex);
+                    case ExpressionType.Not:
+                        return TryEmitNot((UnaryExpression)expr, exprType, paramExprs, il, ref closure,
+                            ignoreResult, isMemberAccess, isInstanceAccess);
                     case ExpressionType.Convert:
                     case ExpressionType.ConvertChecked:
                         return TryEmitConvert((UnaryExpression)expr, exprType, paramExprs, il, ref closure,
-                            ignoreResult, isMemberAccess);
+                            ignoreResult, isMemberAccess, isInstanceAccess);
                     case ExpressionType.ArrayIndex:
                         return EmitBinary((BinaryExpression)expr, paramExprs, il, ref closure, ExpressionType.ArrayIndex, ignoreResult, isMemberAccess)
                             && TryEmitArrayIndex(expr.Type, il);
@@ -1681,9 +1684,27 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static bool TryEmitNot(UnaryExpression expr, Type targetType,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
+                bool ignoreResult, bool isMemberAccess, bool isInstanceAccess)
+            {
+                if (!TryEmit(expr.Operand, expr.Operand.Type, paramExprs, il, ref closure, ExpressionType.Convert, false, isMemberAccess, isInstanceAccess))
+                    return false;
+
+                if (ignoreResult)
+                    il.Emit(OpCodes.Pop);
+                else
+                {
+                    il.Emit(OpCodes.Ldc_I4_0);
+                    il.Emit(OpCodes.Ceq);
+                }
+
+                return true;
+            }
+
             private static bool TryEmitConvert(UnaryExpression expr, Type targetType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                bool ignoreResult, bool isMemberAccess)
+                bool ignoreResult, bool isMemberAccess, bool isInstanceAccess)
             {
                 var opExpr = expr.Operand;
                 var method = expr.Method;
@@ -1691,7 +1712,7 @@ namespace FastExpressionCompiler
                     return TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Call, false, isMemberAccess, true, 0) 
                         && EmitMethodCall(il, method, ignoreResult);
 
-                if (!TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Convert, false, isMemberAccess))
+                if (!TryEmit(opExpr, opExpr.Type, paramExprs, il, ref closure, ExpressionType.Convert, false, isMemberAccess, isInstanceAccess))
                     return false;
 
                 var sourceType = opExpr.Type;

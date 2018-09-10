@@ -159,6 +159,9 @@ namespace FastExpressionCompiler.LightExpression
         public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) =>
             new LambdaExpression(delegateType, body, parameters);
 
+        public static UnaryExpression Not(Expression operand) =>
+            new UnaryExpression(ExpressionType.Not, operand, operand.Type);
+
         public static UnaryExpression Convert(Expression operand, Type targetType) =>
             new UnaryExpression(ExpressionType.Convert, operand, targetType);
 

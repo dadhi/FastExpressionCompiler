@@ -873,6 +873,54 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void TestToString()
+        {
+            var body = Call(Constant(true),
+                typeof(bool).GetTypeInfo().DeclaredMethods
+                    .First(x => x.Name == "ToString" && x.GetParameters().Length == 0));
+
+            var expr = Lambda<Func<string>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled();
+
+            Assert.AreEqual("True", ret);
+        }
+
+        [Test]
+        public void Test2ToString()
+        {
+            var p = Parameter(typeof(bool));
+            var body = Call(p,
+                typeof(bool).GetTypeInfo().DeclaredMethods
+                    .First(x => x.Name == "ToString" && x.GetParameters().Length == 0));
+
+            var expr = Lambda<Func<bool, string>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled(true);
+
+            Assert.AreEqual("True", ret);
+        }
+
+        [Test]
+        public void Test3Bool()
+        {
+            var p = Parameter(typeof(bool));
+            var body = Not(p);
+
+            var expr = Lambda<Func<bool, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled(true);
+
+            Assert.AreEqual(false, ret);
+        }
+
+        [Test]
         public void ConvertNullableTest()
         {
             var body = Convert(ConvertChecked(Constant(long.MaxValue-1, typeof(long)), typeof(int)), typeof(int?));
