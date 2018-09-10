@@ -3101,12 +3101,6 @@ namespace FastExpressionCompiler
                 var labelDone = il.DefineLabel();
                 var ifFalseExpr = expr.IfFalse;
 
-                if (ifFalseExpr.NodeType == ExpressionType.Default)
-                {
-                    il.MarkLabel(labelIfFalse);
-                    return true;
-                }
-
                 il.Emit(OpCodes.Br, labelDone);
 
                 il.MarkLabel(labelIfFalse);
