@@ -1252,9 +1252,9 @@ namespace FastExpressionCompiler
                             var arithmeticExpr = (BinaryExpression)expr;
                             return
                                 TryEmit(arithmeticExpr.Left, paramExprs, il, ref closure,
-                                    parent | ParentFlags.Arithmetic) &&
+                                    (parent | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess) &&
                                 TryEmit(arithmeticExpr.Right, paramExprs, il, ref closure,
-                                    parent | ParentFlags.Arithmetic) &&
+                                    (parent | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess) &&
                                 TryEmitArithmeticOperation(expr.NodeType, expr.Type, il);
 
                         case ExpressionType.AndAlso:
