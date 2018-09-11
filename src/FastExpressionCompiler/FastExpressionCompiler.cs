@@ -61,7 +61,8 @@ namespace FastExpressionCompiler
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false) =>
             lambdaExpr.CompileFast<Delegate>(ifFastFailedReturnNull);
 
-        private static TDelegate CompileSys<TDelegate>(this Expression<TDelegate> lambdaExpr) where TDelegate : class =>
+        /// <summary>Unifies Compile for System.Linq.Expressions and FEC.LightExpression</summary>
+        public static TDelegate CompileSys<TDelegate>(this Expression<TDelegate> lambdaExpr) where TDelegate : class =>
             lambdaExpr
 #if LIGHT_EXPRESSION
             .ToLambdaExpression()
@@ -1244,7 +1245,24 @@ namespace FastExpressionCompiler
                         return TryEmitAssign((BinaryExpression)expr, paramExprs, il, ref closure, parent);
 
                     case ExpressionType.Block:
-                        return TryEmitBlock((BlockExpression)expr, paramExprs, il, ref closure, parent);
+                        var blockExpr = (BlockExpression)expr;
+                        var blockHasVars = blockExpr.Variables.Count != 0;
+                        if (blockHasVars)
+                            closure.PushBlockAndConstructLocalVars(blockExpr.Variables, il);
+
+                        // ignore result for all not the last statements in block
+                        var exprs = blockExpr.Expressions;
+                        for (var i = 0; i < exprs.Count - 1; i++)
+                            if (!TryEmit(exprs[i], paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
+                                return false;
+
+                        // last (result) statement in block will provide the result
+                        if (!TryEmit(blockExpr.Result, paramExprs, il, ref closure, parent))
+                            return false;
+
+                        if (blockHasVars)
+                            closure.PopBlock();
+                        return true;
 
                     case ExpressionType.Try:
                         return TryEmitTryCatchFinallyBlock((TryExpression)expr, paramExprs, il, ref closure, parent);
@@ -1448,21 +1466,6 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitBlock(BlockExpression blockExpr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
-            {
-                closure.PushBlockAndConstructLocalVars(blockExpr.Variables, il);
-
-                var exprs = blockExpr.Expressions;
-                var last = exprs.Count - 1;
-                for (var i = 0; i <= last; i++)
-                    if (!TryEmit(exprs[i], paramExprs, il, ref closure,
-                        i < last ? parent | ParentFlags.IgnoreResult : parent))
-                        return false;
-
-                closure.PopBlock();
-                return true;
-            }
 
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
@@ -1583,9 +1586,7 @@ namespace FastExpressionCompiler
                 var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (variable != null)
                 {
-                    if ((paramType.IsValueType() && (parent & ParentFlags.MemberAccess) != 0))
-                        il.Emit(OpCodes.Ldloca_S, variable);
-                    else if (byRefIndex >= 0)
+                    if (byRefIndex != -1 || (paramType.IsValueType() && (parent & ParentFlags.MemberAccess) != 0))
                         il.Emit(OpCodes.Ldloca_S, variable);
                     else
                         il.Emit(OpCodes.Ldloc, variable);
@@ -2369,20 +2370,20 @@ namespace FastExpressionCompiler
                 IReadOnlyList<Expression> argExprs = expr.Arguments;
                 if (argExprs.Count != 0)
                 {
+                    var args = expr.Method.GetParameters();
                     for (var i = 0; i < argExprs.Count; i++)
                     {
-                        var callParameters = expr.Method.GetParameters();
-                        var byRefIndex = callParameters[i].ParameterType.IsByRef ? i : -1;
-                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, callFlags, byRefIndex))
+                        var byRefIndex = args[i].ParameterType.IsByRef ? i : -1;
+                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, callFlags, 
+                            byRefIndex))
                             return false;
                     }
                 }
 
-                var method = expr.Method;
-                if (method.IsVirtual && objExpr?.Type.IsValueType() == true)
+                if (expr.Method.IsVirtual && objExpr?.Type.IsValueType() == true)
                     il.Emit(OpCodes.Constrained, objExpr.Type);
 
-                return EmitMethodCall(il, method, parent);
+                return EmitMethodCall(il, expr.Method, parent);
             }
 
             private static bool TryEmitMemberAccess(MemberExpression expr,
