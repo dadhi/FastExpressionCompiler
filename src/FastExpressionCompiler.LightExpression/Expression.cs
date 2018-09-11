@@ -718,7 +718,6 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType { get; }
         public override Type Type { get; }
 
-        // todo: That it is a ReadOnlyCollection<Expression> in original NewArrayExpression. 
         // I made it a ICollection for now to use Arguments as input, without changing Arguments type
         public IReadOnlyList<Expression> Expressions => Arguments;
 
