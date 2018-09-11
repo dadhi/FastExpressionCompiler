@@ -1946,7 +1946,7 @@ namespace FastExpressionCompiler
                 {
                     for (var i = 0; i < elems.Count; i++)
                         if (!TryEmit(elems[i], paramExprs, il, ref closure, parent, i))
-                            return false;
+                        return false;
 
                     il.Emit(OpCodes.Newobj, arrayType.GetTypeInfo().DeclaredConstructors.GetFirst());
                     return true;
@@ -2009,7 +2009,7 @@ namespace FastExpressionCompiler
                     var argExprs = newExpr.Arguments;
                     for (var i = 0; i < argExprs.Count; i++)
                         if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, i))
-                            return false;
+                    return false;
                     if (!TryEmitNew(newExpr.Constructor, newExpr.Type, il, valueVar))
                         return false;
                 }
@@ -2283,8 +2283,8 @@ namespace FastExpressionCompiler
                         var indexArgExprs = indexExpr.Arguments;
                         for (var i = 0; i < indexArgExprs.Count; i++)
                             if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, flags, i))
-                                return false;
-
+                            return false;
+                        
                         if (!TryEmit(right, paramExprs, il, ref closure, flags))
                             return false;
 
@@ -2361,7 +2361,7 @@ namespace FastExpressionCompiler
                         var theVar = il.DeclareLocal(objExpr.Type);
                         il.Emit(OpCodes.Stloc, theVar);
                         il.Emit(OpCodes.Ldloca, theVar);
-                    }
+                }
                 }
 
                 IReadOnlyList<Expression> argExprs = expr.Arguments;
@@ -2370,7 +2370,7 @@ namespace FastExpressionCompiler
                     argExprs = MakeByRefParameters(expr, argExprs);
                     for (var i = 0; i < argExprs.Count; i++)
                         if (!TryEmit(argExprs[i], paramExprs, il, ref closure, callFlags, i))
-                            return false;
+                    return false;
                 }
 
                 var method = expr.Method;
@@ -2619,7 +2619,7 @@ namespace FastExpressionCompiler
                     return TryEmit(lambdaExpr.Body, paramExprs, il, ref closure, parent);
 
                 if (!TryEmit(lambda, paramExprs, il, ref closure, parent))
-                    return false;
+                        return false;
 
                 var argExprs = expr.Arguments;
                 for (var i = 0; i < argExprs.Count; i++)
@@ -2965,7 +2965,8 @@ namespace FastExpressionCompiler
                 // optimization: special handling of comparing with null
                 if (testExpr is BinaryExpression b && 
                     ((testExpr.NodeType == ExpressionType.Equal || testExpr.NodeType == ExpressionType.NotEqual) &&
-                    b.Right is ConstantExpression r && r.Value == null
+                     !(b.Left.Type.IsNullable() || b.Right.Type.IsNullable()) &&
+                      b.Right is ConstantExpression r && r.Value == null
                     ? TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult)
                     : b.Left is ConstantExpression l && l.Value == null &&
                       TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult)))
