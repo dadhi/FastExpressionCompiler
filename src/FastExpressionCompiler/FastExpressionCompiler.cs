@@ -1457,7 +1457,7 @@ namespace FastExpressionCompiler
                 var last = exprs.Count - 1;
                 for (var i = 0; i <= last; i++)
                     if (!TryEmit(exprs[i], paramExprs, il, ref closure,
-                        i < last ? parent | ParentFlags.IgnoreResult : parent, i))
+                        i < last ? parent | ParentFlags.IgnoreResult : parent))
                         return false;
 
                 closure.PopBlock();
@@ -1583,7 +1583,9 @@ namespace FastExpressionCompiler
                 var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (variable != null)
                 {
-                    if (paramType.IsValueType() && (parent & ParentFlags.MemberAccess) != 0)
+                    if ((paramType.IsValueType() && (parent & ParentFlags.MemberAccess) != 0))
+                        il.Emit(OpCodes.Ldloca_S, variable);
+                    else if (byRefIndex >= 0)
                         il.Emit(OpCodes.Ldloca_S, variable);
                     else
                         il.Emit(OpCodes.Ldloc, variable);
@@ -2367,10 +2369,13 @@ namespace FastExpressionCompiler
                 IReadOnlyList<Expression> argExprs = expr.Arguments;
                 if (argExprs.Count != 0)
                 {
-                    argExprs = MakeByRefParameters(expr, argExprs);
                     for (var i = 0; i < argExprs.Count; i++)
-                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, callFlags, i))
-                    return false;
+                    {
+                        var callParameters = expr.Method.GetParameters();
+                        var byRefIndex = callParameters[i].ParameterType.IsByRef ? i : -1;
+                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, callFlags, byRefIndex))
+                            return false;
+                    }
                 }
 
                 var method = expr.Method;
@@ -2378,30 +2383,6 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Constrained, objExpr.Type);
 
                 return EmitMethodCall(il, method, parent);
-            }
-
-            // if call is done into byref method parameters there is no indicators in tree, so grab that from method
-            // current approach is to copy into new list only if there are by ref with by ref parameters,
-            // possible approach to store hit map of small size (possible 256 bit #89) to check if parameter is by ref
-            // https://stackoverflow.com/questions/12658883/what-is-the-maximum-number-of-parameters-that-a-c-sharp-method-can-be-defined-as
-            private static IReadOnlyList<Expression> MakeByRefParameters(MethodCallExpression expr, IReadOnlyList<Expression> argExprs)
-            {
-                List<Expression> someByRefArguments = null;
-                var methodParams = expr.Method.GetParameters();
-                for (var i = 0; i < methodParams.Length; i++)
-                {
-                    if (methodParams[i].ParameterType.IsByRef)
-                    {
-                        if (someByRefArguments == null) // copy arguments
-                            someByRefArguments = new List<Expression>(argExprs);
-
-                        var paramExpr = argExprs[i] as ParameterExpression;
-                        if (paramExpr != null && !paramExpr.IsByRef)
-                            someByRefArguments[i] = Expression.Parameter(paramExpr.Type.MakeByRefType(), paramExpr.Name);
-                    }
-                }
-
-                return (IReadOnlyList<Expression>)someByRefArguments ?? argExprs;
             }
 
             private static bool TryEmitMemberAccess(MemberExpression expr,
@@ -2985,11 +2966,6 @@ namespace FastExpressionCompiler
 
                 var labelDone = il.DefineLabel();
                 var ifFalseExpr = expr.IfFalse;
-                if (ifFalseExpr.NodeType == ExpressionType.Default)
-                {
-                    il.MarkLabel(labelIfFalse);
-                    return true;
-                }
 
                 il.Emit(OpCodes.Br, labelDone);
 
