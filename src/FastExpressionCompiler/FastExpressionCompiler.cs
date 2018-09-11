@@ -2695,8 +2695,11 @@ namespace FastExpressionCompiler
 
                 var argExprs = expr.Arguments;
                 for (var i = 0; i < argExprs.Count; i++)
-                    if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult, i))
+                {
+                    var byRefIndex = argExprs[i].Type.IsByRef ? i : -1;
+                    if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult, byRefIndex))
                         return false;
+                }
 
                 return EmitMethodCall(il, lambda.Type.FindDelegateInvokeMethod(), parent);
             }
