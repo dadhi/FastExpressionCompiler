@@ -1152,13 +1152,13 @@ namespace FastExpressionCompiler
 
             public static bool TryEmit(Expression expr, Type exprType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ExpressionType parent,
-                bool ignoreResult = false, bool isMemberAccess = false, int byRefIndex = -1)
+                bool ignoreResult = false, bool isMemberAccess = false, int byRefArgumentIndex = -1)
             {
                 switch (expr.NodeType)
                 {
                     case ExpressionType.Parameter:
                         return ignoreResult || TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure,
-                                   parent, isMemberAccess, byRefIndex);
+                                   parent, isMemberAccess, byRefArgumentIndex);
                     case ExpressionType.Convert:
                         return TryEmitConvert((UnaryExpression)expr, exprType, paramExprs, il, ref closure,
                             ignoreResult, isMemberAccess);
@@ -1537,7 +1537,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitParameter(ParameterExpression paramExpr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                ExpressionType parent, bool isMemberAccess, int byRefIndex = -1)
+                ExpressionType parent, bool isMemberAccess, int byRefArgumentIndex = -1)
             {
                 // if parameter is passed through, then just load it on stack
                 var paramIndex = paramExprs.GetFirstIndex(paramExpr);
@@ -1569,13 +1569,13 @@ namespace FastExpressionCompiler
                 var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (variable != null)
                 {
-                    il.Emit(paramExpr.Type.IsValueType() && isMemberAccess ? OpCodes.Ldloca_S : OpCodes.Ldloc, variable);
+                    il.Emit((paramExpr.Type.IsValueType() && isMemberAccess) || byRefArgumentIndex >= 0 ? OpCodes.Ldloca_S : OpCodes.Ldloc, variable);
                     return true;
                 }
 
                 if (paramExpr.IsByRef)
                 {
-                    il.Emit(OpCodes.Ldloca_S, byRefIndex);
+                    il.Emit(OpCodes.Ldloca_S, byRefArgumentIndex);
                     return true;
                 }
 
@@ -1661,14 +1661,15 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitMany(IReadOnlyList<Expression> exprs,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                ExpressionType parent, bool ignoreResult, bool isMemberAccess)
+                ExpressionType parent, bool ignoreResult, bool isMemberAccess, ParameterInfo[] callParameters = null)
             {
                 for (int i = 0, n = exprs.Count; i < n; i++)
                 {
                     var expr = exprs[i];
                     // ignore the result of expression if it is not the result expression, e.g. not the last expression in block
                     var ignore = ignoreResult || parent == ExpressionType.Block && expr != closure.CurrentBlock.ResultExpr;
-                    if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, ignore, isMemberAccess, i))
+                    var byRefArgumentIndex = callParameters != null ? (callParameters[i].ParameterType.IsByRef ? i : -1) : -1;
+                    if (!TryEmit(expr, expr.Type, paramExprs, il, ref closure, parent, ignore, isMemberAccess, byRefArgumentIndex))
                         return false;
                 }
 
@@ -2368,7 +2369,7 @@ namespace FastExpressionCompiler
                 }
 
                 if (expr.Arguments.Count != 0 &&
-                    !TryEmitMany(MakeByRefParameters(expr, expr.Arguments), paramExprs, il, ref closure, ExpressionType.Call, false, isMemberAccess))
+                    !TryEmitMany(expr.Arguments, paramExprs, il, ref closure, ExpressionType.Call, false, isMemberAccess, expr.Method.GetParameters()))
                     return false;
 
                 var method = expr.Method;
@@ -3019,12 +3020,6 @@ namespace FastExpressionCompiler
 
                 var labelDone = il.DefineLabel();
                 var ifFalseExpr = expr.IfFalse;
-
-                if (ifFalseExpr.NodeType == ExpressionType.Default)
-                {
-                    il.MarkLabel(labelIfFalse);
-                    return true;
-                }
 
                 il.Emit(OpCodes.Br, labelDone);
 

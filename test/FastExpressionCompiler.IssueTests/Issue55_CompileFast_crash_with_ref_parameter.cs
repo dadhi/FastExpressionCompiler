@@ -728,5 +728,81 @@ namespace FastExpressionCompiler.UnitTests
             LocalAssert(DynamicDeserializerGeneric);
             LocalAssert(compiledFast);
         }
+
+        [Test]
+        public void ConstantOutInCondition()
+        {
+            int TryParseCondition()
+            {
+                int intValue;
+                return int.TryParse("123", out intValue) ? intValue : default(int);
+            }
+
+            var intValueParameter = Parameter(typeof(int), "intValue");
+            var tryParseMethod = typeof(int)
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .First(m => m.Name == "TryParse" && m.GetParameters().Length == 2);
+            var tryParseCall = Call(
+                tryParseMethod,
+                Constant("123", typeof(string)),
+                intValueParameter);
+            var parsedValueOrDefault = Condition(
+                tryParseCall,
+                intValueParameter,
+                Default(typeof(int)));
+            var conditionBlock = Block(new[] { intValueParameter }, parsedValueOrDefault);
+            var conditionLambda = Lambda<Func<int>>(conditionBlock);
+#if !LIGHT_EXPRESSION
+            var conditionFunc = conditionLambda.Compile();
+#endif
+            var conditionFuncFast = conditionLambda.CompileFast();
+
+            void LocalAssert(Func<int> invoke)
+            {
+                var x = invoke();
+                Assert.AreEqual(123, x);
+            }
+#if !LIGHT_EXPRESSION
+            LocalAssert(conditionFunc);
+#endif
+            LocalAssert(conditionFuncFast);
+            LocalAssert(TryParseCondition);
+        }
+
+        [Test]
+        public void ConstantOut()
+        {
+            int TryParseReturn()
+            {
+                int intValue;
+                int.TryParse("123", out intValue);
+                return intValue;
+            }
+
+            var intValueParameter = Parameter(typeof(int), "intValue");
+            var tryParseMethod = typeof(int)
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .First(m => m.Name == "TryParse" && m.GetParameters().Length == 2);
+            var tryParseCall = Call(
+                tryParseMethod,
+                Constant("123", typeof(string)),
+                intValueParameter);
+            var conditionBlock = Block(new[] { intValueParameter }, tryParseCall, intValueParameter);
+            var conditionLambda = Lambda<Func<int>>(conditionBlock);
+
+            void LocalAssert(Func<int> invoke) => Assert.AreEqual(123, invoke());
+#if !LIGHT_EXPRESSION
+            var func = conditionLambda.Compile();
+#endif
+            var funcFast = conditionLambda.CompileFast();
+
+#if !LIGHT_EXPRESSION
+            LocalAssert(func);
+#endif
+            LocalAssert(funcFast);
+            LocalAssert(TryParseReturn);
+        }
+
+
+        }
     }
-}
