@@ -1157,151 +1157,172 @@ namespace FastExpressionCompiler
             public static bool TryEmit(Expression expr, IReadOnlyList<ParameterExpression> paramExprs, 
                 ILGenerator il, ref ClosureInfo closure, ParentFlags parent, int byRefIndex = -1)
             {
-                switch (expr.NodeType)
+                while (true)
                 {
-                    case ExpressionType.Parameter:
-                        return ShouldIgnoreResult(parent) || 
-                               TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
-                    case ExpressionType.Convert:
-                        return TryEmitConvert((UnaryExpression)expr, paramExprs, il, ref closure, parent);
-                    case ExpressionType.ArrayIndex:
-                        var arrIndexExpr = (BinaryExpression)expr;
-                        return TryEmit(arrIndexExpr.Left, paramExprs, il, ref closure, parent) &&
-                               TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, parent) && 
-                               TryEmitArrayIndex(expr.Type, il);
-                    case ExpressionType.Constant:
-                        return ShouldIgnoreResult(parent) || TryEmitConstant((ConstantExpression)expr, il, ref closure);
-                    case ExpressionType.Call:
-                        return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, parent);
-                    case ExpressionType.MemberAccess:
-                        return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, parent);
-                    case ExpressionType.New:
-                        var newExpr = (NewExpression)expr;
-                        var argExprs = newExpr.Arguments;
-                        for (var i = 0; i < argExprs.Count; i++)
-                            if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, i))
-                                return false;
-                        return TryEmitNew(newExpr.Constructor, newExpr.Type, il);
-                    case ExpressionType.NewArrayBounds:
-                    case ExpressionType.NewArrayInit:
-                        return EmitNewArray((NewArrayExpression)expr, paramExprs, il, ref closure, parent);
-                    case ExpressionType.MemberInit:
-                        return EmitMemberInit((MemberInitExpression)expr, paramExprs, il, ref closure, parent);
-                    case ExpressionType.Lambda:
-                        return TryEmitNestedLambda((LambdaExpression)expr, paramExprs, il, ref closure);
-
-                    case ExpressionType.Invoke:
-                        return TryEmitInvoke((InvocationExpression)expr, paramExprs, il, ref closure, parent);
-
-                    case ExpressionType.GreaterThan:
-                    case ExpressionType.GreaterThanOrEqual:
-                    case ExpressionType.LessThan:
-                    case ExpressionType.LessThanOrEqual:
-                    case ExpressionType.Equal:
-                    case ExpressionType.NotEqual:
-                        var binaryExpr = (BinaryExpression)expr;
-                        return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, binaryExpr.NodeType, 
-                            paramExprs, il, ref closure, parent);
-
-                    case ExpressionType.Add:
-                    case ExpressionType.AddChecked:
-                    case ExpressionType.Subtract:
-                    case ExpressionType.SubtractChecked:
-                    case ExpressionType.Multiply:
-                    case ExpressionType.MultiplyChecked:
-                    case ExpressionType.Divide:
-                    case ExpressionType.Modulo:
-                    case ExpressionType.Power:
-                    case ExpressionType.And:
-                    case ExpressionType.Or:
-                    case ExpressionType.ExclusiveOr:
-                    case ExpressionType.LeftShift:
-                    case ExpressionType.RightShift:
-                        var arithmeticExpr = (BinaryExpression)expr;
-                        return 
-                            TryEmit(arithmeticExpr.Left, paramExprs, il, ref closure, parent | ParentFlags.Arithmetic) &&
-                            TryEmit(arithmeticExpr.Right, paramExprs, il, ref closure, parent | ParentFlags.Arithmetic) &&
-                            TryEmitArithmeticOperation(expr.NodeType, expr.Type, il);
-
-                    case ExpressionType.AndAlso:
-                    case ExpressionType.OrElse:
-                        return TryEmitLogicalOperator((BinaryExpression)expr, paramExprs, il, ref closure, parent);
-
-                    case ExpressionType.Coalesce:
-                        return TryEmitCoalesceOperator((BinaryExpression)expr, paramExprs, il, ref closure, parent);
-
-                    case ExpressionType.Conditional:
-                        return TryEmitConditional((ConditionalExpression)expr, paramExprs, il, ref closure, parent);
-
-                    case ExpressionType.PostIncrementAssign:
-                    case ExpressionType.PreIncrementAssign:
-                    case ExpressionType.PostDecrementAssign:
-                    case ExpressionType.PreDecrementAssign:
-                        return TryEmitIncDecAssign((UnaryExpression)expr, il, ref closure, parent);
-
-                    case ExpressionType arithmeticAssign
-                        when Tools.GetArithmeticFromArithmeticAssignOrSelf(arithmeticAssign) != arithmeticAssign:
-                    case ExpressionType.Assign:
-                        return TryEmitAssign((BinaryExpression)expr, paramExprs, il, ref closure, parent);
-
-                    case ExpressionType.Block:
-                        var blockExpr = (BlockExpression)expr;
-                        var blockHasVars = blockExpr.Variables.Count != 0;
-                        if (blockHasVars)
-                            closure.PushBlockAndConstructLocalVars(blockExpr.Variables, il);
-
-                        // ignore result for all not the last statements in block
-                        var exprs = blockExpr.Expressions;
-                        for (var i = 0; i < exprs.Count - 1; i++)
-                            if (!TryEmit(exprs[i], paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
-                                return false;
-
-                        // last (result) statement in block will provide the result
-                        if (!TryEmit(blockExpr.Result, paramExprs, il, ref closure, parent))
-                            return false;
-
-                        if (blockHasVars)
-                            closure.PopBlock();
-                        return true;
-
-                    case ExpressionType.Try:
-                        return TryEmitTryCatchFinallyBlock((TryExpression)expr, paramExprs, il, ref closure, parent);
-
-                    case ExpressionType.Throw:
+                    switch (expr.NodeType)
                     {
-                        var opExpr = ((UnaryExpression)expr).Operand;
-                        if (!TryEmit(opExpr, paramExprs, il, ref closure, parent))
-                            return false;
-                        il.ThrowException(opExpr.Type);
-                        return true;
-                    }
+                        case ExpressionType.Parameter:
+                            return ShouldIgnoreResult(parent) ||
+                                   TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent,
+                                       byRefIndex);
 
-                    case ExpressionType.Default:
-                        return expr.Type == typeof(void) || ShouldIgnoreResult(parent) || EmitDefault(expr.Type, il);
+                        case ExpressionType.Convert:
+                            return TryEmitConvert((UnaryExpression)expr, paramExprs, il, ref closure, parent);
 
-                    case ExpressionType.Index:
-                        var indexExpr = (IndexExpression)expr;
-                        if (indexExpr.Object != null && !TryEmit(indexExpr.Object, paramExprs, il, ref closure, parent))
-                            return false;
+                        case ExpressionType.ArrayIndex:
+                            var arrIndexExpr = (BinaryExpression)expr;
+                            return TryEmit(arrIndexExpr.Left, paramExprs, il, ref closure, parent) &&
+                                   TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, parent) &&
+                                   TryEmitArrayIndex(expr.Type, il);
 
-                        var indexArgExprs = indexExpr.Arguments;
-                        for (var i = 0; i < indexArgExprs.Count; i++)
-                            if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, parent, i))
+                        case ExpressionType.Constant:
+                            return ShouldIgnoreResult(parent) ||
+                                   TryEmitConstant((ConstantExpression)expr, il, ref closure);
+
+                        case ExpressionType.Call:
+                            return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.MemberAccess:
+                            return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.New:
+                            var newExpr = (NewExpression)expr;
+                            var argExprs = newExpr.Arguments;
+                            for (var i = 0; i < argExprs.Count; i++)
+                                if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, i))
+                                    return false;
+                            return TryEmitNew(newExpr.Constructor, newExpr.Type, il);
+
+                        case ExpressionType.NewArrayBounds:
+                        case ExpressionType.NewArrayInit:
+                            return EmitNewArray((NewArrayExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.MemberInit:
+                            return EmitMemberInit((MemberInitExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.Lambda:
+                            return TryEmitNestedLambda((LambdaExpression)expr, paramExprs, il, ref closure);
+
+                        case ExpressionType.Invoke:
+                            return TryEmitInvoke((InvocationExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.GreaterThan:
+                        case ExpressionType.GreaterThanOrEqual:
+                        case ExpressionType.LessThan:
+                        case ExpressionType.LessThanOrEqual:
+                        case ExpressionType.Equal:
+                        case ExpressionType.NotEqual:
+                            var binaryExpr = (BinaryExpression)expr;
+                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, binaryExpr.NodeType,
+                                paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.Add:
+                        case ExpressionType.AddChecked:
+                        case ExpressionType.Subtract:
+                        case ExpressionType.SubtractChecked:
+                        case ExpressionType.Multiply:
+                        case ExpressionType.MultiplyChecked:
+                        case ExpressionType.Divide:
+                        case ExpressionType.Modulo:
+                        case ExpressionType.Power:
+                        case ExpressionType.And:
+                        case ExpressionType.Or:
+                        case ExpressionType.ExclusiveOr:
+                        case ExpressionType.LeftShift:
+                        case ExpressionType.RightShift:
+                            var arithmeticExpr = (BinaryExpression)expr;
+                            return
+                                TryEmit(arithmeticExpr.Left, paramExprs, il, ref closure,
+                                    parent | ParentFlags.Arithmetic) &&
+                                TryEmit(arithmeticExpr.Right, paramExprs, il, ref closure,
+                                    parent | ParentFlags.Arithmetic) &&
+                                TryEmitArithmeticOperation(expr.NodeType, expr.Type, il);
+
+                        case ExpressionType.AndAlso:
+                        case ExpressionType.OrElse:
+                            return TryEmitLogicalOperator((BinaryExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.Coalesce:
+                            return TryEmitCoalesceOperator((BinaryExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.Conditional:
+                            return TryEmitConditional((ConditionalExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.PostIncrementAssign:
+                        case ExpressionType.PreIncrementAssign:
+                        case ExpressionType.PostDecrementAssign:
+                        case ExpressionType.PreDecrementAssign:
+                            return TryEmitIncDecAssign((UnaryExpression)expr, il, ref closure, parent);
+
+                        case ExpressionType arithmeticAssign
+                            when Tools.GetArithmeticFromArithmeticAssignOrSelf(arithmeticAssign) != arithmeticAssign:
+                        case ExpressionType.Assign:
+                            return TryEmitAssign((BinaryExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.Block:
+                            var blockExpr = (BlockExpression)expr;
+                            var blockHasVars = blockExpr.Variables.Count != 0;
+                            if (blockHasVars)
+                                closure.PushBlockAndConstructLocalVars(blockExpr.Variables, il);
+
+                            // ignore result for all not the last statements in block
+                            var exprs = blockExpr.Expressions;
+                            for (var i = 0; i < exprs.Count - 1; i++)
+                                if (!TryEmit(exprs[i], paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
+                                    return false;
+
+                            // last (result) statement in block will provide the result
+                            expr = blockExpr.Result;
+                            if (!blockHasVars)
+                                continue; // omg, no recursion!
+
+                            if (!TryEmit(blockExpr.Result, paramExprs, il, ref closure, parent))
+                                return false;
+                            closure.PopBlock();
+                            return true;
+
+                        case ExpressionType.Try:
+                            return TryEmitTryCatchFinallyBlock((TryExpression)expr, paramExprs, il, ref closure,
+                                parent);
+
+                        case ExpressionType.Throw:
+                        {
+                            var opExpr = ((UnaryExpression)expr).Operand;
+                            if (!TryEmit(opExpr, paramExprs, il, ref closure, parent))
+                                return false;
+                            il.ThrowException(opExpr.Type);
+                            return true;
+                        }
+
+                        case ExpressionType.Default:
+                            return expr.Type == typeof(void) || ShouldIgnoreResult(parent) ||
+                                   EmitDefault(expr.Type, il);
+
+                        case ExpressionType.Index:
+                            var indexExpr = (IndexExpression)expr;
+                            if (indexExpr.Object != null &&
+                                !TryEmit(indexExpr.Object, paramExprs, il, ref closure, parent))
                                 return false;
 
-                        return TryEmitIndex((IndexExpression)expr, il);
+                            var indexArgExprs = indexExpr.Arguments;
+                            for (var i = 0; i < indexArgExprs.Count; i++)
+                                if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, parent, i))
+                                    return false;
 
-                    case ExpressionType.Goto:
-                        return TryEmitGoto((GotoExpression)expr, il, ref closure);
+                            return TryEmitIndex((IndexExpression)expr, il);
 
-                    case ExpressionType.Label:
-                        return TryEmitLabel((LabelExpression)expr, paramExprs, il, ref closure, parent);
+                        case ExpressionType.Goto:
+                            return TryEmitGoto((GotoExpression)expr, il, ref closure);
 
-                    case ExpressionType.Switch:
-                        return TryEmitSwitch((SwitchExpression)expr, paramExprs, il, ref closure, parent);
+                        case ExpressionType.Label:
+                            return TryEmitLabel((LabelExpression)expr, paramExprs, il, ref closure, parent);
 
-                    default:
-                        return false;
+                        case ExpressionType.Switch:
+                            return TryEmitSwitch((SwitchExpression)expr, paramExprs, il, ref closure, parent);
+
+                        default:
+                            return false;
+                    }
                 }
             }
 
@@ -1317,7 +1338,7 @@ namespace FastExpressionCompiler
                 return expr.DefaultValue == null || TryEmit(expr.DefaultValue, paramExprs, il, ref closure, parent);
             }
 
-            // todo : GotoExpression.Value 
+            // todo: GotoExpression.Value 
             private static bool TryEmitGoto(GotoExpression exprObj, ILGenerator il, ref ClosureInfo closure)
             {
                 var labels = closure.Labels;
