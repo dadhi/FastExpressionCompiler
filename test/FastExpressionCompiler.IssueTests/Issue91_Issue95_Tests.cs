@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using ILDebugging.Decoder;
 using NUnit.Framework;
