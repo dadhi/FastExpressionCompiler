@@ -1009,6 +1009,10 @@ namespace FastExpressionCompiler
                                 return false;
                         return true;
 
+                    case ExpressionType.Extension:
+                        expr = expr.Reduce();
+                        continue;
+
                     case ExpressionType.Default:
                         return true;
 
@@ -1338,6 +1342,10 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Switch:
                             return TryEmitSwitch((SwitchExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.Extension:
+                            expr = expr.Reduce();
+                            continue;
 
                         default:
                             return false;
