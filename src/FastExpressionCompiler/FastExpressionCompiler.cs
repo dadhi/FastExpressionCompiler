@@ -1177,17 +1177,7 @@ namespace FastExpressionCompiler
                                        byRefIndex);
 
                         case ExpressionType.Not:
-                            var notExpr = (UnaryExpression)expr;
-                            if (!TryEmit(notExpr.Operand, paramExprs, il, ref closure, parent))
-                                return false;
-                            if ((parent & ParentFlags.IgnoreResult) > 0)
-                                il.Emit(OpCodes.Pop);
-                            else
-                            {
-                                il.Emit(OpCodes.Ldc_I4_0);
-                                il.Emit(OpCodes.Ceq);
-                            }
-                            return true;
+                            return TryEmitNot((UnaryExpression)expr, paramExprs, il, ref closure, parent);
                         case ExpressionType.Convert:
                         case ExpressionType.ConvertChecked:
                             return TryEmitConvert((UnaryExpression)expr, paramExprs, il, ref closure, parent);
@@ -1722,6 +1712,22 @@ namespace FastExpressionCompiler
                 }
             }
 
+            private static bool TryEmitNot(UnaryExpression expr,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
+                ParentFlags parent)
+            {
+                if (!TryEmit(expr.Operand, paramExprs, il, ref closure, parent))
+                    return false;
+                if ((parent & ParentFlags.IgnoreResult) > 0)
+                    il.Emit(OpCodes.Pop);
+                else
+                {
+                    il.Emit(OpCodes.Ldc_I4_0);
+                    il.Emit(OpCodes.Ceq);
+                }
+                return true;
+            }
+
             private static bool TryEmitConvert(UnaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
@@ -1776,14 +1782,11 @@ namespace FastExpressionCompiler
                         var locT = il.DeclareLocal(targetType);
                         il.Emit(OpCodes.Stloc_S, loc);
                         il.Emit(OpCodes.Ldloca_S, loc);
-                        var hasValueMethod = sourceTypeInfo.GetDeclaredMethod("get_HasValue");
-                        if (!EmitMethodCall(il, hasValueMethod))
+                        if (!EmitMethodCall(il, sourceType.FindNullableHasValueGetterMethod()))
                             return false;
                         il.Emit(OpCodes.Brfalse, labelFalse);
                         il.Emit(OpCodes.Ldloca_S, loc);
-                        var mthValue = sourceTypeInfo.GetDeclaredMethods("GetValueOrDefault")
-                            .GetFirst(x => x.GetParameters().Length == 0);
-                        if (!EmitMethodCall(il, mthValue))
+                        if (!EmitMethodCall(il, sourceType.FindNullableValueOrDefaultMethod()))
                             return false;
                         TryEmitValueConvert(Nullable.GetUnderlyingType(targetType), il,
                             expr.NodeType == ExpressionType.ConvertChecked);

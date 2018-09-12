@@ -50,6 +50,9 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Converts to Expression and outputs its as string</summary>
         public override string ToString() => ToExpression().ToString();
 
+        /// <summary>Reduces the Expression to simple ones</summary>
+        public virtual Expression Reduce() => this;
+
         public static ParameterExpression Parameter(Type type, string name = null) =>
             new ParameterExpression(type.IsByRef ? type.GetElementType() : type, name, type.IsByRef);
 
