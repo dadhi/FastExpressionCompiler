@@ -1202,8 +1202,11 @@ namespace FastExpressionCompiler
                             var newExpr = (NewExpression)expr;
                             var argExprs = newExpr.Arguments;
                             for (var i = 0; i < argExprs.Count; i++)
-                                if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, i))
+                            {
+                                var idx = argExprs[i].Type.IsByRef ? i : -1;
+                                if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, idx))
                                     return false;
+                            }
                             return TryEmitNew(newExpr.Constructor, newExpr.Type, il);
 
                         case ExpressionType.NewArrayBounds:
