@@ -279,6 +279,56 @@ namespace FastExpressionCompiler.UnitTests
             Value2 = 2,
         }
 
+#if !LIGHT_EXPRESSION
+        [Test]
+        public void Equal1_Test()
+        {
+            var p = Parameter(typeof(object));
+            var pp = new Patient();
+            var body = Equal(Constant(pp), p);
+            Expression<Func<object, bool>> e = (o) => o == pp;
+            var expr = Lambda<Func<object, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+            var c = expr.Compile();
+
+            Assert.AreEqual(c(pp), compiled(pp));
+            Assert.AreEqual(c(new Patient()), compiled(new Patient()));
+        }
+
+        [Test]
+        public void Equal2_Test()
+        {
+            var p = Parameter(typeof(Patient));
+            var pp = new Patient();
+            var body = Equal(Constant(pp), p);
+            Expression<Func<object, bool>> e = (o) => o == pp;
+            var expr = Lambda<Func<Patient, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+            var c = expr.Compile();
+
+            Assert.AreEqual(c(pp), compiled(pp));
+            Assert.AreEqual(c(new Patient()), compiled(new Patient()));
+        }
+
+        [Test]
+        public void Equal3_Test()
+        {
+            var p = Parameter(typeof(Patient));
+            var pp = new Patient2();
+            var body = Equal(Constant(pp), p);
+            Expression<Func<Patient, bool>> e = (o) => o == pp;
+            var expr = Lambda<Func<Patient, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+            var c = expr.Compile();
+
+            Assert.AreEqual(c(pp), compiled(pp));
+            Assert.AreEqual(c(new Patient()), compiled(new Patient()));
+        }
+#endif
+
         [Test]
         public void Enum_to_enum_conversion()
         {
@@ -1012,6 +1062,45 @@ namespace FastExpressionCompiler.UnitTests
             var ret = compiled();
 
             Assert.AreEqual(0x10, ret);
+        }
+
+        public class Patient2 : Patient { }
+
+        public class Patient
+        {
+            public int PersonID;
+            public string Diagnosis;
+
+            public static bool operator ==(Patient a, Patient b)
+            {
+                return Equals(a, b);
+            }
+            public static bool operator !=(Patient a, Patient b)
+            {
+                return !Equals(a, b);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Patient);
+            }
+
+            public bool Equals(Patient other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return other.PersonID == PersonID && Equals(other.Diagnosis, Diagnosis);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var result = PersonID;
+                    result = (result * 397) ^ (Diagnosis != null ? Diagnosis.GetHashCode() : 0);
+                    return result;
+                }
+            }
         }
 
         class TestClass1

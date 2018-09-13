@@ -2827,9 +2827,6 @@ namespace FastExpressionCompiler
                 if (exprRight is ConstantExpression c && c.Value == null && exprRight.Type == typeof(object))
                     rightOpType = leftOpType;
 
-                if (leftOpType != rightOpType)
-                    return false;
-
                 LocalBuilder lVar = null, rVar = null;
                 if (!TryEmit(exprLeft, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                     return false;
@@ -2848,6 +2845,32 @@ namespace FastExpressionCompiler
 
                 if (!TryEmit(exprRight, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                     return false;
+
+                if (leftOpType != rightOpType)
+                {
+                    if (leftOpType.GetTypeInfo().IsClass && rightOpType.GetTypeInfo().IsClass && (leftOpType == typeof(object) || rightOpType == typeof(object)))
+                    {
+                        if (expressionType == ExpressionType.Equal)
+                        {
+                            il.Emit(OpCodes.Ceq);
+                            if ((parent & ParentFlags.IgnoreResult) > 0)
+                                il.Emit(OpCodes.Pop);
+                        }
+                        else if (expressionType == ExpressionType.NotEqual)
+                        {
+                            il.Emit(OpCodes.Ceq);
+                            il.Emit(OpCodes.Ldc_I4_0);
+                            il.Emit(OpCodes.Ceq);
+                        }
+                        else
+                            return false;
+
+                        if ((parent & ParentFlags.IgnoreResult) > 0)
+                            il.Emit(OpCodes.Pop);
+
+                        return true;
+                    }
+                }
 
                 if (rightOpType.IsNullable())
                 {
