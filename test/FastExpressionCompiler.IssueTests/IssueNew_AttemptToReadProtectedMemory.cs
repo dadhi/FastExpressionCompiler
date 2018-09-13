@@ -87,7 +87,11 @@ namespace FastExpressionCompiler.UnitTests
                 new[] { valueKeyVariable, valueVariable },
                 structValueAssignment);
 
-            var structMapping = Block(structVariableAssignment, structPopulation, structVariable);
+            var structMapping = Block(
+                new[] { structVariable },
+                structVariableAssignment,
+                structPopulation,
+                structVariable);
 
             var populationLambda = Lambda<Func<MappingData<Dictionary<string, int>, PublicPropertyStruct<string>>, PublicPropertyStruct<string>>>(
                 structMapping,
