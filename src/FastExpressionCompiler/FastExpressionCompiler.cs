@@ -1323,8 +1323,11 @@ namespace FastExpressionCompiler
 
                             var indexArgExprs = indexExpr.Arguments;
                             for (var i = 0; i < indexArgExprs.Count; i++)
-                                if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, parent, i))
+                            {
+                                var idx = indexArgExprs[i].Type.IsByRef ? i : -1;
+                                if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, parent, idx))
                                     return false;
+                            }
 
                             return TryEmitIndex((IndexExpression)expr, il);
 
