@@ -3018,18 +3018,28 @@ namespace FastExpressionCompiler
             {
                 if (!exprType.IsPrimitive())
                 {
-                    var methodName
-                        = exprNodeType == ExpressionType.Add ? "op_Addition"
-                        : exprNodeType == ExpressionType.AddChecked ? "op_Addition"
-                        : exprNodeType == ExpressionType.Subtract ? "op_Subtraction"
-                        : exprNodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
-                        : exprNodeType == ExpressionType.Multiply ? "op_Multiply"
-                        : exprNodeType == ExpressionType.MultiplyChecked ? "op_Multiply"
-                        : exprNodeType == ExpressionType.Divide ? "op_Division"
-                        : exprNodeType == ExpressionType.Modulo ? "op_Modulus"
-                        : null;
+                    MethodInfo method = null;
+                    if (exprType == typeof(string))
+                        method = typeof(string).GetTypeInfo().DeclaredMethods.First(x =>
+                            x.Name == "Concat" && x.GetParameters().Length == 2 &&
+                            x.GetParameters()[0].ParameterType == typeof(string));
+                    else
+                    {
+                        var methodName
+                            = exprNodeType == ExpressionType.Add ? "op_Addition"
+                            : exprNodeType == ExpressionType.AddChecked ? "op_Addition"
+                            : exprNodeType == ExpressionType.Subtract ? "op_Subtraction"
+                            : exprNodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
+                            : exprNodeType == ExpressionType.Multiply ? "op_Multiply"
+                            : exprNodeType == ExpressionType.MultiplyChecked ? "op_Multiply"
+                            : exprNodeType == ExpressionType.Divide ? "op_Division"
+                            : exprNodeType == ExpressionType.Modulo ? "op_Modulus"
+                            : null;
+                        if (methodName != null)
+                            method = exprType.FindMethod(methodName);
+                    }
 
-                    return methodName != null && EmitMethodCall(il, exprType.FindMethod(methodName));
+                    return method != null && EmitMethodCall(il, method);
                 }
 
                 switch (exprNodeType)
