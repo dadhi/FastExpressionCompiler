@@ -881,7 +881,7 @@ namespace FastExpressionCompiler
 
         private static bool IsClosureBoundConstant(object value, TypeInfo type) =>
             value is Delegate ||
-            !type.IsPrimitive && !type.IsEnum && !(value is string) && !(value is Type);
+            !type.IsPrimitive && !type.IsEnum && !(value is string) && !(value is Type) && !(value is decimal);
 
         // @paramExprs is required for nested lambda compilation
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr, IReadOnlyList<ParameterExpression> paramExprs)
@@ -1953,6 +1953,44 @@ namespace FastExpressionCompiler
                         unchecked
                         {
                             il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)constantValue).ToUInt64());
+                        }
+                    }
+                    else if (constantType == typeof(decimal))
+                    {
+                        var value = (decimal)constantValue;
+                        if (value % 1 == 0)
+                        {
+                            if (value <= int.MaxValue && value >= int.MinValue)
+                            {
+                                EmitLoadConstantInt(il, decimal.ToInt32(value));
+                                il.Emit(OpCodes.Newobj,
+                                    typeof(decimal).GetTypeInfo().DeclaredConstructors.First(x =>
+                                        x.GetParameters().Length == 1 &&
+                                        x.GetParameters()[0].ParameterType == typeof(int)));
+                            }
+                            else if (value <= long.MaxValue && value >= long.MinValue)
+                            {
+                                il.Emit(OpCodes.Ldc_I8, decimal.ToInt64(value));
+                                il.Emit(OpCodes.Newobj,
+                                    typeof(decimal).GetTypeInfo().DeclaredConstructors.First(x =>
+                                        x.GetParameters().Length == 1 &&
+                                        x.GetParameters()[0].ParameterType == typeof(int)));
+                            }
+                        }
+                        else
+                        {
+                            int[] parts = Decimal.GetBits(value);
+                            bool sign = (parts[3] & 0x80000000) != 0;
+                            byte scale = (byte)((parts[3] >> 16) & 0x7F);
+                            EmitLoadConstantInt(il, parts[0]);
+                            EmitLoadConstantInt(il, parts[1]);
+                            EmitLoadConstantInt(il, parts[2]);
+                            il.Emit(sign ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                            EmitLoadConstantInt(il, scale);
+                            il.Emit(OpCodes.Conv_U1);
+                            il.Emit(OpCodes.Newobj,
+                                typeof(decimal).GetTypeInfo().DeclaredConstructors.First(x =>
+                                    x.GetParameters().Length == 5));
                         }
                     }
                     else return false;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using NUnit.Framework;
 
@@ -903,6 +904,32 @@ namespace FastExpressionCompiler.UnitTests
             var ret = compiled(true);
 
             Assert.AreEqual("True", ret);
+        }
+
+        [Test]
+        public void TestDecimal()
+        {
+            var body = Constant(5.64m);
+
+            var expr = Lambda<Func<Decimal>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled();
+            Assert.AreEqual(5.64m, ret);
+        }
+
+        [Test]
+        public void TestDecimal1()
+        {
+            var body = Constant(5m);
+
+            var expr = Lambda<Func<Decimal>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled();
+            Assert.AreEqual(5m, ret);
         }
 
         [Test]
