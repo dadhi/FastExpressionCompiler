@@ -1038,6 +1038,12 @@ namespace FastExpressionCompiler
                             continue;
                         }
 
+                        if (expr is TypeBinaryExpression typeBinaryExpr)
+                        {
+                            expr = typeBinaryExpr.Expression;
+                            continue;
+                        }
+
                         return false;
                 }
             }
@@ -1184,6 +1190,8 @@ namespace FastExpressionCompiler
                                        byRefIndex);
                         case ExpressionType.TypeAs:
                             return TryEmitTypeAs((UnaryExpression)expr, paramExprs, il, ref closure, parent);
+                        case ExpressionType.TypeIs:
+                            return TryEmitTypeIs((TypeBinaryExpression)expr, paramExprs, il, ref closure, parent);
                         case ExpressionType.Not:
                             return TryEmitNot((UnaryExpression)expr, paramExprs, il, ref closure, parent);
                         case ExpressionType.Convert:
@@ -1738,6 +1746,22 @@ namespace FastExpressionCompiler
                 else
                 {
                     il.Emit(OpCodes.Isinst, expr.Type);
+                }
+                return true;
+            }
+            private static bool TryEmitTypeIs(TypeBinaryExpression expr,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
+                ParentFlags parent)
+            {
+                if (!TryEmit(expr.Expression, paramExprs, il, ref closure, parent))
+                    return false;
+                if ((parent & ParentFlags.IgnoreResult) > 0)
+                    il.Emit(OpCodes.Pop);
+                else
+                {
+                    il.Emit(OpCodes.Isinst, expr.TypeOperand);
+                    il.Emit(OpCodes.Ldnull);
+                    il.Emit(OpCodes.Cgt_Un);
                 }
                 return true;
             }
@@ -3037,7 +3061,7 @@ namespace FastExpressionCompiler
                     if (exprType.IsNullable())
                         exprType = Nullable.GetUnderlyingType(exprType);
 
-                    if (!exprType.IsPrimitive)
+                    if (!exprType.IsPrimitive())
                     {
                         MethodInfo method = null;
                         if (exprType == typeof(string))

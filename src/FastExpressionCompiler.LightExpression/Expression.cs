@@ -165,8 +165,11 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression Not(Expression operand) =>
             new UnaryExpression(ExpressionType.Not, operand, operand.Type);
 
-        public static UnaryExpression TypeAs(Expression operand, Type type) =>
-            new UnaryExpression(ExpressionType.TypeAs, operand, type);
+        public static TypeBinaryExpression TypeAs(Expression operand, Type type) =>
+            new TypeBinaryExpression(ExpressionType.TypeAs, operand, type);
+
+        public static UnaryExpression TypeIs(Expression operand, Type type) =>
+            new UnaryExpression(ExpressionType.TypeIs, operand, type);
 
         public static UnaryExpression Convert(Expression operand, Type targetType) =>
             new UnaryExpression(ExpressionType.Convert, operand, targetType);
@@ -580,6 +583,26 @@ namespace FastExpressionCompiler.LightExpression
             }
             else
                 Type = type;
+        }
+    }
+
+    public class TypeBinaryExpression : Expression
+    {
+        public override ExpressionType NodeType { get; }
+        public override Type Type { get; }
+
+        public Type TypeOperand { get; }
+
+        public readonly Expression Expression;
+
+        public override SysExpr ToExpression() => SysExpr.TypeIs(Expression.ToExpression(), TypeOperand);
+
+        internal TypeBinaryExpression(ExpressionType nodeType, Expression expression, Type typeOperand)
+        {
+            NodeType = nodeType;
+            Expression = expression;
+            Type = typeof(bool);
+            TypeOperand = typeOperand;
         }
     }
 
