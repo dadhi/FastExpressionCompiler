@@ -1189,8 +1189,9 @@ namespace FastExpressionCompiler
                                    TryEmitArrayIndex(expr.Type, il);
 
                         case ExpressionType.Constant:
+                            var constantExpression = (ConstantExpression)expr;
                             return ShouldIgnoreResult(parent) ||
-                                   TryEmitConstant((ConstantExpression)expr, il, ref closure);
+                                   TryEmitConstant(constantExpression, constantExpression.Type, constantExpression.Value, il, ref closure);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, parent);
@@ -1855,10 +1856,8 @@ namespace FastExpressionCompiler
                     (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
                     m.GetParameters()[0].ParameterType == sourceType);
 
-            private static bool TryEmitConstant(ConstantExpression expr, ILGenerator il, ref ClosureInfo closure)
+            private static bool TryEmitConstant(ConstantExpression expr, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure)
             {
-                var exprType = expr.Type;
-                var constantValue = expr.Value;
                 if (constantValue == null)
                 {
                     if (exprType.IsValueType()) // handles the conversion of null to Nullable<T>
@@ -1869,7 +1868,7 @@ namespace FastExpressionCompiler
                 }
 
                 var constantType = constantValue.GetType();
-                if (IsClosureBoundConstant(constantValue, constantType.GetTypeInfo()))
+                if (expr != null && IsClosureBoundConstant(constantValue, constantType.GetTypeInfo()))
                 {
                     var constIndex = closure.Constants.GetFirstIndex(expr);
                     if (constIndex == -1 || !LoadClosureFieldOrItem(ref closure, il, constIndex, exprType))
@@ -2551,7 +2550,15 @@ namespace FastExpressionCompiler
                 if (field != null)
                 {
                     if (field.IsStatic)
-                        il.Emit(OpCodes.Ldsfld, field);
+                    {
+                        if (field.IsLiteral)
+                        {
+                            var value = field.GetValue(null);
+                            TryEmitConstant(null, field.FieldType, value, il, ref closure);
+                        }
+                        else
+                            il.Emit(OpCodes.Ldsfld, field);
+                    }
                     else
                     {
                         closure.LastEmitIsAddress = (field.FieldType.GetTypeInfo().IsValueType && (parent & ParentFlags.InstanceAccess) > 0);
