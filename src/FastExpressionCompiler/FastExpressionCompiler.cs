@@ -1182,7 +1182,8 @@ namespace FastExpressionCompiler
                             return ShouldIgnoreResult(parent) ||
                                    TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent,
                                        byRefIndex);
-
+                        case ExpressionType.TypeAs:
+                            return TryEmitTypeAs((UnaryExpression)expr, paramExprs, il, ref closure, parent);
                         case ExpressionType.Not:
                             return TryEmitNot((UnaryExpression)expr, paramExprs, il, ref closure, parent);
                         case ExpressionType.Convert:
@@ -1724,6 +1725,21 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Ldarg, paramIndex);
                         break;
                 }
+            }
+
+            private static bool TryEmitTypeAs(UnaryExpression expr,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
+                ParentFlags parent)
+            {
+                if (!TryEmit(expr.Operand, paramExprs, il, ref closure, parent))
+                    return false;
+                if ((parent & ParentFlags.IgnoreResult) > 0)
+                    il.Emit(OpCodes.Pop);
+                else
+                {
+                    il.Emit(OpCodes.Isinst, expr.Type);
+                }
+                return true;
             }
 
             private static bool TryEmitNot(UnaryExpression expr,

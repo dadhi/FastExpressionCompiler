@@ -327,6 +327,22 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(c(pp), compiled(pp));
             Assert.AreEqual(c(new Patient()), compiled(new Patient()));
         }
+
+        [Test]
+        public void TypeAs_Test()
+        {
+            var p = Parameter(typeof(object));
+            var body = TypeAs(p, typeof(Patient));
+            var expr = Lambda<Func<object, Patient>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+            var c = expr.Compile();
+
+            var pp = new Patient();
+            var s = "a";
+            Assert.AreEqual(c(pp), compiled(pp));
+            Assert.AreEqual(c(s), compiled(s));
+        }
 #endif
 
         [Test]

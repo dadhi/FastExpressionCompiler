@@ -165,6 +165,9 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression Not(Expression operand) =>
             new UnaryExpression(ExpressionType.Not, operand, operand.Type);
 
+        public static UnaryExpression TypeAs(Expression operand, Type type) =>
+            new UnaryExpression(ExpressionType.TypeAs, operand, type);
+
         public static UnaryExpression Convert(Expression operand, Type targetType) =>
             new UnaryExpression(ExpressionType.Convert, operand, targetType);
 
