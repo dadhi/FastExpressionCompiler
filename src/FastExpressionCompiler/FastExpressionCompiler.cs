@@ -360,6 +360,8 @@ namespace FastExpressionCompiler
             public NestedLambdaInfo[] NestedLambdas;
             public LambdaExpression[] NestedLambdaExprs;
 
+            public Dictionary<Expression, Expression> ReducedExpressions;
+
             public int ClosedItemCount => Constants.Length + NonPassedParameters.Length + NestedLambdas.Length;
 
             // FieldInfos are needed to load field of closure object on stack in emitter.
@@ -387,6 +389,7 @@ namespace FastExpressionCompiler
                 Labels = null;
                 LabelCount = 0;
                 LastEmitIsAddress = false;
+                ReducedExpressions = null;
 
                 if (closure == null)
                 {
@@ -1010,7 +1013,11 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.Extension:
-                        expr = expr.Reduce();
+                        var reducedExpr = expr.Reduce();
+                        if (closure.ReducedExpressions == null)
+                            closure.ReducedExpressions = new Dictionary<Expression, Expression>();
+                        closure.ReducedExpressions.Add(expr, reducedExpr);
+                        expr = reducedExpr;
                         continue;
 
                     case ExpressionType.Default:
@@ -1341,7 +1348,7 @@ namespace FastExpressionCompiler
                             return TryEmitSwitch((SwitchExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.Extension:
-                            expr = expr.Reduce();
+                            expr = closure.ReducedExpressions[expr];
                             continue;
 
                         default:
