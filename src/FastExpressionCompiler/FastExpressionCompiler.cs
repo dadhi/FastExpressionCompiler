@@ -2546,6 +2546,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldloca, theVar);
                     }
 
+                    closure.LastEmitIsAddress = false;
                     return EmitMethodCall(il, prop.FindPropertyGetMethod());
                 }
 
@@ -2829,7 +2830,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 LocalBuilder lVar = null, rVar = null;
-                if (!TryEmit(exprLeft, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                if (!TryEmit(exprLeft, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                     return false;
 
                 if (leftIsNull)
@@ -2844,7 +2845,7 @@ namespace FastExpressionCompiler
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
 
-                if (!TryEmit(exprRight, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                if (!TryEmit(exprRight, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                     return false;
 
                 if (rightOpType.IsNullable())
