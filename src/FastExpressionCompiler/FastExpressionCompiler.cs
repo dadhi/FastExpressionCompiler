@@ -1959,6 +1959,7 @@ namespace FastExpressionCompiler
                     }
                     else if (constantType == typeof(decimal))
                     {
+                        //check if decimal has decimal places, if not use shorter IL code (constructor from int or long)
                         var value = (decimal)constantValue;
                         if (value % 1 == 0)
                         {
