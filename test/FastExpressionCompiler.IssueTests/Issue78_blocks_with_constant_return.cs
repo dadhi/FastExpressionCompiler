@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection.Emit;
+using ILDebugging.Decoder;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -21,6 +24,20 @@ namespace FastExpressionCompiler.UnitTests
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
             Assert.IsNotNull(fastCompiled);
             Assert.AreEqual(7, fastCompiled());
+        }
+
+        [Test]
+        public void MultipleConstantReturnsAreRemoved()
+        {
+            var ret = Block(Constant(7), Constant(7), Constant(7));
+            var lambda = Lambda<Func<int>>(ret);
+            var fastCompiled = lambda.CompileFast<Func<int>>(true);
+            Assert.IsNotNull(fastCompiled);
+            Assert.AreEqual(7, fastCompiled());
+
+            var il = ILReaderFactory.Create(fastCompiled.Method);
+            CollectionAssert.AreEqual(il.Select(x => x.OpCode),
+                new[] {OpCodes.Ldc_I4_7,  OpCodes.Ret});
         }
 
         [Test]

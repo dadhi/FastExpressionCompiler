@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using NUnit.Framework;
 
@@ -277,6 +278,88 @@ namespace FastExpressionCompiler.UnitTests
             Value1 = 1,
             Value2 = 2,
         }
+
+#if !LIGHT_EXPRESSION
+        [Test]
+        public void Equal1_Test()
+        {
+            var p = Parameter(typeof(object));
+            var pp = new Patient();
+            var body = Equal(Constant(pp), p);
+            Expression<Func<object, bool>> e = (o) => o == pp;
+            var expr = Lambda<Func<object, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+            var c = expr.Compile();
+
+            Assert.AreEqual(c(pp), compiled(pp));
+            Assert.AreEqual(c(new Patient()), compiled(new Patient()));
+        }
+
+        [Test]
+        public void Equal2_Test()
+        {
+            var p = Parameter(typeof(Patient));
+            var pp = new Patient();
+            var body = Equal(Constant(pp), p);
+            Expression<Func<object, bool>> e = (o) => o == pp;
+            var expr = Lambda<Func<Patient, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+            var c = expr.Compile();
+
+            Assert.AreEqual(c(pp), compiled(pp));
+            Assert.AreEqual(c(new Patient()), compiled(new Patient()));
+        }
+
+        [Test]
+        public void Equal3_Test()
+        {
+            var p = Parameter(typeof(Patient));
+            var pp = new Patient2();
+            var body = Equal(Constant(pp), p);
+            Expression<Func<Patient, bool>> e = (o) => o == pp;
+            var expr = Lambda<Func<Patient, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+            var c = expr.Compile();
+
+            Assert.AreEqual(c(pp), compiled(pp));
+            Assert.AreEqual(c(new Patient()), compiled(new Patient()));
+        }
+
+        [Test]
+        public void TypeAs_Test()
+        {
+            var p = Parameter(typeof(object));
+            var body = TypeAs(p, typeof(Patient));
+            var expr = Lambda<Func<object, Patient>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+            var c = expr.Compile();
+
+            var pp = new Patient();
+            var s = "a";
+            Assert.AreEqual(c(pp), compiled(pp));
+            Assert.AreEqual(c(s), compiled(s));
+        }
+
+        [Test]
+        public void TypeIs_Test()
+        {
+            var p = Parameter(typeof(object));
+            var body = TypeIs(p, typeof(Patient));
+            var expr = Lambda<Func<object, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+            var c = expr.Compile();
+
+            var pp = new Patient();
+            var s = "a";
+            Assert.AreEqual(c(pp), compiled(pp));
+            Assert.AreEqual(c(s), compiled(s));
+        }
+#endif
 
         [Test]
         public void Enum_to_enum_conversion()
@@ -623,6 +706,53 @@ namespace FastExpressionCompiler.UnitTests
             compiled1(null);
             compiled2(null);
         }
+
+        class sPrp {
+            public short? v;
+        }
+
+        [Test]
+        public void TestConverterNullable()
+        {
+            var p = Parameter(typeof(sPrp), "p");
+
+            var mapperBody = /*Convert(*/Convert(Field(p, nameof(sPrp.v)), typeof(int?))/*, typeof(object))*/;
+            var mapper = Lambda<Func<sPrp, int?>>(mapperBody, p);
+
+            var compiled1 = mapper.Compile();
+            var compiled2 = mapper.CompileFast(true);
+
+            var a = compiled1(new sPrp() { v = short.MaxValue });
+            var b = compiled2(new sPrp() { v = short.MaxValue });
+
+            Assert.AreEqual(a, b);
+
+            var c = compiled1(new sPrp() { v = short.MinValue });
+            var d = compiled2(new sPrp() { v = short.MinValue });
+
+            Assert.AreEqual(c, d);
+        }
+
+        public static string aa(int nr) {
+            return nr.ToString();
+        }
+
+        [Test]
+        public void TestLdArg()
+        {
+            var p = Parameter(typeof(int), "p");
+
+            var mapperBody = Call(typeof(Issue83_linq2db).GetTypeInfo().GetMethod("aa"), p);
+            var mapper = Lambda<Func<int, string>>(mapperBody, p);
+
+            var compiled1 = mapper.Compile();
+            var compiled2 = mapper.CompileFast(true);
+
+            var a = compiled1(5);
+            var b = compiled2(5);
+
+            Assert.AreEqual(a, b);
+        }
 #endif
 
         [Test]
@@ -774,6 +904,237 @@ namespace FastExpressionCompiler.UnitTests
             Assert.That(obj.Class2.Struct1P.Class3P.Class4.Field1, Is.EqualTo(42));
         }
 
+        [Test]
+        public void NullableEnum()
+        {
+            var objParam = Parameter(typeof(TestClass2), "obj");
+            
+            var body = Block(
+                Assign(Field(objParam, nameof(TestClass2.NullEnum2)), Constant(Enum2.Value1, typeof(Enum2?)))
+                );
+
+            var expr = Lambda<Action<TestClass2>>(body, objParam);
+
+            var compiled = expr.CompileFast(true);
+
+            var obj = new TestClass2();
+
+            compiled(obj);
+
+            Assert.That(obj.NullEnum2, Is.EqualTo(Enum2.Value1));
+        }
+
+        [Test]
+        public void NullableEnum2()
+        {
+            var objParam = Parameter(typeof(TestClass2), "obj");
+
+            var body = Block(
+                Equal(Field(objParam, nameof(TestClass2.NullEnum2)), Constant(Enum2.Value1, typeof(Enum2?)))
+            );
+
+            var expr = Lambda<Action<TestClass2>>(body, objParam);
+
+
+            var compiled = expr.CompileFast(true);
+
+            var obj = new TestClass2();
+
+            compiled(obj);
+        }
+
+        [Test]
+        public void NewNullableTest()
+        {
+            var body = New(typeof(int?).GetTypeInfo().DeclaredConstructors.First(), Constant(6, typeof(int)));
+
+            var expr = Lambda<Func<int?>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            compiled();
+        }
+
+        [Test]
+        public void TestToString()
+        {
+            var body = Call(Constant(true),
+                typeof(bool).GetTypeInfo().DeclaredMethods
+                    .First(x => x.Name == "ToString" && x.GetParameters().Length == 0));
+
+            var expr = Lambda<Func<string>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled();
+
+            Assert.AreEqual("True", ret);
+        }
+
+        [Test]
+        public void Test2ToString()
+        {
+            var p = Parameter(typeof(bool));
+            var body = Call(p,
+                typeof(bool).GetTypeInfo().DeclaredMethods
+                    .First(x => x.Name == "ToString" && x.GetParameters().Length == 0));
+
+            var expr = Lambda<Func<bool, string>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled(true);
+
+            Assert.AreEqual("True", ret);
+        }
+
+        [Test]
+        public void TestDecimal()
+        {
+            var body = Constant(5.64m);
+
+            var expr = Lambda<Func<Decimal>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled();
+            Assert.AreEqual(5.64m, ret);
+        }
+
+        [Test]
+        public void TestDecimal1()
+        {
+            var body = Constant(5m);
+
+            var expr = Lambda<Func<Decimal>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled();
+            Assert.AreEqual(5m, ret);
+        }
+
+        [Test]
+        public void Test3Bool()
+        {
+            var p = Parameter(typeof(bool));
+            var body = Not(p);
+
+            var expr = Lambda<Func<bool, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled(true);
+
+            Assert.AreEqual(false, ret);
+        }
+
+        [Test]
+        public void Test4Bool()
+        {
+            var p = Parameter(typeof(bool));
+            var body = Not(p);
+
+            var expr = Lambda<Func<bool, bool>>(body, p);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled(false);
+
+            Assert.AreEqual(true, ret);
+        }
+
+        [Test]
+        public void ConvertNullableTest()
+        {
+            var body = Convert(ConvertChecked(Constant(long.MaxValue-1, typeof(long)), typeof(int)), typeof(int?));
+
+            var expr = Lambda<Func<int?>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+           Assert.Throws<OverflowException>(()=> compiled());
+        }
+
+        [Test]
+        public void ConvertNullable2Test()
+        {
+            var body = Convert(ConvertChecked(Constant(5l, typeof(long)), typeof(int)), typeof(int?));
+
+            var expr = Lambda<Func<int?>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            compiled();
+        }
+
+        [Test]
+        public void ConvertTest()
+        {
+            var body = ConvertChecked(Constant(0x10, typeof(int)), typeof(char));
+
+            var expr = Lambda<Func<char>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled();
+
+            Assert.AreEqual('\x10', ret);
+        }
+
+        [Test]
+        public void ConvertTest2()
+        {
+            var body = ConvertChecked(Constant('\x10', typeof(char)), typeof(int));
+
+            var expr = Lambda<Func<int>>(body);
+
+            var compiled = expr.CompileFast(true);
+
+            var ret = compiled();
+
+            Assert.AreEqual(0x10, ret);
+        }
+
+        public class Patient2 : Patient { }
+
+        public class Patient
+        {
+            public int PersonID;
+            public string Diagnosis;
+
+            public static bool operator ==(Patient a, Patient b)
+            {
+                return Equals(a, b);
+            }
+            public static bool operator !=(Patient a, Patient b)
+            {
+                return !Equals(a, b);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Patient);
+            }
+
+            public bool Equals(Patient other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return other.PersonID == PersonID && Equals(other.Diagnosis, Diagnosis);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var result = PersonID;
+                    result = (result * 397) ^ (Diagnosis != null ? Diagnosis.GetHashCode() : 0);
+                    return result;
+                }
+            }
+        }
+
         class TestClass1
         {
             public int Prop1
@@ -794,6 +1155,7 @@ namespace FastExpressionCompiler.UnitTests
 
         class TestClass2
         {
+            public Enum2? NullEnum2;
             public TestClass3 Class3;
             public TestStruct1 Struct1;
             public TestStruct1 Struct1P { get; set; }

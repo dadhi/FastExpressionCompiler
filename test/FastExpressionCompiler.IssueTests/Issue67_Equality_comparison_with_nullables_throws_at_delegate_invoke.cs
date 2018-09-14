@@ -16,6 +16,30 @@ namespace FastExpressionCompiler.IssueTests
             public Point? PropP { get; set; }
 
             public int Prop3 { get; set; }
+
+            public aa Prop4 { get; set; }
+        }
+
+        public struct aa
+        {
+            public int b;
+
+            public override bool Equals(Object obj)
+            {
+                return obj is aa && this == (aa)obj;
+            }
+            public override int GetHashCode()
+            {
+                return b.GetHashCode();
+            }
+            public static bool operator ==(aa x, aa y)
+            {
+                return x.b == y.b;
+            }
+            public static bool operator !=(aa x, aa y)
+            {
+                return !(x == y);
+            }
         }
 
         [Test]
@@ -32,6 +56,19 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
             Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
             Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+        }
+
+        [Test]
+        public void Comparing_struct_equal_works()
+        {
+            var aaComparand = new aa();
+            Expression<Func<Foo, bool>> e = foo => foo.Prop4 == aaComparand;
+
+            var f = e.CompileFast(true);
+            var f2 = e.Compile();
+            Assert.IsNotNull(f);
+
+            Assert.AreEqual(f2(new Foo() { Prop4 = aaComparand }), f(new Foo() { Prop4 = aaComparand }));
         }
 
         [Test]

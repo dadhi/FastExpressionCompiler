@@ -31,4 +31,10 @@
         </Reference>
     </ItemGroup>
 
+    <ItemGroup>
+      <Reference Include="ILDebugging.Decoder">
+        <HintPath>..\libs\ILDebugging.Decoder.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
 </Project>

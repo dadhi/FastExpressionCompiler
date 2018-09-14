@@ -50,6 +50,9 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Converts to Expression and outputs its as string</summary>
         public override string ToString() => ToExpression().ToString();
 
+        /// <summary>Reduces the Expression to simple ones</summary>
+        public virtual Expression Reduce() => this;
+
         public static ParameterExpression Parameter(Type type, string name = null) =>
             new ParameterExpression(type.IsByRef ? type.GetElementType() : type, name, type.IsByRef);
 
@@ -159,11 +162,26 @@ namespace FastExpressionCompiler.LightExpression
         public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) =>
             new LambdaExpression(delegateType, body, parameters);
 
+        public static UnaryExpression Not(Expression operand) =>
+            new UnaryExpression(ExpressionType.Not, operand, operand.Type);
+
+        public static TypeBinaryExpression TypeAs(Expression operand, Type type) =>
+            new TypeBinaryExpression(ExpressionType.TypeAs, operand, type);
+
+        public static UnaryExpression TypeIs(Expression operand, Type type) =>
+            new UnaryExpression(ExpressionType.TypeIs, operand, type);
+
         public static UnaryExpression Convert(Expression operand, Type targetType) =>
             new UnaryExpression(ExpressionType.Convert, operand, targetType);
 
         public static UnaryExpression Convert(Expression operand, Type targetType, MethodInfo method) =>
             new UnaryExpression(ExpressionType.Convert, operand, targetType, method);
+
+        public static UnaryExpression ConvertChecked(Expression operand, Type targetType) =>
+            new UnaryExpression(ExpressionType.ConvertChecked, operand, targetType);
+
+        public static UnaryExpression ConvertChecked(Expression operand, Type targetType, MethodInfo method) =>
+            new UnaryExpression(ExpressionType.ConvertChecked, operand, targetType, method);
 
         public static UnaryExpression PreIncrementAssign(Expression operand) =>
             new UnaryExpression(ExpressionType.PreIncrementAssign, operand, operand.Type);
@@ -565,6 +583,26 @@ namespace FastExpressionCompiler.LightExpression
             }
             else
                 Type = type;
+        }
+    }
+
+    public class TypeBinaryExpression : Expression
+    {
+        public override ExpressionType NodeType { get; }
+        public override Type Type { get; }
+
+        public Type TypeOperand { get; }
+
+        public readonly Expression Expression;
+
+        public override SysExpr ToExpression() => SysExpr.TypeIs(Expression.ToExpression(), TypeOperand);
+
+        internal TypeBinaryExpression(ExpressionType nodeType, Expression expression, Type typeOperand)
+        {
+            NodeType = nodeType;
+            Expression = expression;
+            Type = typeof(bool);
+            TypeOperand = typeOperand;
         }
     }
 
