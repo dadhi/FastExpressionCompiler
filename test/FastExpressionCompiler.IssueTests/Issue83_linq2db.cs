@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -266,6 +267,48 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(TypeCodeEnum.A2, res.TypeCode);
             Assert.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
         }
+
+        enum TestEnum1
+        {
+            Value1 = 3,
+            Value2,
+        }
+
+        class NullableTestTable1
+        {
+             public int? Id;
+             public TestEnum1? TestField;
+        }
+
+        const int RID = 101;
+
+#if !LIGHT_EXPRESSION
+        [Test]
+        public void linq2db_Expression()
+        {
+            var param = TestEnum1.Value1;
+
+            var l = new List<NullableTestTable1>();
+            System.Linq.Expressions.Expression<Func<IEnumerable<NullableTestTable1>>> e = () => l
+                .Where(r => r.Id == RID && r.TestField == TestEnum1.Value2)
+                .Select(r => new NullableTestTable1
+                {
+                    Id = r.Id,
+                    TestField = param
+                });
+            var compiled = e.CompileFast(true);
+            compiled();
+        }
+
+        [Test]
+        public void linq2db_Expression2()
+        {
+            var e = Default(typeof(TestEnum1));
+            var l = Lambda<Func<TestEnum1>>(e);
+            var compiled = l.CompileFast(true);
+            var b = compiled();
+        }
+#endif
 
         enum Enum2
         {

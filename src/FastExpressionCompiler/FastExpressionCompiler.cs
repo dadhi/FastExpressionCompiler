@@ -2801,7 +2801,7 @@ namespace FastExpressionCompiler
                 if (lambda is LambdaExpression lambdaExpr && lambdaExpr.Parameters.Count == 0)
                     return TryEmit(lambdaExpr.Body, paramExprs, il, ref closure, parent);
 
-                if (!TryEmit(lambda, paramExprs, il, ref closure, parent))
+                if (!TryEmit(lambda, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                         return false;
 
                 var argExprs = expr.Arguments;
