@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !LIGHT_EXPRESSION
+using System;
 using NUnit.Framework;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
@@ -53,4 +54,5 @@ namespace FastExpressionCompiler.UnitTests
             public T Value { get; set; }
         }
     }
+#endif
 }
