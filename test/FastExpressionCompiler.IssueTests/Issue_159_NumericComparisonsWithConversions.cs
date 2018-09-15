@@ -4,7 +4,7 @@ using NUnit.Framework;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 {
-    public class Issue_NumericComparisonsWithConversions
+    public class Issue_159_NumericComparisonsWithConversions
     {
         [Test, Ignore("Fails")]
         public void NumericComparisonsWithConversionsShouldWork()
@@ -54,5 +54,5 @@ namespace FastExpressionCompiler.UnitTests
             public T Value { get; set; }
         }
     }
-#endif
 }
+#endif
