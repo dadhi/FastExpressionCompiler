@@ -282,6 +282,12 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression Power(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Power, left, right, left.Type);
 
+        public static BinaryExpression AndAlso(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.AndAlso, left, right, left.Type);
+
+        public static BinaryExpression OrElse(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.OrElse, left, right, left.Type);
+
         public static Expression Equal(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Equal, left, right, left.Type);
 
@@ -577,7 +583,8 @@ namespace FastExpressionCompiler.LightExpression
 
             if (nodeType == ExpressionType.Equal || nodeType == ExpressionType.NotEqual || 
                 nodeType == ExpressionType.GreaterThan || nodeType == ExpressionType.GreaterThanOrEqual || 
-                nodeType == ExpressionType.LessThan || nodeType == ExpressionType.LessThanOrEqual)
+                nodeType == ExpressionType.LessThan || nodeType == ExpressionType.LessThanOrEqual ||
+                nodeType == ExpressionType.AndAlso || nodeType == ExpressionType.OrElse)
             {
                 Type = typeof(bool);
             }

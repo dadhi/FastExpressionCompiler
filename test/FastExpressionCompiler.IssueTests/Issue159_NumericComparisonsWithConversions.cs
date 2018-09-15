@@ -1,12 +1,18 @@
-﻿#if !LIGHT_EXPRESSION
-using System;
+﻿using System;
 using NUnit.Framework;
+
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
-    public class Issue_159_NumericComparisonsWithConversions
+    public class Issue159_NumericComparisonsWithConversions
     {
-        [Test, Ignore("Fails")]
+        [Test]
         public void NumericComparisonsWithConversionsShouldWork()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong>), "ulongValue");
@@ -55,4 +61,3 @@ namespace FastExpressionCompiler.UnitTests
         }
     }
 }
-#endif
