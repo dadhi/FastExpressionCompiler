@@ -13,7 +13,7 @@ namespace FastExpressionCompiler.UnitTests
     public class Issue159_NumericComparisonsWithConversions
     {
         [Test]
-        public void NumericComparisonsWithConversionsShouldWork()
+        public void UnsignedLongComparisonsWithConversionsShouldWork()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong>), "ulongValue");
             var ulongValueProperty = Property(ulongParameter, "Value");
@@ -53,6 +53,56 @@ namespace FastExpressionCompiler.UnitTests
             var result = ulongValueOrDefaultFunc.Invoke(new ValueHolder<ulong> { Value = ulong.MaxValue });
 
             Assert.AreEqual(default(int), result.Value);
+        }
+
+        [Test, Ignore("Fails")]
+        public void FloatComparisonsWithConversionsShouldWork()
+        {
+            var floatParameter = Parameter(typeof(ValueHolder<float>), "floatValue");
+            var floatValueProperty = Property(floatParameter, "Value");
+
+            var nullableShortVariable = Variable(typeof(ValueHolder<short?>), "nullableShort");
+            var nullableShortValueProperty = Property(nullableShortVariable, "Value");
+
+            var newShortHolder = Assign(nullableShortVariable, New(nullableShortVariable.Type));
+
+            var floatGtOrEqualToShortMinValue = GreaterThanOrEqual(
+                floatValueProperty,
+                Convert(Constant(short.MinValue), floatValueProperty.Type));
+
+            var floatLtOrEqualToShortMaxValue = LessThanOrEqual(
+                floatValueProperty,
+                Convert(Constant(short.MaxValue), floatValueProperty.Type));
+
+            var floatIsInShortRange = AndAlso(floatGtOrEqualToShortMinValue, floatLtOrEqualToShortMaxValue);
+
+            var floatAsNullableShort = Convert(floatValueProperty, nullableShortValueProperty.Type);
+            var defaultNullableShort = Default(nullableShortValueProperty.Type);
+            var floatValueOrDefault = Condition(floatIsInShortRange, floatAsNullableShort, defaultNullableShort);
+
+            var shortValueAssignment = Assign(nullableShortValueProperty, floatValueOrDefault);
+
+            var block = Block(
+                new[] { nullableShortVariable },
+                newShortHolder,
+                shortValueAssignment,
+                nullableShortVariable);
+
+            var floatValueOrDefaultLambda = Lambda<Func<ValueHolder<float>, ValueHolder<short?>>>(
+                block,
+                floatParameter);
+
+            var source = new ValueHolder<float> { Value = 532.00f };
+
+            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.Compile();
+            var result = floatValueOrDefaultFunc.Invoke(source);
+
+            Assert.AreEqual(532, result.Value, "MS Compiler");
+
+            floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
+            result = floatValueOrDefaultFunc.Invoke(source);
+
+            Assert.AreEqual((short)532, result.Value, "FEC");
         }
 
         private class ValueHolder<T>
