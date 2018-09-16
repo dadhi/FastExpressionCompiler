@@ -94,15 +94,10 @@ namespace FastExpressionCompiler.UnitTests
 
             var source = new ValueHolder<float> { Value = 532.00f };
 
-            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.Compile();
+            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
             var result = floatValueOrDefaultFunc.Invoke(source);
 
-            Assert.AreEqual(532, result.Value, "MS Compiler");
-
-            floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
-            result = floatValueOrDefaultFunc.Invoke(source);
-
-            Assert.AreEqual((short)532, result.Value, "FEC");
+            Assert.AreEqual((short)532, result.Value);
         }
 
         private class ValueHolder<T>
