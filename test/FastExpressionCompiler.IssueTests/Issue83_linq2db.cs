@@ -299,15 +299,6 @@ namespace FastExpressionCompiler.UnitTests
             var compiled = e.CompileFast(true);
             compiled();
         }
-
-        [Test]
-        public void linq2db_Expression2()
-        {
-            var e = Default(typeof(TestEnum1));
-            var l = Lambda<Func<TestEnum1>>(e);
-            var compiled = l.CompileFast(true);
-            var b = compiled();
-        }
 #endif
 
         enum Enum2
@@ -421,6 +412,45 @@ namespace FastExpressionCompiler.UnitTests
             var compiled = expr.CompileFast();
 
             Assert.AreEqual(Enum2.Value2, compiled(Enum3.Value2));
+        }
+
+        [Test]
+        public void Enum_to_enumNull_conversion()
+        {
+            var from = typeof(Enum3);
+            var to = typeof(Enum3?);
+
+            var p = Parameter(from, "p");
+
+            var body = Convert(
+                Convert(p, typeof(Enum3?)),
+                to);
+
+            var expr = Lambda<Func<Enum3, Enum3?>>(body, p);
+
+            var compiled = expr.CompileFast();
+
+            Assert.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
+        }
+
+        [Test]
+        public void EnumNull_to_enum_conversion()
+        {
+            var from = typeof(Enum3?);
+            var to = typeof(Enum3);
+
+            var p = Parameter(from, "p");
+
+            var body = Convert(
+                Convert(p, typeof(Enum3)),
+                to);
+
+            var expr = Lambda<Func<Enum3?, Enum3>>(body, p);
+
+            var compiled = expr.CompileFast();
+
+            Assert.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
+            Assert.Throws<InvalidOperationException>(() => compiled(null));
         }
 
         [Test]
