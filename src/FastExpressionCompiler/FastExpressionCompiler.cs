@@ -1621,6 +1621,7 @@ namespace FastExpressionCompiler
                         ((parent & (ParentFlags.Call | ParentFlags.InstanceAccess)) == (ParentFlags.Call | ParentFlags.InstanceAccess) ||
                         (parent & ParentFlags.MemberAccess) != 0);
 
+                    closure.LastEmitIsAddress = asAddress;
                     EmitLoadParamArg(il, paramIndex, asAddress);
 
                     if (paramExpr.IsByRef)
@@ -2069,13 +2070,6 @@ namespace FastExpressionCompiler
                 if (underlyingNullableType != null)
                 {
                     il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.First());
-
-                    if ((parent & ParentFlags.InstanceAccess) > 0)
-                    {
-                        var loc = il.DeclareLocal(exprType);
-                        il.Emit(OpCodes.Stloc, loc);
-                        il.Emit(OpCodes.Ldloca_S, loc);
-                    }
                 }
                 
                 // todo: consider how to remove boxing where it is not required
@@ -3091,6 +3085,12 @@ namespace FastExpressionCompiler
                     noValueLabel = il.DefineLabel();
                     if (!TryEmit(expr.Left, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) | ParentFlags.InstanceAccess | ParentFlags.Call))
                         return false;
+                    if (!closure.LastEmitIsAddress)
+                    {
+                        var loc = il.DeclareLocal(expr.Left.Type);
+                        il.Emit(OpCodes.Stloc, loc);
+                        il.Emit(OpCodes.Ldloca_S, loc);
+                    }
                     il.Emit(OpCodes.Dup);
                     var mthHasValueGetterMethod = expr.Left.Type.FindNullableHasValueGetterMethod();
                     EmitMethodCall(il, mthHasValueGetterMethod);
@@ -3109,6 +3109,12 @@ namespace FastExpressionCompiler
                     noValueLabel2 = il.DefineLabel();
                     if (!TryEmit(expr.Right, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) | ParentFlags.InstanceAccess | ParentFlags.Call))
                         return false;
+                    if (!closure.LastEmitIsAddress)
+                    {
+                        var loc = il.DeclareLocal(expr.Right.Type);
+                        il.Emit(OpCodes.Stloc, loc);
+                        il.Emit(OpCodes.Ldloca_S, loc);
+                    }
                     il.Emit(OpCodes.Dup);
                     var mthHasValueGetterMethod = expr.Right.Type.FindNullableHasValueGetterMethod();
                     EmitMethodCall(il, mthHasValueGetterMethod);
