@@ -1207,7 +1207,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Constant:
                             var constantExpression = (ConstantExpression)expr;
                             return ShouldIgnoreResult(parent) ||
-                                   TryEmitConstant(constantExpression, constantExpression.Type, constantExpression.Value, il, ref closure, parent);
+                                   TryEmitConstant(constantExpression, constantExpression.Type, constantExpression.Value, il, ref closure);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, parent);
@@ -1926,7 +1926,7 @@ namespace FastExpressionCompiler
                     (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
                     m.GetParameters()[0].ParameterType == sourceType);
 
-            private static bool TryEmitConstant(ConstantExpression expr, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+            private static bool TryEmitConstant(ConstantExpression expr, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure)
             {
                 if (constantValue == null)
                 {
@@ -2623,7 +2623,7 @@ namespace FastExpressionCompiler
                         if (field.IsLiteral)
                         {
                             var value = field.GetValue(null);
-                            TryEmitConstant(null, field.FieldType, value, il, ref closure, ParentFlags.Empty);
+                            TryEmitConstant(null, field.FieldType, value, il, ref closure);
                         }
                         else
                             il.Emit(OpCodes.Ldsfld, field);
