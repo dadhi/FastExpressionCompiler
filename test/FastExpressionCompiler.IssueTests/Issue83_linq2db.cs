@@ -1169,6 +1169,28 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(0x10, ret);
         }
 
+        [Test]
+        public void AddNullTest()
+        {
+            var p = Parameter(typeof(int?));
+            var body = Add(Constant(4, typeof(int?)), p);
+            var expr = Lambda<Func<int?, int?>>(body, p);
+            var compiled = expr.CompileFast(true);
+            Assert.AreEqual(9, compiled(5));
+            Assert.AreEqual(null, compiled(null));
+        }
+
+        [Test]
+        public void AddNullTest2()
+        {
+            var p = Parameter(typeof(int?));
+            var body = Add(p, Constant(4, typeof(int?)));
+            var expr = Lambda<Func<int?, int?>>(body, p);
+            var compiled = expr.CompileFast(true);
+            Assert.AreEqual(9, compiled(5));
+            Assert.AreEqual(null, compiled(null));
+        }
+
         public class Patient2 : Patient { }
 
         public class Patient

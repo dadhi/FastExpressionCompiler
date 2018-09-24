@@ -1207,7 +1207,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Constant:
                             var constantExpression = (ConstantExpression)expr;
                             return ShouldIgnoreResult(parent) ||
-                                   TryEmitConstant(constantExpression, constantExpression.Type, constantExpression.Value, il, ref closure);
+                                   TryEmitConstant(constantExpression, constantExpression.Type, constantExpression.Value, il, ref closure, parent);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, parent);
@@ -1264,12 +1264,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
                             var arithmeticExpr = (BinaryExpression)expr;
-                            return
-                                TryEmit(arithmeticExpr.Left, paramExprs, il, ref closure,
-                                    (parent | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess) &&
-                                TryEmit(arithmeticExpr.Right, paramExprs, il, ref closure,
-                                    (parent | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess) &&
-                                TryEmitArithmeticOperation(expr.NodeType, expr.Type, il, arithmeticExpr.Left.Type, arithmeticExpr.Right.Type);
+                            return TryEmitArithmetic(arithmeticExpr, expr.NodeType, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
@@ -1930,7 +1925,7 @@ namespace FastExpressionCompiler
                     (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
                     m.GetParameters()[0].ParameterType == sourceType);
 
-            private static bool TryEmitConstant(ConstantExpression expr, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure)
+            private static bool TryEmitConstant(ConstantExpression expr, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 if (constantValue == null)
                 {
@@ -2072,7 +2067,16 @@ namespace FastExpressionCompiler
 
                 var underlyingNullableType = Nullable.GetUnderlyingType(exprType);
                 if (underlyingNullableType != null)
+                {
                     il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.First());
+
+                    if ((parent & ParentFlags.InstanceAccess) > 0)
+                    {
+                        var loc = il.DeclareLocal(exprType);
+                        il.Emit(OpCodes.Stloc, loc);
+                        il.Emit(OpCodes.Ldloca_S, loc);
+                    }
+                }
                 
                 // todo: consider how to remove boxing where it is not required
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
@@ -2341,10 +2345,7 @@ namespace FastExpressionCompiler
                                     if (!TryEmit(right, paramExprs, il, ref closure, flags))
                                         return false;
                                 }
-                                else if (
-                                    !TryEmit(expr.Left, paramExprs, il, ref closure, flags | ParentFlags.Arithmetic) ||
-                                    !TryEmit(expr.Right, paramExprs, il, ref closure, flags | ParentFlags.Arithmetic) ||
-                                    !TryEmitArithmeticOperation(arithmeticNodeType, exprType, il, expr.Left.Type, expr.Right.Type))
+                                else if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, parent))
                                     return false;
 
                                 EmitByRefStore(il, leftParamExpr.Type);
@@ -2370,9 +2371,7 @@ namespace FastExpressionCompiler
                                 var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex(leftParamExpr);
                                 if (varIdx != -1)
                                 {
-                                    if (!TryEmit(expr.Left, paramExprs, il, ref closure, flags | ParentFlags.Arithmetic) ||
-                                        !TryEmit(expr.Right, paramExprs, il, ref closure, flags | ParentFlags.Arithmetic) ||
-                                        !TryEmitArithmeticOperation(arithmeticNodeType, exprType, il, expr.Left.Type, expr.Right.Type))
+                                    if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, parent))
                                         return false;
 
                                     il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
@@ -2630,7 +2629,7 @@ namespace FastExpressionCompiler
                         if (field.IsLiteral)
                         {
                             var value = field.GetValue(null);
-                            TryEmitConstant(null, field.FieldType, value, il, ref closure);
+                            TryEmitConstant(null, field.FieldType, value, il, ref closure, ParentFlags.Empty);
                         }
                         else
                             il.Emit(OpCodes.Ldsfld, field);
@@ -3077,6 +3076,84 @@ namespace FastExpressionCompiler
 
                 if ((parent & ParentFlags.IgnoreResult) > 0)
                     il.Emit(OpCodes.Pop);
+
+                return true;
+            }
+
+            private static bool TryEmitArithmetic(BinaryExpression expr, ExpressionType exprNodeType,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+            {
+                var flags = parent & ~ParentFlags.IgnoreResult;
+                Label? noValueLabel = null;
+                Label? noValueLabel2 = null;
+                if (expr.Left.Type.IsNullable())
+                {
+                    noValueLabel = il.DefineLabel();
+                    if (!TryEmit(expr.Left, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) | ParentFlags.InstanceAccess | ParentFlags.Call))
+                        return false;
+                    il.Emit(OpCodes.Dup);
+                    var mthHasValueGetterMethod = expr.Left.Type.FindNullableHasValueGetterMethod();
+                    EmitMethodCall(il, mthHasValueGetterMethod);
+                    il.Emit(OpCodes.Brfalse, noValueLabel.Value);
+                    var mthFindNullableValueOrDefaultMethod = expr.Left.Type.FindNullableValueOrDefaultMethod();
+                    EmitMethodCall(il, mthFindNullableValueOrDefaultMethod);
+                }
+                else
+                {
+                    if (!TryEmit(expr.Left, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess))
+                        return false;
+                }
+
+                if (expr.Right.Type.IsNullable())
+                {
+                    noValueLabel2 = il.DefineLabel();
+                    if (!TryEmit(expr.Right, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) | ParentFlags.InstanceAccess | ParentFlags.Call))
+                        return false;
+                    il.Emit(OpCodes.Dup);
+                    var mthHasValueGetterMethod = expr.Right.Type.FindNullableHasValueGetterMethod();
+                    EmitMethodCall(il, mthHasValueGetterMethod);
+                    il.Emit(OpCodes.Brfalse, noValueLabel2.Value);
+                    var mthFindNullableValueOrDefaultMethod = expr.Right.Type.FindNullableValueOrDefaultMethod();
+                    EmitMethodCall(il, mthFindNullableValueOrDefaultMethod);
+                }
+                else
+                {
+                    if (!TryEmit(expr.Right, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess))
+                        return false;
+                }
+
+                if (!TryEmitArithmeticOperation(exprNodeType, expr.Type, il, expr.Left.Type, expr.Right.Type))
+                    return false;
+
+                if (noValueLabel.HasValue || noValueLabel2.HasValue)
+                {
+                    var valueLabel = il.DefineLabel();
+                    il.Emit(OpCodes.Br, valueLabel);
+                    if (noValueLabel2.HasValue)
+                        il.MarkLabel(noValueLabel2.Value);
+                    il.Emit(OpCodes.Pop);
+                    if (noValueLabel.HasValue)
+                        il.MarkLabel(noValueLabel.Value);
+                    il.Emit(OpCodes.Pop);
+
+                    if (expr.Type.IsNullable())
+                    {
+                        var loc = il.DeclareLocal(expr.Type);
+                        var endL = il.DefineLabel();
+                        il.Emit(OpCodes.Ldloca_S, loc);
+                        il.Emit(OpCodes.Initobj, expr.Type);
+                        il.Emit(OpCodes.Ldloc_S, loc);
+                        il.Emit(OpCodes.Br_S, endL);
+                        il.MarkLabel(valueLabel);
+                        il.Emit(OpCodes.Newobj, expr.Type.GetTypeInfo().DeclaredConstructors.First());
+                        il.MarkLabel(endL);
+                    }
+                    else
+                    {
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.MarkLabel(valueLabel);
+                    }
+                }
 
                 return true;
             }
