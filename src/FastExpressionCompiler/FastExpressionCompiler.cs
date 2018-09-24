@@ -2825,7 +2825,7 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < argExprs.Count; i++)
                 {
                     var byRefIndex = argExprs[i].Type.IsByRef ? i : -1;
-                    if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult, byRefIndex))
+                    if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess, byRefIndex))
                         return false;
                 }
 
