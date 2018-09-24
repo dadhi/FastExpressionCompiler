@@ -1264,12 +1264,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
                             var arithmeticExpr = (BinaryExpression)expr;
-                            return
-                                TryEmit(arithmeticExpr.Left, paramExprs, il, ref closure,
-                                    (parent | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess) &&
-                                TryEmit(arithmeticExpr.Right, paramExprs, il, ref closure,
-                                    (parent | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess) &&
-                                TryEmitArithmeticOperation(expr.NodeType, expr.Type, il);
+                            return TryEmitArithmetic(arithmeticExpr, expr.NodeType, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
@@ -1447,7 +1442,7 @@ namespace FastExpressionCompiler
 
                     il.Emit(OpCodes.Brfalse, labelFalse);
                     il.Emit(OpCodes.Ldloca_S, loc);
-                    if (!EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod()))
+                    if (!EmitMethodCall(il, leftType.FindNullableValueOrDefaultMethod()))
                         return false;
 
                     il.Emit(OpCodes.Br, labelDone);
@@ -1626,6 +1621,7 @@ namespace FastExpressionCompiler
                         ((parent & (ParentFlags.Call | ParentFlags.InstanceAccess)) == (ParentFlags.Call | ParentFlags.InstanceAccess) ||
                         (parent & ParentFlags.MemberAccess) != 0);
 
+                    closure.LastEmitIsAddress = asAddress;
                     EmitLoadParamArg(il, paramIndex, asAddress);
 
                     if (paramExpr.IsByRef)
@@ -1792,10 +1788,33 @@ namespace FastExpressionCompiler
                     return TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.Call | ParentFlags.InstanceAccess, 0) 
                         && EmitMethodCall(il, method, parent);
 
-                if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                var sourceType = opExpr.Type;
+                var sourceTypeInfo = sourceType.GetTypeInfo();
+
+                if (sourceType.IsNullable() && targetType == Nullable.GetUnderlyingType(sourceType))
+                {
+                    var valueGetMethod = sourceType.GetTypeInfo().GetDeclaredProperty("Value").FindPropertyGetMethod();
+                    if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ParentFlags.InstanceAccess))
+                        return false;
+                    if (!closure.LastEmitIsAddress)
+                    {
+                        var theVar = il.DeclareLocal(sourceType);
+                        il.Emit(OpCodes.Stloc, theVar);
+                        il.Emit(OpCodes.Ldloca, theVar);
+                    }
+
+                    return EmitMethodCall(il, valueGetMethod, parent);
+                }
+
+                if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                     return false;
 
-                var sourceType = opExpr.Type;
+                if (targetType.IsNullable() && sourceType == Nullable.GetUnderlyingType(targetType))
+                {
+                    il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.First());
+                    return true;
+                }
+
                 if (sourceType == targetType || targetType == typeof(object))
                 {
                     if (targetType == typeof(object) && sourceType.IsValueType())
@@ -1806,7 +1825,6 @@ namespace FastExpressionCompiler
                 }
 
                 // check implicit / explicit conversion operators on source and target types - #73
-                var sourceTypeInfo = sourceType.GetTypeInfo();
                 if (!sourceTypeInfo.IsPrimitive)
                 {
                     var convertOpMethod = FirstConvertOperatorOrDefault(sourceTypeInfo, targetType, sourceType);
@@ -1828,6 +1846,7 @@ namespace FastExpressionCompiler
                 // Conversion to Nullable: new Nullable<T>(T val);
                 else if (targetType.IsNullable())
                 {
+                    var targetTypeNonNull = Nullable.GetUnderlyingType(targetType);
                     if (sourceType.IsNullable())
                     {
                         var labelFalse = il.DefineLabel();
@@ -1842,7 +1861,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldloca_S, loc);
                         if (!EmitMethodCall(il, sourceType.FindNullableValueOrDefaultMethod()))
                             return false;
-                        TryEmitValueConvert(Nullable.GetUnderlyingType(targetType), il,
+                        TryEmitValueConvert(targetTypeNonNull, il,
                             expr.NodeType == ExpressionType.ConvertChecked);
                         il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetTypeInfo.GenericTypeArguments[0]));
                         il.Emit(OpCodes.Stloc_S, locT);
@@ -1857,6 +1876,7 @@ namespace FastExpressionCompiler
                         return true;
                     }
 
+                    TryEmitValueConvert(targetTypeNonNull, il, false);
                     il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetTypeInfo.GenericTypeArguments[0]));
                 }
                 else
@@ -2048,7 +2068,9 @@ namespace FastExpressionCompiler
 
                 var underlyingNullableType = Nullable.GetUnderlyingType(exprType);
                 if (underlyingNullableType != null)
+                {
                     il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.First());
+                }
                 
                 // todo: consider how to remove boxing where it is not required
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
@@ -2317,10 +2339,7 @@ namespace FastExpressionCompiler
                                     if (!TryEmit(right, paramExprs, il, ref closure, flags))
                                         return false;
                                 }
-                                else if (
-                                    !TryEmit(expr.Left, paramExprs, il, ref closure, flags | ParentFlags.Arithmetic) ||
-                                    !TryEmit(expr.Right, paramExprs, il, ref closure, flags | ParentFlags.Arithmetic) ||
-                                    !TryEmitArithmeticOperation(arithmeticNodeType, exprType, il))
+                                else if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, parent))
                                     return false;
 
                                 EmitByRefStore(il, leftParamExpr.Type);
@@ -2346,9 +2365,7 @@ namespace FastExpressionCompiler
                                 var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex(leftParamExpr);
                                 if (varIdx != -1)
                                 {
-                                    if (!TryEmit(expr.Left, paramExprs, il, ref closure, flags | ParentFlags.Arithmetic) ||
-                                        !TryEmit(expr.Right, paramExprs, il, ref closure, flags | ParentFlags.Arithmetic) ||
-                                        !TryEmitArithmeticOperation(arithmeticNodeType, exprType, il))
+                                    if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, parent))
                                         return false;
 
                                     il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
@@ -2548,7 +2565,7 @@ namespace FastExpressionCompiler
                         var theVar = il.DeclareLocal(objExpr.Type);
                         il.Emit(OpCodes.Stloc, theVar);
                         il.Emit(OpCodes.Ldloca, theVar);
-                }
+                    }
                 }
 
                 IReadOnlyList<Expression> argExprs = expr.Arguments;
@@ -2808,7 +2825,7 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < argExprs.Count; i++)
                 {
                     var byRefIndex = argExprs[i].Type.IsByRef ? i : -1;
-                    if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult, byRefIndex))
+                    if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess, byRefIndex))
                         return false;
                 }
 
@@ -3057,7 +3074,97 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitArithmeticOperation(ExpressionType exprNodeType, Type exprType, ILGenerator il)
+            private static bool TryEmitArithmetic(BinaryExpression expr, ExpressionType exprNodeType,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+            {
+                var flags = parent & ~ParentFlags.IgnoreResult;
+                Label? noValueLabel = null;
+                Label? noValueLabel2 = null;
+                if (expr.Left.Type.IsNullable())
+                {
+                    noValueLabel = il.DefineLabel();
+                    if (!TryEmit(expr.Left, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) | ParentFlags.InstanceAccess | ParentFlags.Call))
+                        return false;
+                    if (!closure.LastEmitIsAddress)
+                    {
+                        var loc = il.DeclareLocal(expr.Left.Type);
+                        il.Emit(OpCodes.Stloc, loc);
+                        il.Emit(OpCodes.Ldloca_S, loc);
+                    }
+                    il.Emit(OpCodes.Dup);
+                    var mthHasValueGetterMethod = expr.Left.Type.FindNullableHasValueGetterMethod();
+                    EmitMethodCall(il, mthHasValueGetterMethod);
+                    il.Emit(OpCodes.Brfalse, noValueLabel.Value);
+                    var mthFindNullableValueOrDefaultMethod = expr.Left.Type.FindNullableValueOrDefaultMethod();
+                    EmitMethodCall(il, mthFindNullableValueOrDefaultMethod);
+                }
+                else
+                {
+                    if (!TryEmit(expr.Left, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess))
+                        return false;
+                }
+
+                if (expr.Right.Type.IsNullable())
+                {
+                    noValueLabel2 = il.DefineLabel();
+                    if (!TryEmit(expr.Right, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) | ParentFlags.InstanceAccess | ParentFlags.Call))
+                        return false;
+                    if (!closure.LastEmitIsAddress)
+                    {
+                        var loc = il.DeclareLocal(expr.Right.Type);
+                        il.Emit(OpCodes.Stloc, loc);
+                        il.Emit(OpCodes.Ldloca_S, loc);
+                    }
+                    il.Emit(OpCodes.Dup);
+                    var mthHasValueGetterMethod = expr.Right.Type.FindNullableHasValueGetterMethod();
+                    EmitMethodCall(il, mthHasValueGetterMethod);
+                    il.Emit(OpCodes.Brfalse, noValueLabel2.Value);
+                    var mthFindNullableValueOrDefaultMethod = expr.Right.Type.FindNullableValueOrDefaultMethod();
+                    EmitMethodCall(il, mthFindNullableValueOrDefaultMethod);
+                }
+                else
+                {
+                    if (!TryEmit(expr.Right, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess))
+                        return false;
+                }
+
+                if (!TryEmitArithmeticOperation(exprNodeType, expr.Type, il, expr.Left.Type, expr.Right.Type))
+                    return false;
+
+                if (noValueLabel.HasValue || noValueLabel2.HasValue)
+                {
+                    var valueLabel = il.DefineLabel();
+                    il.Emit(OpCodes.Br, valueLabel);
+                    if (noValueLabel2.HasValue)
+                        il.MarkLabel(noValueLabel2.Value);
+                    il.Emit(OpCodes.Pop);
+                    if (noValueLabel.HasValue)
+                        il.MarkLabel(noValueLabel.Value);
+                    il.Emit(OpCodes.Pop);
+
+                    if (expr.Type.IsNullable())
+                    {
+                        var loc = il.DeclareLocal(expr.Type);
+                        var endL = il.DefineLabel();
+                        il.Emit(OpCodes.Ldloca_S, loc);
+                        il.Emit(OpCodes.Initobj, expr.Type);
+                        il.Emit(OpCodes.Ldloc_S, loc);
+                        il.Emit(OpCodes.Br_S, endL);
+                        il.MarkLabel(valueLabel);
+                        il.Emit(OpCodes.Newobj, expr.Type.GetTypeInfo().DeclaredConstructors.First());
+                        il.MarkLabel(endL);
+                    }
+                    else
+                    {
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.MarkLabel(valueLabel);
+                    }
+                }
+
+                return true;
+            }
+
+            private static bool TryEmitArithmeticOperation(ExpressionType exprNodeType, Type exprType, ILGenerator il, Type leftType, Type rightType)
             {
                 if (!exprType.IsPrimitive())
                 {
@@ -3068,9 +3175,12 @@ namespace FastExpressionCompiler
                     {
                         MethodInfo method = null;
                         if (exprType == typeof(string))
-                            method = typeof(string).GetTypeInfo().DeclaredMethods.First(x =>
-                                x.Name == "Concat" && x.GetParameters().Length == 2 &&
-                                x.GetParameters()[0].ParameterType == typeof(string));
+                        {
+                            Type paraType = typeof(string);
+                            if (leftType != rightType || leftType != typeof(string))
+                                paraType = typeof(object);
+                            method = typeof(string).GetTypeInfo().DeclaredMethods.First(x => x.Name == "Concat" && x.GetParameters().Length == 2 && x.GetParameters()[0].ParameterType == paraType);
+                        }
                         else
                         {
                             var methodName
@@ -3214,7 +3324,7 @@ namespace FastExpressionCompiler
                 il.Emit(usedInverted && testExpr.NodeType == ExpressionType.Equal ? OpCodes.Brtrue : OpCodes.Brfalse, labelIfFalse);
 
                 var ifTrueExpr = expr.IfTrue;
-                if (!TryEmit(ifTrueExpr, paramExprs, il, ref closure, parent))
+                if (!TryEmit(ifTrueExpr, paramExprs, il, ref closure, parent & ParentFlags.IgnoreResult))
                     return false;
 
                 var labelDone = il.DefineLabel();
@@ -3223,7 +3333,7 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Br, labelDone);
 
                 il.MarkLabel(labelIfFalse);
-                if (!TryEmit(ifFalseExpr, paramExprs, il, ref closure, parent))
+                if (!TryEmit(ifFalseExpr, paramExprs, il, ref closure, parent & ParentFlags.IgnoreResult))
                     return false;
 
                 il.MarkLabel(labelDone);

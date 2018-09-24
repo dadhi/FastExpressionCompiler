@@ -55,7 +55,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(default(int), result.Value);
         }
 
-        [Test, Ignore("Fails")]
+        [Test]
         public void FloatComparisonsWithConversionsShouldWork()
         {
             var floatParameter = Parameter(typeof(ValueHolder<float>), "floatValue");
@@ -89,6 +89,51 @@ namespace FastExpressionCompiler.UnitTests
                 nullableShortVariable);
 
             var floatValueOrDefaultLambda = Lambda<Func<ValueHolder<float>, ValueHolder<short?>>>(
+                block,
+                floatParameter);
+
+            var source = new ValueHolder<float> { Value = 532.00f };
+
+            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
+            var result = floatValueOrDefaultFunc.Invoke(source);
+
+            Assert.AreEqual((short)532, result.Value);
+        }
+
+        [Test]
+        public void FloatComparisonsWithConversionsShouldWork2()
+        {
+            var floatParameter = Parameter(typeof(ValueHolder<float>), "floatValue");
+            var floatValueProperty = Property(floatParameter, "Value");
+
+            var nullableShortVariable = Variable(typeof(ValueHolder<short>), "short");
+            var nullableShortValueProperty = Property(nullableShortVariable, "Value");
+
+            var newShortHolder = Assign(nullableShortVariable, New(nullableShortVariable.Type));
+
+            var floatGtOrEqualToShortMinValue = GreaterThanOrEqual(
+                floatValueProperty,
+                Convert(Constant(short.MinValue), floatValueProperty.Type));
+
+            var floatLtOrEqualToShortMaxValue = LessThanOrEqual(
+                floatValueProperty,
+                Convert(Constant(short.MaxValue), floatValueProperty.Type));
+
+            var floatIsInShortRange = AndAlso(floatGtOrEqualToShortMinValue, floatLtOrEqualToShortMaxValue);
+
+            var floatAsNullableShort = Convert(floatValueProperty, nullableShortValueProperty.Type);
+            var defaultNullableShort = Default(nullableShortValueProperty.Type);
+            var floatValueOrDefault = Condition(floatIsInShortRange, floatAsNullableShort, defaultNullableShort);
+
+            var shortValueAssignment = Assign(nullableShortValueProperty, floatValueOrDefault);
+
+            var block = Block(
+                new[] { nullableShortVariable },
+                newShortHolder,
+                shortValueAssignment,
+                nullableShortVariable);
+
+            var floatValueOrDefaultLambda = Lambda<Func<ValueHolder<float>, ValueHolder<short>>>(
                 block,
                 floatParameter);
 
