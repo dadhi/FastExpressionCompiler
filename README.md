@@ -7,8 +7,9 @@
 [Rebus]: https://github.com/rebus-org/Rebus
 [StructureMap]: https://github.com/structuremap/structuremap
 [Lamar]: https://github.com/JasperFx/lamar
+[NServiceBus]: https://github.com/Particular/NServiceBus/pull/5071
 
-[NServiceBus]: https://github.com/Particular/NServiceBus/issues/5070
+[LINQ to DB]: https://github.com/linq2db/linq2db/pull/1277
 [Moq]: https://github.com/moq/moq4/issues/504#issuecomment-406714210
 
 [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)
@@ -43,9 +44,9 @@ Install from [NuGet](https://www.nuget.org/packages/FastExpressionCompiler) or g
 
 ## Some users
 
-[Marten], [Rebus], [StructureMap], [Lamar], [ExpressionToCodeLib].
+[Marten], [Rebus], [StructureMap], [Lamar], [ExpressionToCodeLib], [NServiceBus].
 
-Considering: [NServiceBus], [Moq]
+Considering: [Moq], [LINQ to DB]
 
 
 ## How to use
