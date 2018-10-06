@@ -1274,5 +1274,21 @@ namespace FastExpressionCompiler.UnitTests
             public TestClass3 Class3P { get; set; }
         }
 
+        [Test]
+        public void RenameMe()
+        {
+            var body = Convert(
+                Convert(
+                    Convert(
+                        Convert(Constant(2d), typeof(double?)),
+                        typeof(decimal),
+                        typeof(decimal).GetMethod("op_Explicit", new[] { typeof(double) })),
+                    typeof(decimal?)),
+                typeof(object));
+
+            var expr = Lambda<Func<object>>(body);
+            var compiled = expr.CompileFast(true);
+            Assert.AreEqual(2m, compiled());
+        }
     }
 }
