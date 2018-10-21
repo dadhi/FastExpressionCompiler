@@ -299,15 +299,6 @@ namespace FastExpressionCompiler.UnitTests
             var compiled = e.CompileFast(true);
             compiled();
         }
-
-        [Test]
-        public void linq2db_Expression2()
-        {
-            var e = Default(typeof(TestEnum1));
-            var l = Lambda<Func<TestEnum1>>(e);
-            var compiled = l.CompileFast(true);
-            var b = compiled();
-        }
 #endif
 
         enum Enum2
@@ -421,6 +412,45 @@ namespace FastExpressionCompiler.UnitTests
             var compiled = expr.CompileFast();
 
             Assert.AreEqual(Enum2.Value2, compiled(Enum3.Value2));
+        }
+
+        [Test]
+        public void Enum_to_enumNull_conversion()
+        {
+            var from = typeof(Enum3);
+            var to = typeof(Enum3?);
+
+            var p = Parameter(from, "p");
+
+            var body = Convert(
+                Convert(p, typeof(Enum3?)),
+                to);
+
+            var expr = Lambda<Func<Enum3, Enum3?>>(body, p);
+
+            var compiled = expr.CompileFast();
+
+            Assert.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
+        }
+
+        [Test]
+        public void EnumNull_to_enum_conversion()
+        {
+            var from = typeof(Enum3?);
+            var to = typeof(Enum3);
+
+            var p = Parameter(from, "p");
+
+            var body = Convert(
+                Convert(p, typeof(Enum3)),
+                to);
+
+            var expr = Lambda<Func<Enum3?, Enum3>>(body, p);
+
+            var compiled = expr.CompileFast();
+
+            Assert.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
+            Assert.Throws<InvalidOperationException>(() => compiled(null));
         }
 
         [Test]
@@ -1139,6 +1169,28 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(0x10, ret);
         }
 
+        [Test]
+        public void AddNullTest()
+        {
+            var p = Parameter(typeof(int?));
+            var body = Add(Constant(4, typeof(int?)), p);
+            var expr = Lambda<Func<int?, int?>>(body, p);
+            var compiled = expr.CompileFast(true);
+            Assert.AreEqual(9, compiled(5));
+            Assert.AreEqual(null, compiled(null));
+        }
+
+        [Test]
+        public void AddNullTest2()
+        {
+            var p = Parameter(typeof(int?));
+            var body = Add(p, Constant(4, typeof(int?)));
+            var expr = Lambda<Func<int?, int?>>(body, p);
+            var compiled = expr.CompileFast(true);
+            Assert.AreEqual(9, compiled(5));
+            Assert.AreEqual(null, compiled(null));
+        }
+
         public class Patient2 : Patient { }
 
         public class Patient
@@ -1222,5 +1274,22 @@ namespace FastExpressionCompiler.UnitTests
             public TestClass3 Class3P { get; set; }
         }
 
+        [Test]
+        [Ignore("todo : fixme")]
+        public void RenameMe()
+        {
+            var body = Convert(
+                Convert(
+                    Convert(
+                        Convert(Constant(2d), typeof(double?)),
+                        typeof(decimal),
+                        typeof(decimal).GetMethod("op_Explicit", new[] { typeof(double) })),
+                    typeof(decimal?)),
+                typeof(object));
+
+            var expr = Lambda<Func<object>>(body);
+            var compiled = expr.CompileFast(true);
+            Assert.AreEqual(2m, compiled());
+        }
     }
 }
