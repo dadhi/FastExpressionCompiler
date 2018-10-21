@@ -1,28 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net46;netcoreapp2.0;netcoreapp2.1</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">netcoreapp2.1</TargetFrameworks>
+        <LangVersion>7.1</LangVersion>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFrameworks>net46;netcoreapp2.0</TargetFrameworks>
-    <LangVersion>7.1</LangVersion>
-  </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <NoWarn>1701;1702;1705;659</NoWarn>
+    </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <NoWarn>1701;1702;1705;659</NoWarn>
-  </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
+        <PackageReference Include="NUnit" Version="3.11.0" />
+        <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.2" />
-    <PackageReference Include="NUnit" Version="3.10.1" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="ILDebugging.Decoder">
-      <HintPath>..\libs\ILDebugging.Decoder.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+    <ItemGroup>
+        <Reference Include="ILDebugging.Decoder">
+            <HintPath>..\libs\ILDebugging.Decoder.dll</HintPath>
+        </Reference>
+    </ItemGroup>
 
 </Project>

@@ -1222,11 +1222,10 @@ namespace FastExpressionCompiler
                             var newExpr = (NewExpression)expr;
                             var argExprs = newExpr.Arguments;
                             for (var i = 0; i < argExprs.Count; i++)
-                            {
-                                var idx = argExprs[i].Type.IsByRef ? i : -1;
-                                if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, idx))
+                                if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent,
+                                    argExprs[i].Type.IsByRef ? i : -1))
                                     return false;
-                            }
+
                             return TryEmitNew(newExpr.Constructor, newExpr.Type, il);
 
                         case ExpressionType.NewArrayBounds:
@@ -1337,11 +1336,9 @@ namespace FastExpressionCompiler
 
                             var indexArgExprs = indexExpr.Arguments;
                             for (var i = 0; i < indexArgExprs.Count; i++)
-                            {
-                                var idx = indexArgExprs[i].Type.IsByRef ? i : -1;
-                                if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, parent, idx))
+                                if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, parent,
+                                    indexArgExprs[i].Type.IsByRef ? i : -1))
                                     return false;
-                            }
 
                             return TryEmitIndex((IndexExpression)expr, il);
 

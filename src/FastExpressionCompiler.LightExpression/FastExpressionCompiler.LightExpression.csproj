@@ -1,21 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net45;netstandard1.3;netstandard2.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">netstandard2.0</TargetFrameworks>
+
         <VersionPrefix>1.0.0</VersionPrefix>
-        <TargetFrameworks>net45;netstandard1.3;netstandard2.0</TargetFrameworks>
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <AssemblyName>FastExpressionCompiler.LightExpression</AssemblyName>
+        <VersionSuffix>preview-01</VersionSuffix>
+
         <Product>FastExpressionCompiler.LightExpression</Product>
-        <RootNamespace>FastExpressionCompiler.LightExpression</RootNamespace>
         <Authors>Maksim Volkau</Authors>
         <Copyright>Copyright © 2018 Maksim Volkau</Copyright>
         <NeutralLanguage>en-US</NeutralLanguage>
-        <Title>FastExpressionCompiler.LightExpression</Title>
-        <Summary>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Summary>
+        <Title>$(Product)</Title>
+        <PackageId>$(Product)</PackageId>
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
-        
-        <PackageId>FastExpressionCompiler</PackageId>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes>
             v1.0.0
@@ -26,8 +23,14 @@
         <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
 
-        <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
+        <AssemblyName>$(Product)</AssemblyName>
+        <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
+        <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
 
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -53,15 +56,5 @@
     <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
     </ItemGroup>
-
-    <PropertyGroup Condition="'$(TargetFramework)'=='net45'">
-        <AssemblyTitle>FastExpressionCompiler.LightExpression .NET 4.5</AssemblyTitle>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(TargetFramework)'=='netstandard1.3'">
-        <AssemblyTitle>FastExpressionCompiler.LightExpression .NET Standard 1.3</AssemblyTitle>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(TargetFramework)'=='netstandard2.0'">
-        <AssemblyTitle>FastExpressionCompiler.LightExpression .NET Standard 2.0</AssemblyTitle>
-    </PropertyGroup>
 
 </Project>

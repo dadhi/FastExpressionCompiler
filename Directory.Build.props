@@ -1,0 +1,6 @@
+<Project>
+    <PropertyGroup>
+        <!--Set to true to minimize number of target frameworks, to fasten the build :-) -->
+        <DevMode>true</DevMode>
+    </PropertyGroup>
+</Project>

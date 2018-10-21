@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using NUnit.Framework;
 
@@ -320,7 +318,9 @@ namespace FastExpressionCompiler.UnitTests
             var p = Parameter(typeof(object));
             var pp = new Patient();
             var body = Equal(Constant(pp), p);
-            Expression<Func<object, bool>> e = (o) => o == pp;
+#pragma warning disable CS0252 // Possible unintended reference comparison; left hand side needs cast
+            Expression<Func<object, bool>> e = o => o == pp;
+#pragma warning restore CS0252 // Possible unintended reference comparison; left hand side needs cast
             var expr = Lambda<Func<object, bool>>(body, p);
 
             var compiled = expr.CompileFast(true);
@@ -336,7 +336,9 @@ namespace FastExpressionCompiler.UnitTests
             var p = Parameter(typeof(Patient));
             var pp = new Patient();
             var body = Equal(Constant(pp), p);
-            Expression<Func<object, bool>> e = (o) => o == pp;
+#pragma warning disable CS0252 // Possible unintended reference comparison; left hand side needs cast
+            Expression<Func<object, bool>> e = o => o == pp;
+#pragma warning restore CS0252 // Possible unintended reference comparison; left hand side needs cast
             var expr = Lambda<Func<Patient, bool>>(body, p);
 
             var compiled = expr.CompileFast(true);
@@ -1132,7 +1134,7 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void ConvertNullable2Test()
         {
-            var body = Convert(ConvertChecked(Constant(5l, typeof(long)), typeof(int)), typeof(int?));
+            var body = Convert(ConvertChecked(Constant(5L, typeof(long)), typeof(int)), typeof(int?));
 
             var expr = Lambda<Func<int?>>(body);
 

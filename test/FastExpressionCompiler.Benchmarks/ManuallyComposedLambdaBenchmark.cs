@@ -35,8 +35,8 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly ConstantExpression _aConstExpr = Expression.Constant(_a, typeof(A));
         private static readonly Expression<Func<B, X>> _expr = ComposeManualExprWithParams(_aConstExpr);
 
+        [CoreJob]
         [MemoryDiagnoser]
-        [ClrJob, CoreJob]
         [MarkdownExporter]
         public class Compilation
         {
@@ -54,8 +54,8 @@ namespace FastExpressionCompiler.Benchmarks
                 ?? _expr.Compile();
         }
 
-        [MemoryDiagnoser]
         [ClrJob, CoreJob]
+        [MemoryDiagnoser]
         [MarkdownExporter]
         public class Invocation
         {
