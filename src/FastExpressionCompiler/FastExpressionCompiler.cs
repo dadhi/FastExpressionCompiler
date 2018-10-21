@@ -1155,7 +1155,7 @@ namespace FastExpressionCompiler
             InstanceAccess = 1 << 6
         }
 
-        internal static bool ShouldIgnoreResult(ParentFlags parent) => (parent & ParentFlags.IgnoreResult) != 0;
+        internal static bool IgnoresResult(this ParentFlags parent) => (parent & ParentFlags.IgnoreResult) != 0;
 
         /// <summary>Supports emitting of selected expressions, e.g. lambdaExpr are not supported yet.
         /// When emitter find not supported expression it will return false from <see cref="TryEmit"/>, so I could fallback
@@ -1185,15 +1185,18 @@ namespace FastExpressionCompiler
                     switch (expr.NodeType)
                     {
                         case ExpressionType.Parameter:
-                            return ShouldIgnoreResult(parent) ||
-                                   TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent,
-                                       byRefIndex);
+                            return parent.IgnoresResult() ||
+                                   TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
+
                         case ExpressionType.TypeAs:
                             return TryEmitTypeAs((UnaryExpression)expr, paramExprs, il, ref closure, parent);
+
                         case ExpressionType.TypeIs:
                             return TryEmitTypeIs((TypeBinaryExpression)expr, paramExprs, il, ref closure, parent);
+
                         case ExpressionType.Not:
                             return TryEmitNot((UnaryExpression)expr, paramExprs, il, ref closure, parent);
+
                         case ExpressionType.Convert:
                         case ExpressionType.ConvertChecked:
                             return TryEmitConvert((UnaryExpression)expr, paramExprs, il, ref closure, parent);
@@ -1206,7 +1209,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Constant:
                             var constantExpression = (ConstantExpression)expr;
-                            return ShouldIgnoreResult(parent) ||
+                            return IgnoresResult(parent) ||
                                    TryEmitConstant(constantExpression, constantExpression.Type, constantExpression.Value, il, ref closure);
 
                         case ExpressionType.Call:
@@ -1328,7 +1331,7 @@ namespace FastExpressionCompiler
                         }
 
                         case ExpressionType.Default:
-                            return expr.Type == typeof(void) || ShouldIgnoreResult(parent) ||
+                            return expr.Type == typeof(void) || IgnoresResult(parent) ||
                                    EmitDefault(expr.Type, il);
 
                         case ExpressionType.Index:
@@ -1800,7 +1803,7 @@ namespace FastExpressionCompiler
                 {
                     if (targetType == typeof(object) && sourceType.IsValueType())
                         il.Emit(OpCodes.Box, sourceType);
-                    if (ShouldIgnoreResult(parent))
+                    if (IgnoresResult(parent))
                         il.Emit(OpCodes.Pop);
                     return true;
                 }
@@ -1869,7 +1872,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Castclass, targetType);
                 }
 
-                if (ShouldIgnoreResult(parent)) il.Emit(OpCodes.Pop);
+                if (IgnoresResult(parent)) il.Emit(OpCodes.Pop);
                 return true;
             }
 
