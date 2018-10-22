@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 using NUnit.Framework;
 #pragma warning disable 219
 
-namespace FastExpressionCompiler.IssueTests
+namespace FastExpressionCompiler.UnitTests
 {
     [TestFixture]
     public class Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke
