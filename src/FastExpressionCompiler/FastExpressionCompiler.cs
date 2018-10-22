@@ -1145,7 +1145,8 @@ namespace FastExpressionCompiler
             MemberAccess = 1 << 3, // Any Parent Expression is a MemberExpression
             Arithmetic = 1 << 4,
             Coalesce = 1 << 5,
-            InstanceAccess = 1 << 6
+            InstanceAccess = 1 << 6,
+            InstanceCall = Call | MemberAccess
         }
 
         internal static bool IgnoresResult(this ParentFlags parent) => (parent & ParentFlags.IgnoreResult) != 0;
@@ -2553,7 +2554,9 @@ namespace FastExpressionCompiler
                     if (!TryEmit(objExpr, paramExprs, il, ref closure, callFlags | ParentFlags.InstanceAccess))
                         return false;
 
-                    if (objExpr.Type.IsValueType() && objExpr.NodeType != ExpressionType.Parameter && !closure.LastEmitIsAddress)
+                    if (objExpr.Type.IsValueType() && 
+                        objExpr.NodeType != ExpressionType.Parameter && 
+                        !closure.LastEmitIsAddress)
                     {
                         var theVar = il.DeclareLocal(objExpr.Type);
                         il.Emit(OpCodes.Stloc, theVar);
@@ -2597,7 +2600,9 @@ namespace FastExpressionCompiler
                     // Value type special treatment to load address of value instance in order to access a field or call a method.
                     // Parameter should be excluded because it already loads an address via Ldarga, and you don't need to.
                     // And for field access no need to load address, cause the field stored on stack nearby
-                    if (instanceExpr != null && !closure.LastEmitIsAddress && instanceExpr.NodeType != ExpressionType.Parameter && instanceExpr.Type.IsValueType())
+                    if (instanceExpr != null && !closure.LastEmitIsAddress && 
+                        instanceExpr.NodeType != ExpressionType.Parameter && 
+                        instanceExpr.Type.IsValueType())
                     {
                         var theVar = il.DeclareLocal(instanceExpr.Type);
                         il.Emit(OpCodes.Stloc, theVar);
@@ -2623,7 +2628,10 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        closure.LastEmitIsAddress = (field.FieldType.GetTypeInfo().IsValueType && (parent & ParentFlags.InstanceAccess) > 0);
+                        closure.LastEmitIsAddress = 
+                            field.FieldType.GetTypeInfo().IsValueType && 
+                            (parent & ParentFlags.InstanceAccess) != 0;
+
                         il.Emit(closure.LastEmitIsAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
                     }
                     return true;
@@ -3067,84 +3075,85 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+
+
             private static bool TryEmitArithmetic(BinaryExpression expr, ExpressionType exprNodeType,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, 
+                ParentFlags parent)
             {
-                var flags = parent & ~ParentFlags.IgnoreResult;
-                Label? noValueLabel = null;
-                Label? noValueLabel2 = null;
-                if (expr.Left.Type.IsNullable())
-                {
-                    noValueLabel = il.DefineLabel();
-                    if (!TryEmit(expr.Left, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) | ParentFlags.InstanceAccess | ParentFlags.Call))
-                        return false;
-                    if (!closure.LastEmitIsAddress)
-                    {
-                        var loc = il.DeclareLocal(expr.Left.Type);
-                        il.Emit(OpCodes.Stloc, loc);
-                        il.Emit(OpCodes.Ldloca_S, loc);
-                    }
-                    il.Emit(OpCodes.Dup);
-                    var mthHasValueGetterMethod = expr.Left.Type.FindNullableHasValueGetterMethod();
-                    EmitMethodCall(il, mthHasValueGetterMethod);
-                    il.Emit(OpCodes.Brfalse, noValueLabel.Value);
-                    var mthFindNullableValueOrDefaultMethod = expr.Left.Type.FindNullableValueOrDefaultMethod();
-                    EmitMethodCall(il, mthFindNullableValueOrDefaultMethod);
-                }
-                else
-                {
-                    if (!TryEmit(expr.Left, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess))
-                        return false;
-                }
+                var flags = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall | ParentFlags.Arithmetic;
 
-                if (expr.Right.Type.IsNullable())
+                Label leftNoValueLabel;
+                var leftExpr = expr.Left;
+                var lefType = leftExpr.Type;
+                var leftIsNullable = lefType.IsNullable();
+                if (leftIsNullable)
                 {
-                    noValueLabel2 = il.DefineLabel();
-                    if (!TryEmit(expr.Right, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) | ParentFlags.InstanceAccess | ParentFlags.Call))
+                    leftNoValueLabel = il.DefineLabel();
+                    if (!TryEmit(leftExpr, paramExprs, il, ref closure, flags | ParentFlags.InstanceCall))
                         return false;
-                    if (!closure.LastEmitIsAddress)
-                    {
-                        var loc = il.DeclareLocal(expr.Right.Type);
-                        il.Emit(OpCodes.Stloc, loc);
-                        il.Emit(OpCodes.Ldloca_S, loc);
-                    }
-                    il.Emit(OpCodes.Dup);
-                    var mthHasValueGetterMethod = expr.Right.Type.FindNullableHasValueGetterMethod();
-                    EmitMethodCall(il, mthHasValueGetterMethod);
-                    il.Emit(OpCodes.Brfalse, noValueLabel2.Value);
-                    var mthFindNullableValueOrDefaultMethod = expr.Right.Type.FindNullableValueOrDefaultMethod();
-                    EmitMethodCall(il, mthFindNullableValueOrDefaultMethod);
-                }
-                else
-                {
-                    if (!TryEmit(expr.Right, paramExprs, il, ref closure, (flags | ParentFlags.Arithmetic) & ~ParentFlags.InstanceAccess))
-                        return false;
-                }
 
-                if (!TryEmitArithmeticOperation(exprNodeType, expr.Type, il, expr.Left.Type, expr.Right.Type))
+                    if (!closure.LastEmitIsAddress)
+                        DeclareAndLoadLocalVariable(il, lefType);
+
+                    il.Emit(OpCodes.Dup);
+                    EmitMethodCall(il, lefType.FindNullableHasValueGetterMethod());
+
+                    il.Emit(OpCodes.Brfalse, leftNoValueLabel);
+                    EmitMethodCall(il, lefType.FindNullableValueOrDefaultMethod());
+                }
+                else if (!TryEmit(leftExpr, paramExprs, il, ref closure, flags))
                     return false;
 
-                if (noValueLabel.HasValue || noValueLabel2.HasValue)
+                Label rightNoValueLabel;
+                var rightExpr = expr.Right;
+                var rightType = rightExpr.Type;
+                var rightIsNullable = rightType.IsNullable();
+                if (rightIsNullable)
+                {
+                    rightNoValueLabel = il.DefineLabel();
+                    if (!TryEmit(rightExpr, paramExprs, il, ref closure, flags | ParentFlags.InstanceCall))
+                        return false;
+
+                    if (!closure.LastEmitIsAddress)
+                        DeclareAndLoadLocalVariable(il, rightType);
+
+                    il.Emit(OpCodes.Dup);
+                    EmitMethodCall(il, rightType.FindNullableHasValueGetterMethod());
+
+                    il.Emit(OpCodes.Brfalse, rightNoValueLabel);
+                    EmitMethodCall(il, rightType.FindNullableValueOrDefaultMethod());
+                }
+                else if (!TryEmit(rightExpr, paramExprs, il, ref closure, flags))
+                    return false;
+
+                var exprType = expr.Type;
+                if (!TryEmitArithmeticOperation(expr, exprNodeType, exprType, il))
+                    return false;
+
+                if (leftIsNullable || rightIsNullable)
                 {
                     var valueLabel = il.DefineLabel();
                     il.Emit(OpCodes.Br, valueLabel);
-                    if (noValueLabel2.HasValue)
-                        il.MarkLabel(noValueLabel2.Value);
-                    il.Emit(OpCodes.Pop);
-                    if (noValueLabel.HasValue)
-                        il.MarkLabel(noValueLabel.Value);
+
+                    if (rightIsNullable)
+                        il.MarkLabel(rightNoValueLabel);
                     il.Emit(OpCodes.Pop);
 
-                    if (expr.Type.IsNullable())
+                    if (leftIsNullable)
+                        il.MarkLabel(leftNoValueLabel);
+                    il.Emit(OpCodes.Pop);
+
+                    if (exprType.IsNullable())
                     {
-                        var loc = il.DeclareLocal(expr.Type);
+                        var loc = il.DeclareLocal(exprType);
                         var endL = il.DefineLabel();
                         il.Emit(OpCodes.Ldloca_S, loc);
-                        il.Emit(OpCodes.Initobj, expr.Type);
+                        il.Emit(OpCodes.Initobj, exprType);
                         il.Emit(OpCodes.Ldloc_S, loc);
                         il.Emit(OpCodes.Br_S, endL);
                         il.MarkLabel(valueLabel);
-                        il.Emit(OpCodes.Newobj, expr.Type.GetTypeInfo().DeclaredConstructors.First());
+                        il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.First());
                         il.MarkLabel(endL);
                     }
                     else
@@ -3157,7 +3166,15 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitArithmeticOperation(ExpressionType exprNodeType, Type exprType, ILGenerator il, Type leftType, Type rightType)
+            private static void DeclareAndLoadLocalVariable(ILGenerator il, Type lefType)
+            {
+                var loc = il.DeclareLocal(lefType);
+                il.Emit(OpCodes.Stloc, loc);
+                il.Emit(OpCodes.Ldloca_S, loc);
+            }
+
+            private static bool TryEmitArithmeticOperation(BinaryExpression expr,
+                ExpressionType exprNodeType, Type exprType, ILGenerator il)
             {
                 if (!exprType.IsPrimitive())
                 {
@@ -3169,10 +3186,12 @@ namespace FastExpressionCompiler
                         MethodInfo method = null;
                         if (exprType == typeof(string))
                         {
-                            Type paraType = typeof(string);
-                            if (leftType != rightType || leftType != typeof(string))
+                            var paraType = typeof(string);
+                            if (expr.Left.Type != expr.Right.Type || expr.Left.Type != typeof(string))
                                 paraType = typeof(object);
-                            method = typeof(string).GetTypeInfo().DeclaredMethods.First(x => x.Name == "Concat" && x.GetParameters().Length == 2 && x.GetParameters()[0].ParameterType == paraType);
+                            method = typeof(string).GetTypeInfo().DeclaredMethods.GetFirst(x => 
+                                x.Name == "Concat" && x.GetParameters().Length == 2 &&
+                                x.GetParameters()[0].ParameterType == paraType);
                         }
                         else
                         {

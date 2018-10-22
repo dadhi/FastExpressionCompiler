@@ -438,6 +438,28 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(result, new Vector2(-1.0f, -1.0f));
         }
 
+        [Test]
+        public void Can_add_strings()
+        {
+            var s1 = "a";
+            var s2 = "b";
+            Expression<Func<string>> expr = () => s1 + s2;
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual("ab", f());
+        }
+
+        [Test]
+        public void Can_add_string_and_not_string()
+        {
+            var s1 = "a";
+            var s2 = 1;
+            Expression<Func<string>> expr = () => s1 + s2;
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual("a1", f());
+        }
+
         private sealed class NonPrimitiveInt32Class
         {
             private readonly int _value;
