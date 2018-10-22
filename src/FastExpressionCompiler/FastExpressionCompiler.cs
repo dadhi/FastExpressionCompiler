@@ -3222,7 +3222,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.AddChecked:
                     case ExpressionType.AddAssignChecked:
-                        il.Emit(IsUnsigned(exprType) ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf);
+                        il.Emit(exprType.IsUnsigned() ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf);
                         return true;
 
                     case ExpressionType.Subtract:
@@ -3232,7 +3232,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.SubtractChecked:
                     case ExpressionType.SubtractAssignChecked:
-                        il.Emit(IsUnsigned(exprType) ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf);
+                        il.Emit(exprType.IsUnsigned() ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf);
                         return true;
 
                     case ExpressionType.Multiply:
@@ -3242,7 +3242,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.MultiplyChecked:
                     case ExpressionType.MultiplyAssignChecked:
-                        il.Emit(IsUnsigned(exprType) ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf);
+                        il.Emit(exprType.IsUnsigned() ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf);
                         return true;
 
                     case ExpressionType.Divide:
@@ -3286,9 +3286,6 @@ namespace FastExpressionCompiler
 
                 return false;
             }
-
-            private static bool IsUnsigned(Type type) =>
-                type == typeof(byte) || type == typeof(ushort) || type == typeof(uint) || type == typeof(ulong);
 
             private static bool TryEmitLogicalOperator(BinaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
@@ -3415,6 +3412,9 @@ namespace FastExpressionCompiler
     {
         internal static bool IsValueType(this Type type) => type.GetTypeInfo().IsValueType;
         internal static bool IsPrimitive(this Type type) => type.GetTypeInfo().IsPrimitive;
+
+        internal static bool IsUnsigned(this Type type) =>
+            type == typeof(byte) || type == typeof(ushort) || type == typeof(uint) || type == typeof(ulong);
 
         internal static bool IsNullable(this Type type) =>
             type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>);
