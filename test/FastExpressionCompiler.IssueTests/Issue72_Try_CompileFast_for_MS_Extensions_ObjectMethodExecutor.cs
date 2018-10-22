@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Internal;
 using NUnit.Framework;
 
-namespace FastExpressionCompiler.IssueTests
+namespace FastExpressionCompiler.UnitTests
 {
     [TestFixture]
     public class Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor

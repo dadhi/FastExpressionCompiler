@@ -16,8 +16,8 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-// considers in/out/ref in C# represented by ByRef in expressions (i.e. single representation for 3 C# keywords)
-[TestFixture]
+    // considers in/out/ref in C# represented by ByRef in expressions (i.e. single representation for 3 C# keywords)
+    [TestFixture]
     public class Issue55_CompileFast_crash_with_ref_parameter
     {
         delegate TResult FuncRef<T, out TResult>(ref T a1);
@@ -625,9 +625,9 @@ namespace FastExpressionCompiler.UnitTests
             var body = Assign(prop, objVal);
             var lambda = Lambda<ActionRefIn<StructWithIntField, int>>(body, objRef, objVal);
 
-            var compiledB = lambda.CompileFast<ActionRefIn<StructWithIntField, int>>(true);
+            var fastCompiled = lambda.CompileFast<ActionRefIn<StructWithIntField, int>>(true);
             var exampleB = default(StructWithIntField);
-            compiledB(ref exampleB, 7);
+            fastCompiled(ref exampleB, 7);
             Assert.AreEqual(7, exampleB.IntField);
         }
 
@@ -703,7 +703,7 @@ namespace FastExpressionCompiler.UnitTests
             void DynamicDeserializer(ref object value) =>
                 value = value ?? new object();
 
-            void DynamicDeserializerGeneric<T>(ref T value) where T:class, new () =>
+            void DynamicDeserializerGeneric<T>(ref T value) where T : class, new() =>
                 value = value ?? new T();
 
             var specificType = typeof(object);
@@ -802,7 +802,5 @@ namespace FastExpressionCompiler.UnitTests
             LocalAssert(funcFast);
             LocalAssert(TryParseReturn);
         }
-
-
-        }
     }
+}
