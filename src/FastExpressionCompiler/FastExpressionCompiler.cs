@@ -344,7 +344,6 @@ namespace FastExpressionCompiler
 
             // Type of constructed closure, may be available even without closure object (in case of nested lambda)
             public Type ClosureType;
-
             public bool HasClosure => ClosureType != null;
 
             public bool LastEmitIsAddress;
@@ -1360,7 +1359,8 @@ namespace FastExpressionCompiler
             {
                 var lbl = closure.Labels.FirstOrDefault(x => x.Key == expr.Target);
                 if (lbl.Key != expr.Target)
-                    closure.Labels[closure.LabelCount++] = lbl = new KeyValuePair<object, Label>(expr.Target, il.DefineLabel());
+                    closure.Labels[closure.LabelCount++] = 
+                        lbl = new KeyValuePair<object, Label>(expr.Target, il.DefineLabel());
 
                 il.MarkLabel(lbl.Value);
 
@@ -3083,7 +3083,7 @@ namespace FastExpressionCompiler
             {
                 var flags = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall | ParentFlags.Arithmetic;
 
-                Label leftNoValueLabel;
+                var leftNoValueLabel = default(Label);
                 var leftExpr = expr.Left;
                 var lefType = leftExpr.Type;
                 var leftIsNullable = lefType.IsNullable();
@@ -3105,7 +3105,7 @@ namespace FastExpressionCompiler
                 else if (!TryEmit(leftExpr, paramExprs, il, ref closure, flags))
                     return false;
 
-                Label rightNoValueLabel;
+                var rightNoValueLabel = default(Label);
                 var rightExpr = expr.Right;
                 var rightType = rightExpr.Type;
                 var rightIsNullable = rightType.IsNullable();
