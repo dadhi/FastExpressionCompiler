@@ -1724,21 +1724,21 @@ namespace FastExpressionCompiler
             {
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, parent))
                     return false;
-                if ((parent & ParentFlags.IgnoreResult) > 0)
+                if ((parent & ParentFlags.IgnoreResult) != 0)
                     il.Emit(OpCodes.Pop);
                 else
-                {
                     il.Emit(OpCodes.Isinst, expr.Type);
-                }
                 return true;
             }
+
             private static bool TryEmitTypeIs(TypeBinaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
                 if (!TryEmit(expr.Expression, paramExprs, il, ref closure, parent))
                     return false;
-                if ((parent & ParentFlags.IgnoreResult) > 0)
+
+                if ((parent & ParentFlags.IgnoreResult) != 0)
                     il.Emit(OpCodes.Pop);
                 else
                 {
@@ -1746,6 +1746,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldnull);
                     il.Emit(OpCodes.Cgt_Un);
                 }
+
                 return true;
             }
 
@@ -1772,7 +1773,7 @@ namespace FastExpressionCompiler
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
-                    return TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.Call | ParentFlags.InstanceAccess, 0)
+                    return TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, 0)
                         && EmitMethodCall(il, method, parent);
 
                 var sourceType = opExpr.Type;
@@ -1781,14 +1782,11 @@ namespace FastExpressionCompiler
                 if (sourceType.IsNullable() && targetType == Nullable.GetUnderlyingType(sourceType))
                 {
                     var valueGetMethod = sourceType.GetTypeInfo().GetDeclaredProperty("Value").FindPropertyGetMethod();
-                    if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ParentFlags.InstanceAccess))
+                    if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceAccess))
                         return false;
+
                     if (!closure.LastEmitIsAddress)
-                    {
-                        var theVar = il.DeclareLocal(sourceType);
-                        il.Emit(OpCodes.Stloc, theVar);
-                        il.Emit(OpCodes.Ldloca, theVar);
-                    }
+                        DeclareAndLoadLocalVariable(il, sourceType);
 
                     return EmitMethodCall(il, valueGetMethod, parent);
                 }
@@ -1838,19 +1836,21 @@ namespace FastExpressionCompiler
                     {
                         var labelFalse = il.DefineLabel();
                         var labelDone = il.DefineLabel();
-                        var loc = il.DeclareLocal(sourceType);
                         var locT = il.DeclareLocal(targetType);
-                        il.Emit(OpCodes.Stloc_S, loc);
-                        il.Emit(OpCodes.Ldloca_S, loc);
+
+                        var loc = DeclareAndLoadLocalVariable(il, sourceType);
+
                         if (!EmitMethodCall(il, sourceType.FindNullableHasValueGetterMethod()))
                             return false;
+
                         il.Emit(OpCodes.Brfalse, labelFalse);
                         il.Emit(OpCodes.Ldloca_S, loc);
                         if (!EmitMethodCall(il, sourceType.FindNullableValueOrDefaultMethod()))
                             return false;
-                        TryEmitValueConvert(targetTypeNonNull, il,
-                            expr.NodeType == ExpressionType.ConvertChecked);
-                        il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetTypeInfo.GenericTypeArguments[0]));
+
+                        TryEmitValueConvert(targetTypeNonNull, il, expr.NodeType == ExpressionType.ConvertChecked);
+
+                         il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetTypeInfo.GenericTypeArguments[0]));
                         il.Emit(OpCodes.Stloc_S, locT);
                         il.Emit(OpCodes.Br_S, labelDone);
                         il.MarkLabel(labelFalse);
@@ -1863,7 +1863,8 @@ namespace FastExpressionCompiler
                         return true;
                     }
 
-                    TryEmitValueConvert(targetTypeNonNull, il, false);
+                    TryEmitValueConvert(targetTypeNonNull, il, isChecked: false);
+
                     il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetTypeInfo.GenericTypeArguments[0]));
                 }
                 else
@@ -1880,26 +1881,26 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitValueConvert(Type targetType, ILGenerator il, bool @checked)
+            private static bool TryEmitValueConvert(Type targetType, ILGenerator il, bool isChecked)
             {
                 if (targetType == typeof(int))
-                    il.Emit(@checked ? OpCodes.Conv_Ovf_I4 : OpCodes.Conv_I4);
+                    il.Emit(isChecked ? OpCodes.Conv_Ovf_I4 : OpCodes.Conv_I4);
                 else if (targetType == typeof(float))
                     il.Emit(OpCodes.Conv_R4);
                 else if (targetType == typeof(uint))
-                    il.Emit(@checked ? OpCodes.Conv_Ovf_U4 : OpCodes.Conv_U4);
+                    il.Emit(isChecked ? OpCodes.Conv_Ovf_U4 : OpCodes.Conv_U4);
                 else if (targetType == typeof(sbyte))
-                    il.Emit(@checked ? OpCodes.Conv_Ovf_I1 : OpCodes.Conv_I1);
+                    il.Emit(isChecked ? OpCodes.Conv_Ovf_I1 : OpCodes.Conv_I1);
                 else if (targetType == typeof(byte))
-                    il.Emit(@checked ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
+                    il.Emit(isChecked ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
                 else if (targetType == typeof(short))
-                    il.Emit(@checked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
+                    il.Emit(isChecked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
                 else if (targetType == typeof(ushort) || targetType == typeof(char))
-                    il.Emit(@checked ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
+                    il.Emit(isChecked ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
                 else if (targetType == typeof(long))
-                    il.Emit(@checked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
+                    il.Emit(isChecked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
                 else if (targetType == typeof(ulong))
-                    il.Emit(@checked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8);
+                    il.Emit(isChecked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8);
                 else if (targetType == typeof(double))
                     il.Emit(OpCodes.Conv_R8);
                 else
@@ -2606,17 +2607,13 @@ namespace FastExpressionCompiler
                     if (field.IsStatic)
                     {
                         if (field.IsLiteral)
-                        {
-                            var value = field.GetValue(null);
-                            TryEmitConstant(null, field.FieldType, value, il, ref closure);
-                        }
+                            TryEmitConstant(null, field.FieldType, field.GetValue(null), il, ref closure);
                         else
                             il.Emit(OpCodes.Ldsfld, field);
                     }
                     else
                     {
                         closure.LastEmitIsAddress = field.FieldType.IsValueType() && (parent & ParentFlags.InstanceAccess) != 0;
-
                         il.Emit(closure.LastEmitIsAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
                     }
                     return true;
@@ -3152,11 +3149,12 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static void DeclareAndLoadLocalVariable(ILGenerator il, Type lefType)
+            private static LocalBuilder DeclareAndLoadLocalVariable(ILGenerator il, Type lefType)
             {
                 var loc = il.DeclareLocal(lefType);
                 il.Emit(OpCodes.Stloc, loc);
                 il.Emit(OpCodes.Ldloca_S, loc);
+                return loc;
             }
 
             private static bool TryEmitArithmeticOperation(BinaryExpression expr,
