@@ -7,6 +7,8 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
+            BenchmarkRunner.Run<NestedLambdaOverhead>();
+
             //BenchmarkRunner.Run<FEC_vs_ManualEmit_vs_Activator>();
 
             //BenchmarkRunner.Run<MultipleNestedLambdaExprVsExprSharing>();
@@ -14,7 +16,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Compile>();
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Execute>();
 
-            BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_CreateExecutor>();
+            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_CreateExecutor>();
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Execute>();
             //BenchmarkRunner.Run<StaticTypeOfSwitch>();
