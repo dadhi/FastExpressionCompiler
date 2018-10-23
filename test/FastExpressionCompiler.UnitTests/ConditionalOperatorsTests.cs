@@ -139,14 +139,6 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 
         [Test]
-        public void CompileFast_should_return_null_when_option_is_set_and_expression_type_is_not_supported()
-        {
-            // exception is "Cannot jump, no labels found"
-            Assert.Throws<InvalidOperationException>(() => 
-                Lambda(Return(Label(), Constant("null"))).CompileFast(ifFastFailedReturnNull: true));
-        }
-
-        [Test]
         public void Test_IfThenElse()
         {
             const bool test = true;
