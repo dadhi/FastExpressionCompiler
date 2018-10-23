@@ -10,18 +10,22 @@
         <Authors>Maksim Volkau</Authors>
         <Copyright>Copyright © 2018 Maksim Volkau</Copyright>
         <NeutralLanguage>en-US</NeutralLanguage>
-        <Title>$(Product)</Title>
+
         <PackageId>$(Product)</PackageId>
+        <Title>$(Product)</Title>
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
-        <PackageReleaseNotes>
-            v1.0.0
-            - Initial stable release - previously was a code compiling ExpressionInfo and a part of FastExpressionCompiler
-            - fixed:
+        <PackageReleaseNotes><![CDATA[
+v1.0.0
+- Initial stable release - previously was a code compiling ExpressionInfo and a part of FastExpressionCompiler
+- fixed:
+            ]]>
         </PackageReleaseNotes>
         <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
         <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
+
+        <PackageOutputPath>..\..\.dist</PackageOutputPath>
 
         <AssemblyName>$(Product)</AssemblyName>
         <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
@@ -41,9 +45,7 @@
     <ItemGroup>
         <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs" />
         <None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE" />
-        <None Remove="FastExpressionCompiler.*.ncrunchproject*" />
         <None Remove="**\*.orig" />
-        <None Remove="dist\*" />
     </ItemGroup>
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
@@ -56,5 +58,4 @@
     <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
     </ItemGroup>
-
 </Project>

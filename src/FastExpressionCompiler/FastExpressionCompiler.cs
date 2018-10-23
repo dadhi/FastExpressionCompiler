@@ -1620,8 +1620,8 @@ namespace FastExpressionCompiler
 
                     if (paramExpr.IsByRef)
                     {
-                        if (((parent & ParentFlags.MemberAccess) != 0 && paramType.IsClass) ||
-                            ((parent & ParentFlags.Coalesce) != 0))
+                        if ((parent & ParentFlags.MemberAccess) != 0 && paramType.GetTypeInfo().IsClass ||
+                            (parent & ParentFlags.Coalesce) != 0)
                             il.Emit(OpCodes.Ldind_Ref); 
                         else if ((parent & ParentFlags.Arithmetic) != 0)
                             EmitDereference(il, paramType);
