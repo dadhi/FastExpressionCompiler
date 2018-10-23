@@ -1141,7 +1141,7 @@ namespace FastExpressionCompiler
             Arithmetic = 1 << 4,
             Coalesce = 1 << 5,
             InstanceAccess = 1 << 6,
-            InstanceCall = Call | MemberAccess
+            InstanceCall = Call | InstanceAccess
         }
 
         internal static bool IgnoresResult(this ParentFlags parent) => (parent & ParentFlags.IgnoreResult) != 0;
@@ -1596,26 +1596,23 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent, int byRefIndex = -1)
             {
-                var paramType = paramExpr.Type;
-
                 // if parameter is passed through, then just load it on stack
+                var paramType = paramExpr.Type;
                 var paramIndex = paramExprs.GetFirstIndex(paramExpr);
                 if (paramIndex != -1)
                 {
                     if (closure.HasClosure)
                         paramIndex += 1; // shift parameter indices by one, because the first one will be closure
 
-                    var asAddress =
-                        paramType.IsValueType() && !paramExpr.IsByRef &&
-                        ((parent & (ParentFlags.Call | ParentFlags.InstanceAccess)) == (ParentFlags.Call | ParentFlags.InstanceAccess) ||
+                    closure.LastEmitIsAddress = !paramExpr.IsByRef && paramType.IsValueType() &&
+                        ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall ||
                         (parent & ParentFlags.MemberAccess) != 0);
 
-                    closure.LastEmitIsAddress = asAddress;
-                    EmitLoadParamArg(il, paramIndex, asAddress);
+                    EmitLoadParamArg(il, paramIndex, closure.LastEmitIsAddress);
 
                     if (paramExpr.IsByRef)
                     {
-                        if ((parent & ParentFlags.MemberAccess) != 0 && paramType.GetTypeInfo().IsClass ||
+                        if ((parent & ParentFlags.MemberAccess) != 0 && paramType.IsClass() ||
                             (parent & ParentFlags.Coalesce) != 0)
                             il.Emit(OpCodes.Ldind_Ref);
                         else if ((parent & ParentFlags.Arithmetic) != 0)
@@ -1634,7 +1631,7 @@ namespace FastExpressionCompiler
                 var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (variable != null)
                 {
-                    if (byRefIndex != -1 || (paramType.IsValueType() && (parent & ParentFlags.MemberAccess) != 0))
+                    if (byRefIndex != -1 || paramType.IsValueType() && (parent & ParentFlags.MemberAccess) != 0)
                         il.Emit(OpCodes.Ldloca_S, variable);
                     else
                         il.Emit(OpCodes.Ldloc, variable);
@@ -2543,21 +2540,17 @@ namespace FastExpressionCompiler
             private static bool TryEmitMethodCall(MethodCallExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
+                var flags = parent & ~ParentFlags.IgnoreResult | ParentFlags.Call;
+
                 var objExpr = expr.Object;
-                var callFlags = parent & ~ParentFlags.IgnoreResult | ParentFlags.Call;
                 if (objExpr != null)
                 {
-                    if (!TryEmit(objExpr, paramExprs, il, ref closure, callFlags | ParentFlags.InstanceAccess))
+                    if (!TryEmit(objExpr, paramExprs, il, ref closure, flags | ParentFlags.InstanceAccess))
                         return false;
 
-                    if (objExpr.Type.IsValueType() &&
-                        objExpr.NodeType != ExpressionType.Parameter &&
-                        !closure.LastEmitIsAddress)
-                    {
-                        var theVar = il.DeclareLocal(objExpr.Type);
-                        il.Emit(OpCodes.Stloc, theVar);
-                        il.Emit(OpCodes.Ldloca, theVar);
-                    }
+                    var objType = objExpr.Type;
+                    if (objType.IsValueType() && objExpr.NodeType != ExpressionType.Parameter && !closure.LastEmitIsAddress)
+                        DeclareAndLoadLocalVariable(il, objType);
                 }
 
                 IReadOnlyList<Expression> argExprs = expr.Arguments;
@@ -2567,8 +2560,7 @@ namespace FastExpressionCompiler
                     for (var i = 0; i < argExprs.Count; i++)
                     {
                         var byRefIndex = args[i].ParameterType.IsByRef ? i : -1;
-                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, callFlags,
-                            byRefIndex))
+                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, flags, byRefIndex))
                             return false;
                     }
                 }
@@ -2577,7 +2569,6 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Constrained, objExpr.Type);
 
                 closure.LastEmitIsAddress = false;
-
                 return EmitMethodCall(il, expr.Method, parent);
             }
 
@@ -2624,9 +2615,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        closure.LastEmitIsAddress =
-                            field.FieldType.GetTypeInfo().IsValueType &&
-                            (parent & ParentFlags.InstanceAccess) != 0;
+                        closure.LastEmitIsAddress = field.FieldType.IsValueType() && (parent & ParentFlags.InstanceAccess) != 0;
 
                         il.Emit(closure.LastEmitIsAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
                     }
@@ -2909,7 +2898,8 @@ namespace FastExpressionCompiler
 
                 if (leftOpType != rightOpType)
                 {
-                    if (leftOpType.GetTypeInfo().IsClass && rightOpType.GetTypeInfo().IsClass && (leftOpType == typeof(object) || rightOpType == typeof(object)))
+                    if (leftOpType.IsClass() && rightOpType.IsClass() && 
+                        (leftOpType == typeof(object) || rightOpType == typeof(object)))
                     {
                         if (expressionType == ExpressionType.Equal)
                         {
@@ -3408,6 +3398,7 @@ namespace FastExpressionCompiler
     {
         internal static bool IsValueType(this Type type) => type.GetTypeInfo().IsValueType;
         internal static bool IsPrimitive(this Type type) => type.GetTypeInfo().IsPrimitive;
+        internal static bool IsClass(this Type type) => type.GetTypeInfo().IsClass;
 
         internal static bool IsUnsigned(this Type type) =>
             type == typeof(byte) || type == typeof(ushort) || type == typeof(uint) || type == typeof(ulong);
