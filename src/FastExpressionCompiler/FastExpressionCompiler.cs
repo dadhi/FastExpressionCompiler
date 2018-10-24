@@ -1777,9 +1777,8 @@ namespace FastExpressionCompiler
                         && EmitMethodCall(il, method, parent);
 
                 var sourceType = opExpr.Type;
-                var sourceTypeInfo = sourceType.GetTypeInfo();
-
-                if (sourceType.IsNullable() && targetType == Nullable.GetUnderlyingType(sourceType))
+                var sourceTypeIsNullable = sourceType.IsNullable();
+                if (sourceTypeIsNullable && targetType == Nullable.GetUnderlyingType(sourceType))
                 {
                     var valueGetMethod = sourceType.GetTypeInfo().GetDeclaredProperty("Value").FindPropertyGetMethod();
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceAccess))
@@ -1809,30 +1808,30 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                // check implicit / explicit conversion operators on source and target types - #73
-                if (!sourceTypeInfo.IsPrimitive)
+                // check implicit / explicit conversion operators on source and target types
+                // for non-primitives and for non-primitive nullables - #73
+                if (!sourceType.IsPrimitiveOrNullableOfPrimitive())
                 {
-                    var convertOpMethod = FirstConvertOperatorOrDefault(sourceTypeInfo, targetType, sourceType);
+                    var convertOpMethod = sourceType.FindConvertOperator(sourceType, targetType);
                     if (convertOpMethod != null)
                         return EmitMethodCall(il, convertOpMethod, parent);
                 }
 
-                var targetTypeInfo = targetType.GetTypeInfo();
-                if (!targetTypeInfo.IsPrimitive)
+                if (!targetType.IsPrimitiveOrNullableOfPrimitive())
                 {
-                    var convertOpMethod = FirstConvertOperatorOrDefault(targetTypeInfo, targetType, sourceType);
+                    var convertOpMethod = targetType.FindConvertOperator(sourceType, targetType);
                     if (convertOpMethod != null)
                         return EmitMethodCall(il, convertOpMethod, parent);
                 }
 
-                if (sourceType == typeof(object) && targetTypeInfo.IsValueType)
+                if (sourceType == typeof(object) && targetType.IsValueType())
                     il.Emit(OpCodes.Unbox_Any, targetType);
 
                 // Conversion to Nullable: new Nullable<T>(T val);
                 else if (targetType.IsNullable())
                 {
                     var targetTypeNonNull = Nullable.GetUnderlyingType(targetType);
-                    if (sourceType.IsNullable())
+                    if (sourceTypeIsNullable)
                     {
                         var labelFalse = il.DefineLabel();
                         var labelDone = il.DefineLabel();
@@ -1850,7 +1849,7 @@ namespace FastExpressionCompiler
 
                         TryEmitValueConvert(targetTypeNonNull, il, expr.NodeType == ExpressionType.ConvertChecked);
 
-                         il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetTypeInfo.GenericTypeArguments[0]));
+                        il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetType.GetTypeInfo().GenericTypeArguments[0]));
                         il.Emit(OpCodes.Stloc_S, locT);
                         il.Emit(OpCodes.Br_S, labelDone);
                         il.MarkLabel(labelFalse);
@@ -1865,7 +1864,7 @@ namespace FastExpressionCompiler
 
                     TryEmitValueConvert(targetTypeNonNull, il, isChecked: false);
 
-                    il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetTypeInfo.GenericTypeArguments[0]));
+                    il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetType.GetTypeInfo().GenericTypeArguments[0]));
                 }
                 else
                 {
@@ -1907,12 +1906,6 @@ namespace FastExpressionCompiler
                     return false;
                 return true;
             }
-
-            private static MethodInfo FirstConvertOperatorOrDefault(TypeInfo typeInfo, Type targetType, Type sourceType) =>
-                typeInfo.DeclaredMethods.GetFirst(m =>
-                    m.IsStatic && m.ReturnType == targetType &&
-                    (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
-                    m.GetParameters()[0].ParameterType == sourceType);
 
             private static bool TryEmitConstant(ConstantExpression expr, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure)
             {
@@ -2237,7 +2230,7 @@ namespace FastExpressionCompiler
             {
                 var prop = member as PropertyInfo;
                 if (prop != null)
-                    return EmitMethodCall(il, prop.DeclaringType.GetTypeInfo().GetDeclaredMethod("set_" + prop.Name));
+                    return EmitMethodCall(il, prop.FindPropertySetMethod());
 
                 var field = member as FieldInfo;
                 if (field == null)
@@ -2310,9 +2303,9 @@ namespace FastExpressionCompiler
 
                         if (paramIndex != -1)
                         {
+                            // shift parameter indices by one, because the first one will be closure
                             if (closure.HasClosure)
-                                paramIndex +=
-                                    1; // shift parameter indices by one, because the first one will be closure
+                                paramIndex += 1; 
 
                             if (paramIndex >= byte.MaxValue)
                                 return false;
@@ -3404,6 +3397,9 @@ namespace FastExpressionCompiler
         internal static bool IsNullable(this Type type) =>
             type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>);
 
+        internal static bool IsPrimitiveOrNullableOfPrimitive(this Type type) =>
+            type.IsPrimitive() || type.IsNullable() && Nullable.GetUnderlyingType(type).IsPrimitive();
+
         internal static PropertyInfo FindProperty(this Type type, string propertyName) =>
             type.GetTypeInfo().GetDeclaredProperty(propertyName);
 
@@ -3428,6 +3424,16 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindPropertyGetMethod(this PropertyInfo prop) =>
             prop.DeclaringType.GetTypeInfo().GetDeclaredMethod("get_" + prop.Name);
+
+        internal static MethodInfo FindPropertySetMethod(this PropertyInfo prop) =>
+            prop.DeclaringType.GetTypeInfo().GetDeclaredMethod("set_" + prop.Name);
+
+        internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType) =>
+            type.GetTypeInfo().DeclaredMethods.GetFirst(m =>
+                m.IsStatic && m.ReturnType == targetType &&
+                (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
+                m.GetParameters()[0].ParameterType == sourceType);
+
 
         // todo: test what is faster? Copy and inline switch? Switch in method? Ors in method?
 

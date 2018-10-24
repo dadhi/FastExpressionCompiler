@@ -144,35 +144,36 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual((short)532, result.Value);
         }
 
-        [Test, Ignore("Fails")]
+        // todo: problem is not in conversion but rather in no dup newed value
+        [Test]//, Ignore("Fails")]
         public void NullableIntToDoubleCastsShouldWork()
         {
-            var intParameter = Parameter(typeof(ValueHolder<int?>), "nullableIntValue");
-            var intValueProperty = Property(intParameter, "Value");
+            // constructs this function
+            ValueHolder<double> Adapt(ValueHolder<int?> nullableIntHolder)
+            {
+                var vd = new ValueHolder<double>();
+                vd.Value = (double)nullableIntHolder.Value;
+                return vd;
+            }
 
-            var doubleVariable = Variable(typeof(ValueHolder<double>), "double");
-            var doubleValueProperty = Property(doubleVariable, "Value");
-
-            var newDoubleHolder = Assign(doubleVariable, New(doubleVariable.Type));
-
-            var nullableIntAsDouble = Convert(intValueProperty, doubleValueProperty.Type);
-            var doubleValueAssignment = Assign(doubleValueProperty, nullableIntAsDouble);
+            var nullableIntHolderParam = Parameter(typeof(ValueHolder<int?>), "nullableIntHolder");
+            var doubleHolderVar = Variable(typeof(ValueHolder<double>), "doubleHolder");
+            var nullableIntHolderValueProp = Property(nullableIntHolderParam, "Value");
+            var doubleHolderValueProp = Property(doubleHolderVar, "Value");
 
             var block = Block(
-                new[] { doubleVariable },
-                newDoubleHolder,
-                doubleValueAssignment,
-                doubleVariable);
+                new[] { doubleHolderVar },
+                Assign(doubleHolderVar, New(doubleHolderVar.Type)),
+                Assign(doubleHolderValueProp, Convert(nullableIntHolderValueProp, doubleHolderValueProp.Type)),
+                doubleHolderVar);
 
-            var convertedIntValueLambda = Lambda<Func<ValueHolder<int?>, ValueHolder<double>>>(
+            var adaptExpr = Lambda<Func<ValueHolder<int?>, ValueHolder<double>>>(
                 block,
-                intParameter);
+                nullableIntHolderParam);
 
-            var source = new ValueHolder<int?> { Value = 321 };
+            var adapt = adaptExpr.CompileFast();
 
-            var convertedIntValueFunc = convertedIntValueLambda.CompileFast();
-            var result = convertedIntValueFunc.Invoke(source);
-
+            var result = adapt(new ValueHolder<int?> { Value = 321 });
             Assert.AreEqual(321d, result.Value);
         }
 
