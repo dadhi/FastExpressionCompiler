@@ -1277,8 +1277,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        [Ignore("todo : fixme")]
-        public void RenameMe()
+        public void Triple_convert_with_decimal_nullables()
         {
             var body = Convert(
                 Convert(
