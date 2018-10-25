@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
+using ILDebugging.Decoder;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -11,6 +15,9 @@ namespace FastExpressionCompiler.UnitTests
 {
     public class Issue159_NumericConversions
     {
+        private static void AssertCodes(MethodInfo method, params OpCode[] expectedCodes) =>
+            CollectionAssert.AreEqual(expectedCodes, ILReaderFactory.Create(method).Select(x => x.OpCode).ToArray());
+
         [Test]
         public void UnsignedLongComparisonsWithConversionsShouldWork()
         {
@@ -144,18 +151,17 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual((short)532, result.Value);
         }
 
-        // todo: problem is not in conversion but rather in no dup newed value
-        [Test]//, Ignore("Fails")]
+        // Expression used for the tests below
+        //private ValueHolder<double> Adapt(ValueHolder<int?> nullableIntHolder)
+        //{
+        //    var vd = new ValueHolder<double>();
+        //    vd.Value = (double)nullableIntHolder.Value;
+        //    return vd;
+        //}
+
+        [Test]
         public void NullableIntToDoubleCastsShouldWork()
         {
-            // constructs this function
-            ValueHolder<double> Adapt(ValueHolder<int?> nullableIntHolder)
-            {
-                var vd = new ValueHolder<double>();
-                vd.Value = (double)nullableIntHolder.Value;
-                return vd;
-            }
-
             var nullableIntHolderParam = Parameter(typeof(ValueHolder<int?>), "nullableIntHolder");
             var doubleHolderVar = Variable(typeof(ValueHolder<double>), "doubleHolder");
             var nullableIntHolderValueProp = Property(nullableIntHolderParam, "Value");
@@ -172,6 +178,49 @@ namespace FastExpressionCompiler.UnitTests
                 nullableIntHolderParam);
 
             var adapt = adaptExpr.CompileFast();
+            AssertCodes(adapt.Method,
+                OpCodes.Newobj,
+                OpCodes.Stloc_0, // todo: can be replaced with dup #
+                OpCodes.Ldloc_0, // 
+                OpCodes.Ldarg_0, 
+                OpCodes.Call, // ValueHolder<int?>.get_Value
+                OpCodes.Stloc_1,
+                OpCodes.Ldloca_S,
+                OpCodes.Call, // int?.get_Value
+                OpCodes.Conv_R8,
+                OpCodes.Call, // ValueHolder<double>.set_Value
+                OpCodes.Ldloc_0,
+                OpCodes.Ret);
+
+            var result = adapt(new ValueHolder<int?> { Value = 321 });
+            Assert.AreEqual(321d, result.Value);
+        }
+
+        [Test]
+        public void NullableIntToDoubleCastsShouldWork_with_MemberInit()
+        {
+            var nullableIntHolderParam = Parameter(typeof(ValueHolder<int?>), "nullableIntHolder");
+
+            var memberInit = MemberInit(New(typeof(ValueHolder<double>)),
+                Bind(typeof(ValueHolder<double>).GetTypeInfo().GetDeclaredProperty(nameof(ValueHolder<double>.Value)),
+                    Convert(Property(nullableIntHolderParam, "Value"), typeof(double))));
+
+            var adaptExpr = Lambda<Func<ValueHolder<int?>, ValueHolder<double>>>(
+                memberInit, nullableIntHolderParam);
+
+            var adapt = adaptExpr.CompileFast();
+
+            AssertCodes(adapt.Method, 
+                OpCodes.Newobj, 
+                OpCodes.Dup, 
+                OpCodes.Ldarg_0, 
+                OpCodes.Call, // ValueHolder<int?>.get_Value
+                OpCodes.Stloc_0, 
+                OpCodes.Ldloca_S, 
+                OpCodes.Call, // int?.get_Value
+                OpCodes.Conv_R8, 
+                OpCodes.Call, // ValueHolder<double>.set_Value 
+                OpCodes.Ret);
 
             var result = adapt(new ValueHolder<int?> { Value = 321 });
             Assert.AreEqual(321d, result.Value);

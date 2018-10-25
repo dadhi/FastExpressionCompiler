@@ -1780,14 +1780,13 @@ namespace FastExpressionCompiler
                 var sourceTypeIsNullable = sourceType.IsNullable();
                 if (sourceTypeIsNullable && targetType == Nullable.GetUnderlyingType(sourceType))
                 {
-                    var valueGetMethod = sourceType.GetTypeInfo().GetDeclaredProperty("Value").FindPropertyGetMethod();
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceAccess))
                         return false;
 
                     if (!closure.LastEmitIsAddress)
                         DeclareAndLoadLocalVariable(il, sourceType);
 
-                    return EmitMethodCall(il, valueGetMethod, parent);
+                    return EmitMethodCall(il, sourceType.FindValueGetterMethod(), parent);
                 }
 
                 if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
@@ -1830,7 +1829,7 @@ namespace FastExpressionCompiler
                 // Conversion to Nullable: new Nullable<T>(T val);
                 else if (targetType.IsNullable())
                 {
-                    var targetTypeNonNull = Nullable.GetUnderlyingType(targetType);
+                    var underlyingNullableTargetType = Nullable.GetUnderlyingType(targetType);
                     if (sourceTypeIsNullable)
                     {
                         var labelFalse = il.DefineLabel();
@@ -1847,7 +1846,7 @@ namespace FastExpressionCompiler
                         if (!EmitMethodCall(il, sourceType.FindNullableValueOrDefaultMethod()))
                             return false;
 
-                        TryEmitValueConvert(targetTypeNonNull, il, expr.NodeType == ExpressionType.ConvertChecked);
+                        TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked);
 
                         il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetType.GetTypeInfo().GenericTypeArguments[0]));
                         il.Emit(OpCodes.Stloc_S, locT);
@@ -1862,7 +1861,7 @@ namespace FastExpressionCompiler
                         return true;
                     }
 
-                    TryEmitValueConvert(targetTypeNonNull, il, isChecked: false);
+                    TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false);
 
                     il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetType.GetTypeInfo().GenericTypeArguments[0]));
                 }
@@ -1871,12 +1870,23 @@ namespace FastExpressionCompiler
                     if (targetType.GetTypeInfo().IsEnum)
                         targetType = Enum.GetUnderlyingType(targetType);
 
+                    // fixes #159
+                    if (sourceTypeIsNullable)
+                    {
+                        if (!closure.LastEmitIsAddress)
+                            DeclareAndLoadLocalVariable(il, sourceType);
+
+                        EmitMethodCall(il, sourceType.FindValueGetterMethod(), parent);
+                    }
+
                     // cast as the last resort and let's it fail if unlucky
                     if (!TryEmitValueConvert(targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                         il.Emit(OpCodes.Castclass, targetType);
                 }
 
-                if (IgnoresResult(parent)) il.Emit(OpCodes.Pop);
+                if (IgnoresResult(parent))
+                    il.Emit(OpCodes.Pop);
+
                 return true;
             }
 
@@ -2581,13 +2591,11 @@ namespace FastExpressionCompiler
                     // Value type special treatment to load address of value instance in order to access a field or call a method.
                     // Parameter should be excluded because it already loads an address via Ldarga, and you don't need to.
                     // And for field access no need to load address, cause the field stored on stack nearby
-                    if (instanceExpr != null && !closure.LastEmitIsAddress &&
-                        instanceExpr.NodeType != ExpressionType.Parameter &&
+                    if (!closure.LastEmitIsAddress && instanceExpr != null && 
+                        instanceExpr.NodeType != ExpressionType.Parameter && 
                         instanceExpr.Type.IsValueType())
                     {
-                        var theVar = il.DeclareLocal(instanceExpr.Type);
-                        il.Emit(OpCodes.Stloc, theVar);
-                        il.Emit(OpCodes.Ldloca, theVar);
+                        DeclareAndLoadLocalVariable(il, instanceExpr.Type);
                     }
 
                     closure.LastEmitIsAddress = false;
@@ -3142,9 +3150,9 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static LocalBuilder DeclareAndLoadLocalVariable(ILGenerator il, Type lefType)
+            private static LocalBuilder DeclareAndLoadLocalVariable(ILGenerator il, Type type)
             {
-                var loc = il.DeclareLocal(lefType);
+                var loc = il.DeclareLocal(type);
                 il.Emit(OpCodes.Stloc, loc);
                 il.Emit(OpCodes.Ldloca_S, loc);
                 return loc;
@@ -3419,6 +3427,9 @@ namespace FastExpressionCompiler
         internal static MethodInfo FindNullableValueOrDefaultMethod(this Type type) =>
             type.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault").GetFirst(x => x.GetParameters().Length == 0);
 
+        internal static MethodInfo FindValueGetterMethod(this Type type) =>
+            type.GetTypeInfo().GetDeclaredMethod("get_Value");
+
         internal static MethodInfo FindNullableHasValueGetterMethod(this Type type) =>
             type.GetTypeInfo().GetDeclaredMethod("get_HasValue");
 
@@ -3434,9 +3445,7 @@ namespace FastExpressionCompiler
                 (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
                 m.GetParameters()[0].ParameterType == sourceType);
 
-
         // todo: test what is faster? Copy and inline switch? Switch in method? Ors in method?
-
         internal static ExpressionType GetArithmeticFromArithmeticAssignOrSelf(ExpressionType arithmetic)
         {
             switch (arithmetic)
