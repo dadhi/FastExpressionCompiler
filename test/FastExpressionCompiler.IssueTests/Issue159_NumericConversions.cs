@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using ILDebugging.Decoder;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -15,9 +13,6 @@ namespace FastExpressionCompiler.UnitTests
 {
     public class Issue159_NumericConversions
     {
-        private static void AssertCodes(MethodInfo method, params OpCode[] expectedCodes) =>
-            CollectionAssert.AreEqual(expectedCodes, ILReaderFactory.Create(method).Select(x => x.OpCode).ToArray());
-
         [Test]
         public void UnsignedLongComparisonsWithConversionsShouldWork()
         {
@@ -178,7 +173,7 @@ namespace FastExpressionCompiler.UnitTests
                 nullableIntHolderParam);
 
             var adapt = adaptExpr.CompileFast();
-            AssertCodes(adapt.Method,
+            adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be replaced with dup #
                 OpCodes.Ldloc_0, // 
@@ -210,7 +205,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var adapt = adaptExpr.CompileFast();
 
-            AssertCodes(adapt.Method, 
+            adapt.Method.AssertOpCodes( 
                 OpCodes.Newobj, 
                 OpCodes.Dup, 
                 OpCodes.Ldarg_0, 
@@ -226,7 +221,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(321d, result.Value);
         }
 
-        [Test, Ignore("Fails")]
+        [Test] 
         public void NullableDecimalToDoubleCastsShouldWork()
         {
             var decimalParameter = Parameter(typeof(ValueHolder<decimal?>), "nullableDecimalValue");
@@ -235,15 +230,10 @@ namespace FastExpressionCompiler.UnitTests
             var doubleVariable = Variable(typeof(ValueHolder<double>), "double");
             var doubleValueProperty = Property(doubleVariable, "Value");
 
-            var newDoubleHolder = Assign(doubleVariable, New(doubleVariable.Type));
-
-            var nullableDecimalAsDouble = Convert(decimalValueProperty, doubleValueProperty.Type);
-            var doubleValueAssignment = Assign(doubleValueProperty, nullableDecimalAsDouble);
-
             var block = Block(
                 new[] { doubleVariable },
-                newDoubleHolder,
-                doubleValueAssignment,
+                Assign(doubleVariable, New(doubleVariable.Type)),
+                Assign(doubleValueProperty, Convert(decimalValueProperty, doubleValueProperty.Type)),
                 doubleVariable);
 
             var convertedDecimalValueLambda = Lambda<Func<ValueHolder<decimal?>, ValueHolder<double>>>(
@@ -252,9 +242,22 @@ namespace FastExpressionCompiler.UnitTests
 
             var source = new ValueHolder<decimal?> { Value = 938378.637m };
 
-            var convertedDecimalValueFunc = convertedDecimalValueLambda.CompileFast();
-            var result = convertedDecimalValueFunc.Invoke(source);
+            var adapt = convertedDecimalValueLambda.CompileFast();
+            adapt.Method.AssertOpCodes(
+                OpCodes.Newobj,
+                OpCodes.Stloc_0, // todo: can be simplified with dup #173
+                OpCodes.Ldloc_0,
+                OpCodes.Ldarg_0,
+                OpCodes.Call, // ValueHolder<int?>.get_Value
+                OpCodes.Stloc_1,
+                OpCodes.Ldloca_S,
+                OpCodes.Call, // int?.get_Value
+                OpCodes.Call, // double Decimal.op_Explicit() 
+                OpCodes.Call, // ValueHolder<double>.set_Value
+                OpCodes.Ldloc_0,
+                OpCodes.Ret);
 
+            var result = adapt(source);
             Assert.AreEqual(938378.637d, result.Value);
         }
 

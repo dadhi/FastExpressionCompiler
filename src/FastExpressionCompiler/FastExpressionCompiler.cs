@@ -1778,7 +1778,8 @@ namespace FastExpressionCompiler
 
                 var sourceType = opExpr.Type;
                 var sourceTypeIsNullable = sourceType.IsNullable();
-                if (sourceTypeIsNullable && targetType == Nullable.GetUnderlyingType(sourceType))
+                var underlyingNullableSourceType = Nullable.GetUnderlyingType(sourceType);
+                if (sourceTypeIsNullable && targetType == underlyingNullableSourceType)
                 {
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceAccess))
                         return false;
@@ -1792,7 +1793,9 @@ namespace FastExpressionCompiler
                 if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                     return false;
 
-                if (targetType.IsNullable() && sourceType == Nullable.GetUnderlyingType(targetType))
+                var targetTypeIsNullable = targetType.IsNullable();
+                var underlyingNullableTargetType = Nullable.GetUnderlyingType(targetType);
+                if (targetTypeIsNullable && sourceType == underlyingNullableTargetType)
                 {
                     il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.First());
                     return true;
@@ -1827,9 +1830,8 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Unbox_Any, targetType);
 
                 // Conversion to Nullable: new Nullable<T>(T val);
-                else if (targetType.IsNullable())
+                else if (targetTypeIsNullable)
                 {
-                    var underlyingNullableTargetType = Nullable.GetUnderlyingType(targetType);
                     if (sourceTypeIsNullable)
                     {
                         var labelFalse = il.DefineLabel();
@@ -1877,6 +1879,10 @@ namespace FastExpressionCompiler
                             DeclareAndLoadLocalVariable(il, sourceType);
 
                         EmitMethodCall(il, sourceType.FindValueGetterMethod(), parent);
+
+                        var convertMethod = underlyingNullableSourceType.FindConvertOperator(underlyingNullableSourceType, targetType);
+                        if (convertMethod != null)
+                            return EmitMethodCall(il, convertMethod, parent);
                     }
 
                     // cast as the last resort and let's it fail if unlucky
