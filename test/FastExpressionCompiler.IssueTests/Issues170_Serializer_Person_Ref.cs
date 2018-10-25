@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Reflection;
 using NUnit.Framework;
 
 #pragma warning disable 649
@@ -12,8 +7,8 @@ using NUnit.Framework;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
+// ReSharper disable UnusedMember.Global
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
@@ -42,7 +37,7 @@ namespace FastExpressionCompiler.UnitTests
                 Assign(PropertyOrField(refValueArg, nameof(Person.Name)), Constant("test result name"))
                );
 
-            void AssingRefs(byte[] buffer, ref int offset, ref Person value)
+            void AssigningRefs(byte[] buffer, ref int offset, ref Person value)
             {
                 value.Health = 5;
                 value.Name = "test result name";
@@ -62,7 +57,7 @@ namespace FastExpressionCompiler.UnitTests
                 Assert.AreEqual("test result name", person.Name);
             }
 
-            LocalAssert(AssingRefs);
+            LocalAssert(AssigningRefs);
 
 #if !LIGHT_EXPRESSION
             {
@@ -121,15 +116,11 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-#if LIGHT_EXPRESSION
-        [Ignore("Fix ArgumentException for LIGHT_EXPRESSION")]
-#endif
         public void InvokeActionConstantIsSupportedSimpleStruct()
         {
             var refValueArg = Parameter(typeof(SimplePersonStruct).MakeByRefType(), "value");
 
-            void AssingRefs(ref SimplePersonStruct value) => value.Health = 5;
-
+            void AssigningRefs(ref SimplePersonStruct value) => value.Health = 5;
 
             var lambda = Lambda<DeserializeDelegateSimple<SimplePersonStruct>>(
                 Assign(PropertyOrField(refValueArg, nameof(SimplePersonStruct.Health)), Constant(5)),
@@ -142,7 +133,7 @@ namespace FastExpressionCompiler.UnitTests
                 Assert.AreEqual(5, person.Health);
             }
 
-            LocalAssert(AssingRefs);
+            LocalAssert(AssigningRefs);
 
             var func = lambda
 #if LIGHT_EXPRESSION

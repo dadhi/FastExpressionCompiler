@@ -702,14 +702,19 @@ namespace FastExpressionCompiler.LightExpression
         public readonly bool IsByRef;
 
         public override SysExpr ToExpression() => ToParameterExpression();
-        public System.Linq.Expressions.ParameterExpression ToParameterExpression() => SysExpr.Parameter(Type, Name);
+
+        public System.Linq.Expressions.ParameterExpression ToParameterExpression() =>
+            _paramExpr ?? (_paramExpr = SysExpr.Parameter(IsByRef ? Type.MakeByRefType() : Type, Name));
 
         internal ParameterExpression(Type type, string name, bool isByRef)
         {
             Type = type;
             Name = name;
             IsByRef = isByRef;
+            _paramExpr = null;
         }
+
+        private System.Linq.Expressions.ParameterExpression _paramExpr;
     }
 
     public sealed class ConstantExpression : Expression
