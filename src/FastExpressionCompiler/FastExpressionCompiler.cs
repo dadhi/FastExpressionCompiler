@@ -1812,18 +1812,30 @@ namespace FastExpressionCompiler
 
                 // check implicit / explicit conversion operators on source and target types
                 // for non-primitives and for non-primitive nullables - #73
-                if (!sourceType.IsPrimitiveOrNullableOfPrimitive())
+                if (!sourceType.IsPrimitive() && (!sourceTypeIsNullable || !underlyingNullableSourceType.IsPrimitive()))
                 {
-                    var convertOpMethod = sourceType.FindConvertOperator(sourceType, targetType);
+                    var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
+                    var convertOpMethod = sourceType.FindConvertOperator(sourceType, actualTargetType);
                     if (convertOpMethod != null)
-                        return EmitMethodCall(il, convertOpMethod, parent);
+                    {
+                        EmitMethodCall(il, convertOpMethod, parent);
+                        if (targetTypeIsNullable)
+                            il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
+                        return true;
+                    }
                 }
 
-                if (!targetType.IsPrimitiveOrNullableOfPrimitive())
+                if (!targetType.IsPrimitive() && (!targetTypeIsNullable || !underlyingNullableTargetType.IsPrimitive()))
                 {
-                    var convertOpMethod = targetType.FindConvertOperator(sourceType, targetType);
+                    var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
+                    var convertOpMethod = actualTargetType.FindConvertOperator(sourceType, actualTargetType);
                     if (convertOpMethod != null)
-                        return EmitMethodCall(il, convertOpMethod, parent);
+                    {
+                        EmitMethodCall(il, convertOpMethod, parent);
+                        if (targetTypeIsNullable)
+                            il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
+                        return true;
+                    }
                 }
 
                 if (sourceType == typeof(object) && targetType.IsValueType())
@@ -3410,9 +3422,6 @@ namespace FastExpressionCompiler
 
         internal static bool IsNullable(this Type type) =>
             type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>);
-
-        internal static bool IsPrimitiveOrNullableOfPrimitive(this Type type) =>
-            type.IsPrimitive() || type.IsNullable() && Nullable.GetUnderlyingType(type).IsPrimitive();
 
         internal static PropertyInfo FindProperty(this Type type, string propertyName) =>
             type.GetTypeInfo().GetDeclaredProperty(propertyName);

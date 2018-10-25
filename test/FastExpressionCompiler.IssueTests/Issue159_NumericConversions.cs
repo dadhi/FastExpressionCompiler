@@ -236,22 +236,22 @@ namespace FastExpressionCompiler.UnitTests
                 Assign(doubleValueProperty, Convert(decimalValueProperty, doubleValueProperty.Type)),
                 doubleVariable);
 
-            var convertedDecimalValueLambda = Lambda<Func<ValueHolder<decimal?>, ValueHolder<double>>>(
+            var expr = Lambda<Func<ValueHolder<decimal?>, ValueHolder<double>>>(
                 block,
                 decimalParameter);
 
             var source = new ValueHolder<decimal?> { Value = 938378.637m };
 
-            var adapt = convertedDecimalValueLambda.CompileFast();
+            var adapt = expr.CompileFast();
             adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173
                 OpCodes.Ldloc_0,
                 OpCodes.Ldarg_0,
-                OpCodes.Call, // ValueHolder<int?>.get_Value
+                OpCodes.Call, // ValueHolder<decimal?>.get_Value
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
-                OpCodes.Call, // int?.get_Value
+                OpCodes.Call, // decimal?.get_Value
                 OpCodes.Call, // double Decimal.op_Explicit() 
                 OpCodes.Call, // ValueHolder<double>.set_Value
                 OpCodes.Ldloc_0,
@@ -261,7 +261,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(938378.637d, result.Value);
         }
 
-        [Test, Ignore("Fails")]
+        [Test]
         public void DecimalToNullableDoubleCastsShouldWork()
         {
             var decimalParameter = Parameter(typeof(ValueHolder<decimal>), "decimalValue");
@@ -270,26 +270,32 @@ namespace FastExpressionCompiler.UnitTests
             var nullableDoubleVariable = Variable(typeof(ValueHolder<double?>), "nullableDouble");
             var doubleValueProperty = Property(nullableDoubleVariable, "Value");
 
-            var newDoubleHolder = Assign(nullableDoubleVariable, New(nullableDoubleVariable.Type));
-
-            var decimalAsNullableDouble = Convert(decimalValueProperty, doubleValueProperty.Type);
-            var doubleValueAssignment = Assign(doubleValueProperty, decimalAsNullableDouble);
-
             var block = Block(
                 new[] { nullableDoubleVariable },
-                newDoubleHolder,
-                doubleValueAssignment,
+                Assign(nullableDoubleVariable, New(nullableDoubleVariable.Type)),
+                Assign(doubleValueProperty, Convert(decimalValueProperty, doubleValueProperty.Type)),
                 nullableDoubleVariable);
 
-            var convertedDecimalValueLambda = Lambda<Func<ValueHolder<decimal>, ValueHolder<double?>>>(
+            var expr = Lambda<Func<ValueHolder<decimal>, ValueHolder<double?>>>(
                 block,
                 decimalParameter);
 
             var source = new ValueHolder<decimal> { Value = 5332.00m };
 
-            var convertedDecimalValueFunc = convertedDecimalValueLambda.CompileFast();
-            var result = convertedDecimalValueFunc.Invoke(source);
+            var adapt = expr.CompileFast();
+            adapt.Method.AssertOpCodes(
+                OpCodes.Newobj,
+                OpCodes.Stloc_0, // todo: can be simplified with dup #173
+                OpCodes.Ldloc_0,
+                OpCodes.Ldarg_0,
+                OpCodes.Call,    // ValueHolder<decimal>.get_Value
+                OpCodes.Call,    // double Decimal.op_Explicit() 
+                OpCodes.Newobj,  // new Nullable<double>()
+                OpCodes.Call,    // ValueHolder<double?>.set_Value
+                OpCodes.Ldloc_0,
+                OpCodes.Ret);
 
+            var result = adapt(source);
             Assert.AreEqual(5332d, result.Value);
         }
 
