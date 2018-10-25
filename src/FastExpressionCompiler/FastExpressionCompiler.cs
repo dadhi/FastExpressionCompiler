@@ -1814,26 +1814,46 @@ namespace FastExpressionCompiler
                 // for non-primitives and for non-primitive nullables - #73
                 if (!sourceType.IsPrimitive() && (!sourceTypeIsNullable || !underlyingNullableSourceType.IsPrimitive()))
                 {
+                    var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
                     var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
-                    var convertOpMethod = sourceType.FindConvertOperator(sourceType, actualTargetType);
+
+                    var convertOpMethod = actualSourceType.FindConvertOperator(actualSourceType, actualTargetType);
                     if (convertOpMethod != null)
                     {
+                        if (sourceTypeIsNullable)
+                        {
+                            DeclareAndLoadLocalVariable(il, sourceType);
+                            EmitMethodCall(il, sourceType.FindValueGetterMethod(), parent);
+                        }
+
                         EmitMethodCall(il, convertOpMethod, parent);
+
                         if (targetTypeIsNullable)
                             il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
+
                         return true;
                     }
                 }
 
                 if (!targetType.IsPrimitive() && (!targetTypeIsNullable || !underlyingNullableTargetType.IsPrimitive()))
                 {
+                    var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
                     var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
-                    var convertOpMethod = actualTargetType.FindConvertOperator(sourceType, actualTargetType);
+
+                    var convertOpMethod = actualTargetType.FindConvertOperator(actualSourceType, actualTargetType);
                     if (convertOpMethod != null)
                     {
+                        if (sourceTypeIsNullable)
+                        {
+                            DeclareAndLoadLocalVariable(il, sourceType);
+                            EmitMethodCall(il, sourceType.FindValueGetterMethod(), parent);
+                        }
+
                         EmitMethodCall(il, convertOpMethod, parent);
+
                         if (targetTypeIsNullable)
                             il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
+
                         return true;
                     }
                 }
@@ -1848,28 +1868,27 @@ namespace FastExpressionCompiler
                     {
                         var labelFalse = il.DefineLabel();
                         var labelDone = il.DefineLabel();
-                        var locT = il.DeclareLocal(targetType);
-
-                        var loc = DeclareAndLoadLocalVariable(il, sourceType);
+                        var targetVar = il.DeclareLocal(targetType);
+                        var sourceVar = DeclareAndLoadLocalVariable(il, sourceType);
 
                         if (!EmitMethodCall(il, sourceType.FindNullableHasValueGetterMethod()))
                             return false;
 
                         il.Emit(OpCodes.Brfalse, labelFalse);
-                        il.Emit(OpCodes.Ldloca_S, loc);
+                        il.Emit(OpCodes.Ldloca_S, sourceVar);
                         if (!EmitMethodCall(il, sourceType.FindNullableValueOrDefaultMethod()))
                             return false;
 
                         TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked);
 
-                        il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetType.GetTypeInfo().GenericTypeArguments[0]));
-                        il.Emit(OpCodes.Stloc_S, locT);
+                        il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
+                        il.Emit(OpCodes.Stloc_S, targetVar);
                         il.Emit(OpCodes.Br_S, labelDone);
                         il.MarkLabel(labelFalse);
-                        il.Emit(OpCodes.Ldloca_S, locT);
+                        il.Emit(OpCodes.Ldloca_S, targetVar);
                         il.Emit(OpCodes.Initobj, targetType);
                         il.MarkLabel(labelDone);
-                        il.Emit(OpCodes.Ldloc_S, locT);
+                        il.Emit(OpCodes.Ldloc_S, targetVar);
                         if ((parent & ParentFlags.IgnoreResult) > 0)
                             il.Emit(OpCodes.Pop);
                         return true;
@@ -1877,7 +1896,7 @@ namespace FastExpressionCompiler
 
                     TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false);
 
-                    il.Emit(OpCodes.Newobj, targetType.FindConstructor(targetType.GetTypeInfo().GenericTypeArguments[0]));
+                    il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
                 }
                 else
                 {
@@ -1887,14 +1906,8 @@ namespace FastExpressionCompiler
                     // fixes #159
                     if (sourceTypeIsNullable)
                     {
-                        if (!closure.LastEmitIsAddress)
-                            DeclareAndLoadLocalVariable(il, sourceType);
-
+                        DeclareAndLoadLocalVariable(il, sourceType);
                         EmitMethodCall(il, sourceType.FindValueGetterMethod(), parent);
-
-                        var convertMethod = underlyingNullableSourceType.FindConvertOperator(underlyingNullableSourceType, targetType);
-                        if (convertMethod != null)
-                            return EmitMethodCall(il, convertMethod, parent);
                     }
 
                     // cast as the last resort and let's it fail if unlucky
