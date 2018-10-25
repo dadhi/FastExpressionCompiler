@@ -49,7 +49,6 @@ namespace FastExpressionCompiler.UnitTests
             void LocalAssert(DeserializeDelegate<Person> invoke)
             {
                 var person = new Person { Name = "a", Health = 1 };
-                byte[] buffer = new byte[100];
                 int offset = 0;
 
                 invoke(null, ref offset, ref person);
@@ -82,7 +81,7 @@ namespace FastExpressionCompiler.UnitTests
         public void InvokeActionConstantIsSupportedSimple()
         {
             var refValueArg = Parameter(typeof(SimplePerson).MakeByRefType(), "value");
-            void AssingRefs(ref SimplePerson value) => value.Health = 5;
+            void AssigningRefs(ref SimplePerson value) => value.Health = 5;
             var lambda = Lambda<DeserializeDelegateSimple<SimplePerson>>(
                 Assign(PropertyOrField(refValueArg, nameof(SimplePerson.Health)), Constant(5)),
                 refValueArg);
@@ -95,7 +94,7 @@ namespace FastExpressionCompiler.UnitTests
                 Assert.AreEqual(5, person.Health);
             }
 
-            LocalAssert(AssingRefs);
+            LocalAssert(AssigningRefs);
 
 #if !LIGHT_EXPRESSION
             {
@@ -135,11 +134,11 @@ namespace FastExpressionCompiler.UnitTests
 
             LocalAssert(AssigningRefs);
 
-            var func = lambda
+            Assert.DoesNotThrow(() => lambda
 #if LIGHT_EXPRESSION
                 .ToLambdaExpression()
 #endif
-                .Compile();
+                .Compile());
 
             var funcFast = lambda.CompileFast();
             LocalAssert(funcFast);
