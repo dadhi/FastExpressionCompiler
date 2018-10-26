@@ -2102,11 +2102,19 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static LocalBuilder DeclareAndLoadLocalVariable(ILGenerator il, Type type)
+            {
+                var loc = il.DeclareLocal(type);
+                il.Emit(OpCodes.Stloc, loc);
+                il.Emit(OpCodes.Ldloca_S, loc);
+                return loc;
+            }
+
             private static LocalBuilder InitValueTypeVariable(ILGenerator il, Type exprType,
                 LocalBuilder existingVar = null)
             {
                 var valVar = existingVar ?? il.DeclareLocal(exprType);
-                il.Emit(OpCodes.Ldloca, valVar);
+                il.Emit(OpCodes.Ldloca_S, valVar);
                 il.Emit(OpCodes.Initobj, exprType);
                 return valVar;
             }
@@ -2898,8 +2906,6 @@ namespace FastExpressionCompiler
             private static bool TryEmitComparison(Expression exprLeft, Expression exprRight, ExpressionType expressionType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                // todo: for now, handling only parameters of the same type
-                // todo: for now, Nullable is not supported
                 var leftOpType = exprLeft.Type;
                 var leftIsNull = leftOpType.IsNullable();
                 var rightOpType = exprRight.Type;
@@ -2912,13 +2918,9 @@ namespace FastExpressionCompiler
 
                 if (leftIsNull)
                 {
-                    lVar = il.DeclareLocal(leftOpType);
-                    il.Emit(OpCodes.Stloc_S, lVar);
-                    il.Emit(OpCodes.Ldloca_S, lVar);
-
+                    lVar = DeclareAndLoadLocalVariable(il, leftOpType);
                     if (!EmitMethodCall(il, leftOpType.FindNullableValueOrDefaultMethod()))
                         return false;
-
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
 
@@ -2954,9 +2956,7 @@ namespace FastExpressionCompiler
 
                 if (rightOpType.IsNullable())
                 {
-                    rVar = il.DeclareLocal(rightOpType);
-                    il.Emit(OpCodes.Stloc_S, rVar);
-                    il.Emit(OpCodes.Ldloca_S, rVar);
+                    rVar = DeclareAndLoadLocalVariable(il, rightOpType);
                     if (!EmitMethodCall(il, rightOpType.FindNullableValueOrDefaultMethod()))
                         return false;
                 }
@@ -3161,14 +3161,12 @@ namespace FastExpressionCompiler
 
                     if (exprType.IsNullable())
                     {
-                        var loc = il.DeclareLocal(exprType);
                         var endL = il.DefineLabel();
-                        il.Emit(OpCodes.Ldloca_S, loc);
-                        il.Emit(OpCodes.Initobj, exprType);
+                        var loc = InitValueTypeVariable(il, exprType);
                         il.Emit(OpCodes.Ldloc_S, loc);
                         il.Emit(OpCodes.Br_S, endL);
                         il.MarkLabel(valueLabel);
-                        il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.First());
+                        il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.GetFirst());
                         il.MarkLabel(endL);
                     }
                     else
@@ -3179,14 +3177,6 @@ namespace FastExpressionCompiler
                 }
 
                 return true;
-            }
-
-            private static LocalBuilder DeclareAndLoadLocalVariable(ILGenerator il, Type type)
-            {
-                var loc = il.DeclareLocal(type);
-                il.Emit(OpCodes.Stloc, loc);
-                il.Emit(OpCodes.Ldloca_S, loc);
-                return loc;
             }
 
             private static bool TryEmitArithmeticOperation(BinaryExpression expr,

@@ -4,7 +4,7 @@
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">netstandard2.0</TargetFrameworks>
 
         <VersionPrefix>2.0.0</VersionPrefix>
-        <VersionSuffix>preview-01</VersionSuffix>
+        <VersionSuffix>preview-02</VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
         <Authors>Maksim Volkau</Authors>
@@ -40,13 +40,13 @@ The release includes all goodies from FEC v2.0:
 - added: #138 Optimize Compilation of nested Lambdas
 
 - fixed: #83 Issues with linq2db tests
-- fixed: #92 Expression not compileable
-- fixed: #93 Comparisson to "null" does not work when not Typed
+- fixed: #92 Expression not compilable
+- fixed: #93 Comparison to "null" does not work when not Typed
 - fixed: #95 Ref support not yet working completely
 - fixed: #124 LightExpression wrong Type
 - fixed: #131 Linq2db - Test for JIT compiler internal limitation
 - fixed: #137 Problem with Reading & Writing of Struct Fields.
-- fxied: #146 Boolean parameter value changed from false to true
+- fixed: #146 Boolean parameter value changed from false to true
 - fixed: #147 'Common Language Runtime detected an invalid program' with int.TryParse
 - fixed: #151 'Attempt to read protected memory'
 - fixed: #152 int.MinValue access throws 'Method not supported' 
@@ -55,9 +55,10 @@ The release includes all goodies from FEC v2.0:
 - fixed: #159 Condition with converted numeric comparisons gives unexpected result
 - fixed: #162 Float - short numeric comparisons with conversions gives unexpected result
 - fixed: #163 Add of Nullable Int, etc does not work correctly
+- fixed: #165 Int and Decimal to Double conversion issues
 - fixed: #170 Problems with ref parameters
 - fixed: #172 Using FEC to compile a property setter with an enum value sets the property to random values
-            ]]>
+        ]]>
         </PackageReleaseNotes>
         <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
         <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
