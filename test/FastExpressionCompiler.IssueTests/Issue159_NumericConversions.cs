@@ -56,6 +56,44 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(default(int), result.Value);
         }
 
+        [Test, Ignore("TODO")]
+        public void UnsignedNullableLongComparisonsWithConversionsShouldWork()
+        {
+            var ulongParameter = Parameter(typeof(ValueHolder<ulong?>), "nullableUlongValue");
+            var ulongValueProperty = Property(ulongParameter, "Value");
+
+            var intVariable = Variable(typeof(ValueHolder<int?>), "nullableIntValue");
+            var intValueProperty = Property(intVariable, "Value");
+
+            var newIntHolder = Assign(intVariable, New(intVariable.Type));
+
+            var ulongLtOrEqualToIntMaxValue = LessThanOrEqual(
+                ulongValueProperty,
+                Convert(Constant(int.MaxValue), ulongValueProperty.Type));
+
+            var ulongAsNullableInt = Convert(ulongValueProperty, typeof(int?));
+            var defaultNullableInt = Default(intValueProperty.Type);
+            var ulongValueOrDefault = Condition(ulongLtOrEqualToIntMaxValue, ulongAsNullableInt, defaultNullableInt);
+
+            var intValueAssignment = Assign(intValueProperty, ulongValueOrDefault);
+
+            var block = Block(
+                new[] { intVariable },
+                newIntHolder,
+                intValueAssignment,
+                intVariable);
+
+            var ulongValueOrDefaultLambda = Lambda<Func<ValueHolder<ulong?>, ValueHolder<int?>>>(
+                block,
+                ulongParameter);
+
+            var ulongValueOrDefaultFunc = ulongValueOrDefaultLambda.CompileFast();
+            var result = ulongValueOrDefaultFunc.Invoke(new ValueHolder<ulong?> { Value = ulong.MaxValue });
+
+            // result.Value == -1
+            Assert.AreEqual(default(int?), result.Value);
+        }
+
         [Test]
         public void FloatComparisonsWithConversionsShouldWork()
         {
