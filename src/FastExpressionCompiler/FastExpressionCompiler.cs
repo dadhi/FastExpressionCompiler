@@ -46,26 +46,38 @@ namespace FastExpressionCompiler
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr,
-            bool ifFastFailedReturnNull = false) where TDelegate : class =>
-            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters, Tools.GetParamTypes(lambdaExpr.Parameters),
-                lambdaExpr.ReturnType) ??
-            (ifFastFailedReturnNull
-                ? null
-                : (TDelegate)(object)lambdaExpr
-#if LIGHT_EXPRESSION
-                .ToLambdaExpression()
-#endif
-                    .Compile());
+            bool ifFastFailedReturnNull = false) where TDelegate : class
+        {
+            var ignored = new ClosureInfo(false);
+            return (TDelegate)TryCompile(ref ignored, 
+                       typeof(TDelegate), Tools.GetParamTypes(lambdaExpr.Parameters), 
+                       lambdaExpr.ReturnType, lambdaExpr.Body, lambdaExpr.Parameters)
+                ?? (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.CompileSys());
+        }
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            lambdaExpr.CompileFast<Delegate>(ifFastFailedReturnNull);
+        public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
+        {
+            var ignored = new ClosureInfo(false);
+            return (Delegate)TryCompile(ref ignored, 
+                lambdaExpr.Type, Tools.GetParamTypes(lambdaExpr.Parameters), 
+                       lambdaExpr.ReturnType, lambdaExpr.Body, lambdaExpr.Parameters)
+                ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
+        }
 
         /// <summary>Unifies Compile for System.Linq.Expressions and FEC.LightExpression</summary>
         public static TDelegate CompileSys<TDelegate>(this Expression<TDelegate> lambdaExpr) where TDelegate : class =>
             lambdaExpr
 #if LIGHT_EXPRESSION
             .ToLambdaExpression()
+#endif
+            .Compile();
+
+        /// <summary>Unifies Compile for System.Linq.Expressions and FEC.LightExpression</summary>
+        public static Delegate CompileSys(this LambdaExpression lambdaExpr) =>
+            lambdaExpr
+#if LIGHT_EXPRESSION
+                .ToLambdaExpression()
 #endif
                 .Compile();
 

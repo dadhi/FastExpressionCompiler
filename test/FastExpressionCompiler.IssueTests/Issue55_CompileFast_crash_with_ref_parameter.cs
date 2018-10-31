@@ -752,7 +752,7 @@ namespace FastExpressionCompiler.UnitTests
                 Default(typeof(int)));
             var conditionBlock = Block(new[] { intValueParameter }, parsedValueOrDefault);
             var conditionLambda = Lambda<Func<int>>(conditionBlock);
-#if !LIGHT_EXPRESSION
+#if !LIGHT_EXPRESSION // todo: fix
             var conditionFunc = conditionLambda.Compile();
 #endif
             var conditionFuncFast = conditionLambda.CompileFast();

@@ -44,13 +44,7 @@ namespace FastExpressionCompiler.UnitTests
             var lambda = Lambda(
                 Return(Label(), Constant(1)));
 
-            Assert.Throws<InvalidOperationException>(() => 
-            lambda
-#if LIGHT_EXPRESSION
-                .ToLambdaExpression()
-#endif
-                .Compile()
-            );
+            Assert.Throws<InvalidOperationException>(() => lambda.CompileSys());
 
             Assert.Throws<InvalidOperationException>(() =>
                 lambda.CompileFast(true));

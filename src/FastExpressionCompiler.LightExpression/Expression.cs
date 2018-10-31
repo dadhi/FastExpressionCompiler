@@ -1097,7 +1097,7 @@ namespace FastExpressionCompiler.LightExpression
         public override SysExpr ToExpression() => ToLambdaExpression();
 
         public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
-            SysExpr.Lambda(Body.ToExpression(), Parameters.Map(p => p.ToParameterExpression()));
+            SysExpr.Lambda(Type, Body.ToExpression(), Parameters.Map(p => p.ToParameterExpression()));
 
         internal LambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters)
         {
