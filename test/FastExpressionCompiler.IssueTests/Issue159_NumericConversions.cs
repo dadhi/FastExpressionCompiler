@@ -184,6 +184,231 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual((short)532, result.Value);
         }
 
+        [Test, Ignore("Common Language Runtime detected an invalid program")]
+        public void FloatComparisonsWithConversionsShouldWork3()
+        {
+            var floatParameter = Parameter(typeof(ValueHolder<float>), "floatValue");
+            var floatValueProperty = Property(floatParameter, "Value");
+
+            var nullableDecimalVariable = Variable(typeof(ValueHolder<decimal?>), "nullableDecimal");
+            var nullableDecimalValueProperty = Property(nullableDecimalVariable, "Value");
+
+            var newDecimalHolder = Assign(nullableDecimalVariable, New(nullableDecimalVariable.Type));
+
+            var floatGtOrEqualToDecimalMinValue = GreaterThanOrEqual(
+                floatValueProperty,
+                Convert(Constant(decimal.MinValue), floatValueProperty.Type));
+
+            var floatLtOrEqualToDecimalMaxValue = LessThanOrEqual(
+                floatValueProperty,
+                Convert(Constant(decimal.MaxValue), floatValueProperty.Type));
+
+            var floatIsInDecimalRange = AndAlso(floatGtOrEqualToDecimalMinValue, floatLtOrEqualToDecimalMaxValue);
+
+            var floatAsNullableDecimal = Convert(floatValueProperty, nullableDecimalValueProperty.Type);
+            var defaultNullableDecimal = Default(nullableDecimalValueProperty.Type);
+            var floatValueOrDefault = Condition(floatIsInDecimalRange, floatAsNullableDecimal, defaultNullableDecimal);
+
+            var decimalValueAssignment = Assign(nullableDecimalValueProperty, floatValueOrDefault);
+
+            var block = Block(
+                new[] { nullableDecimalVariable },
+                newDecimalHolder,
+                decimalValueAssignment,
+                nullableDecimalVariable);
+
+            var floatValueOrDefaultLambda = Lambda<Func<ValueHolder<float>, ValueHolder<decimal?>>>(
+                block,
+                floatParameter);
+
+            var source = new ValueHolder<float> { Value = float.MaxValue };
+
+            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
+            var result = floatValueOrDefaultFunc.Invoke(source);
+
+            Assert.IsNull(result.Value);
+        }
+
+        [Test, Ignore("Common Language Runtime detected an invalid program")]
+        public void FloatComparisonsWithConversionsShouldWork4()
+        {
+            var floatParameter = Parameter(typeof(ValueHolder<float>), "floatValue");
+            var floatValueProperty = Property(floatParameter, "Value");
+
+            var decimalVariable = Variable(typeof(ValueHolder<decimal>), "decimal");
+            var decimalValueProperty = Property(decimalVariable, "Value");
+
+            var newDecimalHolder = Assign(decimalVariable, New(decimalVariable.Type));
+
+            var floatGtOrEqualToDecimalMinValue = GreaterThanOrEqual(
+                floatValueProperty,
+                Convert(Constant(decimal.MinValue), floatValueProperty.Type));
+
+            var floatLtOrEqualToDecimalMaxValue = LessThanOrEqual(
+                floatValueProperty,
+                Convert(Constant(decimal.MaxValue), floatValueProperty.Type));
+
+            var floatIsInDecimalRange = AndAlso(floatGtOrEqualToDecimalMinValue, floatLtOrEqualToDecimalMaxValue);
+
+            var floatAsDecimal = Convert(floatValueProperty, decimalValueProperty.Type);
+            var defaultDecimal = Default(decimalValueProperty.Type);
+            var floatValueOrDefault = Condition(floatIsInDecimalRange, floatAsDecimal, defaultDecimal);
+
+            var decimalValueAssignment = Assign(decimalValueProperty, floatValueOrDefault);
+
+            var block = Block(
+                new[] { decimalVariable },
+                newDecimalHolder,
+                decimalValueAssignment,
+                decimalVariable);
+
+            var floatValueOrDefaultLambda = Lambda<Func<ValueHolder<float>, ValueHolder<decimal>>>(
+                block,
+                floatParameter);
+
+            var source = new ValueHolder<float> { Value = 8532.00f };
+
+            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
+            var result = floatValueOrDefaultFunc.Invoke(source);
+
+            Assert.AreEqual(8532.00m, result.Value);
+        }
+
+        [Test, Ignore("Common Language Runtime detected an invalid program")]
+        public void NullableFloatComparisonsWithConversionsShouldWork()
+        {
+            var floatParameter = Parameter(typeof(ValueHolder<float?>), "nullableFloatValue");
+            var floatValueProperty = Property(floatParameter, "Value");
+
+            var nullableDecimalVariable = Variable(typeof(ValueHolder<decimal?>), "nullableDecimal");
+            var nullableDecimalValueProperty = Property(nullableDecimalVariable, "Value");
+
+            var newDecimalHolder = Assign(nullableDecimalVariable, New(nullableDecimalVariable.Type));
+
+            var floatGtOrEqualToDecimalMinValue = GreaterThanOrEqual(
+                floatValueProperty,
+                Convert(Constant(decimal.MinValue), floatValueProperty.Type));
+
+            var floatLtOrEqualToDecimalMaxValue = LessThanOrEqual(
+                floatValueProperty,
+                Convert(Constant(decimal.MaxValue), floatValueProperty.Type));
+
+            var floatIsInDecimalRange = AndAlso(floatGtOrEqualToDecimalMinValue, floatLtOrEqualToDecimalMaxValue);
+
+            var floatAsNullableDecimal = Convert(floatValueProperty, nullableDecimalValueProperty.Type);
+            var defaultNullableDecimal = Default(nullableDecimalValueProperty.Type);
+            var floatValueOrDefault = Condition(floatIsInDecimalRange, floatAsNullableDecimal, defaultNullableDecimal);
+
+            var decimalValueAssignment = Assign(nullableDecimalValueProperty, floatValueOrDefault);
+
+            var block = Block(
+                new[] { nullableDecimalVariable },
+                newDecimalHolder,
+                decimalValueAssignment,
+                nullableDecimalVariable);
+
+            var floatValueOrDefaultLambda = Lambda<Func<ValueHolder<float?>, ValueHolder<decimal?>>>(
+                block,
+                floatParameter);
+
+            var source = new ValueHolder<float?> { Value = 73.62f };
+
+            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
+            var result = floatValueOrDefaultFunc.Invoke(source);
+
+            Assert.AreEqual(73.62m, result.Value);
+        }
+
+        [Test, Ignore("Common Language Runtime detected an invalid program")]
+        public void DoubleComparisonsWithConversionsShouldWork()
+        {
+            var doubleParameter = Parameter(typeof(ValueHolder<double>), "doubleValue");
+            var doubleValueProperty = Property(doubleParameter, "Value");
+
+            var nullableDecimalVariable = Variable(typeof(ValueHolder<decimal?>), "nullableDecimal");
+            var nullableDecimalValueProperty = Property(nullableDecimalVariable, "Value");
+
+            var newDecimalHolder = Assign(nullableDecimalVariable, New(nullableDecimalVariable.Type));
+
+            var doubleGtOrEqualToDecimalMinValue = GreaterThanOrEqual(
+                doubleValueProperty,
+                Convert(Constant(decimal.MinValue), doubleValueProperty.Type));
+
+            var doubleLtOrEqualToDecimalMaxValue = LessThanOrEqual(
+                doubleValueProperty,
+                Convert(Constant(decimal.MaxValue), doubleValueProperty.Type));
+
+            var doubleIsInDecimalRange = AndAlso(doubleGtOrEqualToDecimalMinValue, doubleLtOrEqualToDecimalMaxValue);
+
+            var doubleAsNullableDecimal = Convert(doubleValueProperty, nullableDecimalValueProperty.Type);
+            var defaultNullableDecimal = Default(nullableDecimalValueProperty.Type);
+            var doubleValueOrDefault = Condition(doubleIsInDecimalRange, doubleAsNullableDecimal, defaultNullableDecimal);
+
+            var decimalValueAssignment = Assign(nullableDecimalValueProperty, doubleValueOrDefault);
+
+            var block = Block(
+                new[] { nullableDecimalVariable },
+                newDecimalHolder,
+                decimalValueAssignment,
+                nullableDecimalVariable);
+
+            var doubleValueOrDefaultLambda = Lambda<Func<ValueHolder<double>, ValueHolder<decimal?>>>(
+                block,
+                doubleParameter);
+
+            var source = new ValueHolder<double> { Value = double.MaxValue };
+
+            var doubleValueOrDefaultFunc = doubleValueOrDefaultLambda.CompileFast();
+            var result = doubleValueOrDefaultFunc.Invoke(source);
+
+            Assert.IsNull(result.Value);
+        }
+
+        [Test, Ignore("Common Language Runtime detected an invalid program")]
+        public void DoubleComparisonsWithConversionsShouldWork2()
+        {
+            var doubleParameter = Parameter(typeof(ValueHolder<double>), "doubleValue");
+            var doubleValueProperty = Property(doubleParameter, "Value");
+
+            var decimalVariable = Variable(typeof(ValueHolder<decimal>), "decimal");
+            var decimalValueProperty = Property(decimalVariable, "Value");
+
+            var newDecimalHolder = Assign(decimalVariable, New(decimalVariable.Type));
+
+            var doubleGtOrEqualToDecimalMinValue = GreaterThanOrEqual(
+                doubleValueProperty,
+                Convert(Constant(decimal.MinValue), doubleValueProperty.Type));
+
+            var doubleLtOrEqualToDecimalMaxValue = LessThanOrEqual(
+                doubleValueProperty,
+                Convert(Constant(decimal.MaxValue), doubleValueProperty.Type));
+
+            var doubleIsInDecimalRange = AndAlso(doubleGtOrEqualToDecimalMinValue, doubleLtOrEqualToDecimalMaxValue);
+
+            var doubleAsDecimal = Convert(doubleValueProperty, decimalValueProperty.Type);
+            var defaultDecimal = Default(decimalValueProperty.Type);
+            var doubleValueOrDefault = Condition(doubleIsInDecimalRange, doubleAsDecimal, defaultDecimal);
+
+            var decimalValueAssignment = Assign(decimalValueProperty, doubleValueOrDefault);
+
+            var block = Block(
+                new[] { decimalVariable },
+                newDecimalHolder,
+                decimalValueAssignment,
+                decimalVariable);
+
+            var doubleValueOrDefaultLambda = Lambda<Func<ValueHolder<double>, ValueHolder<decimal>>>(
+                block,
+                doubleParameter);
+
+            var source = new ValueHolder<double> { Value = double.MinValue };
+
+            var doubleValueOrDefaultFunc = doubleValueOrDefaultLambda.CompileFast();
+            var result = doubleValueOrDefaultFunc.Invoke(source);
+
+            Assert.AreEqual(default(decimal), result.Value);
+        }
+
         // Expression used for the tests below
         //private ValueHolder<double> Adapt(ValueHolder<int?> nullableIntHolder)
         //{
@@ -215,7 +440,7 @@ namespace FastExpressionCompiler.UnitTests
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be replaced with dup #
                 OpCodes.Ldloc_0, // 
-                OpCodes.Ldarg_0, 
+                OpCodes.Ldarg_0,
                 OpCodes.Call, // ValueHolder<int?>.get_Value
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
@@ -243,15 +468,15 @@ namespace FastExpressionCompiler.UnitTests
 
             var adapt = adaptExpr.CompileFast();
 
-            adapt.Method.AssertOpCodes( 
-                OpCodes.Newobj, 
-                OpCodes.Dup, 
-                OpCodes.Ldarg_0, 
+            adapt.Method.AssertOpCodes(
+                OpCodes.Newobj,
+                OpCodes.Dup,
+                OpCodes.Ldarg_0,
                 OpCodes.Call, // ValueHolder<int?>.get_Value
-                OpCodes.Stloc_0, 
-                OpCodes.Ldloca_S, 
+                OpCodes.Stloc_0,
+                OpCodes.Ldloca_S,
                 OpCodes.Call, // int?.get_Value
-                OpCodes.Conv_R8, 
+                OpCodes.Conv_R8,
                 OpCodes.Call, // ValueHolder<double>.set_Value 
                 OpCodes.Ret);
 
@@ -259,7 +484,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(321d, result.Value);
         }
 
-        [Test] 
+        [Test]
         public void NullableDecimalToDoubleCastsShouldWork()
         {
             var decimalParameter = Parameter(typeof(ValueHolder<decimal?>), "nullableDecimalValue");
