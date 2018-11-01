@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -33,7 +32,7 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void RefDoNothingShouldNoCrash()
         {
-            void DoNothing(ref int ignore) { };
+            void DoNothing(ref int ignore) { }
             var lambda = Lambda<ActionRef<int>>(Empty(), Parameter(typeof(int).MakeByRefType()));
 
             void LocalAssert(ActionRef<int> invoke)
@@ -52,7 +51,7 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void RefDoNothingShouldNoCrashCustomStruct()
         {
-            void DoNothing(ref BigInteger ignore) { };
+            void DoNothing(ref BigInteger ignore) { }
             var lambda = Lambda<ActionRef<BigInteger>>(Empty(), Parameter(typeof(BigInteger).MakeByRefType()));
 
             void LocalAssert(ActionRef<BigInteger> invoke)
@@ -752,9 +751,8 @@ namespace FastExpressionCompiler.UnitTests
                 Default(typeof(int)));
             var conditionBlock = Block(new[] { intValueParameter }, parsedValueOrDefault);
             var conditionLambda = Lambda<Func<int>>(conditionBlock);
-#if !LIGHT_EXPRESSION // todo: fix
-            var conditionFunc = conditionLambda.Compile();
-#endif
+
+            var conditionFunc = conditionLambda.CompileSys();
             var conditionFuncFast = conditionLambda.CompileFast();
 
             void LocalAssert(Func<int> invoke)
@@ -762,9 +760,7 @@ namespace FastExpressionCompiler.UnitTests
                 var x = invoke();
                 Assert.AreEqual(123, x);
             }
-#if !LIGHT_EXPRESSION
             LocalAssert(conditionFunc);
-#endif
             LocalAssert(conditionFuncFast);
             LocalAssert(TryParseCondition);
         }
@@ -791,14 +787,10 @@ namespace FastExpressionCompiler.UnitTests
             var conditionLambda = Lambda<Func<int>>(conditionBlock);
 
             void LocalAssert(Func<int> invoke) => Assert.AreEqual(123, invoke());
-#if !LIGHT_EXPRESSION
-            var func = conditionLambda.Compile();
-#endif
+            var func = conditionLambda.CompileSys();
             var funcFast = conditionLambda.CompileFast();
 
-#if !LIGHT_EXPRESSION
             LocalAssert(func);
-#endif
             LocalAssert(funcFast);
             LocalAssert(TryParseReturn);
         }

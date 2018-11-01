@@ -947,7 +947,10 @@ namespace FastExpressionCompiler.LightExpression
         public readonly IReadOnlyList<Expression> Expressions;
         public readonly Expression Result;
 
-        public override SysExpr ToExpression() => SysExpr.Block(Expressions.Map(info => info.ToExpression()));
+        public override SysExpr ToExpression() => SysExpr.Block(
+            Type,
+            Variables.Map(x => x.ToParameterExpression()),
+            Expressions.Map(x => x.ToExpression()));
 
         internal BlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
         {

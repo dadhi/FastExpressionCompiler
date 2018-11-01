@@ -58,12 +58,8 @@ namespace FastExpressionCompiler.UnitTests
 
             LocalAssert(AssigningRefs);
 
-#if !LIGHT_EXPRESSION
-            {
-                var func = lambda.Compile();
-                LocalAssert(func);
-            }
-#endif
+            var func = lambda.CompileSys();
+            LocalAssert(func);
 
             var funcFast = lambda.CompileFast();
             LocalAssert(funcFast);
@@ -96,18 +92,13 @@ namespace FastExpressionCompiler.UnitTests
 
             LocalAssert(AssigningRefs);
 
-#if !LIGHT_EXPRESSION
-            {
-                var func = lambda.Compile();
-                LocalAssert(func);
-            }
-#endif
+            var func = lambda.CompileSys();
+            LocalAssert(func);
 
 
             var funcFast = lambda.CompileFast();
             LocalAssert(funcFast);
         }
-
 
         struct SimplePersonStruct
         {
@@ -134,11 +125,7 @@ namespace FastExpressionCompiler.UnitTests
 
             LocalAssert(AssigningRefs);
 
-            Assert.DoesNotThrow(() => lambda
-#if LIGHT_EXPRESSION
-                .ToLambdaExpression()
-#endif
-                .Compile());
+            Assert.DoesNotThrow(() => lambda.CompileSys());
 
             var funcFast = lambda.CompileFast();
             LocalAssert(funcFast);
