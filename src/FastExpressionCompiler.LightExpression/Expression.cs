@@ -282,6 +282,9 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression Power(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Power, left, right, left.Type);
 
+        public static BinaryExpression And(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.And, left, right, left.Type);
+
         public static BinaryExpression AndAlso(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.AndAlso, left, right, left.Type);
 
@@ -581,10 +584,16 @@ namespace FastExpressionCompiler.LightExpression
             Left = left;
             Right = right;
 
-            if (nodeType == ExpressionType.Equal || nodeType == ExpressionType.NotEqual || 
-                nodeType == ExpressionType.GreaterThan || nodeType == ExpressionType.GreaterThanOrEqual || 
-                nodeType == ExpressionType.LessThan || nodeType == ExpressionType.LessThanOrEqual ||
-                nodeType == ExpressionType.AndAlso || nodeType == ExpressionType.OrElse)
+            if (nodeType == ExpressionType.Equal || 
+                nodeType == ExpressionType.NotEqual || 
+                nodeType == ExpressionType.GreaterThan || 
+                nodeType == ExpressionType.GreaterThanOrEqual || 
+                nodeType == ExpressionType.LessThan || 
+                nodeType == ExpressionType.LessThanOrEqual ||
+                nodeType == ExpressionType.And || 
+                nodeType == ExpressionType.AndAlso ||
+                nodeType == ExpressionType.Or ||
+                nodeType == ExpressionType.OrElse)
             {
                 Type = typeof(bool);
             }
@@ -617,7 +626,8 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override SysExpr ToExpression()
         {
-            switch (NodeType) {
+            switch (NodeType)
+            {
                 case ExpressionType.Add:
                     return SysExpr.Add(Left.ToExpression(), Right.ToExpression());
                 case ExpressionType.Subtract:
@@ -626,10 +636,32 @@ namespace FastExpressionCompiler.LightExpression
                     return SysExpr.Multiply(Left.ToExpression(), Right.ToExpression());
                 case ExpressionType.Divide:
                     return SysExpr.Divide(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.Power:
+                    return SysExpr.Power(Left.ToExpression(), Right.ToExpression());
                 case ExpressionType.Coalesce:
                     return SysExpr.Coalesce(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.And:
+                    return SysExpr.And(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.AndAlso:
+                    return SysExpr.AndAlso(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.Or:
+                    return SysExpr.Or(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.OrElse:
+                    return SysExpr.OrElse(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.Equal:
+                    return SysExpr.Equal(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.NotEqual:
+                    return SysExpr.NotEqual(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.GreaterThan:
+                    return SysExpr.GreaterThan(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.GreaterThanOrEqual:
+                    return SysExpr.GreaterThanOrEqual(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.LessThan:
+                    return SysExpr.LessThan(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.LessThanOrEqual:
+                    return SysExpr.LessThanOrEqual(Left.ToExpression(), Right.ToExpression());
                 default:
-                    throw new NotSupportedException($"Not a valid {NodeType} for arithmetic binary expression.");
+                    throw new NotSupportedException($"Not a valid {NodeType} for arithmetic or boolean binary expression.");
             }
         }
 
@@ -661,7 +693,36 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class AssignBinaryExpression : BinaryExpression
     {
-        public override SysExpr ToExpression() => SysExpr.Assign(Left.ToExpression(), Right.ToExpression());
+        public override SysExpr ToExpression()
+        {
+            switch (NodeType)
+            {
+                case ExpressionType.Assign:
+                    return SysExpr.Assign(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.AddAssign:
+                    return SysExpr.AddAssign(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.AddAssignChecked:
+                    return SysExpr.AddAssignChecked(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.SubtractAssign:
+                    return SysExpr.SubtractAssign(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.SubtractAssignChecked:
+                    return SysExpr.SubtractAssignChecked(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.MultiplyAssign:
+                    return SysExpr.MultiplyAssign(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.MultiplyAssignChecked:
+                    return SysExpr.MultiplyAssignChecked(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.DivideAssign:
+                    return SysExpr.DivideAssign(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.PowerAssign:
+                    return SysExpr.PowerAssign(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.AndAssign:
+                    return SysExpr.AndAssign(Left.ToExpression(), Right.ToExpression());
+                case ExpressionType.OrAssign:
+                    return SysExpr.OrAssign(Left.ToExpression(), Right.ToExpression());
+                default:
+                    throw new NotSupportedException($"Not a valid {NodeType} for Assign binary expression.");
+            }
+        }
 
         internal AssignBinaryExpression(Expression left, Expression right, Type type)
             : base(ExpressionType.Assign, left, right, type) { }

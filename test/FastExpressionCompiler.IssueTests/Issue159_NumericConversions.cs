@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(default(int), result.Value);
         }
 
-        [Test, Ignore("TODO")]
+        [Test, Ignore("Todo: fix me")]
         public void UnsignedNullableLongComparisonsWithConversionsShouldWork()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong?>), "nullableUlongValue");
@@ -65,33 +65,28 @@ namespace FastExpressionCompiler.UnitTests
             var intVariable = Variable(typeof(ValueHolder<int?>), "nullableIntValue");
             var intValueProperty = Property(intVariable, "Value");
 
-            var newIntHolder = Assign(intVariable, New(intVariable.Type));
-
-            var ulongLtOrEqualToIntMaxValue = LessThanOrEqual(
-                ulongValueProperty,
-                Convert(Constant(int.MaxValue), ulongValueProperty.Type));
-
-            var ulongAsNullableInt = Convert(ulongValueProperty, typeof(int?));
-            var defaultNullableInt = Default(intValueProperty.Type);
-            var ulongValueOrDefault = Condition(ulongLtOrEqualToIntMaxValue, ulongAsNullableInt, defaultNullableInt);
-
-            var intValueAssignment = Assign(intValueProperty, ulongValueOrDefault);
+            var ulongValueOrDefault = Condition(
+                LessThanOrEqual(ulongValueProperty, Convert(Constant(int.MaxValue), ulongValueProperty.Type)),
+                Convert(ulongValueProperty, typeof(int?)),
+                Default(intValueProperty.Type));
 
             var block = Block(
                 new[] { intVariable },
-                newIntHolder,
-                intValueAssignment,
+                Assign(intVariable, New(intVariable.Type)),
+                Assign(intValueProperty, ulongValueOrDefault),
                 intVariable);
 
             var ulongValueOrDefaultLambda = Lambda<Func<ValueHolder<ulong?>, ValueHolder<int?>>>(
                 block,
                 ulongParameter);
 
-            var ulongValueOrDefaultFunc = ulongValueOrDefaultLambda.CompileFast();
-            var result = ulongValueOrDefaultFunc.Invoke(new ValueHolder<ulong?> { Value = ulong.MaxValue });
+            var expected = ulongValueOrDefaultLambda.CompileSys();
+            var expectedResult = expected(new ValueHolder<ulong?> { Value = ulong.MaxValue });
+            Assert.AreEqual(default(int?), expectedResult.Value);
 
-            // result.Value == -1
-            Assert.AreEqual(default(int?), result.Value);
+            var actual = ulongValueOrDefaultLambda.CompileFast();
+            var actualResult = actual(new ValueHolder<ulong?> { Value = ulong.MaxValue });
+            Assert.AreEqual(default(int?), actualResult.Value);
         }
 
         [Test]
