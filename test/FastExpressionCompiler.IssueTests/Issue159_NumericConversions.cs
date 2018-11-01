@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(default(int), result.Value);
         }
 
-        [Test, Ignore("Todo: fix me")]
+        [Test]//, Ignore("Todo: fix me")]
         public void UnsignedNullableLongComparisonsWithConversionsShouldWork()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong?>), "nullableUlongValue");
