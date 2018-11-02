@@ -1879,40 +1879,36 @@ namespace FastExpressionCompiler
                 {
                     if (sourceTypeIsNullable)
                     {
-                        var targetVar = il.DeclareLocal(targetType);
                         var sourceVar = DeclareAndLoadLocalVariable(il, sourceType);
 
                         if (!EmitMethodCall(il, sourceType.FindNullableHasValueGetterMethod()))
                             return false;
-                        var labelSourceHasNoValue = il.DefineLabel();
-                        il.Emit(OpCodes.Brfalse, labelSourceHasNoValue);
-                        il.Emit(OpCodes.Ldloca_S, sourceVar);
+                        var labelSourceHasValue = il.DefineLabel();
+                        il.Emit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
 
-                        if (!EmitMethodCall(il, sourceType.FindNullableGetValueOrDefaultMethod()))
-                            return false;
+                        // otherwise, emit and load a `new Nullable<TTarget>()` struct (that's why a Init instead of New)
+                        il.Emit(OpCodes.Ldloc, InitValueTypeVariable(il, targetType));
 
-                        TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked);
-
-                        il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
-                        il.Emit(OpCodes.Stloc_S, targetVar);
-
+                        // jump to completion
                         var labelDone = il.DefineLabel();
                         il.Emit(OpCodes.Br_S, labelDone);
 
-                        il.MarkLabel(labelSourceHasNoValue);
-                        il.Emit(OpCodes.Ldloca_S, targetVar);
-                        il.Emit(OpCodes.Initobj, targetType);
+                        // if source nullable has a value:
+                        il.MarkLabel(labelSourceHasValue);
+                        il.Emit(OpCodes.Ldloca_S, sourceVar);
+                        if (!EmitMethodCall(il, sourceType.FindNullableGetValueOrDefaultMethod()))
+                            return false;
 
+                        if (!TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
+                            return false;
+
+                        il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
                         il.MarkLabel(labelDone);
-                        il.Emit(OpCodes.Ldloc_S, targetVar);
-
-                        if (parent.IgnoresResult())
-                            il.Emit(OpCodes.Pop);
-
                         return true;
                     }
 
-                    TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false);
+                    if (!TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false))
+                        return false;
 
                     il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
                 }

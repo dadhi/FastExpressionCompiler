@@ -56,7 +56,48 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(default(int), result.Value);
         }
 
-        [Test]//, Ignore("Todo: fix me")]
+        [Test]
+        public void IntToNullableUlong()
+        {
+            var outputHolderExpr = Variable(typeof(ValueHolder<ulong?>), "nullableUlongValue");
+            var outputValPropExpr = Property(outputHolderExpr, "Value");
+
+            var block = Block(
+                new[] { outputHolderExpr },
+                Assign(outputHolderExpr, New(outputHolderExpr.Type)),
+                Assign(outputValPropExpr, Convert(Constant(int.MaxValue), outputValPropExpr.Type)),
+                outputHolderExpr);
+
+            var ulongValHolderExpr = Lambda<Func<ValueHolder<ulong?>>>(block);
+
+            var expected = ulongValHolderExpr.CompileSys();
+            Assert.AreEqual(int.MaxValue, expected().Value);
+
+            var actual = ulongValHolderExpr.CompileFast();
+            Assert.AreEqual(int.MaxValue, actual().Value);
+        }
+
+        [Test]
+        public void UnsignedNullableLongComparison()
+        {
+            var ulongParameter = Parameter(typeof(ValueHolder<ulong?>), "nullableUlongValue");
+            var ulongValueProperty = Property(ulongParameter, "Value");
+
+            var lambdaExpr = Lambda<Func<ValueHolder<ulong?>, bool>>(
+                LessThanOrEqual(ulongValueProperty, Convert(Constant(int.MaxValue), ulongValueProperty.Type)),
+                ulongParameter);
+
+            var expected = lambdaExpr.CompileSys();
+            var expectedResult = expected(new ValueHolder<ulong?> { Value = ulong.MaxValue });
+            Assert.AreEqual(false, expectedResult);
+
+            var actual = lambdaExpr.CompileFast();
+            var actualResult = actual(new ValueHolder<ulong?> { Value = ulong.MaxValue });
+            Assert.AreEqual(false, actualResult);
+        }
+
+
+        [Test, Ignore("Todo: fix me")]
         public void UnsignedNullableLongComparisonsWithConversionsShouldWork()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong?>), "nullableUlongValue");
