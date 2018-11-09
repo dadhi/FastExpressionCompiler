@@ -1842,7 +1842,7 @@ namespace FastExpressionCompiler
                         EmitMethodCall(il, convertOpMethod, parent);
 
                         if (targetTypeIsNullable)
-                            il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
+                            il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
                         return true;
                     }
@@ -1865,7 +1865,7 @@ namespace FastExpressionCompiler
                         EmitMethodCall(il, convertOpMethod, parent);
 
                         if (targetTypeIsNullable)
-                            il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
+                            il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
                         return true;
                     }
@@ -1877,7 +1877,14 @@ namespace FastExpressionCompiler
                 // Conversion to Nullable: new Nullable<T>(T val);
                 else if (targetTypeIsNullable)
                 {
-                    if (sourceTypeIsNullable)
+                    if (!sourceTypeIsNullable)
+                    {
+                        if (!TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false))
+                            return false;
+
+                        il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                    }
+                    else
                     {
                         var sourceVar = DeclareAndLoadLocalVariable(il, sourceType);
 
@@ -1899,18 +1906,13 @@ namespace FastExpressionCompiler
                         if (!EmitMethodCall(il, sourceType.FindNullableGetValueOrDefaultMethod()))
                             return false;
 
-                        if (!TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
+                        if (!TryEmitValueConvert(underlyingNullableTargetType, il,
+                            expr.NodeType == ExpressionType.ConvertChecked))
                             return false;
 
-                        il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
+                        il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                         il.MarkLabel(labelDone);
-                        return true;
                     }
-
-                    if (!TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false))
-                        return false;
-
-                    il.Emit(OpCodes.Newobj, targetType.FindConstructor(underlyingNullableTargetType));
                 }
                 else
                 {
@@ -2921,7 +2923,7 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var leftOpType = exprLeft.Type;
-                var leftIsNull = leftOpType.IsNullable();
+                var leftIsNullable = leftOpType.IsNullable();
                 var rightOpType = exprRight.Type;
                 if (exprRight is ConstantExpression c && c.Value == null && exprRight.Type == typeof(object))
                     rightOpType = leftOpType;
@@ -2930,7 +2932,7 @@ namespace FastExpressionCompiler
                 if (!TryEmit(exprLeft, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                     return false;
 
-                if (leftIsNull)
+                if (leftIsNullable)
                 {
                     lVar = DeclareAndLoadLocalVariable(il, leftOpType);
                     if (!EmitMethodCall(il, leftOpType.FindNullableGetValueOrDefaultMethod()))
@@ -2973,6 +2975,7 @@ namespace FastExpressionCompiler
                     rVar = DeclareAndLoadLocalVariable(il, rightOpType);
                     if (!EmitMethodCall(il, rightOpType.FindNullableGetValueOrDefaultMethod()))
                         return false;
+                    rightOpType = Nullable.GetUnderlyingType(rightOpType);
                 }
 
                 var leftOpTypeInfo = leftOpType.GetTypeInfo();
@@ -3008,7 +3011,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ceq);
                     }
 
-                    if (leftIsNull)
+                    if (leftIsNullable)
                         goto nullCheck;
 
                     if ((parent & ParentFlags.IgnoreResult) > 0)
@@ -3040,17 +3043,20 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.GreaterThanOrEqual:
                     case ExpressionType.LessThanOrEqual:
-                        var l1 = il.DefineLabel();
-                        var l2 = il.DefineLabel();
+                        var ifTrueLabel = il.DefineLabel();
+                        var doneLabel = il.DefineLabel();
                         if (rightOpType == typeof(uint) || rightOpType == typeof(ulong) || rightOpType == typeof(ushort) || rightOpType == typeof(byte))
-                            il.Emit(expressionType == ExpressionType.GreaterThanOrEqual ? OpCodes.Bge_Un_S : OpCodes.Ble_Un_S, l1);
+                            il.Emit(expressionType == ExpressionType.GreaterThanOrEqual ? OpCodes.Bge_Un_S : OpCodes.Ble_Un_S, ifTrueLabel);
                         else
-                            il.Emit(expressionType == ExpressionType.GreaterThanOrEqual ? OpCodes.Bge_S : OpCodes.Ble_S, l1);
+                            il.Emit(expressionType == ExpressionType.GreaterThanOrEqual ? OpCodes.Bge_S : OpCodes.Ble_S, ifTrueLabel);
+
                         il.Emit(OpCodes.Ldc_I4_0);
-                        il.Emit(OpCodes.Br_S, l2);
-                        il.MarkLabel(l1);
+                        il.Emit(OpCodes.Br_S, doneLabel);
+
+                        il.MarkLabel(ifTrueLabel);
                         il.Emit(OpCodes.Ldc_I4_1);
-                        il.MarkLabel(l2);
+
+                        il.MarkLabel(doneLabel);
                         break;
 
                     default:
@@ -3058,15 +3064,14 @@ namespace FastExpressionCompiler
                 }
 
                 nullCheck:
-                if (leftIsNull)
+                if (leftIsNullable)
                 {
                     il.Emit(OpCodes.Ldloca_S, lVar);
-                    var hasValueMethod = exprLeft.Type.FindNullableHasValueGetterMethod();
-                    if (!EmitMethodCall(il, hasValueMethod))
+                    if (!EmitMethodCall(il, exprLeft.Type.FindNullableHasValueGetterMethod()))
                         return false;
                     // ReSharper disable once AssignNullToNotNullAttribute
                     il.Emit(OpCodes.Ldloca_S, rVar);
-                    if (!EmitMethodCall(il, hasValueMethod))
+                    if (!EmitMethodCall(il, exprLeft.Type.FindNullableHasValueGetterMethod()))
                         return false;
 
                     switch (expressionType)
@@ -3103,8 +3108,6 @@ namespace FastExpressionCompiler
 
                 return true;
             }
-
-
 
             private static bool TryEmitArithmetic(BinaryExpression expr, ExpressionType exprNodeType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
@@ -3448,10 +3451,6 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindMethod(this Type type, string methodName) =>
             type.GetTypeInfo().GetDeclaredMethod(methodName);
-
-        internal static ConstructorInfo FindConstructor(this Type type, params Type[] args) =>
-            type.GetTypeInfo().DeclaredConstructors
-                .GetFirst(c => c.GetParameters().Map(p => p.ParameterType).SequenceEqual(args));
 
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) =>
             type.GetTypeInfo().GetDeclaredMethod("Invoke");

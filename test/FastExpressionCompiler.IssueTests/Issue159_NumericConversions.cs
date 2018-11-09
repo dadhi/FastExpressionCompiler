@@ -77,7 +77,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(int.MaxValue, actual().Value);
         }
 
-        [Test]
+        [Test, Ignore("todo")]
         public void UnsignedNullableLongComparison()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong?>), "nullableUlongValue");
@@ -92,10 +92,25 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(false, expectedResult);
 
             var actual = lambdaExpr.CompileFast();
+            actual.Method.AssertOpCodes(
+                OpCodes.Ldarg_0,
+                OpCodes.Call,   // get_Value getter
+                OpCodes.Stloc_0,
+                OpCodes.Ldloca_S,
+                OpCodes.Call,   // GetValueOrDefault
+                OpCodes.Ldc_I4, // load `int.MaxValue`
+                OpCodes.Conv_I8,// convert it to `ulong?`  
+                OpCodes.Stloc_1,
+                OpCodes.Ldloca_S,
+                OpCodes.Call,
+                OpCodes.Call,
+                OpCodes.Call,
+                OpCodes.Ldloc_0,
+                OpCodes.Ret);
+
             var actualResult = actual(new ValueHolder<ulong?> { Value = ulong.MaxValue });
             Assert.AreEqual(false, actualResult);
         }
-
 
         [Test, Ignore("Todo: fix me")]
         public void UnsignedNullableLongComparisonsWithConversionsShouldWork()

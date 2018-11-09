@@ -7,7 +7,7 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<NestedLambdaOverhead>();
+            //BenchmarkRunner.Run<NestedLambdaOverhead>();
 
             //BenchmarkRunner.Run<FEC_vs_ManualEmit_vs_Activator>();
 
@@ -28,8 +28,8 @@ namespace FastExpressionCompiler.Benchmarks
 
             //BenchmarkRunner.Run<ExprInfoVsExpr_Create_ComplexExpr>();
             //BenchmarkRunner.Run<ExprInfoVsExpr_CreateAndCompile_ComplexExpr>();
-            //BenchmarkRunner.Run</*ExprInfoVsExpr_CreateAndCompile_NestedLambdaExpr*/>();
-            //BenchmarkRunner.Run<ExprInfoVsExpr_CreateAndCompile_SimpleExpr>();
+            //BenchmarkRunner.Run<ExprInfoVsExpr_CreateAndCompile_NestedLambdaExpr>();
+            BenchmarkRunner.Run<ExprInfoVsExpr_CreateAndCompile_SimpleExpr>();
 
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();

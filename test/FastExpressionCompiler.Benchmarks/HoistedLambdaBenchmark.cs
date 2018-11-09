@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         [MemoryDiagnoser]
         [MarkdownExporter]
-        [ClrJob, CoreJob]
+        [CoreJob]
         public class Compilation
         {
             [Benchmark]
@@ -30,7 +30,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         [MemoryDiagnoser]
         [MarkdownExporter]
-        [ClrJob, CoreJob]
+        [CoreJob]
         public class Invocation
         {
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();

@@ -54,7 +54,7 @@ namespace FastExpressionCompiler.Benchmarks
                 ?? _expr.Compile();
         }
 
-        [ClrJob, CoreJob]
+        [CoreJob]
         [MemoryDiagnoser]
         [MarkdownExporter]
         public class Invocation
