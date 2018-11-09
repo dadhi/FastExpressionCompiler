@@ -264,47 +264,89 @@ IL_0021:  ret
             Assert.AreEqual((short)532, result.Value);
         }
 
+        [Test]
+        public void FloatToDecimalNullableShouldWork()
+        {
+            var floatParamExpr = Parameter(typeof(ValueHolder<float>), "floatValue");
+            var floatValuePropExpr = Property(floatParamExpr, "Value");
+
+            var nullableDecimalVarExpr = Variable(typeof(ValueHolder<decimal?>), "nullableDecimal");
+            var nullableDecimalValuePropExpr = Property(nullableDecimalVarExpr, "Value");
+
+            var block = Block(
+                new[] { nullableDecimalVarExpr },
+                Assign(nullableDecimalVarExpr, New(nullableDecimalVarExpr.Type)),
+                Assign(nullableDecimalValuePropExpr, Convert(floatValuePropExpr, nullableDecimalValuePropExpr.Type)),
+                nullableDecimalVarExpr);
+
+            var expr = Lambda<Func<ValueHolder<float>, ValueHolder<decimal?>>>(
+                block,
+                floatParamExpr);
+
+            var source = new ValueHolder<float> { Value = 3.14f };
+
+            var compiled = expr.CompileSys();
+            Assert.AreEqual(3.14m, compiled(source).Value);
+
+            var fastCompiled = expr.CompileFast(true);
+            var result = fastCompiled(source);
+            Assert.AreEqual(3.14m, result.Value);
+        }
+
+        [Test, Ignore("todo: fix me")]
+        public void ComparisonsWithConversionsShouldWork3()
+        {
+            var floatParamExpr = Parameter(typeof(ValueHolder<float>), "floatValue");
+            var floatValuePropExpr = Property(floatParamExpr, "Value");
+
+            var nullableDecimalVarExpr = Variable(typeof(ValueHolder<decimal?>), "nullableDecimal");
+            var nullableDecimalValuePropExpr = Property(nullableDecimalVarExpr, "Value");
+
+            var condition = AndAlso(
+                    GreaterThanOrEqual(floatValuePropExpr, Convert(Constant(decimal.MinValue), floatValuePropExpr.Type)),
+                    LessThanOrEqual(floatValuePropExpr, Convert(Constant(decimal.MaxValue), floatValuePropExpr.Type)));
+
+            var expr = Lambda<Func<ValueHolder<float>, bool>>(condition, floatParamExpr);
+            var source = new ValueHolder<float> { Value = float.MaxValue };
+
+            var compiled = expr.CompileSys();
+            Assert.AreEqual(false, compiled(source));
+
+            var compiledFast = expr.CompileFast(true);
+            var result = compiledFast(source);
+            Assert.AreEqual(false, result);
+        }
+
         [Test, Ignore("Common Language Runtime detected an invalid program")]
         public void FloatComparisonsWithConversionsShouldWork3()
         {
-            var floatParameter = Parameter(typeof(ValueHolder<float>), "floatValue");
-            var floatValueProperty = Property(floatParameter, "Value");
+            var floatParamExpr = Parameter(typeof(ValueHolder<float>), "floatValue");
+            var floatValuePropExpr = Property(floatParamExpr, "Value");
 
-            var nullableDecimalVariable = Variable(typeof(ValueHolder<decimal?>), "nullableDecimal");
-            var nullableDecimalValueProperty = Property(nullableDecimalVariable, "Value");
+            var nullableDecimalVarExpr = Variable(typeof(ValueHolder<decimal?>), "nullableDecimal");
+            var nullableDecimalValuePropExpr = Property(nullableDecimalVarExpr, "Value");
 
-            var newDecimalHolder = Assign(nullableDecimalVariable, New(nullableDecimalVariable.Type));
-
-            var floatGtOrEqualToDecimalMinValue = GreaterThanOrEqual(
-                floatValueProperty,
-                Convert(Constant(decimal.MinValue), floatValueProperty.Type));
-
-            var floatLtOrEqualToDecimalMaxValue = LessThanOrEqual(
-                floatValueProperty,
-                Convert(Constant(decimal.MaxValue), floatValueProperty.Type));
-
-            var floatIsInDecimalRange = AndAlso(floatGtOrEqualToDecimalMinValue, floatLtOrEqualToDecimalMaxValue);
-
-            var floatAsNullableDecimal = Convert(floatValueProperty, nullableDecimalValueProperty.Type);
-            var defaultNullableDecimal = Default(nullableDecimalValueProperty.Type);
-            var floatValueOrDefault = Condition(floatIsInDecimalRange, floatAsNullableDecimal, defaultNullableDecimal);
-
-            var decimalValueAssignment = Assign(nullableDecimalValueProperty, floatValueOrDefault);
+            var floatValueOrDefault = Condition(
+                AndAlso(
+                    GreaterThanOrEqual(floatValuePropExpr, Convert(Constant(decimal.MinValue), floatValuePropExpr.Type)), 
+                    LessThanOrEqual(floatValuePropExpr, Convert(Constant(decimal.MaxValue), floatValuePropExpr.Type))), 
+                Convert(floatValuePropExpr, nullableDecimalValuePropExpr.Type), 
+                Default(nullableDecimalValuePropExpr.Type));
 
             var block = Block(
-                new[] { nullableDecimalVariable },
-                newDecimalHolder,
-                decimalValueAssignment,
-                nullableDecimalVariable);
+                new[] { nullableDecimalVarExpr },
+                Assign(nullableDecimalVarExpr, New(nullableDecimalVarExpr.Type)),
+                Assign(nullableDecimalValuePropExpr, floatValueOrDefault),
+                nullableDecimalVarExpr);
 
-            var floatValueOrDefaultLambda = Lambda<Func<ValueHolder<float>, ValueHolder<decimal?>>>(
+            var expr = Lambda<Func<ValueHolder<float>, ValueHolder<decimal?>>>(
                 block,
-                floatParameter);
+                floatParamExpr);
 
             var source = new ValueHolder<float> { Value = float.MaxValue };
 
-            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
-            var result = floatValueOrDefaultFunc.Invoke(source);
+            var func = expr.CompileFast(true);
+            var result = func(source);
 
             Assert.IsNull(result.Value);
         }
