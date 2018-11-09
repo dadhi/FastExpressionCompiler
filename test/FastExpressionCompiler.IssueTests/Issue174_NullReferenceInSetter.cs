@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.UnitTests
 {
     public class Issue174_NullReferenceInSetter
     {
-        [Test, Ignore("TODO")]
+        [Test]
         public void PropertyAssignmentFromEqualityComparisonShouldWork()
         {
             var boolParameter = Parameter(typeof(ValueHolder<bool>), "boolValue");
@@ -19,23 +19,20 @@ namespace FastExpressionCompiler.UnitTests
 
             var decimalParameter = Parameter(typeof(ValueHolder<decimal>), "decimalValue");
             var decimalValueProperty = Property(decimalParameter, "Value");
-            var decimalOne = Constant(decimal.One);
-            var decimalPropertyEqualsOne = Equal(decimalValueProperty, decimalOne);
-
-            var assignBoolProperty = Assign(boolValueProperty, decimalPropertyEqualsOne);
 
             var expr = Lambda<Func<ValueHolder<decimal>, bool>>(
-                assignBoolProperty,
+                Block(new[] { boolParameter },
+                Assign(boolParameter, New(boolParameter.Type)),
+                Assign(boolValueProperty, Equal(decimalValueProperty, Constant(decimal.One)))),
                 decimalParameter);
 
             var source = new ValueHolder<decimal> { Value = 1 };
 
-            var adapt = expr.CompileFast();
+            var compiled = expr.CompileSys();
+            Assert.IsTrue(compiled(source));
 
-            // Throws NullReferenceException in ValueHolder<T> - '<Value>k__BackingField was null'
-            var result = adapt(source);
-
-            Assert.IsTrue(result);
+            var compiledFast = expr.CompileFast();
+            Assert.IsTrue(compiledFast(source));
         }
 
         private class ValueHolder<T>
