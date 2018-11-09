@@ -1810,7 +1810,7 @@ namespace FastExpressionCompiler
                 var underlyingNullableTargetType = Nullable.GetUnderlyingType(targetType);
                 if (targetTypeIsNullable && sourceType == underlyingNullableTargetType)
                 {
-                    il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.First());
+                    il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                     return true;
                 }
 
@@ -2064,42 +2064,7 @@ namespace FastExpressionCompiler
                     }
                     else if (constantType == typeof(decimal))
                     {
-                        //check if decimal has decimal places, if not use shorter IL code (constructor from int or long)
-                        var value = (decimal)constantValue;
-                        if (value % 1 == 0)
-                        {
-                            if (value <= int.MaxValue && value >= int.MinValue)
-                            {
-                                EmitLoadConstantInt(il, decimal.ToInt32(value));
-                                il.Emit(OpCodes.Newobj,
-                                    typeof(decimal).GetTypeInfo().DeclaredConstructors.First(x =>
-                                        x.GetParameters().Length == 1 &&
-                                        x.GetParameters()[0].ParameterType == typeof(int)));
-                            }
-                            else if (value <= long.MaxValue && value >= long.MinValue)
-                            {
-                                il.Emit(OpCodes.Ldc_I8, decimal.ToInt64(value));
-                                il.Emit(OpCodes.Newobj,
-                                    typeof(decimal).GetTypeInfo().DeclaredConstructors.First(x =>
-                                        x.GetParameters().Length == 1 &&
-                                        x.GetParameters()[0].ParameterType == typeof(int)));
-                            }
-                        }
-                        else
-                        {
-                            int[] parts = Decimal.GetBits(value);
-                            bool sign = (parts[3] & 0x80000000) != 0;
-                            byte scale = (byte)((parts[3] >> 16) & 0x7F);
-                            EmitLoadConstantInt(il, parts[0]);
-                            EmitLoadConstantInt(il, parts[1]);
-                            EmitLoadConstantInt(il, parts[2]);
-                            il.Emit(sign ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                            EmitLoadConstantInt(il, scale);
-                            il.Emit(OpCodes.Conv_U1);
-                            il.Emit(OpCodes.Newobj,
-                                typeof(decimal).GetTypeInfo().DeclaredConstructors.First(x =>
-                                    x.GetParameters().Length == 5));
-                        }
+                        EmitDecimalConstant((decimal)constantValue, il);
                     }
                     else return false;
                 }
@@ -2116,6 +2081,55 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Box, constantValue.GetType()); // using normal type for Enum instead of underlying type
 
                 return true;
+            }
+
+            private static void EmitDecimalConstant(decimal value, ILGenerator il)
+            {
+                //check if decimal has decimal places, if not use shorter IL code (constructor from int or long)
+                if (value % 1 == 0)
+                {
+                    if (value >= int.MinValue && value <= int.MaxValue)
+                    {
+                        EmitLoadConstantInt(il, decimal.ToInt32(value));
+                        il.Emit(OpCodes.Newobj, typeof(decimal).FindSingleParamConstructor(typeof(int)));
+                        return;
+                    }
+
+                    if (value >= long.MinValue && value <= long.MaxValue)
+                    {
+                        il.Emit(OpCodes.Ldc_I8, decimal.ToInt64(value));
+                        il.Emit(OpCodes.Newobj, typeof(decimal).FindSingleParamConstructor(typeof(long)));
+                        return;
+                    }
+                }
+
+                if (value == decimal.MinValue)
+                {
+                    il.Emit(OpCodes.Ldsfld, typeof(decimal).GetTypeInfo().GetDeclaredField(nameof(decimal.MinValue)));
+                    return;
+                }
+
+                if (value == decimal.MaxValue)
+                {
+                    il.Emit(OpCodes.Ldsfld, typeof(decimal).GetTypeInfo().GetDeclaredField(nameof(decimal.MaxValue)));
+                    return;
+                }
+
+                var parts = decimal.GetBits(value);
+                var sign = (parts[3] & 0x80000000) != 0;
+                var scale = (byte)((parts[3] >> 16) & 0x7F);
+
+                EmitLoadConstantInt(il, parts[0]);
+                EmitLoadConstantInt(il, parts[1]);
+                EmitLoadConstantInt(il, parts[2]);
+
+                il.Emit(sign ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                EmitLoadConstantInt(il, scale);
+
+                il.Emit(OpCodes.Conv_U1);
+                il.Emit(OpCodes.Newobj,
+                    typeof(decimal).GetTypeInfo().DeclaredConstructors.GetFirst(
+                        x => x.GetParameters().Length == 5));
             }
 
             private static LocalBuilder DeclareAndLoadLocalVariable(ILGenerator il, Type type)
@@ -3044,13 +3058,14 @@ namespace FastExpressionCompiler
                     case ExpressionType.GreaterThanOrEqual:
                     case ExpressionType.LessThanOrEqual:
                         var ifTrueLabel = il.DefineLabel();
-                        var doneLabel = il.DefineLabel();
-                        if (rightOpType == typeof(uint) || rightOpType == typeof(ulong) || rightOpType == typeof(ushort) || rightOpType == typeof(byte))
+                        if (rightOpType == typeof(uint) || rightOpType == typeof(ulong) || 
+                            rightOpType == typeof(ushort) || rightOpType == typeof(byte))
                             il.Emit(expressionType == ExpressionType.GreaterThanOrEqual ? OpCodes.Bge_Un_S : OpCodes.Ble_Un_S, ifTrueLabel);
                         else
                             il.Emit(expressionType == ExpressionType.GreaterThanOrEqual ? OpCodes.Bge_S : OpCodes.Ble_S, ifTrueLabel);
 
                         il.Emit(OpCodes.Ldc_I4_0);
+                        var doneLabel = il.DefineLabel();
                         il.Emit(OpCodes.Br_S, doneLabel);
 
                         il.MarkLabel(ifTrueLabel);
@@ -3475,6 +3490,18 @@ namespace FastExpressionCompiler
                 m.IsStatic && m.ReturnType == targetType &&
                 (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
                 m.GetParameters()[0].ParameterType == sourceType);
+
+        internal static ConstructorInfo FindSingleParamConstructor(this Type type, Type paramType)
+        {
+            foreach (var ctor in type.GetTypeInfo().DeclaredConstructors)
+            {
+                var parameters = ctor.GetParameters();
+                if (parameters.Length == 1 && parameters[0].ParameterType == paramType)
+                    return ctor;
+            }
+
+            return null;
+        }
 
         // todo: test what is faster? Copy and inline switch? Switch in method? Ors in method?
         internal static ExpressionType GetArithmeticFromArithmeticAssignOrSelf(ExpressionType arithmetic)

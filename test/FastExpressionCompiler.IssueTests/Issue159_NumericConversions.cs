@@ -293,14 +293,43 @@ IL_0021:  ret
             Assert.AreEqual(3.14m, result.Value);
         }
 
-        [Test, Ignore("todo: fix me")]
+        [Test]
         public void ComparisonsWithConversionsShouldWork3()
         {
             var floatParamExpr = Parameter(typeof(ValueHolder<float>), "floatValue");
             var floatValuePropExpr = Property(floatParamExpr, "Value");
 
-            var nullableDecimalVarExpr = Variable(typeof(ValueHolder<decimal?>), "nullableDecimal");
-            var nullableDecimalValuePropExpr = Property(nullableDecimalVarExpr, "Value");
+            var condition = GreaterThanOrEqual(
+                floatValuePropExpr, 
+                Convert(Constant(decimal.MinValue), floatValuePropExpr.Type));
+
+            var expr = Lambda<Func<ValueHolder<float>, bool>>(condition, floatParamExpr);
+            var source = new ValueHolder<float> { Value = float.MaxValue };
+
+            var compiled = expr.CompileSys();
+            Assert.AreEqual(true, compiled(source));
+
+            var compiledFast = expr.CompileFast(true);
+
+            compiledFast.Method.AssertOpCodes(
+                OpCodes.Ldarg_0,
+                OpCodes.Call,
+                OpCodes.Ldsfld,
+                OpCodes.Call,
+                OpCodes.Bge_S,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Br_S,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Ret);
+
+            Assert.AreEqual(true, compiledFast(source));
+        }
+
+        [Test]
+        public void ComparisonsWithConversionsShouldWork4()
+        {
+            var floatParamExpr = Parameter(typeof(ValueHolder<float>), "floatValue");
+            var floatValuePropExpr = Property(floatParamExpr, "Value");
 
             var condition = AndAlso(
                     GreaterThanOrEqual(floatValuePropExpr, Convert(Constant(decimal.MinValue), floatValuePropExpr.Type)),
@@ -313,11 +342,33 @@ IL_0021:  ret
             Assert.AreEqual(false, compiled(source));
 
             var compiledFast = expr.CompileFast(true);
-            var result = compiledFast(source);
-            Assert.AreEqual(false, result);
+
+            compiledFast.Method.AssertOpCodes(
+                OpCodes.Ldarg_0,
+                OpCodes.Call,
+                OpCodes.Ldsfld,
+                OpCodes.Call,
+                OpCodes.Bge_S,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Br_S,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Brfalse,
+                OpCodes.Ldarg_0,
+                OpCodes.Call,
+                OpCodes.Ldsfld,
+                OpCodes.Call,
+                OpCodes.Ble_S,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Br_S,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Br,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Ret);
+
+            Assert.AreEqual(false, compiledFast(source));
         }
 
-        [Test, Ignore("Common Language Runtime detected an invalid program")]
+        [Test]
         public void FloatComparisonsWithConversionsShouldWork3()
         {
             var floatParamExpr = Parameter(typeof(ValueHolder<float>), "floatValue");
@@ -328,9 +379,9 @@ IL_0021:  ret
 
             var floatValueOrDefault = Condition(
                 AndAlso(
-                    GreaterThanOrEqual(floatValuePropExpr, Convert(Constant(decimal.MinValue), floatValuePropExpr.Type)), 
-                    LessThanOrEqual(floatValuePropExpr, Convert(Constant(decimal.MaxValue), floatValuePropExpr.Type))), 
-                Convert(floatValuePropExpr, nullableDecimalValuePropExpr.Type), 
+                    GreaterThanOrEqual(floatValuePropExpr, Convert(Constant(decimal.MinValue), floatValuePropExpr.Type)),
+                    LessThanOrEqual(floatValuePropExpr, Convert(Constant(decimal.MaxValue), floatValuePropExpr.Type))),
+                Convert(floatValuePropExpr, nullableDecimalValuePropExpr.Type),
                 Default(nullableDecimalValuePropExpr.Type));
 
             var block = Block(
@@ -351,7 +402,7 @@ IL_0021:  ret
             Assert.IsNull(result.Value);
         }
 
-        [Test, Ignore("Common Language Runtime detected an invalid program")]
+        [Test]
         public void FloatComparisonsWithConversionsShouldWork4()
         {
             var floatParameter = Parameter(typeof(ValueHolder<float>), "floatValue");
@@ -396,7 +447,7 @@ IL_0021:  ret
             Assert.AreEqual(8532.00m, result.Value);
         }
 
-        [Test, Ignore("Common Language Runtime detected an invalid program")]
+        [Test]
         public void NullableFloatComparisonsWithConversionsShouldWork()
         {
             var floatParameter = Parameter(typeof(ValueHolder<float?>), "nullableFloatValue");
@@ -441,7 +492,7 @@ IL_0021:  ret
             Assert.AreEqual(73.62m, result.Value);
         }
 
-        [Test, Ignore("Common Language Runtime detected an invalid program")]
+        [Test]
         public void DoubleComparisonsWithConversionsShouldWork()
         {
             var doubleParameter = Parameter(typeof(ValueHolder<double>), "doubleValue");
@@ -486,7 +537,7 @@ IL_0021:  ret
             Assert.IsNull(result.Value);
         }
 
-        [Test, Ignore("Common Language Runtime detected an invalid program")]
+        [Test]
         public void DoubleComparisonsWithConversionsShouldWork2()
         {
             var doubleParameter = Parameter(typeof(ValueHolder<double>), "doubleValue");
