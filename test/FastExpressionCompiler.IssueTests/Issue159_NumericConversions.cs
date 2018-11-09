@@ -77,7 +77,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(int.MaxValue, actual().Value);
         }
 
-        [Test, Ignore("todo")]
+        [Test]
         public void UnsignedNullableLongComparison()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong?>), "nullableUlongValue");
@@ -92,6 +92,25 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(false, expectedResult);
 
             var actual = lambdaExpr.CompileFast();
+
+            // todo: optimize to something like below
+            /*
+IL_0000:  ldarg.1     
+IL_0001:  callvirt    UserQuery+ValueHolder<System.Nullable<System.UInt64>>.get_Value
+IL_0006:  stloc.0     
+IL_0007:  ldc.i4      FF FF FF 7F 
+IL_000C:  conv.i8     
+IL_000D:  stloc.1     
+IL_000E:  ldloca.s    00 
+IL_0010:  call        System.Nullable<System.UInt64>.GetValueOrDefault
+IL_0015:  ldloc.1     
+IL_0016:  ble.un.s    IL_001A
+IL_0018:  ldc.i4.0    
+IL_0019:  ret         
+IL_001A:  ldloca.s    00 
+IL_001C:  call        System.Nullable<System.UInt64>.get_HasValue
+IL_0021:  ret 
+            */
             actual.Method.AssertOpCodes(
                 OpCodes.Ldarg_0,
                 OpCodes.Call,   // get_Value getter
@@ -99,20 +118,30 @@ namespace FastExpressionCompiler.UnitTests
                 OpCodes.Ldloca_S,
                 OpCodes.Call,   // GetValueOrDefault
                 OpCodes.Ldc_I4, // load `int.MaxValue`
-                OpCodes.Conv_I8,// convert it to `ulong?`  
+                OpCodes.Conv_U8,// convert it to `ulong?`  
+                OpCodes.Newobj,
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
                 OpCodes.Call,
+                OpCodes.Ble_Un_S,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Br_S,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Ldloca_S,
                 OpCodes.Call,
+                OpCodes.Ldloca_S,
                 OpCodes.Call,
-                OpCodes.Ldloc_0,
+                OpCodes.Ceq,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Ceq,
+                OpCodes.And,
                 OpCodes.Ret);
 
             var actualResult = actual(new ValueHolder<ulong?> { Value = ulong.MaxValue });
             Assert.AreEqual(false, actualResult);
         }
 
-        [Test, Ignore("Todo: fix me")]
+        [Test]
         public void UnsignedNullableLongComparisonsWithConversionsShouldWork()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong?>), "nullableUlongValue");
