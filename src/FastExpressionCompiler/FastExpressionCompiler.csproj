@@ -5,11 +5,11 @@
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">netstandard2.0</TargetFrameworks>
         
         <VersionPrefix>2.0.0</VersionPrefix>
-        <VersionSuffix>preview-03</VersionSuffix>
+        <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler</Product>
         <Authors>Maksim Volkau</Authors>
-        <Copyright>Copyright © 2016-2018 Maksim Volkau</Copyright>
+        <Copyright>Copyright © 2016-2019 Maksim Volkau</Copyright>
         <NeutralLanguage>en-US</NeutralLanguage>
 
         <PackageId>$(Product)</PackageId>
@@ -62,7 +62,7 @@ with all the functionality of the FEC. The `ExpressionInfo` itself was renamed t
 ]]>
         </PackageReleaseNotes>
         <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
-        <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+        <PackageLicense>https://github.com/dadhi/FastExpressionCompiler/blob/master/LICENSE</PackageLicense>
         <RepositoryUrl>https://github.com/dadhi/FastExpressionCompiler</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
