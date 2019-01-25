@@ -16,7 +16,7 @@
     </PropertyGroup>
 
     <!--Signing all packages, oh boy-->
-    <PropertyGroup>
+    <PropertyGroup Condition=" '$(Sign)' != 'false' ">
         <SignAssembly>true</SignAssembly>
         <AssemblyOriginatorKeyFile>..\..\FastExpressionCompiler.snk</AssemblyOriginatorKeyFile>
     </PropertyGroup>
@@ -42,7 +42,7 @@
     </PropertyGroup>
 
     <!-- SourceLink support -->
-    <ItemGroup>
+    <ItemGroup Condition=" '$(SourceLink)' != 'false' ">
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-18618-05" PrivateAssets="All" />
     </ItemGroup> 
 
