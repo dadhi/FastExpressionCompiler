@@ -23,6 +23,7 @@ THE SOFTWARE.
 */
 
 // ReSharper disable CoVariantArrayConversion
+//#if NET45 || NETSTANDARD1_3 || NETSTANDARD2_0
 
 using System;
 using System.Collections.Generic;
@@ -52,6 +53,20 @@ namespace FastExpressionCompiler.LightExpression
 
         /// <summary>Reduces the Expression to simple ones</summary>
         public virtual Expression Reduce() => this;
+
+        internal static SysExpr[] ToExpressions(IReadOnlyList<Expression> exprs)
+        {
+            if (exprs.Count == 0)
+                return Tools.Empty<SysExpr>();
+
+            if (exprs.Count == 1)
+                return new[] { exprs[0].ToExpression() };
+
+            var result = new SysExpr[exprs.Count];
+            for (var i = 0; i < result.Length; ++i)
+                result[i] = exprs[i].ToExpression();
+            return result;
+        }
 
         public static ParameterExpression Parameter(Type type, string name = null) =>
             new ParameterExpression(type.IsByRef ? type.GetElementType() : type, name, type.IsByRef);
@@ -88,7 +103,7 @@ namespace FastExpressionCompiler.LightExpression
         public static MethodCallExpression Call(MethodInfo method, IEnumerable<Expression> arguments) =>
             Call(null, method, arguments.AsReadOnlyList());
 
-        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) => 
+        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) =>
             Call(null, type.FindMethod(methodName, typeArguments, arguments, isStatic: true), arguments);
 
         public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments)
@@ -112,19 +127,19 @@ namespace FastExpressionCompiler.LightExpression
         public static MemberExpression Property(Expression instance, PropertyInfo property) =>
             new PropertyExpression(instance, property);
 
-        public static MemberExpression Property(Expression expression, string propertyName) => 
+        public static MemberExpression Property(Expression expression, string propertyName) =>
             Property(expression, expression.Type.FindProperty(propertyName));
 
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, params Expression[] arguments) =>
             new IndexExpression(instance, indexer, arguments);
 
-        public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) => 
+        public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
             new IndexExpression(instance, indexer, arguments.AsReadOnlyList());
 
         public static MemberExpression PropertyOrField(Expression expression, string propertyName) =>
-            expression.Type.FindProperty(propertyName) != null ? 
-                (MemberExpression) new PropertyExpression(expression, expression.Type.FindProperty(propertyName)) :
-                (MemberExpression) new FieldExpression(expression, expression.Type.FindField(propertyName));
+            expression.Type.FindProperty(propertyName) != null ?
+                (MemberExpression)new PropertyExpression(expression, expression.Type.FindProperty(propertyName)) :
+                new FieldExpression(expression, expression.Type.FindField(propertyName));
 
         public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member)
         {
@@ -135,13 +150,13 @@ namespace FastExpressionCompiler.LightExpression
             throw new ArgumentException($"Member is not field or property: {member}", nameof(member));
         }
 
-        public static IndexExpression MakeIndex(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) => 
+        public static IndexExpression MakeIndex(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
             indexer != null ? Property(instance, indexer, arguments) : ArrayAccess(instance, arguments);
 
         public static IndexExpression ArrayAccess(Expression array, params Expression[] indexes) =>
             new IndexExpression(array, null, indexes);
 
-        public static IndexExpression ArrayAccess(Expression array, IEnumerable<Expression> indexes) => 
+        public static IndexExpression ArrayAccess(Expression array, IEnumerable<Expression> indexes) =>
             new IndexExpression(array, null, indexes.AsReadOnlyList());
 
         public static MemberExpression Field(FieldInfo field) =>
@@ -150,7 +165,7 @@ namespace FastExpressionCompiler.LightExpression
         public static MemberExpression Field(Expression instance, FieldInfo field) =>
             new FieldExpression(instance, field);
 
-        public static MemberExpression Field(Expression instance, string fieldName) => 
+        public static MemberExpression Field(Expression instance, string fieldName) =>
             new FieldExpression(instance, instance.Type.FindField(fieldName));
 
         public static LambdaExpression Lambda(Expression body) =>
@@ -207,7 +222,7 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression ArrayIndex(Expression array, Expression index) =>
             new ArrayIndexExpression(array, index, array.Type.GetElementType());
 
-        public static MemberAssignment Bind(MemberInfo member, Expression expression) => 
+        public static MemberAssignment Bind(MemberInfo member, Expression expression) =>
             new MemberAssignment(member, expression);
 
         public static MemberInitExpression MemberInit(NewExpression newExpr, params MemberBinding[] bindings) =>
@@ -221,8 +236,8 @@ namespace FastExpressionCompiler.LightExpression
             new NewArrayExpression(ExpressionType.NewArrayInit, type.MakeArrayType(), initializers);
 
         public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
-            new NewArrayExpression(ExpressionType.NewArrayBounds, 
-                bounds.Length == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Length), 
+            new NewArrayExpression(ExpressionType.NewArrayBounds,
+                bounds.Length == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Length),
                 bounds);
 
         public static BinaryExpression Assign(Expression left, Expression right) =>
@@ -256,15 +271,15 @@ namespace FastExpressionCompiler.LightExpression
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Type type) =>
             new ConditionalExpression(test, ifTrue, ifFalse, type);
 
-        public static ConditionalExpression IfThen(Expression test, Expression ifTrue) => 
+        public static ConditionalExpression IfThen(Expression test, Expression ifTrue) =>
             Condition(test, ifTrue, Empty(), typeof(void));
 
         public static DefaultExpression Empty() => new DefaultExpression(typeof(void));
 
-        public static DefaultExpression Default(Type type) => 
+        public static DefaultExpression Default(Type type) =>
             type == typeof(void) ? Empty() : new DefaultExpression(type);
 
-        public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) => 
+        public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) =>
             Condition(test, ifTrue, ifFalse, typeof(void));
 
         public static Expression Add(Expression left, Expression right) =>
@@ -309,7 +324,7 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression NotEqual(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, left.Type);
 
-        public static BlockExpression Block(params Expression[] expressions) => 
+        public static BlockExpression Block(params Expression[] expressions) =>
             Block(Tools.Empty<ParameterExpression>(), expressions);
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
@@ -336,28 +351,28 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression Throw(Expression value) =>
             new UnaryExpression(ExpressionType.Throw, value, typeof(void));
 
-        public static LabelExpression Label(LabelTarget target, Expression defaultValue = null) => 
+        public static LabelExpression Label(LabelTarget target, Expression defaultValue = null) =>
             new LabelExpression(target, defaultValue);
 
-        public static LabelTarget Label(Type type = null, string name = null) => 
+        public static LabelTarget Label(Type type = null, string name = null) =>
             SysExpr.Label(type ?? typeof(void), name);
 
         public static LabelTarget Label(string name) =>
             SysExpr.Label(typeof(void), name);
 
-        public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type = null) => 
+        public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type = null) =>
             new GotoExpression(kind, target, value, type ?? typeof(void));
 
-        public static GotoExpression Break(LabelTarget target, Expression value = null, Type type = null) => 
+        public static GotoExpression Break(LabelTarget target, Expression value = null, Type type = null) =>
             MakeGoto(GotoExpressionKind.Break, target, value, type);
 
-        public static GotoExpression Continue(LabelTarget target, Type type = null) => 
+        public static GotoExpression Continue(LabelTarget target, Type type = null) =>
             MakeGoto(GotoExpressionKind.Continue, target, null, type);
 
-        public static GotoExpression Return(LabelTarget target, Expression value = null, Type type = null) => 
+        public static GotoExpression Return(LabelTarget target, Expression value = null, Type type = null) =>
             MakeGoto(GotoExpressionKind.Return, target, value);
 
-        public static GotoExpression Goto(LabelTarget target, Expression value = null, Type type = null) => 
+        public static GotoExpression Goto(LabelTarget target, Expression value = null, Type type = null) =>
             MakeGoto(GotoExpressionKind.Goto, target, value, type);
 
         public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, params SwitchCase[] cases) =>
@@ -383,9 +398,9 @@ namespace FastExpressionCompiler.LightExpression
 
         public static BinaryExpression Coalesce(Expression left, Expression right) => Coalesce(left, right, null);
 
-        public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) => 
+        public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) =>
             conversion == null ?
-                new SimpleBinaryExpression(ExpressionType.Coalesce, left, right, GetCoalesceType(left.Type, right.Type)) : 
+                new SimpleBinaryExpression(ExpressionType.Coalesce, left, right, GetCoalesceType(left.Type, right.Type)) :
                 (BinaryExpression)new CoalesceConversionBinaryExpression(left, right, conversion);
 
         private static Type GetCoalesceType(Type left, Type right)
@@ -406,7 +421,7 @@ namespace FastExpressionCompiler.LightExpression
 
     internal static class TypeTools
     {
-        internal static Type UnpackNullableOrSelf(this Type type) => 
+        internal static Type UnpackNullableOrSelf(this Type type) =>
             type.IsNullable() ? type.GetTypeInfo().GenericTypeArguments[0] : type;
 
         internal static bool IsImplicitlyConvertibleTo(this Type source, Type target) =>
@@ -415,10 +430,10 @@ namespace FastExpressionCompiler.LightExpression
             source.IsImplicitlyBoxingConvertibleTo(target) ||
             source.IsImplicitlyNumericConvertibleTo(target);
 
-        internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) => 
+        internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
             source.IsValueType() &&
-            (target == typeof(object) || 
-             target == typeof(ValueType)) || 
+            (target == typeof(object) ||
+             target == typeof(ValueType)) ||
              source.GetTypeInfo().IsEnum && target == typeof(Enum);
 
         internal static MethodInfo FindMethod(this Type type,
@@ -453,14 +468,14 @@ namespace FastExpressionCompiler.LightExpression
         internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
         {
             if (source == typeof(Char))
-                return 
-                    target == typeof(UInt16) || 
-                    target == typeof(Int32) || 
-                    target == typeof(UInt32) || 
-                    target == typeof(Int64) || 
-                    target == typeof(UInt64) || 
-                    target == typeof(Single) || 
-                    target == typeof(Double) || 
+                return
+                    target == typeof(UInt16) ||
+                    target == typeof(Int32) ||
+                    target == typeof(UInt32) ||
+                    target == typeof(Int64) ||
+                    target == typeof(UInt64) ||
+                    target == typeof(Single) ||
+                    target == typeof(Double) ||
                     target == typeof(Decimal);
 
             if (source == typeof(SByte))
@@ -580,17 +595,17 @@ namespace FastExpressionCompiler.LightExpression
         protected BinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type)
         {
             NodeType = nodeType;
-           
+
             Left = left;
             Right = right;
 
-            if (nodeType == ExpressionType.Equal || 
-                nodeType == ExpressionType.NotEqual || 
-                nodeType == ExpressionType.GreaterThan || 
-                nodeType == ExpressionType.GreaterThanOrEqual || 
-                nodeType == ExpressionType.LessThan || 
+            if (nodeType == ExpressionType.Equal ||
+                nodeType == ExpressionType.NotEqual ||
+                nodeType == ExpressionType.GreaterThan ||
+                nodeType == ExpressionType.GreaterThanOrEqual ||
+                nodeType == ExpressionType.LessThan ||
                 nodeType == ExpressionType.LessThanOrEqual ||
-                nodeType == ExpressionType.And || 
+                nodeType == ExpressionType.And ||
                 nodeType == ExpressionType.AndAlso ||
                 nodeType == ExpressionType.Or ||
                 nodeType == ExpressionType.OrElse)
@@ -742,7 +757,7 @@ namespace FastExpressionCompiler.LightExpression
         public readonly IReadOnlyList<MemberBinding> Bindings;
 
         public override SysExpr ToExpression() =>
-            SysExpr.MemberInit(NewExpression.ToNewExpression(), Bindings.Map(b => b.ToMemberBinding()));
+            SysExpr.MemberInit(NewExpression.ToNewExpression(), MemberBinding.BindingsToExpressions(Bindings));
 
         internal MemberInitExpression(NewExpression newExpression, MemberBinding[] bindings)
             : this((Expression)newExpression, bindings) { }
@@ -766,6 +781,21 @@ namespace FastExpressionCompiler.LightExpression
 
         public System.Linq.Expressions.ParameterExpression ToParameterExpression() =>
             _paramExpr ?? (_paramExpr = SysExpr.Parameter(IsByRef ? Type.MakeByRefType() : Type, Name));
+
+        internal static System.Linq.Expressions.ParameterExpression[] ToParameterExpressions(
+            IReadOnlyList<ParameterExpression> ps)
+        {
+            if (ps.Count == 0)
+                return Tools.Empty<System.Linq.Expressions.ParameterExpression>();
+
+            if (ps.Count == 1)
+                return new[] { ps[0].ToParameterExpression() };
+
+            var result = new System.Linq.Expressions.ParameterExpression[ps.Count];
+            for (var i = 0; i < result.Length; ++i)
+                result[i] = ps[i].ToParameterExpression();
+            return result;
+        }
 
         internal ParameterExpression(Type type, string name, bool isByRef)
         {
@@ -798,7 +828,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public readonly IReadOnlyList<Expression> Arguments;
 
-        protected SysExpr[] ArgumentsToExpressions() => Arguments.Map(info => info.ToExpression());
+        protected SysExpr[] ArgumentsToExpressions() => ToExpressions(Arguments);
 
         protected ArgumentsExpression(IReadOnlyList<Expression> arguments)
         {
@@ -817,7 +847,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public System.Linq.Expressions.NewExpression ToNewExpression() => SysExpr.New(Constructor, ArgumentsToExpressions());
 
-        internal NewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : 
+        internal NewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) :
             base(arguments)
         {
             Constructor = constructor;
@@ -853,7 +883,7 @@ namespace FastExpressionCompiler.LightExpression
         public readonly MethodInfo Method;
         public readonly Expression Object;
 
-        public override SysExpr ToExpression() => 
+        public override SysExpr ToExpression() =>
             SysExpr.Call(Object?.ToExpression(), Method, ArgumentsToExpressions());
 
         internal MethodCallExpression(Expression @object, MethodInfo method, IReadOnlyList<Expression> arguments)
@@ -883,7 +913,7 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => PropertyInfo.PropertyType;
         public PropertyInfo PropertyInfo => (PropertyInfo)Member;
 
-        public override SysExpr ToExpression() => SysExpr.Property(Expression.ToExpression(), PropertyInfo);
+        public override SysExpr ToExpression() => SysExpr.Property(Expression?.ToExpression(), PropertyInfo);
 
         internal PropertyExpression(Expression instance, PropertyInfo property) : base(instance, property) { }
     }
@@ -893,7 +923,7 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => FieldInfo.FieldType;
         public FieldInfo FieldInfo => (FieldInfo)Member;
 
-        public override SysExpr ToExpression() => SysExpr.Field(Expression.ToExpression(), FieldInfo);
+        public override SysExpr ToExpression() => SysExpr.Field(Expression?.ToExpression(), FieldInfo);
 
         internal FieldExpression(Expression instance, FieldInfo field)
             : base(instance, field) { }
@@ -905,6 +935,20 @@ namespace FastExpressionCompiler.LightExpression
 
         public abstract MemberBindingType BindingType { get; }
         public abstract System.Linq.Expressions.MemberBinding ToMemberBinding();
+
+        internal static System.Linq.Expressions.MemberBinding[] BindingsToExpressions(IReadOnlyList<MemberBinding> ms)
+        {
+            if (ms.Count == 0)
+                return Tools.Empty<System.Linq.Expressions.MemberBinding>();
+
+            if (ms.Count == 1)
+                return new[] { ms[0].ToMemberBinding() };
+
+            var result = new System.Linq.Expressions.MemberBinding[ms.Count];
+            for (var i = 0; i < result.Length; ++i)
+                result[i] = ms[i].ToMemberBinding();
+            return result;
+        }
 
         internal MemberBinding(MemberInfo member)
         {
@@ -918,7 +962,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public override MemberBindingType BindingType => MemberBindingType.Assignment;
 
-        public override System.Linq.Expressions.MemberBinding ToMemberBinding() => 
+        public override System.Linq.Expressions.MemberBinding ToMemberBinding() =>
             SysExpr.Bind(Member, Expression.ToExpression());
 
         internal MemberAssignment(MemberInfo member, Expression expression) : base(member)
@@ -966,7 +1010,7 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression IfFalse;
         private readonly Type _type;
 
-        public override SysExpr ToExpression() => _type == null 
+        public override SysExpr ToExpression() => _type == null
             ? SysExpr.Condition(Test.ToExpression(), IfTrue.ToExpression(), IfFalse.ToExpression())
             : SysExpr.Condition(Test.ToExpression(), IfTrue.ToExpression(), IfFalse.ToExpression(), _type);
 
@@ -988,10 +1032,10 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Object;
         public readonly PropertyInfo Indexer;
 
-        public override SysExpr ToExpression() => 
+        public override SysExpr ToExpression() =>
             SysExpr.MakeIndex(Object.ToExpression(), Indexer, ArgumentsToExpressions());
 
-        internal IndexExpression(Expression @object, PropertyInfo indexer, IReadOnlyList<Expression> arguments) 
+        internal IndexExpression(Expression @object, PropertyInfo indexer, IReadOnlyList<Expression> arguments)
             : base(arguments)
         {
             Object = @object;
@@ -1010,14 +1054,14 @@ namespace FastExpressionCompiler.LightExpression
 
         public override SysExpr ToExpression() => SysExpr.Block(
             Type,
-            Variables.Map(x => x.ToParameterExpression()),
-            Expressions.Map(x => x.ToExpression()));
+            ParameterExpression.ToParameterExpressions(Variables),
+            ToExpressions(Expressions));
 
         internal BlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
         {
-            Variables = variables;
-            Expressions = expressions;
-            Result = expressions[expressions.Count - 1];
+            Variables = variables ?? Tools.Empty<ParameterExpression>();
+            Expressions = expressions ?? Tools.Empty<Expression>();
+            Result = Expressions[Expressions.Count - 1];
             Type = type;
         }
     }
@@ -1129,16 +1173,31 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType { get; }
         public override Type Type { get; }
 
-        public override SysExpr ToExpression() => SysExpr.Switch(SwitchValue.ToExpression(), DefaultBody.ToExpression(),
-            Comparison, Cases.Map(x => x.ToSwitchCase()));
+        public override SysExpr ToExpression() => SysExpr.Switch(
+            SwitchValue.ToExpression(), DefaultBody.ToExpression(),
+            Comparison, ToSwitchCaseExpressions(Cases));
+
+        internal static System.Linq.Expressions.SwitchCase[] ToSwitchCaseExpressions(IReadOnlyList<SwitchCase> sw)
+        {
+            if (sw.Count == 0)
+                return Tools.Empty<System.Linq.Expressions.SwitchCase>();
+
+            if (sw.Count == 1)
+                return new[] { sw[0].ToSwitchCase() };
+
+            var result = new System.Linq.Expressions.SwitchCase[sw.Count];
+            for (var i = 0; i < result.Length; ++i)
+                result[i] = sw[i].ToSwitchCase();
+            return result;
+        }
 
         public readonly Expression SwitchValue;
         public readonly IReadOnlyList<SwitchCase> Cases;
         public readonly Expression DefaultBody;
         public readonly MethodInfo Comparison;
 
-
-        public SwitchExpression(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases)
+        public SwitchExpression(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison,
+            IEnumerable<SwitchCase> cases)
         {
             NodeType = ExpressionType.Switch;
             Type = type;
@@ -1161,7 +1220,7 @@ namespace FastExpressionCompiler.LightExpression
         public override SysExpr ToExpression() => ToLambdaExpression();
 
         public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
-            SysExpr.Lambda(Type, Body.ToExpression(), Parameters.Map(p => p.ToParameterExpression()));
+            SysExpr.Lambda(Type, Body.ToExpression(), ParameterExpression.ToParameterExpressions(Parameters));
 
         internal LambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters)
         {
@@ -1184,9 +1243,10 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class Expression<TDelegate> : LambdaExpression
     {
         public new System.Linq.Expressions.Expression<TDelegate> ToLambdaExpression() =>
-            SysExpr.Lambda<TDelegate>(Body.ToExpression(), Parameters.Map(p => p.ToParameterExpression()));
+            SysExpr.Lambda<TDelegate>(Body.ToExpression(), ParameterExpression.ToParameterExpressions(Parameters));
 
-        internal Expression(Expression body, ParameterExpression[] parameters)
+        internal Expression(Expression body, IReadOnlyList<ParameterExpression> parameters)
             : base(typeof(TDelegate), body, parameters) { }
     }
 }
+//#endif
