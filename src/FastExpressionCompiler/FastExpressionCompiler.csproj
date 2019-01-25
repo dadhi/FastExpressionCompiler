@@ -8,9 +8,6 @@
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler</Product>
-        <Authors>Maksim Volkau</Authors>
-        <Copyright>Copyright © 2016-2019 Maksim Volkau</Copyright>
-        <NeutralLanguage>en-US</NeutralLanguage>
 
         <PackageId>$(Product)</PackageId>
         <Title>$(Product)</Title>
@@ -25,6 +22,7 @@ and other contributors - kudos to all of them!
 - removed: `ExpressionInfo` was moved into separate package `FastExpressionCompiler.LigthExpression` 
 with all the functionality of the FEC. The `ExpressionInfo` itself was renamed to `Expression` for more simple drop-in replacement.
 
+- added: #57 Consider signed package version!
 - added: #59 Support compiling delegates with ref and out parameters
 - added: #78 Lambda<Func<int>>(Block(Label(Label(typeof(int)), Constant(7)))) is not supported
 - added: #88 Lambda<Func<IntPtr>>(Block(Constant(IntPtr.Zero)))
@@ -61,33 +59,11 @@ with all the functionality of the FEC. The `ExpressionInfo` itself was renamed t
 - fixed: #172 Using FEC to compile a property setter with an enum value sets the property to random values
 ]]>
         </PackageReleaseNotes>
-        <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
-        <PackageLicense>https://github.com/dadhi/FastExpressionCompiler/blob/master/LICENSE</PackageLicense>
-        <RepositoryUrl>https://github.com/dadhi/FastExpressionCompiler</RepositoryUrl>
-        <RepositoryType>git</RepositoryType>
-        <PublishRepositoryUrl>true</PublishRepositoryUrl>
-
-        <PackageOutputPath>..\..\.dist</PackageOutputPath>
 
         <AssemblyName>$(Product)</AssemblyName>
         <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
         <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
-
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-
     </PropertyGroup>
-
-    <PropertyGroup Condition="'$(Configuration)'=='Release'">
-        <DebugType>embedded</DebugType>
-        <DebugSymbols>true</DebugSymbols>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <None Remove="FastExpressionCompiler.*.ncrunchproject" />
-        <None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE" />
-        <None Remove="**\*.orig" />
-    </ItemGroup>
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
     </ItemGroup>
