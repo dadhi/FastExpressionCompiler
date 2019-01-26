@@ -164,7 +164,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return funcExpr;
         }
 
-        public static Expression<Func<object[], object>> CreateComplexExpressionInfo()
+        public static Expression<Func<object[], object>> CreateComplexLightExpression()
         {
             var stateParamExpr = Parameter(typeof(object[]));
 
@@ -191,7 +191,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         [Test]
         public void Can_compile_complex_expr_with_Array_Properties_and_Casts()
         {
-            var expr = CreateComplexExpressionInfo();
+            var expr = CreateComplexLightExpression();
             var func = expr.CompileFast(true);
             func(new object[12]);
         }
