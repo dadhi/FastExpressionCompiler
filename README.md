@@ -60,7 +60,7 @@ __Note:__ `CompileFast` has an optional parameter `bool ifFastFailedReturnNull =
 
 Hoisted lambda expression (created by compiler):
 
-```csharp
+```cs
 var a = new A(); var b = new B();
 Expression<Func<X>> expr = () => new X(a, b);
 
@@ -70,7 +70,7 @@ var x = getX();
 
 Manually composed lambda expression:
 
-```csharp
+```cs
 var a = new A();
 var bParamExpr = Expression.Parameter(typeof(B), "b");
 var expr = Expression.Lambda(
@@ -82,26 +82,12 @@ var getX = expr.CompileFast();
 var x = getX(new B());
 ```
 
-Using `ExpressionInfo` instead of `Expression`:
-
-```csharp
-var a = new A();
-var bParamExpr = ExpressionInfo.Parameter(typeof(B), "b");
-var expr = ExpressionInfo.Lambda(
-    ExpressionInfo.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
-        ExpressionInfo.Constant(a, typeof(A)), bParamExpr),
-    bParamExpr);
-
-var getX = expr.CompileFast();
-var x = getX(new B());
-```
-
 __Note:__ Simplify your life in C# 6+ with `using static`
 
-```csharp
+```cs
 using static System.Linq.Expressions.Expression;
 // or
-//  using static FastExpressionCompiler.ExpressionInfo;
+// using static FastExpressionCompiler.LightExpression.Expression;
 
 var a = new A();
 var bParamExpr = Parameter(typeof(B), "b");
@@ -111,7 +97,6 @@ var expr = Lambda(
 
 var x = expr.CompileFast()(new B());
 ```
-
 
 ## Benchmarks
 
@@ -226,15 +211,13 @@ Invoking compiled delegate comparing to normal delegate:
 | FastCompiledLambdaWithPreCreatedClosure | Core |    Core | 16.546 ns | 0.1251 ns | 0.1109 ns |   1.00 |     0.00 | 0.0203 |      32 B |
 
 
-### ExpressionInfo vs Expression
+### FEC.LightExpression.Expression vs Expression
 
-`FastExpressionCompiler.ExpressionInfo` is the lightweight version of `Expression`. 
-You may look at it as just a thin wrapper on operation node which helps you to compose the computation tree. But
-it __won't do any node compatibility verification__ for the tree as the `Expression` does (and why it is slow).
-Hopefully, you are checking the expression arguments yourself, and not waiting for `Expression` exceptions to blow up.
+`FastExpressionCompiler.LightExpression.Expression` is the lightweight version of `Expression`. 
 
-__Note:__ At the moment `ExpressionInfo` is not supported for all supported expression types
-([#46](https://github.com/dadhi/FastExpressionCompiler/issues/46)).
+You may look at it as a bare wrapper over expression node which helps you to compose the computation tree.  
+It __won't do any node compatibility verification__ for the tree as the `Expression` does (and why the latter is slow).
+Hopefully you are checking the expression arguments yourself and not waiting for `Expression` exceptions to blow up - then you are safe.
 
 [Sample expression](https://github.com/dadhi/FastExpressionCompiler/blob/8cab34992be52e5f0f18805f21e0e6faab69493a/test/FastExpressionCompiler.UnitTests/ExpressionInfoTests.cs#L145)
 
