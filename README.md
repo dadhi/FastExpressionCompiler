@@ -12,10 +12,10 @@
 [LINQ to DB]: https://github.com/linq2db/linq2db/pull/1277
 [Moq]: https://github.com/moq/moq4/issues/504#issuecomment-406714210
 
-FastExpressionCompiler [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)  
-FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression)  
+FastExpressionCompiler [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)[![fuget.org package api diff](https://www.fuget.org/packages/FastExpressionCompiler/badge.svg?v=2.0.0)](https://www.fuget.org/packages/FastExpressionCompiler/2.0.0/lib/netstandard2.0/diff/1.10.1/)  
+FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression)[![fuget.org package last version](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/badge.svg?v=2.0.0)](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/2.0.0)
 
-[![fuget.org](https://img.shields.io/badge/fuget.org-latest%20version-blue.svg)](https://www.fuget.org/packages/FastExpressionCompiler/2.0.0)
+
 
 [![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 
