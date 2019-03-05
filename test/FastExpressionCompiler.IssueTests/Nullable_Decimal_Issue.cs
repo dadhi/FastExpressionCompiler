@@ -1,7 +1,15 @@
-using Xunit;
-using using System.Linq.Expressions;
+using System;
+using NUnit.Framework;
 
+#pragma warning disable IDE1006 // Naming Styles for linq2db
+#pragma warning disable 649 // Unaasigned fields
+
+#if LIGHT_EXPRESSION
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
         public class GeneralContainer
         {
@@ -9,9 +17,9 @@ namespace FastExpressionCompiler.UnitTests
             public decimal Decimal { get; set; }
         }
         
-    public class Nullable_Decimal_Issue
+    public class Issu183_NullableDecimal
     {
-      [Fact(Skip="fixme")]
+      [Test, Ignore("fixme")]
       public void NullableDecimalIssue()
       {
             ParameterExpression parameterExpression = Expression.Parameter(typeof(GeneralContainer));
@@ -22,9 +30,7 @@ namespace FastExpressionCompiler.UnitTests
             obj[0] = parameterExpression;
             Func<GeneralContainer, bool> fctn = Expression.Lambda<Func<GeneralContainer, bool>>(body, obj).CompileFast();
 
-            var exception = Record.Exception(() => fctn(new GeneralContainer() { Decimal = 1 }));
-           
-            Assert.Null(exception);
+            Assert.DoesNotThrow(() => fctn(new GeneralContainer() { Decimal = 1 }) );
       }
     }
 }
