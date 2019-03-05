@@ -17,7 +17,7 @@ namespace FastExpressionCompiler.UnitTests
             public decimal Decimal { get; set; }
         }
         
-    public class Issu183_NullableDecimal
+    public class Issue183_NullableDecimal
     {
       [Test, Ignore("fixme")]
       public void NullableDecimalIssue()
