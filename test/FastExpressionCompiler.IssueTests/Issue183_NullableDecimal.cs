@@ -22,13 +22,13 @@ namespace FastExpressionCompiler.UnitTests
       [Test, Ignore("fixme")]
       public void NullableDecimalIssue()
       {
-            ParameterExpression parameterExpression = Expression.Parameter(typeof(GeneralContainer));
-            MemberExpression left = Expression.Property(parameterExpression, nameof(GeneralContainer.NullableByte));
-            MemberExpression right = Expression.Property(parameterExpression, nameof(GeneralContainer.Decimal));
-            BinaryExpression body = Expression.Equal(Expression.Convert(left, typeof(decimal?)), Expression.Convert(right, typeof(decimal?)));
-            ParameterExpression[] obj = new ParameterExpression[1];
+            var parameterExpression = Expression.Parameter(typeof(GeneralContainer));
+            var left = Expression.Property(parameterExpression, nameof(GeneralContainer.NullableByte));
+            var right = Expression.Property(parameterExpression, nameof(GeneralContainer.Decimal));
+            var body = Expression.Equal(Expression.Convert(left, typeof(decimal?)), Expression.Convert(right, typeof(decimal?)));
+            var obj = new ParameterExpression[1];
             obj[0] = parameterExpression;
-            Func<GeneralContainer, bool> fctn = Expression.Lambda<Func<GeneralContainer, bool>>(body, obj).CompileFast();
+            var fctn = Expression.Lambda<Func<GeneralContainer, bool>>(body, obj).CompileFast();
 
             Assert.DoesNotThrow(() => fctn(new GeneralContainer() { Decimal = 1 }) );
       }
