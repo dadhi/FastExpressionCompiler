@@ -180,8 +180,8 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression Not(Expression operand) =>
             new UnaryExpression(ExpressionType.Not, operand, operand.Type);
 
-        public static TypeBinaryExpression TypeAs(Expression operand, Type type) =>
-            new TypeBinaryExpression(ExpressionType.TypeAs, operand, type);
+        public static UnaryExpression TypeAs(Expression operand, Type type) =>
+            new UnaryExpression(ExpressionType.TypeAs, operand, type);
 
         public static UnaryExpression TypeIs(Expression operand, Type type) =>
             new UnaryExpression(ExpressionType.TypeIs, operand, type);
