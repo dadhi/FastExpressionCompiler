@@ -183,6 +183,9 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression TypeAs(Expression operand, Type type) =>
             new UnaryExpression(ExpressionType.TypeAs, operand, type);
 
+        public static TypeBinaryExpression TypeEqual(Expression operand, Type type) =>
+            new TypeBinaryExpression(ExpressionType.TypeEqual, operand, type);
+
         public static TypeBinaryExpression TypeIs(Expression operand, Type type) =>
             new TypeBinaryExpression(ExpressionType.TypeIs, operand, type);
 
