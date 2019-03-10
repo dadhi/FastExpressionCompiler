@@ -177,11 +177,18 @@ namespace FastExpressionCompiler.LightExpression
         public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) =>
             new LambdaExpression(delegateType, body, parameters);
 
-        public static UnaryExpression Not(Expression operand) =>
-            new UnaryExpression(ExpressionType.Not, operand, operand.Type);
+        /// <summary>Creates a UnaryExpression that represents a bitwise complement operation.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to Not and the Operand property set to the specified value.</returns>
+        public static UnaryExpression Not(Expression expression) =>
+            new UnaryExpression(ExpressionType.Not, expression, expression.Type);
 
-        public static UnaryExpression TypeAs(Expression operand, Type type) =>
-            new UnaryExpression(ExpressionType.TypeAs, operand, type);
+        /// <summary>Creates a UnaryExpression that represents an explicit reference or boxing conversion where null is supplied if the conversion fails.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <param name="type">A Type to set the Type property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to TypeAs and the Operand and Type properties set to the specified values.</returns>
+        public static UnaryExpression TypeAs(Expression expression, Type type) =>
+            new UnaryExpression(ExpressionType.TypeAs, expression, type);
 
         public static TypeBinaryExpression TypeEqual(Expression operand, Type type) =>
             new TypeBinaryExpression(ExpressionType.TypeEqual, operand, type);
@@ -189,29 +196,135 @@ namespace FastExpressionCompiler.LightExpression
         public static TypeBinaryExpression TypeIs(Expression operand, Type type) =>
             new TypeBinaryExpression(ExpressionType.TypeIs, operand, type);
 
-        public static UnaryExpression Convert(Expression operand, Type targetType) =>
-            new UnaryExpression(ExpressionType.Convert, operand, targetType);
+        /// <summary>Creates a UnaryExpression that represents an expression for obtaining the length of a one-dimensional array.</summary>
+        /// <param name="array">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to ArrayLength and the Operand property equal to array.</returns>
+        public static UnaryExpression ArrayLength(Expression array) =>
+            new UnaryExpression(ExpressionType.ArrayLength, array, typeof(int));
 
-        public static UnaryExpression Convert(Expression operand, Type targetType, MethodInfo method) =>
-            new UnaryExpression(ExpressionType.Convert, operand, targetType, method);
+        /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <param name="type">A Type to set the Type property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to Convert and the Operand and Type properties set to the specified values.</returns>
+        public static UnaryExpression Convert(Expression expression, Type type) =>
+            Convert(expression, type, null);
 
-        public static UnaryExpression ConvertChecked(Expression operand, Type targetType) =>
-            new UnaryExpression(ExpressionType.ConvertChecked, operand, targetType);
+        /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <param name="type">A Type to set the Type property equal to.</param>
+        /// <param name="method">A MethodInfo to set the Method property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to Convert and the Operand, Type, and Method properties set to the specified values.</returns>
+        public static UnaryExpression Convert(Expression expression, Type type, MethodInfo method) =>
+            new UnaryExpression(ExpressionType.Convert, expression, type, method);
 
-        public static UnaryExpression ConvertChecked(Expression operand, Type targetType, MethodInfo method) =>
-            new UnaryExpression(ExpressionType.ConvertChecked, operand, targetType, method);
+        /// <summary>Creates a UnaryExpression that represents a conversion operation that throws an exception if the target type is overflowed.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <param name="type">A Type to set the Type property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to ConvertChecked and the Operand and Type properties set to the specified values.</returns>
+        public static UnaryExpression ConvertChecked(Expression expression, Type type) =>
+            ConvertChecked(expression, type, null);
 
-        public static UnaryExpression PreIncrementAssign(Expression operand) =>
-            new UnaryExpression(ExpressionType.PreIncrementAssign, operand, operand.Type);
+        /// <summary>Creates a UnaryExpression that represents a conversion operation that throws an exception if the target type is overflowed and for which the implementing method is specified.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <param name="type">A Type to set the Type property equal to.</param>
+        /// <param name="method">A MethodInfo to set the Method property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to ConvertChecked and the Operand, Type, and Method properties set to the specified values.</returns>
+        public static UnaryExpression ConvertChecked(Expression expression, Type type, MethodInfo method) =>
+            new UnaryExpression(ExpressionType.ConvertChecked, expression, type, method);
 
-        public static UnaryExpression PostIncrementAssign(Expression operand) =>
-            new UnaryExpression(ExpressionType.PostIncrementAssign, operand, operand.Type);
+        /// <summary>Creates a UnaryExpression that represents the decrementing of the expression by 1.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that represents the decremented expression.</returns>
+        public static UnaryExpression Decrement(Expression expression) =>
+            new UnaryExpression(ExpressionType.Decrement, expression, expression.Type);
 
-        public static UnaryExpression PreDecrementAssign(Expression operand) =>
-            new UnaryExpression(ExpressionType.PreDecrementAssign, operand, operand.Type);
+        /// <summary>Creates a UnaryExpression that represents the incrementing of the expression value by 1.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that represents the incremented expression.</returns>
+        public static UnaryExpression Increment(Expression expression) =>
+            new UnaryExpression(ExpressionType.Increment, expression, expression.Type);
 
-        public static UnaryExpression PostDecrementAssign(Expression operand) =>
-            new UnaryExpression(ExpressionType.PostDecrementAssign, operand, operand.Type);
+        /// <summary>Returns whether the expression evaluates to false.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>An instance of UnaryExpression.</returns>
+        public static UnaryExpression IsFalse(Expression expression) =>
+            new UnaryExpression(ExpressionType.IsFalse, expression, typeof(bool));
+
+        /// <summary>Returns whether the expression evaluates to true.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>An instance of UnaryExpression.</returns>
+        public static UnaryExpression IsTrue(Expression expression) =>
+            new UnaryExpression(ExpressionType.IsTrue, expression, typeof(bool));
+
+        /// <summary>Creates a UnaryExpression, given an operand, by calling the appropriate factory method.</summary>
+        /// <param name="unaryType">The ExpressionType that specifies the type of unary operation.</param>
+        /// <param name="operand">An Expression that represents the operand.</param>
+        /// <param name="type">The Type that specifies the type to be converted to (pass null if not applicable).</param>
+        /// <returns>The UnaryExpression that results from calling the appropriate factory method.</returns>
+        public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type) =>
+            new UnaryExpression(unaryType, operand, type);
+
+        /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to Negate and the Operand property set to the specified value.</returns>
+        public static UnaryExpression Negate(Expression expression) =>
+            new UnaryExpression(ExpressionType.Negate, expression, expression.Type);
+
+        /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation that has overflow checking.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to NegateChecked and the Operand property set to the specified value.</returns>
+        public static UnaryExpression NegateChecked(Expression expression) =>
+            new UnaryExpression(ExpressionType.NegateChecked, expression, expression.Type);
+
+        /// <summary>Returns the expression representing the ones complement.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>An instance of UnaryExpression.</returns>
+        public static UnaryExpression OnesComplement(Expression expression) =>
+            new UnaryExpression(ExpressionType.OnesComplement, expression, expression.Type);
+
+
+        /// <summary>Creates a UnaryExpression that increments the expression by 1 and assigns the result back to the expression.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that represents the resultant expression.</returns>
+        public static UnaryExpression PreIncrementAssign(Expression expression) =>
+            new UnaryExpression(ExpressionType.PreIncrementAssign, expression, expression.Type);
+
+        /// <summary>Creates a UnaryExpression that represents the assignment of the expression followed by a subsequent increment by 1 of the original expression.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that represents the resultant expression.</returns>
+        public static UnaryExpression PostIncrementAssign(Expression expression) =>
+            new UnaryExpression(ExpressionType.PostIncrementAssign, expression, expression.Type);
+
+        /// <summary>Creates a UnaryExpression that decrements the expression by 1 and assigns the result back to the expression.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that represents the resultant expression.</returns>
+        public static UnaryExpression PreDecrementAssign(Expression expression) =>
+            new UnaryExpression(ExpressionType.PreDecrementAssign, expression, expression.Type);
+
+        /// <summary>Creates a UnaryExpression that represents the assignment of the expression followed by a subsequent decrement by 1 of the original expression.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that represents the resultant expression.</returns>
+        public static UnaryExpression PostDecrementAssign(Expression expression) =>
+            new UnaryExpression(ExpressionType.PostDecrementAssign, expression, expression.Type);
+
+        /// <summary>Creates a UnaryExpression that represents an expression that has a constant value of type Expression.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to Quote and the Operand property set to the specified value.</returns>
+        public static UnaryExpression Quote(Expression expression) =>
+            new UnaryExpression(ExpressionType.Quote, expression, expression.Type);
+
+        /// <summary>Creates a UnaryExpression that represents a unary plus operation.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to UnaryPlus and the Operand property set to the specified value.</returns>
+        public static UnaryExpression UnaryPlus(Expression expression) =>
+            new UnaryExpression(ExpressionType.UnaryPlus, expression, expression.Type);
+
+        /// <summary>Creates a UnaryExpression that represents an explicit unboxing.</summary>
+        /// <param name="expression">An Expression to set the Operand property equal to.</param>
+        /// <param name="type">A Type to set the Type property equal to.</param>
+        /// <returns>A UnaryExpression that has the NodeType property equal to Unbox and the Operand and Type properties set to the specified values.</returns>
+        public static UnaryExpression Unbox(Expression expression, Type type) =>
+            new UnaryExpression(ExpressionType.Unbox, expression, type);
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body) =>
             new Expression<TDelegate>(body, Tools.Empty<ParameterExpression>());
@@ -222,6 +335,10 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) =>
             new Expression<TDelegate>(body, parameters);
 
+        /// <summary>Creates a BinaryExpression that represents applying an array index operator to an array of rank one.</summary>
+        /// <param name="array">A Expression to set the Left property equal to.</param>
+        /// <param name="index">A Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to ArrayIndex and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression ArrayIndex(Expression array, Expression index) =>
             new ArrayIndexExpression(array, index, array.Type.GetElementType());
 
@@ -243,21 +360,108 @@ namespace FastExpressionCompiler.LightExpression
                 bounds.Length == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Length),
                 bounds);
 
+        /// <summary>Creates a BinaryExpression that represents an assignment operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Assign and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression Assign(Expression left, Expression right) =>
             new AssignBinaryExpression(left, right, left.Type);
 
+        /// <summary>Creates a BinaryExpression that represents raising an expression to a power and assigning the result back to the expression.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to PowerAssign and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression PowerAssign(Expression left, Expression right) =>
             new AssignBinaryExpression(ExpressionType.PowerAssign, left, right, left.Type);
 
+        /// <summary>Creates a BinaryExpression that represents an addition assignment operation that does not have overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to AddAssign and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression AddAssign(Expression left, Expression right) =>
             new AssignBinaryExpression(ExpressionType.AddAssign, left, right, left.Type);
 
+        /// <summary>Creates a BinaryExpression that represents an addition assignment operation that has overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to AddAssignChecked and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression AddAssignChecked(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.AddAssignChecked, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a bitwise AND assignment operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to AndAssign and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression AndAssign(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.AndAssign, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a bitwise XOR assignment operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to ExclusiveOrAssign and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression ExclusiveOrAssign(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.ExclusiveOrAssign, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a bitwise left-shift assignment operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to LeftShiftAssign and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression LeftShiftAssign(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.LeftShiftAssign, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a remainder assignment operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to ModuloAssign and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression ModuloAssign(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.ModuloAssign, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a bitwise OR assignment operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to OrAssign and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression OrAssign(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.OrAssign, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a bitwise right-shift assignment operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to RightShiftAssign and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression RightShiftAssign(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.RightShiftAssign, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a subtraction assignment operation that does not have overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to SubtractAssign and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression SubtractAssign(Expression left, Expression right) =>
             new AssignBinaryExpression(ExpressionType.SubtractAssign, left, right, left.Type);
 
+        /// <summary>Creates a BinaryExpression that represents a subtraction assignment operation that has overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to SubtractAssignChecked and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression SubtractAssignChecked(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.SubtractAssignChecked, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a multiplication assignment operation that does not have overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to MultiplyAssign and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression MultiplyAssign(Expression left, Expression right) =>
             new AssignBinaryExpression(ExpressionType.MultiplyAssign, left, right, left.Type);
 
+        /// <summary>Creates a BinaryExpression that represents a multiplication assignment operation that has overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to MultiplyAssignChecked and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression MultiplyAssignChecked(Expression left, Expression right) =>
+            new AssignBinaryExpression(ExpressionType.MultiplyAssignChecked, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a division assignment operation that does not have overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to DivideAssign and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression DivideAssign(Expression left, Expression right) =>
             new AssignBinaryExpression(ExpressionType.DivideAssign, left, right, left.Type);
 
@@ -285,47 +489,159 @@ namespace FastExpressionCompiler.LightExpression
         public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) =>
             Condition(test, ifTrue, ifFalse, typeof(void));
 
-        public static Expression Add(Expression left, Expression right) =>
+        /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Add and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression Add(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Add, left, right, left.Type);
 
-        public static Expression Substract(Expression left, Expression right) =>
+        /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that has overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to AddChecked and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression AddChecked(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.AddChecked, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a bitwise XOR operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to ExclusiveOr and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression ExclusiveOr(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.ExclusiveOr, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a bitwise left-shift operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to LeftShift and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression LeftShift(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.LeftShift, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents an arithmetic remainder operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Modulo and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression Modulo(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.Modulo, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a bitwise OR operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Or and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression Or(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.Or, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to RightShift and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression RightShift(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.RightShift, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that does not have overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Subtract and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression Subtract(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Subtract, left, right, left.Type);
 
-        public static Expression Multiply(Expression left, Expression right) =>
+        /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that has overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to SubtractChecked and the Left, Right, and Method properties set to the specified values.</returns>
+        public static BinaryExpression SubtractChecked(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.SubtractChecked, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that does not have overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Multiply and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression Multiply(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Multiply, left, right, left.Type);
 
-        public static Expression Divide(Expression left, Expression right) =>
+        /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that has overflow checking.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to MultiplyChecked and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression MultiplyChecked(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.MultiplyChecked, left, right, left.Type);
+
+        /// <summary>Creates a BinaryExpression that represents an arithmetic division operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Divide and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression Divide(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Divide, left, right, left.Type);
 
-        public static Expression Power(Expression left, Expression right) =>
+        /// <summary>Creates a BinaryExpression that represents raising a number to a power.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Power and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression Power(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Power, left, right, left.Type);
 
+        /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to And and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression And(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.And, left, right, left.Type);
 
+        /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to AndAlso and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression AndAlso(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.AndAlso, left, right, left.Type);
 
+        /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to OrElse and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression OrElse(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.OrElse, left, right, left.Type);
 
-        public static Expression Equal(Expression left, Expression right) =>
-            new SimpleBinaryExpression(ExpressionType.Equal, left, right, left.Type);
+        /// <summary>Creates a BinaryExpression that represents an equality comparison.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Equal and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression Equal(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.Equal, left, right, typeof(bool));
 
-        public static Expression GreaterThan(Expression left, Expression right) =>
+        /// <summary>Creates a BinaryExpression that represents a "greater than" numeric comparison.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to GreaterThan and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression GreaterThan(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.GreaterThan, left, right, left.Type);
 
-        public static Expression GreaterThanOrEqual(Expression left, Expression right) =>
+        /// <summary>Creates a BinaryExpression that represents a "greater than or equal" numeric comparison.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to GreaterThanOrEqual and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.GreaterThanOrEqual, left, right, left.Type);
 
-        public static Expression LessThan(Expression left, Expression right) =>
+        /// <summary>Creates a BinaryExpression that represents a "less than" numeric comparison.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to LessThan and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression LessThan(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.LessThan, left, right, left.Type);
 
-        public static Expression LessThanOrEqual(Expression left, Expression right) =>
+        /// <summary>Creates a BinaryExpression that represents a " less than or equal" numeric comparison.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to LessThanOrEqual and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression LessThanOrEqual(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.LessThanOrEqual, left, right, left.Type);
 
-        public static Expression NotEqual(Expression left, Expression right) =>
-            new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, left.Type);
+        /// <summary>Creates a BinaryExpression that represents an inequality comparison.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to NotEqual and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression NotEqual(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, typeof(bool));
 
         public static BlockExpression Block(params Expression[] expressions) =>
             Block(Tools.Empty<ParameterExpression>(), expressions);
@@ -351,6 +667,9 @@ namespace FastExpressionCompiler.LightExpression
         public static CatchBlock Catch(Type test, Expression body) =>
             new CatchBlock(null, body, null, test);
 
+        /// <summary>Creates a UnaryExpression that represents a throwing of an exception.</summary>
+        /// <param name="value">An Expression to set the Operand property equal to.</param>
+        /// <returns>A UnaryExpression that represents the exception.</returns>
         public static UnaryExpression Throw(Expression value) =>
             new UnaryExpression(ExpressionType.Throw, value, typeof(void));
 
@@ -363,6 +682,41 @@ namespace FastExpressionCompiler.LightExpression
         public static LabelTarget Label(string name) =>
             SysExpr.Label(typeof(void), name);
 
+        /// <summary>Creates a BinaryExpression, given the left and right operands, by calling an appropriate factory method.</summary>
+        /// <param name="binaryType">The ExpressionType that specifies the type of binary operation.</param>
+        /// <param name="left">An Expression that represents the left operand.</param>
+        /// <param name="right">An Expression that represents the right operand.</param>
+        /// <returns>The BinaryExpression that results from calling the appropriate factory method.</returns>
+        public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right)
+        {
+            switch (binaryType)
+            {
+                case ExpressionType.AddAssign:
+                case ExpressionType.AddAssignChecked:
+                case ExpressionType.AndAssign:
+                case ExpressionType.Assign:
+                case ExpressionType.DivideAssign:
+                case ExpressionType.ExclusiveOrAssign:
+                case ExpressionType.LeftShiftAssign:
+                case ExpressionType.ModuloAssign:
+                case ExpressionType.MultiplyAssign:
+                case ExpressionType.MultiplyAssignChecked:
+                case ExpressionType.OrAssign:
+                case ExpressionType.PowerAssign:
+                case ExpressionType.RightShiftAssign:
+                case ExpressionType.SubtractAssign:
+                case ExpressionType.SubtractAssignChecked:
+                    return new AssignBinaryExpression(binaryType, left, right, left.Type);
+                case ExpressionType.ArrayIndex:
+                    return ArrayIndex(left, right);
+                case ExpressionType.Coalesce:
+                    return Coalesce(left, right);
+                default:
+                    return new SimpleBinaryExpression(binaryType, left, right, left.Type);
+            }
+        }
+
+
         public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type = null) =>
             new GotoExpression(kind, target, value, type ?? typeof(void));
 
@@ -371,6 +725,20 @@ namespace FastExpressionCompiler.LightExpression
 
         public static GotoExpression Continue(LabelTarget target, Type type = null) =>
             MakeGoto(GotoExpressionKind.Continue, target, null, type);
+
+        /// <summary>Creates a BinaryExpression that represents a reference equality comparison.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Equal and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression ReferenceEqual(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.Equal, left, right, typeof(bool));
+
+        /// <summary>Creates a BinaryExpression that represents a reference inequality comparison.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to NotEqual and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression ReferenceNotEqual(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, typeof(bool));
 
         public static GotoExpression Return(LabelTarget target, Expression value = null, Type type = null) =>
             MakeGoto(GotoExpressionKind.Return, target, value);
@@ -399,8 +767,17 @@ namespace FastExpressionCompiler.LightExpression
         public static SwitchCase SwitchCase(Expression body, params Expression[] testValues) =>
             new SwitchCase(body, testValues);
 
+        /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Coalesce and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression Coalesce(Expression left, Expression right) => Coalesce(left, right, null);
 
+        /// <summary>Creates a BinaryExpression that represents a coalescing operation, given a conversion function.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <param name="conversion">A LambdaExpression to set the Conversion property equal to.</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Coalesce and the Left, Right and Conversion properties set to the specified values.</returns>
         public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) =>
             conversion == null ?
                 new SimpleBinaryExpression(ExpressionType.Coalesce, left, right, GetCoalesceType(left.Type, right.Type)) :
@@ -559,9 +936,43 @@ namespace FastExpressionCompiler.LightExpression
 
         public override SysExpr ToExpression()
         {
-            if (NodeType == ExpressionType.Convert)
-                return SysExpr.Convert(Operand.ToExpression(), Type);
-            throw new NotSupportedException("Cannot convert Expression to Expression of type " + NodeType);
+            switch (NodeType)
+            {
+                case ExpressionType.ArrayLength:
+                    return SysExpr.ArrayLength(Operand.ToExpression());
+                case ExpressionType.Convert:
+                    return SysExpr.Convert(Operand.ToExpression(), Type);
+                case ExpressionType.Decrement:
+                    return SysExpr.Decrement(Operand.ToExpression());
+                case ExpressionType.Increment:
+                    return SysExpr.Increment(Operand.ToExpression());
+                case ExpressionType.IsFalse:
+                    return SysExpr.IsFalse(Operand.ToExpression());
+                case ExpressionType.IsTrue:
+                    return SysExpr.IsTrue(Operand.ToExpression());
+                case ExpressionType.Negate:
+                    return SysExpr.Negate(Operand.ToExpression());
+                case ExpressionType.NegateChecked:
+                    return SysExpr.NegateChecked(Operand.ToExpression());
+                case ExpressionType.OnesComplement:
+                    return SysExpr.OnesComplement(Operand.ToExpression());
+                case ExpressionType.PostDecrementAssign:
+                    return SysExpr.PostDecrementAssign(Operand.ToExpression());
+                case ExpressionType.PostIncrementAssign:
+                    return SysExpr.PostIncrementAssign(Operand.ToExpression());
+                case ExpressionType.PreDecrementAssign:
+                    return SysExpr.PreDecrementAssign(Operand.ToExpression());
+                case ExpressionType.PreIncrementAssign:
+                    return SysExpr.PreIncrementAssign(Operand.ToExpression());
+                case ExpressionType.Quote:
+                    return SysExpr.Quote(Operand.ToExpression());
+                case ExpressionType.UnaryPlus:
+                    return SysExpr.UnaryPlus(Operand.ToExpression());
+                case ExpressionType.Unbox:
+                    return SysExpr.Unbox(Operand.ToExpression(), Type);
+                default:
+                    throw new NotSupportedException("Cannot convert Expression to Expression of type " + NodeType);
+            }
         }
 
         public UnaryExpression(ExpressionType nodeType, Expression operand, Type type)

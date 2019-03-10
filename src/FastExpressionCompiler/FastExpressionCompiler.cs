@@ -1319,9 +1319,10 @@ namespace FastExpressionCompiler
                         case ExpressionType.Throw:
                             {
                                 var opExpr = ((UnaryExpression)expr).Operand;
-                                if (!TryEmit(opExpr, paramExprs, il, ref closure, parent))
+                                if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                                     return false;
-                                il.ThrowException(opExpr.Type);
+
+                                il.Emit(OpCodes.Throw);
                                 return true;
                             }
 
@@ -1772,8 +1773,15 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Pop);
                 else
                 {
-                    il.Emit(OpCodes.Ldc_I4_0);
-                    il.Emit(OpCodes.Ceq);
+                    if (expr.Type == typeof(bool))
+                    {
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.Emit(OpCodes.Ceq);
+                    }
+                    else
+                    {
+                        il.Emit(OpCodes.Not);
+                    }
                 }
                 return true;
             }
@@ -2379,58 +2387,48 @@ namespace FastExpressionCompiler
                     case ExpressionType.Parameter:
                         var leftParamExpr = (ParameterExpression)left;
                         var paramIndex = paramExprs.GetFirstIndex(leftParamExpr);
+                        var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
 
                         if (paramIndex != -1)
                         {
                             // shift parameter indices by one, because the first one will be closure
                             if (closure.HasClosure)
-                                paramIndex += 1; 
+                                paramIndex += 1;
 
                             if (paramIndex >= byte.MaxValue)
                                 return false;
 
                             if (leftParamExpr.IsByRef)
-                            {
                                 EmitLoadParamArg(il, paramIndex, false);
 
-                                var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
-                                if (arithmeticNodeType == nodeType)
-                                {
-                                    if (!TryEmit(right, paramExprs, il, ref closure, flags))
-                                        return false;
-                                }
-                                else if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, parent))
-                                    return false;
-
-                                EmitByRefStore(il, leftParamExpr.Type);
-                            }
-                            else
+                            if (arithmeticNodeType == nodeType)
                             {
                                 if (!TryEmit(right, paramExprs, il, ref closure, flags))
                                     return false;
-
-                                if ((parent & ParentFlags.IgnoreResult) == 0)
-                                    il.Emit(OpCodes.Dup); // dup value to assign and return
-
-                                il.Emit(OpCodes.Starg_S, paramIndex);
                             }
+                            else if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, parent))
+                                return false;
+
+                            if ((parent & ParentFlags.IgnoreResult) == 0)
+                                il.Emit(OpCodes.Dup); // dup value to assign and return
+
+                            if (leftParamExpr.IsByRef)
+                                EmitByRefStore(il, leftParamExpr.Type);
+                            else
+                                il.Emit(OpCodes.Starg_S, paramIndex);
 
                             return true;
                         }
-                        else
+                        else if (arithmeticNodeType != nodeType)
                         {
-                            var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
-                            if (arithmeticNodeType != nodeType)
+                            var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex(leftParamExpr);
+                            if (varIdx != -1)
                             {
-                                var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex(leftParamExpr);
-                                if (varIdx != -1)
-                                {
-                                    if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, parent))
-                                        return false;
+                                if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, parent))
+                                    return false;
 
-                                    il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
-                                    return true;
-                                }
+                                il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
+                                return true;
                             }
                         }
 
