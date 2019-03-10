@@ -175,14 +175,13 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Equal_compiles()
         {
-            var param = Parameter(typeof(object), "o");
-            var expression = Lambda<Func<object, bool>>(
-                Equal(param, Constant(1, typeof(object))),
+            var param = Parameter(typeof(int), "i");
+            var expression = Lambda<Func<int, bool>>(
+                Equal(param, Constant(1)),
                 param);
 
             bool result = expression.CompileFast()(1);
 
-            // Verify that when passed a boxed value, object.Equals was called
             Assert.IsTrue(result);
         }
 
@@ -423,15 +422,14 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void NotEqual_compiles()
         {
-            var param = Parameter(typeof(object), "o");
-            var expression = Lambda<Func<object, bool>>(
-                NotEqual(param, Constant(1, typeof(object))),
+            var param = Parameter(typeof(int), "i");
+            var expression = Lambda<Func<int, bool>>(
+                NotEqual(param, Constant(1)),
                 param);
 
-            bool result = expression.CompileFast()(2);
+            bool result = expression.CompileFast()(1);
 
-            // Verify that when passed a boxed value, object.Equals was called
-            Assert.IsTrue(result);
+            Assert.IsFalse(result);
         }
 
         [Test]
@@ -502,31 +500,29 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void ReferenceEqual_compiles()
         {
+            const string Value = "test";
             var param = Parameter(typeof(object), "o");
             var expression = Lambda<Func<object, bool>>(
-                ReferenceEqual(param, Constant(1, typeof(object))),
+                ReferenceEqual(param, Constant(Value)),
                 param);
 
-            bool result = expression.CompileFast()(1);
+            bool result = expression.CompileFast()(Value);
 
-            // Verify it did a reference equality, which will be comparing boxed
-            // values and, therefore, return false
-            Assert.IsFalse(result);
+            Assert.IsTrue(result);
         }
 
         [Test]
         public void ReferenceNotEqual_compiles()
         {
+            const string Value = "test";
             var param = Parameter(typeof(object), "o");
             var expression = Lambda<Func<object, bool>>(
-                ReferenceNotEqual(param, Constant(1, typeof(object))),
+                ReferenceNotEqual(param, Constant(Value)),
                 param);
 
-            bool result = expression.CompileFast()(1);
+            bool result = expression.CompileFast()(Value);
 
-            // Verify it did a reference equality, which will be comparing boxed
-            // values and, therefore, return true
-            Assert.IsTrue(result);
+            Assert.IsFalse(result);
         }
 
         [Test]
