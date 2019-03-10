@@ -1,5 +1,6 @@
 ﻿using System;
 using NUnit.Framework;
+using SysExpr = System.Linq.Expressions;
 
 #if LIGHT_EXPRESSION
 using ExpressionType = System.Linq.Expressions.ExpressionType;
@@ -228,12 +229,12 @@ namespace FastExpressionCompiler.UnitTests
         public void Quote_compiles()
         {
             var param = Parameter(typeof(int), "i");
-            var expression = Lambda<Func<int, Expression<Func<int>>>>(
+            var expression = Lambda<Func<int, SysExpr.Expression<Func<int>>>>(
                 Quote(Lambda(param)),
                 param);
 
             var resultExpression = expression.CompileFast()(2);
-            int result = resultExpression.CompileFast()();
+            int result = resultExpression.Compile()();
 
             Assert.AreEqual(2, result);
         }
