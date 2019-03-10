@@ -60,20 +60,6 @@ namespace FastExpressionCompiler.UnitTests
             f("hey");
         }
 
-        [Test]
-        public void Target_type_as_in_func()
-        {
-            var sExpr = Parameter(typeof(object), "o");
-            var expr = Lambda<Func<object, string>>(
-                TypeAs(sExpr, typeof(string)),
-                sExpr);
-
-            var f = expr.CompileFast();
-            string result = f("123");
-
-            Assert.AreEqual("123", result);
-        }
-
         public struct X
         {
             public static implicit operator X(string s) => new X("X:" + s);
