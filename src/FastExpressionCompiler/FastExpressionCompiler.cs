@@ -1772,8 +1772,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Pop);
                 else
                 {
-                    il.Emit(OpCodes.Ldc_I4_0);
-                    il.Emit(OpCodes.Ceq);
+                    il.Emit(OpCodes.Not);
                 }
                 return true;
             }
