@@ -1319,9 +1319,10 @@ namespace FastExpressionCompiler
                         case ExpressionType.Throw:
                             {
                                 var opExpr = ((UnaryExpression)expr).Operand;
-                                if (!TryEmit(opExpr, paramExprs, il, ref closure, parent))
+                                if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                                     return false;
-                                il.ThrowException(opExpr.Type);
+
+                                il.Emit(OpCodes.Throw);
                                 return true;
                             }
 
