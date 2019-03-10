@@ -936,9 +936,43 @@ namespace FastExpressionCompiler.LightExpression
 
         public override SysExpr ToExpression()
         {
-            if (NodeType == ExpressionType.Convert)
-                return SysExpr.Convert(Operand.ToExpression(), Type);
-            throw new NotSupportedException("Cannot convert Expression to Expression of type " + NodeType);
+            switch (NodeType)
+            {
+                case ExpressionType.ArrayLength:
+                    return SysExpr.ArrayLength(Operand.ToExpression());
+                case ExpressionType.Convert:
+                    return SysExpr.Convert(Operand.ToExpression(), Type);
+                case ExpressionType.Decrement:
+                    return SysExpr.Decrement(Operand.ToExpression());
+                case ExpressionType.Increment:
+                    return SysExpr.Increment(Operand.ToExpression());
+                case ExpressionType.IsFalse:
+                    return SysExpr.IsFalse(Operand.ToExpression());
+                case ExpressionType.IsTrue:
+                    return SysExpr.IsTrue(Operand.ToExpression());
+                case ExpressionType.Negate:
+                    return SysExpr.Negate(Operand.ToExpression());
+                case ExpressionType.NegateChecked:
+                    return SysExpr.NegateChecked(Operand.ToExpression());
+                case ExpressionType.OnesComplement:
+                    return SysExpr.OnesComplement(Operand.ToExpression());
+                case ExpressionType.PostDecrementAssign:
+                    return SysExpr.PostDecrementAssign(Operand.ToExpression());
+                case ExpressionType.PostIncrementAssign:
+                    return SysExpr.PostIncrementAssign(Operand.ToExpression());
+                case ExpressionType.PreDecrementAssign:
+                    return SysExpr.PreDecrementAssign(Operand.ToExpression());
+                case ExpressionType.PreIncrementAssign:
+                    return SysExpr.PreIncrementAssign(Operand.ToExpression());
+                case ExpressionType.Quote:
+                    return SysExpr.Quote(Operand.ToExpression());
+                case ExpressionType.UnaryPlus:
+                    return SysExpr.UnaryPlus(Operand.ToExpression());
+                case ExpressionType.Unbox:
+                    return SysExpr.Unbox(Operand.ToExpression(), Type);
+                default:
+                    throw new NotSupportedException("Cannot convert Expression to Expression of type " + NodeType);
+            }
         }
 
         public UnaryExpression(ExpressionType nodeType, Expression operand, Type type)
