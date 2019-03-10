@@ -336,8 +336,8 @@ namespace FastExpressionCompiler.LightExpression
             new Expression<TDelegate>(body, parameters);
 
         /// <summary>Creates a BinaryExpression that represents applying an array index operator to an array of rank one.</summary>
-        /// <param name="left">An Expression to set the Left property equal to.</param>
-        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <param name="array">A Expression to set the Left property equal to.</param>
+        /// <param name="index">A Expression to set the Right property equal to.</param>
         /// <returns>A BinaryExpression that has the NodeType property equal to ArrayIndex and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression ArrayIndex(Expression array, Expression index) =>
             new ArrayIndexExpression(array, index, array.Type.GetElementType());
