@@ -437,7 +437,18 @@ namespace FastExpressionCompiler
                     Labels = Labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
             }
 
-            public Label GetLabel(LabelTarget labelTarget) => Labels[GetLabelIndex(labelTarget)].Value.GetValueOrDefault();
+            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) 
+                => GetOrCreateLabel(GetLabelIndex(labelTarget), il);
+
+            public Label GetOrCreateLabel(int index, ILGenerator il)
+            {
+                var labelPair = Labels[index];
+                var label = labelPair.Value;
+                if (!label.HasValue)
+                    Labels[index] = new KeyValuePair<LabelTarget, Label?>(labelPair.Key, label = il.DefineLabel());
+
+                return label.Value;
+            }
 
             public int GetLabelIndex(LabelTarget labelTarget) => Labels.GetFirstIndex(kvp => kvp.Key == labelTarget);
 
@@ -1336,7 +1347,7 @@ namespace FastExpressionCompiler
                             il.MarkLabel(loopBodyLabel);
 
                             if (loopExpr.ContinueLabel != null)
-                                il.MarkLabel(closure.GetLabel(loopExpr.ContinueLabel));
+                                il.MarkLabel(closure.GetOrCreateLabel(loopExpr.ContinueLabel, il));
 
                             if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, parent))
                                 return false;
@@ -1345,7 +1356,7 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Br_S, loopBodyLabel);
 
                             if (loopExpr.BreakLabel != null)
-                                il.MarkLabel(closure.GetLabel(loopExpr.BreakLabel));
+                                il.MarkLabel(closure.GetOrCreateLabel(loopExpr.BreakLabel, il));
 
                             return true;
 
@@ -1408,11 +1419,9 @@ namespace FastExpressionCompiler
                     return false; // should be found in first collecting constants round
 
                 // define a new label or use the label provided by the preceding GoTo expression
-                var label = closure.Labels[index].Value;
-                if (!label.HasValue)
-                    closure.Labels[index] = new KeyValuePair<LabelTarget, Label?>(expr.Target, label = il.DefineLabel());
+                var label = closure.GetOrCreateLabel(index, il);
                     
-                il.MarkLabel(label.Value);
+                il.MarkLabel(label);
 
                 return expr.DefaultValue == null || TryEmit(expr.DefaultValue, paramExprs, il, ref closure, parent);
             }
@@ -1425,17 +1434,15 @@ namespace FastExpressionCompiler
                     throw new InvalidOperationException("Cannot jump, no labels found");
 
                 // use label defined by Label expression or define its own to use by subsequent Label
-                var label = closure.Labels[index].Value;
-                if (!label.HasValue)
-                    closure.Labels[index] = new KeyValuePair<LabelTarget, Label?>(expr.Target, label = il.DefineLabel());
+                var label = closure.GetOrCreateLabel(index, il);
 
                 switch (expr.Kind) {
                     case GotoExpressionKind.Goto:
-                        il.Emit(OpCodes.Br, label.Value);
+                        il.Emit(OpCodes.Br, label);
                         return true;
                     
                     case GotoExpressionKind.Break:
-                        il.Emit(OpCodes.Br_S, label.Value);
+                        il.Emit(OpCodes.Br_S, label);
                         return true;
 
                     default:

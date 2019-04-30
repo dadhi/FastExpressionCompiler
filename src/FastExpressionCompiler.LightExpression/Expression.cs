@@ -1556,7 +1556,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.Loop;
 
-        public override Type Type => Body.Type;
+        public override Type Type => typeof(void);
 
         public readonly Expression Body;
         public readonly LabelTarget BreakLabel;
@@ -1639,7 +1639,9 @@ namespace FastExpressionCompiler.LightExpression
         public readonly LabelTarget Target;
         public readonly Expression DefaultValue;
 
-        public override SysExpr ToExpression() => SysExpr.Label(Target, DefaultValue.ToExpression());
+        public override SysExpr ToExpression() =>
+            DefaultValue == null ? SysExpr.Label(Target) :
+            SysExpr.Label(Target, DefaultValue.ToExpression());
 
         internal LabelExpression(LabelTarget target, Expression defaultValue)
         {
@@ -1653,7 +1655,9 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType => ExpressionType.Goto;
         public override Type Type { get; }
 
-        public override SysExpr ToExpression() => SysExpr.Goto(Target, Value.ToExpression(), Type);
+        public override SysExpr ToExpression() =>
+            Value == null ? SysExpr.Goto(Target, Type) :
+            SysExpr.Goto(Target, Value.ToExpression(), Type);
 
         public readonly Expression Value;
         public readonly LabelTarget Target;
