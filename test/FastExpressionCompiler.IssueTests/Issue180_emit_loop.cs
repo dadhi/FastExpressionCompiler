@@ -13,6 +13,26 @@ namespace FastExpressionCompiler.UnitTests
     public class Issue180_emit_loop
     {
         [Test]
+        public void LoopIsSupported()
+        {
+            var intVariable = Variable(typeof(int), "i");
+            var incrementVariable = PreIncrementAssign(intVariable);
+
+            var returnLabel = Label();
+
+            var variableMoreThanThree = GreaterThan(intVariable, Constant(3));
+            var ifMoreThanThreeReturn = IfThen(variableMoreThanThree, Return(returnLabel));
+
+            var loop = Loop(Block(ifMoreThanThreeReturn, incrementVariable));
+            var lambdaBody = Block(new[] { intVariable }, loop, Label(returnLabel));
+
+            var loopLambda = Lambda<Action>(lambdaBody);
+            var loopFunc = loopLambda.CompileFast();
+
+            loopFunc.Invoke();
+        }
+
+        [Test]
         public void LoopWithBreakIsSupported()
         {
             var intVariable = Variable(typeof(int), "i");
