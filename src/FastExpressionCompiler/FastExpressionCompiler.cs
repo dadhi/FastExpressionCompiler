@@ -1352,7 +1352,7 @@ namespace FastExpressionCompiler
                             if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, parent))
                                 return false;
 
-                            //If loop hasn't exited, jump back to start of its body:
+                            // If loop hasn't exited, jump back to start of its body:
                             il.Emit(OpCodes.Br_S, loopBodyLabel);
 
                             if (loopExpr.BreakLabel != null)
