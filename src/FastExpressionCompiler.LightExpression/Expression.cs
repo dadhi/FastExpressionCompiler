@@ -57,14 +57,21 @@ namespace FastExpressionCompiler.LightExpression
         internal static SysExpr[] ToExpressions(IReadOnlyList<Expression> exprs)
         {
             if (exprs.Count == 0)
+            {
                 return Tools.Empty<SysExpr>();
+            }
 
             if (exprs.Count == 1)
+            {
                 return new[] { exprs[0].ToExpression() };
+            }
 
             var result = new SysExpr[exprs.Count];
             for (var i = 0; i < result.Length; ++i)
+            {
                 result[i] = exprs[i].ToExpression();
+            }
+
             return result;
         }
 
@@ -144,9 +151,15 @@ namespace FastExpressionCompiler.LightExpression
         public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member)
         {
             if (member is FieldInfo field)
+            {
                 return Field(expression, field);
+            }
+
             if (member is PropertyInfo property)
+            {
                 return Property(expression, property);
+            }
+
             throw new ArgumentException($"Member is not field or property: {member}", nameof(member));
         }
 
@@ -652,6 +665,25 @@ namespace FastExpressionCompiler.LightExpression
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
             new BlockExpression(type, variables.AsReadOnlyList(), expressions);
 
+        /// <summary>
+        /// Creates a LoopExpression with the given body and (optional) break target.
+        /// </summary>
+        /// <param name="body">The body of the loop.</param>
+        /// <param name="break">The break target used by the loop body, if required.</param>
+        /// <returns>The created LoopExpression.</returns>
+        public static LoopExpression Loop(Expression body, LabelTarget @break = null) =>
+            @break == null ? new LoopExpression(body, null, null) : new LoopExpression(body, @break, null);
+
+        /// <summary>
+        /// Creates a LoopExpression with the given body.
+        /// </summary>
+        /// <param name="body">The body of the loop.</param>
+        /// <param name="break">The break target used by the loop body.</param>
+        /// <param name="continue">The continue target used by the loop body.</param>
+        /// <returns>The created LoopExpression.</returns>
+        public static LoopExpression Loop(Expression body, LabelTarget @break, LabelTarget @continue) =>
+            new LoopExpression(body, @break, @continue);
+
         public static TryExpression TryCatch(Expression body, params CatchBlock[] handlers) =>
             new TryExpression(body, null, handlers);
 
@@ -787,13 +819,19 @@ namespace FastExpressionCompiler.LightExpression
         {
             var leftNonNullable = left.UnpackNullableOrSelf();
             if (leftNonNullable != left && right.IsImplicitlyConvertibleTo(leftNonNullable))
+            {
                 return leftNonNullable;
+            }
 
             if (right.IsImplicitlyConvertibleTo(left))
+            {
                 return left;
+            }
 
             if (leftNonNullable.IsImplicitlyConvertibleTo(right))
+            {
                 return right;
+            }
 
             throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
         }
@@ -848,6 +886,7 @@ namespace FastExpressionCompiler.LightExpression
         internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
         {
             if (source == typeof(Char))
+            {
                 return
                     target == typeof(UInt16) ||
                     target == typeof(Int32) ||
@@ -857,8 +896,10 @@ namespace FastExpressionCompiler.LightExpression
                     target == typeof(Single) ||
                     target == typeof(Double) ||
                     target == typeof(Decimal);
+            }
 
             if (source == typeof(SByte))
+            {
                 return
                     target == typeof(Int16) ||
                     target == typeof(Int32) ||
@@ -866,8 +907,10 @@ namespace FastExpressionCompiler.LightExpression
                     target == typeof(Single) ||
                     target == typeof(Double) ||
                     target == typeof(Decimal);
+            }
 
             if (source == typeof(Byte))
+            {
                 return
                     target == typeof(Int16) ||
                     target == typeof(UInt16) ||
@@ -878,16 +921,20 @@ namespace FastExpressionCompiler.LightExpression
                     target == typeof(Single) ||
                     target == typeof(Double) ||
                     target == typeof(Decimal);
+            }
 
             if (source == typeof(Int16))
+            {
                 return
                     target == typeof(Int32) ||
                     target == typeof(Int64) ||
                     target == typeof(Single) ||
                     target == typeof(Double) ||
                     target == typeof(Decimal);
+            }
 
             if (source == typeof(UInt16))
+            {
                 return
                     target == typeof(Int32) ||
                     target == typeof(UInt32) ||
@@ -896,31 +943,40 @@ namespace FastExpressionCompiler.LightExpression
                     target == typeof(Single) ||
                     target == typeof(Double) ||
                     target == typeof(Decimal);
+            }
 
             if (source == typeof(Int32))
+            {
                 return
                     target == typeof(Int64) ||
                     target == typeof(Single) ||
                     target == typeof(Double) ||
                     target == typeof(Decimal);
+            }
 
             if (source == typeof(UInt32))
+            {
                 return
                     target == typeof(UInt32) ||
                     target == typeof(UInt64) ||
                     target == typeof(Single) ||
                     target == typeof(Double) ||
                     target == typeof(Decimal);
+            }
 
             if (source == typeof(Int64) ||
                 source == typeof(UInt64))
+            {
                 return
                     target == typeof(Single) ||
                     target == typeof(Double) ||
                     target == typeof(Decimal);
+            }
 
             if (source == typeof(Single))
+            {
                 return target == typeof(Double);
+            }
 
             return false;
         }
@@ -1027,7 +1083,9 @@ namespace FastExpressionCompiler.LightExpression
                 Type = typeof(bool);
             }
             else
+            {
                 Type = type;
+            }
         }
     }
 
@@ -1200,14 +1258,21 @@ namespace FastExpressionCompiler.LightExpression
             IReadOnlyList<ParameterExpression> ps)
         {
             if (ps.Count == 0)
+            {
                 return Tools.Empty<System.Linq.Expressions.ParameterExpression>();
+            }
 
             if (ps.Count == 1)
+            {
                 return new[] { ps[0].ToParameterExpression() };
+            }
 
             var result = new System.Linq.Expressions.ParameterExpression[ps.Count];
             for (var i = 0; i < result.Length; ++i)
+            {
                 result[i] = ps[i].ToParameterExpression();
+            }
+
             return result;
         }
 
@@ -1353,14 +1418,21 @@ namespace FastExpressionCompiler.LightExpression
         internal static System.Linq.Expressions.MemberBinding[] BindingsToExpressions(IReadOnlyList<MemberBinding> ms)
         {
             if (ms.Count == 0)
+            {
                 return Tools.Empty<System.Linq.Expressions.MemberBinding>();
+            }
 
             if (ms.Count == 1)
+            {
                 return new[] { ms[0].ToMemberBinding() };
+            }
 
             var result = new System.Linq.Expressions.MemberBinding[ms.Count];
             for (var i = 0; i < result.Length; ++i)
+            {
                 result[i] = ms[i].ToMemberBinding();
+            }
+
             return result;
         }
 
@@ -1480,6 +1552,29 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
+    public sealed class LoopExpression : Expression
+    {
+        public override ExpressionType NodeType => ExpressionType.Loop;
+
+        public override Type Type => Body.Type;
+
+        public readonly Expression Body;
+        public readonly LabelTarget BreakLabel;
+        public readonly LabelTarget ContinueLabel;
+
+        public override SysExpr ToExpression() =>
+            BreakLabel == null ? SysExpr.Loop(Body.ToExpression()) :
+            ContinueLabel == null ? SysExpr.Loop(Body.ToExpression(), BreakLabel) :
+            SysExpr.Loop(Body.ToExpression(), BreakLabel, ContinueLabel);
+
+        internal LoopExpression(Expression body, LabelTarget breakLabel, LabelTarget continueLabel)
+        {
+            Body = body;
+            BreakLabel = breakLabel;
+            ContinueLabel = continueLabel;
+        }
+    }
+
     public sealed class TryExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Try;
@@ -1497,10 +1592,16 @@ namespace FastExpressionCompiler.LightExpression
         private static System.Linq.Expressions.CatchBlock[] ToCatchBlocks(IReadOnlyList<CatchBlock> hs)
         {
             if (hs == null)
+            {
                 return Tools.Empty<System.Linq.Expressions.CatchBlock>();
+            }
+
             var catchBlocks = new System.Linq.Expressions.CatchBlock[hs.Count];
             for (var i = 0; i < hs.Count; ++i)
+            {
                 catchBlocks[i] = hs[i].ToCatchBlock();
+            }
+
             return catchBlocks;
         }
 
@@ -1594,14 +1695,21 @@ namespace FastExpressionCompiler.LightExpression
         internal static System.Linq.Expressions.SwitchCase[] ToSwitchCaseExpressions(IReadOnlyList<SwitchCase> sw)
         {
             if (sw.Count == 0)
+            {
                 return Tools.Empty<System.Linq.Expressions.SwitchCase>();
+            }
 
             if (sw.Count == 1)
+            {
                 return new[] { sw[0].ToSwitchCase() };
+            }
 
             var result = new System.Linq.Expressions.SwitchCase[sw.Count];
             for (var i = 0; i < result.Length; ++i)
+            {
                 result[i] = sw[i].ToSwitchCase();
+            }
+
             return result;
         }
 

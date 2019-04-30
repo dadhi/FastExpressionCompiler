@@ -977,6 +977,10 @@ namespace FastExpressionCompiler
                         closure.PopBlock();
                         return true;
 
+                    case ExpressionType.Loop:
+                        expr = ((LoopExpression)expr).Body;
+                        continue;
+
                     case ExpressionType.Index:
                         var indexExpr = (IndexExpression)expr;
                         if (!TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs))
