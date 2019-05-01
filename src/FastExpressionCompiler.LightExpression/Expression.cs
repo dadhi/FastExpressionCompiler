@@ -652,6 +652,25 @@ namespace FastExpressionCompiler.LightExpression
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
             new BlockExpression(type, variables.AsReadOnlyList(), expressions);
 
+        /// <summary>
+        /// Creates a LoopExpression with the given body and (optional) break target.
+        /// </summary>
+        /// <param name="body">The body of the loop.</param>
+        /// <param name="break">The break target used by the loop body, if required.</param>
+        /// <returns>The created LoopExpression.</returns>
+        public static LoopExpression Loop(Expression body, LabelTarget @break = null) =>
+            @break == null ? new LoopExpression(body, null, null) : new LoopExpression(body, @break, null);
+
+        /// <summary>
+        /// Creates a LoopExpression with the given body.
+        /// </summary>
+        /// <param name="body">The body of the loop.</param>
+        /// <param name="break">The break target used by the loop body.</param>
+        /// <param name="continue">The continue target used by the loop body.</param>
+        /// <returns>The created LoopExpression.</returns>
+        public static LoopExpression Loop(Expression body, LabelTarget @break, LabelTarget @continue) =>
+            new LoopExpression(body, @break, @continue);
+
         public static TryExpression TryCatch(Expression body, params CatchBlock[] handlers) =>
             new TryExpression(body, null, handlers);
 
@@ -1480,6 +1499,29 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
+    public sealed class LoopExpression : Expression
+    {
+        public override ExpressionType NodeType => ExpressionType.Loop;
+
+        public override Type Type => typeof(void);
+
+        public readonly Expression Body;
+        public readonly LabelTarget BreakLabel;
+        public readonly LabelTarget ContinueLabel;
+
+        public override SysExpr ToExpression() =>
+            BreakLabel == null ? SysExpr.Loop(Body.ToExpression()) :
+            ContinueLabel == null ? SysExpr.Loop(Body.ToExpression(), BreakLabel) :
+            SysExpr.Loop(Body.ToExpression(), BreakLabel, ContinueLabel);
+
+        internal LoopExpression(Expression body, LabelTarget breakLabel, LabelTarget continueLabel)
+        {
+            Body = body;
+            BreakLabel = breakLabel;
+            ContinueLabel = continueLabel;
+        }
+    }
+
     public sealed class TryExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Try;
@@ -1538,7 +1580,9 @@ namespace FastExpressionCompiler.LightExpression
         public readonly LabelTarget Target;
         public readonly Expression DefaultValue;
 
-        public override SysExpr ToExpression() => SysExpr.Label(Target, DefaultValue.ToExpression());
+        public override SysExpr ToExpression() =>
+            DefaultValue == null ? SysExpr.Label(Target) :
+            SysExpr.Label(Target, DefaultValue.ToExpression());
 
         internal LabelExpression(LabelTarget target, Expression defaultValue)
         {
@@ -1552,7 +1596,9 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType => ExpressionType.Goto;
         public override Type Type { get; }
 
-        public override SysExpr ToExpression() => SysExpr.Goto(Target, Value.ToExpression(), Type);
+        public override SysExpr ToExpression() =>
+            Value == null ? SysExpr.Goto(Target, Type) :
+            SysExpr.Goto(Target, Value.ToExpression(), Type);
 
         public readonly Expression Value;
         public readonly LabelTarget Target;

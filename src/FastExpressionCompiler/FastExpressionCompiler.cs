@@ -431,6 +431,27 @@ namespace FastExpressionCompiler
                     NestedLambdaExprs = NestedLambdaExprs.WithLast(lambdaExpr);
             }
 
+            public void AddLabel(LabelTarget labelTarget)
+            {
+                if ((labelTarget != null) && (Labels.GetFirstIndex(kvp => kvp.Key == labelTarget) == -1))
+                    Labels = Labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
+            }
+
+            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) 
+                => GetOrCreateLabel(GetLabelIndex(labelTarget), il);
+
+            public Label GetOrCreateLabel(int index, ILGenerator il)
+            {
+                var labelPair = Labels[index];
+                var label = labelPair.Value;
+                if (!label.HasValue)
+                    Labels[index] = new KeyValuePair<LabelTarget, Label?>(labelPair.Key, label = il.DefineLabel());
+
+                return label.Value;
+            }
+
+            public int GetLabelIndex(LabelTarget labelTarget) => Labels.GetFirstIndex(kvp => kvp.Key == labelTarget);
+
             public object ConstructClosureTypeAndObject(bool constructTypeOnly)
             {
                 IsClosureConstructed = true;
@@ -977,6 +998,13 @@ namespace FastExpressionCompiler
                         closure.PopBlock();
                         return true;
 
+                    case ExpressionType.Loop:
+                        var loopExpr = (LoopExpression)expr;
+                        closure.AddLabel(loopExpr.BreakLabel);
+                        closure.AddLabel(loopExpr.ContinueLabel);
+                        expr = loopExpr.Body;
+                        continue;
+
                     case ExpressionType.Index:
                         var indexExpr = (IndexExpression)expr;
                         if (!TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs))
@@ -992,8 +1020,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
                         var defaultValueExpr = labelExpr.DefaultValue;
-                        closure.Labels = closure.Labels
-                            .WithLast(new KeyValuePair<LabelTarget, Label?>(labelExpr.Target, null));
+                        closure.AddLabel(labelExpr.Target);
                         if (defaultValueExpr == null)
                             return true;
                         expr = defaultValueExpr;
@@ -1312,6 +1339,27 @@ namespace FastExpressionCompiler
                             closure.PopBlock();
                             return true;
 
+                        case ExpressionType.Loop:
+                            var loopExpr = (LoopExpression)expr;
+
+                            // Mark the start of the loop body:
+                            var loopBodyLabel = il.DefineLabel();
+                            il.MarkLabel(loopBodyLabel);
+
+                            if (loopExpr.ContinueLabel != null)
+                                il.MarkLabel(closure.GetOrCreateLabel(loopExpr.ContinueLabel, il));
+
+                            if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, parent))
+                                return false;
+
+                            // If loop hasn't exited, jump back to start of its body:
+                            il.Emit(OpCodes.Br_S, loopBodyLabel);
+
+                            if (loopExpr.BreakLabel != null)
+                                il.MarkLabel(closure.GetOrCreateLabel(loopExpr.BreakLabel, il));
+
+                            return true;
+
                         case ExpressionType.Try:
                             return TryEmitTryCatchFinallyBlock((TryExpression)expr, paramExprs, il, ref closure,
                                 parent);
@@ -1366,16 +1414,14 @@ namespace FastExpressionCompiler
             private static bool TryEmitLabel(LabelExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var index = closure.Labels.GetFirstIndex(x => x.Key == expr.Target);
+                var index = closure.GetLabelIndex(expr.Target);
                 if (index == -1)
                     return false; // should be found in first collecting constants round
 
                 // define a new label or use the label provided by the preceding GoTo expression
-                var label = closure.Labels[index].Value;
-                if (!label.HasValue)
-                    closure.Labels[index] = new KeyValuePair<LabelTarget, Label?>(expr.Target, label = il.DefineLabel());
+                var label = closure.GetOrCreateLabel(index, il);
                     
-                il.MarkLabel(label.Value);
+                il.MarkLabel(label);
 
                 return expr.DefaultValue == null || TryEmit(expr.DefaultValue, paramExprs, il, ref closure, parent);
             }
@@ -1383,22 +1429,25 @@ namespace FastExpressionCompiler
             // todo: GotoExpression.Value 
             private static bool TryEmitGoto(GotoExpression expr, ILGenerator il, ref ClosureInfo closure)
             {
-                var index = closure.Labels.GetFirstIndex(x => x.Key == expr.Target);
+                var index = closure.GetLabelIndex(expr.Target);
                 if (index == -1)
                     throw new InvalidOperationException("Cannot jump, no labels found");
 
                 // use label defined by Label expression or define its own to use by subsequent Label
-                var label = closure.Labels[index].Value;
-                if (!label.HasValue)
-                    closure.Labels[index] = new KeyValuePair<LabelTarget, Label?>(expr.Target, label = il.DefineLabel());
+                var label = closure.GetOrCreateLabel(index, il);
 
-                if (expr.Kind == GotoExpressionKind.Goto)
-                {
-                    il.Emit(OpCodes.Br, label.Value);
-                    return true;
+                switch (expr.Kind) {
+                    case GotoExpressionKind.Goto:
+                        il.Emit(OpCodes.Br, label);
+                        return true;
+                    
+                    case GotoExpressionKind.Break:
+                        il.Emit(OpCodes.Br_S, label);
+                        return true;
+
+                    default:
+                        return false;
                 }
-
-                return false;
             }
 
             private static bool TryEmitIndex(IndexExpression expr, ILGenerator il)
