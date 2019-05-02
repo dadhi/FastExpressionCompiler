@@ -378,7 +378,7 @@ namespace FastExpressionCompiler
             public BlockInfo CurrentBlock;
 
             // Dictionary for the used Labels in IL
-            public KeyValuePair<LabelTarget, Label?>[] Labels;
+            private KeyValuePair<LabelTarget, Label?>[] _labels;
 
             // Populates info directly with provided closure object and constants.
             public ClosureInfo(bool isConstructed, object closure = null,
@@ -390,7 +390,7 @@ namespace FastExpressionCompiler
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 NestedLambdaExprs = Tools.Empty<LambdaExpression>();
                 CurrentBlock = BlockInfo.Empty;
-                Labels = null;
+                _labels = null;
                 LastEmitIsAddress = false;
 
                 if (closure == null)
@@ -433,8 +433,8 @@ namespace FastExpressionCompiler
 
             public void AddLabel(LabelTarget labelTarget)
             {
-                if ((labelTarget != null) && (Labels.GetFirstIndex(kvp => kvp.Key == labelTarget) == -1))
-                    Labels = Labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
+                if ((labelTarget != null) && (GetLabelIndex(labelTarget) == -1))
+                    _labels = _labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
             }
 
             public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) 
@@ -442,15 +442,15 @@ namespace FastExpressionCompiler
 
             public Label GetOrCreateLabel(int index, ILGenerator il)
             {
-                var labelPair = Labels[index];
+                var labelPair = _labels[index];
                 var label = labelPair.Value;
                 if (!label.HasValue)
-                    Labels[index] = new KeyValuePair<LabelTarget, Label?>(labelPair.Key, label = il.DefineLabel());
+                    _labels[index] = new KeyValuePair<LabelTarget, Label?>(labelPair.Key, label = il.DefineLabel());
 
                 return label.Value;
             }
 
-            public int GetLabelIndex(LabelTarget labelTarget) => Labels.GetFirstIndex(kvp => kvp.Key == labelTarget);
+            public int GetLabelIndex(LabelTarget labelTarget) => _labels.GetFirstIndex(kvp => kvp.Key == labelTarget);
 
             public object ConstructClosureTypeAndObject(bool constructTypeOnly)
             {
@@ -554,7 +554,7 @@ namespace FastExpressionCompiler
                         localVars[i] = il.DeclareLocal(blockVarExprs[i].Type);
                 }
 
-                CurrentBlock = new BlockInfo(CurrentBlock, blockVarExprs, localVars);
+                PushBlock(blockVarExprs, localVars);
             }
 
             public void PopBlock() =>
@@ -1353,7 +1353,7 @@ namespace FastExpressionCompiler
                                 return false;
 
                             // If loop hasn't exited, jump back to start of its body:
-                            il.Emit(OpCodes.Br_S, loopBodyLabel);
+                            il.Emit(OpCodes.Br, loopBodyLabel);
 
                             if (loopExpr.BreakLabel != null)
                                 il.MarkLabel(closure.GetOrCreateLabel(loopExpr.BreakLabel, il));
@@ -1437,12 +1437,9 @@ namespace FastExpressionCompiler
                 var label = closure.GetOrCreateLabel(index, il);
 
                 switch (expr.Kind) {
+                    case GotoExpressionKind.Break:
                     case GotoExpressionKind.Goto:
                         il.Emit(OpCodes.Br, label);
-                        return true;
-                    
-                    case GotoExpressionKind.Break:
-                        il.Emit(OpCodes.Br_S, label);
                         return true;
 
                     default:
@@ -2378,43 +2375,48 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitIncDecAssign(UnaryExpression expr, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex((ParameterExpression)expr.Operand);
-                if (varIdx == -1)
+                var localVar = closure.GetDefinedLocalVarOrDefault((ParameterExpression)expr.Operand);
+
+                if (localVar == null)
                     return false;
 
-                il.Emit(OpCodes.Ldloc, closure.CurrentBlock.LocalVars[varIdx]);
+                il.Emit(OpCodes.Ldloc, localVar);
 
-                var nodeType = expr.NodeType;
-                if (nodeType == ExpressionType.PreIncrementAssign)
-                {
-                    il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(OpCodes.Add);
-                    if ((parent & ParentFlags.IgnoreResult) == 0)
-                        il.Emit(OpCodes.Dup);
-                }
-                else if (nodeType == ExpressionType.PostIncrementAssign)
-                {
-                    if ((parent & ParentFlags.IgnoreResult) == 0)
-                        il.Emit(OpCodes.Dup);
-                    il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(OpCodes.Add);
-                }
-                else if (nodeType == ExpressionType.PreDecrementAssign)
-                {
-                    il.Emit(OpCodes.Ldc_I4_M1);
-                    il.Emit(OpCodes.Add);
-                    if ((parent & ParentFlags.IgnoreResult) == 0)
-                        il.Emit(OpCodes.Dup);
-                }
-                else if (nodeType == ExpressionType.PostDecrementAssign)
-                {
-                    if ((parent & ParentFlags.IgnoreResult) == 0)
-                        il.Emit(OpCodes.Dup);
-                    il.Emit(OpCodes.Ldc_I4_M1);
-                    il.Emit(OpCodes.Add);
+                switch (expr.NodeType) {
+                    case ExpressionType.PreIncrementAssign: {
+                        il.Emit(OpCodes.Ldc_I4_1);
+                        il.Emit(OpCodes.Add);
+                        if ((parent & ParentFlags.IgnoreResult) == 0)
+                            il.Emit(OpCodes.Dup);
+                        break;
+                    }
+
+                    case ExpressionType.PostIncrementAssign: {
+                        if ((parent & ParentFlags.IgnoreResult) == 0)
+                            il.Emit(OpCodes.Dup);
+                        il.Emit(OpCodes.Ldc_I4_1);
+                        il.Emit(OpCodes.Add);
+                        break;
+                    }
+
+                    case ExpressionType.PreDecrementAssign: {
+                        il.Emit(OpCodes.Ldc_I4_M1);
+                        il.Emit(OpCodes.Add);
+                        if ((parent & ParentFlags.IgnoreResult) == 0)
+                            il.Emit(OpCodes.Dup);
+                        break;
+                    }
+
+                    case ExpressionType.PostDecrementAssign: {
+                        if ((parent & ParentFlags.IgnoreResult) == 0)
+                            il.Emit(OpCodes.Dup);
+                        il.Emit(OpCodes.Ldc_I4_M1);
+                        il.Emit(OpCodes.Add);
+                        break;
+                    }
                 }
 
-                il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
+                il.Emit(OpCodes.Stloc, localVar);
                 return true;
             }
 
@@ -2470,13 +2472,13 @@ namespace FastExpressionCompiler
                         }
                         else if (arithmeticNodeType != nodeType)
                         {
-                            var varIdx = closure.CurrentBlock.VarExprs.GetFirstIndex(leftParamExpr);
-                            if (varIdx != -1)
+                            var localVar = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
+                            if (localVar != null)
                             {
                                 if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, parent))
                                     return false;
 
-                                il.Emit(OpCodes.Stloc, closure.CurrentBlock.LocalVars[varIdx]);
+                                il.Emit(OpCodes.Stloc, localVar);
                                 return true;
                             }
                         }
