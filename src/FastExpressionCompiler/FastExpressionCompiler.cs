@@ -433,7 +433,7 @@ namespace FastExpressionCompiler
 
             public void AddLabel(LabelTarget labelTarget)
             {
-                if ((labelTarget != null) && (_labels.GetFirstIndex(kvp => kvp.Key == labelTarget) == -1))
+                if ((labelTarget != null) && (GetLabelIndex(labelTarget) == -1))
                     _labels = _labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
             }
 
