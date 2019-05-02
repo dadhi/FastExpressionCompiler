@@ -1437,12 +1437,9 @@ namespace FastExpressionCompiler
                 var label = closure.GetOrCreateLabel(index, il);
 
                 switch (expr.Kind) {
+                    case GotoExpressionKind.Break:
                     case GotoExpressionKind.Goto:
                         il.Emit(OpCodes.Br, label);
-                        return true;
-                    
-                    case GotoExpressionKind.Break:
-                        il.Emit(OpCodes.Br_S, label);
                         return true;
 
                     default:
