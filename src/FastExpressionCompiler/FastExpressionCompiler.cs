@@ -554,7 +554,7 @@ namespace FastExpressionCompiler
                         localVars[i] = il.DeclareLocal(blockVarExprs[i].Type);
                 }
 
-                CurrentBlock = new BlockInfo(CurrentBlock, blockVarExprs, localVars);
+                PushBlock(blockVarExprs, localVars);
             }
 
             public void PopBlock() =>
