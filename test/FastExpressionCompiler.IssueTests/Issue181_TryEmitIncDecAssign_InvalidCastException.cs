@@ -159,5 +159,24 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.AreEqual(expectedValue, CounterField);
         }
+
+        [Test]
+        public void TryEmitIncDecAssign_Supports_PostIncrement_Field_Func()
+        {
+            var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
+
+            var lambda = Lambda<Func<Issue181_TryEmitIncDecAssign_InvalidCastException, int>>(
+                PostIncrementAssign(
+                    Field(p, nameof(CounterField))
+                ),
+                p);
+
+            var del = lambda.CompileFast();
+
+            var startValue = CounterField;
+
+            Assert.AreEqual(startValue, del.Invoke(this));
+            Assert.AreEqual(startValue + 1, CounterField);
+        }
     }
 }

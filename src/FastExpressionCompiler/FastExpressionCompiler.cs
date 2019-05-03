@@ -2380,7 +2380,8 @@ namespace FastExpressionCompiler
                 MemberExpression memberAccess;
 
                 var isVar = expr.Operand.NodeType == ExpressionType.Parameter;
-                var useLocalVar = isVar;
+                var usesResult = !parent.IgnoresResult();
+                var useLocalVar = isVar || usesResult;
 
                 if (isVar)
                 {
@@ -2399,8 +2400,14 @@ namespace FastExpressionCompiler
                     if (!TryEmitMemberAccess(memberAccess, paramExprs, il, ref closure, parent | ParentFlags.DupMemberOwner))
                         return false;
 
-                    useLocalVar = memberAccess.Member.MemberType == MemberTypes.Property;
+                    useLocalVar = usesResult || memberAccess.Member.MemberType == MemberTypes.Property;
                     localVar = useLocalVar ? il.DeclareLocal(expr.Operand.Type) : null;
+
+                    if (usesResult)
+                    {
+                        il.Emit(OpCodes.Stloc, localVar);
+                        il.Emit(OpCodes.Ldloc, localVar);
+                    }
                 }
                 else
                 {
@@ -2412,12 +2419,12 @@ namespace FastExpressionCompiler
                     case ExpressionType.PreIncrementAssign:
                         il.Emit(OpCodes.Ldc_I4_1);
                         il.Emit(OpCodes.Add);
-                        if (isVar && (parent & ParentFlags.IgnoreResult) == 0)
+                        if (isVar && usesResult)
                             il.Emit(OpCodes.Dup);
                         break;
 
                     case ExpressionType.PostIncrementAssign:
-                        if (isVar && (parent & ParentFlags.IgnoreResult) == 0)
+                        if (isVar && usesResult)
                             il.Emit(OpCodes.Dup);
                         il.Emit(OpCodes.Ldc_I4_1);
                         il.Emit(OpCodes.Add);
@@ -2426,28 +2433,34 @@ namespace FastExpressionCompiler
                     case ExpressionType.PreDecrementAssign:
                         il.Emit(OpCodes.Ldc_I4_M1);
                         il.Emit(OpCodes.Add);
-                        if (isVar && (parent & ParentFlags.IgnoreResult) == 0)
+                        if (isVar && usesResult)
                             il.Emit(OpCodes.Dup);
                         break;
 
                     case ExpressionType.PostDecrementAssign:
-                        if (isVar && (parent & ParentFlags.IgnoreResult) == 0)
+                        if (isVar && usesResult)
                             il.Emit(OpCodes.Dup);
                         il.Emit(OpCodes.Ldc_I4_M1);
                         il.Emit(OpCodes.Add);
                         break;
                 }
 
-                if (useLocalVar)
+                if (isVar || (useLocalVar && !usesResult))
                     il.Emit(OpCodes.Stloc, localVar);
 
                 if (isVar)
                     return true;
 
-                if (useLocalVar)
+                if (useLocalVar && !usesResult)
                     il.Emit(OpCodes.Ldloc, localVar);
 
-                return EmitMemberAssign(il, memberAccess.Member);
+                if (!EmitMemberAssign(il, memberAccess.Member))
+                    return false;
+
+                if (usesResult)
+                    il.Emit(OpCodes.Ldloc, localVar);
+                    
+                return true;
             }
 
             private static bool TryEmitAssign(BinaryExpression expr,
@@ -2755,9 +2768,9 @@ namespace FastExpressionCompiler
                     return EmitMethodCall(il, ((PropertyInfo)expr.Member).FindPropertyGetMethod());
                 }
 
-                if (expr.Member.MemberType != MemberTypes.Field) 
+                if (expr.Member.MemberType != MemberTypes.Field)
                     return false;
-                
+
                 var field = (FieldInfo)expr.Member;
                 if (field.IsStatic)
                 {
