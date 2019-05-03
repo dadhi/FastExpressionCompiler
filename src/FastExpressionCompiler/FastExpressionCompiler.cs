@@ -883,20 +883,20 @@ namespace FastExpressionCompiler
 
             public static readonly MethodInfo[] Methods = _methods.AsArray();
 
-            internal static Action Curry<C>(Action<C> a, C c) => () => a(c);
-            internal static Action<T1> Curry<C, T1>(Action<C, T1> f, C c) => t1 => f(c, t1);
-            internal static Action<T1, T2> Curry<C, T1, T2>(Action<C, T1, T2> f, C c) => (t1, t2) => f(c, t1, t2);
+            public static Action Curry<C>(Action<C> a, C c) => () => a(c);
+            public static Action<T1> Curry<C, T1>(Action<C, T1> f, C c) => t1 => f(c, t1);
+            public static Action<T1, T2> Curry<C, T1, T2>(Action<C, T1, T2> f, C c) => (t1, t2) => f(c, t1, t2);
 
-            internal static Action<T1, T2, T3> Curry<C, T1, T2, T3>(Action<C, T1, T2, T3> f, C c) =>
+            public static Action<T1, T2, T3> Curry<C, T1, T2, T3>(Action<C, T1, T2, T3> f, C c) =>
                 (t1, t2, t3) => f(c, t1, t2, t3);
 
-            internal static Action<T1, T2, T3, T4> Curry<C, T1, T2, T3, T4>(Action<C, T1, T2, T3, T4> f, C c) =>
+            public static Action<T1, T2, T3, T4> Curry<C, T1, T2, T3, T4>(Action<C, T1, T2, T3, T4> f, C c) =>
                 (t1, t2, t3, t4) => f(c, t1, t2, t3, t4);
 
-            internal static Action<T1, T2, T3, T4, T5> Curry<C, T1, T2, T3, T4, T5>(Action<C, T1, T2, T3, T4, T5> f,
+            public static Action<T1, T2, T3, T4, T5> Curry<C, T1, T2, T3, T4, T5>(Action<C, T1, T2, T3, T4, T5> f,
                 C c) => (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5);
 
-            internal static Action<T1, T2, T3, T4, T5, T6>
+            public static Action<T1, T2, T3, T4, T5, T6>
                 Curry<C, T1, T2, T3, T4, T5, T6>(Action<C, T1, T2, T3, T4, T5, T6> f, C c) =>
                 (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6);
         }
@@ -1564,14 +1564,13 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldc_R4, default(float));
                 else if (type == typeof(double))
                     il.Emit(OpCodes.Ldc_R8, default(double));
-                else if (type.GetTypeInfo().IsValueType)
+                else if (type.IsValueType())
                     il.Emit(OpCodes.Ldloc, InitValueTypeVariable(il, type));
                 else
                     il.Emit(OpCodes.Ldnull);
 
                 return true;
             }
-
 
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
@@ -2227,7 +2226,7 @@ namespace FastExpressionCompiler
                     if (itemType == null)
                         return false;
 
-                    il.Emit(itemType.GetTypeInfo().IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
+                    il.Emit(itemType.IsValueType() ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
                 }
 
                 return true;
@@ -2280,7 +2279,7 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Newarr, elemType);
                 il.Emit(OpCodes.Stloc, arrVar);
 
-                var isElemOfValueType = elemType.GetTypeInfo().IsValueType;
+                var isElemOfValueType = elemType.IsValueType();
 
                 for (int i = 0, n = elems.Count; i < n; i++)
                 {
@@ -2582,7 +2581,7 @@ namespace FastExpressionCompiler
                                 il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField); // load array field
                                 EmitLoadConstantInt(il, paramInClosureIndex); // load array item index
                                 il.Emit(OpCodes.Ldloc, valueVar);
-                                if (exprType.GetTypeInfo().IsValueType)
+                                if (exprType.IsValueType())
                                     il.Emit(OpCodes.Box, exprType);
                                 il.Emit(OpCodes.Stelem_Ref); // put the variable into array
                                 il.Emit(OpCodes.Ldloc, valueVar);
@@ -2697,7 +2696,7 @@ namespace FastExpressionCompiler
 
                 if (indexExpr.Arguments.Count == 1) // one dimensional array
                 {
-                    if (elementType.GetTypeInfo().IsValueType)
+                    if (elementType.IsValueType())
                         il.Emit(OpCodes.Stelem, elementType);
                     else
                         il.Emit(OpCodes.Stelem_Ref);
@@ -2705,7 +2704,7 @@ namespace FastExpressionCompiler
                 }
 
                 // multi dimensional array
-                return EmitMethodCall(il, instType?.GetTypeInfo().GetDeclaredMethod("Set"));
+                return EmitMethodCall(il, instType?.FindMethod("Set"));
             }
 
             private static bool TryEmitMethodCall(MethodCallExpression expr,
@@ -2776,9 +2775,7 @@ namespace FastExpressionCompiler
                     return EmitMethodCall(il, prop.FindPropertyGetMethod());
                 }
 
-                var field = expr.Member as FieldInfo;
-                
-                if (field == null)
+                if (!(expr.Member is FieldInfo field))
                     return false;
 
                 if (field.IsStatic)
@@ -2858,7 +2855,7 @@ namespace FastExpressionCompiler
 
                         if (isNestedArrayClosure)
                         {
-                            if (nestedConstant.Type.GetTypeInfo().IsValueType)
+                            if (nestedConstant.Type.IsValueType())
                                 il.Emit(OpCodes.Box, nestedConstant.Type);
                             il.Emit(OpCodes.Stelem_Ref); // store the item in array
                         }
@@ -2910,7 +2907,7 @@ namespace FastExpressionCompiler
 
                     if (isNestedArrayClosure)
                     {
-                        if (nestedUsedParamType.GetTypeInfo().IsValueType)
+                        if (nestedUsedParamType.IsValueType())
                             il.Emit(OpCodes.Box, nestedUsedParamType);
 
                         il.Emit(OpCodes.Stelem_Ref); // store the item in array
@@ -3562,32 +3559,33 @@ namespace FastExpressionCompiler
         internal static bool IsNullable(this Type type) =>
             type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>);
 
+#if LIGHT_EXPRESSION
         internal static PropertyInfo FindProperty(this Type type, string propertyName) =>
             type.GetTypeInfo().GetDeclaredProperty(propertyName);
 
         internal static FieldInfo FindField(this Type type, string fieldName) =>
             type.GetTypeInfo().GetDeclaredField(fieldName);
-
+#endif
         internal static MethodInfo FindMethod(this Type type, string methodName) =>
             type.GetTypeInfo().GetDeclaredMethod(methodName);
 
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) =>
-            type.GetTypeInfo().GetDeclaredMethod("Invoke");
+            type.FindMethod("Invoke");
 
         internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type) =>
             type.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault").GetFirst(x => x.GetParameters().Length == 0);
 
         internal static MethodInfo FindValueGetterMethod(this Type type) =>
-            type.GetTypeInfo().GetDeclaredMethod("get_Value");
+            type.FindMethod("get_Value");
 
         internal static MethodInfo FindNullableHasValueGetterMethod(this Type type) =>
-            type.GetTypeInfo().GetDeclaredMethod("get_HasValue");
+            type.FindMethod("get_HasValue");
 
         internal static MethodInfo FindPropertyGetMethod(this PropertyInfo prop) =>
-            prop.DeclaringType.GetTypeInfo().GetDeclaredMethod("get_" + prop.Name);
+            prop.DeclaringType.FindMethod("get_" + prop.Name);
 
         internal static MethodInfo FindPropertySetMethod(this PropertyInfo prop) =>
-            prop.DeclaringType.GetTypeInfo().GetDeclaredMethod("set_" + prop.Name);
+            prop.DeclaringType.FindMethod("set_" + prop.Name);
 
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType) =>
             type.GetTypeInfo().DeclaredMethods.GetFirst(m =>
@@ -3632,9 +3630,10 @@ namespace FastExpressionCompiler
 
         public static T[] AsArray<T>(this IEnumerable<T> xs) => xs as T[] ?? xs.ToArray();
 
+#if LIGHT_EXPRESSION
         public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs) =>
             xs as IReadOnlyList<T> ?? xs.ToArray();
-
+#endif
         private static class EmptyArray<T>
         {
             public static readonly T[] Value = new T[0];
@@ -3751,7 +3750,7 @@ namespace FastExpressionCompiler
             var index = arr.GetFirstIndex(predicate);
             return index == -1 ? default(T) : arr[index];
         }
-
+#if LIGHT_EXPRESSION
         public static R[] Map<T, R>(this IReadOnlyList<T> source, Func<T, R> project)
         {
             if (source == null || source.Count == 0)
@@ -3765,5 +3764,6 @@ namespace FastExpressionCompiler
                 result[i] = project(source[i]);
             return result;
         }
+#endif
     }
 }
