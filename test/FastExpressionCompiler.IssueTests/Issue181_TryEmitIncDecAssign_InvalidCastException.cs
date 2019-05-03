@@ -102,5 +102,62 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.AreEqual(expectedValue, CounterObjField.CounterField);
         }
+
+        [Test]
+        public void TryEmitIncDecAssign_Supports_PostIncrement_Property_Action()
+        {
+            var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
+
+            var lambda = Lambda<Action<Issue181_TryEmitIncDecAssign_InvalidCastException>>(
+                PostIncrementAssign(
+                    Property(p, nameof(CounterProperty))
+                ),
+                p);
+
+            var del = lambda.CompileFast();
+
+            var expectedValue = CounterProperty + 1;
+            del.Invoke(this);
+
+            Assert.AreEqual(expectedValue, CounterProperty);
+        }
+
+        [Test]
+        public void TryEmitIncDecAssign_Supports_PreDecrement_Nested_Property_Action()
+        {
+            var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
+
+            var lambda = Lambda<Action<Issue181_TryEmitIncDecAssign_InvalidCastException>>(
+                PreDecrementAssign(
+                    Property(Field(p, nameof(CounterObjField)), nameof(CounterProperty))
+                ),
+                p);
+
+            var del = lambda.CompileFast();
+
+            var expectedValue = CounterObjField.CounterProperty - 1;
+            del.Invoke(this);
+
+            Assert.AreEqual(expectedValue, CounterObjField.CounterProperty);
+        }
+
+        [Test]
+        public void TryEmitIncDecAssign_Supports_PostDecrement_Field_Action()
+        {
+            var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
+
+            var lambda = Lambda<Action<Issue181_TryEmitIncDecAssign_InvalidCastException>>(
+                PostDecrementAssign(
+                    Field(p, nameof(CounterField))
+                ),
+                p);
+
+            var del = lambda.CompileFast();
+
+            var expectedValue = CounterField - 1;
+            del.Invoke(this);
+
+            Assert.AreEqual(expectedValue, CounterField);
+        }
     }
 }
