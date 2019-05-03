@@ -2369,7 +2369,9 @@ namespace FastExpressionCompiler
                 if (member.MemberType != MemberTypes.Field)
                     return false;
 
-                il.Emit(OpCodes.Stfld, (FieldInfo)member);
+                var field = (FieldInfo)member;
+
+                il.Emit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
                 return true;
             }
 
@@ -2402,7 +2404,7 @@ namespace FastExpressionCompiler
                     if (!TryEmitMemberAccess(memberAccess, paramExprs, il, ref closure, parent | ParentFlags.DupMemberOwner))
                         return false;
 
-                    useLocalVar = usesResult || memberAccess.Member.MemberType == MemberTypes.Property;
+                    useLocalVar = (memberAccess.Expression != null) && (usesResult || memberAccess.Member.MemberType == MemberTypes.Property);
                     localVar = useLocalVar ? il.DeclareLocal(expr.Operand.Type) : null;
                 }
                 else
@@ -2449,7 +2451,7 @@ namespace FastExpressionCompiler
                 if (!EmitMemberAssign(il, memberAccess.Member))
                     return false;
 
-                if (usesResult)
+                if (useLocalVar && usesResult)
                     il.Emit(OpCodes.Ldloc, localVar);
                     
                 return true;
@@ -2460,7 +2462,7 @@ namespace FastExpressionCompiler
                 if (!usesResult) 
                     return;
                 
-                if (isVar)
+                if (isVar || (localVar == null))
                     il.Emit(OpCodes.Dup);
                 else
                 {
@@ -2749,14 +2751,16 @@ namespace FastExpressionCompiler
                 var isProp = expr.Member.MemberType == MemberTypes.Property;
 
                 var instanceExpr = expr.Expression;
-                if (instanceExpr != null &&
-                    !TryEmit(instanceExpr, paramExprs, il, ref closure,
+                if (instanceExpr != null)
+                {
+                    if (!TryEmit(instanceExpr, paramExprs, il, ref closure,
                         ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner &
                         (parent | (isProp ? ParentFlags.Call : parent) | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)))
-                    return false;
+                        return false;
 
-                if ((parent & ParentFlags.DupMemberOwner) != 0)
-                    il.Emit(OpCodes.Dup);
+                    if ((parent & ParentFlags.DupMemberOwner) != 0)
+                        il.Emit(OpCodes.Dup);
+                }
 
                 if (isProp)
                 {
