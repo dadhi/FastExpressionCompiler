@@ -2363,13 +2363,11 @@ namespace FastExpressionCompiler
 
             private static bool EmitMemberAssign(ILGenerator il, MemberInfo member)
             {
-                if (member.MemberType == MemberTypes.Property)
-                    return EmitMethodCall(il, ((PropertyInfo)member).FindPropertySetMethod());
+                if (member is PropertyInfo prop)
+                    return EmitMethodCall(il, prop.FindPropertySetMethod());
 
-                if (member.MemberType != MemberTypes.Field)
+                if (!(member is FieldInfo field))
                     return false;
-
-                var field = (FieldInfo)member;
 
                 il.Emit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
                 return true;
@@ -2748,21 +2746,21 @@ namespace FastExpressionCompiler
             private static bool TryEmitMemberAccess(MemberExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var isProp = expr.Member.MemberType == MemberTypes.Property;
+                var prop = expr.Member as PropertyInfo;
 
                 var instanceExpr = expr.Expression;
                 if (instanceExpr != null)
                 {
                     if (!TryEmit(instanceExpr, paramExprs, il, ref closure,
                         ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner &
-                        (parent | (isProp ? ParentFlags.Call : parent) | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)))
+                        (parent | (prop != null ? ParentFlags.Call : parent) | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)))
                         return false;
 
                     if ((parent & ParentFlags.DupMemberOwner) != 0)
                         il.Emit(OpCodes.Dup);
                 }
 
-                if (isProp)
+                if (prop != null)
                 {
                     // Value type special treatment to load address of value instance in order to access a field or call a method.
                     // Parameter should be excluded because it already loads an address via Ldarga, and you don't need to.
@@ -2778,10 +2776,11 @@ namespace FastExpressionCompiler
                     return EmitMethodCall(il, ((PropertyInfo)expr.Member).FindPropertyGetMethod());
                 }
 
-                if (expr.Member.MemberType != MemberTypes.Field)
+                var field = expr.Member as FieldInfo;
+                
+                if (field == null)
                     return false;
 
-                var field = (FieldInfo)expr.Member;
                 if (field.IsStatic)
                 {
                     if (field.IsLiteral)
