@@ -49,8 +49,8 @@ namespace FastExpressionCompiler
             bool ifFastFailedReturnNull = false) where TDelegate : class
         {
             var ignored = new ClosureInfo(false);
-            return (TDelegate)TryCompile(ref ignored, 
-                       typeof(TDelegate), Tools.GetParamTypes(lambdaExpr.Parameters), 
+            return (TDelegate)TryCompile(ref ignored,
+                       typeof(TDelegate), Tools.GetParamTypes(lambdaExpr.Parameters),
                        lambdaExpr.ReturnType, lambdaExpr.Body, lambdaExpr.Parameters)
                 ?? (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.CompileSys());
         }
@@ -59,8 +59,8 @@ namespace FastExpressionCompiler
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
         {
             var ignored = new ClosureInfo(false);
-            return (Delegate)TryCompile(ref ignored, 
-                lambdaExpr.Type, Tools.GetParamTypes(lambdaExpr.Parameters), 
+            return (Delegate)TryCompile(ref ignored,
+                lambdaExpr.Type, Tools.GetParamTypes(lambdaExpr.Parameters),
                        lambdaExpr.ReturnType, lambdaExpr.Body, lambdaExpr.Parameters)
                 ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
         }
@@ -437,7 +437,7 @@ namespace FastExpressionCompiler
                     _labels = _labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
             }
 
-            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) 
+            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il)
                 => GetOrCreateLabel(GetLabelIndex(labelTarget), il);
 
             public Label GetOrCreateLabel(int index, ILGenerator il)
@@ -1180,6 +1180,7 @@ namespace FastExpressionCompiler
             Arithmetic = 1 << 4,
             Coalesce = 1 << 5,
             InstanceAccess = 1 << 6,
+            DupMemberOwner = 1 << 7,
             InstanceCall = Call | InstanceAccess
         }
 
@@ -1310,7 +1311,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.PreIncrementAssign:
                         case ExpressionType.PostDecrementAssign:
                         case ExpressionType.PreDecrementAssign:
-                            return TryEmitIncDecAssign((UnaryExpression)expr, il, ref closure, parent);
+                            return TryEmitIncDecAssign((UnaryExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType arithmeticAssign
                             when Tools.GetArithmeticFromArithmeticAssignOrSelf(arithmeticAssign) != arithmeticAssign:
@@ -1420,7 +1421,7 @@ namespace FastExpressionCompiler
 
                 // define a new label or use the label provided by the preceding GoTo expression
                 var label = closure.GetOrCreateLabel(index, il);
-                    
+
                 il.MarkLabel(label);
 
                 return expr.DefaultValue == null || TryEmit(expr.DefaultValue, paramExprs, il, ref closure, parent);
@@ -1436,7 +1437,8 @@ namespace FastExpressionCompiler
                 // use label defined by Label expression or define its own to use by subsequent Label
                 var label = closure.GetOrCreateLabel(index, il);
 
-                switch (expr.Kind) {
+                switch (expr.Kind)
+                {
                     case GotoExpressionKind.Break:
                     case GotoExpressionKind.Goto:
                         il.Emit(OpCodes.Br, label);
@@ -2361,63 +2363,110 @@ namespace FastExpressionCompiler
 
             private static bool EmitMemberAssign(ILGenerator il, MemberInfo member)
             {
-                var prop = member as PropertyInfo;
-                if (prop != null)
+                if (member is PropertyInfo prop)
                     return EmitMethodCall(il, prop.FindPropertySetMethod());
 
-                var field = member as FieldInfo;
-                if (field == null)
+                if (!(member is FieldInfo field))
                     return false;
 
-                il.Emit(OpCodes.Stfld, field);
+                il.Emit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
                 return true;
             }
 
-            private static bool TryEmitIncDecAssign(UnaryExpression expr, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+            private static bool TryEmitIncDecAssign(UnaryExpression expr,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var localVar = closure.GetDefinedLocalVarOrDefault((ParameterExpression)expr.Operand);
+                LocalBuilder localVar;
+                MemberExpression memberAccess;
+                bool useLocalVar;
 
-                if (localVar == null)
+                var isVar = expr.Operand.NodeType == ExpressionType.Parameter;
+                var usesResult = !parent.IgnoresResult();
+
+                if (isVar)
+                {
+                    localVar = closure.GetDefinedLocalVarOrDefault((ParameterExpression)expr.Operand);
+
+                    if (localVar == null)
+                        return false;
+                    
+                    memberAccess = null;
+                    useLocalVar = true;
+
+                    il.Emit(OpCodes.Ldloc, localVar);
+                }
+                else if (expr.Operand.NodeType == ExpressionType.MemberAccess)
+                {
+                    memberAccess = (MemberExpression)expr.Operand;
+
+                    if (!TryEmitMemberAccess(memberAccess, paramExprs, il, ref closure, parent | ParentFlags.DupMemberOwner))
+                        return false;
+
+                    useLocalVar = (memberAccess.Expression != null) && (usesResult || memberAccess.Member is PropertyInfo);
+                    localVar = useLocalVar ? il.DeclareLocal(expr.Operand.Type) : null;
+                }
+                else
+                {
                     return false;
-
-                il.Emit(OpCodes.Ldloc, localVar);
-
-                switch (expr.NodeType) {
-                    case ExpressionType.PreIncrementAssign: {
-                        il.Emit(OpCodes.Ldc_I4_1);
-                        il.Emit(OpCodes.Add);
-                        if ((parent & ParentFlags.IgnoreResult) == 0)
-                            il.Emit(OpCodes.Dup);
-                        break;
-                    }
-
-                    case ExpressionType.PostIncrementAssign: {
-                        if ((parent & ParentFlags.IgnoreResult) == 0)
-                            il.Emit(OpCodes.Dup);
-                        il.Emit(OpCodes.Ldc_I4_1);
-                        il.Emit(OpCodes.Add);
-                        break;
-                    }
-
-                    case ExpressionType.PreDecrementAssign: {
-                        il.Emit(OpCodes.Ldc_I4_M1);
-                        il.Emit(OpCodes.Add);
-                        if ((parent & ParentFlags.IgnoreResult) == 0)
-                            il.Emit(OpCodes.Dup);
-                        break;
-                    }
-
-                    case ExpressionType.PostDecrementAssign: {
-                        if ((parent & ParentFlags.IgnoreResult) == 0)
-                            il.Emit(OpCodes.Dup);
-                        il.Emit(OpCodes.Ldc_I4_M1);
-                        il.Emit(OpCodes.Add);
-                        break;
-                    }
                 }
 
-                il.Emit(OpCodes.Stloc, localVar);
+                switch (expr.NodeType)
+                {
+                    case ExpressionType.PreIncrementAssign:
+                        il.Emit(OpCodes.Ldc_I4_1);
+                        il.Emit(OpCodes.Add);
+                        StoreIncDecValue(il, usesResult, isVar, localVar);
+                        break;
+
+                    case ExpressionType.PostIncrementAssign:
+                        StoreIncDecValue(il, usesResult, isVar, localVar);
+                        il.Emit(OpCodes.Ldc_I4_1);
+                        il.Emit(OpCodes.Add);
+                        break;
+
+                    case ExpressionType.PreDecrementAssign:
+                        il.Emit(OpCodes.Ldc_I4_M1);
+                        il.Emit(OpCodes.Add);
+                        StoreIncDecValue(il, usesResult, isVar, localVar);
+                        break;
+
+                    case ExpressionType.PostDecrementAssign:
+                        StoreIncDecValue(il, usesResult, isVar, localVar);
+                        il.Emit(OpCodes.Ldc_I4_M1);
+                        il.Emit(OpCodes.Add);
+                        break;
+                }
+
+                if (isVar || (useLocalVar && !usesResult))
+                    il.Emit(OpCodes.Stloc, localVar);
+
+                if (isVar)
+                    return true;
+
+                if (useLocalVar && !usesResult)
+                    il.Emit(OpCodes.Ldloc, localVar);
+
+                if (!EmitMemberAssign(il, memberAccess.Member))
+                    return false;
+
+                if (useLocalVar && usesResult)
+                    il.Emit(OpCodes.Ldloc, localVar);
+                    
                 return true;
+            }
+
+            private static void StoreIncDecValue(ILGenerator il, bool usesResult, bool isVar, LocalBuilder localVar)
+            {
+                if (!usesResult) 
+                    return;
+                
+                if (isVar || (localVar == null))
+                    il.Emit(OpCodes.Dup);
+                else
+                {
+                    il.Emit(OpCodes.Stloc, localVar);
+                    il.Emit(OpCodes.Ldloc, localVar);
+                }
             }
 
             private static bool TryEmitAssign(BinaryExpression expr,
@@ -2698,19 +2747,26 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var prop = expr.Member as PropertyInfo;
+
                 var instanceExpr = expr.Expression;
-                if (instanceExpr != null &&
-                    !TryEmit(instanceExpr, paramExprs, il, ref closure,
-                        parent | (prop != null ? ParentFlags.Call : parent) | ParentFlags.MemberAccess | ParentFlags.InstanceAccess))
-                    return false;
+                if (instanceExpr != null)
+                {
+                    if (!TryEmit(instanceExpr, paramExprs, il, ref closure,
+                        ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner &
+                        (parent | (prop != null ? ParentFlags.Call : parent) | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)))
+                        return false;
+
+                    if ((parent & ParentFlags.DupMemberOwner) != 0)
+                        il.Emit(OpCodes.Dup);
+                }
 
                 if (prop != null)
                 {
                     // Value type special treatment to load address of value instance in order to access a field or call a method.
                     // Parameter should be excluded because it already loads an address via Ldarga, and you don't need to.
                     // And for field access no need to load address, cause the field stored on stack nearby
-                    if (!closure.LastEmitIsAddress && instanceExpr != null && 
-                        instanceExpr.NodeType != ExpressionType.Parameter && 
+                    if (!closure.LastEmitIsAddress && instanceExpr != null &&
+                        instanceExpr.NodeType != ExpressionType.Parameter &&
                         instanceExpr.Type.IsValueType())
                     {
                         DeclareAndLoadLocalVariable(il, instanceExpr.Type);
@@ -2721,24 +2777,23 @@ namespace FastExpressionCompiler
                 }
 
                 var field = expr.Member as FieldInfo;
-                if (field != null)
-                {
-                    if (field.IsStatic)
-                    {
-                        if (field.IsLiteral)
-                            TryEmitConstant(null, field.FieldType, field.GetValue(null), il, ref closure);
-                        else
-                            il.Emit(OpCodes.Ldsfld, field);
-                    }
-                    else
-                    {
-                        closure.LastEmitIsAddress = field.FieldType.IsValueType() && (parent & ParentFlags.InstanceAccess) != 0;
-                        il.Emit(closure.LastEmitIsAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
-                    }
-                    return true;
-                }
+                
+                if (field == null)
+                    return false;
 
-                return false;
+                if (field.IsStatic)
+                {
+                    if (field.IsLiteral)
+                        TryEmitConstant(null, field.FieldType, field.GetValue(null), il, ref closure);
+                    else
+                        il.Emit(OpCodes.Ldsfld, field);
+                }
+                else
+                {
+                    closure.LastEmitIsAddress = field.FieldType.IsValueType() && (parent & ParentFlags.InstanceAccess) != 0;
+                    il.Emit(closure.LastEmitIsAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                }
+                return true;
             }
 
             // ReSharper disable once FunctionComplexityOverflow
@@ -3008,7 +3063,7 @@ namespace FastExpressionCompiler
 
                 if (leftOpType != rightOpType)
                 {
-                    if (leftOpType.IsClass() && rightOpType.IsClass() && 
+                    if (leftOpType.IsClass() && rightOpType.IsClass() &&
                         (leftOpType == typeof(object) || rightOpType == typeof(object)))
                     {
                         if (expressionType == ExpressionType.Equal)
@@ -3107,7 +3162,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.GreaterThanOrEqual:
                     case ExpressionType.LessThanOrEqual:
                         var ifTrueLabel = il.DefineLabel();
-                        if (rightOpType == typeof(uint) || rightOpType == typeof(ulong) || 
+                        if (rightOpType == typeof(uint) || rightOpType == typeof(ulong) ||
                             rightOpType == typeof(ushort) || rightOpType == typeof(byte))
                             il.Emit(expressionType == ExpressionType.GreaterThanOrEqual ? OpCodes.Bge_Un_S : OpCodes.Ble_Un_S, ifTrueLabel);
                         else
@@ -3127,7 +3182,7 @@ namespace FastExpressionCompiler
                         return false;
                 }
 
-                nullCheck:
+            nullCheck:
                 if (leftIsNullable)
                 {
                     il.Emit(OpCodes.Ldloca_S, lVar);
@@ -3443,7 +3498,7 @@ namespace FastExpressionCompiler
 
                 il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
 
-                if ((parent & ParentFlags.IgnoreResult) != 0 && method.ReturnType != typeof(void))
+                if (parent.IgnoresResult() && method.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);
                 return true;
             }
