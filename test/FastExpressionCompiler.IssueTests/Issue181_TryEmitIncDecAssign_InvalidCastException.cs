@@ -161,6 +161,22 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void TryEmitIncDecAssign_Supports_PreIncrement_Nested_Property_Func()
+        {
+            var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
+
+            var lambda = Lambda<Func<Issue181_TryEmitIncDecAssign_InvalidCastException, int>>(
+                PreIncrementAssign(
+                    Property(Field(p, nameof(CounterObjField)), nameof(CounterProperty))
+                ),
+                p);
+
+            var del = lambda.CompileFast();
+
+            Assert.AreEqual(CounterObjField.CounterProperty + 1, del.Invoke(this));
+        }
+
+        [Test]
         public void TryEmitIncDecAssign_Supports_PostIncrement_Field_Func()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -177,6 +193,41 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.AreEqual(startValue, del.Invoke(this));
             Assert.AreEqual(startValue + 1, CounterField);
+        }
+
+        [Test]
+        public void TryEmitIncDecAssign_Supports_PreDecrement_Property_Func()
+        {
+            var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
+
+            var lambda = Lambda<Func<Issue181_TryEmitIncDecAssign_InvalidCastException, int>>(
+                PreDecrementAssign(
+                    Property(p, nameof(CounterProperty))
+                ),
+                p);
+
+            var del = lambda.CompileFast();
+
+            Assert.AreEqual(CounterProperty - 1, del.Invoke(this));
+        }
+
+        [Test]
+        public void TryEmitIncDecAssign_Supports_PostDecrement_Nested_Field_Func()
+        {
+            var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
+
+            var lambda = Lambda<Func<Issue181_TryEmitIncDecAssign_InvalidCastException, int>>(
+                PostDecrementAssign(
+                    Field(Field(p, nameof(CounterObjField)), nameof(CounterField))
+                ),
+                p);
+
+            var del = lambda.CompileFast();
+
+            var startValue = CounterObjField.CounterField;
+
+            Assert.AreEqual(startValue, del.Invoke(this));
+            Assert.AreEqual(startValue - 1, CounterObjField.CounterField);
         }
     }
 }
