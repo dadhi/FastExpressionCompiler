@@ -375,7 +375,7 @@ namespace FastExpressionCompiler
             public FieldInfo[] ClosureFields;
 
             // Helper to decide whether we are inside the block or not
-            public BlockInfo CurrentBlock;
+            private BlockInfo _currentBlock;
 
             // Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
@@ -389,7 +389,7 @@ namespace FastExpressionCompiler
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 NestedLambdaExprs = Tools.Empty<LambdaExpression>();
-                CurrentBlock = BlockInfo.Empty;
+                _currentBlock = BlockInfo.Empty;
                 _labels = null;
                 LastEmitIsAddress = false;
 
@@ -542,7 +542,7 @@ namespace FastExpressionCompiler
             }
 
             public void PushBlock(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars) =>
-                CurrentBlock = new BlockInfo(CurrentBlock, blockVarExprs, localVars);
+                _currentBlock = new BlockInfo(_currentBlock, blockVarExprs, localVars);
 
             public void PushBlockAndConstructLocalVars(IReadOnlyList<ParameterExpression> blockVarExprs, ILGenerator il)
             {
@@ -558,19 +558,19 @@ namespace FastExpressionCompiler
             }
 
             public void PopBlock() =>
-                CurrentBlock = CurrentBlock.Parent;
+                _currentBlock = _currentBlock.Parent;
 
             public bool IsLocalVar(object varParamExpr)
             {
                 var i = -1;
-                for (var block = CurrentBlock; i == -1 && !block.IsEmpty; block = block.Parent)
+                for (var block = _currentBlock; i == -1 && !block.IsEmpty; block = block.Parent)
                     i = block.VarExprs.GetFirstIndex(varParamExpr);
                 return i != -1;
             }
 
             public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                for (var block = CurrentBlock; !block.IsEmpty; block = block.Parent)
+                for (var block = _currentBlock; !block.IsEmpty; block = block.Parent)
                 {
                     if (block.LocalVars.Length == 0)
                         continue;
