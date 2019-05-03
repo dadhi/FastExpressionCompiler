@@ -67,10 +67,10 @@ namespace FastExpressionCompiler.UnitTests
 
             var del = lambda.CompileFast();
 
-            var expectedValue = CounterField + 1;
+            var expectedValue = CounterProperty + 1;
             del.Invoke(this);
 
-            Assert.AreEqual(expectedValue, CounterField);
+            Assert.AreEqual(expectedValue, CounterProperty);
         }
 
         [Test]
