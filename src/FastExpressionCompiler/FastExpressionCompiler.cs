@@ -2773,7 +2773,7 @@ namespace FastExpressionCompiler
                     }
 
                     closure.LastEmitIsAddress = false;
-                    return EmitMethodCall(il, ((PropertyInfo)expr.Member).FindPropertyGetMethod());
+                    return EmitMethodCall(il, prop.FindPropertyGetMethod());
                 }
 
                 var field = expr.Member as FieldInfo;
