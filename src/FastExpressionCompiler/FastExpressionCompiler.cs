@@ -2402,7 +2402,7 @@ namespace FastExpressionCompiler
                     if (!TryEmitMemberAccess(memberAccess, paramExprs, il, ref closure, parent | ParentFlags.DupMemberOwner))
                         return false;
 
-                    useLocalVar = (memberAccess.Expression != null) && (usesResult || memberAccess.Member.MemberType == MemberTypes.Property);
+                    useLocalVar = (memberAccess.Expression != null) && (usesResult || memberAccess.Member is PropertyInfo);
                     localVar = useLocalVar ? il.DeclareLocal(expr.Operand.Type) : null;
                 }
                 else
