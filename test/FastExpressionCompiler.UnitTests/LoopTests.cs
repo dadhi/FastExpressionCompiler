@@ -27,7 +27,9 @@ namespace FastExpressionCompiler.UnitTests
             var lambdaBody = Block(new[] { intVariable }, loop, Label(returnLabel));
 
             var loopLambda = Lambda<Action>(lambdaBody);
-            var loopFunc = loopLambda.CompileFast();
+            var loopFunc = loopLambda.CompileFast(true);
+
+            Assert.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -47,7 +49,9 @@ namespace FastExpressionCompiler.UnitTests
             var loopWithBreak = Loop(loopBody, breakLabel);
 
             var loopLambda = Lambda<Action>(loopWithBreak);
-            var loopFunc = loopLambda.CompileFast();
+            var loopFunc = loopLambda.CompileFast(true);
+
+            Assert.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -68,7 +72,9 @@ namespace FastExpressionCompiler.UnitTests
             var lambdaBody = Block(new[] { intVariable }, loop, Label(returnLabel));
 
             var loopLambda = Lambda<Action>(lambdaBody);
-            var loopFunc = loopLambda.CompileFast();
+            var loopFunc = loopLambda.CompileFast(true);
+
+            Assert.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -97,7 +103,9 @@ namespace FastExpressionCompiler.UnitTests
             var lambdaBody = Block(new[] { intVariable1, intVariable2 }, loopWithBreakAndContinue);
 
             var loopLambda = Lambda<Action>(lambdaBody);
-            var loopFunc = loopLambda.CompileFast();
+            var loopFunc = loopLambda.CompileFast(true);
+
+            Assert.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -118,7 +126,9 @@ namespace FastExpressionCompiler.UnitTests
             var lambdaBody = Block(new[] { intVariable }, loop);
 
             var loopLambda = Lambda<Action>(lambdaBody);
-            var loopFunc = loopLambda.CompileFast();
+            var loopFunc = loopLambda.CompileFast(true);
+
+            Assert.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -140,7 +150,9 @@ namespace FastExpressionCompiler.UnitTests
             var lambdaBody = Block(new[] { intVariable }, loop, Label(returnLabel));
 
             var loopLambda = Lambda<Action>(lambdaBody);
-            var loopFunc = loopLambda.CompileFast();
+            var loopFunc = loopLambda.CompileFast(true);
+
+            Assert.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -149,18 +161,20 @@ namespace FastExpressionCompiler.UnitTests
         public void Loop_with_return_value()
         {
             var intVariable = Variable(typeof(int), "i");
-            var incrementVariable = PreIncrementAssign(intVariable);
+            var assignVariable = Assign(intVariable, Constant(4));
 
             var returnLabel = Label(typeof(int));
 
             var variableMoreThanThree = GreaterThan(intVariable, Constant(3));
             var ifMoreThanThreeReturnFive = IfThen(variableMoreThanThree, Return(returnLabel, Constant(5)));
 
-            var loop = Loop(Block(ifMoreThanThreeReturnFive, incrementVariable));
+            var loop = Loop(Block(assignVariable, ifMoreThanThreeReturnFive));
             var lambdaBody = Block(new[] { intVariable }, loop, Label(returnLabel, Constant(3)));
 
             var loopLambda = Lambda<Func<int>>(lambdaBody);
-            var loopFunc = loopLambda.CompileFast();
+            var loopFunc = loopLambda.CompileFast(true);
+
+            Assert.IsNotNull(loopFunc);
 
             var result = loopFunc.Invoke();
 

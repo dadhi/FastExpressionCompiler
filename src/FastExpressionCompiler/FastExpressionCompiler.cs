@@ -1394,7 +1394,7 @@ namespace FastExpressionCompiler
                             return TryEmitIndex((IndexExpression)expr, il);
 
                         case ExpressionType.Goto:
-                            return TryEmitGoto((GotoExpression)expr, il, ref closure);
+                            return TryEmitGoto((GotoExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.Label:
                             return TryEmitLabel((LabelExpression)expr, paramExprs, il, ref closure, parent);
@@ -1428,11 +1428,15 @@ namespace FastExpressionCompiler
             }
 
             // todo: GotoExpression.Value 
-            private static bool TryEmitGoto(GotoExpression expr, ILGenerator il, ref ClosureInfo closure)
+            private static bool TryEmitGoto(GotoExpression expr,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var index = closure.GetLabelIndex(expr.Target);
                 if (index == -1)
                     throw new InvalidOperationException("Cannot jump, no labels found");
+
+                if ((expr.Value != null) && !TryEmit(expr.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                    return false;
 
                 // use label defined by Label expression or define its own to use by subsequent Label
                 var label = closure.GetOrCreateLabel(index, il);
@@ -1440,8 +1444,13 @@ namespace FastExpressionCompiler
                 switch (expr.Kind)
                 {
                     case GotoExpressionKind.Break:
+                    case GotoExpressionKind.Continue:
                     case GotoExpressionKind.Goto:
                         il.Emit(OpCodes.Br, label);
+                        return true;
+                    
+                    case GotoExpressionKind.Return:
+                        il.Emit(OpCodes.Ret, label);
                         return true;
 
                     default:
@@ -2388,7 +2397,7 @@ namespace FastExpressionCompiler
 
                     if (localVar == null)
                         return false;
-                    
+
                     memberAccess = null;
                     useLocalVar = true;
 
@@ -2450,15 +2459,15 @@ namespace FastExpressionCompiler
 
                 if (useLocalVar && usesResult)
                     il.Emit(OpCodes.Ldloc, localVar);
-                    
+
                 return true;
             }
 
             private static void StoreIncDecValue(ILGenerator il, bool usesResult, bool isVar, LocalBuilder localVar)
             {
-                if (!usesResult) 
+                if (!usesResult)
                     return;
-                
+
                 if (isVar || (localVar == null))
                     il.Emit(OpCodes.Dup);
                 else
