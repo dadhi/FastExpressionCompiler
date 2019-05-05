@@ -760,7 +760,7 @@ namespace FastExpressionCompiler.LightExpression
             new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, typeof(bool));
 
         public static GotoExpression Return(LabelTarget target, Expression value = null, Type type = null) =>
-            MakeGoto(GotoExpressionKind.Return, target, value);
+            MakeGoto(GotoExpressionKind.Return, target, value, type);
 
         public static GotoExpression Goto(LabelTarget target, Expression value = null, Type type = null) =>
             MakeGoto(GotoExpressionKind.Goto, target, value, type);

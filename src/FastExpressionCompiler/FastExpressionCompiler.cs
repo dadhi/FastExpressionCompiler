@@ -325,6 +325,29 @@ namespace FastExpressionCompiler
             return closureAndParamTypes;
         }
 
+        private sealed class TryCatchFinallyInfo
+        {
+            public static readonly TryCatchFinallyInfo Empty = new TryCatchFinallyInfo();
+            private TryCatchFinallyInfo() { }
+            
+            public readonly TryCatchFinallyInfo Parent;
+            public readonly bool IsNonVoid;
+            public readonly Label ReturnLabel;
+            public readonly LocalBuilder ReturnResult;
+
+            internal TryCatchFinallyInfo(TryCatchFinallyInfo parent, TryExpression tryExpr, ILGenerator il)
+            {
+                Parent = parent;
+
+                if ((tryExpr.Type == typeof(void)) || (il == null))
+                    return;
+
+                IsNonVoid = true;
+                ReturnLabel = il.DefineLabel();
+                ReturnResult = il.DeclareLocal(tryExpr.Type);
+            }
+        }
+
         private sealed class BlockInfo
         {
             public static readonly BlockInfo Empty = new BlockInfo();
@@ -374,6 +397,10 @@ namespace FastExpressionCompiler
             // It is also an indicator that we use typed Closure object and not an array.
             public FieldInfo[] ClosureFields;
 
+            // Helper to decide whether we are inside a try/catch/finally or not
+            private TryCatchFinallyInfo _currentTryCatchFinally;
+            private int _tryCatchFinallyReturnLabelIndex;
+
             // Helper to decide whether we are inside the block or not
             private BlockInfo _currentBlock;
 
@@ -389,6 +416,8 @@ namespace FastExpressionCompiler
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 NestedLambdaExprs = Tools.Empty<LambdaExpression>();
+                _currentTryCatchFinally = TryCatchFinallyInfo.Empty;
+                _tryCatchFinallyReturnLabelIndex = int.MinValue;
                 _currentBlock = BlockInfo.Empty;
                 _labels = null;
                 LastEmitIsAddress = false;
@@ -451,6 +480,8 @@ namespace FastExpressionCompiler
             }
 
             public int GetLabelIndex(LabelTarget labelTarget) => _labels.GetFirstIndex(kvp => kvp.Key == labelTarget);
+
+            public void MarkLabelAsTryReturn(int index) => _tryCatchFinallyReturnLabelIndex = index;
 
             public object ConstructClosureTypeAndObject(bool constructTypeOnly)
             {
@@ -541,6 +572,12 @@ namespace FastExpressionCompiler
                 return constructTypeOnly ? null : createClosure.Invoke(null, fieldValues);
             }
 
+            public TryCatchFinallyInfo PushTry(TryExpression tryExpr, ILGenerator il = null) =>
+                _currentTryCatchFinally = new TryCatchFinallyInfo(_currentTryCatchFinally, tryExpr, il);
+
+            public void PopTry() =>
+                _currentTryCatchFinally = _currentTryCatchFinally.Parent;
+
             public void PushBlock(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars) =>
                 _currentBlock = new BlockInfo(_currentBlock, blockVarExprs, localVars);
 
@@ -567,6 +604,8 @@ namespace FastExpressionCompiler
                     i = block.VarExprs.GetFirstIndex(varParamExpr);
                 return i != -1;
             }
+
+            public bool IsTryReturnLabel(int index) => index == _tryCatchFinallyReturnLabelIndex;
 
             public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
@@ -1128,6 +1167,8 @@ namespace FastExpressionCompiler
         private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr,
             IReadOnlyList<ParameterExpression> paramExprs)
         {
+            closure.PushTry(tryExpr);
+
             if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs))
                 return false;
 
@@ -1155,7 +1196,12 @@ namespace FastExpressionCompiler
             }
 
             var finallyExpr = tryExpr.Finally;
-            return finallyExpr == null || TryCollectBoundConstants(ref closure, finallyExpr, paramExprs);
+
+            if (finallyExpr != null && !TryCollectBoundConstants(ref closure, finallyExpr, paramExprs))
+                return false;
+
+            closure.PopTry();
+            return true;
         }
 
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, IReadOnlyList<Expression> exprs,
@@ -1181,6 +1227,7 @@ namespace FastExpressionCompiler
             Coalesce = 1 << 5,
             InstanceAccess = 1 << 6,
             DupMemberOwner = 1 << 7,
+            TryCatch = 1 << 8,
             InstanceCall = Call | InstanceAccess
         }
 
@@ -1363,7 +1410,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Try:
                             return TryEmitTryCatchFinallyBlock((TryExpression)expr, paramExprs, il, ref closure,
-                                parent);
+                                parent | ParentFlags.TryCatch);
 
                         case ExpressionType.Throw:
                             {
@@ -1419,6 +1466,9 @@ namespace FastExpressionCompiler
                 if (index == -1)
                     return false; // should be found in first collecting constants round
 
+                if (closure.IsTryReturnLabel(index))
+                    return true; // label will be emitted by TryEmitTryCatchFinallyBlock
+
                 // define a new label or use the label provided by the preceding GoTo expression
                 var label = closure.GetOrCreateLabel(index, il);
 
@@ -1427,7 +1477,6 @@ namespace FastExpressionCompiler
                 return expr.DefaultValue == null || TryEmit(expr.DefaultValue, paramExprs, il, ref closure, parent);
             }
 
-            // todo: GotoExpression.Value 
             private static bool TryEmitGoto(GotoExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
@@ -1438,24 +1487,32 @@ namespace FastExpressionCompiler
                 if ((expr.Value != null) && !TryEmit(expr.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
-                // use label defined by Label expression or define its own to use by subsequent Label
-                var label = closure.GetOrCreateLabel(index, il);
-
                 switch (expr.Kind)
                 {
                     case GotoExpressionKind.Break:
                     case GotoExpressionKind.Continue:
                     case GotoExpressionKind.Goto:
-                        il.Emit(OpCodes.Br, label);
-                        return true;
-                    
+                        return EmitGotoLabel(OpCodes.Br, index, il, ref closure);
+
                     case GotoExpressionKind.Return:
-                        il.Emit(OpCodes.Ret, label);
+                        if ((parent & ParentFlags.TryCatch) == 0)
+                            return EmitGotoLabel(OpCodes.Ret, index, il, ref closure);
+
+                        // Can't emit a Ret inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
+                        // to emit the Leave instruction, return label and return result
+                        closure.MarkLabelAsTryReturn(index);
                         return true;
 
                     default:
                         return false;
                 }
+            }
+
+            private static bool EmitGotoLabel(OpCode gotoOpCode, int labelIndex, ILGenerator il, ref ClosureInfo closure)
+            {
+                // use label defined by Label expression or define its own to use by subsequent Label
+                il.Emit(gotoOpCode, closure.GetOrCreateLabel(labelIndex, il));
+                return true;
             }
 
             private static bool TryEmitIndex(IndexExpression expr, ILGenerator il)
@@ -1584,25 +1641,18 @@ namespace FastExpressionCompiler
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var exprType = tryExpr.Type;
-                var returnLabel = default(Label);
-                var returnResult = default(LocalBuilder);
-                var isNonVoid = exprType != typeof(void); // todo: check how it is correlated with `parent.IgnoreResult`
-                if (isNonVoid)
-                {
-                    returnLabel = il.DefineLabel();
-                    returnResult = il.DeclareLocal(exprType);
-                }
+                // todo: check how tcf.IsNonVoid is correlated with `parent.IgnoreResult`
+                var tcf = closure.PushTry(tryExpr, il);
 
                 il.BeginExceptionBlock();
                 var tryBodyExpr = tryExpr.Body;
                 if (!TryEmit(tryBodyExpr, paramExprs, il, ref closure, parent))
                     return false;
 
-                if (isNonVoid)
+                if (tcf.IsNonVoid)
                 {
-                    il.Emit(OpCodes.Stloc_S, returnResult);
-                    il.Emit(OpCodes.Leave_S, returnLabel);
+                    il.Emit(OpCodes.Stloc_S, tcf.ReturnResult);
+                    il.Emit(OpCodes.Leave_S, tcf.ReturnLabel);
                 }
 
                 var catchBlocks = tryExpr.Handlers;
@@ -1631,16 +1681,13 @@ namespace FastExpressionCompiler
                     if (exVarExpr != null)
                         closure.PopBlock();
 
-                    if (isNonVoid)
+                    if (tcf.IsNonVoid)
                     {
-                        il.Emit(OpCodes.Stloc_S, returnResult);
-                        il.Emit(OpCodes.Leave_S, returnLabel);
+                        il.Emit(OpCodes.Stloc_S, tcf.ReturnResult);
+                        il.Emit(OpCodes.Leave_S, tcf.ReturnLabel);
                     }
-                    else
-                    {
-                        if (catchBodyExpr.Type != typeof(void))
-                            il.Emit(OpCodes.Pop);
-                    }
+                    else if (catchBodyExpr.Type != typeof(void))
+                        il.Emit(OpCodes.Pop);
                 }
 
                 var finallyExpr = tryExpr.Finally;
@@ -1652,12 +1699,13 @@ namespace FastExpressionCompiler
                 }
 
                 il.EndExceptionBlock();
-                if (isNonVoid)
+                if (tcf.IsNonVoid)
                 {
-                    il.MarkLabel(returnLabel);
-                    il.Emit(OpCodes.Ldloc, returnResult);
+                    il.MarkLabel(tcf.ReturnLabel);
+                    il.Emit(OpCodes.Ldloc, tcf.ReturnResult);
                 }
 
+                closure.PopTry();
                 return true;
             }
 
@@ -2106,14 +2154,16 @@ namespace FastExpressionCompiler
                     {
                         il.Emit((bool)constantValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                     }
-                    else if (constantValue is string)
+                    else if (constantValue is string stringValue)
                     {
-                        il.Emit(OpCodes.Ldstr, (string)constantValue);
+                        il.Emit(OpCodes.Ldstr, stringValue);
+                        return true;
                     }
-                    else if (constantValue is Type)
+                    else if (constantValue is Type typeValue)
                     {
-                        il.Emit(OpCodes.Ldtoken, (Type)constantValue);
+                        il.Emit(OpCodes.Ldtoken, typeValue);
                         il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
+                        return true;
                     }
                     else if (constantType == typeof(IntPtr))
                     {

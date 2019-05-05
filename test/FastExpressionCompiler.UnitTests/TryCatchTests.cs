@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-[TestFixture]
+    [TestFixture]
     public class TryCatchTests
     {
         [Test]
@@ -20,7 +20,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             var expr = Lambda<Action>(TryCatch(
                     Throw(Constant(new DivideByZeroException())),
-                    Catch(typeof(DivideByZeroException), 
+                    Catch(typeof(DivideByZeroException),
                         Throw(Constant(new InvalidTimeZoneException())
                     )
                 )
@@ -146,6 +146,27 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.IsNotNull(func);
             Assert.Throws<DivideByZeroException>(() => func());
+        }
+
+        [Test]
+        public void Can_return_from_try_block_using_label()
+        {
+            var returnLabel = Label(typeof(string));
+
+            var expr = Lambda<Func<string>>(Block(
+                TryCatch(
+                    Return(returnLabel, Constant("From Try block"), typeof(string)),
+                    Catch(
+                        typeof(Exception),
+                        Return(returnLabel, Constant("From Catch block"), typeof(string))
+                    )
+                ),
+                Label(returnLabel, Default(returnLabel.Type))));
+
+            var func = expr.CompileFast(true);
+            
+            Assert.IsNotNull(func);
+            Assert.AreEqual("From Try block", func());
         }
     }
 }
