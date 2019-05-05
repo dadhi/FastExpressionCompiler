@@ -282,7 +282,6 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression OnesComplement(Expression expression) =>
             new UnaryExpression(ExpressionType.OnesComplement, expression, expression.Type);
 
-
         /// <summary>Creates a UnaryExpression that increments the expression by 1 and assigns the result back to the expression.</summary>
         /// <param name="expression">An Expression to set the Operand property equal to.</param>
         /// <returns>A UnaryExpression that represents the resultant expression.</returns>
@@ -734,7 +733,6 @@ namespace FastExpressionCompiler.LightExpression
                     return new SimpleBinaryExpression(binaryType, left, right, left.Type);
             }
         }
-
 
         public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type = null) =>
             new GotoExpression(kind, target, value, type ?? typeof(void));
