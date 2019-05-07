@@ -17,7 +17,7 @@ namespace FastExpressionCompiler.UnitTests
     class Issue78_blocks_with_constant_return
     {
         [Test]
-        public void BlockWithConstanReturnIsSupported()
+        public void BlockWithConstantReturnIsSupported()
         {
             var ret = Block(Label(Label(typeof(int)), Constant(7)));
             var lambda = Lambda<Func<int>>(ret);

@@ -688,8 +688,14 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception.</summary>
         /// <param name="value">An Expression to set the Operand property equal to.</param>
         /// <returns>A UnaryExpression that represents the exception.</returns>
-        public static UnaryExpression Throw(Expression value) =>
-            new UnaryExpression(ExpressionType.Throw, value, typeof(void));
+        public static UnaryExpression Throw(Expression value) => Throw(value, typeof(void));
+
+        /// <summary>Creates a UnaryExpression that represents a throwing of an exception with a given type.</summary>
+        /// <param name="value">An Expression to set the Operand property equal to.</param>
+        /// <param name="type">The Type of the expression.</param>
+        /// <returns>A UnaryExpression that represents the exception.</returns>
+        public static UnaryExpression Throw(Expression value, Type type) =>
+            new UnaryExpression(ExpressionType.Throw, value, type);
 
         public static LabelExpression Label(LabelTarget target, Expression defaultValue = null) =>
             new LabelExpression(target, defaultValue);

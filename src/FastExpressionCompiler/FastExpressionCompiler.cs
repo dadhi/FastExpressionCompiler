@@ -1604,25 +1604,19 @@ namespace FastExpressionCompiler
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var exprType = tryExpr.Type;
-                var returnLabel = default(Label);
-                var returnResult = default(LocalBuilder);
-                var isNonVoid = exprType != typeof(void); // todo: check how it is correlated with `parent.IgnoreResult`
-                if (isNonVoid)
-                {
-                    returnLabel = il.DefineLabel();
-                    returnResult = il.DeclareLocal(exprType);
-                }
-
                 il.BeginExceptionBlock();
-                var tryBodyExpr = tryExpr.Body;
-                if (!TryEmit(tryBodyExpr, paramExprs, il, ref closure, parent))
+
+                if (!TryEmit(tryExpr.Body, paramExprs, il, ref closure, parent))
                     return false;
 
+                var exprType = tryExpr.Type;
+                var isNonVoid = exprType != typeof(void); // todo: check how it is correlated with `parent.IgnoreResult`
+                var returnLabel = default(Label);
+                var returnResult = default(LocalBuilder);
                 if (isNonVoid)
                 {
-                    il.Emit(OpCodes.Stloc_S, returnResult);
-                    il.Emit(OpCodes.Leave_S, returnLabel);
+                    il.Emit(OpCodes.Stloc_S, returnResult = il.DeclareLocal(exprType));
+                    il.Emit(OpCodes.Leave_S, returnLabel = il.DefineLabel());
                 }
 
                 var catchBlocks = tryExpr.Handlers;

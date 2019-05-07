@@ -189,5 +189,73 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(func);
             Assert.AreEqual("From Catch block", func());
         }
+
+        [Test]
+        public void Can_return_try_block_result_using_label()
+        {
+            var returnType = typeof(string);
+            var innerReturnLabel = Label(returnType);
+            var outerReturnLabel = Label(returnType);
+
+            var expr = Lambda<Func<string>>(Block(
+                TryCatch(
+                    Return(
+                        outerReturnLabel,
+                        Block(
+                            TryCatch(
+                                Return(innerReturnLabel, Constant("From inner Try block"), returnType),
+                                Catch(
+                                    typeof(Exception),
+                                    Return(innerReturnLabel, Constant("From inner Catch block"), returnType)
+                                )
+                            ),
+                            Label(innerReturnLabel, Default(innerReturnLabel.Type))),
+                        returnType),
+                    Catch(
+                        typeof(Exception),
+                        Return(outerReturnLabel, Constant("From outer Catch block"), returnType)
+                    )
+                ),
+                Label(outerReturnLabel, Default(outerReturnLabel.Type))));
+
+            var func = expr.CompileFast(true);
+
+            Assert.IsNotNull(func);
+            Assert.AreEqual("From inner Try block", func());
+        }
+
+        [Test]
+        public void Can_return_from_nested_catch_block_using_outer_label()
+        {
+            var returnType = typeof(string);
+            var innerReturnLabel = Label(returnType);
+            var outerReturnLabel = Label(returnType);
+
+            var expr = Lambda<Func<string>>(Block(
+                TryCatch(
+                    Return(
+                        outerReturnLabel,
+                        Block(
+                            TryCatch(
+                                Throw(New(typeof(Exception).GetConstructor(Type.EmptyTypes)), returnType),
+                                Catch(
+                                    typeof(Exception),
+                                    Return(outerReturnLabel, Constant("From inner Catch block"), returnType)
+                                )
+                            ),
+                            Label(innerReturnLabel, Default(innerReturnLabel.Type))),
+                        returnType),
+                    Catch(
+                        typeof(Exception),
+                        Return(outerReturnLabel, Constant("From outer Catch block"), returnType)
+                    )
+                ),
+                Label(outerReturnLabel, Default(outerReturnLabel.Type))));
+
+            var func = expr.CompileFast(true);
+
+            Assert.IsNotNull(func);
+            Assert.AreEqual("From inner Catch block", func());
+        }
     }
 }
