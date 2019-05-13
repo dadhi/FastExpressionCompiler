@@ -1454,7 +1454,12 @@ namespace FastExpressionCompiler
                 {
                     case GotoExpressionKind.Break:
                     case GotoExpressionKind.Continue:
+                        return EmitGotoLabel(OpCodes.Br, index, il, ref closure);
+
                     case GotoExpressionKind.Goto:
+                        if (expr.Value != null)
+                            goto case GotoExpressionKind.Return;
+
                         return EmitGotoLabel(OpCodes.Br, index, il, ref closure);
 
                     case GotoExpressionKind.Return:
@@ -3507,8 +3512,14 @@ namespace FastExpressionCompiler
                 if (!TryEmit(ifTrueExpr, paramExprs, il, ref closure, parent & ParentFlags.IgnoreResult))
                     return false;
 
-                var labelDone = il.DefineLabel();
                 var ifFalseExpr = expr.IfFalse;
+                if ((ifFalseExpr.NodeType == ExpressionType.Default) && (ifFalseExpr.Type == typeof(void)))
+                {
+                    il.MarkLabel(labelIfFalse);
+                    return true;
+                }
+
+                var labelDone = il.DefineLabel();
 
                 il.Emit(OpCodes.Br, labelDone);
 
