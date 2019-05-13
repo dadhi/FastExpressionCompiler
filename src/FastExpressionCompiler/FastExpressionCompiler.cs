@@ -1641,9 +1641,6 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Stloc_S, exVar);
                     }
 
-                    //if (isNonVoid)
-                    //    il.Emit(OpCodes.Pop);
-
                     if (!TryEmit(catchBlock.Body, paramExprs, il, ref closure, parent))
                         return false;
 
