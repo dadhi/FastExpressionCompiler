@@ -124,6 +124,34 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Member_test_block_result()
+        {
+            var testVar = Variable(typeof(Test));
+            var intVar = Variable(typeof(int));
+
+            var assignExpr = Lambda<Func<Test>>(
+                Block(
+                    Assign(testVar, New(testVar.Type.GetConstructor(Type.EmptyTypes))),
+                    Assign(
+                        Property(testVar, nameof(Test.Prop)),
+                        Block(
+                            new[] { intVar },
+                            Assign(intVar, Constant(0)),
+                            PreIncrementAssign(intVar),
+                            PreIncrementAssign(intVar),
+                            intVar)),
+                    testVar));
+
+            var func = assignExpr.CompileFast(true);
+
+            Assert.IsNotNull(func);
+
+            var test = func();
+            Assert.IsNotNull(test);
+            Assert.AreEqual(2, test.Prop);
+        }
+
+        [Test]
         public void Member_test_try_catch_finally_result()
         {
             var tryCatchVar = Variable(typeof(TryCatchTest));
