@@ -52,7 +52,7 @@ namespace FastExpressionCompiler.UnitTests
             var assignExpr = Lambda<Func<TryCatchTest, TryCatchTest>>(
                 Block(
                     Assign(
-                        tryCatchParameter, 
+                        tryCatchParameter,
                         TryCatch(
                             New(tryCatchParameter.Type.GetConstructor(Type.EmptyTypes)),
                             Catch(typeof(Exception), Default(tryCatchParameter.Type)))),
@@ -68,6 +68,30 @@ namespace FastExpressionCompiler.UnitTests
             var tryCatchResult = func(input);
             Assert.AreNotSame(input, tryCatchResult);
             Assert.IsNotNull(tryCatchResult);
+        }
+
+        [Test]
+        public void Local_Variable_test_try_catch_finally_result()
+        {
+            var tryCatchVar = Variable(typeof(TryCatchTest));
+
+            var assignExpr = Lambda<Func<TryCatchTest>>(
+                Block(
+                    new[] { tryCatchVar },
+                    Assign(
+                        tryCatchVar,
+                        TryCatch(
+                            New(tryCatchVar.Type.GetConstructor(Type.EmptyTypes)),
+                            Catch(typeof(Exception), Default(tryCatchVar.Type)))),
+                    tryCatchVar
+                ));
+
+            var func = assignExpr.CompileFast(true);
+
+            Assert.IsNotNull(func);
+
+            var tryCatch = func();
+            Assert.IsNotNull(tryCatch);
         }
 
         [Test]
@@ -97,6 +121,40 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(f);
             Assert.AreEqual(5, f());
             Assert.AreEqual(5, a.Field);
+        }
+
+        [Test]
+        public void Member_test_try_catch_finally_result()
+        {
+            var tryCatchVar = Variable(typeof(TryCatchTest));
+            var tryCatchNestedVar = Variable(typeof(TryCatchNestedTest));
+
+            var assignExpr = Lambda<Func<TryCatchTest>>(
+                TryCatch(
+                    Block(
+                        new[] { tryCatchVar },
+                        Assign(tryCatchVar, New(tryCatchVar.Type.GetConstructor(Type.EmptyTypes))),
+                        Assign(
+                            Property(tryCatchVar, nameof(TryCatchTest.NestedTest)),
+                            TryCatch(
+                                Block(
+                                    new[] { tryCatchNestedVar },
+                                    Assign(tryCatchNestedVar, New(tryCatchNestedVar.Type.GetConstructor(Type.EmptyTypes))),
+                                    Assign(Property(tryCatchNestedVar, nameof(TryCatchNestedTest.Nested)), Constant("Value")),
+                                    tryCatchNestedVar),
+                                Catch(typeof(Exception), Default(tryCatchNestedVar.Type)))),
+                        tryCatchVar
+                    ),
+                    Catch(typeof(Exception), Default(tryCatchVar.Type))));
+
+            var func = assignExpr.CompileFast(true);
+
+            Assert.IsNotNull(func);
+
+            var tryCatch = func();
+            Assert.IsNotNull(tryCatch);
+            Assert.IsNotNull(tryCatch.NestedTest);
+            Assert.AreEqual("Value", tryCatch.NestedTest.Nested);
         }
 
         public class Test
@@ -246,40 +304,6 @@ namespace FastExpressionCompiler.UnitTests
                 get => a[i];
                 set => a[i] = value;
             }
-        }
-
-        [Test]
-        public void Member_test_try_catch_finally_result()
-        {
-            var tryCatchVar = Variable(typeof(TryCatchTest));
-            var tryCatchNestedVar = Variable(typeof(TryCatchNestedTest));
-
-            var assignExpr = Lambda<Func<TryCatchTest>>(
-                TryCatch(
-                    Block(
-                        new[] { tryCatchVar },
-                        Assign(tryCatchVar, New(tryCatchVar.Type.GetConstructor(Type.EmptyTypes))),
-                        Assign(
-                            Property(tryCatchVar, nameof(TryCatchTest.NestedTest)),
-                            TryCatch(
-                                Block(
-                                    new[] { tryCatchNestedVar },
-                                    Assign(tryCatchNestedVar, New(tryCatchNestedVar.Type.GetConstructor(Type.EmptyTypes))),
-                                    Assign(Property(tryCatchNestedVar, nameof(TryCatchNestedTest.Nested)), Constant("Value")),
-                                    tryCatchNestedVar),
-                                Catch(typeof(Exception), Default(tryCatchNestedVar.Type)))),
-                        tryCatchVar
-                    ),
-                    Catch(typeof(Exception), Default(tryCatchVar.Type))));
-
-            var func = assignExpr.CompileFast(true);
-
-            Assert.IsNotNull(func);
-
-            var tryCatch = func();
-            Assert.IsNotNull(tryCatch);
-            Assert.IsNotNull(tryCatch.NestedTest);
-            Assert.AreEqual("Value", tryCatch.NestedTest.Nested);
         }
 
         public class TryCatchTest

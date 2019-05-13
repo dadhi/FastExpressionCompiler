@@ -2494,8 +2494,6 @@ namespace FastExpressionCompiler
                 var right = expr.Right;
                 var leftNodeType = expr.Left.NodeType;
                 var nodeType = expr.NodeType;
-                var assignFromLocalVar = right.NodeType == ExpressionType.Try;
-                var resultLocalVar = assignFromLocalVar ? il.DeclareLocal(right.Type) : null;
 
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
@@ -2632,8 +2630,8 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.MemberAccess:
-                        var memberExpr = (MemberExpression)left;
-                        var member = memberExpr.Member;
+                        var assignFromLocalVar = right.NodeType == ExpressionType.Try;
+                        var resultLocalVar = assignFromLocalVar ? il.DeclareLocal(right.Type) : null;
 
                         if (assignFromLocalVar)
                         {
@@ -2643,6 +2641,7 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Stloc, resultLocalVar);
                         }
 
+                        var memberExpr = (MemberExpression)left;
                         var objExpr = memberExpr.Expression;
                         if (objExpr != null && !TryEmit(objExpr, paramExprs, il, ref closure, flags | ParentFlags.MemberAccess | ParentFlags.InstanceAccess))
                             return false;
@@ -2652,6 +2651,7 @@ namespace FastExpressionCompiler
                         else if (!TryEmit(right, paramExprs, il, ref closure, ParentFlags.Empty))
                             return false;
 
+                        var member = memberExpr.Member;
                         if ((parent & ParentFlags.IgnoreResult) != 0)
                             return EmitMemberAssign(il, member);
 
