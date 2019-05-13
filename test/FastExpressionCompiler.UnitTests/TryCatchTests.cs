@@ -225,7 +225,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Can_return_from_nested_catch_block_using_outer_label()
+        public void Can_return_nested_catch_block_result()
         {
             var returnType = typeof(string);
             var innerReturnLabel = Label(returnType);
@@ -240,7 +240,7 @@ namespace FastExpressionCompiler.UnitTests
                                 Throw(New(typeof(Exception).GetConstructor(Type.EmptyTypes)), returnType),
                                 Catch(
                                     typeof(Exception),
-                                    Return(outerReturnLabel, Constant("From inner Catch block"), returnType)
+                                    Return(innerReturnLabel, Constant("From inner Catch block"), returnType)
                                 )
                             ),
                             Label(innerReturnLabel, Default(innerReturnLabel.Type))),

@@ -1611,12 +1611,10 @@ namespace FastExpressionCompiler
 
                 var exprType = tryExpr.Type;
                 var isNonVoid = exprType != typeof(void); // todo: check how it is correlated with `parent.IgnoreResult`
-                var returnLabel = default(Label);
                 var returnResult = default(LocalBuilder);
                 if (isNonVoid)
                 {
                     il.Emit(OpCodes.Stloc_S, returnResult = il.DeclareLocal(exprType));
-                    il.Emit(OpCodes.Leave_S, returnLabel = il.DefineLabel());
                 }
 
                 var catchBlocks = tryExpr.Handlers;
@@ -1638,8 +1636,10 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Stloc_S, exVar);
                     }
 
-                    var catchBodyExpr = catchBlock.Body;
-                    if (!TryEmit(catchBodyExpr, paramExprs, il, ref closure, parent))
+                    //if (isNonVoid)
+                    //    il.Emit(OpCodes.Pop);
+
+                    if (!TryEmit(catchBlock.Body, paramExprs, il, ref closure, parent))
                         return false;
 
                     if (exVarExpr != null)
@@ -1648,10 +1648,7 @@ namespace FastExpressionCompiler
                     if (isNonVoid)
                     {
                         il.Emit(OpCodes.Stloc_S, returnResult);
-                        il.Emit(OpCodes.Leave_S, returnLabel);
                     }
-                    else if (catchBodyExpr.Type != typeof(void))
-                        il.Emit(OpCodes.Pop);
                 }
 
                 var finallyExpr = tryExpr.Finally;
@@ -1665,7 +1662,6 @@ namespace FastExpressionCompiler
                 il.EndExceptionBlock();
                 if (isNonVoid)
                 {
-                    il.MarkLabel(returnLabel);
                     il.Emit(OpCodes.Ldloc, returnResult);
                 }
 
@@ -2498,6 +2494,8 @@ namespace FastExpressionCompiler
                 var right = expr.Right;
                 var leftNodeType = expr.Left.NodeType;
                 var nodeType = expr.NodeType;
+                var assignFromLocalVar = right.NodeType == ExpressionType.Try;
+                var resultLocalVar = assignFromLocalVar ? il.DeclareLocal(right.Type) : null;
 
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
@@ -2637,9 +2635,21 @@ namespace FastExpressionCompiler
                         var memberExpr = (MemberExpression)left;
                         var member = memberExpr.Member;
 
+                        if (assignFromLocalVar)
+                        {
+                            if (!TryEmit(right, paramExprs, il, ref closure, ParentFlags.Empty))
+                                return false;
+
+                            il.Emit(OpCodes.Stloc, resultLocalVar);
+                        }
+
                         var objExpr = memberExpr.Expression;
-                        if (objExpr != null && !TryEmit(objExpr, paramExprs, il, ref closure, flags | ParentFlags.MemberAccess | ParentFlags.InstanceAccess) ||
-                            !TryEmit(right, paramExprs, il, ref closure, ParentFlags.Empty))
+                        if (objExpr != null && !TryEmit(objExpr, paramExprs, il, ref closure, flags | ParentFlags.MemberAccess | ParentFlags.InstanceAccess))
+                            return false;
+
+                        if (assignFromLocalVar)
+                            il.Emit(OpCodes.Ldloc, resultLocalVar);
+                        else if (!TryEmit(right, paramExprs, il, ref closure, ParentFlags.Empty))
                             return false;
 
                         if ((parent & ParentFlags.IgnoreResult) != 0)

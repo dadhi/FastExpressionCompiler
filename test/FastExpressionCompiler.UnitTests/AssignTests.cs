@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(5, f());
             Assert.AreEqual(5, a.Field);
         }
-        
+
         public class Test
         {
             public int Prop { get; set; }
@@ -220,6 +220,50 @@ namespace FastExpressionCompiler.UnitTests
                 get => a[i];
                 set => a[i] = value;
             }
+        }
+
+        [Test]
+        public void Member_test_try_catch_finally_results()
+        {
+            var tryCatchVar = Variable(typeof(TryCatchTest));
+            var tryCatchNestedVar = Variable(typeof(TryCatchNestedTest));
+
+            var assignExpr = Lambda<Func<TryCatchTest>>(
+                TryCatch(
+                    Block(
+                        new[] { tryCatchVar },
+                        Assign(tryCatchVar, New(tryCatchVar.Type.GetConstructor(Type.EmptyTypes))),
+                        Assign(
+                            Property(tryCatchVar, nameof(TryCatchTest.NestedTest)),
+                            TryCatch(
+                                Block(
+                                    new[] { tryCatchNestedVar },
+                                    Assign(tryCatchNestedVar, New(tryCatchNestedVar.Type.GetConstructor(Type.EmptyTypes))),
+                                    Assign(Property(tryCatchNestedVar, nameof(TryCatchNestedTest.Nested)), Constant("Value")),
+                                    tryCatchNestedVar),
+                                Catch(typeof(Exception), Default(tryCatchNestedVar.Type)))),
+                        tryCatchVar
+                    ),
+                    Catch(typeof(Exception), Default(tryCatchVar.Type))));
+
+            var func = assignExpr.CompileFast(true);
+
+            Assert.IsNotNull(func);
+
+            var tryCatch = func();
+            Assert.IsNotNull(tryCatch);
+            Assert.IsNotNull(tryCatch.NestedTest);
+            Assert.AreEqual("Value", tryCatch.NestedTest.Nested);
+        }
+
+        public class TryCatchTest
+        {
+            public TryCatchNestedTest NestedTest { get; set; }
+        }
+
+        public class TryCatchNestedTest
+        {
+            public string Nested { get; set; }
         }
     }
 }
