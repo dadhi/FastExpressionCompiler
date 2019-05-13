@@ -45,6 +45,32 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Parameter_test_try_catch_finally_result()
+        {
+            var tryCatchParameter = Variable(typeof(TryCatchTest));
+
+            var assignExpr = Lambda<Func<TryCatchTest, TryCatchTest>>(
+                Block(
+                    Assign(
+                        tryCatchParameter, 
+                        TryCatch(
+                            New(tryCatchParameter.Type.GetConstructor(Type.EmptyTypes)),
+                            Catch(typeof(Exception), Default(tryCatchParameter.Type)))),
+                    tryCatchParameter
+                ),
+                tryCatchParameter);
+
+            var func = assignExpr.CompileFast(true);
+
+            Assert.IsNotNull(func);
+
+            var input = new TryCatchTest();
+            var tryCatchResult = func(input);
+            Assert.AreNotSame(input, tryCatchResult);
+            Assert.IsNotNull(tryCatchResult);
+        }
+
+        [Test]
         public void Member_test_prop()
         {
             var a = new Test();
@@ -223,7 +249,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Member_test_try_catch_finally_results()
+        public void Member_test_try_catch_finally_result()
         {
             var tryCatchVar = Variable(typeof(TryCatchTest));
             var tryCatchNestedVar = Variable(typeof(TryCatchNestedTest));
