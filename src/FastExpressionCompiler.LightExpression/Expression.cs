@@ -282,7 +282,6 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression OnesComplement(Expression expression) =>
             new UnaryExpression(ExpressionType.OnesComplement, expression, expression.Type);
 
-
         /// <summary>Creates a UnaryExpression that increments the expression by 1 and assigns the result back to the expression.</summary>
         /// <param name="expression">An Expression to set the Operand property equal to.</param>
         /// <returns>A UnaryExpression that represents the resultant expression.</returns>
@@ -689,8 +688,14 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception.</summary>
         /// <param name="value">An Expression to set the Operand property equal to.</param>
         /// <returns>A UnaryExpression that represents the exception.</returns>
-        public static UnaryExpression Throw(Expression value) =>
-            new UnaryExpression(ExpressionType.Throw, value, typeof(void));
+        public static UnaryExpression Throw(Expression value) => Throw(value, typeof(void));
+
+        /// <summary>Creates a UnaryExpression that represents a throwing of an exception with a given type.</summary>
+        /// <param name="value">An Expression to set the Operand property equal to.</param>
+        /// <param name="type">The Type of the expression.</param>
+        /// <returns>A UnaryExpression that represents the exception.</returns>
+        public static UnaryExpression Throw(Expression value, Type type) =>
+            new UnaryExpression(ExpressionType.Throw, value, type);
 
         public static LabelExpression Label(LabelTarget target, Expression defaultValue = null) =>
             new LabelExpression(target, defaultValue);
@@ -735,7 +740,6 @@ namespace FastExpressionCompiler.LightExpression
             }
         }
 
-
         public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type = null) =>
             new GotoExpression(kind, target, value, type ?? typeof(void));
 
@@ -760,7 +764,7 @@ namespace FastExpressionCompiler.LightExpression
             new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, typeof(bool));
 
         public static GotoExpression Return(LabelTarget target, Expression value = null, Type type = null) =>
-            MakeGoto(GotoExpressionKind.Return, target, value);
+            MakeGoto(GotoExpressionKind.Return, target, value, type);
 
         public static GotoExpression Goto(LabelTarget target, Expression value = null, Type type = null) =>
             MakeGoto(GotoExpressionKind.Goto, target, value, type);

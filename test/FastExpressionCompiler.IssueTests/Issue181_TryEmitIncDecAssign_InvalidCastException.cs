@@ -44,7 +44,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
+
+            Assert.IsNotNull(del);
 
             var expectedValue = CounterProperty + 1;
             del.Invoke(this);
@@ -63,7 +65,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
+
+            Assert.IsNotNull(del);
 
             var expectedValue = CounterObjField.CounterProperty + 1;
             del.Invoke(this);
@@ -82,7 +86,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
+
+            Assert.IsNotNull(del);
 
             var expectedValue = CounterField + 1;
             del.Invoke(this);
@@ -101,7 +107,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
+
+            Assert.IsNotNull(del);
 
             var expectedValue = CounterObjField.CounterField + 1;
             del.Invoke(this);
@@ -120,7 +128,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
+
+            Assert.IsNotNull(del);
 
             var expectedValue = CounterProperty + 1;
             del.Invoke(this);
@@ -139,7 +149,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
+
+            Assert.IsNotNull(del);
 
             var expectedValue = CounterObjField.CounterProperty - 1;
             del.Invoke(this);
@@ -158,7 +170,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
+
+            Assert.IsNotNull(del);
 
             var expectedValue = CounterField - 1;
             del.Invoke(this);
@@ -177,8 +191,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
 
+            Assert.IsNotNull(del);
             Assert.AreEqual(CounterObjField.CounterProperty + 1, del.Invoke(this));
         }
 
@@ -193,7 +208,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
+
+            Assert.IsNotNull(del);
 
             var startValue = CounterField;
 
@@ -212,7 +229,9 @@ namespace FastExpressionCompiler.UnitTests
                     Field(null, staticField)
                 ));
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
+
+            Assert.IsNotNull(del);
 
             var startValue = CounterFieldStatic;
 
@@ -231,8 +250,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
 
+            Assert.IsNotNull(del);
             Assert.AreEqual(CounterProperty - 1, del.Invoke(this));
         }
 
@@ -247,8 +267,9 @@ namespace FastExpressionCompiler.UnitTests
                     Property(null, staticProperty)
                 ));
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
 
+            Assert.IsNotNull(del);
             Assert.AreEqual(CounterPropertyStatic - 1, del.Invoke());
         }
 
@@ -263,7 +284,9 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-            var del = lambda.CompileFast();
+            var del = lambda.CompileFast(true);
+
+            Assert.IsNotNull(del);
 
             var startValue = CounterObjField.CounterField;
 
