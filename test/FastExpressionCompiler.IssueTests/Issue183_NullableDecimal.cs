@@ -19,7 +19,7 @@ namespace FastExpressionCompiler.UnitTests
         
     public class Issue183_NullableDecimal
     {
-      [Test, Ignore("fixme")]
+      [Test]//, Ignore("fixme")]
       public void NullableDecimalIssue()
       {
             var parameterExpression = Expression.Parameter(typeof(GeneralContainer));
