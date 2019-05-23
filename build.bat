@@ -14,11 +14,10 @@ echo:
 echo:## Starting: TESTS...
 echo: 
 
-dotnet test  ".\test\FastExpressionCompiler.UnitTests" -c Release -p:DevMode=false
-dotnet test  ".\test\FastExpressionCompiler.IssueTests" -c Release -p:DevMode=false
+dotnet test -c:Release -p:GeneratePackageOnBuild=false;DevMode=false
 
-dotnet test  ".\test\FastExpressionCompiler.LightExpression.UnitTests" -c Release -p:DevMode=false
-dotnet test  ".\test\FastExpressionCompiler.LightExpression.IssueTests" -c Release -p:DevMode=false
+if %ERRORLEVEL% neq 0 goto :error
+echo:## Finished: TESTS
 
 echo: 
 echo:## Finished: TESTS
@@ -26,8 +25,8 @@ echo:
 echo:## Starting: PACKAGING...
 echo: 
 
-dotnet pack ".\src\FastExpressionCompiler" -c Release -p:DevMode=false
-dotnet pack ".\src\FastExpressionCompiler.LightExpression" -c Release -p:DevMode=false
+dotnet pack ".\src\FastExpressionCompiler" -c:Release -restore:False -p:DevMode=false
+dotnet pack ".\src\FastExpressionCompiler.LightExpression" -c:Release -restore:False -p:DevMode=false
 
 echo: 
 echo:## Finished: PACKAGING

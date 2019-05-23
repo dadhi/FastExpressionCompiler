@@ -398,6 +398,7 @@ namespace FastExpressionCompiler
 
                 if (closure == null)
                 {
+                    Closure = null;
                     Constants = Tools.Empty<ConstantExpression>();
                     ClosureType = null;
                     ClosureFields = null;

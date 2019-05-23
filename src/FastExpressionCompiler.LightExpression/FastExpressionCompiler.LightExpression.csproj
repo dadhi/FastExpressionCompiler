@@ -3,7 +3,7 @@
         <TargetFrameworks Condition="'$(DevMode)' != 'true'">net45;netstandard1.3;netstandard2.0</TargetFrameworks>
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">netstandard2.0</TargetFrameworks>
 
-        <VersionPrefix>2.0.0</VersionPrefix>
+        <VersionPrefix>2.1.0</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -13,7 +13,13 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
-v2.0.0
+## v2.1.0
+Thanks to the contributors
+
+- added: TODO
+
+
+## v2.0.0
 Stable release with the `ExpressionInfo` moved to a separate package and renamed 
 to `FastExpressionCompiler.LightExpression.Expression` to simplify drop-in replacement for `Expression`
 
