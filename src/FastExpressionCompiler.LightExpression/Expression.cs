@@ -321,7 +321,7 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents an explicit unboxing.</summary>
         /// <param name="expression">An Expression to set the Operand property equal to.</param>
         /// <param name="type">A Type to set the Type property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to Unbox and the Operand and Type properties set to the specified values.</returns>
+        /// <returns>A UnaryExpression that has the NodeType property equal to unbox and the Operand and Type properties set to the specified values.</returns>
         public static UnaryExpression Unbox(Expression expression, Type type) =>
             new UnaryExpression(ExpressionType.Unbox, expression, type);
 
@@ -582,7 +582,7 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
         /// <param name="left">An Expression to set the Left property equal to.</param>
         /// <param name="right">An Expression to set the Right property equal to.</param>
-        /// <returns>A BinaryExpression that has the NodeType property equal to And and the Left and Right properties set to the specified values.</returns>
+        /// <returns>A BinaryExpression that has the NodeType property equal to And, and the Left and Right properties are set to the specified values.</returns>
         public static BinaryExpression And(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.And, left, right, left.Type);
 
@@ -840,33 +840,48 @@ namespace FastExpressionCompiler.LightExpression
              source.GetTypeInfo().IsEnum && target == typeof(Enum);
 
         internal static MethodInfo FindMethod(this Type type,
-            string methodName, Type[] typeArgs, IReadOnlyList<Expression> args, bool isStatic = false) =>
-            type.GetTypeInfo().DeclaredMethods.GetFirst(m =>
+            string methodName, Type[] typeArgs, IReadOnlyList<Expression> args, bool isStatic = false)
+        {
+            foreach(var m in type.GetTypeInfo().DeclaredMethods)
             {
                 if (isStatic == m.IsStatic && methodName == m.Name)
                 {
                     typeArgs = typeArgs ?? Type.EmptyTypes;
                     var mTypeArgs = m.GetGenericArguments();
+
                     if (typeArgs.Length == mTypeArgs.Length &&
-                        (typeArgs.Length == 0 ||
-                         typeArgs.Length == 1 && typeArgs[0] == mTypeArgs[0] ||
-                         typeArgs.Length == 2 && typeArgs[0] == mTypeArgs[0] && typeArgs[1] == mTypeArgs[1] ||
-                         typeArgs.SequenceEqual(mTypeArgs)))
+                        (typeArgs.Length == 0 || AreTypesTheSame(typeArgs, mTypeArgs)))
                     {
                         args = args ?? Tools.Empty<Expression>();
-                        var mArgs = m.GetParameters();
-                        return args.Count == mArgs.Length &&
-                               (args.Count == 0 ||
-                                args.Count == 1 && args[0].Type == mArgs[0].ParameterType ||
-                                args.Count == 2 && args[0].Type == mArgs[0].ParameterType &&
-                                args[1].Type == mArgs[1].ParameterType ||
-                                args.Map(a => a.Type).SequenceEqual(mArgs.Map(p => p.ParameterType)));
+                        var pars = m.GetParameters();
+                        if (args.Count == pars.Length && 
+                            (args.Count == 0 || AreArgExpressionsAndParamsOfTheSameType(args, pars)))
+                            return m;
                     }
                 }
+            }
 
-                return false;
-            });
+            return null;
+        }
 
+        private static bool AreTypesTheSame(Type[] source, Type[] target)
+        {
+            for (var i = 0; i < source.Length; i++)
+                if (source[i] != target[i])
+                    return false;
+            return true;
+        }
+
+        private static bool AreArgExpressionsAndParamsOfTheSameType(IReadOnlyList<Expression> args, ParameterInfo[] pars)
+        {
+            for (var i = 0; i < pars.Length; i++)
+                if (pars[i].ParameterType != args[i].Type)
+                    return false;
+            return true;
+        }
+
+        public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs) =>
+            xs as IReadOnlyList<T> ?? xs.ToArray();
 
         internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
         {

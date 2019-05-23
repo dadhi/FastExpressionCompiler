@@ -32,7 +32,6 @@ namespace FastExpressionCompiler
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Linq.Expressions;
     using System.Reflection;
     using System.Reflection.Emit;
@@ -399,7 +398,6 @@ namespace FastExpressionCompiler
 
                 if (closure == null)
                 {
-                    Closure = null;
                     Constants = Tools.Empty<ConstantExpression>();
                     ClosureType = null;
                     ClosureFields = null;
@@ -454,7 +452,14 @@ namespace FastExpressionCompiler
                 return label.Value;
             }
 
-            public int GetLabelIndex(LabelTarget labelTarget) => _labels.GetFirstIndex(kvp => kvp.Key == labelTarget);
+            public int GetLabelIndex(LabelTarget labelTarget)
+            {
+                if (_labels != null)
+                    for (var i = 0; i < _labels.Length; ++i)
+                        if (_labels[i].Key == labelTarget)
+                            return i;
+                return -1;
+            }
 
             public void MarkLabelAsTryReturn(int index) => _tryCatchFinallyReturnLabelIndex = index;
 
@@ -1201,17 +1206,25 @@ namespace FastExpressionCompiler
         /// to normal and slow Expression.Compile.</summary>
         private static class EmittingVisitor
         {
-#if !NETSTANDARD2_0 && !NET45
-            private static readonly MethodInfo _getTypeFromHandleMethod = typeof(Type).GetTypeInfo()
-                .DeclaredMethods.First(m => m.IsStatic && m.Name == "GetTypeFromHandle");
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+            private static readonly MethodInfo _getTypeFromHandleMethod =
+                typeof(Type).GetTypeInfo().GetDeclaredMethod("GetTypeFromHandle");
 
-            private static readonly MethodInfo _objectEqualsMethod = typeof(object).GetTypeInfo()
-                .DeclaredMethods.First(m => m.IsStatic && m.Name == "Equals");
+            private static readonly MethodInfo _objectEqualsMethod = GetObjectEquals();
+            private static MethodInfo GetObjectEquals()
+            {
+                var ms = typeof(object).GetTypeInfo().GetDeclaredMethods("Equals");
+                foreach (var m in ms)
+                    if (m.GetParameters().Length == 2)
+                        return m;
+                throw new InvalidOperationException("object.Equals is not found");
+            }
 #else
             private static readonly MethodInfo _getTypeFromHandleMethod =
                 ((Func<RuntimeTypeHandle, Type>)Type.GetTypeFromHandle).Method;
 
-            private static readonly MethodInfo _objectEqualsMethod = ((Func<object, object, bool>)object.Equals).Method;
+            private static readonly MethodInfo _objectEqualsMethod =
+                ((Func<object, object, bool>)object.Equals).Method;
 #endif
 
             public static bool TryEmit(Expression expr, IReadOnlyList<ParameterExpression> paramExprs,
@@ -1680,7 +1693,7 @@ namespace FastExpressionCompiler
                 if (paramIndex != -1)
                 {
                     if (closure.HasClosure)
-                        paramIndex += 1; // shift parameter indices by one, because the first one will be closure
+                        paramIndex += 1; // shift parameter index by one, because the first one will be closure
 
                     closure.LastEmitIsAddress = !paramExpr.IsByRef && paramType.IsValueType() &&
                         ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall ||
@@ -2146,9 +2159,7 @@ namespace FastExpressionCompiler
 
                 var underlyingNullableType = Nullable.GetUnderlyingType(exprType);
                 if (underlyingNullableType != null)
-                {
-                    il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.First());
-                }
+                    il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
                 // todo: consider how to remove boxing where it is not required
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
@@ -2202,10 +2213,17 @@ namespace FastExpressionCompiler
                 EmitLoadConstantInt(il, scale);
 
                 il.Emit(OpCodes.Conv_U1);
-                il.Emit(OpCodes.Newobj,
-                    typeof(decimal).GetTypeInfo().DeclaredConstructors.GetFirst(
-                        x => x.GetParameters().Length == 5));
+
+                il.Emit(OpCodes.Newobj, _decimalCtor.Value);
             }
+
+            private static readonly Lazy<ConstructorInfo> _decimalCtor = new Lazy<ConstructorInfo>(() =>
+            {
+                foreach (var ctor in typeof(decimal).GetTypeInfo().DeclaredConstructors)
+                    if (ctor.GetParameters().Length == 5)
+                        return ctor;
+                return null;
+            });
 
             private static LocalBuilder DeclareAndLoadLocalVariable(ILGenerator il, Type type)
             {
@@ -3124,6 +3142,7 @@ namespace FastExpressionCompiler
                     rVar = DeclareAndLoadLocalVariable(il, rightOpType);
                     if (!EmitMethodCall(il, rightOpType.FindNullableGetValueOrDefaultMethod()))
                         return false;
+                    // ReSharper disable once AssignNullToNotNullAttribute
                     rightOpType = Nullable.GetUnderlyingType(rightOpType);
                 }
 
@@ -3143,12 +3162,9 @@ namespace FastExpressionCompiler
                         return false;
 
                     // todo: for now handling only parameters of the same type
-                    var method = leftOpTypeInfo.DeclaredMethods.GetFirst(m =>
-                        m.IsStatic && m.Name == methodName &&
-                        m.GetParameters().All(p => p.ParameterType == leftOpType));
-
-                    if (method != null)
-                        return EmitMethodCall(il, method);
+                    foreach (var m in leftOpTypeInfo.DeclaredMethods)
+                        if (m.IsStatic && m.Name == methodName && IsComparisonOperatorSignature(m.GetParameters(), leftOpType))
+                            return EmitMethodCall(il, m);
 
                     if (expressionType != ExpressionType.Equal && expressionType != ExpressionType.NotEqual)
                         return false;
@@ -3259,6 +3275,9 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static bool IsComparisonOperatorSignature(ParameterInfo[] pars, Type t) =>
+                pars.Length == 2 && pars[0].ParameterType == t && pars[1].ParameterType == t;
+
             private static bool TryEmitArithmetic(BinaryExpression expr, ExpressionType exprNodeType,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
@@ -3362,9 +3381,14 @@ namespace FastExpressionCompiler
                             var paraType = typeof(string);
                             if (expr.Left.Type != expr.Right.Type || expr.Left.Type != typeof(string))
                                 paraType = typeof(object);
-                            method = typeof(string).GetTypeInfo().DeclaredMethods.GetFirst(x =>
-                                x.Name == "Concat" && x.GetParameters().Length == 2 &&
-                                x.GetParameters()[0].ParameterType == paraType);
+
+                            foreach (var m in typeof(string).GetTypeInfo().DeclaredMethods)
+                                if (m.Name == "Concat" && m.GetParameters().Length == 2 &&
+                                    m.GetParameters()[0].ParameterType == paraType)
+                                {
+                                    method = m;
+                                    break;
+                                }
                         }
                         else
                         {
@@ -3612,8 +3636,13 @@ namespace FastExpressionCompiler
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) =>
             type.FindMethod("Invoke");
 
-        internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type) =>
-            type.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault").GetFirst(x => x.GetParameters().Length == 0);
+        internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type)
+        {
+            foreach (var m in type.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault"))
+                if (m.GetParameters().Length == 0)
+                    return m;
+            return null;
+        }
 
         internal static MethodInfo FindValueGetterMethod(this Type type) =>
             type.FindMethod("get_Value");
@@ -3627,11 +3656,15 @@ namespace FastExpressionCompiler
         internal static MethodInfo FindPropertySetMethod(this PropertyInfo prop) =>
             prop.DeclaringType.FindMethod("set_" + prop.Name);
 
-        internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType) =>
-            type.GetTypeInfo().DeclaredMethods.GetFirst(m =>
-                m.IsStatic && m.ReturnType == targetType &&
-                (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
-                m.GetParameters()[0].ParameterType == sourceType);
+        internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
+        {
+            foreach (var m in type.GetTypeInfo().DeclaredMethods)
+                if (m.IsStatic && m.ReturnType == targetType &&
+                    (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
+                    m.GetParameters()[0].ParameterType == sourceType)
+                    return m;
+            return null;
+        }
 
         internal static ConstructorInfo FindSingleParamConstructor(this Type type, Type paramType)
         {
@@ -3641,7 +3674,6 @@ namespace FastExpressionCompiler
                 if (parameters.Length == 1 && parameters[0].ParameterType == paramType)
                     return ctor;
             }
-
             return null;
         }
 
@@ -3668,12 +3700,9 @@ namespace FastExpressionCompiler
             }
         }
 
-        public static T[] AsArray<T>(this IEnumerable<T> xs) => xs as T[] ?? xs.ToArray();
+        public static T[] AsArray<T>(this IEnumerable<T> xs) =>
+            xs is T[] array ? array : xs == null ? null : new List<T>(xs).ToArray();
 
-#if LIGHT_EXPRESSION
-        public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs) =>
-            xs as IReadOnlyList<T> ?? xs.ToArray();
-#endif
         private static class EmptyArray<T>
         {
             public static readonly T[] Value = new T[0];
@@ -3753,57 +3782,19 @@ namespace FastExpressionCompiler
 
         public static int GetFirstIndex<T>(this IReadOnlyList<T> source, T item)
         {
-            if (source == null || source.Count == 0)
-                return -1;
-            var count = source.Count;
-            if (count == 1)
-                return ReferenceEquals(source[0], item) ? 0 : -1;
-            for (var i = 0; i < count; ++i)
-                if (ReferenceEquals(source[i], item))
-                    return i;
-            return -1;
-        }
-
-        public static int GetFirstIndex<T>(this T[] source, Func<T, bool> predicate)
-        {
-            if (source == null || source.Length == 0)
-                return -1;
-            if (source.Length == 1)
-                return predicate(source[0]) ? 0 : -1;
-            for (var i = 0; i < source.Length; ++i)
-                if (predicate(source[i]))
-                    return i;
+            if (source != null)
+                for (var i = 0; i < source.Count; ++i)
+                    if (ReferenceEquals(source[i], item))
+                        return i;
             return -1;
         }
 
         public static T GetFirst<T>(this IEnumerable<T> source)
         {
-            var list = source as IReadOnlyList<T>;
-            return list == null ? source.FirstOrDefault() : list.Count != 0 ? list[0] : default(T);
+            if (source is IList<T> list)
+                return list.Count == 0 ? default(T) : list[0];
+            using (var items = source.GetEnumerator())
+                return items.MoveNext() ? items.Current : default(T);
         }
-
-        public static T GetFirst<T>(this IEnumerable<T> source, Func<T, bool> predicate)
-        {
-            var arr = source as T[];
-            if (arr == null)
-                return source.FirstOrDefault(predicate);
-            var index = arr.GetFirstIndex(predicate);
-            return index == -1 ? default(T) : arr[index];
-        }
-#if LIGHT_EXPRESSION
-        public static R[] Map<T, R>(this IReadOnlyList<T> source, Func<T, R> project)
-        {
-            if (source == null || source.Count == 0)
-                return Empty<R>();
-
-            if (source.Count == 1)
-                return new[] { project(source[0]) };
-
-            var result = new R[source.Count];
-            for (var i = 0; i < result.Length; ++i)
-                result[i] = project(source[i]);
-            return result;
-        }
-#endif
     }
 }
