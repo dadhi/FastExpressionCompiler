@@ -2,35 +2,99 @@ using System;
 using NUnit.Framework;
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
-#pragma warning disable 649 // Unaasigned fields
+#pragma warning disable 649 // Unassigned fields
 
 #if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
 using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-        public class GeneralContainer
-        {
-            public byte? NullableByte { get; set; }
-            public decimal Decimal { get; set; }
-        }
-        
     public class Issue183_NullableDecimal
     {
-      [Test, Ignore("fixme")]
-      public void NullableDecimalIssue()
-      {
-            var parameterExpression = Expression.Parameter(typeof(GeneralContainer));
-            var left = Expression.Property(parameterExpression, nameof(GeneralContainer.NullableByte));
-            var right = Expression.Property(parameterExpression, nameof(GeneralContainer.Decimal));
-            var body = Expression.Equal(Expression.Convert(left, typeof(decimal?)), Expression.Convert(right, typeof(decimal?)));
-            var obj = new ParameterExpression[1];
-            obj[0] = parameterExpression;
-            var fctn = Expression.Lambda<Func<GeneralContainer, bool>>(body, obj).CompileFast();
+        [Test]
+        public void ConvertDecimalParamToNullableDecimal()
+        {
+            var param = Parameter(typeof(decimal), "d");
 
-            Assert.DoesNotThrow(() => fctn(new GeneralContainer() { Decimal = 1 }) );
-      }
+            var f = Lambda<Func<decimal, decimal?>>(Convert(param, typeof(decimal?)), param).CompileFast();
+            var x = f(42);
+
+            Assert.IsNotNull(x);
+            Assert.AreEqual(42, x.Value);
+        }
+
+        [Test]
+        public void ConvertNullNullableParamToNullableDecimal_CheckAgainstTheSystemExprCompile()
+        {
+            var ps = System.Linq.Expressions.Expression.Parameter(typeof(byte?), "b");
+            var fs = System.Linq.Expressions.Expression.Lambda<Func<byte?, decimal?>>(
+                System.Linq.Expressions.Expression.Convert(ps, typeof(decimal?)), ps)
+                .Compile();
+            var xs = fs(null);
+            Assert.IsNull(xs);
+
+            var param = Parameter(typeof(byte?), "b");
+            var ff = Lambda<Func<byte?, decimal?>>(Convert(param, typeof(decimal?)), param)
+                .CompileFast();
+            var xf = ff(null);
+            Assert.IsNull(xf);
+        }
+
+        [Test]
+        public void ConvertDecimalPropertyToNullableDecimal()
+        {
+            var param = Parameter(typeof(DecimalContainer), "d");
+
+            var f = Lambda<Func<DecimalContainer, decimal?>>(
+                Convert(Property(param, nameof(DecimalContainer.Decimal)), typeof(decimal?)), 
+                param
+                ).CompileFast();
+
+            var x = f(new DecimalContainer { Decimal = 42 });
+
+            Assert.IsNotNull(x);
+            Assert.AreEqual(42, x.Value);
+        }
+
+        [Test]
+        public void ConvertNullableBytePropertyToNullableDecimal()
+        {
+            var param = Parameter(typeof(DecimalContainer), "d");
+
+            var f = Lambda<Func<DecimalContainer, decimal?>>(
+                Convert(Property(param, nameof(DecimalContainer.NullableByte)), typeof(decimal?)),
+                param
+            ).CompileFast();
+
+            var x = f(new DecimalContainer { NullableByte = 42 });
+
+            Assert.IsNotNull(x);
+            Assert.AreEqual(42, x.Value);
+        }
+
+        [Test]
+        public void NullableDecimalIssue()
+        {
+            var param = Parameter(typeof(DecimalContainer));
+
+            var body = Equal(
+                Convert(Property(param, nameof(DecimalContainer.NullableByte)), typeof(decimal?)), 
+                Convert(Property(param, nameof(DecimalContainer.Decimal)), typeof(decimal?)));
+
+            var f = Lambda<Func<DecimalContainer, bool>>(body, param).CompileFast();
+
+            var x = f(new DecimalContainer { Decimal = 1 });
+            Assert.IsFalse(x); // cause byte? to decimal? would be `null`
+        }
+    }
+
+    public class DecimalContainer
+    {
+        public byte? NullableByte { get; set; }
+        public decimal Decimal { get; set; }
     }
 }

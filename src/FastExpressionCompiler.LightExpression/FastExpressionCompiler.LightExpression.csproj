@@ -14,12 +14,14 @@
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
 ## v2.1.0
-Thanks to the contributors
 
-- added: TODO
+Thanks to the contributors!
+
+- fixed: #183 nullable types (nullable vs non-nullable operands) 
 
 
 ## v2.0.0
+
 Stable release with the `ExpressionInfo` moved to a separate package and renamed 
 to `FastExpressionCompiler.LightExpression.Expression` to simplify drop-in replacement for `Expression`
 

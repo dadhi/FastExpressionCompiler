@@ -41,7 +41,7 @@ namespace FastExpressionCompiler
     // ReSharper disable once PartialTypeWithSinglePart
     public static partial class ExpressionCompiler
     {
-        #region Expression.CompileFast overloads for Delegate, Funcs, and Actions
+        #region Expression.CompileFast overloads for Delegate, Func, and Action
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr,
@@ -979,7 +979,7 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.Invoke:
-                        // optimization #138: we are inlining invoked lambda body (only for lambdas without arguments)
+                        // optimization #138: we inline the invoked lambda body (only for lambdas without arguments)
                         // therefore we skipping collecting the lambda and invocation arguments and got directly to lambda body.
                         // This approach is repeated in `TryEmitInvoke`
                         var invokeExpr = (InvocationExpression)expr;
@@ -1357,7 +1357,7 @@ namespace FastExpressionCompiler
                             // last (result) statement in block will provide the result
                             expr = blockExpr.Result;
                             if (!blockHasVars)
-                                continue; // omg, no recursion!
+                                continue; // OMG, no recursion!
 
                             if (!TryEmit(blockExpr.Result, paramExprs, il, ref closure, parent))
                                 return false;
@@ -1480,7 +1480,7 @@ namespace FastExpressionCompiler
                         if ((parent & ParentFlags.TryCatch) == 0)
                             return EmitGotoLabel(OpCodes.Ret, index, il, ref closure);
 
-                        // Can't emit a Ret inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
+                        // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
                         // to emit the Leave instruction, return label and return result
                         closure.MarkLabelAsTryReturn(index);
                         return true;
@@ -1911,8 +1911,9 @@ namespace FastExpressionCompiler
                 }
 
                 // check implicit / explicit conversion operators on source and target types
-                // for non-primitives and for non-primitive nullables - #73
-                if (!sourceType.IsPrimitive() && (!sourceTypeIsNullable || !underlyingNullableSourceType.IsPrimitive()))
+                // for non-primitives and for non-primitive nullable - #73
+                if (!sourceTypeIsNullable && !sourceType.IsPrimitive() ||
+                    !targetTypeIsNullable)
                 {
                     var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
                     var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
@@ -1935,7 +1936,8 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                if (!targetType.IsPrimitive() && (!targetTypeIsNullable || !underlyingNullableTargetType.IsPrimitive()))
+                if (!targetTypeIsNullable && !targetType.IsPrimitive() ||
+                    !sourceTypeIsNullable)
                 {
                     var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
                     var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
@@ -1959,11 +1961,12 @@ namespace FastExpressionCompiler
                 }
 
                 if (sourceType == typeof(object) && targetType.IsValueType())
+                {
                     il.Emit(OpCodes.Unbox_Any, targetType);
-
-                // Conversion to Nullable: new Nullable<T>(T val);
+                }
                 else if (targetTypeIsNullable)
                 {
+                    // Conversion to Nullable: `new Nullable<T>(T val);`
                     if (!sourceTypeIsNullable)
                     {
                         if (!TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false))
@@ -1977,6 +1980,7 @@ namespace FastExpressionCompiler
 
                         if (!EmitMethodCall(il, sourceType.FindNullableHasValueGetterMethod()))
                             return false;
+
                         var labelSourceHasValue = il.DefineLabel();
                         il.Emit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
 
@@ -2529,7 +2533,7 @@ namespace FastExpressionCompiler
 
                         if (paramIndex != -1)
                         {
-                            // shift parameter indices by one, because the first one will be closure
+                            // shift parameter index by one, because the first one will be closure
                             if (closure.HasClosure)
                                 paramIndex += 1;
 
@@ -2548,7 +2552,7 @@ namespace FastExpressionCompiler
                                 return false;
 
                             if ((parent & ParentFlags.IgnoreResult) == 0)
-                                il.Emit(OpCodes.Dup); // dup value to assign and return
+                                il.Emit(OpCodes.Dup); // duplicate value to assign and return
 
                             if (leftParamExpr.IsByRef)
                                 EmitByRefStore(il, leftParamExpr.Type);
@@ -2585,7 +2589,7 @@ namespace FastExpressionCompiler
                             if ((right as ParameterExpression)?.IsByRef == true)
                                 il.Emit(OpCodes.Ldind_I4);
 
-                            if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, dup the right value
+                            if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
                                 il.Emit(OpCodes.Dup);
 
                             il.Emit(OpCodes.Stloc, localVariable);
@@ -2815,7 +2819,7 @@ namespace FastExpressionCompiler
                 if (prop != null)
                 {
                     // Value type special treatment to load address of value instance in order to access a field or call a method.
-                    // Parameter should be excluded because it already loads an address via Ldarga, and you don't need to.
+                    // Parameter should be excluded because it already loads an address via `LDARGA`, and you don't need to.
                     // And for field access no need to load address, cause the field stored on stack nearby
                     if (!closure.LastEmitIsAddress && instanceExpr != null &&
                         instanceExpr.NodeType != ExpressionType.Parameter &&
@@ -2924,7 +2928,7 @@ namespace FastExpressionCompiler
                     Type nestedUsedParamType = null;
                     if (isNestedArrayClosure)
                     {
-                        // get a param type for the later
+                        // get a parameter type for the later
                         nestedUsedParamType = nestedUsedParam.Type;
 
                         // Duplicate nested array on stack to store the item, and load index to where to store
@@ -2933,7 +2937,7 @@ namespace FastExpressionCompiler
                     }
 
                     var paramIndex = paramExprs.GetFirstIndex(nestedUsedParam);
-                    if (paramIndex != -1) // load param from input params
+                    if (paramIndex != -1) // load parameter from input params
                     {
                         // +1 is set cause of added first closure argument
                         EmitLoadParamArg(il, 1 + paramIndex, false);
@@ -3020,7 +3024,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitInvoke(InvocationExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                // optimization #138: we are inlining invoked lambda body (only for lambdas without arguments) 
+                // optimization #138: we inline the invoked lambda body (only for lambdas without arguments) 
                 var lambda = expr.Expression;
                 if (lambda is LambdaExpression lambdaExpr && lambdaExpr.Parameters.Count == 0)
                     return TryEmit(lambdaExpr.Body, paramExprs, il, ref closure, parent);
@@ -3043,8 +3047,8 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 // todo:
-                //- use switch statement for int comparison (if int difference is less or equal 3 -> use il switch)
-                //- TryEmitComparison should not emit "ceq" so we could use Beq_S instead of Brtrue_S (not always possible (nullables))
+                //- use switch statement for int comparison (if int difference is less or equal 3 -> use IL switch)
+                //- TryEmitComparison should not emit "CEQ" so we could use Beq_S instead of Brtrue_S (not always possible (nullable))
                 //- if switch SwitchValue is a nullable parameter, we should call getValue only once and store the result.
                 //- use comparison methods (when defined)
 
