@@ -47,8 +47,8 @@ namespace FastExpressionCompiler
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr,
             bool ifFastFailedReturnNull = false) where TDelegate : class
         {
-            var ignored = new ClosureInfo(false);
-            return (TDelegate)TryCompile(ref ignored,
+            var closureInfo = new ClosureInfo(false);
+            return (TDelegate)TryCompile(ref closureInfo,
                        typeof(TDelegate), Tools.GetParamTypes(lambdaExpr.Parameters),
                        lambdaExpr.ReturnType, lambdaExpr.Body, lambdaExpr.Parameters)
                 ?? (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.CompileSys());
@@ -57,8 +57,8 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
         {
-            var ignored = new ClosureInfo(false);
-            return (Delegate)TryCompile(ref ignored,
+            var closureInfo = new ClosureInfo(false);
+            return (Delegate)TryCompile(ref closureInfo,
                 lambdaExpr.Type, Tools.GetParamTypes(lambdaExpr.Parameters),
                        lambdaExpr.ReturnType, lambdaExpr.Body, lambdaExpr.Parameters)
                 ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
@@ -76,9 +76,9 @@ namespace FastExpressionCompiler
         public static Delegate CompileSys(this LambdaExpression lambdaExpr) =>
             lambdaExpr
 #if LIGHT_EXPRESSION
-                .ToLambdaExpression()
+            .ToLambdaExpression()
 #endif
-                .Compile();
+            .Compile();
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this Expression<TDelegate> lambdaExpr,
@@ -211,8 +211,8 @@ namespace FastExpressionCompiler
             Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
             where TDelegate : class
         {
-            var ignored = new ClosureInfo(false);
-            return (TDelegate)TryCompile(ref ignored, typeof(TDelegate), paramTypes, returnType, bodyExpr, paramExprs);
+            var closureInfo = new ClosureInfo(false);
+            return (TDelegate)TryCompile(ref closureInfo, typeof(TDelegate), paramTypes, returnType, bodyExpr, paramExprs);
         }
 
         private static object TryCompile(ref ClosureInfo closureInfo,
@@ -220,18 +220,16 @@ namespace FastExpressionCompiler
             IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda = false)
         {
             object closureObject;
-            if (closureInfo.IsClosureConstructed)
+            if (!closureInfo.IsClosureConstructed)
             {
-                closureObject = closureInfo.Closure;
-            }
-            else if (TryCollectBoundConstants(ref closureInfo, expr, paramExprs))
-            {
+                if (!TryCollectBoundConstants(ref closureInfo, expr, paramExprs))
+                    return null;
+
                 var nestedLambdaExprs = closureInfo.NestedLambdaExprs;
-                var nestedLambdaCount = nestedLambdaExprs.Length;
-                if (nestedLambdaCount != 0)
+                if (nestedLambdaExprs.Length != 0)
                 {
-                    closureInfo.NestedLambdas = new NestedLambdaInfo[nestedLambdaCount];
-                    for (var i = 0; i < nestedLambdaCount; ++i)
+                    closureInfo.NestedLambdas = new NestedLambdaInfo[nestedLambdaExprs.Length];
+                    for (var i = 0; i < nestedLambdaExprs.Length; ++i)
                         if (!TryCompileNestedLambda(ref closureInfo, i, nestedLambdaExprs[i]))
                             return null;
                 }
@@ -239,7 +237,9 @@ namespace FastExpressionCompiler
                 closureObject = closureInfo.ConstructClosureTypeAndObject(constructTypeOnly: isNestedLambda);
             }
             else
-                return null;
+            {
+                closureObject = closureInfo.Closure;
+            }
 
             var closureType = closureInfo.ClosureType;
             var methodParamTypes = closureType == null ? paramTypes : GetClosureAndParamTypes(paramTypes, closureType);
@@ -254,10 +254,10 @@ namespace FastExpressionCompiler
 
             il.Emit(OpCodes.Ret);
 
-            // include closure as the first parameter, BUT don't bound to it. It will be bound later in EmitNestedLambda.
+            // Include the closure as the first parameter, BUT don't bound to it. It will be bound later in EmitNestedLambda.
             if (isNestedLambda)
                 delegateType = Tools.GetFuncOrActionType(methodParamTypes, returnType);
-            // create a specific delegate if user requested delegate is untyped, otherwise CreateMethod will fail
+            // Create a specific delegate if user requested delegate is untyped, otherwise CreateMethod will fail
             else if (delegateType == typeof(Delegate))
                 delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
 
@@ -286,7 +286,7 @@ namespace FastExpressionCompiler
                     info.AddConstant(nestedConstants[i]);
 
             // Add nested constants to outer lambda closure.
-            // At this moment we  know that NestedLambdaExprs are non-empty, cause we doing this from the nested lambda already.
+            // At this moment we know that the NestedLambdaExprs are non-empty, cause we are doing this from the nested lambda already.
             var nestedNestedLambdaExprs = nestedInfo.NestedLambdaExprs;
             if (nestedNestedLambdaExprs.Length != 0)
             {
@@ -317,6 +317,9 @@ namespace FastExpressionCompiler
 
             if (paramCount == 1)
                 return new[] { closureType, paramTypes[0] };
+
+            if (paramCount == 2)
+                return new[] { closureType, paramTypes[0], paramTypes[1] };
 
             var closureAndParamTypes = new Type[paramCount + 1];
             closureAndParamTypes[0] = closureType;
@@ -436,12 +439,13 @@ namespace FastExpressionCompiler
 
             public void AddLabel(LabelTarget labelTarget)
             {
-                if ((labelTarget != null) && (GetLabelIndex(labelTarget) == -1))
+                if (labelTarget != null && 
+                    GetLabelIndex(labelTarget) == -1)
                     _labels = _labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
             }
 
-            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il)
-                => GetOrCreateLabel(GetLabelIndex(labelTarget), il);
+            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) => 
+                GetOrCreateLabel(GetLabelIndex(labelTarget), il);
 
             public Label GetOrCreateLabel(int index, ILGenerator il)
             {
@@ -449,7 +453,6 @@ namespace FastExpressionCompiler
                 var label = labelPair.Value;
                 if (!label.HasValue)
                     _labels[index] = new KeyValuePair<LabelTarget, Label?>(labelPair.Key, label = il.DefineLabel());
-
                 return label.Value;
             }
 
