@@ -1912,13 +1912,24 @@ namespace FastExpressionCompiler
 
                 // check implicit / explicit conversion operators on source and target types
                 // for non-primitives and for non-primitive nullable - #73
-                if (!sourceTypeIsNullable && !sourceType.IsPrimitive() ||
-                    !targetTypeIsNullable)
+                if (!sourceTypeIsNullable && !sourceType.IsPrimitive())
                 {
-                    var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
                     var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
 
-                    var convertOpMethod = actualSourceType.FindConvertOperator(actualSourceType, actualTargetType);
+                    var convertOpMethod = sourceType.FindConvertOperator(sourceType, actualTargetType);
+                    if (convertOpMethod != null)
+                    {
+                        EmitMethodCall(il, convertOpMethod, parent);
+                        if (targetTypeIsNullable)
+                            il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                        return true;
+                    }
+                }
+                else if (!targetTypeIsNullable)
+                {
+                    var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
+
+                    var convertOpMethod = actualSourceType.FindConvertOperator(actualSourceType, targetType);
                     if (convertOpMethod != null)
                     {
                         if (sourceTypeIsNullable)
@@ -1928,21 +1939,15 @@ namespace FastExpressionCompiler
                         }
 
                         EmitMethodCall(il, convertOpMethod, parent);
-
-                        if (targetTypeIsNullable)
-                            il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
-
                         return true;
                     }
                 }
 
-                if (!targetTypeIsNullable && !targetType.IsPrimitive() ||
-                    !sourceTypeIsNullable)
+                if (!targetTypeIsNullable && !targetType.IsPrimitive())
                 {
                     var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
-                    var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
 
-                    var convertOpMethod = actualTargetType.FindConvertOperator(actualSourceType, actualTargetType);
+                    var convertOpMethod = targetType.FindConvertOperator(actualSourceType, targetType);
                     if (convertOpMethod != null)
                     {
                         if (sourceTypeIsNullable)
@@ -1952,10 +1957,19 @@ namespace FastExpressionCompiler
                         }
 
                         EmitMethodCall(il, convertOpMethod, parent);
+                        return true;
+                    }
+                }
+                else if (!sourceTypeIsNullable)
+                {
+                    var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
 
+                    var convertOpMethod = actualTargetType.FindConvertOperator(sourceType, actualTargetType);
+                    if (convertOpMethod != null)
+                    {
+                        EmitMethodCall(il, convertOpMethod, parent);
                         if (targetTypeIsNullable)
                             il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
-
                         return true;
                     }
                 }
