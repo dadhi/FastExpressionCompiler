@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks Condition="'$(DevMode)' != 'true'">net45;netstandard1.3;netstandard2.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DevMode)' == 'true'">netstandard2.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net45;netstandard2.0</TargetFrameworks>
 
         <VersionPrefix>2.1.0</VersionPrefix>
         <VersionSuffix></VersionSuffix>
