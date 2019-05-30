@@ -16,7 +16,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Compile>();
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Execute>();
 
-            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_CreateExecutor>();
+            BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_CreateExecutor>();
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Execute>();
             //BenchmarkRunner.Run<StaticTypeOfSwitch>();
@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
 
             //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
-            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
+            //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
         }
     }
 }

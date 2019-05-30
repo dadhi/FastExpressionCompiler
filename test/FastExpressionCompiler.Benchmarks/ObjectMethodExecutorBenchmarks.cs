@@ -52,7 +52,7 @@ namespace FastExpressionCompiler.Benchmarks
 
     //[CoreJob]
     [MemoryDiagnoser]
-    [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+    //[Orderer(SummaryOrderPolicy.FastestToSlowest)]
     public class ObjectExecutor_AsyncMethod_CreateExecutor
     {
         /*
@@ -63,6 +63,15 @@ namespace FastExpressionCompiler.Benchmarks
            CompileFastWithPreCreatedClosure |    98.33 us |  0.9981 us |  0.8848 us |  1.49 |    0.02 |      5.7373 |      2.8076 |      0.3662 |            26.69 KB |
                                 CompileFast |   107.19 us |  0.7070 us |  0.6613 us |  1.63 |    0.01 |      5.9814 |      2.9297 |      0.3662 |            27.72 KB |
                                     Compile | 1,560.78 us | 12.1744 us | 11.3879 us | 23.67 |    0.27 |      7.8125 |      3.9063 |           - |            42.05 KB |
+
+        ## v2.1.0: 
+                                     Method |        Mean |      Error |     StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+        ----------------------------------- |------------:|-----------:|-----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 1,392.35 us | 14.8822 us | 13.9208 us | 19.99 |    0.26 |      7.8125 |      3.9063 |           - |            42.05 KB |
+                                CompileFast |   112.59 us |  0.9482 us |  0.8869 us |  1.61 |    0.02 |      6.3477 |      3.1738 |      0.4883 |            29.33 KB |
+           CompileFastWithPreCreatedClosure |   102.35 us |  0.9648 us |  0.8056 us |  1.47 |    0.01 |      6.1035 |      3.0518 |      0.4883 |            28.25 KB |
+         CompileFastWithPreCreatedClosureLE |    69.74 us |  0.3595 us |  0.3002 us |  1.00 |    0.00 |      5.6152 |      2.8076 |      0.3662 |            25.79 KB |
+
          */
 
         public async Task<string> Foo(int a, int b) => await Task.FromResult((a + b).ToString());

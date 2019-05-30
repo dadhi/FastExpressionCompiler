@@ -207,17 +207,11 @@ namespace Microsoft.Extensions.Internal.LE
             var parametersParameter = Expression.Parameter(typeof(object[]), "parameters");
 
             // Build parameter list
-            var parameters = new List<Expression>();
             var paramInfos = methodInfo.GetParameters();
-            for (int i = 0; i < paramInfos.Length; i++)
-            {
-                var paramInfo = paramInfos[i];
-                var valueObj = Expression.ArrayIndex(parametersParameter, Expression.Constant(i));
-                var valueCast = Expression.Convert(valueObj, paramInfo.ParameterType);
-
-                // valueCast is "(Ti) parameters[i]"
-                parameters.Add(valueCast);
-            }
+            var parameters = new Expression[paramInfos.Length];
+            for (var i = 0; i < paramInfos.Length; i++)
+                parameters[i] = Expression.Convert(Expression.ArrayIndex(parametersParameter, Expression.Constant(i)),
+                    paramInfos[i].ParameterType);
 
             // Call method
             var instanceCast = Expression.Convert(targetParameter, targetTypeInfo.AsType());
@@ -239,7 +233,8 @@ namespace Microsoft.Extensions.Internal.LE
                         Expression.Convert(customAwaitableParam, postCoercionMethodReturnType),
                         awaitableInfo.GetAwaiterMethod),
                     typeof(object)),
-                customAwaitableParam).TryCompileWithoutClosure<Func<object, object>>();
+                customAwaitableParam)
+                .TryCompileWithoutClosure<Func<object, object>>();
 
             // var isCompletedFunc = (object awaiter) =>
             //     ((CustomAwaiterType)awaiter).IsCompleted;

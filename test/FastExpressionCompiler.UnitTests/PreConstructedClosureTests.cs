@@ -53,7 +53,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             Expression<Func<X>> expr = () => new X();
 
-            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(closure: null);
+            var f = expr.TryCompileWithoutClosure<Func<X>>();
 
             Assert.IsInstanceOf<X>(f());
         }
