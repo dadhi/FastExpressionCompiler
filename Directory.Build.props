@@ -3,7 +3,7 @@
         <!--Set to true to minimize number of target frameworks, to fasten the build :-) -->
         <DevMode>true</DevMode>
 
-        <LangVersion>7.3</LangVersion>
+        <LangVersion>Latest</LangVersion>
 
         <Authors>Maksim Volkau</Authors>
         <Copyright>Copyright © 2016-2019 Maksim Volkau</Copyright>
