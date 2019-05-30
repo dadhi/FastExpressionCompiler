@@ -3282,6 +3282,7 @@ namespace FastExpressionCompiler
                         return false;
 
                     EmitMethodCall(il, _objectEqualsMethod);
+
                     if (expressionType == ExpressionType.NotEqual) // invert result for not equal
                     {
                         il.Emit(OpCodes.Ldc_I4_0);
@@ -3621,39 +3622,29 @@ namespace FastExpressionCompiler
             private static bool TryEmitConditional(ConditionalExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var testExpr = expr.Test;
-                var usedInverted = false;
+                var testExpr = TryReduceCondition(expr.Test);
+                var comparedWithNull = false;
 
-                // optimization: special handling of comparing with null
-                if (testExpr is BinaryExpression b &&
-                    ((testExpr.NodeType == ExpressionType.Equal || testExpr.NodeType == ExpressionType.NotEqual) &&
-                     !(b.Left.Type.IsNullable() || b.Right.Type.IsNullable()) &&
-                      b.Right is ConstantExpression r && r.Value == null
-                    ? TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult)
-                    : b.Left is ConstantExpression l && l.Value == null &&
-                      TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult)))
-                {
-                    usedInverted = true;
-                }
+                if (testExpr is BinaryExpression b && TryEmitComparisonWithNull(b, paramExprs, il, ref closure, parent))
+                    comparedWithNull = true;
                 else if (!TryEmit(testExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
                 var labelIfFalse = il.DefineLabel();
-                il.Emit(usedInverted && testExpr.NodeType == ExpressionType.Equal ? OpCodes.Brtrue : OpCodes.Brfalse, labelIfFalse);
+                il.Emit(comparedWithNull && testExpr.NodeType == ExpressionType.Equal ? OpCodes.Brtrue : OpCodes.Brfalse, labelIfFalse);
 
                 var ifTrueExpr = expr.IfTrue;
                 if (!TryEmit(ifTrueExpr, paramExprs, il, ref closure, parent & ParentFlags.IgnoreResult))
                     return false;
 
                 var ifFalseExpr = expr.IfFalse;
-                if ((ifFalseExpr.NodeType == ExpressionType.Default) && (ifFalseExpr.Type == typeof(void)))
+                if (ifFalseExpr.NodeType == ExpressionType.Default && ifFalseExpr.Type == typeof(void))
                 {
                     il.MarkLabel(labelIfFalse);
                     return true;
                 }
 
                 var labelDone = il.DefineLabel();
-
                 il.Emit(OpCodes.Br, labelDone);
 
                 il.MarkLabel(labelIfFalse);
@@ -3662,6 +3653,47 @@ namespace FastExpressionCompiler
 
                 il.MarkLabel(labelDone);
                 return true;
+            }
+
+            private static Expression TryReduceCondition(Expression testExpr)
+            {
+                if (testExpr is BinaryExpression b)
+                {
+                    if (b.NodeType == ExpressionType.OrElse)
+                    {
+                        if (b.Left is ConstantExpression l && l.Value is bool lb)
+                            return lb ? b.Left : TryReduceCondition(b.Right);
+
+                        if (b.Right is ConstantExpression r && r.Value is bool rb && rb == false)
+                            return TryReduceCondition(b.Left);
+                    }
+                    else if (b.NodeType == ExpressionType.AndAlso)
+                    {
+                        if (b.Left is ConstantExpression l && l.Value is bool lb)
+                            return !lb ? b.Left : TryReduceCondition(b.Right);
+
+                        if (b.Right is ConstantExpression r && r.Value is bool rb && rb == true)
+                            return TryReduceCondition(b.Left);
+                    }
+                }
+
+                return testExpr;
+            }
+
+            private static bool TryEmitComparisonWithNull(BinaryExpression b,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+            {
+                if (b.NodeType != ExpressionType.Equal && b.NodeType != ExpressionType.NotEqual &&
+                    (b.Left.Type.IsNullable() || b.Right.Type.IsNullable()))
+                    return false;
+
+                if (b.Right is ConstantExpression r && r.Value == null)
+                    return TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult);
+
+                if (b.Left is ConstantExpression l && l.Value == null)
+                    return TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult);
+
+                return false;
             }
 
             private static bool EmitMethodCall(ILGenerator il, MethodInfo method, ParentFlags parent = ParentFlags.Empty)

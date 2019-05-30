@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks Condition="'$(DevMode)' != 'true'">net46;netcoreapp2.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DevMode)' == 'true'">netcoreapp2.0</TargetFrameworks>
-        <LangVersion>7.1</LangVersion>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">netcoreapp2.0</TargetFrameworks>        
+        <!--<TargetFramework>net46</TargetFramework>--><!--net46 is for ILVisualizer to work-->
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -10,6 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="AutoMapper" Version="5.1.1" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
         <PackageReference Include="NUnit" Version="3.11.0" />
         <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />

@@ -73,11 +73,18 @@ namespace FastExpressionCompiler.LightExpression
 
         public static ParameterExpression Variable(Type type, string name = null) => Parameter(type, name);
 
-        public static ConstantExpression Constant(object value, Type type = null) =>
-            value == null && type == null ? _nullExprInfo
-                : new ConstantExpression(value, type ?? value.GetType());
+        public static ConstantExpression Constant(object value, Type type = null)
+        {
+            if (value is bool b)
+                return b ? _trueExpr : _falseExpr;
+            if (type == null)
+                return value != null ? new ConstantExpression(value, value.GetType()) : _nullExpr;
+            return new ConstantExpression(value, type);
+        }
 
-        private static readonly ConstantExpression _nullExprInfo = new ConstantExpression(null, typeof(object));
+        private static readonly ConstantExpression _nullExpr  = new ConstantExpression(null,  typeof(object));
+        private static readonly ConstantExpression _falseExpr = new ConstantExpression(false, typeof(bool));
+        private static readonly ConstantExpression _trueExpr  = new ConstantExpression(true,  typeof(bool));
 
         public static NewExpression New(Type type) =>
             new NewExpression(type.GetTypeInfo().DeclaredConstructors.First(x => x.GetParameters().Length == 0), Tools.Empty<Expression>());
