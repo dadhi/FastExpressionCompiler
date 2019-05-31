@@ -438,33 +438,10 @@ namespace FastExpressionCompiler
         // Track the info required to build a closure object + some context information not directly related to closure.
         private struct ClosureInfo
         {
-            public bool IsClosureConstructed;
-
-            // Constructed closure object.
-            public readonly object Closure;
-
-            // Type of constructed closure, may be available even without closure object (in case of nested lambda)
-            public Type ClosureType;
-            public bool HasClosure => ClosureType != null;
+            // todo: Could be moved to the separate Context object
+            #region Emitting context to track state
 
             public bool LastEmitIsAddress;
-
-            // Constant expressions to find an index (by reference) of constant expression from compiled expression.
-            public ConstantExpression[] Constants;
-
-            // Parameters not passed through lambda parameter list But used inside lambda body.
-            // The top expression should not! contain non passed parameters. 
-            public ParameterExpression[] NonPassedParameters;
-
-            // All nested lambdas recursively nested in expression
-            public NestedLambdaInfo[] NestedLambdas;
-            public LambdaExpression[] NestedLambdaExprs;
-
-            public int ClosedItemCount => Constants.Length + NonPassedParameters.Length + NestedLambdas.Length;
-
-            // FieldInfos are needed to load field of closure object on stack in emitter.
-            // It is also an indicator that we use typed Closure object and not an array.
-            public FieldInfo[] ClosureFields;
 
             // Helper to know if a Return GotoExpression's Label should be emitted
             private int _tryCatchFinallyReturnLabelIndex;
@@ -475,9 +452,40 @@ namespace FastExpressionCompiler
             // Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
 
+            #endregion
+
+            #region Closure related state
+
+            public bool IsClosureConstructed;
+
+            // Constructed closure object.
+            public readonly object Closure;
+
+            // Type of constructed closure, may be available even without closure object (in case of nested lambda)
+            public Type ClosureType;
+            public bool HasClosure => ClosureType != null;
+
+            // Constant expressions to find an index (by reference) of constant expression from compiled expression.
+            public ConstantExpression[] Constants;
+
+            // FieldInfos are needed to load field of closure object on stack in emitter.
+            // It is also an indicator that we use typed Closure object and not an array.
+            public FieldInfo[] ClosureFields;
+
+            // Parameters not passed through lambda parameter list But used inside lambda body.
+            // The top expression should Not contain not passed parameters. 
+            public ParameterExpression[] NonPassedParameters;
+
+            // All nested lambdas recursively nested in expression
+            public NestedLambdaInfo[] NestedLambdas;
+            public LambdaExpression[] NestedLambdaExprs;
+
+            public int ClosedItemCount => Constants.Length + NonPassedParameters.Length + NestedLambdas.Length;
+
+            #endregion
+
             // Populates info directly with provided closure object and constants.
-            public ClosureInfo(bool isConstructed, object closure = null,
-                ConstantExpression[] closureConstantExpressions = null)
+            public ClosureInfo(bool isConstructed, object closure = null, ConstantExpression[] closureConstantExpressions = null)
             {
                 IsClosureConstructed = isConstructed;
 
@@ -499,7 +507,8 @@ namespace FastExpressionCompiler
                 else
                 {
                     Closure = closure;
-                    Constants = closureConstantExpressions ?? Tools.Empty<ConstantExpression>();
+                    Constants = closureConstantExpressions ?? throw new ArgumentException(
+                                    "Constant expressions should not be null if `closure` parameter is passed", nameof(closureConstantExpressions));
                     ClosureType = closure.GetType();
                     
                     // todo: verify that Fields types are correspond to `closureConstantExpressions`
@@ -652,12 +661,16 @@ namespace FastExpressionCompiler
 
             public void PushBlockAndConstructLocalVars(IReadOnlyList<ParameterExpression> blockVarExprs, ILGenerator il)
             {
-                var localVars = Tools.Empty<LocalBuilder>();
+                LocalBuilder[] localVars;
                 if (blockVarExprs.Count != 0)
                 {
                     localVars = new LocalBuilder[blockVarExprs.Count];
                     for (var i = 0; i < localVars.Length; i++)
                         localVars[i] = il.DeclareLocal(blockVarExprs[i].Type);
+                }
+                else
+                {
+                    localVars = Tools.Empty<LocalBuilder>();
                 }
 
                 PushBlock(blockVarExprs, localVars);
@@ -1443,9 +1456,10 @@ namespace FastExpressionCompiler
 
                             // ignore result for all not the last statements in block
                             var exprs = blockExpr.Expressions;
-                            for (var i = 0; i < exprs.Count - 1; i++)
-                                if (!TryEmit(exprs[i], paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
-                                    return false;
+                            if (exprs.Count > 1)
+                                for (var i = 0; i < exprs.Count - 1; i++)
+                                    if (!TryEmit(exprs[i], paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
+                                        return false;
 
                             // last (result) statement in block will provide the result
                             expr = blockExpr.Result;
@@ -1454,6 +1468,7 @@ namespace FastExpressionCompiler
 
                             if (!TryEmit(blockExpr.Result, paramExprs, il, ref closure, parent))
                                 return false;
+
                             closure.PopBlock();
                             return true;
 
