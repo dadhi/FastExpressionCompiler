@@ -661,18 +661,9 @@ namespace FastExpressionCompiler
 
             public void PushBlockAndConstructLocalVars(IReadOnlyList<ParameterExpression> blockVarExprs, ILGenerator il)
             {
-                LocalBuilder[] localVars;
-                if (blockVarExprs.Count != 0)
-                {
-                    localVars = new LocalBuilder[blockVarExprs.Count];
-                    for (var i = 0; i < localVars.Length; i++)
-                        localVars[i] = il.DeclareLocal(blockVarExprs[i].Type);
-                }
-                else
-                {
-                    localVars = Tools.Empty<LocalBuilder>();
-                }
-
+                var localVars = new LocalBuilder[blockVarExprs.Count];
+                for (var i = 0; i < localVars.Length; i++)
+                    localVars[i] = il.DeclareLocal(blockVarExprs[i].Type);
                 PushBlock(blockVarExprs, localVars);
             }
 
@@ -1458,18 +1449,35 @@ namespace FastExpressionCompiler
                             var exprs = blockExpr.Expressions;
                             if (exprs.Count > 1)
                                 for (var i = 0; i < exprs.Count - 1; i++)
+                                {
                                     if (!TryEmit(exprs[i], paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
                                         return false;
 
-                            // last (result) statement in block will provide the result
-                            expr = blockExpr.Result;
-                            if (!blockHasVars)
-                                continue; // OMG, no recursion!
+                                    // #196 - we may need to stop on the first Throw expression instead of actual result last expression
+                                    if (exprs[i].NodeType == ExpressionType.Throw)
+                                    {
+                                        expr = exprs[i];
+                                        break;
+                                    }
+                                }
 
-                            if (!TryEmit(blockExpr.Result, paramExprs, il, ref closure, parent))
-                                return false;
+                            if (expr.NodeType == ExpressionType.Throw)
+                            {
+                                ;
+                            }
+                            else
+                            {
+                                // last (result) statement in block will provide the result
+                                expr = blockExpr.Result;
+                                if (!blockHasVars)
+                                    continue; // OMG, no recursion!
 
-                            closure.PopBlock();
+                                if (!TryEmit(expr, paramExprs, il, ref closure, parent))
+                                    return false;
+                            }
+
+                            if (blockHasVars)
+                                closure.PopBlock();
                             return true;
 
                         case ExpressionType.Loop:
@@ -1770,9 +1778,7 @@ namespace FastExpressionCompiler
                         closure.PopBlock();
 
                     if (isNonVoid)
-                    {
                         il.Emit(OpCodes.Stloc_S, returnResult);
-                    }
                 }
 
                 var finallyExpr = tryExpr.Finally;
@@ -3674,7 +3680,7 @@ namespace FastExpressionCompiler
             {
                 if (testExpr is BinaryExpression b)
                 {
-                    if (b.NodeType == ExpressionType.OrElse)
+                    if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
                     {
                         if (b.Left is ConstantExpression l && l.Value is bool lb)
                             return lb ? b.Left : TryReduceCondition(b.Right);
@@ -3682,12 +3688,12 @@ namespace FastExpressionCompiler
                         if (b.Right is ConstantExpression r && r.Value is bool rb && rb == false)
                             return TryReduceCondition(b.Left);
                     }
-                    else if (b.NodeType == ExpressionType.AndAlso)
+                    else if (b.NodeType == ExpressionType.AndAlso || b.NodeType == ExpressionType.And)
                     {
                         if (b.Left is ConstantExpression l && l.Value is bool lb)
                             return !lb ? b.Left : TryReduceCondition(b.Right);
 
-                        if (b.Right is ConstantExpression r && r.Value is bool rb && rb == true)
+                        if (b.Right is ConstantExpression r && r.Value is bool rb && rb)
                             return TryReduceCondition(b.Left);
                     }
                 }
