@@ -1442,42 +1442,50 @@ namespace FastExpressionCompiler
                         case ExpressionType.Block:
                             var blockExpr = (BlockExpression)expr;
                             var blockHasVars = blockExpr.Variables.Count != 0;
+                            var statementExprs = blockExpr.Expressions;
+
+                            // Trim the expressions after the Throw - #196
+                            if (statementExprs.Count > 1)
+                            {
+                                var throwIndex = -1;
+                                for (var i = 0; i < statementExprs.Count && throwIndex == -1; i++)
+                                    if (statementExprs[i].NodeType == ExpressionType.Throw)
+                                        throwIndex = i;
+
+                                if (throwIndex != -1 && throwIndex != statementExprs.Count - 1)
+                                {
+                                    var newExprs = new Expression[throwIndex + 1];
+                                    for (var i = 0; i < throwIndex; i++)
+                                        newExprs[i] = statementExprs[i];
+
+                                    var throwExpr = statementExprs[throwIndex];
+                                    if (throwExpr.Type != blockExpr.Type)
+                                        throwExpr = Expression.Throw(((UnaryExpression)throwExpr).Operand, blockExpr.Type);
+
+                                    newExprs[throwIndex] = throwExpr;
+
+                                    blockExpr = Expression.Block(typeof(void), blockExpr.Variables, newExprs);
+                                }
+                            }
+
                             if (blockHasVars)
                                 closure.PushBlockAndConstructLocalVars(blockExpr.Variables, il);
 
                             // ignore result for all not the last statements in block
-                            var exprs = blockExpr.Expressions;
-                            if (exprs.Count > 1)
-                                for (var i = 0; i < exprs.Count - 1; i++)
-                                {
-                                    if (!TryEmit(exprs[i], paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
+                            if (statementExprs.Count > 1)
+                                for (var i = 0; i < statementExprs.Count - 1; i++)
+                                    if (!TryEmit(statementExprs[i], paramExprs, il, ref closure,
+                                        parent | ParentFlags.IgnoreResult))
                                         return false;
 
-                                    // #196 - we may need to stop on the first Throw expression instead of actual result last expression
-                                    if (exprs[i].NodeType == ExpressionType.Throw)
-                                    {
-                                        expr = exprs[i];
-                                        break;
-                                    }
-                                }
+                            // last (result) statement in block will provide the result
+                            expr = blockExpr.Result;
+                            if (!blockHasVars)
+                                continue; // OMG, no recursion!
 
-                            if (expr.NodeType == ExpressionType.Throw)
-                            {
-                                ;
-                            }
-                            else
-                            {
-                                // last (result) statement in block will provide the result
-                                expr = blockExpr.Result;
-                                if (!blockHasVars)
-                                    continue; // OMG, no recursion!
-
-                                if (!TryEmit(expr, paramExprs, il, ref closure, parent))
-                                    return false;
-                            }
-
-                            if (blockHasVars)
-                                closure.PopBlock();
+                            if (!TryEmit(expr, paramExprs, il, ref closure, parent))
+                                return false;
+                            closure.PopBlock();
                             return true;
 
                         case ExpressionType.Loop:
@@ -1577,7 +1585,8 @@ namespace FastExpressionCompiler
                 if (index == -1)
                     throw new InvalidOperationException("Cannot jump, no labels found");
 
-                if ((expr.Value != null) && !TryEmit(expr.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                if (expr.Value != null && 
+                    !TryEmit(expr.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
                 switch (expr.Kind)
@@ -1594,7 +1603,11 @@ namespace FastExpressionCompiler
 
                     case GotoExpressionKind.Return:
                         if ((parent & ParentFlags.TryCatch) == 0)
-                            return EmitGotoLabel(OpCodes.Ret, index, il, ref closure);
+                        {
+                            // use label defined by Label expression or define its own to use by subsequent Label
+                            il.Emit(OpCodes.Ret, closure.GetOrCreateLabel(index, il));
+                            return true;
+                        }
 
                         // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
                         // to emit the Leave instruction, return label and return result
@@ -1745,12 +1758,12 @@ namespace FastExpressionCompiler
                     return false;
 
                 var exprType = tryExpr.Type;
-                var isNonVoid = exprType != typeof(void); // todo: check how it is correlated with `parent.IgnoreResult`
-                var returnResult = default(LocalBuilder);
-                if (isNonVoid)
-                {
-                    il.Emit(OpCodes.Stloc_S, returnResult = il.DeclareLocal(exprType));
-                }
+                //var isNonVoid = exprType != typeof(void);
+                var returnsResult = exprType != typeof(void) && (parent & ParentFlags.IgnoreResult) == 0;
+                var resultVar = default(LocalBuilder);
+
+                if (returnsResult)
+                    il.Emit(OpCodes.Stloc_S, resultVar = il.DeclareLocal(exprType));
 
                 var catchBlocks = tryExpr.Handlers;
                 for (var i = 0; i < catchBlocks.Count; i++)
@@ -1777,8 +1790,8 @@ namespace FastExpressionCompiler
                     if (exVarExpr != null)
                         closure.PopBlock();
 
-                    if (isNonVoid)
-                        il.Emit(OpCodes.Stloc_S, returnResult);
+                    if (returnsResult)
+                        il.Emit(OpCodes.Stloc_S, resultVar);
                 }
 
                 var finallyExpr = tryExpr.Finally;
@@ -1790,10 +1803,9 @@ namespace FastExpressionCompiler
                 }
 
                 il.EndExceptionBlock();
-                if (isNonVoid)
-                {
-                    il.Emit(OpCodes.Ldloc, returnResult);
-                }
+
+                if (returnsResult)
+                    il.Emit(OpCodes.Ldloc, resultVar);
 
                 return true;
             }

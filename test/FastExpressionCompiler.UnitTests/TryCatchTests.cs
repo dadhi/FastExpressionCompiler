@@ -174,16 +174,21 @@ namespace FastExpressionCompiler.UnitTests
         {
             var returnLabel = Label(typeof(string));
 
-            var expr = Lambda<Func<string>>(Block(
-                TryCatch(
-                    Throw(New(typeof(Exception).GetConstructor(Type.EmptyTypes)), typeof(string)),
-                    Catch(
-                        typeof(Exception),
-                        Return(returnLabel, Constant("From Catch block"), typeof(string))
-                    )
-                ),
-                Label(returnLabel, Default(returnLabel.Type))));
+            var expr = Lambda<Func<string>>(
+                Block(
+                    TryCatch(
+                        Throw(New(typeof(Exception).GetConstructor(Type.EmptyTypes)), typeof(string)),
+                        Catch(
+                            typeof(Exception),
+                            Return(returnLabel, Constant("From Catch block"), typeof(string)))
+                    ),
+                    Label(returnLabel, Default(returnLabel.Type))
+                ));
 
+#if !LIGHT_EXPRESSION
+            var funcSys = expr.Compile();
+            Assert.AreEqual("From Catch block", funcSys());
+#endif
             var func = expr.CompileFast(true);
 
             Assert.IsNotNull(func);

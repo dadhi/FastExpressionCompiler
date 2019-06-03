@@ -658,6 +658,9 @@ namespace FastExpressionCompiler.LightExpression
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
             new BlockExpression(type, variables.AsReadOnlyList(), expressions);
 
+        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
+            new BlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+
         /// <summary>
         /// Creates a LoopExpression with the given body and (optional) break target.
         /// </summary>
