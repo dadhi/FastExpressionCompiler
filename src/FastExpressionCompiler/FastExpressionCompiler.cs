@@ -684,8 +684,6 @@ namespace FastExpressionCompiler
             {
                 for (var block = _currentBlock; !block.IsEmpty; block = block.Parent)
                 {
-                    if (block.LocalVars.Length == 0)
-                        continue;
                     var varIndex = block.VarExprs.GetFirstIndex(varParamExpr);
                     if (varIndex != -1)
                         return block.LocalVars[varIndex];
@@ -1849,7 +1847,8 @@ namespace FastExpressionCompiler
                 var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (variable != null)
                 {
-                    if (byRefIndex != -1 || paramType.IsValueType() && (parent & ParentFlags.MemberAccess) != 0)
+                    if (byRefIndex != -1 || 
+                        paramType.IsValueType() && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
                         il.Emit(OpCodes.Ldloca_S, variable);
                     else
                         il.Emit(OpCodes.Ldloc, variable);
@@ -2920,7 +2919,7 @@ namespace FastExpressionCompiler
                         DeclareAndLoadLocalVariable(il, objType);
                 }
 
-                IReadOnlyList<Expression> argExprs = expr.Arguments;
+                var argExprs = expr.Arguments;
                 if (argExprs.Count != 0)
                 {
                     var args = expr.Method.GetParameters();
@@ -3959,7 +3958,7 @@ namespace FastExpressionCompiler
 
         public static int GetFirstIndex<T>(this IReadOnlyList<T> source, T item)
         {
-            if (source != null)
+            if (source != null && source.Count != 0)
                 for (var i = 0; i < source.Count; ++i)
                     if (ReferenceEquals(source[i], item))
                         return i;
