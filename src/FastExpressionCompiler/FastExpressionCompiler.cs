@@ -3799,15 +3799,13 @@ namespace FastExpressionCompiler
         internal static bool IsNullable(this Type type) =>
             type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>);
 
-#if LIGHT_EXPRESSION
-        internal static PropertyInfo FindProperty(this Type type, string propertyName) =>
-            type.GetTypeInfo().GetDeclaredProperty(propertyName);
-
-        internal static FieldInfo FindField(this Type type, string fieldName) =>
-            type.GetTypeInfo().GetDeclaredField(fieldName);
-#endif
-        internal static MethodInfo FindMethod(this Type type, string methodName) =>
-            type.GetTypeInfo().GetDeclaredMethod(methodName);
+        internal static MethodInfo FindMethod(this Type type, string methodName)
+        {
+            foreach (var method in type.GetTypeInfo().DeclaredMethods)
+                if (method.Name == methodName)
+                    return method;
+            return type.GetTypeInfo().BaseType?.FindMethod(methodName);
+        }
 
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) =>
             type.FindMethod("Invoke");

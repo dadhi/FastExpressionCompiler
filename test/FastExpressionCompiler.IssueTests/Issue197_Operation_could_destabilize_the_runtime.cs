@@ -69,7 +69,6 @@ namespace FastExpressionCompiler.IssueTests
 
             var srcParam = Parameter(typeof(Source), "src");
             var destParam = Parameter(typeof(Destination), "dest");
-            var resolvedValueParam = Parameter(typeof(ConsoleColor), "resolvedValue");
             var propertyValueParam = Parameter(typeof(string), "propertyValue");
 
 

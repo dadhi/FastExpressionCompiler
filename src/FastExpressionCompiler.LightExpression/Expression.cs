@@ -135,7 +135,8 @@ namespace FastExpressionCompiler.LightExpression
             new PropertyExpression(instance, property);
 
         public static MemberExpression Property(Expression expression, string propertyName) =>
-            Property(expression, expression.Type.FindProperty(propertyName));
+            Property(expression, expression.Type.FindProperty(propertyName) 
+                ?? throw new ArgumentException($"Declared property with the name '{propertyName}' is not found in '{expression.Type}'", nameof(propertyName)));
 
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, params Expression[] arguments) =>
             new IndexExpression(instance, indexer, arguments);
@@ -145,8 +146,10 @@ namespace FastExpressionCompiler.LightExpression
 
         public static MemberExpression PropertyOrField(Expression expression, string propertyName) =>
             expression.Type.FindProperty(propertyName) != null ?
-                (MemberExpression)new PropertyExpression(expression, expression.Type.FindProperty(propertyName)) :
-                new FieldExpression(expression, expression.Type.FindField(propertyName));
+                (MemberExpression)new PropertyExpression(expression, expression.Type.FindProperty(propertyName)
+                    ?? throw new ArgumentException($"Declared property with the name '{propertyName}' is not found in '{expression.Type}'", nameof(propertyName))) :
+                new FieldExpression(expression, expression.Type.FindField(propertyName)
+                    ?? throw new ArgumentException($"Declared field with the name '{propertyName}' is not found '{expression.Type}'", nameof(propertyName)));
 
         public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member)
         {
@@ -849,6 +852,22 @@ namespace FastExpressionCompiler.LightExpression
              target == typeof(ValueType)) ||
              source.GetTypeInfo().IsEnum && target == typeof(Enum);
 
+        internal static PropertyInfo FindProperty(this Type type, string propertyName)
+        {
+            foreach (var x in type.GetTypeInfo().DeclaredProperties)
+                if (x.Name == propertyName)
+                    return x;
+            return type.GetTypeInfo().BaseType?.FindProperty(propertyName);
+        }
+
+        internal static FieldInfo FindField(this Type type, string fieldName)
+        {
+            foreach (var x in type.GetTypeInfo().DeclaredFields)
+                if (x.Name == fieldName)
+                    return x;
+            return type.GetTypeInfo().BaseType?.FindField(fieldName);
+        }
+
         internal static MethodInfo FindMethod(this Type type,
             string methodName, Type[] typeArgs, IReadOnlyList<Expression> args, bool isStatic = false)
         {
@@ -871,7 +890,7 @@ namespace FastExpressionCompiler.LightExpression
                 }
             }
 
-            return null;
+            return type.GetTypeInfo().BaseType?.FindMethod(methodName, typeArgs, args, isStatic);
         }
 
         private static bool AreTypesTheSame(Type[] source, Type[] target)
