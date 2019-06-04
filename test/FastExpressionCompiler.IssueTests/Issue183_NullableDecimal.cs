@@ -20,7 +20,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             var param = Parameter(typeof(decimal), "d");
 
-            var f = Lambda<Func<decimal, decimal?>>(Convert(param, typeof(decimal?)), param).CompileFast();
+            var f = Lambda<Func<decimal, decimal?>>(Convert(param, typeof(decimal?)), param).CompileFast(true);
             var x = f(42);
 
             Assert.IsNotNull(x);
@@ -39,7 +39,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var param = Parameter(typeof(byte?), "b");
             var ff = Lambda<Func<byte?, decimal?>>(Convert(param, typeof(decimal?)), param)
-                .CompileFast();
+                .CompileFast(true);
             var xf = ff(null);
             Assert.IsNull(xf);
         }
@@ -52,7 +52,7 @@ namespace FastExpressionCompiler.UnitTests
             var f = Lambda<Func<DecimalContainer, decimal?>>(
                 Convert(Property(param, nameof(DecimalContainer.Decimal)), typeof(decimal?)), 
                 param
-                ).CompileFast();
+                ).CompileFast(true);
 
             var x = f(new DecimalContainer { Decimal = 42 });
 
@@ -68,7 +68,7 @@ namespace FastExpressionCompiler.UnitTests
             var f = Lambda<Func<DecimalContainer, decimal?>>(
                 Convert(Property(param, nameof(DecimalContainer.NullableByte)), typeof(decimal?)),
                 param
-            ).CompileFast();
+            ).CompileFast(true);
 
             var x = f(new DecimalContainer { NullableByte = 42 });
 
@@ -85,7 +85,7 @@ namespace FastExpressionCompiler.UnitTests
                 Convert(Property(param, nameof(DecimalContainer.NullableByte)), typeof(decimal?)), 
                 Convert(Property(param, nameof(DecimalContainer.Decimal)), typeof(decimal?)));
 
-            var f = Lambda<Func<DecimalContainer, bool>>(body, param).CompileFast();
+            var f = Lambda<Func<DecimalContainer, bool>>(body, param).CompileFast(true);
 
             var x = f(new DecimalContainer { Decimal = 1 });
             Assert.IsFalse(x); // cause byte? to decimal? would be `null`

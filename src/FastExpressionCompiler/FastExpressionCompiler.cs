@@ -1640,7 +1640,7 @@ namespace FastExpressionCompiler
                 }
 
                 // multi dimensional array
-                return EmitMethodCall(il, expr.Object?.Type.FindMethod("Get"));
+                return EmitMethodCall(il, expr.Object?.Type.FindMethod("Get", false));
             }
 
             private static bool TryEmitCoalesceOperator(BinaryExpression exprObj,
@@ -1999,11 +1999,11 @@ namespace FastExpressionCompiler
                     return TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, 0)
                         && EmitMethodCall(il, method, parent);
 
-                var targetType = expr.Type;
-
                 var sourceType = opExpr.Type;
                 var sourceTypeIsNullable = sourceType.IsNullable();
                 var underlyingNullableSourceType = Nullable.GetUnderlyingType(sourceType);
+                var targetType = expr.Type;
+
                 if (sourceTypeIsNullable && targetType == underlyingNullableSourceType)
                 {
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceAccess))
@@ -2041,7 +2041,7 @@ namespace FastExpressionCompiler
                 {
                     var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
 
-                    var convertOpMethod = sourceType.FindConvertOperator(sourceType, actualTargetType);
+                    var convertOpMethod = method ?? sourceType.FindConvertOperator(sourceType, actualTargetType);
                     if (convertOpMethod != null)
                     {
                         EmitMethodCall(il, convertOpMethod, parent);
@@ -2054,7 +2054,7 @@ namespace FastExpressionCompiler
                 {
                     var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
 
-                    var convertOpMethod = actualSourceType.FindConvertOperator(actualSourceType, targetType);
+                    var convertOpMethod = method ?? actualSourceType.FindConvertOperator(actualSourceType, targetType);
                     if (convertOpMethod != null)
                     {
                         if (sourceTypeIsNullable)
@@ -2072,7 +2072,7 @@ namespace FastExpressionCompiler
                 {
                     var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
 
-                    var convertOpMethod = targetType.FindConvertOperator(actualSourceType, targetType);
+                    var convertOpMethod = method ?? targetType.FindConvertOperator(actualSourceType, targetType);
                     if (convertOpMethod != null)
                     {
                         if (sourceTypeIsNullable)
@@ -2089,7 +2089,7 @@ namespace FastExpressionCompiler
                 {
                     var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
 
-                    var convertOpMethod = actualTargetType.FindConvertOperator(sourceType, actualTargetType);
+                    var convertOpMethod = method ?? actualTargetType.FindConvertOperator(sourceType, actualTargetType);
                     if (convertOpMethod != null)
                     {
                         EmitMethodCall(il, convertOpMethod, parent);
@@ -2138,7 +2138,13 @@ namespace FastExpressionCompiler
 
                         if (!TryEmitValueConvert(underlyingNullableTargetType, il,
                             expr.NodeType == ExpressionType.ConvertChecked))
-                            return false;
+                        {
+                            var convertOpMethod = method ?? underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
+                            if (convertOpMethod != null)
+                                EmitMethodCall(il, convertOpMethod, parent);
+                            else
+                                return false; // nor conversion nor conversion operator is found
+                        }
 
                         il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                         il.MarkLabel(labelDone);
@@ -2900,7 +2906,7 @@ namespace FastExpressionCompiler
                 }
 
                 // multi dimensional array
-                return EmitMethodCall(il, instType?.FindMethod("Set"));
+                return EmitMethodCall(il, instType?.FindMethod("Set", false));
             }
 
             private static bool TryEmitMethodCall(MethodCallExpression expr,
@@ -3531,8 +3537,7 @@ namespace FastExpressionCompiler
                                 if (m.Name == "Concat" && m.GetParameters().Length == 2 &&
                                     m.GetParameters()[0].ParameterType == paraType)
                                 {
-                                    method = m;
-                                    break;
+                                    method = m; break;
                                 }
                         }
                         else
@@ -3549,9 +3554,16 @@ namespace FastExpressionCompiler
                                 : null;
 
                             if (methodName != null)
-                                method = exprType.FindMethod(methodName);
+                            {
+                                foreach (var m in exprType.GetTypeInfo().DeclaredMethods)
+                                    if (m.IsSpecialName && m.IsStatic && m.Name == methodName)
+                                    {
+                                        method = m; break;
+                                    }
+                            }
                         }
-                        return method != null && EmitMethodCall(il, method);
+
+                        return EmitMethodCall(il, method);
                     }
                 }
 
@@ -3623,7 +3635,7 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.Power:
-                        return EmitMethodCall(il, typeof(Math).FindMethod("Pow"));
+                        return EmitMethodCall(il, typeof(Math).FindMethod("Pow", false));
                 }
 
                 return false;
@@ -3799,16 +3811,16 @@ namespace FastExpressionCompiler
         internal static bool IsNullable(this Type type) =>
             type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>);
 
-        internal static MethodInfo FindMethod(this Type type, string methodName)
+        internal static MethodInfo FindMethod(this Type type, string methodName, bool isOperatorOrPropertyGetterSetter)
         {
             foreach (var method in type.GetTypeInfo().DeclaredMethods)
-                if (method.Name == methodName)
+                if (method.IsSpecialName == isOperatorOrPropertyGetterSetter && method.Name == methodName)
                     return method;
-            return type.GetTypeInfo().BaseType?.FindMethod(methodName);
+            return type.GetTypeInfo().BaseType?.FindMethod(methodName, isOperatorOrPropertyGetterSetter);
         }
 
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) =>
-            type.FindMethod("Invoke");
+            type.FindMethod("Invoke", false);
 
         internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type)
         {
@@ -3819,21 +3831,21 @@ namespace FastExpressionCompiler
         }
 
         internal static MethodInfo FindValueGetterMethod(this Type type) =>
-            type.FindMethod("get_Value");
+            type.FindMethod("get_Value", true);
 
         internal static MethodInfo FindNullableHasValueGetterMethod(this Type type) =>
-            type.FindMethod("get_HasValue");
+            type.FindMethod("get_HasValue", true);
 
         internal static MethodInfo FindPropertyGetMethod(this PropertyInfo prop) =>
-            prop.DeclaringType.FindMethod("get_" + prop.Name);
+            prop.DeclaringType.FindMethod("get_" + prop.Name, true);
 
         internal static MethodInfo FindPropertySetMethod(this PropertyInfo prop) =>
-            prop.DeclaringType.FindMethod("set_" + prop.Name);
+            prop.DeclaringType.FindMethod("set_" + prop.Name, true);
 
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
             foreach (var m in type.GetTypeInfo().DeclaredMethods)
-                if (m.IsStatic && m.ReturnType == targetType &&
+                if (m.IsStatic && m.IsSpecialName && m.ReturnType == targetType &&
                     (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
                     m.GetParameters()[0].ParameterType == sourceType)
                     return m;
@@ -3966,9 +3978,9 @@ namespace FastExpressionCompiler
         public static T GetFirst<T>(this IEnumerable<T> source)
         {
             if (source is IList<T> list)
-                return list.Count == 0 ? default(T) : list[0];
+                return list.Count == 0 ? default : list[0];
             using (var items = source.GetEnumerator())
-                return items.MoveNext() ? items.Current : default(T);
+                return items.MoveNext() ? items.Current : default;
         }
     }
 }

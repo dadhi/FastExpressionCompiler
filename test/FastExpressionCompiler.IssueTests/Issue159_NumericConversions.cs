@@ -447,7 +447,20 @@ IL_0021:  ret
             Assert.AreEqual(8532.00m, result.Value);
         }
 
-        [Test, Ignore("fix me")]
+        [Test]
+        public void ConvertNullableFloatToDecimal()
+        {
+            var p = Parameter(typeof(float?), "f");
+            var f = Lambda<Func<float?, decimal?>>(Convert(p, typeof(decimal?)), p);
+
+            //var fs = f.CompileSys();
+            //Assert.AreEqual(42, fs(42));
+
+            var ff = f.CompileFast(true);
+            Assert.AreEqual(42, ff(42));
+        }
+
+        [Test]
         public void NullableFloatComparisonsWithConversionsShouldWork()
         {
             var floatParameter = Parameter(typeof(ValueHolder<float?>), "nullableFloatValue");
