@@ -1037,6 +1037,8 @@ namespace FastExpressionCompiler.LightExpression
                     return SysExpr.UnaryPlus(Operand.ToExpression());
                 case ExpressionType.Unbox:
                     return SysExpr.Unbox(Operand.ToExpression(), Type);
+                case ExpressionType.Throw:
+                    return SysExpr.Throw(Operand.ToExpression(), Type);
                 default:
                     throw new NotSupportedException("Cannot convert Expression to Expression of type " + NodeType);
             }
