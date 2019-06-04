@@ -1,33 +1,22 @@
-﻿#if !LIGHT_EXPRESSION
-using System.Linq;
+﻿using System.Linq;
 using System.Reflection;
 using System;
-using System.Linq.Expressions;
-using AutoMapper;
 using NUnit.Framework;
-using static System.Linq.Expressions.Expression;
 
-namespace FastExpressionCompiler.IssueTests
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
+namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class Issue196_AutoMapper_tests_are_failing_when_using_FEC
     {
         public class FastExpressionCompilerBug
         {
-            [Test]
-            public void ShouldWork()
-            {
-                var config = new MapperConfiguration(cfg => cfg.CreateMap<Source, Dest>());
-                var mapper = config.CreateMapper();
-                var expression = mapper.ConfigurationProvider.ExpressionBuilder.CreateMapExpression(typeof(Source), typeof(Dest));
-                Assert.IsNotNull(((LambdaExpression)expression).CompileFast(true));
-
-                var source = new Source { Value = 5 };
-                var dest = mapper.Map<Dest>(source);
-
-                Assert.AreEqual(source.Value, dest.Value);
-            }
-
             public class Source
             {
                 public int Value { get; set; }
@@ -119,12 +108,11 @@ namespace FastExpressionCompiler.IssueTests
                             Assign(resultVar, Constant(77))),
                         resultVar));
 
-                var fs = expression.Compile();
-                Assert.IsNotNull(fs);
-                Assert.AreEqual(77, fs());
+                //var fs = expression.CompileSys();
+                //Assert.IsNotNull(fs);
+                //Assert.AreEqual(77, fs());
 
                 var ff = expression.CompileFast(true);
-                Assert.IsNotNull(ff);
                 Assert.AreEqual(77, ff());
             }
 
@@ -147,12 +135,11 @@ namespace FastExpressionCompiler.IssueTests
                                     typeof(int)))),
                         resultVar));
 
-                var fs = expression.Compile();
-                Assert.IsNotNull(fs);
-                Assert.AreEqual(77, fs());
+                //var fs = expression.CompileSys();
+                //Assert.IsNotNull(fs);
+                //Assert.AreEqual(77, fs());
 
                 var ff = expression.CompileFast(true);
-                Assert.IsNotNull(ff);
                 Assert.AreEqual(77, ff());
             }
 
@@ -197,7 +184,7 @@ namespace FastExpressionCompiler.IssueTests
                     srcParam, destParam, Parameter(typeof(ResolutionContext), "_")
                 );
 
-                var fs = expression.Compile();
+                var fs = expression.CompileSys();
                 var ds = fs(new Source { Value = 42 }, null, new ResolutionContext());
                 Assert.AreEqual(42, ds.Value);
 
@@ -250,7 +237,7 @@ namespace FastExpressionCompiler.IssueTests
                     srcParam, destParam, Parameter(typeof(ResolutionContext), "_")
                 );
 
-                var fs = expression.Compile();
+                var fs = expression.CompileSys();
                 var ds = fs(new Source { Value = 42 }, null, new ResolutionContext());
                 Assert.AreEqual(42, ds.Value);
 
@@ -304,7 +291,7 @@ namespace FastExpressionCompiler.IssueTests
                     srcParam, destParam, Parameter(typeof(ResolutionContext), "_")
                 );
 
-                var fs = expression.Compile();
+                var fs = expression.CompileSys();
                 var ds = fs(new Source { Value = 42 }, null, new ResolutionContext());
                 Assert.AreEqual(42, ds.Value);
 
@@ -317,4 +304,3 @@ namespace FastExpressionCompiler.IssueTests
         }
     }
 }
-#endif

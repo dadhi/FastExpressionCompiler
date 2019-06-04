@@ -9,7 +9,7 @@ using SysExpr = System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
     [TestFixture]
-    public class ExpressionInfoTests
+    public class LightExpressionTests
     {
         [Test]
         public void Can_compile_lambda_without_converting_to_expression()

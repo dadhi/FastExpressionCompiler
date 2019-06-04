@@ -30,15 +30,15 @@ namespace FastExpressionCompiler.Benchmarks
 
         [Benchmark]
         public object CreateExpression_and_Compile() =>
-            ExpressionInfoTests.CreateComplexExpression().Compile();
+            LightExpressionTests.CreateComplexExpression().Compile();
 
         [Benchmark]
         public object CreateExpression_and_CompileFast() =>
-            ExpressionInfoTests.CreateComplexExpression().CompileFast();
+            LightExpressionTests.CreateComplexExpression().CompileFast();
 
         [Benchmark(Baseline = true)]
         public object CreateLightExpression_and_CompileFast() =>
-            LE.CompileFast(ExpressionInfoTests.CreateComplexLightExpression());
+            LE.CompileFast(LightExpressionTests.CreateComplexLightExpression());
     }
 
     [MemoryDiagnoser]
@@ -55,10 +55,10 @@ namespace FastExpressionCompiler.Benchmarks
          */
         [Benchmark]
         public object CreateExpression() =>
-            ExpressionInfoTests.CreateComplexExpression();
+            LightExpressionTests.CreateComplexExpression();
 
         [Benchmark(Baseline = true)]
         public object CreateLightExpression() =>
-            ExpressionInfoTests.CreateComplexLightExpression();
+            LightExpressionTests.CreateComplexLightExpression();
     }
 }

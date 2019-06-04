@@ -26,12 +26,6 @@
         <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' == 'net46'">
-        <Reference Include="Microsoft.CSharp">
-            <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6\Microsoft.CSharp.dll</HintPath>
-        </Reference>
-    </ItemGroup>
-
     <ItemGroup>
         <Reference Include="ILDebugging.Decoder">
             <HintPath>..\libs\ILDebugging.Decoder.dll</HintPath>
