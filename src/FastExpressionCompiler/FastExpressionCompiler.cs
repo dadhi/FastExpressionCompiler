@@ -1756,7 +1756,6 @@ namespace FastExpressionCompiler
                     return false;
 
                 var exprType = tryExpr.Type;
-                //var isNonVoid = exprType != typeof(void);
                 var returnsResult = exprType != typeof(void) && (parent & ParentFlags.IgnoreResult) == 0;
                 var resultVar = default(LocalBuilder);
 
