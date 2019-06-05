@@ -440,6 +440,8 @@ namespace FastExpressionCompiler
         private struct TryCatchFinallyInfo
         {
             public bool HasReturnExpression { get; set; }
+            
+            public int ReturnLabelIndex { get; set; }
         }
 
         // Track the info required to build a closure object + some context information not directly related to closure.
@@ -450,13 +452,11 @@ namespace FastExpressionCompiler
 
             public bool LastEmitIsAddress;
 
-            // Helper to know if a Return GotoExpression's Label should be emitted
-            private int _tryCatchFinallyReturnLabelIndex;
-
             // Helpers to decide whether we are inside the block or not
             private BlockInfo[] _blockStack;
             private int _currentBlockIndex;
             
+            // Helpers to decide whether we are inside a try/catch or not
             private TryCatchFinallyInfo[] _tryCatchFinallyStack;
             private int _currentTryCatchFinallyIndex;
 
@@ -503,7 +503,6 @@ namespace FastExpressionCompiler
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 NestedLambdaExprs = Tools.Empty<LambdaExpression>();
-                _tryCatchFinallyReturnLabelIndex = -1;
                 _blockStack = Tools.Empty<BlockInfo>();
                 _currentBlockIndex = -1;
                 _tryCatchFinallyStack = Tools.Empty<TryCatchFinallyInfo>();
@@ -579,7 +578,8 @@ namespace FastExpressionCompiler
                 return -1;
             }
 
-            public void MarkLabelAsTryReturn(int index) => _tryCatchFinallyReturnLabelIndex = index;
+            public void MarkLabelAsTryReturn(int labelIndex) => 
+                _tryCatchFinallyStack[_currentTryCatchFinallyIndex].ReturnLabelIndex = labelIndex;
 
             public void MarkReturnExpression()
             {
@@ -710,8 +710,14 @@ namespace FastExpressionCompiler
                 }
             }
 
-            public bool IsTryReturnLabel(int labelIndex) 
-                => labelIndex == _tryCatchFinallyReturnLabelIndex;
+            public bool IsTryReturnLabel(int labelIndex)
+            {
+                for (var i = _tryCatchFinallyStack.Length; i > 0;)
+                    if (_tryCatchFinallyStack[--i].ReturnLabelIndex == labelIndex)
+                        return true;
+
+                return false;
+            }
 
             public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
