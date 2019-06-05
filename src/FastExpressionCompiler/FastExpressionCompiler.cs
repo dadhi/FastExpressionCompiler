@@ -419,20 +419,22 @@ namespace FastExpressionCompiler
 
         private sealed class BlockInfo
         {
-            public static readonly BlockInfo Empty = new BlockInfo();
-            private BlockInfo() { }
-
-            public bool IsEmpty => Parent == null;
-            public readonly BlockInfo Parent;
             public readonly IReadOnlyList<ParameterExpression> VarExprs;
             public readonly LocalBuilder[] LocalVars;
 
-            internal BlockInfo(BlockInfo parent, IReadOnlyList<ParameterExpression> varExprs, LocalBuilder[] localVars)
+            internal BlockInfo(IReadOnlyList<ParameterExpression> varExprs, LocalBuilder[] localVars)
             {
-                Parent = parent;
                 VarExprs = varExprs;
                 LocalVars = localVars;
             }
+
+            public void ConstructLocalVariables(IReadOnlyList<ParameterExpression> varExprs, ILGenerator il)
+            {
+                for (var i = 0; i < varExprs.Count; i++)
+                    LocalVars[i] = il.DeclareLocal(varExprs[i].Type);
+            }
+
+            public void SetLocalVariable(LocalBuilder localVar) => LocalVars[0] = localVar;
         }
 
         // Track the info required to build a closure object + some context information not directly related to closure.
@@ -446,8 +448,9 @@ namespace FastExpressionCompiler
             // Helper to know if a Return GotoExpression's Label should be emitted
             private int _tryCatchFinallyReturnLabelIndex;
 
-            // Helper to decide whether we are inside the block or not
-            private BlockInfo _currentBlock;
+            // Helpers to decide whether we are inside the block or not
+            private BlockInfo[] _blockStack;
+            private int _currentBlockIndex;
 
             // Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
@@ -492,8 +495,9 @@ namespace FastExpressionCompiler
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 NestedLambdaExprs = Tools.Empty<LambdaExpression>();
-                _tryCatchFinallyReturnLabelIndex = int.MinValue;
-                _currentBlock = BlockInfo.Empty;
+                _tryCatchFinallyReturnLabelIndex = -1;
+                _blockStack = Tools.Empty<BlockInfo>();
+                _currentBlockIndex = -1;
                 _labels = null;
                 LastEmitIsAddress = false;
 
@@ -566,6 +570,11 @@ namespace FastExpressionCompiler
             }
 
             public void MarkLabelAsTryReturn(int index) => _tryCatchFinallyReturnLabelIndex = index;
+
+            public void MarkAsUsedReturnTarget(LabelTarget labelTarget)
+            {
+
+            }
 
             public object ConstructClosureTypeAndObject(bool constructTypeOnly = false)
             {
@@ -656,25 +665,28 @@ namespace FastExpressionCompiler
                 return constructTypeOnly ? null : createClosure.Invoke(null, fieldValues);
             }
 
-            public void PushBlock(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars) =>
-                _currentBlock = new BlockInfo(_currentBlock, blockVarExprs, localVars);
-
-            public void PushBlockAndConstructLocalVars(IReadOnlyList<ParameterExpression> blockVarExprs, ILGenerator il)
+            public void PushBlock(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars)
             {
-                var localVars = new LocalBuilder[blockVarExprs.Count];
-                for (var i = 0; i < localVars.Length; i++)
-                    localVars[i] = il.DeclareLocal(blockVarExprs[i].Type);
-                PushBlock(blockVarExprs, localVars);
+                _blockStack = _blockStack.WithLast(new BlockInfo(blockVarExprs, localVars));
+                ++_currentBlockIndex;
             }
 
+            public BlockInfo PushBlock() => _blockStack[++_currentBlockIndex];
+
             public void PopBlock() =>
-                _currentBlock = _currentBlock.Parent;
+                --_currentBlockIndex;
 
             public bool IsLocalVar(object varParamExpr)
             {
+                if (_blockStack.Length == 0)
+                    return false;
+
+                if (_blockStack.Length == 1)
+                    return _blockStack[0].VarExprs.GetFirstIndex(varParamExpr) != -1;
+
                 var i = -1;
-                for (var block = _currentBlock; i == -1 && !block.IsEmpty; block = block.Parent)
-                    i = block.VarExprs.GetFirstIndex(varParamExpr);
+                for (var j = _currentBlockIndex; i == -1 && j > -1; j--)
+                    i = _blockStack[j].VarExprs.GetFirstIndex(varParamExpr);
                 return i != -1;
             }
 
@@ -682,8 +694,9 @@ namespace FastExpressionCompiler
 
             public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                for (var block = _currentBlock; !block.IsEmpty; block = block.Parent)
+                for (var i = _currentBlockIndex; i > -1; i--)
                 {
+                    var block = _blockStack[i];
                     var varIndex = block.VarExprs.GetFirstIndex(varParamExpr);
                     if (varIndex != -1)
                         return block.LocalVars[varIndex];
@@ -1102,10 +1115,14 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Block:
                         var blockExpr = (BlockExpression)expr;
-                        closure.PushBlock(blockExpr.Variables, Tools.Empty<LocalBuilder>());
+                        var blockVariableCount = blockExpr.Variables.Count;
+                        var blockHasVariables = blockVariableCount != 0;
+                        if (blockHasVariables)
+                            closure.PushBlock(blockExpr.Variables, new LocalBuilder[blockVariableCount]);
                         if (!TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs))
                             return false;
-                        closure.PopBlock();
+                        if (blockHasVariables)
+                            closure.PopBlock();
                         return true;
 
                     case ExpressionType.Loop:
@@ -1137,10 +1154,13 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Goto:
-                        var gotoValueExpr = ((GotoExpression)expr).Value;
-                        if (gotoValueExpr == null)
+                        var gotoExpr = (GotoExpression)expr;
+                        if (gotoExpr.Kind == GotoExpressionKind.Return)
+                            closure.MarkAsUsedReturnTarget(gotoExpr.Target);
+                        var gotoExprValue = gotoExpr.Value;
+                        if (gotoExprValue == null)
                             return true;
-                        expr = gotoValueExpr;
+                        expr = gotoExprValue;
                         continue;
 
                     case ExpressionType.Switch:
@@ -1248,7 +1268,7 @@ namespace FastExpressionCompiler
                 var catchExVar = catchBlock.Variable;
                 if (catchExVar != null)
                 {
-                    closure.PushBlock(new[] { catchExVar }, Tools.Empty<LocalBuilder>());
+                    closure.PushBlock(new[] { catchExVar }, new LocalBuilder[1]);
                     if (!TryCollectBoundConstants(ref closure, catchExVar, paramExprs))
                         return false;
                 }
@@ -1467,7 +1487,7 @@ namespace FastExpressionCompiler
                             }
 
                             if (blockHasVars)
-                                closure.PushBlockAndConstructLocalVars(blockExpr.Variables, il);
+                                closure.PushBlock().ConstructLocalVariables(blockExpr.Variables, il);
 
                             // ignore result for all not the last statements in block
                             if (statementExprs.Count > 1)
@@ -1601,11 +1621,7 @@ namespace FastExpressionCompiler
 
                     case GotoExpressionKind.Return:
                         if ((parent & ParentFlags.TryCatch) == 0)
-                        {
-                            // use label defined by Label expression or define its own to use by subsequent Label
-                            il.Emit(OpCodes.Ret, closure.GetOrCreateLabel(index, il));
-                            return true;
-                        }
+                            return EmitGotoLabel(OpCodes.Ret, index, il, ref closure);
 
                         // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
                         // to emit the Leave instruction, return label and return result
@@ -1756,7 +1772,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 var exprType = tryExpr.Type;
-                var returnsResult = exprType != typeof(void) && (parent & ParentFlags.IgnoreResult) == 0;
+                var returnsResult = exprType != typeof(void) && !parent.IgnoresResult();
                 var resultVar = default(LocalBuilder);
 
                 if (returnsResult)
@@ -1777,7 +1793,7 @@ namespace FastExpressionCompiler
                     if (exVarExpr != null)
                     {
                         var exVar = il.DeclareLocal(exVarExpr.Type);
-                        closure.PushBlock(new[] { exVarExpr }, new[] { exVar });
+                        closure.PushBlock().SetLocalVariable(exVar);
                         il.Emit(OpCodes.Stloc_S, exVar);
                     }
 

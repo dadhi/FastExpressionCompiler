@@ -149,7 +149,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.Throws<DivideByZeroException>(() => func());
         }
 
-        [Test, Ignore("fix me")]
+        [Test]
         public void Can_return_from_try_block_using_label()
         {
             var returnLabel = Label(typeof(string));
@@ -170,7 +170,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual("From Try block", func());
         }
 
-        [Test, Ignore("fix me")]
+        [Test]
         public void Can_return_from_catch_block_using_label()
         {
             var returnLabel = Label(typeof(string));
@@ -196,7 +196,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual("From Catch block", func());
         }
 
-        [Test, Ignore("fix me")]
+        [Test]
         public void Can_return_try_block_result_using_label()
         {
             var returnType = typeof(string);
@@ -230,7 +230,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual("From inner Try block", func());
         }
 
-        [Test, Ignore("fix me")]
+        [Test]
         public void Can_return_nested_catch_block_result()
         {
             var returnType = typeof(string);
