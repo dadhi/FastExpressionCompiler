@@ -36,6 +36,7 @@ namespace FastExpressionCompiler.LightExpression
 {
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+    // todo: To reduce allocations we may consider to introduce IExpression and made implementations a struct.
     /// <summary>Facade for constructing Expression.</summary>
     public abstract class Expression
     {
@@ -86,11 +87,21 @@ namespace FastExpressionCompiler.LightExpression
         private static readonly ConstantExpression _falseExpr = new ConstantExpression(false, typeof(bool));
         private static readonly ConstantExpression _trueExpr  = new ConstantExpression(true,  typeof(bool));
 
-        public static NewExpression New(Type type) =>
-            new NewExpression(type.GetTypeInfo().DeclaredConstructors.First(x => x.GetParameters().Length == 0), Tools.Empty<Expression>());
+        public static NewExpression New(Type type)
+        {
+            ConstructorInfo ctor = null;
+            foreach (var x in type.GetTypeInfo().DeclaredConstructors)
+                if (x.GetParameters().Length == 0)
+                    ctor = x;
+            return new NewExpression(ctor, Tools.Empty<Expression>());
+        }
 
         public static NewExpression New(ConstructorInfo ctor) =>
             new NewExpression(ctor, Tools.Empty<Expression>());
+
+        // todo: Reduce allocations
+        //public static NewExpression New(ConstructorInfo ctor, Expression argument) =>
+        //    new NewExpression<Expression>(ctor, argument);
 
         public static NewExpression New(ConstructorInfo ctor, params Expression[] arguments) =>
             new NewExpression(ctor, arguments);
@@ -1316,6 +1327,27 @@ namespace FastExpressionCompiler.LightExpression
         protected ArgumentsExpression(IReadOnlyList<Expression> arguments)
         {
             Arguments = arguments ?? Tools.Empty<Expression>();
+        }
+    }
+
+    // todo: The whole idea is to reduce allocations
+    public sealed class NewExpression<TArgs> : Expression
+    {
+        public override ExpressionType NodeType => ExpressionType.New;
+        public override Type Type => Constructor.DeclaringType;
+
+        public readonly ConstructorInfo Constructor;
+        public readonly TArgs Arguments;
+
+        public override SysExpr ToExpression() =>
+            Arguments is Expression expr
+                ? SysExpr.New(Constructor, expr.ToExpression())
+                : SysExpr.New(Constructor, ToExpressions((IReadOnlyList<Expression>)Arguments));
+
+        internal NewExpression(ConstructorInfo constructor, TArgs arguments)
+        {
+            Constructor = constructor;
+            Arguments = arguments;
         }
     }
 

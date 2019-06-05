@@ -1368,6 +1368,9 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.New:
                             var newExpr = (NewExpression)expr;
+                            // todo: This may be an approach to use specialized versions of NewExpression to reduce allocations
+                            //if (newExpr.Arguments is Expression argExpr)
+                            //    TryEmit(argExpr, paramExprs, il, ref closure, parent, argExpr.Type.IsByRef ? 0 : -1);
                             var argExprs = newExpr.Arguments;
                             for (var i = 0; i < argExprs.Count; i++)
                                 if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent,
