@@ -73,6 +73,32 @@ namespace FastExpressionCompiler.Benchmarks
             public object Create_n_CompileFast_LightExpression() => LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression());
         }
 
+        /*
+                                      Method |     Mean |     Error |    StdDev | Ratio | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+        ------------------------------------ |---------:|----------:|----------:|------:|------------:|------------:|------------:|--------------------:|
+                             Invoke_Compiled | 8.094 ns | 0.0358 ns | 0.0335 ns |  0.98 |      0.0051 |           - |           - |                24 B |
+                         Invoke_CompiledFast | 8.235 ns | 0.0529 ns | 0.0469 ns |  1.00 |      0.0051 |           - |           - |                24 B |
+         Invoke_CompiledFast_LightExpression | 8.219 ns | 0.0264 ns | 0.0247 ns |  1.00 |      0.0051 |           - |           - |                24 B |
+        */
+        [MemoryDiagnoser]
+        public class Invoke_compiled_delegate
+        {
+            private static readonly Func<Source, Dest, ResolutionContext, Dest> _compiled = CreateExpression().Compile();
+            private static readonly Func<Source, Dest, ResolutionContext, Dest> _compiledFast = CreateExpression().CompileFast();
+            private static readonly Func<Source, Dest, ResolutionContext, Dest> _compiledFastLE = LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression());
+
+            private static readonly Source _source = new Source { Value = 42 };
+
+            [Benchmark]
+            public Dest Invoke_Compiled() => _compiled(_source, null, null);
+
+            [Benchmark]
+            public Dest Invoke_CompiledFast() => _compiledFast(_source, null, null);
+
+            [Benchmark(Baseline = true)]
+            public Dest Invoke_CompiledFast_LightExpression() => _compiledFastLE(_source, null, null);
+        }
+
         public class Source
         {
             public int Value { get; set; }
