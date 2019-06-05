@@ -437,6 +437,11 @@ namespace FastExpressionCompiler
             public void SetLocalVariable(LocalBuilder localVar) => LocalVars[0] = localVar;
         }
 
+        private struct TryCatchFinallyInfo
+        {
+            public bool HasReturnExpression { get; set; }
+        }
+
         // Track the info required to build a closure object + some context information not directly related to closure.
         private struct ClosureInfo
         {
@@ -451,6 +456,9 @@ namespace FastExpressionCompiler
             // Helpers to decide whether we are inside the block or not
             private BlockInfo[] _blockStack;
             private int _currentBlockIndex;
+            
+            private TryCatchFinallyInfo[] _tryCatchFinallyStack;
+            private int _currentTryCatchFinallyIndex;
 
             // Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
@@ -498,6 +506,8 @@ namespace FastExpressionCompiler
                 _tryCatchFinallyReturnLabelIndex = -1;
                 _blockStack = Tools.Empty<BlockInfo>();
                 _currentBlockIndex = -1;
+                _tryCatchFinallyStack = Tools.Empty<TryCatchFinallyInfo>();
+                _currentTryCatchFinallyIndex = -1;
                 _labels = null;
                 LastEmitIsAddress = false;
 
@@ -571,9 +581,10 @@ namespace FastExpressionCompiler
 
             public void MarkLabelAsTryReturn(int index) => _tryCatchFinallyReturnLabelIndex = index;
 
-            public void MarkAsUsedReturnTarget(LabelTarget labelTarget)
+            public void MarkReturnExpression()
             {
-
+                if (_currentTryCatchFinallyIndex != -1)
+                    _tryCatchFinallyStack[_currentTryCatchFinallyIndex].HasReturnExpression = true;
             }
 
             public object ConstructClosureTypeAndObject(bool constructTypeOnly = false)
@@ -673,24 +684,34 @@ namespace FastExpressionCompiler
 
             public BlockInfo PushBlock() => _blockStack[++_currentBlockIndex];
 
-            public void PopBlock() =>
-                --_currentBlockIndex;
+            public void PopBlock() => --_currentBlockIndex;
+
+            public TryCatchFinallyInfo PushTryCatchFinally()
+            {
+                if (!IsClosureConstructed)
+                    _tryCatchFinallyStack = _tryCatchFinallyStack.WithLast(new TryCatchFinallyInfo());
+                return _tryCatchFinallyStack[++_currentTryCatchFinallyIndex];
+            }
+
+            public void PopTryCatchFinally() => --_currentTryCatchFinallyIndex;
 
             public bool IsLocalVar(object varParamExpr)
             {
-                if (_blockStack.Length == 0)
-                    return false;
-
-                if (_blockStack.Length == 1)
-                    return _blockStack[0].VarExprs.GetFirstIndex(varParamExpr) != -1;
-
-                var i = -1;
-                for (var j = _currentBlockIndex; i == -1 && j > -1; j--)
-                    i = _blockStack[j].VarExprs.GetFirstIndex(varParamExpr);
-                return i != -1;
+                switch (_blockStack.Length) {
+                    case 0:
+                        return false;
+                    case 1:
+                        return _blockStack[0].VarExprs.GetFirstIndex(varParamExpr) != -1;
+                    default:
+                        var i = -1;
+                        for (var j = _currentBlockIndex; i == -1 && j > -1; j--)
+                            i = _blockStack[j].VarExprs.GetFirstIndex(varParamExpr);
+                        return i != -1;
+                }
             }
 
-            public bool IsTryReturnLabel(int index) => index == _tryCatchFinallyReturnLabelIndex;
+            public bool IsTryReturnLabel(int labelIndex) 
+                => labelIndex == _tryCatchFinallyReturnLabelIndex;
 
             public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
@@ -1156,7 +1177,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
                         if (gotoExpr.Kind == GotoExpressionKind.Return)
-                            closure.MarkAsUsedReturnTarget(gotoExpr.Target);
+                            closure.MarkReturnExpression();
                         var gotoExprValue = gotoExpr.Value;
                         if (gotoExprValue == null)
                             return true;
@@ -1257,6 +1278,8 @@ namespace FastExpressionCompiler
         private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr,
             IReadOnlyList<ParameterExpression> paramExprs)
         {
+            closure.PushTryCatchFinally();
+
             if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs))
                 return false;
 
@@ -1285,7 +1308,11 @@ namespace FastExpressionCompiler
 
             var finallyExpr = tryExpr.Finally;
 
-            return finallyExpr == null || TryCollectBoundConstants(ref closure, finallyExpr, paramExprs);
+            if (finallyExpr != null && !TryCollectBoundConstants(ref closure, finallyExpr, paramExprs)) 
+                return false;
+            
+            closure.PopTryCatchFinally();
+            return true;
         }
 
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, IReadOnlyList<Expression> exprs,
@@ -1766,13 +1793,14 @@ namespace FastExpressionCompiler
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
+                var hasReturnExpression = closure.PushTryCatchFinally().HasReturnExpression;
                 il.BeginExceptionBlock();
 
                 if (!TryEmit(tryExpr.Body, paramExprs, il, ref closure, parent))
                     return false;
 
                 var exprType = tryExpr.Type;
-                var returnsResult = exprType != typeof(void) && !parent.IgnoresResult();
+                var returnsResult = exprType != typeof(void) && (hasReturnExpression || !parent.IgnoresResult());
                 var resultVar = default(LocalBuilder);
 
                 if (returnsResult)
@@ -1820,6 +1848,7 @@ namespace FastExpressionCompiler
                 if (returnsResult)
                     il.Emit(OpCodes.Ldloc, resultVar);
 
+                closure.PopTryCatchFinally();
                 return true;
             }
 
