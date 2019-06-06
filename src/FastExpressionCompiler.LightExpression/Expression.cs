@@ -23,11 +23,10 @@ THE SOFTWARE.
 */
 
 // ReSharper disable CoVariantArrayConversion
-//#if NET45 || NETSTANDARD1_3 || NETSTANDARD2_0
+//#if !NET35 && !NET40 && !NETSTANDARD1_0 && !NETSTANDARD1_1 && !NETSTANDARD1_2
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using SysExpr = System.Linq.Expressions.Expression;
@@ -36,7 +35,6 @@ namespace FastExpressionCompiler.LightExpression
 {
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-    // todo: To reduce allocations we may consider to introduce IExpression and made implementations a struct.
     /// <summary>Facade for constructing Expression.</summary>
     public abstract class Expression
     {
@@ -98,10 +96,6 @@ namespace FastExpressionCompiler.LightExpression
 
         public static NewExpression New(ConstructorInfo ctor) =>
             new NewExpression(ctor, Tools.Empty<Expression>());
-
-        // todo: Reduce allocations
-        //public static NewExpression New(ConstructorInfo ctor, Expression argument) =>
-        //    new NewExpression<Expression>(ctor, argument);
 
         public static NewExpression New(ConstructorInfo ctor, params Expression[] arguments) =>
             new NewExpression(ctor, arguments);
@@ -920,8 +914,8 @@ namespace FastExpressionCompiler.LightExpression
             return true;
         }
 
-        public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs) =>
-            xs as IReadOnlyList<T> ?? xs.ToArray();
+        public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs) => 
+            xs is IReadOnlyList<T> list ? list : xs == null ? null : new List<T>(xs);
 
         internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
         {
@@ -1322,32 +1316,9 @@ namespace FastExpressionCompiler.LightExpression
     {
         public readonly IReadOnlyList<Expression> Arguments;
 
-        protected SysExpr[] ArgumentsToExpressions() => ToExpressions(Arguments);
-
         protected ArgumentsExpression(IReadOnlyList<Expression> arguments)
         {
             Arguments = arguments ?? Tools.Empty<Expression>();
-        }
-    }
-
-    // todo: The whole idea is to reduce allocations
-    public sealed class NewExpression<TArgs> : Expression
-    {
-        public override ExpressionType NodeType => ExpressionType.New;
-        public override Type Type => Constructor.DeclaringType;
-
-        public readonly ConstructorInfo Constructor;
-        public readonly TArgs Arguments;
-
-        public override SysExpr ToExpression() =>
-            Arguments is Expression expr
-                ? SysExpr.New(Constructor, expr.ToExpression())
-                : SysExpr.New(Constructor, ToExpressions((IReadOnlyList<Expression>)Arguments));
-
-        internal NewExpression(ConstructorInfo constructor, TArgs arguments)
-        {
-            Constructor = constructor;
-            Arguments = arguments;
         }
     }
 
@@ -1360,7 +1331,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public override SysExpr ToExpression() => ToNewExpression();
 
-        public System.Linq.Expressions.NewExpression ToNewExpression() => SysExpr.New(Constructor, ArgumentsToExpressions());
+        public System.Linq.Expressions.NewExpression ToNewExpression() => SysExpr.New(Constructor, ToExpressions(Arguments));
 
         internal NewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) :
             base(arguments)
@@ -1379,9 +1350,9 @@ namespace FastExpressionCompiler.LightExpression
 
         public override SysExpr ToExpression() => NodeType == ExpressionType.NewArrayInit
             // ReSharper disable once AssignNullToNotNullAttribute
-            ? SysExpr.NewArrayInit(Type.GetElementType(), ArgumentsToExpressions())
+            ? SysExpr.NewArrayInit(Type.GetElementType(), ToExpressions(Arguments))
             // ReSharper disable once AssignNullToNotNullAttribute
-            : SysExpr.NewArrayBounds(Type.GetElementType(), ArgumentsToExpressions());
+            : SysExpr.NewArrayBounds(Type.GetElementType(), ToExpressions(Arguments));
 
         internal NewArrayExpression(ExpressionType expressionType, Type arrayType, IReadOnlyList<Expression> elements) : base(elements)
         {
@@ -1399,7 +1370,7 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Object;
 
         public override SysExpr ToExpression() =>
-            SysExpr.Call(Object?.ToExpression(), Method, ArgumentsToExpressions());
+            SysExpr.Call(Object?.ToExpression(), Method, ToExpressions(Arguments));
 
         internal MethodCallExpression(Expression @object, MethodInfo method, IReadOnlyList<Expression> arguments)
             : base(arguments)
@@ -1493,7 +1464,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public readonly Expression Expression;
 
-        public override SysExpr ToExpression() => SysExpr.Invoke(Expression.ToExpression(), ArgumentsToExpressions());
+        public override SysExpr ToExpression() => SysExpr.Invoke(Expression.ToExpression(), ToExpressions(Arguments));
 
         internal InvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type) : base(arguments)
         {
@@ -1548,7 +1519,7 @@ namespace FastExpressionCompiler.LightExpression
         public readonly PropertyInfo Indexer;
 
         public override SysExpr ToExpression() =>
-            SysExpr.MakeIndex(Object.ToExpression(), Indexer, ArgumentsToExpressions());
+            SysExpr.MakeIndex(Object.ToExpression(), Indexer, ToExpressions(Arguments));
 
         internal IndexExpression(Expression @object, PropertyInfo indexer, IReadOnlyList<Expression> arguments)
             : base(arguments)
@@ -1701,7 +1672,7 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Body;
 
         public System.Linq.Expressions.SwitchCase ToSwitchCase() =>
-            SysExpr.SwitchCase(Body.ToExpression(), TestValues.Select(x => x.ToExpression()));
+            SysExpr.SwitchCase(Body.ToExpression(), Expression.ToExpressions(TestValues));
 
         public SwitchCase(Expression body, IEnumerable<Expression> testValues)
         {
