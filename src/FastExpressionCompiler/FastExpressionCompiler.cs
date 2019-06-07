@@ -382,7 +382,7 @@ namespace FastExpressionCompiler
         private static Type[] GetClosureAndParamTypes(Type closureType, IReadOnlyList<ParameterExpression> paramExprs)
         {
             if (paramExprs == null || paramExprs.Count == 0)
-                return new[]{ closureType };
+                return new[] { closureType };
 
             if (paramExprs.Count == 1)
                 return new[] { closureType, paramExprs[0].IsByRef ? paramExprs[0].Type.MakeByRefType() : paramExprs[0].Type };
@@ -422,10 +422,10 @@ namespace FastExpressionCompiler
             public readonly IReadOnlyList<ParameterExpression> VarExprs;
             public readonly LocalBuilder[] LocalVars;
 
-            internal BlockInfo(IReadOnlyList<ParameterExpression> varExprs, LocalBuilder[] localVars)
+            internal BlockInfo(IReadOnlyList<ParameterExpression> varExprs)
             {
                 VarExprs = varExprs;
-                LocalVars = localVars;
+                LocalVars = new LocalBuilder[varExprs.Count];
             }
 
             public void ConstructLocalVariables(IReadOnlyList<ParameterExpression> varExprs, ILGenerator il)
@@ -440,7 +440,7 @@ namespace FastExpressionCompiler
         private struct TryCatchFinallyInfo
         {
             public bool HasReturnExpression { get; set; }
-            
+
             public int ReturnLabelIndex { get; set; }
         }
 
@@ -455,7 +455,7 @@ namespace FastExpressionCompiler
             // Helpers to decide whether we are inside the block or not
             private BlockInfo[] _blockStack;
             private int _currentBlockIndex;
-            
+
             // Helpers to decide whether we are inside a try/catch or not
             private TryCatchFinallyInfo[] _tryCatchFinallyStack;
             private int _currentTryCatchFinallyIndex;
@@ -468,6 +468,7 @@ namespace FastExpressionCompiler
             #region Closure related state
 
             public bool IsClosureConstructed;
+            private bool _isClosurePreCreated;
 
             // Constructed closure object.
             public readonly object Closure;
@@ -499,6 +500,7 @@ namespace FastExpressionCompiler
             public ClosureInfo(bool isConstructed, object closure = null, ConstantExpression[] closureConstantExpressions = null)
             {
                 IsClosureConstructed = isConstructed;
+                _isClosurePreCreated = closure != null;
 
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
@@ -510,22 +512,22 @@ namespace FastExpressionCompiler
                 _labels = null;
                 LastEmitIsAddress = false;
 
-                if (closure == null)
-                {
-                    Closure = null;
-                    Constants = Tools.Empty<ConstantExpression>();
-                    ClosureType = null;
-                    ClosureFields = null;
-                }
-                else
+                if (_isClosurePreCreated)
                 {
                     Closure = closure;
                     Constants = closureConstantExpressions ?? throw new ArgumentException(
                                     "Constant expressions should not be null if `closure` parameter is passed", nameof(closureConstantExpressions));
                     ClosureType = closure.GetType();
-                    
+
                     // todo: verify that Fields types are correspond to `closureConstantExpressions`
                     ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
+                }
+                else
+                {
+                    Closure = null;
+                    Constants = Tools.Empty<ConstantExpression>();
+                    ClosureType = null;
+                    ClosureFields = null;
                 }
             }
 
@@ -552,12 +554,12 @@ namespace FastExpressionCompiler
 
             public void AddLabel(LabelTarget labelTarget)
             {
-                if (labelTarget != null && 
+                if (labelTarget != null &&
                     GetLabelIndex(labelTarget) == -1)
                     _labels = _labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
             }
 
-            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) => 
+            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) =>
                 GetOrCreateLabel(GetLabelIndex(labelTarget), il);
 
             public Label GetOrCreateLabel(int index, ILGenerator il)
@@ -578,7 +580,7 @@ namespace FastExpressionCompiler
                 return -1;
             }
 
-            public void MarkLabelAsTryReturn(int labelIndex) => 
+            public void MarkLabelAsTryReturn(int labelIndex) =>
                 _tryCatchFinallyStack[_currentTryCatchFinallyIndex].ReturnLabelIndex = labelIndex;
 
             public void MarkReturnExpression()
@@ -676,13 +678,25 @@ namespace FastExpressionCompiler
                 return constructTypeOnly ? null : createClosure.Invoke(null, fieldValues);
             }
 
-            public void PushBlock(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars)
+            public void PushBlock(IReadOnlyList<ParameterExpression> blockVarExprs)
             {
-                _blockStack = _blockStack.WithLast(new BlockInfo(blockVarExprs, localVars));
+                _blockStack = _blockStack.WithLast(new BlockInfo(blockVarExprs));
                 ++_currentBlockIndex;
             }
 
-            public BlockInfo PushBlock() => _blockStack[++_currentBlockIndex];
+            public BlockInfo PushAndGetBlock(IReadOnlyList<ParameterExpression> blockVarExprs)
+            {
+                if (_isClosurePreCreated)
+                {
+                    PushBlock(blockVarExprs);
+                }
+                else
+                {
+                    ++_currentBlockIndex;
+                }
+
+                return _blockStack[_currentBlockIndex];
+            }
 
             public void PopBlock() => --_currentBlockIndex;
 
@@ -697,7 +711,8 @@ namespace FastExpressionCompiler
 
             public bool IsLocalVar(object varParamExpr)
             {
-                switch (_blockStack.Length) {
+                switch (_blockStack.Length)
+                {
                     case 0:
                         return false;
                     case 1:
@@ -1142,10 +1157,9 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Block:
                         var blockExpr = (BlockExpression)expr;
-                        var blockVariableCount = blockExpr.Variables.Count;
-                        var blockHasVariables = blockVariableCount != 0;
+                        var blockHasVariables = blockExpr.Variables.Count != 0;
                         if (blockHasVariables)
-                            closure.PushBlock(blockExpr.Variables, new LocalBuilder[blockVariableCount]);
+                            closure.PushBlock(blockExpr.Variables);
                         if (!TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs))
                             return false;
                         if (blockHasVariables)
@@ -1297,7 +1311,7 @@ namespace FastExpressionCompiler
                 var catchExVar = catchBlock.Variable;
                 if (catchExVar != null)
                 {
-                    closure.PushBlock(new[] { catchExVar }, new LocalBuilder[1]);
+                    closure.PushBlock(new[] { catchExVar });
                     if (!TryCollectBoundConstants(ref closure, catchExVar, paramExprs))
                         return false;
                 }
@@ -1314,9 +1328,9 @@ namespace FastExpressionCompiler
 
             var finallyExpr = tryExpr.Finally;
 
-            if (finallyExpr != null && !TryCollectBoundConstants(ref closure, finallyExpr, paramExprs)) 
+            if (finallyExpr != null && !TryCollectBoundConstants(ref closure, finallyExpr, paramExprs))
                 return false;
-            
+
             closure.PopTryCatchFinally();
             return true;
         }
@@ -1410,7 +1424,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Constant:
                             var constantExpression = (ConstantExpression)expr;
-                            return IgnoresResult(parent) ||
+                            return parent.IgnoresResult() ||
                                    TryEmitConstant(constantExpression, constantExpression.Type, constantExpression.Value, il, ref closure);
 
                         case ExpressionType.Call:
@@ -1520,7 +1534,7 @@ namespace FastExpressionCompiler
                             }
 
                             if (blockHasVars)
-                                closure.PushBlock().ConstructLocalVariables(blockExpr.Variables, il);
+                                closure.PushAndGetBlock(blockExpr.Variables).ConstructLocalVariables(blockExpr.Variables, il);
 
                             // ignore result for all not the last statements in block
                             if (statementExprs.Count > 1)
@@ -1636,7 +1650,7 @@ namespace FastExpressionCompiler
                 if (index == -1)
                     throw new InvalidOperationException("Cannot jump, no labels found");
 
-                if (expr.Value != null && 
+                if (expr.Value != null &&
                     !TryEmit(expr.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
@@ -1827,7 +1841,7 @@ namespace FastExpressionCompiler
                     if (exVarExpr != null)
                     {
                         var exVar = il.DeclareLocal(exVarExpr.Type);
-                        closure.PushBlock().SetLocalVariable(exVar);
+                        closure.PushAndGetBlock(new[] { exVarExpr }).SetLocalVariable(exVar);
                         il.Emit(OpCodes.Stloc_S, exVar);
                     }
 
@@ -1897,7 +1911,7 @@ namespace FastExpressionCompiler
                 var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (variable != null)
                 {
-                    if (byRefIndex != -1 || 
+                    if (byRefIndex != -1 ||
                         paramType.IsValueType() && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
                         il.Emit(OpCodes.Ldloca_S, variable);
                     else

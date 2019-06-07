@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-[TestFixture]
+    [TestFixture]
     public class PreConstructedClosureTests
     {
         [Test]
@@ -22,11 +22,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var c = ExpressionCompiler.Closure.Create(x);
             var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(c, xConstExpr);
+            Assert.IsNotNull(f);
 
-            Assert.IsInstanceOf<X>(f());
+            var result = f();
+            Assert.AreSame(x, result);
         }
-
-        public class X { }
 
         [Test]
         public void Can_pass_ANY_class_closure_with_constant_to_TryCompile()
@@ -37,14 +37,65 @@ namespace FastExpressionCompiler.UnitTests
 
             var cx = new ClosureX(x);
             var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(cx, xConstExpr);
+            Assert.IsNotNull(f);
 
-            Assert.IsInstanceOf<X>(f());
+            var result = f();
+            Assert.AreSame(x, result);
         }
+
+        [Test]
+        public void Can_pass_closure_with_block_to_TryCompile()
+        {
+            var x = new X();
+            var xConstExpr = Constant(x);
+            var expr = Lambda<Func<X>>(Block(xConstExpr));
+
+            var cx = new ClosureX(x);
+            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(cx, xConstExpr);
+            Assert.IsNotNull(f);
+
+            var result = f();
+            Assert.AreSame(x, result);
+        }
+
+        [Test]
+        public void Can_pass_closure_with_variable_block_to_TryCompile()
+        {
+            var intVariable = Variable(typeof(int));
+            var intDoubler = new IntDoubler();
+            var intDoublerConstExpr = Constant(intDoubler);
+
+            var expr = Lambda<Action>(Block(
+                new[] { intVariable },
+                Assign(intVariable, Constant(1)),
+                Call(intDoublerConstExpr, nameof(IntDoubler.Double), Type.EmptyTypes, intVariable)));
+
+            var cx = new ClosureIntHolder(intDoubler);
+            var f = expr.TryCompileWithPreCreatedClosure<Action>(cx, intDoublerConstExpr);
+            Assert.IsNotNull(f);
+
+            f();
+            Assert.AreEqual(2, intDoubler.DoubleValue);
+        }
+
+        public class X { }
 
         public class ClosureX
         {
             public readonly X X;
             public ClosureX(X x) { X = x; }
+        }
+
+        public class IntDoubler
+        {
+            public int DoubleValue { get; set; }
+            public void Double(int value) => DoubleValue = value * 2;
+        }
+
+        public class ClosureIntHolder
+        {
+            public readonly IntDoubler Value;
+            public ClosureIntHolder(IntDoubler value) { Value = value; }
         }
 
 #if !LIGHT_EXPRESSION
