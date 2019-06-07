@@ -226,11 +226,13 @@ namespace FastExpressionCompiler
             return (TDelegate)(object)method.CreateDelegate(delegateType, closure);
         }
 
+        private static readonly object _staticDelegateClosurePlaceholder = new object();
+
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
         public static TDelegate TryCompileWithoutClosure<TDelegate>(this LambdaExpression lambdaExpr)
             where TDelegate : class
         {
-            var closureInfo = new ClosureInfo(true);
+            var closureInfo = new ClosureInfo(true, _staticDelegateClosurePlaceholder);
             var paramTypes = Tools.GetParamTypes(lambdaExpr.Parameters);
 
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, paramTypes,
@@ -512,7 +514,7 @@ namespace FastExpressionCompiler
                 _labels = null;
                 LastEmitIsAddress = false;
 
-                if (_isClosurePreCreated)
+                if (_isClosurePreCreated && closure != _staticDelegateClosurePlaceholder)
                 {
                     Closure = closure;
                     Constants = closureConstantExpressions ?? throw new ArgumentException(
@@ -702,7 +704,7 @@ namespace FastExpressionCompiler
 
             public TryCatchFinallyInfo PushTryCatchFinally()
             {
-                if (!IsClosureConstructed)
+                if (_isClosurePreCreated || !IsClosureConstructed)
                     _tryCatchFinallyStack = _tryCatchFinallyStack.WithLast(new TryCatchFinallyInfo());
                 return _tryCatchFinallyStack[++_currentTryCatchFinallyIndex];
             }

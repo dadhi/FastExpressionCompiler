@@ -78,6 +78,23 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(2, intDoubler.DoubleValue);
         }
 
+        [Test]
+        public void Can_pass_closure_with_trycatch_to_TryCompile()
+        {
+            var x = new X();
+            var xConstExpr = Constant(x);
+            var expr = Lambda<Func<X>>(TryCatch(
+                xConstExpr,
+                Catch(typeof(Exception), Default(xConstExpr.Type))));
+
+            var cx = new ClosureX(x);
+            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(cx, xConstExpr);
+            Assert.IsNotNull(f);
+
+            var result = f();
+            Assert.AreSame(x, result);
+        }
+
         public class X { }
 
         public class ClosureX
@@ -105,8 +122,41 @@ namespace FastExpressionCompiler.UnitTests
             Expression<Func<X>> expr = () => new X();
 
             var f = expr.TryCompileWithoutClosure<Func<X>>();
+            Assert.IsNotNull(f);
 
-            Assert.IsInstanceOf<X>(f());
+            var result = f();
+            Assert.IsNotNull(result);
+        }
+
+        [Test]
+        public void Can_use_block_when_compiling_a_static_delegate()
+        {
+            var expr = Lambda<Func<X>>(Block(New(typeof(X).GetConstructor(Type.EmptyTypes))));
+
+            var f = expr.TryCompileWithoutClosure<Func<X>>();
+            Assert.IsNotNull(f);
+
+            var result = f();
+            Assert.IsNotNull(result);
+        }
+
+        [Test]
+        public void Can_use_variable_block_when_compiling_a_static_delegate()
+        {
+            var intDoublerVariable = Variable(typeof(IntDoubler));
+
+            var expr = Lambda<Func<IntDoubler>>(Block(
+                new[] { intDoublerVariable },
+                Assign(intDoublerVariable, New(intDoublerVariable.Type.GetConstructor(Type.EmptyTypes))),
+                Call(intDoublerVariable, nameof(IntDoubler.Double), Type.EmptyTypes, Constant(5)),
+                intDoublerVariable));
+
+            var f = expr.TryCompileWithoutClosure<Func<IntDoubler>>();
+            Assert.IsNotNull(f);
+
+            var result = f();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(10, result.DoubleValue);
         }
 
         [Test]
@@ -116,9 +166,10 @@ namespace FastExpressionCompiler.UnitTests
             Expression<Func<Y>> expr = () => new Y(x, () => x);
 
             var f1 = expr.TryCompile<Func<Y>>();
-            var y = f1();
+            Assert.IsNotNull(f1);
 
-            Assert.IsInstanceOf<Y>(y);
+            var y = f1();
+            Assert.IsNotNull(y);
             Assert.AreSame(y.A, y.B);
         }
 #endif
