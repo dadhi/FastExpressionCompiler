@@ -40,6 +40,9 @@ namespace FastExpressionCompiler.Benchmarks
             public object CompileFast() => _expression.CompileFast();
 
             [Benchmark]
+            public object CompileFast_WithoutClosure() => _expression.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>();
+
+            [Benchmark]
             public object CompileFast_LightExpression() => LightExpression.ExpressionCompiler.CompileFast(_lightExpression);
         }
 

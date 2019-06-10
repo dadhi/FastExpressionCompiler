@@ -7,7 +7,6 @@ using NUnit.Framework;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
@@ -189,10 +188,12 @@ namespace FastExpressionCompiler.UnitTests
                 Assert.AreEqual(42, ds.Value);
 
                 var ff = expression.CompileFast(true);
-                Assert.IsNotNull(ff);
-
                 var df = ff(new Source { Value = 42 }, null, new ResolutionContext());
                 Assert.AreEqual(42, df.Value);
+
+                var fa = expression.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>();
+                var da = ff(new Source { Value = 42 }, null, new ResolutionContext());
+                Assert.AreEqual(42, da.Value);
             }
 
             [Test]
