@@ -310,7 +310,7 @@ namespace FastExpressionCompiler
             }
             else
             {
-                closureObject = emitContext.Closure;
+                closureObject = emitContext.UserDefinedClosure;
             }
 
             var closureType = emitContext.ClosureType;
@@ -469,10 +469,8 @@ namespace FastExpressionCompiler
             #region Closure related state
 
             public bool IsClosureConstructed;
-            private bool _isClosurePreCreated;
 
-            // Constructed closure object.
-            public readonly object Closure;
+            public readonly object UserDefinedClosure;
 
             // Type of constructed closure, may be available even without closure object (in case of nested lambda)
             public Type ClosureType;
@@ -498,10 +496,10 @@ namespace FastExpressionCompiler
             #endregion
 
             // Populates info directly with provided closure object and constants.
-            public EmitContext(bool isConstructed, object closure = null, ConstantExpression[] closureConstantExpressions = null)
+            public EmitContext(bool isConstructed, object userDefinedClosure = null, ConstantExpression[] closureConstantExpressions = null)
             {
                 IsClosureConstructed = isConstructed;
-                _isClosurePreCreated = closure != null;
+                UserDefinedClosure = userDefinedClosure;
 
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
@@ -513,19 +511,15 @@ namespace FastExpressionCompiler
                 _labels = null;
                 LastEmitIsAddress = false;
 
-                if (_isClosurePreCreated && closure != _staticDelegateClosurePlaceholder)
+                if (userDefinedClosure != null && userDefinedClosure != _staticDelegateClosurePlaceholder)
                 {
-                    Closure = closure;
                     Constants = closureConstantExpressions ?? throw new ArgumentException(
                                     "Constant expressions should not be null if `closure` parameter is passed", nameof(closureConstantExpressions));
-                    ClosureType = closure.GetType();
-
-                    // todo: verify that Fields types are correspond to `closureConstantExpressions`
+                    ClosureType = userDefinedClosure.GetType();
                     ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
                 }
                 else
                 {
-                    Closure = null;
                     Constants = Tools.Empty<ConstantExpression>();
                     ClosureType = null;
                     ClosureFields = null;
@@ -605,8 +599,7 @@ namespace FastExpressionCompiler
 
                 // Construct the array based closure when number of values is bigger than
                 // number of fields in biggest supported Closure class.
-                var createMethods = ExpressionCompiler.Closure.CreateMethods;
-                if (totalItemCount > createMethods.Length)
+                if (totalItemCount > Closure.CreateMethods.Length)
                 {
                     ClosureType = typeof(ArrayClosure);
                     if (constructTypeOnly)
@@ -672,7 +665,7 @@ namespace FastExpressionCompiler
                         }
                 }
 
-                var createClosure = createMethods[totalItemCount - 1].MakeGenericMethod(fieldTypes);
+                var createClosure = ExpressionCompiler.Closure.CreateMethods[totalItemCount - 1].MakeGenericMethod(fieldTypes);
                 ClosureType = createClosure.ReturnType;
                 ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
 
@@ -687,14 +680,10 @@ namespace FastExpressionCompiler
 
             public BlockInfo PushAndGetBlock(IReadOnlyList<ParameterExpression> blockVarExprs)
             {
-                if (_isClosurePreCreated)
-                {
+                if (UserDefinedClosure != null)
                     PushBlock(blockVarExprs);
-                }
                 else
-                {
                     ++_currentBlockIndex;
-                }
 
                 return _blockStack[_currentBlockIndex];
             }
@@ -703,7 +692,7 @@ namespace FastExpressionCompiler
 
             public TryCatchFinallyInfo PushTryCatchFinally()
             {
-                if (_isClosurePreCreated || !IsClosureConstructed)
+                if (UserDefinedClosure != null || !IsClosureConstructed)
                     _tryCatchFinallyStack = _tryCatchFinallyStack.WithLast(new TryCatchFinallyInfo());
                 return _tryCatchFinallyStack[++_currentTryCatchFinallyIndex];
             }
@@ -731,7 +720,6 @@ namespace FastExpressionCompiler
                 for (var i = _tryCatchFinallyStack.Length; i > 0;)
                     if (_tryCatchFinallyStack[--i].ReturnLabelIndex == labelIndex)
                         return true;
-
                 return false;
             }
 
@@ -1256,8 +1244,8 @@ namespace FastExpressionCompiler
 
             var lambdaParamExprs = lambdaExpr.Parameters;
 
-            var nestedClosure = new EmitContext(false);
-            var compiledLambda = TryCompile(ref nestedClosure,
+            var nestedContext = new EmitContext(false);
+            var compiledLambda = TryCompile(ref nestedContext,
                 lambdaExpr.Type, Tools.GetParamTypes(lambdaParamExprs), lambdaExpr.ReturnType, lambdaExpr.Body,
                 lambdaParamExprs, isNestedLambda: true);
 
@@ -1265,10 +1253,10 @@ namespace FastExpressionCompiler
                 return false;
 
             var isAction = lambdaExpr.ReturnType == typeof(void);
-            closure.NestedLambdas[lambdaIndex] = new NestedLambdaInfo(nestedClosure, compiledLambda, isAction);
+            closure.NestedLambdas[lambdaIndex] = new NestedLambdaInfo(nestedContext, compiledLambda, isAction);
 
-            if (nestedClosure.HasClosure)
-                CopyNestedClosureInfo(lambdaParamExprs, ref closure, ref nestedClosure);
+            if (nestedContext.HasClosure)
+                CopyNestedClosureInfo(lambdaParamExprs, ref closure, ref nestedContext);
 
             return true;
         }
@@ -2140,6 +2128,7 @@ namespace FastExpressionCompiler
                 {
                     var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
 
+                    // ReSharper disable once ConstantNullCoalescingCondition
                     var convertOpMethod = method ?? targetType.FindConvertOperator(actualSourceType, targetType);
                     if (convertOpMethod != null)
                     {
