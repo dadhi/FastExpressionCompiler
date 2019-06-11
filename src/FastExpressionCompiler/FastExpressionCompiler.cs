@@ -676,28 +676,16 @@ namespace FastExpressionCompiler
                         }
                 }
 
-                var createClosure = ExpressionCompiler.Closure.CreateMethods[totalItemCount - 1].MakeGenericMethod(fieldTypes);
+                var createClosure = Closure.CreateMethods[totalItemCount - 1].MakeGenericMethod(fieldTypes);
                 ClosureType = createClosure.ReturnType;
                 ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
 
                 return constructTypeOnly ? null : createClosure.Invoke(null, fieldValues);
             }
 
-            public void PushBlock(IReadOnlyList<ParameterExpression> blockVarExprs)
-            {
-                //_blockStack = _blockStack.WithLast(new BlockInfo(blockVarExprs));
-                //++_currentBlockIndex;
-            }
-
             public BlockInfo PushAndGetBlock(IReadOnlyList<ParameterExpression> blockVarExprs)
             {
-                //if (UserDefinedClosure != null)
-                {
-                    _blockStack = _blockStack.WithLast(new BlockInfo(blockVarExprs));
-                }
-
-                //++_currentBlockIndex;
-
+                _blockStack = _blockStack.WithLast(new BlockInfo(blockVarExprs));
                 return _blockStack[++_currentBlockIndex];
             }
 
@@ -1072,12 +1060,13 @@ namespace FastExpressionCompiler
 
         #region Collect Bound Constants
 
-        private static bool IsClosureBoundConstant(object value, TypeInfo type) =>
+        /// Used by FEC to consider to put constant into Closure object
+        public static bool IsClosureBoundConstant(object value, TypeInfo type) =>
             value is Delegate ||
             !type.IsPrimitive && !type.IsEnum && !(value is string) && !(value is Type) && !(value is decimal);
 
         // @paramExprs is required for nested lambda compilation
-        private static bool TryCollectBoundConstants(ref EmitContext closure, Expression expr, IReadOnlyList<ParameterExpression> paramExprs)
+        private static bool TryCollectBoundConstants(ref EmitContext context, Expression expr, IReadOnlyList<ParameterExpression> paramExprs)
         {
             while (true)
             {
@@ -1090,20 +1079,20 @@ namespace FastExpressionCompiler
                         var constantExpr = (ConstantExpression)expr;
                         var value = constantExpr.Value;
                         if (value != null && IsClosureBoundConstant(value, value.GetType().GetTypeInfo()))
-                            closure.AddConstant(constantExpr);
+                            context.AddConstant(constantExpr);
                         return true;
 
                     case ExpressionType.Parameter:
                         // if parameter is used BUT is not in passed parameters and not in local variables,
                         // it means parameter is provided by outer lambda and should be put in closure for current lambda
-                        if (paramExprs.GetFirstIndex(expr) == -1 && !closure.IsLocalVar(expr))
-                            closure.AddNonPassedParam((ParameterExpression)expr);
+                        if (paramExprs.GetFirstIndex(expr) == -1 && !context.IsLocalVar(expr))
+                            context.AddNonPassedParam((ParameterExpression)expr);
                         return true;
 
                     case ExpressionType.Call:
                         var methodCallExpr = (MethodCallExpression)expr;
                         if (methodCallExpr.Arguments.Count != 0 &&
-                            !TryCollectBoundConstants(ref closure, methodCallExpr.Arguments, paramExprs))
+                            !TryCollectBoundConstants(ref context, methodCallExpr.Arguments, paramExprs))
                             return false;
                         if (methodCallExpr.Object == null)
                             return true;
@@ -1118,17 +1107,17 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.New:
-                        return TryCollectBoundConstants(ref closure, ((NewExpression)expr).Arguments, paramExprs);
+                        return TryCollectBoundConstants(ref context, ((NewExpression)expr).Arguments, paramExprs);
 
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
-                        return TryCollectBoundConstants(ref closure, ((NewArrayExpression)expr).Expressions, paramExprs);
+                        return TryCollectBoundConstants(ref context, ((NewArrayExpression)expr).Expressions, paramExprs);
 
                     case ExpressionType.MemberInit:
-                        return TryCollectMemberInitExprConstants(ref closure, (MemberInitExpression)expr, paramExprs);
+                        return TryCollectMemberInitExprConstants(ref context, (MemberInitExpression)expr, paramExprs);
 
                     case ExpressionType.Lambda:
-                        closure.AddNestedLambda((LambdaExpression)expr);
+                        context.AddNestedLambda((LambdaExpression)expr);
                         return true;
 
                     case ExpressionType.Invoke:
@@ -1143,7 +1132,7 @@ namespace FastExpressionCompiler
                         }
 
                         if (invokeExpr.Arguments.Count != 0 &&
-                            !TryCollectBoundConstants(ref closure, invokeExpr.Arguments, paramExprs))
+                            !TryCollectBoundConstants(ref context, invokeExpr.Arguments, paramExprs))
                             return false;
 
                         expr = invokeExpr.Expression;
@@ -1151,33 +1140,26 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
-                        if (!TryCollectBoundConstants(ref closure, condExpr.Test, paramExprs) ||
-                            !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs))
+                        if (!TryCollectBoundConstants(ref context, condExpr.Test, paramExprs) ||
+                            !TryCollectBoundConstants(ref context, condExpr.IfFalse, paramExprs))
                             return false;
                         expr = condExpr.IfTrue;
                         continue;
 
                     case ExpressionType.Block:
                         var blockExpr = (BlockExpression)expr;
-                        //var blockHasVariables = blockExpr.Variables.Count != 0;
-                        //if (blockHasVariables)
-                        //    closure.PushBlock(blockExpr.Variables);
-                        if (!TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs))
-                            return false;
-                        //if (blockHasVariables)
-                            //closure.PopBlock();
-                        return true;
+                        return TryCollectBoundConstants(ref context, blockExpr.Expressions, paramExprs);
 
                     case ExpressionType.Loop:
                         var loopExpr = (LoopExpression)expr;
-                        closure.AddLabel(loopExpr.BreakLabel);
-                        closure.AddLabel(loopExpr.ContinueLabel);
+                        context.AddLabel(loopExpr.BreakLabel);
+                        context.AddLabel(loopExpr.ContinueLabel);
                         expr = loopExpr.Body;
                         continue;
 
                     case ExpressionType.Index:
                         var indexExpr = (IndexExpression)expr;
-                        if (!TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs))
+                        if (!TryCollectBoundConstants(ref context, indexExpr.Arguments, paramExprs))
                             return false;
                         if (indexExpr.Object == null)
                             return true;
@@ -1185,12 +1167,12 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Try:
-                        return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs);
+                        return TryCollectTryExprConstants(ref context, (TryExpression)expr, paramExprs);
 
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
                         var defaultValueExpr = labelExpr.DefaultValue;
-                        closure.AddLabel(labelExpr.Target);
+                        context.AddLabel(labelExpr.Target);
                         if (defaultValueExpr == null)
                             return true;
                         expr = defaultValueExpr;
@@ -1199,7 +1181,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
                         if (gotoExpr.Kind == GotoExpressionKind.Return)
-                            closure.MarkReturnExpression();
+                            context.MarkReturnExpression();
                         var gotoExprValue = gotoExpr.Value;
                         if (gotoExprValue == null)
                             return true;
@@ -1208,11 +1190,11 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Switch:
                         var switchExpr = ((SwitchExpression)expr);
-                        if (!TryCollectBoundConstants(ref closure, switchExpr.SwitchValue, paramExprs) ||
-                            switchExpr.DefaultBody != null && !TryCollectBoundConstants(ref closure, switchExpr.DefaultBody, paramExprs))
+                        if (!TryCollectBoundConstants(ref context, switchExpr.SwitchValue, paramExprs) ||
+                            switchExpr.DefaultBody != null && !TryCollectBoundConstants(ref context, switchExpr.DefaultBody, paramExprs))
                             return false;
                         for (var i = 0; i < switchExpr.Cases.Count; i++)
-                            if (!TryCollectBoundConstants(ref closure, switchExpr.Cases[i].Body, paramExprs))
+                            if (!TryCollectBoundConstants(ref context, switchExpr.Cases[i].Body, paramExprs))
                                 return false;
                         return true;
 
@@ -1232,7 +1214,7 @@ namespace FastExpressionCompiler
 
                         if (expr is BinaryExpression binaryExpr)
                         {
-                            if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs))
+                            if (!TryCollectBoundConstants(ref context, binaryExpr.Left, paramExprs))
                                 return false;
                             expr = binaryExpr.Right;
                             continue;
@@ -1324,20 +1306,19 @@ namespace FastExpressionCompiler
                     return false;
             }
 
-            var finallyExpr = tryExpr.Finally;
-
-            if (finallyExpr != null && !TryCollectBoundConstants(ref context, finallyExpr, paramExprs))
+            if (tryExpr.Finally != null && 
+                !TryCollectBoundConstants(ref context, tryExpr.Finally, paramExprs))
                 return false;
 
             context.PopTryCatchFinally();
             return true;
         }
 
-        private static bool TryCollectBoundConstants(ref EmitContext closure, IReadOnlyList<Expression> exprs,
+        private static bool TryCollectBoundConstants(ref EmitContext context, IReadOnlyList<Expression> exprs,
             IReadOnlyList<ParameterExpression> paramExprs)
         {
             for (var i = 0; i < exprs.Count; i++)
-                if (!TryCollectBoundConstants(ref closure, exprs[i], paramExprs))
+                if (!TryCollectBoundConstants(ref context, exprs[i], paramExprs))
                     return false;
             return true;
         }
