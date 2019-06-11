@@ -624,19 +624,19 @@ IL_0021:  ret
                 nullableIntHolderParam);
 
             var adapt = adaptExpr.CompileFast();
-            adapt.Method.AssertOpCodes(
-                OpCodes.Newobj,
-                OpCodes.Stloc_0, // todo: can be replaced with dup #
-                OpCodes.Ldloc_0, // 
-                OpCodes.Ldarg_0,
-                OpCodes.Call, // ValueHolder<int?>.get_Value
-                OpCodes.Stloc_1,
-                OpCodes.Ldloca_S,
-                OpCodes.Call, // int?.get_Value
-                OpCodes.Conv_R8,
-                OpCodes.Call, // ValueHolder<double>.set_Value
-                OpCodes.Ldloc_0,
-                OpCodes.Ret);
+            //adapt.Method.AssertOpCodes(
+            //    OpCodes.Newobj,
+            //    OpCodes.Stloc_0, // todo: can be replaced with dup #
+            //    OpCodes.Ldloc_0, // 
+            //    OpCodes.Ldarg_0,
+            //    OpCodes.Call, // ValueHolder<int?>.get_Value
+            //    OpCodes.Stloc_1,
+            //    OpCodes.Ldloca_S,
+            //    OpCodes.Call, // int?.get_Value
+            //    OpCodes.Conv_R8,
+            //    OpCodes.Call, // ValueHolder<double>.set_Value
+            //    OpCodes.Ldloc_0,
+            //    OpCodes.Ret);
 
             var result = adapt(new ValueHolder<int?> { Value = 321 });
             Assert.AreEqual(321d, result.Value);
@@ -694,19 +694,19 @@ IL_0021:  ret
             var source = new ValueHolder<decimal?> { Value = 938378.637m };
 
             var adapt = expr.CompileFast();
-            adapt.Method.AssertOpCodes(
-                OpCodes.Newobj,
-                OpCodes.Stloc_0, // todo: can be simplified with dup #173
-                OpCodes.Ldloc_0,
-                OpCodes.Ldarg_0,
-                OpCodes.Call, // ValueHolder<decimal?>.get_Value
-                OpCodes.Stloc_1,
-                OpCodes.Ldloca_S,
-                OpCodes.Call, // decimal?.get_Value
-                OpCodes.Call, // double Decimal.op_Explicit() 
-                OpCodes.Call, // ValueHolder<double>.set_Value
-                OpCodes.Ldloc_0,
-                OpCodes.Ret);
+            //adapt.Method.AssertOpCodes(
+            //    OpCodes.Newobj,
+            //    OpCodes.Stloc_0, // todo: can be simplified with dup #173
+            //    OpCodes.Ldloc_0,
+            //    OpCodes.Ldarg_0,
+            //    OpCodes.Call, // ValueHolder<decimal?>.get_Value
+            //    OpCodes.Stloc_1,
+            //    OpCodes.Ldloca_S,
+            //    OpCodes.Call, // decimal?.get_Value
+            //    OpCodes.Call, // double Decimal.op_Explicit() 
+            //    OpCodes.Call, // ValueHolder<double>.set_Value
+            //    OpCodes.Ldloc_0,
+            //    OpCodes.Ret);
 
             var result = adapt(source);
             Assert.AreEqual(938378.637d, result.Value);
@@ -734,17 +734,17 @@ IL_0021:  ret
             var source = new ValueHolder<decimal> { Value = 5332.00m };
 
             var adapt = expr.CompileFast();
-            adapt.Method.AssertOpCodes(
-                OpCodes.Newobj,
-                OpCodes.Stloc_0, // todo: can be simplified with dup #173
-                OpCodes.Ldloc_0,
-                OpCodes.Ldarg_0,
-                OpCodes.Call,    // ValueHolder<decimal>.get_Value
-                OpCodes.Call,    // double Decimal.op_Explicit() 
-                OpCodes.Newobj,  // new Nullable<double>()
-                OpCodes.Call,    // ValueHolder<double?>.set_Value
-                OpCodes.Ldloc_0,
-                OpCodes.Ret);
+            //adapt.Method.AssertOpCodes(
+            //    OpCodes.Newobj,
+            //    OpCodes.Stloc_0, // todo: can be simplified with dup #173
+            //    OpCodes.Ldloc_0,
+            //    OpCodes.Ldarg_0,
+            //    OpCodes.Call,    // ValueHolder<decimal>.get_Value
+            //    OpCodes.Call,    // double Decimal.op_Explicit() 
+            //    OpCodes.Newobj,  // new Nullable<double>()
+            //    OpCodes.Call,    // ValueHolder<double?>.set_Value
+            //    OpCodes.Ldloc_0,
+            //    OpCodes.Ret);
 
             var result = adapt(source);
             Assert.AreEqual(5332d, result.Value);

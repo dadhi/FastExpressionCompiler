@@ -441,15 +441,14 @@ namespace FastExpressionCompiler
 
         private struct TryCatchFinallyInfo
         {
-            public bool HasReturnExpression { get; set; }
-
-            public int ReturnLabelIndex { get; set; }
+            public bool HasReturnExpression;
+            public int ReturnLabelIndex;
         }
 
         // Track the info required to build a closure object + some context information not directly related to closure.
         private struct EmitContext
         {
-            #region Emitting context to track state
+            #region Context to track the emitting state
 
             public bool LastEmitIsAddress;
 
@@ -674,18 +673,20 @@ namespace FastExpressionCompiler
 
             public void PushBlock(IReadOnlyList<ParameterExpression> blockVarExprs)
             {
-                _blockStack = _blockStack.WithLast(new BlockInfo(blockVarExprs));
-                ++_currentBlockIndex;
+                //_blockStack = _blockStack.WithLast(new BlockInfo(blockVarExprs));
+                //++_currentBlockIndex;
             }
 
             public BlockInfo PushAndGetBlock(IReadOnlyList<ParameterExpression> blockVarExprs)
             {
-                if (UserDefinedClosure != null)
-                    PushBlock(blockVarExprs);
-                else
-                    ++_currentBlockIndex;
+                //if (UserDefinedClosure != null)
+                {
+                    _blockStack = _blockStack.WithLast(new BlockInfo(blockVarExprs));
+                }
 
-                return _blockStack[_currentBlockIndex];
+                //++_currentBlockIndex;
+
+                return _blockStack[++_currentBlockIndex];
             }
 
             public void PopBlock() => --_currentBlockIndex;
@@ -1146,13 +1147,13 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Block:
                         var blockExpr = (BlockExpression)expr;
-                        var blockHasVariables = blockExpr.Variables.Count != 0;
-                        if (blockHasVariables)
-                            closure.PushBlock(blockExpr.Variables);
+                        //var blockHasVariables = blockExpr.Variables.Count != 0;
+                        //if (blockHasVariables)
+                        //    closure.PushBlock(blockExpr.Variables);
                         if (!TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs))
                             return false;
-                        if (blockHasVariables)
-                            closure.PopBlock();
+                        //if (blockHasVariables)
+                            //closure.PopBlock();
                         return true;
 
                     case ExpressionType.Loop:
@@ -1300,7 +1301,7 @@ namespace FastExpressionCompiler
                 var catchExVar = catchBlock.Variable;
                 if (catchExVar != null)
                 {
-                    closure.PushBlock(new[] { catchExVar });
+                    //closure.PushBlock(new[] { catchExVar });
                     if (!TryCollectBoundConstants(ref closure, catchExVar, paramExprs))
                         return false;
                 }
@@ -1311,8 +1312,8 @@ namespace FastExpressionCompiler
                     !TryCollectBoundConstants(ref closure, catchBody, paramExprs))
                     return false;
 
-                if (catchExVar != null)
-                    closure.PopBlock();
+                //if (catchExVar != null)
+                //    closure.PopBlock();
             }
 
             var finallyExpr = tryExpr.Finally;

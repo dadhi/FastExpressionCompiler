@@ -25,7 +25,17 @@ namespace FastExpressionCompiler.Benchmarks
                              Compile | 285.788 us | 1.7830 us | 1.6679 us | 22.66 |    0.29 |      1.9531 |      0.9766 |           - |            10.93 KB |
                          CompileFast |  12.613 us | 0.1554 us | 0.1454 us |  1.00 |    0.00 |      0.7477 |      0.3662 |      0.0305 |             3.44 KB |
          CompileFast_LightExpression |   9.845 us | 0.0541 us | 0.0451 us |  0.78 |    0.01 |      0.7477 |      0.3662 |      0.0305 |             3.44 KB |
-         */
+
+        ## Degradation after adding block / try-catch collection + added WithoutClosure for comparison
+
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 254.680 us | 1.0914 us | 1.0209 us | 13.38 |    0.13 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  19.031 us | 0.1987 us | 0.1858 us |  1.00 |    0.00 |      0.9766 |      0.4883 |      0.0305 |             4.61 KB |
+                 CompileFast_WithoutClosure |   5.373 us | 0.0222 us | 0.0207 us |  0.28 |    0.00 |      0.6256 |           - |           - |             2.91 KB |
+                CompileFast_LightExpression |  15.243 us | 0.1002 us | 0.0937 us |  0.80 |    0.01 |      0.9918 |      0.4883 |      0.0458 |             4.61 KB |
+ CompileFast_LightExpression_WithoutClosure |   3.882 us | 0.0735 us | 0.0787 us |  0.20 |    0.01 |      0.6294 |           - |           - |             2.91 KB |
+        */
 
         [MemoryDiagnoser]
         public class Compile_only
@@ -40,10 +50,16 @@ namespace FastExpressionCompiler.Benchmarks
             public object CompileFast() => _expression.CompileFast();
 
             [Benchmark]
-            public object CompileFast_WithoutClosure() => _expression.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>();
+            public object CompileFast_WithoutClosure() => 
+                _expression.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>();
 
             [Benchmark]
-            public object CompileFast_LightExpression() => LightExpression.ExpressionCompiler.CompileFast(_lightExpression);
+            public object CompileFast_LightExpression() => 
+                LightExpression.ExpressionCompiler.CompileFast(_lightExpression);
+
+            [Benchmark]
+            public object CompileFast_LightExpression_WithoutClosure() => 
+                LightExpression.ExpressionCompiler.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>(_lightExpression);
         }
 
         /*
