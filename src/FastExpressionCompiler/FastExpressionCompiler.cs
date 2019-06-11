@@ -421,7 +421,7 @@ namespace FastExpressionCompiler
 
         private sealed class BlockInfo
         {
-            public readonly IReadOnlyList<ParameterExpression> VarExprs;
+            public readonly IReadOnlyList<ParameterExpression> VarExprs; // specialize for 1, 2, 3 variables
             public readonly LocalBuilder[] LocalVars;
 
             internal BlockInfo(IReadOnlyList<ParameterExpression> varExprs)
@@ -457,11 +457,11 @@ namespace FastExpressionCompiler
             private int _currentBlockIndex;
 
             // Helpers to decide whether we are inside a try/catch or not
-            private TryCatchFinallyInfo[] _tryCatchFinallyStack;
+            public TryCatchFinallyInfo[] TryCatchFinallyStack;
             private int _currentTryCatchFinallyIndex;
 
             // Dictionary for the used Labels in IL
-            private KeyValuePair<LabelTarget, Label?>[] _labels;
+            public KeyValuePair<LabelTarget, Label?>[] Labels;
 
             #endregion
 
@@ -503,25 +503,37 @@ namespace FastExpressionCompiler
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 NestedLambdaExprs = Tools.Empty<LambdaExpression>();
+
+
                 _blockStack = Tools.Empty<BlockInfo>();
                 _currentBlockIndex = -1;
-                _tryCatchFinallyStack = Tools.Empty<TryCatchFinallyInfo>();
+                TryCatchFinallyStack = Tools.Empty<TryCatchFinallyInfo>();
                 _currentTryCatchFinallyIndex = -1;
-                _labels = null;
+
                 LastEmitIsAddress = false;
 
-                if (userDefinedClosure != null && userDefinedClosure != _staticDelegateClosurePlaceholder)
-                {
-                    Constants = closureConstantExpressions ?? throw new ArgumentException(
-                                    "Constant expressions should not be null if `closure` parameter is passed", nameof(closureConstantExpressions));
-                    ClosureType = userDefinedClosure.GetType();
-                    ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
-                }
-                else
+                if (userDefinedClosure == null)
                 {
                     Constants = Tools.Empty<ConstantExpression>();
                     ClosureType = null;
                     ClosureFields = null;
+                    Labels = Tools.Empty<KeyValuePair<LabelTarget, Label?>>();
+                }
+                else if (userDefinedClosure == _staticDelegateClosurePlaceholder)
+                {
+                    Constants = null;
+                    ClosureType = null;
+                    ClosureFields = null;
+                    Labels = null;
+                }
+                else // user defined closure
+                {
+                    Constants = closureConstantExpressions ?? throw new ArgumentException(
+                                "Constant expressions should not be null if `closure` parameter is passed",
+                                nameof(closureConstantExpressions));
+                    ClosureType = userDefinedClosure.GetType();
+                    ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
+                    Labels = null;
                 }
             }
 
@@ -550,7 +562,7 @@ namespace FastExpressionCompiler
             {
                 if (labelTarget != null &&
                     GetLabelIndex(labelTarget) == -1)
-                    _labels = _labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
+                    Labels = Labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
             }
 
             public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) =>
@@ -558,29 +570,29 @@ namespace FastExpressionCompiler
 
             public Label GetOrCreateLabel(int index, ILGenerator il)
             {
-                var labelPair = _labels[index];
+                var labelPair = Labels[index];
                 var label = labelPair.Value;
                 if (!label.HasValue)
-                    _labels[index] = new KeyValuePair<LabelTarget, Label?>(labelPair.Key, label = il.DefineLabel());
+                    Labels[index] = new KeyValuePair<LabelTarget, Label?>(labelPair.Key, label = il.DefineLabel());
                 return label.Value;
             }
 
             public int GetLabelIndex(LabelTarget labelTarget)
             {
-                if (_labels != null)
-                    for (var i = 0; i < _labels.Length; ++i)
-                        if (_labels[i].Key == labelTarget)
+                if (Labels != null)
+                    for (var i = 0; i < Labels.Length; ++i)
+                        if (Labels[i].Key == labelTarget)
                             return i;
                 return -1;
             }
 
             public void MarkLabelAsTryReturn(int labelIndex) =>
-                _tryCatchFinallyStack[_currentTryCatchFinallyIndex].ReturnLabelIndex = labelIndex;
+                TryCatchFinallyStack[_currentTryCatchFinallyIndex].ReturnLabelIndex = labelIndex;
 
             public void MarkReturnExpression()
             {
                 if (_currentTryCatchFinallyIndex != -1)
-                    _tryCatchFinallyStack[_currentTryCatchFinallyIndex].HasReturnExpression = true;
+                    TryCatchFinallyStack[_currentTryCatchFinallyIndex].HasReturnExpression = true;
             }
 
             public object ConstructClosureTypeAndObject(bool constructTypeOnly = false)
@@ -694,8 +706,8 @@ namespace FastExpressionCompiler
             public TryCatchFinallyInfo PushTryCatchFinally()
             {
                 if (UserDefinedClosure != null || !IsClosureConstructed)
-                    _tryCatchFinallyStack = _tryCatchFinallyStack.WithLast(new TryCatchFinallyInfo());
-                return _tryCatchFinallyStack[++_currentTryCatchFinallyIndex];
+                    TryCatchFinallyStack = TryCatchFinallyStack.WithLast(new TryCatchFinallyInfo());
+                return TryCatchFinallyStack[++_currentTryCatchFinallyIndex];
             }
 
             public void PopTryCatchFinally() => --_currentTryCatchFinallyIndex;
@@ -718,8 +730,8 @@ namespace FastExpressionCompiler
 
             public bool IsTryReturnLabel(int labelIndex)
             {
-                for (var i = _tryCatchFinallyStack.Length; i > 0;)
-                    if (_tryCatchFinallyStack[--i].ReturnLabelIndex == labelIndex)
+                for (var i = TryCatchFinallyStack.Length; i > 0;)
+                    if (TryCatchFinallyStack[--i].ReturnLabelIndex == labelIndex)
                         return true;
                 return false;
             }
@@ -1285,12 +1297,12 @@ namespace FastExpressionCompiler
             return true;
         }
 
-        private static bool TryCollectTryExprConstants(ref EmitContext closure, TryExpression tryExpr,
+        private static bool TryCollectTryExprConstants(ref EmitContext context, TryExpression tryExpr,
             IReadOnlyList<ParameterExpression> paramExprs)
         {
-            closure.PushTryCatchFinally();
+            context.PushTryCatchFinally();
 
-            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs))
+            if (!TryCollectBoundConstants(ref context, tryExpr.Body, paramExprs))
                 return false;
 
             var catchBlocks = tryExpr.Handlers;
@@ -1301,27 +1313,23 @@ namespace FastExpressionCompiler
                 var catchExVar = catchBlock.Variable;
                 if (catchExVar != null)
                 {
-                    //closure.PushBlock(new[] { catchExVar });
-                    if (!TryCollectBoundConstants(ref closure, catchExVar, paramExprs))
+                    if (!TryCollectBoundConstants(ref context, catchExVar, paramExprs))
                         return false;
                 }
 
                 var filterExpr = catchBlock.Filter;
                 if (filterExpr != null &&
-                    !TryCollectBoundConstants(ref closure, filterExpr, paramExprs) ||
-                    !TryCollectBoundConstants(ref closure, catchBody, paramExprs))
+                    !TryCollectBoundConstants(ref context, filterExpr, paramExprs) ||
+                    !TryCollectBoundConstants(ref context, catchBody, paramExprs))
                     return false;
-
-                //if (catchExVar != null)
-                //    closure.PopBlock();
             }
 
             var finallyExpr = tryExpr.Finally;
 
-            if (finallyExpr != null && !TryCollectBoundConstants(ref closure, finallyExpr, paramExprs))
+            if (finallyExpr != null && !TryCollectBoundConstants(ref context, finallyExpr, paramExprs))
                 return false;
 
-            closure.PopTryCatchFinally();
+            context.PopTryCatchFinally();
             return true;
         }
 
@@ -1619,21 +1627,26 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitLabel(LabelExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext context, ParentFlags parent)
             {
-                var index = closure.GetLabelIndex(expr.Target);
+                var index = context.GetLabelIndex(expr.Target);
                 if (index == -1)
                     return false; // should be found in first collecting constants round
 
-                if (closure.IsTryReturnLabel(index))
-                    return true; // label will be emitted by TryEmitTryCatchFinallyBlock
+                if (context.IsTryReturnLabel(index))
+                {
+                    // note: we are relying on constants collecting phase, otherwise consider Return label not supported
+                    if (context.TryCatchFinallyStack.Length == 0)
+                        return false;
+                    return true;  // label will be emitted by TryEmitTryCatchFinallyBlock
+                }
 
                 // define a new label or use the label provided by the preceding GoTo expression
-                var label = closure.GetOrCreateLabel(index, il);
+                var label = context.GetOrCreateLabel(index, il);
 
                 il.MarkLabel(label);
 
-                return expr.DefaultValue == null || TryEmit(expr.DefaultValue, paramExprs, il, ref closure, parent);
+                return expr.DefaultValue == null || TryEmit(expr.DefaultValue, paramExprs, il, ref context, parent);
             }
 
             private static bool TryEmitGoto(GotoExpression expr,
@@ -1641,7 +1654,11 @@ namespace FastExpressionCompiler
             {
                 var index = closure.GetLabelIndex(expr.Target);
                 if (index == -1)
+                {
+                    if (closure.Labels == null)
+                        return false; 
                     throw new InvalidOperationException("Cannot jump, no labels found");
+                }
 
                 if (expr.Value != null &&
                     !TryEmit(expr.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))

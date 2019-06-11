@@ -186,14 +186,14 @@ namespace FastExpressionCompiler.UnitTests
                     Label(returnLabel, Default(returnLabel.Type))
                 ));
 
-#if !LIGHT_EXPRESSION
-            var funcSys = expr.Compile();
+            var funcSys = expr.CompileSys();
             Assert.AreEqual("From Catch block", funcSys());
-#endif
-            var func = expr.CompileFast(true);
 
-            Assert.IsNotNull(func);
+            var func = expr.CompileFast(true);
             Assert.AreEqual("From Catch block", func());
+
+            var funcWithoutClosure = expr.TryCompileWithoutClosure<Func<string>>();// ?? expr.CompileSys();
+            Assert.IsNull(funcWithoutClosure);
         }
 
         [Test]
