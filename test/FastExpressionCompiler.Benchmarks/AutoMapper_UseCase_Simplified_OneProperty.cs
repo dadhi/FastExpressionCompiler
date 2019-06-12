@@ -37,13 +37,14 @@ namespace FastExpressionCompiler.Benchmarks
  CompileFast_LightExpression_WithoutClosure |   3.882 us | 0.0735 us | 0.0787 us |  0.20 |    0.01 |      0.6294 |           - |           - |             2.91 KB |
 
         ## Got it back a bit
+
                                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
 ------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-                                    Compile | 292.247 us | 2.0617 us | 1.9285 us | 15.18 |    0.09 |      1.9531 |      0.9766 |           - |            10.93 KB |
-                                CompileFast |  19.261 us | 0.1001 us | 0.0887 us |  1.00 |    0.00 |      0.9460 |      0.4578 |      0.0305 |             4.34 KB |
-                 CompileFast_WithoutClosure |  11.520 us | 0.0803 us | 0.0712 us |  0.60 |    0.00 |      0.7019 |      0.3510 |      0.0305 |             3.24 KB |
-                CompileFast_LightExpression |  15.705 us | 0.0879 us | 0.0822 us |  0.82 |    0.01 |      0.9460 |      0.4578 |      0.0305 |             4.34 KB |
- CompileFast_LightExpression_WithoutClosure |   9.457 us | 0.0890 us | 0.0744 us |  0.49 |    0.00 |      0.7019 |      0.3510 |      0.0305 |             3.24 KB |
+                                    Compile | 289.532 us | 1.7909 us | 1.6752 us | 15.95 |    0.21 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  18.156 us | 0.2027 us | 0.1896 us |  1.00 |    0.00 |      0.9155 |      0.4578 |      0.0305 |             4.23 KB |
+                 CompileFast_WithoutClosure |  10.596 us | 0.0600 us | 0.0532 us |  0.58 |    0.01 |      0.6866 |      0.3357 |      0.0305 |             3.14 KB |
+                CompileFast_LightExpression |  14.583 us | 0.0815 us | 0.0680 us |  0.80 |    0.01 |      0.9155 |      0.4578 |      0.0458 |             4.23 KB |
+ CompileFast_LightExpression_WithoutClosure |   8.888 us | 0.0762 us | 0.0713 us |  0.49 |    0.01 |      0.6866 |      0.3357 |      0.0305 |             3.14 KB |
         */
 
         [MemoryDiagnoser]

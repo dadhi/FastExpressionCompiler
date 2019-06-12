@@ -421,26 +421,20 @@ namespace FastExpressionCompiler
 
         private class BlockInfo
         {
-            // todo: specialize for 1, 2, 3 variables
-            public readonly IReadOnlyList<ParameterExpression> VarExprs; 
-            public readonly LocalBuilder[] LocalVars;
-
             public readonly BlockInfo OuterBlock;
+            public readonly ParameterExpression VarExpr0;
+            public readonly LocalBuilder Var0;
+            public readonly KeyValuePair<ParameterExpression, LocalBuilder>[] Vars;
 
-            internal BlockInfo(BlockInfo outerBlock, IReadOnlyList<ParameterExpression> varExprs)
+            internal BlockInfo(BlockInfo outerBlock, 
+                ParameterExpression varExpr0, LocalBuilder var0,
+                KeyValuePair<ParameterExpression, LocalBuilder>[] vars = null)
             {
                 OuterBlock = outerBlock;
-                VarExprs = varExprs;
-                LocalVars = new LocalBuilder[varExprs.Count];
+                VarExpr0 = varExpr0;
+                Var0 = var0;
+                Vars = vars;
             }
-
-            public void ConstructLocalVariables(IReadOnlyList<ParameterExpression> varExprs, ILGenerator il)
-            {
-                for (var i = 0; i < varExprs.Count; i++)
-                    LocalVars[i] = il.DeclareLocal(varExprs[i].Type);
-            }
-
-            public void SetLocalVariable(LocalBuilder localVar) => LocalVars[0] = localVar;
         }
 
         private struct TryCatchFinallyInfo
@@ -683,8 +677,22 @@ namespace FastExpressionCompiler
                 return constructTypeOnly ? null : createClosure.Invoke(null, fieldValues);
             }
 
-            public BlockInfo PushAndGetBlock(IReadOnlyList<ParameterExpression> blockVarExprs) => 
-                CurrentBlock = new BlockInfo(CurrentBlock, blockVarExprs);
+            public void PushAndGetBlock(IReadOnlyList<ParameterExpression> blockVarExprs, ILGenerator il)
+            {
+                if (blockVarExprs.Count == 1)
+                    CurrentBlock = new BlockInfo(CurrentBlock, blockVarExprs[0], il.DeclareLocal(blockVarExprs[0].Type));
+                else
+                {
+                    var vars = new KeyValuePair<ParameterExpression, LocalBuilder>[blockVarExprs.Count - 1];
+                    for (var i = 1; i < blockVarExprs.Count; i++)
+                    {
+                        var varExpr = blockVarExprs[i];
+                        vars[i - 1] = new KeyValuePair<ParameterExpression, LocalBuilder>(varExpr, il.DeclareLocal(varExpr.Type));
+                    }
+
+                    CurrentBlock = new BlockInfo(CurrentBlock, blockVarExprs[0], il.DeclareLocal(blockVarExprs[0].Type), vars);
+                }
+            }
 
             public void PopBlock() => 
                 CurrentBlock = CurrentBlock.OuterBlock;
@@ -701,14 +709,23 @@ namespace FastExpressionCompiler
             public bool IsLocalVar(object varParamExpr)
             {
                 var block = CurrentBlock;
-                var i = -1;
-                while (block != null && i == -1)
+                while (block != null)
                 {
-                    i = block.VarExprs.GetFirstIndex(varParamExpr);
+                    if (block.VarExpr0 == varParamExpr)
+                        return true;
+
+                    if (block.Vars != null)
+                        for (var i = 0; i < block.Vars.Length; i++)
+                        {
+                            ref var x = ref block.Vars[i];
+                            if (x.Key == varParamExpr)
+                                return true;
+                        }
+
                     block = block.OuterBlock;
                 }
 
-                return i != -1;
+                return false;
             }
 
             public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
@@ -716,9 +733,17 @@ namespace FastExpressionCompiler
                 var block = CurrentBlock;
                 while (block != null)
                 {
-                    var i = block.VarExprs.GetFirstIndex(varParamExpr);
-                    if (i != -1)
-                        return block.LocalVars[i];
+                    if (block.VarExpr0 == varParamExpr)
+                        return block.Var0;
+
+                    if (block.Vars != null)
+                        for (var i = 0; i < block.Vars.Length; i++)
+                        {
+                            ref var x = ref block.Vars[i];
+                            if (x.Key == varParamExpr)
+                                return x.Value;
+                        }
+
                     block = block.OuterBlock;
                 }
 
@@ -1512,10 +1537,7 @@ namespace FastExpressionCompiler
                             }
 
                             if (blockHasVars)
-                            {
-                                var block = context.PushAndGetBlock(blockExpr.Variables);
-                                block.ConstructLocalVariables(blockExpr.Variables, il);
-                            }
+                                context.PushAndGetBlock(blockExpr.Variables, il);
 
                             // ignore result for all not the last statements in block
                             if (statementExprs.Count > 1)
@@ -1832,7 +1854,7 @@ namespace FastExpressionCompiler
                     if (exVarExpr != null)
                     {
                         var exVar = il.DeclareLocal(exVarExpr.Type);
-                        closure.PushAndGetBlock(new[] { exVarExpr }).SetLocalVariable(exVar);
+                        closure.CurrentBlock = new BlockInfo(closure.CurrentBlock, exVarExpr, exVar);
                         il.Emit(OpCodes.Stloc_S, exVar);
                     }
 
