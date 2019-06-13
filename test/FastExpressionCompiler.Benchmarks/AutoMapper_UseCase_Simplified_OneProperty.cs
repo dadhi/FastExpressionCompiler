@@ -20,11 +20,13 @@ namespace FastExpressionCompiler.Benchmarks
           DefaultJob : .NET Core 2.1.11 (CoreCLR 4.6.27617.04, CoreFX 4.6.27617.02), 64bit RyuJIT
 
 
-                              Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-        ---------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-                             Compile | 285.788 us | 1.7830 us | 1.6679 us | 22.66 |    0.29 |      1.9531 |      0.9766 |           - |            10.93 KB |
-                         CompileFast |  12.613 us | 0.1554 us | 0.1454 us |  1.00 |    0.00 |      0.7477 |      0.3662 |      0.0305 |             3.44 KB |
-         CompileFast_LightExpression |   9.845 us | 0.0541 us | 0.0451 us |  0.78 |    0.01 |      0.7477 |      0.3662 |      0.0305 |             3.44 KB |
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 291.735 us | 3.6419 us | 3.4067 us | 22.30 |    0.31 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  13.104 us | 0.0625 us | 0.0522 us |  1.00 |    0.00 |      0.6866 |      0.3357 |      0.0305 |              3.2 KB |
+                 CompileFast_WithoutClosure |  10.585 us | 0.0809 us | 0.0757 us |  0.81 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
+                CompileFast_LightExpression |   9.829 us | 0.0751 us | 0.0666 us |  0.75 |    0.01 |      0.6866 |      0.3357 |      0.0305 |              3.2 KB |
+ CompileFast_LightExpression_WithoutClosure |   9.028 us | 0.0632 us | 0.0560 us |  0.69 |    0.00 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
 
         ## Degradation after adding block / try-catch collection + added WithoutClosure for comparison
 
