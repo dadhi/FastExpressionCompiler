@@ -308,7 +308,7 @@ namespace FastExpressionCompiler
             }
             else
             {
-                closureObject = closureInfo.Closure;
+                closureObject = closureInfo.UserDefinedClosure;
             }
 
             var closureType = closureInfo.ClosureType;
@@ -341,19 +341,17 @@ namespace FastExpressionCompiler
             // then ensure it goes to outer non passed parameter.
             // But check that having a non-passed parameter in root expression is invalid.
             var nestedNonPassedParams = nestedInfo.NonPassedParameters;
-            if (nestedNonPassedParams.Length != 0)
-                for (var i = 0; i < nestedNonPassedParams.Length; i++)
-                {
-                    var nestedNonPassedParam = nestedNonPassedParams[i];
-                    if (lambdaParamExprs.GetFirstIndex(nestedNonPassedParam) == -1)
-                        info.AddNonPassedParam(nestedNonPassedParam);
-                }
+            for (var i = 0; i < nestedNonPassedParams.Length; i++)
+            {
+                var nestedNonPassedParam = nestedNonPassedParams[i];
+                if (lambdaParamExprs.GetFirstIndex(nestedNonPassedParam) == -1)
+                    info.AddNonPassedParam(nestedNonPassedParam);
+            }
 
             // Promote found constants and nested lambdas into outer closure
             var nestedConstants = nestedInfo.Constants;
-            if (nestedConstants.Length != 0)
-                for (var i = 0; i < nestedConstants.Length; i++)
-                    info.AddConstant(nestedConstants[i]);
+            for (var i = 0; i < nestedConstants.Length; i++)
+                info.AddConstant(nestedConstants[i]);
 
             // Add nested constants to outer lambda closure.
             // At this moment we know that the NestedLambdaExprs are non-empty, cause we are doing this from the nested lambda already.
@@ -435,8 +433,7 @@ namespace FastExpressionCompiler
         // Track the info required to build a closure object + some context information not directly related to closure.
         private struct ClosureInfo
         {
-            // todo: Could be moved to the separate Context object
-            #region Emitting context to track state
+            #region Emitting context to help track the state
 
             public bool LastEmitIsAddress;
 
@@ -456,7 +453,7 @@ namespace FastExpressionCompiler
             public bool IsClosureConstructed;
 
             // Constructed closure object.
-            public readonly object Closure;
+            public readonly object UserDefinedClosure;
 
             // Type of constructed closure, may be available even without closure object (in case of nested lambda)
             public Type ClosureType;
@@ -482,7 +479,7 @@ namespace FastExpressionCompiler
             #endregion
 
             // Populates info directly with provided closure object and constants.
-            public ClosureInfo(bool isConstructed, object closure = null, ConstantExpression[] closureConstantExpressions = null)
+            public ClosureInfo(bool isConstructed, object userDefinedClosure = null, ConstantExpression[] closureConstantExpressions = null)
             {
                 IsClosureConstructed = isConstructed;
 
@@ -494,19 +491,19 @@ namespace FastExpressionCompiler
                 _labels = null;
                 LastEmitIsAddress = false;
 
-                if (closure == null)
+                if (userDefinedClosure == null)
                 {
-                    Closure = null;
+                    UserDefinedClosure = null;
                     Constants = Tools.Empty<ConstantExpression>();
                     ClosureType = null;
                     ClosureFields = null;
                 }
                 else
                 {
-                    Closure = closure;
+                    UserDefinedClosure = userDefinedClosure;
                     Constants = closureConstantExpressions ?? throw new ArgumentException(
                                     "Constant expressions should not be null if `closure` parameter is passed", nameof(closureConstantExpressions));
-                    ClosureType = closure.GetType();
+                    ClosureType = userDefinedClosure.GetType();
                     
                     // todo: verify that Fields types are correspond to `closureConstantExpressions`
                     ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
@@ -515,9 +512,15 @@ namespace FastExpressionCompiler
 
             public void AddConstant(ConstantExpression expr)
             {
-                if (Constants.Length == 0 ||
-                    Constants.GetFirstIndex(expr) == -1)
-                    Constants = Constants.WithLast(expr);
+                if (Constants.Length == 0)
+                    Constants = new []{ expr };
+                else
+                {
+                    var i = Constants.Length - 1;
+                    while (i > -1 && !ReferenceEquals(Constants[i--], expr)) {}
+                    if (i == -1)
+                        Constants = Constants.WithLast(expr);
+                }
             }
 
             public void AddNonPassedParam(ParameterExpression expr)
@@ -658,7 +661,7 @@ namespace FastExpressionCompiler
                 _currentBlock = new BlockInfo(_currentBlock, blockVarExpr, localVar);
 
             /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
-            public void PushBlockWithVars(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars) =>
+            public void PushBlockWithVars(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars = null) =>
                 _currentBlock = new BlockInfo(_currentBlock, blockVarExprs, localVars);
 
             public void PushBlockAndConstructLocalVars(IReadOnlyList<ParameterExpression> blockVarExprs, ILGenerator il)
@@ -965,6 +968,7 @@ namespace FastExpressionCompiler
             public readonly object Lambda;
             public readonly bool IsAction;
 
+
             public NestedLambdaInfo(ClosureInfo closureInfo, object lambda, bool isAction)
             {
                 ClosureInfo = closureInfo;
@@ -1116,8 +1120,10 @@ namespace FastExpressionCompiler
                         var blockExpr = (BlockExpression)expr;
 
                         var varCount = blockExpr.Variables.Count;
-                        if (varCount != 0)
-                            closure.PushBlockWithVars(blockExpr.Variables, null);
+                        if (varCount == 1) 
+                            closure.PushBlockWithVars(blockExpr.Variables[0]);
+                        else if (varCount > 1)
+                            closure.PushBlockWithVars(blockExpr.Variables);
 
                         if (!TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs))
                             return false;
@@ -1486,11 +1492,10 @@ namespace FastExpressionCompiler
                                 }
                             }
 
-                            if (blockVarCount != 0)
-                                if (blockVarCount == 1)
-                                    closure.PushBlockWithVars(blockExpr.Variables[0], il.DeclareLocal(blockExpr.Variables[0].Type));
-                                else
-                                    closure.PushBlockAndConstructLocalVars(blockExpr.Variables, il);
+                            if (blockVarCount == 1)
+                                closure.PushBlockWithVars(blockExpr.Variables[0], il.DeclareLocal(blockExpr.Variables[0].Type));
+                            else if (blockVarCount > 1)
+                                closure.PushBlockAndConstructLocalVars(blockExpr.Variables, il);
 
                             // ignore result for all not the last statements in block
                             if (statementExprs.Count > 1)
