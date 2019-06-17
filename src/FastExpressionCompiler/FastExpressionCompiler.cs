@@ -432,7 +432,7 @@ namespace FastExpressionCompiler
             }
         }
 
-        private sealed class TryCatchFinallyInfo
+        private struct TryCatchFinallyInfo
         {
             public bool ContainsReturnGotoExpression;
             public int ReturnLabelIndex;
