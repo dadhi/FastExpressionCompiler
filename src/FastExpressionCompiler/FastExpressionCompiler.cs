@@ -226,11 +226,13 @@ namespace FastExpressionCompiler
             return (TDelegate)(object)method.CreateDelegate(delegateType, closure);
         }
 
+        private static readonly object _noClosure = new object();
+
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
         public static TDelegate TryCompileWithoutClosure<TDelegate>(this LambdaExpression lambdaExpr)
             where TDelegate : class
         {
-            var closureInfo = new ClosureInfo(true);
+            var closureInfo = new ClosureInfo(true, _noClosure);
             var paramTypes = Tools.GetParamTypes(lambdaExpr.Parameters);
 
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, paramTypes,
@@ -430,6 +432,12 @@ namespace FastExpressionCompiler
             }
         }
 
+        private sealed class TryCatchFinallyInfo
+        {
+            public bool ContainsReturnGotoExpression;
+            public int ReturnLabelIndex;
+        }
+
         // Track the info required to build a closure object + some context information not directly related to closure.
         private struct ClosureInfo
         {
@@ -437,11 +445,12 @@ namespace FastExpressionCompiler
 
             public bool LastEmitIsAddress;
 
-            // Helper to know if a Return GotoExpression's Label should be emitted
-            private int _tryCatchFinallyReturnLabelIndex;
+            // Helpers to know if a Return GotoExpression's Label should be emitted
+            public TryCatchFinallyInfo[] TryCatchFinallyInfos;
+            public int CurrentTryCatchFinallyIndex;
 
             // Helper to decide whether we are inside the block or not
-            private BlockInfo _currentBlock;
+            private BlockInfo _currentBlockInfo;
 
             // Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
@@ -486,21 +495,21 @@ namespace FastExpressionCompiler
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 NestedLambdaExprs = Tools.Empty<LambdaExpression>();
-                _tryCatchFinallyReturnLabelIndex = int.MinValue;
-                _currentBlock = null;
+                CurrentTryCatchFinallyIndex = -1;
+                _currentBlockInfo = null;
+                TryCatchFinallyInfos = null;
                 _labels = null;
                 LastEmitIsAddress = false;
+                UserDefinedClosure = userDefinedClosure;
 
-                if (userDefinedClosure == null)
+                if (userDefinedClosure == null || userDefinedClosure == _noClosure)
                 {
-                    UserDefinedClosure = null;
                     Constants = Tools.Empty<ConstantExpression>();
                     ClosureType = null;
                     ClosureFields = null;
                 }
                 else
                 {
-                    UserDefinedClosure = userDefinedClosure;
                     Constants = closureConstantExpressions ?? throw new ArgumentException(
                                     "Constant expressions should not be null if `closure` parameter is passed", nameof(closureConstantExpressions));
                     ClosureType = userDefinedClosure.GetType();
@@ -564,8 +573,6 @@ namespace FastExpressionCompiler
                             return i;
                 return -1;
             }
-
-            public void MarkLabelAsTryReturn(int index) => _tryCatchFinallyReturnLabelIndex = index;
 
             public object ConstructClosureTypeAndObject(bool constructTypeOnly = false)
             {
@@ -658,26 +665,26 @@ namespace FastExpressionCompiler
 
             /// LocalVar maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
             public void PushBlockWithVars(ParameterExpression blockVarExpr, LocalBuilder localVar = null) =>
-                _currentBlock = new BlockInfo(_currentBlock, blockVarExpr, localVar);
+                _currentBlockInfo = new BlockInfo(_currentBlockInfo, blockVarExpr, localVar);
 
             /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
             public void PushBlockWithVars(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars = null) =>
-                _currentBlock = new BlockInfo(_currentBlock, blockVarExprs, localVars);
+                _currentBlockInfo = new BlockInfo(_currentBlockInfo, blockVarExprs, localVars);
 
             public void PushBlockAndConstructLocalVars(IReadOnlyList<ParameterExpression> blockVarExprs, ILGenerator il)
             {
                 var localVars = new LocalBuilder[blockVarExprs.Count];
                 for (var i = 0; i < localVars.Length; i++)
                     localVars[i] = il.DeclareLocal(blockVarExprs[i].Type);
-                _currentBlock = new BlockInfo(_currentBlock, blockVarExprs, localVars);
+                _currentBlockInfo = new BlockInfo(_currentBlockInfo, blockVarExprs, localVars);
             }
 
             public void PopBlock() =>
-                _currentBlock = _currentBlock.OuterBlock;
+                _currentBlockInfo = _currentBlockInfo.OuterBlock;
 
             public bool IsLocalVar(object varParamExpr)
             {
-                for (var block = _currentBlock; block != null; block = block.OuterBlock)
+                for (var block = _currentBlockInfo; block != null; block = block.OuterBlock)
                 {
                     if (ReferenceEquals(block.VarExprs, varParamExpr))
                         return true;
@@ -690,11 +697,20 @@ namespace FastExpressionCompiler
                 return false;
             }
 
-            public bool IsTryReturnLabel(int index) => index == _tryCatchFinallyReturnLabelIndex;
+            public bool IsTryReturnLabel(int index)
+            {
+                var tryCatchFinallyInfos = TryCatchFinallyInfos;
+                if (tryCatchFinallyInfos == null)
+                    return false;
+                for (var i = 0; i <= tryCatchFinallyInfos.Length; ++i)
+                    if (tryCatchFinallyInfos[i].ReturnLabelIndex == index)
+                        return true;
+                return false;
+            }
 
             public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                for (var block = _currentBlock; block != null; block = block.OuterBlock)
+                for (var block = _currentBlockInfo; block != null; block = block.OuterBlock)
                 {
                     if (ReferenceEquals(block.VarExprs, varParamExpr))
                         return (LocalBuilder)block.LocalVars;
@@ -1161,10 +1177,17 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Goto:
-                        var gotoValueExpr = ((GotoExpression)expr).Value;
-                        if (gotoValueExpr == null)
+                        var gotoExpr = (GotoExpression)expr;
+                        if (gotoExpr.Kind == GotoExpressionKind.Return)
+                        {
+                            if (closure.CurrentTryCatchFinallyIndex != -1)
+                                closure.TryCatchFinallyInfos[closure.CurrentTryCatchFinallyIndex].ContainsReturnGotoExpression = true;
+                        }
+
+                        if (gotoExpr.Value == null)
                             return true;
-                        expr = gotoValueExpr;
+
+                        expr = gotoExpr.Value;
                         continue;
 
                     case ExpressionType.Switch:
@@ -1261,6 +1284,9 @@ namespace FastExpressionCompiler
         private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr,
             IReadOnlyList<ParameterExpression> paramExprs)
         {
+            closure.TryCatchFinallyInfos = closure.TryCatchFinallyInfos.WithLast(new TryCatchFinallyInfo());
+            ++closure.CurrentTryCatchFinallyIndex;
+
             if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs))
                 return false;
 
@@ -1287,8 +1313,11 @@ namespace FastExpressionCompiler
                     closure.PopBlock();
             }
 
-            return tryExpr.Finally == null || 
-                   TryCollectBoundConstants(ref closure, tryExpr.Finally, paramExprs);
+            if (tryExpr.Finally != null && !TryCollectBoundConstants(ref closure, tryExpr.Finally, paramExprs))
+                return false;
+
+            --closure.CurrentTryCatchFinallyIndex;
+            return true;
         }
 
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, IReadOnlyList<Expression> exprs,
@@ -1609,7 +1638,11 @@ namespace FastExpressionCompiler
             {
                 var index = closure.GetLabelIndex(expr.Target);
                 if (index == -1)
+                {
+                    if (closure.UserDefinedClosure != null)
+                        return false;
                     throw new InvalidOperationException("Cannot jump, no labels found");
+                }
 
                 if (expr.Value != null && 
                     !TryEmit(expr.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
@@ -1619,37 +1652,38 @@ namespace FastExpressionCompiler
                 {
                     case GotoExpressionKind.Break:
                     case GotoExpressionKind.Continue:
-                        return EmitGotoLabel(OpCodes.Br, index, il, ref closure);
+                        // use label defined by Label expression or define its own to use by subsequent Label
+                        il.Emit(OpCodes.Br, closure.GetOrCreateLabel(index, il));
+                        return true;
 
                     case GotoExpressionKind.Goto:
                         if (expr.Value != null)
                             goto case GotoExpressionKind.Return;
 
-                        return EmitGotoLabel(OpCodes.Br, index, il, ref closure);
+                        // use label defined by Label expression or define its own to use by subsequent Label
+                        il.Emit(OpCodes.Br, closure.GetOrCreateLabel(index, il));
+                        return true;
 
                     case GotoExpressionKind.Return:
-                        if ((parent & ParentFlags.TryCatch) == 0)
+
+                        // check that we are inside the Try-Catch-Finally block
+                        if ((parent & ParentFlags.TryCatch) != 0)
+                        {
+                            // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
+                            // to emit the Leave instruction, return label and return result
+                            closure.TryCatchFinallyInfos[closure.CurrentTryCatchFinallyIndex].ReturnLabelIndex = index;
+                        }
+                        else
                         {
                             // use label defined by Label expression or define its own to use by subsequent Label
                             il.Emit(OpCodes.Ret, closure.GetOrCreateLabel(index, il));
-                            return true;
                         }
 
-                        // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
-                        // to emit the Leave instruction, return label and return result
-                        closure.MarkLabelAsTryReturn(index);
                         return true;
 
                     default:
                         return false;
                 }
-            }
-
-            private static bool EmitGotoLabel(OpCode gotoOpCode, int labelIndex, ILGenerator il, ref ClosureInfo closure)
-            {
-                // use label defined by Label expression or define its own to use by subsequent Label
-                il.Emit(gotoOpCode, closure.GetOrCreateLabel(labelIndex, il));
-                return true;
             }
 
             private static bool TryEmitIndex(IndexExpression expr, ILGenerator il)
@@ -1778,13 +1812,15 @@ namespace FastExpressionCompiler
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
+                ++closure.CurrentTryCatchFinallyIndex;
+                var containsReturnGotoExpression = closure.TryCatchFinallyInfos?[closure.CurrentTryCatchFinallyIndex].ContainsReturnGotoExpression ?? false;
                 il.BeginExceptionBlock();
 
                 if (!TryEmit(tryExpr.Body, paramExprs, il, ref closure, parent))
                     return false;
 
                 var exprType = tryExpr.Type;
-                var returnsResult = exprType != typeof(void) && (parent & ParentFlags.IgnoreResult) == 0;
+                var returnsResult = exprType != typeof(void) && (containsReturnGotoExpression || !parent.IgnoresResult());
                 var resultVar = default(LocalBuilder);
 
                 if (returnsResult)
@@ -1831,6 +1867,8 @@ namespace FastExpressionCompiler
 
                 if (returnsResult)
                     il.Emit(OpCodes.Ldloc, resultVar);
+
+                --closure.CurrentTryCatchFinallyIndex;
 
                 return true;
             }
