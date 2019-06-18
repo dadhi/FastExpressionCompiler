@@ -57,6 +57,16 @@ namespace FastExpressionCompiler.Benchmarks
                  CompileFast_WithoutClosure |  10.539 us | 0.0697 us | 0.0652 us |  0.85 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
                 CompileFast_LightExpression |   9.698 us | 0.0435 us | 0.0385 us |  0.78 |    0.01 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
  CompileFast_LightExpression_WithoutClosure |   8.948 us | 0.0687 us | 0.0643 us |  0.72 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
+
+        ## Removing the recursion where possible in TryCollectBoundConstants, in-lining in some places
+
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 285.340 us | 1.8488 us | 1.7294 us | 24.17 |    0.20 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  11.804 us | 0.0780 us | 0.0730 us |  1.00 |    0.00 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
+                 CompileFast_WithoutClosure |  10.526 us | 0.0959 us | 0.0801 us |  0.89 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
+                CompileFast_LightExpression |   9.652 us | 0.0787 us | 0.0736 us |  0.82 |    0.01 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
+ CompileFast_LightExpression_WithoutClosure |   8.686 us | 0.0743 us | 0.0620 us |  0.74 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
  
         */
         [MemoryDiagnoser]
