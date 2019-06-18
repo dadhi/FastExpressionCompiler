@@ -46,8 +46,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.Throws<InvalidOperationException>(() => lambda.CompileSys());
 
-            Assert.Throws<InvalidOperationException>(() =>
-                lambda.CompileFast(true));
+            Assert.Throws<InvalidOperationException>(() => lambda.CompileFast(true));
         }
     }
 }

@@ -79,7 +79,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Can_pass_closure_with_trycatch_to_TryCompile()
+        public void Can_pass_closure_with_try_catch_to_TryCompile()
         {
             var x = new X();
             var xConstExpr = Constant(x);

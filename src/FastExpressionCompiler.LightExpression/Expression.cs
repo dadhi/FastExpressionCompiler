@@ -1622,7 +1622,8 @@ namespace FastExpressionCompiler.LightExpression
             Test = test;
         }
 
-        internal System.Linq.Expressions.CatchBlock ToCatchBlock() => SysExpr.Catch(Variable.ToParameterExpression(), Body.ToExpression());
+        internal System.Linq.Expressions.CatchBlock ToCatchBlock() => 
+            SysExpr.MakeCatchBlock(Test, Variable?.ToParameterExpression(), Body.ToExpression(), Filter?.ToExpression());
     }
 
     public sealed class LabelExpression : Expression

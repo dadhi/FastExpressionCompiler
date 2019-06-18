@@ -47,7 +47,7 @@ namespace FastExpressionCompiler
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr,
             bool ifFastFailedReturnNull = false) where TDelegate : class
         {
-            var closureInfo = new EmitContext(false);
+            var closureInfo = new ClosureInfo(false);
             return (TDelegate)TryCompile(ref closureInfo,
                        typeof(TDelegate), Tools.GetParamTypes(lambdaExpr.Parameters),
                        lambdaExpr.ReturnType, lambdaExpr.Body, lambdaExpr.Parameters)
@@ -59,7 +59,7 @@ namespace FastExpressionCompiler
         /// Check `IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod.cs` for example.
         public static bool CompileFastToIL(this LambdaExpression lambdaExpr, ILGenerator il, bool ifFastFailedReturnNull = false)
         {
-            var closureInfo = new EmitContext(isConstructed: true);
+            var closureInfo = new ClosureInfo(isConstructed: true);
 
             var parentFlags = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(lambdaExpr.Body, lambdaExpr.Parameters, il, ref closureInfo, parentFlags))
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
         {
-            var closureInfo = new EmitContext(false);
+            var closureInfo = new ClosureInfo(false);
             return (Delegate)TryCompile(ref closureInfo,
                 lambdaExpr.Type, Tools.GetParamTypes(lambdaExpr.Parameters),
                        lambdaExpr.ReturnType, lambdaExpr.Body, lambdaExpr.Parameters)
@@ -210,7 +210,7 @@ namespace FastExpressionCompiler
             object closure, params ConstantExpression[] closureConstantsExprs)
             where TDelegate : class
         {
-            var closureInfo = new EmitContext(true, closure, closureConstantsExprs);
+            var closureInfo = new ClosureInfo(true, closure, closureConstantsExprs);
 
             var paramTypes = GetClosureAndParamTypes(closureInfo.ClosureType, lambdaExpr.Parameters);
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, paramTypes,
@@ -226,13 +226,13 @@ namespace FastExpressionCompiler
             return (TDelegate)(object)method.CreateDelegate(delegateType, closure);
         }
 
-        private static readonly object _staticDelegateClosurePlaceholder = new object();
+        private static readonly object _noClosure = new object();
 
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
         public static TDelegate TryCompileWithoutClosure<TDelegate>(this LambdaExpression lambdaExpr)
             where TDelegate : class
         {
-            var closureInfo = new EmitContext(true, _staticDelegateClosurePlaceholder);
+            var closureInfo = new ClosureInfo(true, _noClosure);
             var paramTypes = Tools.GetParamTypes(lambdaExpr.Parameters);
 
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, paramTypes,
@@ -255,8 +255,8 @@ namespace FastExpressionCompiler
             Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
             where TDelegate : class
         {
-            var closureInfo = new EmitContext(false);
-            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs))
+            var closureInfo = new ClosureInfo(false);
+            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false))
                 return null;
 
             var nestedLambdaExprs = closureInfo.NestedLambdaExprs;
@@ -287,33 +287,29 @@ namespace FastExpressionCompiler
             return (TDelegate)(object)method.CreateDelegate(delegateType, closureObject);
         }
 
-        private static object TryCompile(ref EmitContext emitContext,
+        private static object TryCompile(ref ClosureInfo closureInfo,
             Type delegateType, Type[] paramTypes, Type returnType, Expression expr,
             IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda = false)
         {
-            object closureObject;
-            if (!emitContext.IsClosureConstructed)
+            var closureObject = closureInfo.UserDefinedClosure;
+            if (closureObject == null)
             {
-                if (!TryCollectBoundConstants(ref emitContext, expr, paramExprs))
+                if (!TryCollectBoundConstants(ref closureInfo, expr, paramExprs, isNestedLambda))
                     return null;
 
-                var nestedLambdaExprs = emitContext.NestedLambdaExprs;
+                var nestedLambdaExprs = closureInfo.NestedLambdaExprs;
                 if (nestedLambdaExprs.Length != 0)
                 {
-                    emitContext.NestedLambdas = new NestedLambdaInfo[nestedLambdaExprs.Length];
+                    closureInfo.NestedLambdas = new NestedLambdaInfo[nestedLambdaExprs.Length];
                     for (var i = 0; i < nestedLambdaExprs.Length; ++i)
-                        if (!TryCompileNestedLambda(ref emitContext, i, nestedLambdaExprs[i]))
+                        if (!TryCompileNestedLambda(ref closureInfo, i, nestedLambdaExprs[i]))
                             return null;
                 }
 
-                closureObject = emitContext.ConstructClosureTypeAndObject(constructTypeOnly: isNestedLambda);
-            }
-            else
-            {
-                closureObject = emitContext.Closure;
+                closureObject = closureInfo.ConstructClosureTypeAndObject(constructTypeOnly: isNestedLambda);
             }
 
-            var closureType = emitContext.ClosureType;
+            var closureType = closureInfo.ClosureType;
             var methodParamTypes = closureType == null ? paramTypes : GetClosureAndParamTypes(closureType, paramTypes);
 
             var method = new DynamicMethod(string.Empty, returnType, methodParamTypes,
@@ -321,7 +317,7 @@ namespace FastExpressionCompiler
 
             var il = method.GetILGenerator();
             var parentFlags = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
-            if (!EmittingVisitor.TryEmit(expr, paramExprs, il, ref emitContext, parentFlags))
+            if (!EmittingVisitor.TryEmit(expr, paramExprs, il, ref closureInfo, parentFlags))
                 return null;
 
             il.Emit(OpCodes.Ret);
@@ -337,25 +333,23 @@ namespace FastExpressionCompiler
         }
 
         private static void CopyNestedClosureInfo(IReadOnlyList<ParameterExpression> lambdaParamExprs,
-            ref EmitContext info, ref EmitContext nestedInfo)
+            ref ClosureInfo info, ref ClosureInfo nestedInfo)
         {
             // if nested non passed parameter is no matched with any outer passed parameter, 
             // then ensure it goes to outer non passed parameter.
             // But check that having a non-passed parameter in root expression is invalid.
             var nestedNonPassedParams = nestedInfo.NonPassedParameters;
-            if (nestedNonPassedParams.Length != 0)
-                for (var i = 0; i < nestedNonPassedParams.Length; i++)
-                {
-                    var nestedNonPassedParam = nestedNonPassedParams[i];
-                    if (lambdaParamExprs.GetFirstIndex(nestedNonPassedParam) == -1)
-                        info.AddNonPassedParam(nestedNonPassedParam);
-                }
+            for (var i = 0; i < nestedNonPassedParams.Length; i++)
+            {
+                var nestedNonPassedParam = nestedNonPassedParams[i];
+                if (lambdaParamExprs.GetFirstIndex(nestedNonPassedParam) == -1)
+                    info.AddNonPassedParam(nestedNonPassedParam);
+            }
 
             // Promote found constants and nested lambdas into outer closure
             var nestedConstants = nestedInfo.Constants;
-            if (nestedConstants.Length != 0)
-                for (var i = 0; i < nestedConstants.Length; i++)
-                    info.AddConstant(nestedConstants[i]);
+            for (var i = 0; i < nestedConstants.Length; i++)
+                info.AddConstant(nestedConstants[i]);
 
             // Add nested constants to outer lambda closure.
             // At this moment we know that the NestedLambdaExprs are non-empty, cause we are doing this from the nested lambda already.
@@ -384,7 +378,7 @@ namespace FastExpressionCompiler
         private static Type[] GetClosureAndParamTypes(Type closureType, IReadOnlyList<ParameterExpression> paramExprs)
         {
             if (paramExprs == null || paramExprs.Count == 0)
-                return new[] { closureType };
+                return new[]{ closureType };
 
             if (paramExprs.Count == 1)
                 return new[] { closureType, paramExprs[0].IsByRef ? paramExprs[0].Type.MakeByRefType() : paramExprs[0].Type };
@@ -421,45 +415,38 @@ namespace FastExpressionCompiler
 
         private sealed class BlockInfo
         {
-            public readonly IReadOnlyList<ParameterExpression> VarExprs;
-            public readonly LocalBuilder[] LocalVars;
+            public readonly BlockInfo OuterBlock;
 
-            internal BlockInfo(IReadOnlyList<ParameterExpression> varExprs)
+            public readonly object VarExprs; // ParameterExpression | IReadOnlyList<ParameterExpression>
+            public readonly object LocalVars; // LocalBuilder | LocalBuilder[]
+
+            internal BlockInfo(BlockInfo outerBlock, object varExprs, object localVars)
             {
+                OuterBlock = outerBlock;
                 VarExprs = varExprs;
-                LocalVars = new LocalBuilder[varExprs.Count];
+                LocalVars = localVars;
             }
-
-            public void ConstructLocalVariables(IReadOnlyList<ParameterExpression> varExprs, ILGenerator il)
-            {
-                for (var i = 0; i < varExprs.Count; i++)
-                    LocalVars[i] = il.DeclareLocal(varExprs[i].Type);
-            }
-
-            public void SetLocalVariable(LocalBuilder localVar) => LocalVars[0] = localVar;
         }
 
         private struct TryCatchFinallyInfo
         {
-            public bool HasReturnExpression { get; set; }
-
-            public int ReturnLabelIndex { get; set; }
+            public bool ContainsReturnGotoExpression;
+            public int ReturnLabelIndex;
         }
 
         // Track the info required to build a closure object + some context information not directly related to closure.
-        private struct EmitContext
+        private struct ClosureInfo
         {
-            #region Emitting context to track state
+            #region Emitting context to help track the state
 
             public bool LastEmitIsAddress;
 
-            // Helpers to decide whether we are inside the block or not
-            private BlockInfo[] _blockStack;
-            private int _currentBlockIndex;
+            // Helpers to know if a Return GotoExpression's Label should be emitted
+            public TryCatchFinallyInfo[] TryCatchFinallyInfos;
+            public int CurrentTryCatchFinallyIndex;
 
-            // Helpers to decide whether we are inside a try/catch or not
-            private TryCatchFinallyInfo[] _tryCatchFinallyStack;
-            private int _currentTryCatchFinallyIndex;
+            // Helper to decide whether we are inside the block or not
+            private BlockInfo _currentBlockInfo;
 
             // Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
@@ -469,10 +456,9 @@ namespace FastExpressionCompiler
             #region Closure related state
 
             public bool IsClosureConstructed;
-            private bool _isClosurePreCreated;
 
             // Constructed closure object.
-            public readonly object Closure;
+            public readonly object UserDefinedClosure;
 
             // Type of constructed closure, may be available even without closure object (in case of nested lambda)
             public Type ClosureType;
@@ -498,45 +484,48 @@ namespace FastExpressionCompiler
             #endregion
 
             // Populates info directly with provided closure object and constants.
-            public EmitContext(bool isConstructed, object closure = null, ConstantExpression[] closureConstantExpressions = null)
+            public ClosureInfo(bool isConstructed, object userDefinedClosure = null, ConstantExpression[] closureConstantExpressions = null)
             {
                 IsClosureConstructed = isConstructed;
-                _isClosurePreCreated = closure != null;
 
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 NestedLambdaExprs = Tools.Empty<LambdaExpression>();
-                _blockStack = Tools.Empty<BlockInfo>();
-                _currentBlockIndex = -1;
-                _tryCatchFinallyStack = Tools.Empty<TryCatchFinallyInfo>();
-                _currentTryCatchFinallyIndex = -1;
+                CurrentTryCatchFinallyIndex = -1;
+                _currentBlockInfo = null;
+                TryCatchFinallyInfos = null;
                 _labels = null;
                 LastEmitIsAddress = false;
+                UserDefinedClosure = userDefinedClosure;
 
-                if (_isClosurePreCreated && closure != _staticDelegateClosurePlaceholder)
+                if (userDefinedClosure == null || userDefinedClosure == _noClosure)
                 {
-                    Closure = closure;
-                    Constants = closureConstantExpressions ?? throw new ArgumentException(
-                                    "Constant expressions should not be null if `closure` parameter is passed", nameof(closureConstantExpressions));
-                    ClosureType = closure.GetType();
-
-                    // todo: verify that Fields types are correspond to `closureConstantExpressions`
-                    ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
-                }
-                else
-                {
-                    Closure = null;
                     Constants = Tools.Empty<ConstantExpression>();
                     ClosureType = null;
                     ClosureFields = null;
+                }
+                else
+                {
+                    Constants = closureConstantExpressions ?? throw new ArgumentException(
+                                    "Constant expressions should not be null if `closure` parameter is passed", nameof(closureConstantExpressions));
+                    ClosureType = userDefinedClosure.GetType();
+                    
+                    // todo: verify that Fields types are correspond to `closureConstantExpressions`
+                    ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
                 }
             }
 
             public void AddConstant(ConstantExpression expr)
             {
-                if (Constants.Length == 0 ||
-                    Constants.GetFirstIndex(expr) == -1)
-                    Constants = Constants.WithLast(expr);
+                if (Constants.Length == 0)
+                    Constants = new []{ expr };
+                else
+                {
+                    var i = Constants.Length - 1;
+                    while (i > -1 && !ReferenceEquals(Constants[i--], expr)) {}
+                    if (i == -1)
+                        Constants = Constants.WithLast(expr);
+                }
             }
 
             public void AddNonPassedParam(ParameterExpression expr)
@@ -555,12 +544,12 @@ namespace FastExpressionCompiler
 
             public void AddLabel(LabelTarget labelTarget)
             {
-                if (labelTarget != null &&
+                if (labelTarget != null && 
                     GetLabelIndex(labelTarget) == -1)
                     _labels = _labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
             }
 
-            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) =>
+            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) => 
                 GetOrCreateLabel(GetLabelIndex(labelTarget), il);
 
             public Label GetOrCreateLabel(int index, ILGenerator il)
@@ -581,15 +570,6 @@ namespace FastExpressionCompiler
                 return -1;
             }
 
-            public void MarkLabelAsTryReturn(int labelIndex) =>
-                _tryCatchFinallyStack[_currentTryCatchFinallyIndex].ReturnLabelIndex = labelIndex;
-
-            public void MarkReturnExpression()
-            {
-                if (_currentTryCatchFinallyIndex != -1)
-                    _tryCatchFinallyStack[_currentTryCatchFinallyIndex].HasReturnExpression = true;
-            }
-
             public object ConstructClosureTypeAndObject(bool constructTypeOnly = false)
             {
                 IsClosureConstructed = true;
@@ -605,7 +585,7 @@ namespace FastExpressionCompiler
 
                 // Construct the array based closure when number of values is bigger than
                 // number of fields in biggest supported Closure class.
-                var createMethods = ExpressionCompiler.Closure.CreateMethods;
+                var createMethods = Closure.CreateMethods;
                 if (totalItemCount > createMethods.Length)
                 {
                     ClosureType = typeof(ArrayClosure);
@@ -679,72 +659,63 @@ namespace FastExpressionCompiler
                 return constructTypeOnly ? null : createClosure.Invoke(null, fieldValues);
             }
 
-            public void PushBlock(IReadOnlyList<ParameterExpression> blockVarExprs)
+            /// LocalVar maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
+            public void PushBlockWithVars(ParameterExpression blockVarExpr, LocalBuilder localVar = null) =>
+                _currentBlockInfo = new BlockInfo(_currentBlockInfo, blockVarExpr, localVar);
+
+            /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
+            public void PushBlockWithVars(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars = null) =>
+                _currentBlockInfo = new BlockInfo(_currentBlockInfo, blockVarExprs, localVars);
+
+            public void PushBlockAndConstructLocalVars(IReadOnlyList<ParameterExpression> blockVarExprs, ILGenerator il)
             {
-                _blockStack = _blockStack.WithLast(new BlockInfo(blockVarExprs));
-                ++_currentBlockIndex;
+                var localVars = new LocalBuilder[blockVarExprs.Count];
+                for (var i = 0; i < localVars.Length; i++)
+                    localVars[i] = il.DeclareLocal(blockVarExprs[i].Type);
+                _currentBlockInfo = new BlockInfo(_currentBlockInfo, blockVarExprs, localVars);
             }
 
-            public BlockInfo PushAndGetBlock(IReadOnlyList<ParameterExpression> blockVarExprs)
-            {
-                if (_isClosurePreCreated)
-                {
-                    PushBlock(blockVarExprs);
-                }
-                else
-                {
-                    ++_currentBlockIndex;
-                }
-
-                return _blockStack[_currentBlockIndex];
-            }
-
-            public void PopBlock() => --_currentBlockIndex;
-
-            public TryCatchFinallyInfo PushTryCatchFinally()
-            {
-                if (_isClosurePreCreated || !IsClosureConstructed)
-                    _tryCatchFinallyStack = _tryCatchFinallyStack.WithLast(new TryCatchFinallyInfo());
-                return _tryCatchFinallyStack[++_currentTryCatchFinallyIndex];
-            }
-
-            public void PopTryCatchFinally() => --_currentTryCatchFinallyIndex;
+            public void PopBlock() =>
+                _currentBlockInfo = _currentBlockInfo.OuterBlock;
 
             public bool IsLocalVar(object varParamExpr)
             {
-                switch (_blockStack.Length)
+                for (var block = _currentBlockInfo; block != null; block = block.OuterBlock)
                 {
-                    case 0:
-                        return false;
-                    case 1:
-                        return _blockStack[0].VarExprs.GetFirstIndex(varParamExpr) != -1;
-                    default:
-                        var i = -1;
-                        for (var j = _currentBlockIndex; i == -1 && j > -1; j--)
-                            i = _blockStack[j].VarExprs.GetFirstIndex(varParamExpr);
-                        return i != -1;
-                }
-            }
-
-            public bool IsTryReturnLabel(int labelIndex)
-            {
-                for (var i = _tryCatchFinallyStack.Length; i > 0;)
-                    if (_tryCatchFinallyStack[--i].ReturnLabelIndex == labelIndex)
+                    if (ReferenceEquals(block.VarExprs, varParamExpr))
                         return true;
 
+                    if (block.VarExprs is IReadOnlyList<ParameterExpression> varExprs)
+                        for (var i = 0; i < varExprs.Count; i++)
+                            if (ReferenceEquals(varExprs[i], varParamExpr))
+                                return true;
+                }
+                return false;
+            }
+
+            public bool IsTryReturnLabel(int index)
+            {
+                var tryCatchFinallyInfos = TryCatchFinallyInfos;
+                if (tryCatchFinallyInfos == null)
+                    return false;
+                for (var i = 0; i <= tryCatchFinallyInfos.Length; ++i)
+                    if (tryCatchFinallyInfos[i].ReturnLabelIndex == index)
+                        return true;
                 return false;
             }
 
             public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                for (var i = _currentBlockIndex; i > -1; i--)
+                for (var block = _currentBlockInfo; block != null; block = block.OuterBlock)
                 {
-                    var block = _blockStack[i];
-                    var varIndex = block.VarExprs.GetFirstIndex(varParamExpr);
-                    if (varIndex != -1)
-                        return block.LocalVars[varIndex];
-                }
+                    if (ReferenceEquals(block.VarExprs, varParamExpr))
+                        return (LocalBuilder)block.LocalVars;
 
+                    if (block.VarExprs is IReadOnlyList<ParameterExpression> varExprs)
+                        for (var i = 0; i < varExprs.Count; i++)
+                            if (ReferenceEquals(varExprs[i], varParamExpr))
+                                return ((LocalBuilder[])block.LocalVars)[i];
+                }
                 return null;
             }
         }
@@ -1005,13 +976,14 @@ namespace FastExpressionCompiler
 
         private struct NestedLambdaInfo
         {
-            public readonly EmitContext EmitContext;
+            public readonly ClosureInfo ClosureInfo;
             public readonly object Lambda;
             public readonly bool IsAction;
 
-            public NestedLambdaInfo(EmitContext emitContext, object lambda, bool isAction)
+
+            public NestedLambdaInfo(ClosureInfo closureInfo, object lambda, bool isAction)
             {
-                EmitContext = emitContext;
+                ClosureInfo = closureInfo;
                 Lambda = lambda;
                 IsAction = isAction;
             }
@@ -1071,12 +1043,14 @@ namespace FastExpressionCompiler
 
         #region Collect Bound Constants
 
-        private static bool IsClosureBoundConstant(object value, TypeInfo type) =>
+        /// Helps to identify constants as the one to be put in closure object 
+        public static bool IsClosureBoundConstant(object value, TypeInfo type) =>
             value is Delegate ||
             !type.IsPrimitive && !type.IsEnum && !(value is string) && !(value is Type) && !(value is decimal);
 
         // @paramExprs is required for nested lambda compilation
-        private static bool TryCollectBoundConstants(ref EmitContext closure, Expression expr, IReadOnlyList<ParameterExpression> paramExprs)
+        private static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr,
+            IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda)
         {
             while (true)
             {
@@ -1095,18 +1069,44 @@ namespace FastExpressionCompiler
                     case ExpressionType.Parameter:
                         // if parameter is used BUT is not in passed parameters and not in local variables,
                         // it means parameter is provided by outer lambda and should be put in closure for current lambda
-                        if (paramExprs.GetFirstIndex(expr) == -1 && !closure.IsLocalVar(expr))
+                        var isParam = false;
+                        for (var i = 0; !isParam && i < paramExprs.Count; ++i)
+                            isParam = ReferenceEquals(paramExprs[i], expr);
+
+                        if (!isParam && !closure.IsLocalVar(expr))
+                        {
+                            if (!isNestedLambda)
+                                return false;
                             closure.AddNonPassedParam((ParameterExpression)expr);
+                        }
+
                         return true;
 
                     case ExpressionType.Call:
                         var methodCallExpr = (MethodCallExpression)expr;
-                        if (methodCallExpr.Arguments.Count != 0 &&
-                            !TryCollectBoundConstants(ref closure, methodCallExpr.Arguments, paramExprs))
-                            return false;
-                        if (methodCallExpr.Object == null)
+                        var methodArgs = methodCallExpr.Arguments;
+                        var methodArgsCount = methodArgs.Count;
+                        if (methodCallExpr.Object != null)
+                        {
+                            if (methodArgsCount == 0)
+                            {
+                                expr = methodCallExpr.Object;
+                                continue;
+                            }
+
+                            if (!TryCollectBoundConstants(ref closure, methodCallExpr.Object, paramExprs, isNestedLambda))
+                                return false;
+                        }
+                        else if (methodArgsCount == 0)
                             return true;
-                        expr = methodCallExpr.Object;
+
+                        if (methodArgsCount > 1)
+                            for (var i = 0; i < methodArgsCount - 1; i++)
+                                if (!TryCollectBoundConstants(ref closure, methodArgs[i], paramExprs,
+                                    isNestedLambda))
+                                    return false;
+
+                        expr = methodArgs[methodArgsCount - 1];
                         continue;
 
                     case ExpressionType.MemberAccess:
@@ -1117,53 +1117,88 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.New:
-                        return TryCollectBoundConstants(ref closure, ((NewExpression)expr).Arguments, paramExprs);
+                        var ctorArgs = ((NewExpression)expr).Arguments;
+                        var ctorArgsCount = ctorArgs.Count;
+                        if (ctorArgsCount == 0)
+                            return true;
+
+                        if (ctorArgsCount > 1)
+                            for (var i = 0; i < ctorArgsCount - 1; i++)
+                                if (!TryCollectBoundConstants(ref closure, ctorArgs[i], paramExprs, isNestedLambda))
+                                    return false;
+
+                        expr = ctorArgs[ctorArgsCount - 1];
+                        continue;
 
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
-                        return TryCollectBoundConstants(ref closure, ((NewArrayExpression)expr).Expressions, paramExprs);
+                        var elemExprs = ((NewArrayExpression)expr).Expressions;
+                        var elemExprsCount = elemExprs.Count;
+                        if (elemExprsCount == 0)
+                            return true;
+
+                        if (elemExprsCount > 1)
+                            for (var i = 0; i < elemExprsCount - 1; i++)
+                                if (!TryCollectBoundConstants(ref closure, elemExprs[i], paramExprs, isNestedLambda))
+                                    return false;
+
+                        expr = elemExprs[elemExprsCount - 1];
+                        continue;
 
                     case ExpressionType.MemberInit:
-                        return TryCollectMemberInitExprConstants(ref closure, (MemberInitExpression)expr, paramExprs);
+                        return TryCollectMemberInitExprConstants(ref closure, (MemberInitExpression)expr, paramExprs, isNestedLambda);
 
                     case ExpressionType.Lambda:
                         closure.AddNestedLambda((LambdaExpression)expr);
                         return true;
 
                     case ExpressionType.Invoke:
-                        // optimization #138: we inline the invoked lambda body (only for lambdas without arguments)
-                        // therefore we skipping collecting the lambda and invocation arguments and got directly to lambda body.
-                        // This approach is repeated in `TryEmitInvoke`
                         var invokeExpr = (InvocationExpression)expr;
-                        if (invokeExpr.Expression is LambdaExpression lambdaExpr && lambdaExpr.Parameters.Count == 0)
+                        var invokeArgs = invokeExpr.Arguments;
+                        var invokeArgsCount = invokeArgs.Count;
+                        if (invokeArgsCount == 0)
                         {
-                            expr = lambdaExpr.Body;
+                            // optimization #138: we inline the invoked lambda body (only for lambdas without arguments)
+                            // therefore we skipping collecting the lambda and invocation arguments and got directly to lambda body.
+                            // This approach is repeated in `TryEmitInvoke`
+                            expr = (invokeExpr.Expression as LambdaExpression)?.Body ?? invokeExpr.Expression;
                             continue;
                         }
-
-                        if (invokeExpr.Arguments.Count != 0 &&
-                            !TryCollectBoundConstants(ref closure, invokeExpr.Arguments, paramExprs))
+                        else if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda))
                             return false;
 
-                        expr = invokeExpr.Expression;
+                        if (invokeArgsCount > 1)
+                            for (var i = 0; i < invokeArgs.Count - 1; i++)
+                                if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda))
+                                    return false;
+
+                        expr = invokeArgs[invokeArgsCount - 1];
                         continue;
 
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
-                        if (!TryCollectBoundConstants(ref closure, condExpr.Test, paramExprs) ||
-                            !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs))
+                        if (!TryCollectBoundConstants(ref closure, condExpr.Test, paramExprs, isNestedLambda) ||
+                            !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs, isNestedLambda))
                             return false;
                         expr = condExpr.IfTrue;
                         continue;
 
                     case ExpressionType.Block:
                         var blockExpr = (BlockExpression)expr;
-                        var blockHasVariables = blockExpr.Variables.Count != 0;
-                        if (blockHasVariables)
-                            closure.PushBlock(blockExpr.Variables);
-                        if (!TryCollectBoundConstants(ref closure, blockExpr.Expressions, paramExprs))
-                            return false;
-                        if (blockHasVariables)
+
+                        var varCount = blockExpr.Variables.Count;
+                        if (varCount == 1) 
+                            closure.PushBlockWithVars(blockExpr.Variables[0]);
+                        else if (varCount > 1)
+                            closure.PushBlockWithVars(blockExpr.Variables);
+
+                        var blockExprs = blockExpr.Expressions;
+                        var blockExprsCount = blockExprs.Count;
+                        for (var i = 0; i < blockExprsCount; i++)
+                            if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda))
+                                return false;
+
+                        if (varCount != 0)
                             closure.PopBlock();
                         return true;
 
@@ -1176,15 +1211,17 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Index:
                         var indexExpr = (IndexExpression)expr;
-                        if (!TryCollectBoundConstants(ref closure, indexExpr.Arguments, paramExprs))
-                            return false;
+                        var indexArgs = indexExpr.Arguments;
+                        for (var i = 0; i < indexArgs.Count; i++)
+                            if (!TryCollectBoundConstants(ref closure, indexArgs[i], paramExprs, isNestedLambda))
+                                return false;
                         if (indexExpr.Object == null)
                             return true;
                         expr = indexExpr.Object;
                         continue;
 
                     case ExpressionType.Try:
-                        return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs);
+                        return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs, isNestedLambda);
 
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
@@ -1198,20 +1235,24 @@ namespace FastExpressionCompiler
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
                         if (gotoExpr.Kind == GotoExpressionKind.Return)
-                            closure.MarkReturnExpression();
-                        var gotoExprValue = gotoExpr.Value;
-                        if (gotoExprValue == null)
+                        {
+                            if (closure.CurrentTryCatchFinallyIndex != -1)
+                                closure.TryCatchFinallyInfos[closure.CurrentTryCatchFinallyIndex].ContainsReturnGotoExpression = true;
+                        }
+
+                        if (gotoExpr.Value == null)
                             return true;
-                        expr = gotoExprValue;
+
+                        expr = gotoExpr.Value;
                         continue;
 
                     case ExpressionType.Switch:
                         var switchExpr = ((SwitchExpression)expr);
-                        if (!TryCollectBoundConstants(ref closure, switchExpr.SwitchValue, paramExprs) ||
-                            switchExpr.DefaultBody != null && !TryCollectBoundConstants(ref closure, switchExpr.DefaultBody, paramExprs))
+                        if (!TryCollectBoundConstants(ref closure, switchExpr.SwitchValue, paramExprs, isNestedLambda) ||
+                            switchExpr.DefaultBody != null && !TryCollectBoundConstants(ref closure, switchExpr.DefaultBody, paramExprs, isNestedLambda))
                             return false;
                         for (var i = 0; i < switchExpr.Cases.Count; i++)
-                            if (!TryCollectBoundConstants(ref closure, switchExpr.Cases[i].Body, paramExprs))
+                            if (!TryCollectBoundConstants(ref closure, switchExpr.Cases[i].Body, paramExprs, isNestedLambda))
                                 return false;
                         return true;
 
@@ -1231,7 +1272,7 @@ namespace FastExpressionCompiler
 
                         if (expr is BinaryExpression binaryExpr)
                         {
-                            if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs))
+                            if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs, isNestedLambda))
                                 return false;
                             expr = binaryExpr.Right;
                             continue;
@@ -1248,7 +1289,7 @@ namespace FastExpressionCompiler
             }
         }
 
-        private static bool TryCompileNestedLambda(ref EmitContext closure, int lambdaIndex, LambdaExpression lambdaExpr)
+        private static bool TryCompileNestedLambda(ref ClosureInfo closure, int lambdaIndex, LambdaExpression lambdaExpr)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
@@ -1256,7 +1297,7 @@ namespace FastExpressionCompiler
 
             var lambdaParamExprs = lambdaExpr.Parameters;
 
-            var nestedClosure = new EmitContext(false);
+            var nestedClosure = new ClosureInfo(false);
             var compiledLambda = TryCompile(ref nestedClosure,
                 lambdaExpr.Type, Tools.GetParamTypes(lambdaParamExprs), lambdaExpr.ReturnType, lambdaExpr.Body,
                 lambdaParamExprs, isNestedLambda: true);
@@ -1273,15 +1314,15 @@ namespace FastExpressionCompiler
             return true;
         }
 
-        private static bool TryCollectMemberInitExprConstants(ref EmitContext closure, MemberInitExpression expr,
-            IReadOnlyList<ParameterExpression> paramExprs)
+        private static bool TryCollectMemberInitExprConstants(ref ClosureInfo closure, MemberInitExpression expr,
+            IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda)
         {
             var newExpr = expr.NewExpression
 #if LIGHT_EXPRESSION
                           ?? expr.Expression
 #endif
                 ;
-            if (!TryCollectBoundConstants(ref closure, newExpr, paramExprs))
+            if (!TryCollectBoundConstants(ref closure, newExpr, paramExprs, isNestedLambda))
                 return false;
 
             var memberBindings = expr.Bindings;
@@ -1289,59 +1330,48 @@ namespace FastExpressionCompiler
             {
                 var memberBinding = memberBindings[i];
                 if (memberBinding.BindingType == MemberBindingType.Assignment &&
-                    !TryCollectBoundConstants(ref closure, ((MemberAssignment)memberBinding).Expression, paramExprs))
+                    !TryCollectBoundConstants(ref closure, ((MemberAssignment)memberBinding).Expression, paramExprs, isNestedLambda))
                     return false;
             }
 
             return true;
         }
 
-        private static bool TryCollectTryExprConstants(ref EmitContext closure, TryExpression tryExpr,
-            IReadOnlyList<ParameterExpression> paramExprs)
+        private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr,
+            IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda)
         {
-            closure.PushTryCatchFinally();
+            closure.TryCatchFinallyInfos = closure.TryCatchFinallyInfos.WithLast(new TryCatchFinallyInfo());
+            ++closure.CurrentTryCatchFinallyIndex;
 
-            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs))
+            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs, isNestedLambda))
                 return false;
 
             var catchBlocks = tryExpr.Handlers;
             for (var i = 0; i < catchBlocks.Count; i++)
             {
                 var catchBlock = catchBlocks[i];
-                var catchBody = catchBlock.Body;
                 var catchExVar = catchBlock.Variable;
                 if (catchExVar != null)
                 {
-                    closure.PushBlock(new[] { catchExVar });
-                    if (!TryCollectBoundConstants(ref closure, catchExVar, paramExprs))
+                    closure.PushBlockWithVars(catchExVar);
+                    if (!TryCollectBoundConstants(ref closure, catchExVar, paramExprs, isNestedLambda))
                         return false;
                 }
 
-                var filterExpr = catchBlock.Filter;
-                if (filterExpr != null &&
-                    !TryCollectBoundConstants(ref closure, filterExpr, paramExprs) ||
-                    !TryCollectBoundConstants(ref closure, catchBody, paramExprs))
+                if (catchBlock.Filter != null && !TryCollectBoundConstants(ref closure, catchBlock.Filter, paramExprs, isNestedLambda))
+                    return false;
+
+                if (catchBlock.Body != null && !TryCollectBoundConstants(ref closure, catchBlock.Body, paramExprs, isNestedLambda))
                     return false;
 
                 if (catchExVar != null)
                     closure.PopBlock();
             }
 
-            var finallyExpr = tryExpr.Finally;
-
-            if (finallyExpr != null && !TryCollectBoundConstants(ref closure, finallyExpr, paramExprs))
+            if (tryExpr.Finally != null && !TryCollectBoundConstants(ref closure, tryExpr.Finally, paramExprs, isNestedLambda))
                 return false;
 
-            closure.PopTryCatchFinally();
-            return true;
-        }
-
-        private static bool TryCollectBoundConstants(ref EmitContext closure, IReadOnlyList<Expression> exprs,
-            IReadOnlyList<ParameterExpression> paramExprs)
-        {
-            for (var i = 0; i < exprs.Count; i++)
-                if (!TryCollectBoundConstants(ref closure, exprs[i], paramExprs))
-                    return false;
+            --closure.CurrentTryCatchFinallyIndex;
             return true;
         }
 
@@ -1392,7 +1422,7 @@ namespace FastExpressionCompiler
 #endif
 
             public static bool TryEmit(Expression expr, IReadOnlyList<ParameterExpression> paramExprs,
-                ILGenerator il, ref EmitContext closure, ParentFlags parent, int byRefIndex = -1)
+                ILGenerator il, ref ClosureInfo closure, ParentFlags parent, int byRefIndex = -1)
             {
                 while (true)
                 {
@@ -1425,7 +1455,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Constant:
                             var constantExpression = (ConstantExpression)expr;
-                            return parent.IgnoresResult() ||
+                            return IgnoresResult(parent) ||
                                    TryEmitConstant(constantExpression, constantExpression.Type, constantExpression.Value, il, ref closure);
 
                         case ExpressionType.Call:
@@ -1437,8 +1467,6 @@ namespace FastExpressionCompiler
                         case ExpressionType.New:
                             var newExpr = (NewExpression)expr;
                             // todo: This may be an approach to use specialized versions of NewExpression to reduce allocations
-                            //if (newExpr.Arguments is Expression argExpr)
-                            //    TryEmit(argExpr, paramExprs, il, ref closure, parent, argExpr.Type.IsByRef ? 0 : -1);
                             var argExprs = newExpr.Arguments;
                             for (var i = 0; i < argExprs.Count; i++)
                                 if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent,
@@ -1510,7 +1538,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Block:
                             var blockExpr = (BlockExpression)expr;
-                            var blockHasVars = blockExpr.Variables.Count != 0;
+                            var blockVarCount = blockExpr.Variables.Count;
                             var statementExprs = blockExpr.Expressions;
 
                             // Trim the expressions after the Throw - #196
@@ -1537,8 +1565,10 @@ namespace FastExpressionCompiler
                                 }
                             }
 
-                            if (blockHasVars)
-                                closure.PushAndGetBlock(blockExpr.Variables).ConstructLocalVariables(blockExpr.Variables, il);
+                            if (blockVarCount == 1)
+                                closure.PushBlockWithVars(blockExpr.Variables[0], il.DeclareLocal(blockExpr.Variables[0].Type));
+                            else if (blockVarCount > 1)
+                                closure.PushBlockAndConstructLocalVars(blockExpr.Variables, il);
 
                             // ignore result for all not the last statements in block
                             if (statementExprs.Count > 1)
@@ -1549,7 +1579,7 @@ namespace FastExpressionCompiler
 
                             // last (result) statement in block will provide the result
                             expr = blockExpr.Result;
-                            if (!blockHasVars)
+                            if (blockVarCount == 0)
                                 continue; // OMG, no recursion!
 
                             if (!TryEmit(expr, paramExprs, il, ref closure, parent))
@@ -1630,7 +1660,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitLabel(LabelExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var index = closure.GetLabelIndex(expr.Target);
                 if (index == -1)
@@ -1648,13 +1678,17 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitGoto(GotoExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var index = closure.GetLabelIndex(expr.Target);
                 if (index == -1)
+                {
+                    if (closure.UserDefinedClosure != null)
+                        return false;
                     throw new InvalidOperationException("Cannot jump, no labels found");
+                }
 
-                if (expr.Value != null &&
+                if (expr.Value != null && 
                     !TryEmit(expr.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
@@ -1662,33 +1696,38 @@ namespace FastExpressionCompiler
                 {
                     case GotoExpressionKind.Break:
                     case GotoExpressionKind.Continue:
-                        return EmitGotoLabel(OpCodes.Br, index, il, ref closure);
+                        // use label defined by Label expression or define its own to use by subsequent Label
+                        il.Emit(OpCodes.Br, closure.GetOrCreateLabel(index, il));
+                        return true;
 
                     case GotoExpressionKind.Goto:
                         if (expr.Value != null)
                             goto case GotoExpressionKind.Return;
 
-                        return EmitGotoLabel(OpCodes.Br, index, il, ref closure);
+                        // use label defined by Label expression or define its own to use by subsequent Label
+                        il.Emit(OpCodes.Br, closure.GetOrCreateLabel(index, il));
+                        return true;
 
                     case GotoExpressionKind.Return:
-                        if ((parent & ParentFlags.TryCatch) == 0)
-                            return EmitGotoLabel(OpCodes.Ret, index, il, ref closure);
 
-                        // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
-                        // to emit the Leave instruction, return label and return result
-                        closure.MarkLabelAsTryReturn(index);
+                        // check that we are inside the Try-Catch-Finally block
+                        if ((parent & ParentFlags.TryCatch) != 0)
+                        {
+                            // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
+                            // to emit the Leave instruction, return label and return result
+                            closure.TryCatchFinallyInfos[closure.CurrentTryCatchFinallyIndex].ReturnLabelIndex = index;
+                        }
+                        else
+                        {
+                            // use label defined by Label expression or define its own to use by subsequent Label
+                            il.Emit(OpCodes.Ret, closure.GetOrCreateLabel(index, il));
+                        }
+
                         return true;
 
                     default:
                         return false;
                 }
-            }
-
-            private static bool EmitGotoLabel(OpCode gotoOpCode, int labelIndex, ILGenerator il, ref EmitContext closure)
-            {
-                // use label defined by Label expression or define its own to use by subsequent Label
-                il.Emit(gotoOpCode, closure.GetOrCreateLabel(labelIndex, il));
-                return true;
             }
 
             private static bool TryEmitIndex(IndexExpression expr, ILGenerator il)
@@ -1711,7 +1750,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitCoalesceOperator(BinaryExpression exprObj,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var labelFalse = il.DefineLabel();
                 var labelDone = il.DefineLabel();
@@ -1815,16 +1854,17 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var hasReturnExpression = closure.PushTryCatchFinally().HasReturnExpression;
+                ++closure.CurrentTryCatchFinallyIndex;
+                var containsReturnGotoExpression = closure.TryCatchFinallyInfos?[closure.CurrentTryCatchFinallyIndex].ContainsReturnGotoExpression ?? false;
                 il.BeginExceptionBlock();
 
                 if (!TryEmit(tryExpr.Body, paramExprs, il, ref closure, parent))
                     return false;
 
                 var exprType = tryExpr.Type;
-                var returnsResult = exprType != typeof(void) && (hasReturnExpression || !parent.IgnoresResult());
+                var returnsResult = exprType != typeof(void) && (containsReturnGotoExpression || !parent.IgnoresResult());
                 var resultVar = default(LocalBuilder);
 
                 if (returnsResult)
@@ -1835,7 +1875,7 @@ namespace FastExpressionCompiler
                 {
                     var catchBlock = catchBlocks[i];
                     if (catchBlock.Filter != null)
-                        return false; // todo: Add support for filters on catch expression
+                        return false; // todo: Add support for filters in catch expression
 
                     il.BeginCatchBlock(catchBlock.Test);
 
@@ -1845,7 +1885,7 @@ namespace FastExpressionCompiler
                     if (exVarExpr != null)
                     {
                         var exVar = il.DeclareLocal(exVarExpr.Type);
-                        closure.PushAndGetBlock(new[] { exVarExpr }).SetLocalVariable(exVar);
+                        closure.PushBlockWithVars(exVarExpr, exVar);
                         il.Emit(OpCodes.Stloc_S, exVar);
                     }
 
@@ -1872,12 +1912,13 @@ namespace FastExpressionCompiler
                 if (returnsResult)
                     il.Emit(OpCodes.Ldloc, resultVar);
 
-                closure.PopTryCatchFinally();
+                --closure.CurrentTryCatchFinallyIndex;
+
                 return true;
             }
 
             private static bool TryEmitParameter(ParameterExpression paramExpr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent, int byRefIndex = -1)
             {
                 // if parameter is passed through, then just load it on stack
@@ -1915,7 +1956,7 @@ namespace FastExpressionCompiler
                 var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (variable != null)
                 {
-                    if (byRefIndex != -1 ||
+                    if (byRefIndex != -1 || 
                         paramType.IsValueType() && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
                         il.Emit(OpCodes.Ldloca_S, variable);
                     else
@@ -2004,7 +2045,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitTypeAs(UnaryExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, parent))
@@ -2017,7 +2058,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitTypeIs(TypeBinaryExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
                 if (!TryEmit(expr.Expression, paramExprs, il, ref closure, parent))
@@ -2036,7 +2077,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitNot(UnaryExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, parent))
@@ -2059,7 +2100,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitConvert(UnaryExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var opExpr = expr.Operand;
                 var method = expr.Method;
@@ -2140,6 +2181,7 @@ namespace FastExpressionCompiler
                 {
                     var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
 
+                    // ReSharper disable once ConstantNullCoalescingCondition
                     var convertOpMethod = method ?? targetType.FindConvertOperator(actualSourceType, targetType);
                     if (convertOpMethod != null)
                     {
@@ -2268,7 +2310,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitConstant(ConstantExpression expr, Type exprType, object constantValue, ILGenerator il, ref EmitContext closure)
+            private static bool TryEmitConstant(ConstantExpression expr, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure)
             {
                 if (constantValue == null)
                 {
@@ -2460,7 +2502,7 @@ namespace FastExpressionCompiler
                 return valVar;
             }
 
-            private static bool LoadClosureFieldOrItem(ref EmitContext closure, ILGenerator il, int itemIndex,
+            private static bool LoadClosureFieldOrItem(ref ClosureInfo closure, ILGenerator il, int itemIndex,
                 Type itemType, Expression itemExprObj = null)
             {
                 il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
@@ -2507,7 +2549,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool EmitNewArray(NewArrayExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var arrayType = expr.Type;
                 var elems = expr.Expressions;
@@ -2569,7 +2611,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool EmitMemberInit(MemberInitExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 // todo: Use closureInfo Block to track the variable instead
                 LocalBuilder valueVar = null;
@@ -2629,7 +2671,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitIncDecAssign(UnaryExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 LocalBuilder localVar;
                 MemberExpression memberAccess;
@@ -2725,7 +2767,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitAssign(BinaryExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var exprType = expr.Type;
                 var left = expr.Left;
@@ -2978,42 +3020,48 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitMethodCall(MethodCallExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var flags = parent & ~ParentFlags.IgnoreResult | ParentFlags.Call;
 
                 var objExpr = expr.Object;
+                var objIsValueType = false;
                 if (objExpr != null)
                 {
                     if (!TryEmit(objExpr, paramExprs, il, ref closure, flags | ParentFlags.InstanceAccess))
                         return false;
 
                     var objType = objExpr.Type;
-                    if (objType.IsValueType() && objExpr.NodeType != ExpressionType.Parameter && !closure.LastEmitIsAddress)
+                    objIsValueType = objType.IsValueType();
+                    if (objIsValueType && objExpr.NodeType != ExpressionType.Parameter && !closure.LastEmitIsAddress)
                         DeclareAndLoadLocalVariable(il, objType);
                 }
 
-                var argExprs = expr.Arguments;
-                if (argExprs.Count != 0)
+                var exprArgs = expr.Arguments;
+                var exprMethod = expr.Method;
+                if (exprArgs.Count != 0)
                 {
-                    var args = expr.Method.GetParameters();
-                    for (var i = 0; i < argExprs.Count; i++)
-                    {
-                        var byRefIndex = args[i].ParameterType.IsByRef ? i : -1;
-                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, flags, byRefIndex))
+                    var args = exprMethod.GetParameters();
+                    for (var i = 0; i < args.Length; i++)
+                        if (!TryEmit(exprArgs[i], paramExprs, il, ref closure, flags,
+                            args[i].ParameterType.IsByRef ? i : -1))
                             return false;
-                    }
                 }
 
-                if (expr.Method.IsVirtual && objExpr?.Type.IsValueType() == true)
+                if (objIsValueType && exprMethod.IsVirtual)
                     il.Emit(OpCodes.Constrained, objExpr.Type);
 
+                il.Emit(exprMethod.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, exprMethod);
+
+                if (parent.IgnoresResult() && exprMethod.ReturnType != typeof(void))
+                    il.Emit(OpCodes.Pop);
+
                 closure.LastEmitIsAddress = false;
-                return EmitMethodCall(il, expr.Method, parent);
+                return true;
             }
 
             private static bool TryEmitMemberAccess(MemberExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var prop = expr.Member as PropertyInfo;
 
@@ -3065,7 +3113,7 @@ namespace FastExpressionCompiler
 
             // ReSharper disable once FunctionComplexityOverflow
             private static bool TryEmitNestedLambda(LambdaExpression lambdaExpr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
                 // First, find in closed compiled lambdas the one corresponding to the current lambda expression.
                 // Situation with not found lambda is not possible/exceptional,
@@ -3088,7 +3136,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
-                var nestedClosureInfo = nestedLambdaInfo.EmitContext;
+                var nestedClosureInfo = nestedLambdaInfo.ClosureInfo;
                 if (!nestedClosureInfo.HasClosure)
                     return true;
 
@@ -3235,7 +3283,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitInvoke(InvocationExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 // optimization #138: we inline the invoked lambda body (only for lambdas without arguments) 
                 var lambda = expr.Expression;
@@ -3257,7 +3305,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitSwitch(SwitchExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 // todo:
                 //- use switch statement for int comparison (if int difference is less or equal 3 -> use IL switch)
@@ -3305,7 +3353,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitComparison(Expression exprLeft, Expression exprRight, ExpressionType expressionType,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var leftOpType = exprLeft.Type;
                 var leftIsNullable = leftOpType.IsNullable();
@@ -3498,7 +3546,7 @@ namespace FastExpressionCompiler
                 pars.Length == 2 && pars[0].ParameterType == t && pars[1].ParameterType == t;
 
             private static bool TryEmitArithmetic(BinaryExpression expr, ExpressionType exprNodeType,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
                 var flags = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall | ParentFlags.Arithmetic;
@@ -3710,7 +3758,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitLogicalOperator(BinaryExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 if (!TryEmit(expr.Left, paramExprs, il, ref closure, parent))
                     return false;
@@ -3732,7 +3780,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitConditional(ConditionalExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var testExpr = TryReduceCondition(expr.Test);
                 var comparedWithNull = false;
@@ -3793,7 +3841,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitComparisonWithNull(BinaryExpression b,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref EmitContext closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 if (b.NodeType != ExpressionType.Equal && b.NodeType != ExpressionType.NotEqual &&
                     (b.Left.Type.IsNullable() || b.Right.Type.IsNullable()))

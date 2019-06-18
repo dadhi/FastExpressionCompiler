@@ -124,7 +124,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Member_test_block_result()
+        public void Member_test_block_result_should_detect_non_block_variable()
         {
             var testVar = Variable(typeof(Test));
             var intVar = Variable(typeof(int));
@@ -142,10 +142,37 @@ namespace FastExpressionCompiler.UnitTests
                             intVar)),
                     testVar));
 
+            // InvalidOperationException:
+            // 'variable '' of type 'FastExpressionCompiler.LightExpression.UnitTests.AssignTests+Test' referenced from scope '', but it is not defined'
+            Assert.Throws<InvalidOperationException>(() => assignExpr.CompileSys());
+
+            var func = assignExpr.CompileFast(true);
+            Assert.IsNull(func);
+        }
+
+        [Test]
+        public void Member_test_block_result()
+        {
+            var testVar = Variable(typeof(Test));
+            var intVar = Variable(typeof(int));
+
+            var assignExpr = Lambda<Func<Test>>(
+                Block(new[] { testVar },
+                    Assign(testVar, New(testVar.Type.GetConstructor(Type.EmptyTypes))),
+                    Assign(
+                        Property(testVar, nameof(Test.Prop)),
+                        Block(new[] { intVar },
+                            Assign(intVar, Constant(0)),
+                            PreIncrementAssign(intVar),
+                            PreIncrementAssign(intVar),
+                            intVar)),
+                    testVar));
+
+            assignExpr.CompileSys();
+
             var func = assignExpr.CompileFast(true);
 
             Assert.IsNotNull(func);
-
             var test = func();
             Assert.IsNotNull(test);
             Assert.AreEqual(2, test.Prop);

@@ -20,13 +20,55 @@ namespace FastExpressionCompiler.Benchmarks
           DefaultJob : .NET Core 2.1.11 (CoreCLR 4.6.27617.04, CoreFX 4.6.27617.02), 64bit RyuJIT
 
 
-                              Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-        ---------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-                             Compile | 285.788 us | 1.7830 us | 1.6679 us | 22.66 |    0.29 |      1.9531 |      0.9766 |           - |            10.93 KB |
-                         CompileFast |  12.613 us | 0.1554 us | 0.1454 us |  1.00 |    0.00 |      0.7477 |      0.3662 |      0.0305 |             3.44 KB |
-         CompileFast_LightExpression |   9.845 us | 0.0541 us | 0.0451 us |  0.78 |    0.01 |      0.7477 |      0.3662 |      0.0305 |             3.44 KB |
-         */
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 291.735 us | 3.6419 us | 3.4067 us | 22.30 |    0.31 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  13.104 us | 0.0625 us | 0.0522 us |  1.00 |    0.00 |      0.6866 |      0.3357 |      0.0305 |              3.2 KB |
+                 CompileFast_WithoutClosure |  10.585 us | 0.0809 us | 0.0757 us |  0.81 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
+                CompileFast_LightExpression |   9.829 us | 0.0751 us | 0.0666 us |  0.75 |    0.01 |      0.6866 |      0.3357 |      0.0305 |              3.2 KB |
+ CompileFast_LightExpression_WithoutClosure |   9.028 us | 0.0632 us | 0.0560 us |  0.69 |    0.00 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
 
+        ## Degradation after adding block / try-catch collection + added WithoutClosure for comparison
+
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 254.680 us | 1.0914 us | 1.0209 us | 13.38 |    0.13 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  19.031 us | 0.1987 us | 0.1858 us |  1.00 |    0.00 |      0.9766 |      0.4883 |      0.0305 |             4.61 KB |
+                 CompileFast_WithoutClosure |   5.373 us | 0.0222 us | 0.0207 us |  0.28 |    0.00 |      0.6256 |           - |           - |             2.91 KB |
+                CompileFast_LightExpression |  15.243 us | 0.1002 us | 0.0937 us |  0.80 |    0.01 |      0.9918 |      0.4883 |      0.0458 |             4.61 KB |
+ CompileFast_LightExpression_WithoutClosure |   3.882 us | 0.0735 us | 0.0787 us |  0.20 |    0.01 |      0.6294 |           - |           - |             2.91 KB |
+
+        ## Fixed the tests and get back some performance
+
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 289.864 us | 2.7638 us | 2.5853 us | 23.65 |    0.25 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  12.262 us | 0.0789 us | 0.0699 us |  1.00 |    0.00 |      0.7019 |      0.3510 |      0.0305 |             3.26 KB |
+                 CompileFast_WithoutClosure |  10.794 us | 0.0673 us | 0.0562 us |  0.88 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
+                CompileFast_LightExpression |   9.743 us | 0.0676 us | 0.0632 us |  0.79 |    0.01 |      0.7019 |      0.3510 |      0.0305 |             3.26 KB |
+ CompileFast_LightExpression_WithoutClosure |   8.571 us | 0.0464 us | 0.0434 us |  0.70 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
+
+        ## Small memory improvements when changing the `TryCatchFinallyInfo` from class to struct
+
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 286.993 us | 1.3492 us | 1.1960 us | 23.14 |    0.16 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  12.410 us | 0.0839 us | 0.0785 us |  1.00 |    0.00 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
+                 CompileFast_WithoutClosure |  10.539 us | 0.0697 us | 0.0652 us |  0.85 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
+                CompileFast_LightExpression |   9.698 us | 0.0435 us | 0.0385 us |  0.78 |    0.01 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
+ CompileFast_LightExpression_WithoutClosure |   8.948 us | 0.0687 us | 0.0643 us |  0.72 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
+
+        ## Removing the recursion where possible in TryCollectBoundConstants, in-lining in some places
+
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 285.340 us | 1.8488 us | 1.7294 us | 24.17 |    0.20 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  11.804 us | 0.0780 us | 0.0730 us |  1.00 |    0.00 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
+                 CompileFast_WithoutClosure |  10.526 us | 0.0959 us | 0.0801 us |  0.89 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
+                CompileFast_LightExpression |   9.652 us | 0.0787 us | 0.0736 us |  0.82 |    0.01 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
+ CompileFast_LightExpression_WithoutClosure |   8.686 us | 0.0743 us | 0.0620 us |  0.74 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
+ 
+        */
         [MemoryDiagnoser]
         public class Compile_only
         {
@@ -40,7 +82,16 @@ namespace FastExpressionCompiler.Benchmarks
             public object CompileFast() => _expression.CompileFast();
 
             [Benchmark]
-            public object CompileFast_LightExpression() => LightExpression.ExpressionCompiler.CompileFast(_lightExpression);
+            public object CompileFast_WithoutClosure() =>
+                _expression.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>();
+
+            [Benchmark]
+            public object CompileFast_LightExpression() =>
+                LightExpression.ExpressionCompiler.CompileFast(_lightExpression);
+
+            [Benchmark]
+            public object CompileFast_LightExpression_WithoutClosure() => 
+                LightExpression.ExpressionCompiler.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>(_lightExpression);
         }
 
         /*
