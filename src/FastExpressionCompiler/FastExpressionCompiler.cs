@@ -45,21 +45,16 @@ namespace FastExpressionCompiler
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr,
-            bool ifFastFailedReturnNull = false) where TDelegate : class
-        {
-            var closureInfo = new ClosureInfo(false);
-            return (TDelegate)TryCompile(ref closureInfo,
-                       typeof(TDelegate), Tools.GetParamTypes(lambdaExpr.Parameters),
-                       lambdaExpr.ReturnType, lambdaExpr.Body, lambdaExpr.Parameters)
-                ?? (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.CompileSys());
-        }
+            bool ifFastFailedReturnNull = false) where TDelegate : class =>
+            TryCompile<TDelegate>(lambdaExpr.Body, lambdaExpr.Parameters, Tools.GetParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType) 
+            ?? (ifFastFailedReturnNull ? null : (TDelegate)(object)lambdaExpr.CompileSys());
 
         /// Compiles a static method to the passed IL Generator.
         /// Could be used as alternative for `CompileToMethod` like this <code><![CDATA[funcExpr.CompileFastToIL(methodBuilder.GetILGenerator())]]></code>.
         /// Check `IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod.cs` for example.
         public static bool CompileFastToIL(this LambdaExpression lambdaExpr, ILGenerator il, bool ifFastFailedReturnNull = false)
         {
-            var closureInfo = new ClosureInfo(isConstructed: true);
+            var closureInfo = new ClosureInfo(_userProvidedNoClosure);
 
             var parentFlags = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(lambdaExpr.Body, lambdaExpr.Parameters, il, ref closureInfo, parentFlags))
@@ -72,7 +67,7 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false)
         {
-            var closureInfo = new ClosureInfo(false);
+            var closureInfo = new ClosureInfo(null);
             return (Delegate)TryCompile(ref closureInfo,
                 lambdaExpr.Type, Tools.GetParamTypes(lambdaExpr.Parameters),
                        lambdaExpr.ReturnType, lambdaExpr.Body, lambdaExpr.Parameters)
@@ -210,9 +205,9 @@ namespace FastExpressionCompiler
             object closure, params ConstantExpression[] closureConstantsExprs)
             where TDelegate : class
         {
-            var closureInfo = new ClosureInfo(true, closure, closureConstantsExprs);
+            var closureInfo = new ClosureInfo(closure, closureConstantsExprs);
 
-            var paramTypes = GetClosureAndParamTypes(closureInfo.ClosureType, lambdaExpr.Parameters);
+            var paramTypes = GetClosureAndParamTypes(closure.GetType(), lambdaExpr.Parameters);
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, paramTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
 
@@ -226,13 +221,13 @@ namespace FastExpressionCompiler
             return (TDelegate)(object)method.CreateDelegate(delegateType, closure);
         }
 
-        private static readonly object _noClosure = new object();
+        private static readonly object _userProvidedNoClosure = new object();
 
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
         public static TDelegate TryCompileWithoutClosure<TDelegate>(this LambdaExpression lambdaExpr)
             where TDelegate : class
         {
-            var closureInfo = new ClosureInfo(true, _noClosure);
+            var closureInfo = new ClosureInfo(_userProvidedNoClosure);
             var paramTypes = Tools.GetParamTypes(lambdaExpr.Parameters);
 
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, paramTypes,
@@ -255,7 +250,7 @@ namespace FastExpressionCompiler
             Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
             where TDelegate : class
         {
-            var closureInfo = new ClosureInfo(false);
+            var closureInfo = new ClosureInfo(null);
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false))
                 return null;
 
@@ -269,8 +264,8 @@ namespace FastExpressionCompiler
             }
 
             var closureObject = closureInfo.ConstructClosureTypeAndObject(constructTypeOnly: false);
-
             var closureType = closureInfo.ClosureType;
+
             var methodParamTypes = closureType == null ? paramTypes : GetClosureAndParamTypes(closureType, paramTypes);
 
             var method = new DynamicMethod(string.Empty, returnType, methodParamTypes,
@@ -291,24 +286,19 @@ namespace FastExpressionCompiler
             Type delegateType, Type[] paramTypes, Type returnType, Expression expr,
             IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda = false)
         {
-            var closureObject = closureInfo.UserDefinedClosure;
-            if (closureObject == null)
+            if (!TryCollectBoundConstants(ref closureInfo, expr, paramExprs, isNestedLambda))
+                return null;
+
+            var nestedLambdaExprs = closureInfo.NestedLambdaExprs;
+            if (nestedLambdaExprs.Length != 0)
             {
-                if (!TryCollectBoundConstants(ref closureInfo, expr, paramExprs, isNestedLambda))
-                    return null;
-
-                var nestedLambdaExprs = closureInfo.NestedLambdaExprs;
-                if (nestedLambdaExprs.Length != 0)
-                {
-                    closureInfo.NestedLambdas = new NestedLambdaInfo[nestedLambdaExprs.Length];
-                    for (var i = 0; i < nestedLambdaExprs.Length; ++i)
-                        if (!TryCompileNestedLambda(ref closureInfo, i, nestedLambdaExprs[i]))
-                            return null;
-                }
-
-                closureObject = closureInfo.ConstructClosureTypeAndObject(constructTypeOnly: isNestedLambda);
+                closureInfo.NestedLambdas = new NestedLambdaInfo[nestedLambdaExprs.Length];
+                for (var i = 0; i < nestedLambdaExprs.Length; ++i)
+                    if (!TryCompileNestedLambda(ref closureInfo, i, nestedLambdaExprs[i]))
+                        return null;
             }
 
+            var closureObject = closureInfo.ConstructClosureTypeAndObject(constructTypeOnly: isNestedLambda);
             var closureType = closureInfo.ClosureType;
             var methodParamTypes = closureType == null ? paramTypes : GetClosureAndParamTypes(closureType, paramTypes);
 
@@ -434,6 +424,8 @@ namespace FastExpressionCompiler
             public int ReturnLabelIndex;
         }
 
+        private enum ClosureStatus { Initial, Constructed, UserProvided, UserProvidedNoClosure }
+
         // Track the info required to build a closure object + some context information not directly related to closure.
         private struct ClosureInfo
         {
@@ -455,10 +447,7 @@ namespace FastExpressionCompiler
 
             #region Closure related state
 
-            public bool IsClosureConstructed;
-
-            // Constructed closure object.
-            public readonly object UserDefinedClosure;
+            public ClosureStatus Status;
 
             // Type of constructed closure, may be available even without closure object (in case of nested lambda)
             public Type ClosureType;
@@ -484,33 +473,39 @@ namespace FastExpressionCompiler
             #endregion
 
             // Populates info directly with provided closure object and constants.
-            public ClosureInfo(bool isConstructed, object userDefinedClosure = null, ConstantExpression[] closureConstantExpressions = null)
+            public ClosureInfo(object userProvidedClosure, ConstantExpression[] usedProvidedClosureConstantExpressions = null)
             {
-                IsClosureConstructed = isConstructed;
-
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
                 NestedLambdaExprs = Tools.Empty<LambdaExpression>();
+
+                LastEmitIsAddress = false;
                 CurrentTryCatchFinallyIndex = -1;
-                _currentBlockInfo = null;
                 TryCatchFinallyInfos = null;
                 _labels = null;
-                LastEmitIsAddress = false;
-                UserDefinedClosure = userDefinedClosure;
+                _currentBlockInfo = null;
 
-                if (userDefinedClosure == null || userDefinedClosure == _noClosure)
+                if (userProvidedClosure == null)
                 {
+                    Status = ClosureStatus.Initial;
                     Constants = Tools.Empty<ConstantExpression>();
+                    ClosureType = null;
+                    ClosureFields = null;
+                }
+                else if (ReferenceEquals(userProvidedClosure, _userProvidedNoClosure))
+                {
+                    Status = ClosureStatus.UserProvidedNoClosure;
+                    Constants = null;
                     ClosureType = null;
                     ClosureFields = null;
                 }
                 else
                 {
-                    Constants = closureConstantExpressions ?? throw new ArgumentException(
-                                    "Constant expressions should not be null if `closure` parameter is passed", nameof(closureConstantExpressions));
-                    ClosureType = userDefinedClosure.GetType();
-                    
-                    // todo: verify that Fields types are correspond to `closureConstantExpressions`
+                    Status = ClosureStatus.UserProvided;
+                    Constants = usedProvidedClosureConstantExpressions ?? throw new ArgumentException(
+                                    "Constant expressions should not be null if `closure` parameter is passed", 
+                                    nameof(usedProvidedClosureConstantExpressions));
+                    ClosureType = userProvidedClosure.GetType();
                     ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
                 }
             }
@@ -570,9 +565,45 @@ namespace FastExpressionCompiler
                 return -1;
             }
 
+            // todo: use instead of Closure.Create
+            public static object ConstructClosure(ConstantExpression[] constants)
+            {
+                var constantCount = constants.Length;
+                if (constantCount == 0)
+                    return null;
+
+                // Construct the array based closure when number of values is bigger than
+                // number of fields in biggest supported Closure class.
+                var createMethods = Closure.CreateMethods;
+                if (constantCount > createMethods.Length)
+                {
+                    var items = new object[constantCount];
+                    for (var i = 0; i < constants.Length; i++)
+                        items[i] = constants[i].Value;
+                    return new ArrayClosure(items);
+                }
+
+                // Construct the Closure Type and optionally Closure object with closed values stored as fields:
+                var fieldTypes = new Type[constantCount];
+                var fieldValues = new object[constantCount];
+
+                for (var i = 0; i < constantCount; i++)
+                {
+                    var constantExpr = constants[i];
+                    if (constantExpr != null)
+                    {
+                        fieldTypes[i] = constantExpr.Type;
+                        fieldValues[i] = constantExpr.Value;
+                    }
+                }
+
+                var createClosure = createMethods[constantCount - 1].MakeGenericMethod(fieldTypes);
+                return createClosure.Invoke(null, fieldValues);
+            }
+
             public object ConstructClosureTypeAndObject(bool constructTypeOnly = false)
             {
-                IsClosureConstructed = true;
+                Status = ClosureStatus.Constructed;
 
                 var constants = Constants;
                 var nonPassedParams = NonPassedParameters;
@@ -1297,7 +1328,7 @@ namespace FastExpressionCompiler
 
             var lambdaParamExprs = lambdaExpr.Parameters;
 
-            var nestedClosure = new ClosureInfo(false);
+            var nestedClosure = new ClosureInfo(null);
             var compiledLambda = TryCompile(ref nestedClosure,
                 lambdaExpr.Type, Tools.GetParamTypes(lambdaParamExprs), lambdaExpr.ReturnType, lambdaExpr.Body,
                 lambdaParamExprs, isNestedLambda: true);
@@ -1361,7 +1392,7 @@ namespace FastExpressionCompiler
                 if (catchBlock.Filter != null && !TryCollectBoundConstants(ref closure, catchBlock.Filter, paramExprs, isNestedLambda))
                     return false;
 
-                if (catchBlock.Body != null && !TryCollectBoundConstants(ref closure, catchBlock.Body, paramExprs, isNestedLambda))
+                if (!TryCollectBoundConstants(ref closure, catchBlock.Body, paramExprs, isNestedLambda))
                     return false;
 
                 if (catchExVar != null)
@@ -1573,8 +1604,7 @@ namespace FastExpressionCompiler
                             // ignore result for all not the last statements in block
                             if (statementExprs.Count > 1)
                                 for (var i = 0; i < statementExprs.Count - 1; i++)
-                                    if (!TryEmit(statementExprs[i], paramExprs, il, ref closure,
-                                        parent | ParentFlags.IgnoreResult))
+                                    if (!TryEmit(statementExprs[i], paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
                                         return false;
 
                             // last (result) statement in block will provide the result
@@ -1683,7 +1713,7 @@ namespace FastExpressionCompiler
                 var index = closure.GetLabelIndex(expr.Target);
                 if (index == -1)
                 {
-                    if (closure.UserDefinedClosure != null)
+                    if (closure.Status == ClosureStatus.UserProvided || closure.Status == ClosureStatus.UserProvidedNoClosure)
                         return false;
                     throw new InvalidOperationException("Cannot jump, no labels found");
                 }
@@ -1949,7 +1979,7 @@ namespace FastExpressionCompiler
 
                 // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                 // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
-                if (!closure.IsClosureConstructed)
+                if (closure.Status == ClosureStatus.Initial)
                     return false;
 
                 // parameter may represent a variable, so first look if this is the case
@@ -2831,7 +2861,7 @@ namespace FastExpressionCompiler
 
                         // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                         // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
-                        if (!closure.IsClosureConstructed)
+                        if (closure.Status == ClosureStatus.Initial)
                             return false;
 
                         // if it's a local variable, then store the right value in it
