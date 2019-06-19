@@ -46,7 +46,7 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr,
             bool ifFastFailedReturnNull = false) where TDelegate : class =>
-            (TDelegate)(TryCompile(typeof(TDelegate), lambdaExpr.Body, lambdaExpr.Parameters, Tools.GetParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType) 
+            (TDelegate)(TryCompile(typeof(TDelegate), lambdaExpr.Body, lambdaExpr.Parameters, Tools.GetParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys()));
 
         /// Compiles a static method to the passed IL Generator.
@@ -249,19 +249,14 @@ namespace FastExpressionCompiler
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false))
                 return null;
 
-            var nestedLambdaExprs = closureInfo.NestedLambdaExprs;
-            if (nestedLambdaExprs.Length != 0)
-            {
-                closureInfo.NestedLambdas = new NestedLambdaInfo[nestedLambdaExprs.Length];
-                for (var i = 0; i < nestedLambdaExprs.Length; ++i)
-                    if (!TryCompileNestedLambda(ref closureInfo, i, nestedLambdaExprs[i]))
+            var nestedLambdas = closureInfo.NestedLambdas;
+            if (nestedLambdas.Length != 0)
+                for (var i = 0; i < nestedLambdas.Length; ++i)
+                    if (!TryCompileNestedLambda(ref closureInfo, i))
                         return null;
-            }
 
             var closureObject = closureInfo.ConstructClosureObject();
-            var closureType = closureInfo.ClosureType;
-
-            var methodParamTypes = closureType == null ? paramTypes : GetClosureAndParamTypes(closureType, paramTypes);
+            var methodParamTypes = closureObject == null ? paramTypes : GetClosureAndParamTypes(closureObject.GetType(), paramTypes);
 
             var method = new DynamicMethod(string.Empty, returnType, methodParamTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
@@ -279,8 +274,7 @@ namespace FastExpressionCompiler
             return method.CreateDelegate(delegateType, closureObject);
         }
 
-        private static void CopyNestedClosureInfo(IReadOnlyList<ParameterExpression> lambdaParamExprs,
-            ref ClosureInfo info, ref ClosureInfo nestedInfo)
+        private static void CopyNestedClosureInfo(IReadOnlyList<ParameterExpression> lambdaParamExprs, ref ClosureInfo info, ref ClosureInfo nestedInfo)
         {
             // if nested non passed parameter is no matched with any outer passed parameter, 
             // then ensure it goes to outer non passed parameter.
@@ -300,24 +294,19 @@ namespace FastExpressionCompiler
 
             // Add nested constants to outer lambda closure.
             // At this moment we know that the NestedLambdaExprs are non-empty, cause we are doing this from the nested lambda already.
-            var nestedNestedLambdaExprs = nestedInfo.NestedLambdaExprs;
-            if (nestedNestedLambdaExprs.Length != 0)
+            var nestedNestedLambdas = nestedInfo.NestedLambdas;
+            if (nestedNestedLambdas.Length != 0)
             {
-                var fixedNestedLambdaCount = info.NestedLambdaExprs.Length;
-                for (var i = 0; i < nestedNestedLambdaExprs.Length; i++)
+                for (var i = 0; i < nestedNestedLambdas.Length; i++)
                 {
-                    var nestedNestedLambdaExpr = nestedNestedLambdaExprs[i];
+                    var nestedNestedLambdaExpr = nestedNestedLambdas[i].LambdaExpression;
+                    var nestedLambdas = info.NestedLambdas;
+                    var j = nestedLambdas.Length - 1;
+                    while (j != -1 && !ReferenceEquals(nestedLambdas[j].LambdaExpression, nestedNestedLambdaExpr))
+                       --j;
 
-                    var j = info.NestedLambdaExprs.Length - 1;
-                    for (; j >= fixedNestedLambdaCount; --j)
-                        if (ReferenceEquals(info.NestedLambdaExprs[j], nestedNestedLambdaExpr))
-                            break;
-
-                    if (j < fixedNestedLambdaCount)
-                    {
-                        info.NestedLambdaExprs = info.NestedLambdaExprs.WithLast(nestedNestedLambdaExpr);
-                        info.NestedLambdas = info.NestedLambdas.WithLast(nestedInfo.NestedLambdas[i]);
-                    }
+                    if (j == -1)
+                        info.NestedLambdas = nestedLambdas.WithLast(nestedInfo.NestedLambdas[i]);
                 }
             }
         }
@@ -325,7 +314,7 @@ namespace FastExpressionCompiler
         private static Type[] GetClosureAndParamTypes(Type closureType, IReadOnlyList<ParameterExpression> paramExprs)
         {
             if (paramExprs == null || paramExprs.Count == 0)
-                return new[]{ closureType };
+                return new[] { closureType };
 
             if (paramExprs.Count == 1)
                 return new[] { closureType, paramExprs[0].IsByRef ? paramExprs[0].Type.MakeByRefType() : paramExprs[0].Type };
@@ -422,7 +411,6 @@ namespace FastExpressionCompiler
 
             // All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas;
-            public LambdaExpression[] NestedLambdaExprs;
 
             public int ClosedItemCount => Constants.Length + NonPassedParameters.Length + NestedLambdas.Length;
 
@@ -433,7 +421,6 @@ namespace FastExpressionCompiler
             {
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
-                NestedLambdaExprs = Tools.Empty<LambdaExpression>();
 
                 LastEmitIsAddress = false;
                 CurrentTryCatchFinallyIndex = -1;
@@ -459,7 +446,7 @@ namespace FastExpressionCompiler
                 {
                     Status = ClosureStatus.UserProvided;
                     Constants = usedProvidedClosureConstantExpressions ?? throw new ArgumentException(
-                                    "Constant expressions should not be null if `closure` parameter is passed", 
+                                    "Constant expressions should not be null if `closure` parameter is passed",
                                     nameof(usedProvidedClosureConstantExpressions));
                     ClosureType = userProvidedClosure.GetType();
                     ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
@@ -470,17 +457,17 @@ namespace FastExpressionCompiler
             {
                 var constantCount = Constants.Length;
                 if (constantCount == 0)
-                    Constants = new []{ expr };
+                    Constants = new[] { expr };
                 else
                 {
                     var i = constantCount - 1;
-                    while (i > -1 && !ReferenceEquals(Constants[i--], expr)) {}
+                    while (i > -1 && !ReferenceEquals(Constants[i--], expr)) { }
                     if (i == -1)
                     {
                         if (constantCount == 1)
                             Constants = new[] { Constants[0], expr };
                         else if (constantCount == 2)
-                            Constants = new[] {Constants[0], Constants[1], expr};
+                            Constants = new[] { Constants[0], Constants[1], expr };
                         else
                         {
                             var newConstants = new ConstantExpression[constantCount + 1];
@@ -501,19 +488,35 @@ namespace FastExpressionCompiler
 
             public void AddNestedLambda(LambdaExpression lambdaExpr)
             {
-                if (NestedLambdaExprs.Length == 0 ||
-                    NestedLambdaExprs.GetFirstIndex(lambdaExpr) == -1)
-                    NestedLambdaExprs = NestedLambdaExprs.WithLast(lambdaExpr);
+                if (NestedLambdas.Length == 0)
+                    NestedLambdas = new[] { new NestedLambdaInfo(lambdaExpr) };
+
+                var count = NestedLambdas.Length;
+                for (var i = 0; i < count; ++i)
+                    if (ReferenceEquals(NestedLambdas[i].LambdaExpression, lambdaExpr))
+                        return;
+
+                if (NestedLambdas.Length == 1)
+                    NestedLambdas = new[] { NestedLambdas[0], new NestedLambdaInfo(lambdaExpr) };
+                else if (NestedLambdas.Length == 2)
+                    NestedLambdas = new[] { NestedLambdas[0], NestedLambdas[1], new NestedLambdaInfo(lambdaExpr) };
+                else
+                {
+                    var newNestedLambdas = new NestedLambdaInfo[count + 1];
+                    Array.Copy(NestedLambdas, newNestedLambdas, count);
+                    newNestedLambdas[count] = new NestedLambdaInfo(lambdaExpr);
+                    NestedLambdas = newNestedLambdas;
+                }
             }
 
             public void AddLabel(LabelTarget labelTarget)
             {
-                if (labelTarget != null && 
+                if (labelTarget != null &&
                     GetLabelIndex(labelTarget) == -1)
                     _labels = _labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
             }
 
-            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) => 
+            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) =>
                 GetOrCreateLabel(GetLabelIndex(labelTarget), il);
 
             public Label GetOrCreateLabel(int index, ILGenerator il)
@@ -534,7 +537,7 @@ namespace FastExpressionCompiler
                 return -1;
             }
 
-            public bool TryCatchFinallyContainsReturnGotoExpression() => 
+            public bool TryCatchFinallyContainsReturnGotoExpression() =>
                 TryCatchFinallyInfos?[++CurrentTryCatchFinallyIndex].ContainsReturnGotoExpression ?? false;
 
             // todo: use instead of Closure.Create
@@ -546,7 +549,7 @@ namespace FastExpressionCompiler
 
                 // Construct the array based closure when number of values is bigger than
                 // number of fields in biggest supported Closure class.
-                var createMethods = Closure.CreateMethods;  
+                var createMethods = Closure.CreateMethods;
                 if (constantCount > createMethods.Length)
                 {
                     var items = new object[constantCount];
@@ -984,10 +987,7 @@ namespace FastExpressionCompiler
             public static ConstructorInfo Constructor =
                 typeof(ArrayClosure).GetTypeInfo().DeclaredConstructors.GetFirst();
 
-            public ArrayClosure(object[] constants)
-            {
-                Constants = constants;
-            }
+            public ArrayClosure(object[] constants) => Constants = constants;
         }
 
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
@@ -998,16 +998,16 @@ namespace FastExpressionCompiler
 
         private struct NestedLambdaInfo
         {
-            public readonly ClosureInfo ClosureInfo;
-            public readonly object Lambda;
-            public readonly bool IsAction;
+            public readonly LambdaExpression LambdaExpression;
+            public ClosureInfo ClosureInfo;
+            public object Lambda;
+            public bool IsAction => LambdaExpression.ReturnType == typeof(void);
 
-
-            public NestedLambdaInfo(ClosureInfo closureInfo, object lambda, bool isAction)
+            public NestedLambdaInfo(LambdaExpression lambdaExpression)
             {
-                ClosureInfo = closureInfo;
-                Lambda = lambda;
-                IsAction = isAction;
+                LambdaExpression = lambdaExpression;
+                ClosureInfo = new ClosureInfo(null);
+                Lambda = null;
             }
         }
 
@@ -1209,7 +1209,7 @@ namespace FastExpressionCompiler
                         var blockExpr = (BlockExpression)expr;
 
                         var varCount = blockExpr.Variables.Count;
-                        if (varCount == 1) 
+                        if (varCount == 1)
                             closure.PushBlockWithVars(blockExpr.Variables[0]);
                         else if (varCount > 1)
                             closure.PushBlockWithVars(blockExpr.Variables);
@@ -1311,50 +1311,45 @@ namespace FastExpressionCompiler
             }
         }
 
-        private static bool TryCompileNestedLambda(ref ClosureInfo closure, int lambdaIndex, LambdaExpression lambdaExpr)
+        private static bool TryCompileNestedLambda(ref ClosureInfo closureInfo, int lambdaIndex)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
             // 3. Add the compiled lambda to closure of outer lambda for later invocation
+            ref var nestedLambda = ref closureInfo.NestedLambdas[lambdaIndex];
 
+            var lambdaExpr = nestedLambda.LambdaExpression;
             var lambdaParamExprs = lambdaExpr.Parameters;
 
-            var nestedClosure = new ClosureInfo(null);
+            ref var nestedClosureInfo = ref nestedLambda.ClosureInfo;
             var paramTypes = Tools.GetParamTypes(lambdaParamExprs);
 
-            if (!TryCollectBoundConstants(ref nestedClosure, lambdaExpr.Body, lambdaParamExprs, true))
+            if (!TryCollectBoundConstants(ref nestedClosureInfo, lambdaExpr.Body, lambdaParamExprs, true))
                 return false;
 
-            var nestedLambdaExprs = nestedClosure.NestedLambdaExprs;
-            if (nestedLambdaExprs.Length != 0)
-            {
-                nestedClosure.NestedLambdas = new NestedLambdaInfo[nestedLambdaExprs.Length];
-                for (var i = 0; i < nestedLambdaExprs.Length; ++i)
-                    if (!TryCompileNestedLambda(ref nestedClosure, i, nestedLambdaExprs[i]))
+            var nestedLambdas = nestedClosureInfo.NestedLambdas;
+            if (nestedLambdas.Length != 0)
+                for (var i = 0; i < nestedLambdas.Length; ++i)
+                    if (!TryCompileNestedLambda(ref nestedClosureInfo, i))
                         return false;
-            }
 
-            var nestedClosureType = nestedClosure.ConstructClosureType();
+            var nestedClosureType = nestedClosureInfo.ConstructClosureType();
             var methodParamTypes = nestedClosureType == null ? paramTypes : GetClosureAndParamTypes(nestedClosureType, paramTypes);
 
             var returnType = lambdaExpr.ReturnType;
-            var method = new DynamicMethod(string.Empty, returnType, methodParamTypes,
-                typeof(ExpressionCompiler), skipVisibility: true);
+            var method = new DynamicMethod(string.Empty, returnType, methodParamTypes, typeof(ExpressionCompiler), true);
 
             var il = method.GetILGenerator();
             var parentFlags = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
-            if (!EmittingVisitor.TryEmit(lambdaExpr.Body, lambdaParamExprs, il, ref nestedClosure, parentFlags))
+            if (!EmittingVisitor.TryEmit(lambdaExpr.Body, lambdaParamExprs, il, ref nestedClosureInfo, parentFlags))
                 return false;
-
             il.Emit(OpCodes.Ret);
 
             // Include the closure as the first parameter, BUT don't bound to it. It will be bound later in EmitNestedLambda.
-            var compiledLambda = method.CreateDelegate(Tools.GetFuncOrActionType(methodParamTypes, returnType));
-
-            closure.NestedLambdas[lambdaIndex] = new NestedLambdaInfo(nestedClosure, compiledLambda, returnType == typeof(void));
+            nestedLambda.Lambda = method.CreateDelegate(Tools.GetFuncOrActionType(methodParamTypes, returnType));
 
             if (nestedClosureType != null)
-                CopyNestedClosureInfo(lambdaParamExprs, ref closure, ref nestedClosure);
+                CopyNestedClosureInfo(lambdaParamExprs, ref closureInfo, ref nestedClosureInfo);
 
             return true;
         }
@@ -1732,7 +1727,7 @@ namespace FastExpressionCompiler
                     throw new InvalidOperationException("Cannot jump, no labels found");
                 }
 
-                if (expr.Value != null && 
+                if (expr.Value != null &&
                     !TryEmit(expr.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
@@ -2001,7 +1996,7 @@ namespace FastExpressionCompiler
                 var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (variable != null)
                 {
-                    if (byRefIndex != -1 || 
+                    if (byRefIndex != -1 ||
                         paramType.IsValueType() && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
                         il.Emit(OpCodes.Ldloca_S, variable);
                     else
@@ -3129,7 +3124,7 @@ namespace FastExpressionCompiler
                         // Value type special treatment to load address of value instance in order to access a field or call a method.
                         // Parameter should be excluded because it already loads an address via `LDARGA`, and you don't need to.
                         // And for field access no need to load address, cause the field stored on stack nearby
-                        if (!closure.LastEmitIsAddress && 
+                        if (!closure.LastEmitIsAddress &&
                             instanceExpr.NodeType != ExpressionType.Parameter && instanceExpr.Type.IsValueType())
                             DeclareAndLoadLocalVariable(il, instanceExpr.Type);
                     }
@@ -3172,12 +3167,16 @@ namespace FastExpressionCompiler
                 // First, find in closed compiled lambdas the one corresponding to the current lambda expression.
                 // Situation with not found lambda is not possible/exceptional,
                 // it means that we somehow skipped the lambda expression while collecting closure info.
-                var outerNestedLambdaExprs = closure.NestedLambdaExprs;
-                var outerNestedLambdaIndex = outerNestedLambdaExprs.GetFirstIndex(lambdaExpr);
+                var outerNestedLambdas = closure.NestedLambdas;
+                var outerNestedLambdaIndex = outerNestedLambdas.Length - 1;
+                while (outerNestedLambdaIndex != -1 && 
+                       !ReferenceEquals(outerNestedLambdas[outerNestedLambdaIndex].LambdaExpression, lambdaExpr))
+                    --outerNestedLambdaIndex;
+
                 if (outerNestedLambdaIndex == -1)
                     return false;
 
-                var nestedLambdaInfo = closure.NestedLambdas[outerNestedLambdaIndex];
+                ref var nestedLambdaInfo = ref closure.NestedLambdas[outerNestedLambdaIndex];
                 var nestedLambda = nestedLambdaInfo.Lambda;
 
                 var outerConstants = closure.Constants;
@@ -3190,7 +3189,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
-                var nestedClosureInfo = nestedLambdaInfo.ClosureInfo;
+                ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
                 if (nestedClosureInfo.ClosureType == null)
                     return true;
 
@@ -3287,20 +3286,22 @@ namespace FastExpressionCompiler
                 }
 
                 // Load nested lambdas on stack
-                var nestedLambdaExprs = closure.NestedLambdaExprs;
-                var nestedNestedLambdaExprs = nestedClosureInfo.NestedLambdaExprs;
+                var nestedLambdas = closure.NestedLambdas;
                 var nestedNestedLambdas = nestedClosureInfo.NestedLambdas;
                 if (nestedNestedLambdas.Length != 0)
                 {
                     for (var nestedLambdaIndex = 0; nestedLambdaIndex < nestedNestedLambdas.Length; nestedLambdaIndex++)
                     {
-                        var nestedNestedLambda = nestedNestedLambdas[nestedLambdaIndex];
+                        ref var nestedNestedLambda = ref nestedNestedLambdas[nestedLambdaIndex];
+                        var nestedNestedLambdaExpr = nestedNestedLambda.LambdaExpression;
 
                         // Find constant index in the outer closure
-                        var outerLambdaIndex =
-                            nestedLambdaExprs.GetFirstIndex(nestedNestedLambdaExprs[nestedLambdaIndex]);
+                        var outerLambdaIndex = nestedLambdas.Length - 1;
+                        while (outerLambdaIndex != -1 && !ReferenceEquals(nestedLambdas[outerLambdaIndex].LambdaExpression, nestedNestedLambdaExpr))
+                            --outerLambdaIndex;
+
                         if (outerLambdaIndex == -1)
-                            return false; // some error is here
+                            return false; // should not happen 
 
                         // Duplicate nested array on stack to store the item, and load index to where to store
                         if (isNestedArrayClosure)
