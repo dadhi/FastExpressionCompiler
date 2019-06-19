@@ -48,16 +48,6 @@ namespace FastExpressionCompiler.Benchmarks
                 CompileFast_LightExpression |   9.743 us | 0.0676 us | 0.0632 us |  0.79 |    0.01 |      0.7019 |      0.3510 |      0.0305 |             3.26 KB |
  CompileFast_LightExpression_WithoutClosure |   8.571 us | 0.0464 us | 0.0434 us |  0.70 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
 
-        ## Small memory improvements when changing the `TryCatchFinallyInfo` from class to struct
-
-                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-                                    Compile | 286.993 us | 1.3492 us | 1.1960 us | 23.14 |    0.16 |      1.9531 |      0.9766 |           - |            10.93 KB |
-                                CompileFast |  12.410 us | 0.0839 us | 0.0785 us |  1.00 |    0.00 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
-                 CompileFast_WithoutClosure |  10.539 us | 0.0697 us | 0.0652 us |  0.85 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
-                CompileFast_LightExpression |   9.698 us | 0.0435 us | 0.0385 us |  0.78 |    0.01 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
- CompileFast_LightExpression_WithoutClosure |   8.948 us | 0.0687 us | 0.0643 us |  0.72 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
-
         ## Removing the recursion where possible in TryCollectBoundConstants, in-lining in some places
 
                                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
@@ -68,6 +58,27 @@ namespace FastExpressionCompiler.Benchmarks
                 CompileFast_LightExpression |   9.652 us | 0.0787 us | 0.0736 us |  0.82 |    0.01 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
  CompileFast_LightExpression_WithoutClosure |   8.686 us | 0.0743 us | 0.0620 us |  0.74 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
  
+        ## More in-lining and simplifications - probably the main impact is in-lining in the TryEmit switch; plus remove some string allocation when looking for property setter
+
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 290.499 us | 2.5309 us | 2.3674 us | 25.50 |    0.20 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  11.391 us | 0.0683 us | 0.0639 us |  1.00 |    0.00 |      0.6714 |      0.3357 |      0.0305 |             3.13 KB |
+                 CompileFast_WithoutClosure |  10.037 us | 0.0606 us | 0.0506 us |  0.88 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.98 KB |
+                CompileFast_LightExpression |   9.498 us | 0.0640 us | 0.0598 us |  0.83 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.13 KB |
+ CompileFast_LightExpression_WithoutClosure |   8.682 us | 0.0880 us | 0.0735 us |  0.76 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.98 KB |
+
+        ## Changing baseline to CompileFast_LightExpression
+
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 291.325 us | 2.1553 us | 2.0161 us | 30.65 |    0.27 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  11.548 us | 0.0682 us | 0.0638 us |  1.21 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.13 KB |
+                CompileFast_LightExpression |   9.510 us | 0.0778 us | 0.0649 us |  1.00 |    0.00 |      0.6714 |      0.3357 |      0.0305 |             3.13 KB |
+                 CompileFast_WithoutClosure |  10.453 us | 0.0533 us | 0.0498 us |  1.10 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.98 KB |
+ CompileFast_LightExpression_WithoutClosure |   8.564 us | 0.0408 us | 0.0341 us |  0.90 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.98 KB |
+
+
         */
         [MemoryDiagnoser]
         public class Compile_only
@@ -78,16 +89,16 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark]
             public object Compile() => _expression.Compile();
 
-            [Benchmark(Baseline = true)]
+            [Benchmark]
             public object CompileFast() => _expression.CompileFast();
+
+            [Benchmark(Baseline = true)]
+            public object CompileFast_LightExpression() =>
+                LightExpression.ExpressionCompiler.CompileFast(_lightExpression);
 
             [Benchmark]
             public object CompileFast_WithoutClosure() =>
                 _expression.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>();
-
-            [Benchmark]
-            public object CompileFast_LightExpression() =>
-                LightExpression.ExpressionCompiler.CompileFast(_lightExpression);
 
             [Benchmark]
             public object CompileFast_LightExpression_WithoutClosure() => 

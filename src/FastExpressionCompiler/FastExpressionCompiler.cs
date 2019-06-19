@@ -364,13 +364,14 @@ namespace FastExpressionCompiler
             }
         }
 
-        private struct TryCatchFinallyInfo
+        [Flags]
+        private enum ClosureStatus
         {
-            public bool ContainsReturnGotoExpression;
-            public int ReturnLabelIndex;
+            Initial       = 0,
+            ToBeCollected = 1,
+            UserProvided  = 1 << 1,
+            HasClosure    = 1 << 2
         }
-
-        private enum ClosureStatus { Initial, Constructed, UserProvided, UserProvidedNoClosure }
 
         // Track the info required to build a closure object + some context information not directly related to closure.
         private struct ClosureInfo
@@ -379,8 +380,9 @@ namespace FastExpressionCompiler
 
             public bool LastEmitIsAddress;
 
-            // Helpers to know if a Return GotoExpression's Label should be emitted
-            public TryCatchFinallyInfo[] TryCatchFinallyInfos;
+            // Helpers to know if a Return GotoExpression's Label should be emitted.
+            // First set bit is ContainsReturnGoto, the rest is ReturnLabelIndex
+            public int[] TryCatchFinallyInfos; 
             public int CurrentTryCatchFinallyIndex;
 
             // Helper to decide whether we are inside the block or not
@@ -430,24 +432,22 @@ namespace FastExpressionCompiler
 
                 if (userProvidedClosure == null)
                 {
-                    Status = ClosureStatus.Initial;
+                    Status = ClosureStatus.ToBeCollected;
                     Constants = Tools.Empty<ConstantExpression>();
                     ClosureType = null;
                     ClosureFields = null;
                 }
-                else if (ReferenceEquals(userProvidedClosure, _userProvidedNoClosure))
+                else if (usedProvidedClosureConstantExpressions == null)
                 {
-                    Status = ClosureStatus.UserProvidedNoClosure;
+                    Status = ClosureStatus.UserProvided;
                     Constants = null;
                     ClosureType = null;
                     ClosureFields = null;
                 }
                 else
                 {
-                    Status = ClosureStatus.UserProvided;
-                    Constants = usedProvidedClosureConstantExpressions ?? throw new ArgumentException(
-                                    "Constant expressions should not be null if `closure` parameter is passed",
-                                    nameof(usedProvidedClosureConstantExpressions));
+                    Status = ClosureStatus.UserProvided | ClosureStatus.HasClosure;
+                    Constants = usedProvidedClosureConstantExpressions;
                     ClosureType = userProvidedClosure.GetType();
                     ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
                 }
@@ -455,6 +455,8 @@ namespace FastExpressionCompiler
 
             public void AddConstant(ConstantExpression expr)
             {
+                Status |= ClosureStatus.HasClosure;
+
                 var constantCount = Constants.Length;
                 if (constantCount == 0)
                     Constants = new[] { expr };
@@ -471,7 +473,7 @@ namespace FastExpressionCompiler
                         else
                         {
                             var newConstants = new ConstantExpression[constantCount + 1];
-                            Array.Copy((Array)Constants, (Array)newConstants, constantCount);
+                            Array.Copy(Constants, newConstants, constantCount);
                             newConstants[constantCount] = expr;
                             Constants = newConstants;
                         }
@@ -481,6 +483,8 @@ namespace FastExpressionCompiler
 
             public void AddNonPassedParam(ParameterExpression expr)
             {
+                Status |= ClosureStatus.HasClosure;
+
                 if (NonPassedParameters.Length == 0 ||
                     NonPassedParameters.GetFirstIndex(expr) == -1)
                     NonPassedParameters = NonPassedParameters.WithLast(expr);
@@ -488,6 +492,8 @@ namespace FastExpressionCompiler
 
             public void AddNestedLambda(LambdaExpression lambdaExpr)
             {
+                Status |= ClosureStatus.HasClosure;
+
                 if (NestedLambdas.Length == 0)
                     NestedLambdas = new[] { new NestedLambdaInfo(lambdaExpr) };
 
@@ -537,8 +543,39 @@ namespace FastExpressionCompiler
                 return -1;
             }
 
+            public void AddTryCatchFinallyInfo()
+            {
+                ++CurrentTryCatchFinallyIndex;
+                var infos = TryCatchFinallyInfos;
+                if (infos == null)
+                    TryCatchFinallyInfos = new int[1];
+                else if (infos.Length == 1)
+                    TryCatchFinallyInfos = new[] { infos[0], 0 };
+                else if (infos.Length == 2)
+                    TryCatchFinallyInfos = new[] { infos[0], infos[1], 0 };
+                else
+                {
+                    var sourceLength = infos.Length;
+                    var newInfos = new int[sourceLength + 1];
+                    Array.Copy(infos, newInfos, sourceLength);
+                    TryCatchFinallyInfos = newInfos;
+                }
+            }
+
+            public void MarkAsContainsReturnGotoExpression()
+            {
+                if (CurrentTryCatchFinallyIndex != -1)
+                    TryCatchFinallyInfos[CurrentTryCatchFinallyIndex] |= 1;
+            }
+
+            public void MarkReturnLabelIndex(int index)
+            {
+                if (CurrentTryCatchFinallyIndex != -1)
+                    TryCatchFinallyInfos[CurrentTryCatchFinallyIndex] |= index << 1;
+            }
+
             public bool TryCatchFinallyContainsReturnGotoExpression() =>
-                TryCatchFinallyInfos?[++CurrentTryCatchFinallyIndex].ContainsReturnGotoExpression ?? false;
+                TryCatchFinallyInfos != null && (TryCatchFinallyInfos[++CurrentTryCatchFinallyIndex] & 1) != 0;
 
             // todo: use instead of Closure.Create
             public static object ConstructClosure(ConstantExpression[] constants)
@@ -578,13 +615,12 @@ namespace FastExpressionCompiler
 
             public Type ConstructClosureType()
             {
-                Status = ClosureStatus.Constructed;
+                if ((Status & ClosureStatus.HasClosure) == 0)
+                    return null;
 
                 var constants = Constants;
                 var nonPassedParams = NonPassedParameters;
                 var nestedLambdas = NestedLambdas;
-                if (constants.Length == 0 && nonPassedParams.Length == 0 && nestedLambdas.Length == 0)
-                    return null;
 
                 var constPlusParamCount = constants.Length + nonPassedParams.Length;
                 var totalItemCount = constPlusParamCount + nestedLambdas.Length;
@@ -618,13 +654,12 @@ namespace FastExpressionCompiler
 
             public object ConstructClosureObject()
             {
-                Status = ClosureStatus.Constructed;
+                if ((Status & ClosureStatus.HasClosure) == 0)
+                    return null;
 
                 var constants = Constants;
                 var nonPassedParams = NonPassedParameters;
                 var nestedLambdas = NestedLambdas;
-                if (constants.Length == 0 && nonPassedParams.Length == 0 && nestedLambdas.Length == 0)
-                    return null;
 
                 var constPlusParamCount = constants.Length + nonPassedParams.Length;
                 var totalItemCount = constPlusParamCount + nestedLambdas.Length;
@@ -721,11 +756,10 @@ namespace FastExpressionCompiler
             public bool IsTryReturnLabel(int index)
             {
                 var tryCatchFinallyInfos = TryCatchFinallyInfos;
-                if (tryCatchFinallyInfos == null)
-                    return false;
-                for (var i = 0; i <= tryCatchFinallyInfos.Length; ++i)
-                    if (tryCatchFinallyInfos[i].ReturnLabelIndex == index)
-                        return true;
+                if (tryCatchFinallyInfos != null)
+                    for (var i = 0; i < tryCatchFinallyInfos.Length; ++i)
+                        if (tryCatchFinallyInfos[i] >> 1 == index)
+                            return true;
                 return false;
             }
 
@@ -1257,10 +1291,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
                         if (gotoExpr.Kind == GotoExpressionKind.Return)
-                        {
-                            if (closure.CurrentTryCatchFinallyIndex != -1)
-                                closure.TryCatchFinallyInfos[closure.CurrentTryCatchFinallyIndex].ContainsReturnGotoExpression = true;
-                        }
+                            closure.MarkAsContainsReturnGotoExpression();
 
                         if (gotoExpr.Value == null)
                             return true;
@@ -1380,8 +1411,7 @@ namespace FastExpressionCompiler
         private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr,
             IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda)
         {
-            closure.TryCatchFinallyInfos = closure.TryCatchFinallyInfos.WithLast(new TryCatchFinallyInfo());
-            ++closure.CurrentTryCatchFinallyIndex;
+            closure.AddTryCatchFinallyInfo();
 
             if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs, isNestedLambda))
                 return false;
@@ -1510,6 +1540,7 @@ namespace FastExpressionCompiler
                             for (var i = 0; i < argExprs.Count; i++)
                                 if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, argExprs[i].Type.IsByRef ? i : -1))
                                     return false;
+
                             // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                             if (newExpr.Constructor != null)
                                 il.Emit(OpCodes.Newobj, newExpr.Constructor);
@@ -1575,58 +1606,68 @@ namespace FastExpressionCompiler
                         case ExpressionType.PreDecrementAssign:
                             return TryEmitIncDecAssign((UnaryExpression)expr, paramExprs, il, ref closure, parent);
 
-                        case ExpressionType arithmeticAssign
-                            when Tools.GetArithmeticFromArithmeticAssignOrSelf(arithmeticAssign) != arithmeticAssign:
+                        case ExpressionType.AddAssign: 
+                        case ExpressionType.AddAssignChecked:
+                        case ExpressionType.SubtractAssign:
+                        case ExpressionType.SubtractAssignChecked:
+                        case ExpressionType.MultiplyAssign:
+                        case ExpressionType.MultiplyAssignChecked:
+                        case ExpressionType.DivideAssign:
+                        case ExpressionType.ModuloAssign:
+                        case ExpressionType.PowerAssign:
+                        case ExpressionType.AndAssign:
+                        case ExpressionType.OrAssign:
+                        case ExpressionType.ExclusiveOrAssign:
+                        case ExpressionType.LeftShiftAssign:
+                        case ExpressionType.RightShiftAssign:
                         case ExpressionType.Assign:
                             return TryEmitAssign((BinaryExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.Block:
                             var blockExpr = (BlockExpression)expr;
-                            var blockVarCount = blockExpr.Variables.Count;
-                            var statementExprs = blockExpr.Expressions;
+
+                            var blockVarExprs = blockExpr.Variables;
+                            var blockVarCount = blockVarExprs.Count;
+                            if (blockVarCount == 1)
+                                closure.PushBlockWithVars(blockVarExprs[0], il.DeclareLocal(blockVarExprs[0].Type));
+                            else if (blockVarCount > 1)
+                                closure.PushBlockAndConstructLocalVars(blockVarExprs, il);
 
                             // Trim the expressions after the Throw - #196
-                            if (statementExprs.Count > 1)
+                            var statementExprs = blockExpr.Expressions;
+                            var statementCount = statementExprs.Count;
+
+                            // The last (result) statement in block will provide the result
+                            expr = statementExprs[statementCount - 1];
+
+                            // Try to trim the statements up to the Throw (if any)
+                            if (statementCount > 1)
                             {
-                                var throwIndex = -1;
-                                for (var i = 0; i < statementExprs.Count && throwIndex == -1; i++)
-                                    if (statementExprs[i].NodeType == ExpressionType.Throw)
-                                        throwIndex = i;
+                                var throwIndex = statementCount - 1;
+                                while (throwIndex != -1 && statementExprs[throwIndex].NodeType != ExpressionType.Throw)
+                                    --throwIndex;
 
-                                if (throwIndex != -1 && throwIndex != statementExprs.Count - 1)
+                                // If we have a Throw and it is not the last one
+                                if (throwIndex != -1 && throwIndex != statementCount - 1)
                                 {
-                                    var newExprs = new Expression[throwIndex + 1];
-                                    for (var i = 0; i < throwIndex; i++)
-                                        newExprs[i] = statementExprs[i];
-
-                                    var throwExpr = statementExprs[throwIndex];
-                                    if (throwExpr.Type != blockExpr.Type)
-                                        throwExpr = Expression.Throw(((UnaryExpression)throwExpr).Operand, blockExpr.Type);
-
-                                    newExprs[throwIndex] = throwExpr;
-
-                                    blockExpr = Expression.Block(typeof(void), blockExpr.Variables, newExprs);
+                                    // Change the Throw return type to match the one for the Block, and adjust the statement count
+                                    expr = Expression.Throw(((UnaryExpression)statementExprs[throwIndex]).Operand, blockExpr.Type);
+                                    statementCount = throwIndex + 1;
                                 }
                             }
 
-                            if (blockVarCount == 1)
-                                closure.PushBlockWithVars(blockExpr.Variables[0], il.DeclareLocal(blockExpr.Variables[0].Type));
-                            else if (blockVarCount > 1)
-                                closure.PushBlockAndConstructLocalVars(blockExpr.Variables, il);
-
-                            // ignore result for all not the last statements in block
-                            if (statementExprs.Count > 1)
-                                for (var i = 0; i < statementExprs.Count - 1; i++)
+                            // handle the all statements in block excluding the last one
+                            if (statementCount > 1)
+                                for (var i = 0; i < statementCount - 1; i++)
                                     if (!TryEmit(statementExprs[i], paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
                                         return false;
 
-                            // last (result) statement in block will provide the result
-                            expr = blockExpr.Result;
                             if (blockVarCount == 0)
-                                continue; // OMG, no recursion!
+                                continue; // OMG, no recursion, continue with last expression
 
                             if (!TryEmit(expr, paramExprs, il, ref closure, parent))
                                 return false;
+
                             closure.PopBlock();
                             return true;
 
@@ -1726,8 +1767,8 @@ namespace FastExpressionCompiler
                 var index = closure.GetLabelIndex(expr.Target);
                 if (index == -1)
                 {
-                    if (closure.Status != ClosureStatus.Constructed)
-                        return false;
+                    if ((closure.Status & ClosureStatus.ToBeCollected) == 0)
+                        return false; // if no collection cycle then the labels may be not collected
                     throw new InvalidOperationException("Cannot jump, no labels found");
                 }
 
@@ -1758,7 +1799,7 @@ namespace FastExpressionCompiler
                         {
                             // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
                             // to emit the Leave instruction, return label and return result
-                            closure.TryCatchFinallyInfos[closure.CurrentTryCatchFinallyIndex].ReturnLabelIndex = index;
+                            closure.MarkReturnLabelIndex(index);
                         }
                         else
                         {
@@ -1964,13 +2005,14 @@ namespace FastExpressionCompiler
             {
                 // if parameter is passed through, then just load it on stack
                 var paramType = paramExpr.Type;
+
                 var paramIndex = paramExprs.Count - 1;
                 while (paramIndex >= 0 && !ReferenceEquals(paramExprs[paramIndex], paramExpr))
                     --paramIndex;
 
                 if (paramIndex != -1)
                 {
-                    if (closure.ClosureType != null)
+                    if ((closure.Status & ClosureStatus.HasClosure) != 0)
                         paramIndex += 1; // shift parameter index by one, because the first one will be closure
 
                     closure.LastEmitIsAddress = !paramExpr.IsByRef && paramType.IsValueType() &&
@@ -1991,12 +2033,9 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
+                // If parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                 // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
-                if (closure.Status == ClosureStatus.Initial)
-                    return false;
-
-                // parameter may represent a variable, so first look if this is the case
+                // Parameter may represent a variable, so first look if this is the case
                 var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (variable != null)
                 {
@@ -2536,18 +2575,18 @@ namespace FastExpressionCompiler
 
             private static LocalBuilder DeclareAndLoadLocalVariable(ILGenerator il, Type type)
             {
-                var loc = il.DeclareLocal(type);
-                il.Emit(OpCodes.Stloc, loc);
-                il.Emit(OpCodes.Ldloca_S, loc);
-                return loc;
+                var locVar = il.DeclareLocal(type);
+                il.Emit(OpCodes.Stloc, locVar);
+                il.Emit(OpCodes.Ldloca_S, locVar);
+                return locVar;
             }
 
-            private static LocalBuilder InitValueTypeVariable(ILGenerator il, Type exprType, LocalBuilder existingVar = null)
+            private static LocalBuilder InitValueTypeVariable(ILGenerator il, Type exprType)
             {
-                var valVar = existingVar ?? il.DeclareLocal(exprType);
-                il.Emit(OpCodes.Ldloca_S, valVar);
+                var locVar = il.DeclareLocal(exprType);
+                il.Emit(OpCodes.Ldloca_S, locVar);
                 il.Emit(OpCodes.Initobj, exprType);
-                return valVar;
+                return locVar;
             }
 
             private static bool LoadClosureFieldOrItem(ref ClosureInfo closure, ILGenerator il, int itemIndex,
@@ -2568,7 +2607,9 @@ namespace FastExpressionCompiler
 
                     // load item from index
                     il.Emit(OpCodes.Ldelem_Ref);
-                    itemType = itemType ?? itemExprObj?.Type;
+                    if (itemType == null)
+                        itemType = itemExprObj?.Type;
+
                     if (itemType == null)
                         return false;
 
@@ -2664,10 +2705,15 @@ namespace FastExpressionCompiler
                             return false;
 
                     var ctor = newExpr.Constructor;
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                     if (ctor != null)
                         il.Emit(OpCodes.Newobj, ctor);
                     else if (newExpr.Type.IsValueType())
-                        valueVar = InitValueTypeVariable(il, newExpr.Type, valueVar);
+                    {
+                        valueVar = valueVar ?? il.DeclareLocal(expr.Type);
+                        il.Emit(OpCodes.Ldloca_S, valueVar);
+                        il.Emit(OpCodes.Initobj, newExpr.Type);
+                    }
                     else
                         return false; // null constructor and not a value type, better to fallback
                 }
@@ -2831,12 +2877,58 @@ namespace FastExpressionCompiler
                         while (paramIndex != -1 && !ReferenceEquals(paramExprs[paramIndex], leftParamExpr))
                             --paramIndex;
 
-                        var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
+                        var arithmeticNodeType = nodeType;
+                        switch (nodeType)
+                        {
+                            case ExpressionType.AddAssign:
+                                arithmeticNodeType = ExpressionType.Add;
+                                break;
+                            case ExpressionType.AddAssignChecked:
+                                arithmeticNodeType = ExpressionType.AddChecked;
+                                break;
+                            case ExpressionType.SubtractAssign:
+                                arithmeticNodeType = ExpressionType.Subtract;
+                                break;
+                            case ExpressionType.SubtractAssignChecked:
+                                arithmeticNodeType = ExpressionType.SubtractChecked;
+                                break;
+                            case ExpressionType.MultiplyAssign:
+                                arithmeticNodeType = ExpressionType.Multiply;
+                                break;
+                            case ExpressionType.MultiplyAssignChecked:
+                                arithmeticNodeType = ExpressionType.MultiplyChecked;
+                                break;
+                            case ExpressionType.DivideAssign:
+                                arithmeticNodeType = ExpressionType.Divide;
+                                break;
+                            case ExpressionType.ModuloAssign:
+                                arithmeticNodeType = ExpressionType.Modulo;
+                                break;
+                            case ExpressionType.PowerAssign:
+                                arithmeticNodeType = ExpressionType.Power;
+                                break;
+                            case ExpressionType.AndAssign:
+                                arithmeticNodeType = ExpressionType.And;
+                                break;
+                            case ExpressionType.OrAssign:
+                                arithmeticNodeType = ExpressionType.Or;
+                                break;
+                            case ExpressionType.ExclusiveOrAssign:
+                                arithmeticNodeType = ExpressionType.ExclusiveOr;
+                                break;
+                            case ExpressionType.LeftShiftAssign:
+                                arithmeticNodeType = ExpressionType.LeftShift;
+                                break;
+                            case ExpressionType.RightShiftAssign:
+                                arithmeticNodeType = ExpressionType.RightShift;
+                                break;
+                        }
+
                         if (paramIndex != -1)
                         {
                             // shift parameter index by one, because the first one will be closure
-                            if (closure.ClosureType != null)
-                                paramIndex += 1;
+                            if ((closure.Status & ClosureStatus.HasClosure) != 0)
+                                ++paramIndex;
 
                             if (paramIndex >= byte.MaxValue)
                                 return false;
@@ -2877,9 +2969,6 @@ namespace FastExpressionCompiler
 
                         // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                         // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
-                        if (closure.Status == ClosureStatus.Initial)
-                            return false;
-
                         // if it's a local variable, then store the right value in it
                         var localVariable = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
                         if (localVariable != null)
@@ -3193,7 +3282,7 @@ namespace FastExpressionCompiler
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
                 ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
-                if (nestedClosureInfo.ClosureType == null)
+                if ((nestedClosureInfo.Status & ClosureStatus.HasClosure) == 0)
                     return true;
 
                 // If closure is array-based, the create a new array to represent closure for the nested lambda
@@ -3329,15 +3418,13 @@ namespace FastExpressionCompiler
                     ? ArrayClosure.Constructor
                     : nestedClosureInfo.ClosureType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
-                return EmitMethodCall(il, GetCurryClosureMethod(nestedLambda, nestedLambdaInfo.IsAction));
-            }
+                var lambdaTypeArgs = nestedLambda.GetType().GetTypeInfo().GenericTypeArguments;
 
-            private static MethodInfo GetCurryClosureMethod(object lambda, bool isAction)
-            {
-                var lambdaTypeArgs = lambda.GetType().GetTypeInfo().GenericTypeArguments;
-                return isAction
+                var closureMethod = nestedLambdaInfo.IsAction
                     ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
-                    : CurryClosureFuncs.Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
+                    : CurryClosureFuncs  .Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
+
+                return EmitMethodCall(il, closureMethod);
             }
 
             private static bool TryEmitInvoke(InvocationExpression expr,
@@ -3353,11 +3440,10 @@ namespace FastExpressionCompiler
 
                 var argExprs = expr.Arguments;
                 for (var i = 0; i < argExprs.Count; i++)
-                {
-                    var byRefIndex = argExprs[i].Type.IsByRef ? i : -1;
-                    if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess, byRefIndex))
+                    if (!TryEmit(argExprs[i], paramExprs, il, ref closure,
+                        parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess,
+                        argExprs[i].Type.IsByRef ? i : -1))
                         return false;
-                }
 
                 return EmitMethodCall(il, lambda.Type.FindDelegateInvokeMethod(), parent);
             }
@@ -3442,7 +3528,7 @@ namespace FastExpressionCompiler
                         if (expressionType == ExpressionType.Equal)
                         {
                             il.Emit(OpCodes.Ceq);
-                            if ((parent & ParentFlags.IgnoreResult) > 0)
+                            if ((parent & ParentFlags.IgnoreResult) != 0)
                                 il.Emit(OpCodes.Pop);
                         }
                         else if (expressionType == ExpressionType.NotEqual)
@@ -3454,7 +3540,7 @@ namespace FastExpressionCompiler
                         else
                             return false;
 
-                        if ((parent & ParentFlags.IgnoreResult) > 0)
+                        if ((parent & ParentFlags.IgnoreResult) != 0)
                             il.Emit(OpCodes.Pop);
 
                         return true;
@@ -3487,7 +3573,8 @@ namespace FastExpressionCompiler
 
                     // todo: for now handling only parameters of the same type
                     foreach (var m in leftOpTypeInfo.DeclaredMethods)
-                        if (m.IsStatic && m.Name == methodName && IsComparisonOperatorSignature(m.GetParameters(), leftOpType))
+                        if (m.IsSpecialName && m.IsStatic && m.Name == methodName && 
+                            IsComparisonOperatorSignature(leftOpType, m.GetParameters()))
                             return EmitMethodCall(il, m);
 
                     if (expressionType != ExpressionType.Equal && expressionType != ExpressionType.NotEqual)
@@ -3600,7 +3687,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool IsComparisonOperatorSignature(ParameterInfo[] pars, Type t) =>
+            private static bool IsComparisonOperatorSignature(Type t, ParameterInfo[] pars) =>
                 pars.Length == 2 && pars[0].ParameterType == t && pars[1].ParameterType == t;
 
             private static bool TryEmitArithmetic(BinaryExpression expr, ExpressionType exprNodeType,
@@ -3841,12 +3928,26 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var testExpr = TryReduceCondition(expr.Test);
-                var comparedWithNull = false;
 
-                if (testExpr is BinaryExpression b && TryEmitComparisonWithNull(b, paramExprs, il, ref closure, parent))
-                    comparedWithNull = true;
-                else if (!TryEmit(testExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
-                    return false;
+                // detect a special simplistic case of comparison with `null`
+                var comparedWithNull = false;
+                if (testExpr is BinaryExpression b)
+                {
+                    if (b.NodeType == ExpressionType.Equal || b.NodeType == ExpressionType.NotEqual ||
+                        (!b.Left.Type.IsNullable() && !b.Right.Type.IsNullable()))
+                    {
+                        if (b.Right is ConstantExpression r && r.Value == null)
+                            comparedWithNull = TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult);
+                        else if (b.Left is ConstantExpression l && l.Value == null)
+                            comparedWithNull = TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult);
+                    }
+                }
+
+                if (!comparedWithNull)
+                {
+                    if (!TryEmit(testExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                        return false;
+                }
 
                 var labelIfFalse = il.DefineLabel();
                 il.Emit(comparedWithNull && testExpr.NodeType == ExpressionType.Equal ? OpCodes.Brtrue : OpCodes.Brfalse, labelIfFalse);
@@ -3898,22 +3999,6 @@ namespace FastExpressionCompiler
                 return testExpr;
             }
 
-            private static bool TryEmitComparisonWithNull(BinaryExpression b,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
-            {
-                if (b.NodeType != ExpressionType.Equal && b.NodeType != ExpressionType.NotEqual &&
-                    (b.Left.Type.IsNullable() || b.Right.Type.IsNullable()))
-                    return false;
-
-                if (b.Right is ConstantExpression r && r.Value == null)
-                    return TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult);
-
-                if (b.Left is ConstantExpression l && l.Value == null)
-                    return TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult);
-
-                return false;
-            }
-
             private static bool EmitMethodCall(ILGenerator il, MethodInfo method, ParentFlags parent = ParentFlags.Empty)
             {
                 if (method == null)
@@ -3921,7 +4006,7 @@ namespace FastExpressionCompiler
 
                 il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
 
-                if (parent.IgnoresResult() && method.ReturnType != typeof(void))
+                if ((parent & ParentFlags.IgnoreResult) != 0 && method.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);
                 return true;
             }
@@ -4059,29 +4144,6 @@ namespace FastExpressionCompiler
                     return ctor;
             }
             return null;
-        }
-
-        // todo: test what is faster? Copy and inline switch? Switch in method? Ors in method?
-        internal static ExpressionType GetArithmeticFromArithmeticAssignOrSelf(ExpressionType arithmetic)
-        {
-            switch (arithmetic)
-            {
-                case ExpressionType.AddAssign: return ExpressionType.Add;
-                case ExpressionType.AddAssignChecked: return ExpressionType.AddChecked;
-                case ExpressionType.SubtractAssign: return ExpressionType.Subtract;
-                case ExpressionType.SubtractAssignChecked: return ExpressionType.SubtractChecked;
-                case ExpressionType.MultiplyAssign: return ExpressionType.Multiply;
-                case ExpressionType.MultiplyAssignChecked: return ExpressionType.MultiplyChecked;
-                case ExpressionType.DivideAssign: return ExpressionType.Divide;
-                case ExpressionType.ModuloAssign: return ExpressionType.Modulo;
-                case ExpressionType.PowerAssign: return ExpressionType.Power;
-                case ExpressionType.AndAssign: return ExpressionType.And;
-                case ExpressionType.OrAssign: return ExpressionType.Or;
-                case ExpressionType.ExclusiveOrAssign: return ExpressionType.ExclusiveOr;
-                case ExpressionType.LeftShiftAssign: return ExpressionType.LeftShift;
-                case ExpressionType.RightShiftAssign: return ExpressionType.RightShift;
-                default: return arithmetic;
-            }
         }
 
         public static T[] AsArray<T>(this IEnumerable<T> xs) =>
