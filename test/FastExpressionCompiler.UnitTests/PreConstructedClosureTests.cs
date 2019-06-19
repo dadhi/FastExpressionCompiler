@@ -115,19 +115,6 @@ namespace FastExpressionCompiler.UnitTests
             public ClosureIntHolder(IntDoubler value) { Value = value; }
         }
 
-#if !LIGHT_EXPRESSION
-        [Test]
-        public void Can_prevent_closure_creation_when_compiling_a_static_delegate()
-        {
-            Expression<Func<X>> expr = () => new X();
-
-            var f = expr.TryCompileWithoutClosure<Func<X>>();
-            Assert.IsNotNull(f);
-
-            var result = f();
-            Assert.IsNotNull(result);
-        }
-
         [Test]
         public void Can_use_block_when_compiling_a_static_delegate()
         {
@@ -158,6 +145,20 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(result);
             Assert.AreEqual(10, result.DoubleValue);
         }
+
+#if !LIGHT_EXPRESSION
+        [Test]
+        public void Can_prevent_closure_creation_when_compiling_a_static_delegate()
+        {
+            Expression<Func<X>> expr = () => new X();
+
+            var f = expr.TryCompileWithoutClosure<Func<X>>();
+            Assert.IsNotNull(f);
+
+            var result = f();
+            Assert.IsNotNull(result);
+        }
+
 
         [Test]
         public void Can_pass_closure_to_hoisted_expr_with_nested_lambda()
