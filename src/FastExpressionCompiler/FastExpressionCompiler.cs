@@ -1506,14 +1506,18 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.New:
                             var newExpr = (NewExpression)expr;
-                            // todo: This may be an approach to use specialized versions of NewExpression to reduce allocations
                             var argExprs = newExpr.Arguments;
                             for (var i = 0; i < argExprs.Count; i++)
-                                if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent,
-                                    argExprs[i].Type.IsByRef ? i : -1))
+                                if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, argExprs[i].Type.IsByRef ? i : -1))
                                     return false;
-
-                            return TryEmitNew(newExpr.Constructor, newExpr.Type, il);
+                            // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                            if (newExpr.Constructor != null)
+                                il.Emit(OpCodes.Newobj, newExpr.Constructor);
+                            else if (newExpr.Type.IsValueType())
+                                il.Emit(OpCodes.Ldloc, InitValueTypeVariable(il, newExpr.Type));
+                            else
+                                return false;
+                            return true;
 
                         case ExpressionType.NewArrayBounds:
                         case ExpressionType.NewArrayInit:
@@ -2538,8 +2542,7 @@ namespace FastExpressionCompiler
                 return loc;
             }
 
-            private static LocalBuilder InitValueTypeVariable(ILGenerator il, Type exprType,
-                LocalBuilder existingVar = null)
+            private static LocalBuilder InitValueTypeVariable(ILGenerator il, Type exprType, LocalBuilder existingVar = null)
             {
                 var valVar = existingVar ?? il.DeclareLocal(exprType);
                 il.Emit(OpCodes.Ldloca_S, valVar);
@@ -2570,24 +2573,6 @@ namespace FastExpressionCompiler
                         return false;
 
                     il.Emit(itemType.IsValueType() ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
-                }
-
-                return true;
-            }
-
-            // todo: Replace resultValueVar with a closureInfo block
-            private static bool TryEmitNew(ConstructorInfo ctor, Type exprType, ILGenerator il, LocalBuilder resultValueVar = null)
-            {
-                if (ctor != null)
-                    il.Emit(OpCodes.Newobj, ctor);
-                else
-                {
-                    if (!exprType.IsValueType())
-                        return false; // null constructor and not a value type, better fallback
-
-                    var valueVar = InitValueTypeVariable(il, exprType, resultValueVar);
-                    if (resultValueVar == null)
-                        il.Emit(OpCodes.Ldloc, valueVar);
                 }
 
                 return true;
@@ -2667,7 +2652,7 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                 if (newExpr == null)
                 {
-                    if (!TryEmit(expr.Expression, paramExprs, il, ref closure, parent/*, valueVar*/)) // todo: fix me
+                    if (!TryEmit(expr.Expression, paramExprs, il, ref closure, parent))
                         return false;
                 }
                 else
@@ -2677,8 +2662,14 @@ namespace FastExpressionCompiler
                     for (var i = 0; i < argExprs.Count; i++)
                         if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, i))
                             return false;
-                    if (!TryEmitNew(newExpr.Constructor, newExpr.Type, il, valueVar))
-                        return false;
+
+                    var ctor = newExpr.Constructor;
+                    if (ctor != null)
+                        il.Emit(OpCodes.Newobj, ctor);
+                    else if (newExpr.Type.IsValueType())
+                        valueVar = InitValueTypeVariable(il, newExpr.Type, valueVar);
+                    else
+                        return false; // null constructor and not a value type, better to fallback
                 }
 
                 var bindings = expr.Bindings;
@@ -2706,13 +2697,22 @@ namespace FastExpressionCompiler
             private static bool EmitMemberAssign(ILGenerator il, MemberInfo member)
             {
                 if (member is PropertyInfo prop)
-                    return EmitMethodCall(il, prop.FindPropertySetMethod());
+                {
+                    var method = prop.DeclaringType.FindPropertySetMethod(prop.Name);
+                    if (method == null)
+                        return false;
 
-                if (!(member is FieldInfo field))
-                    return false;
+                    il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                    return true;
+                }
 
-                il.Emit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
-                return true;
+                if (member is FieldInfo field)
+                {
+                    il.Emit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
+                    return true;
+                }
+
+                return false;
             }
 
             private static bool TryEmitIncDecAssign(UnaryExpression expr,
@@ -2826,10 +2826,10 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Parameter:
                         var leftParamExpr = (ParameterExpression)left;
-                        var paramIndex = -1;
-                        for (var i = 0; paramIndex == -1 && i < paramExprs.Count; ++i)
-                            if (ReferenceEquals(paramExprs[i], leftParamExpr))
-                                paramIndex = i;
+
+                        var paramIndex = paramExprs.Count - 1;
+                        while (paramIndex != -1 && !ReferenceEquals(paramExprs[paramIndex], leftParamExpr))
+                            --paramIndex;
 
                         var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
                         if (paramIndex != -1)
@@ -2957,10 +2957,12 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.MemberAccess:
                         var assignFromLocalVar = right.NodeType == ExpressionType.Try;
-                        var resultLocalVar = assignFromLocalVar ? il.DeclareLocal(right.Type) : null;
 
+                        LocalBuilder resultLocalVar = null;
                         if (assignFromLocalVar)
                         {
+                            resultLocalVar = il.DeclareLocal(right.Type);
+
                             if (!TryEmit(right, paramExprs, il, ref closure, ParentFlags.Empty))
                                 return false;
 
@@ -2969,7 +2971,8 @@ namespace FastExpressionCompiler
 
                         var memberExpr = (MemberExpression)left;
                         var objExpr = memberExpr.Expression;
-                        if (objExpr != null && !TryEmit(objExpr, paramExprs, il, ref closure, flags | ParentFlags.MemberAccess | ParentFlags.InstanceAccess))
+                        if (objExpr != null && 
+                            !TryEmit(objExpr, paramExprs, il, ref closure, flags | ParentFlags.MemberAccess | ParentFlags.InstanceAccess))
                             return false;
 
                         if (assignFromLocalVar)
@@ -3984,9 +3987,14 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindMethod(this Type type, string methodName, bool isOperatorOrPropertyGetterSetter)
         {
-            foreach (var method in type.GetTypeInfo().DeclaredMethods)
+            var methods = type.GetTypeInfo().DeclaredMethods.AsArray();
+            for (var i = 0; i < methods.Length; i++)
+            {
+                var method = methods[i];
                 if (method.IsSpecialName == isOperatorOrPropertyGetterSetter && method.Name == methodName)
                     return method;
+            }
+
             return type.GetTypeInfo().BaseType?.FindMethod(methodName, isOperatorOrPropertyGetterSetter);
         }
 
@@ -4010,8 +4018,27 @@ namespace FastExpressionCompiler
         internal static MethodInfo FindPropertyGetMethod(this PropertyInfo prop) =>
             prop.DeclaringType.FindMethod("get_" + prop.Name, true);
 
-        internal static MethodInfo FindPropertySetMethod(this PropertyInfo prop) =>
-            prop.DeclaringType.FindMethod("set_" + prop.Name, true);
+        internal static MethodInfo FindPropertySetMethod(this Type propHolderType, string propName)
+        {
+            var methods = propHolderType.GetTypeInfo().DeclaredMethods.AsArray();
+            for (var i = 0; i < methods.Length; i++)
+            {
+                var method = methods[i];
+                if (method.IsSpecialName)
+                {
+                    var methodName = method.Name;
+                    if (methodName.Length == propName.Length + 4 && methodName[0] == 's' && methodName[3] == '_')
+                    {
+                        var j = propName.Length - 1;
+                        while (j != -1 && propName[j] == methodName[j + 4]) --j;
+                        if (j == -1)
+                            return method;
+                    }
+                }
+            }
+
+            return propHolderType.GetTypeInfo().BaseType?.FindPropertySetMethod(propName);
+        }
 
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {

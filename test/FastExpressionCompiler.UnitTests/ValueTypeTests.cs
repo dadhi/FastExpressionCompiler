@@ -16,40 +16,40 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Should_support_struct_params_with_field_access()
         {
-            Expression<Func<A, int>> expr = a => a.N;
+            Expression<Func<StructA, int>> expr = a => a.N;
 
             var f = expr.CompileFast(true);
 
-            Assert.AreEqual(42, f(new A { N = 42 }));
+            Assert.AreEqual(42, f(new StructA { N = 42 }));
         }
 
         [Test]
         public void Should_support_virtual_calls_on_struct_arguments()
         {
-            Expression<Func<A, string>> expr = a => a.ToString();
+            Expression<Func<StructA, string>> expr = a => a.ToString();
 
             var f = expr.CompileFast(true);
 
-            Assert.AreEqual("42", f(new A { N = 42 }));
+            Assert.AreEqual("42", f(new StructA { N = 42 }));
         }
 
         [Test]
         public void Should_support_virtual_calls_with_parameters_on_struct_arguments()
         {
-            object aa = new A();
-            Expression<Func<A, bool>> expr = a => a.Equals(aa);
+            object aa = new StructA();
+            Expression<Func<StructA, bool>> expr = a => a.Equals(aa);
 
             var f = expr.CompileFast(true);
 
-            Assert.AreEqual(false, f(new A { N = 42 }));
+            Assert.AreEqual(false, f(new StructA { N = 42 }));
         }
 
         [Test]
         public void Can_create_struct()
         {
-            Expression<Func<A>> expr = () => new A();
+            Expression<Func<StructA>> expr = () => new StructA();
 
-            var newA = expr.CompileFast<Func<A>>(true);
+            var newA = expr.CompileFast<Func<StructA>>(true);
 
             Assert.AreEqual(0, newA().N);
         }
@@ -57,9 +57,9 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Can_init_struct_member()
         {
-            Expression<Func<A>> expr = () => new A { N = 43, M = 34, Sf = "sf", Sp = "sp" };
+            Expression<Func<StructA>> expr = () => new StructA { N = 43, M = 34, Sf = "sf", Sp = "sp" };
 
-            var newA = expr.CompileFast<Func<A>>(true);
+            var newA = expr.CompileFast<Func<StructA>>(true);
 
             var a = newA();
             Assert.AreEqual(43, a.N);
@@ -71,10 +71,10 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Can_get_struct_member()
         {
-            Expression<Func<int>> exprN = () => new A { N = 43, M = 34, Sf = "sf", Sp = "sp" }.N;
-            Expression<Func<int>> exprM = () => new A { N = 43, M = 34, Sf = "sf", Sp = "sp" }.M;
-            Expression<Func<string>> exprSf = () => new A { N = 43, M = 34, Sf = "sf", Sp = "sp" }.Sf;
-            Expression<Func<string>> exprSp = () => new A { N = 43, M = 34, Sf = "sf", Sp = "sp" }.Sp;
+            Expression<Func<int>> exprN = () => new StructA { N = 43, M = 34, Sf = "sf", Sp = "sp" }.N;
+            Expression<Func<int>> exprM = () => new StructA { N = 43, M = 34, Sf = "sf", Sp = "sp" }.M;
+            Expression<Func<string>> exprSf = () => new StructA { N = 43, M = 34, Sf = "sf", Sp = "sp" }.Sf;
+            Expression<Func<string>> exprSp = () => new StructA { N = 43, M = 34, Sf = "sf", Sp = "sp" }.Sp;
 
 
             var n = exprN.CompileFast<Func<int>>(true);
@@ -88,7 +88,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual("sp", sp());
         }
 
-        struct A
+        struct StructA
         {
             public int N;
             public int M { get; set; }
