@@ -408,7 +408,6 @@ namespace FastExpressionCompiler
 
             // Type of constructed closure, may be available even without closure object (in case of nested lambda)
             public Type ClosureType;
-            public bool HasClosure => ClosureType != null;
 
             // Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public ConstantExpression[] Constants;
@@ -469,14 +468,27 @@ namespace FastExpressionCompiler
 
             public void AddConstant(ConstantExpression expr)
             {
-                if (Constants.Length == 0)
+                var constantCount = Constants.Length;
+                if (constantCount == 0)
                     Constants = new []{ expr };
                 else
                 {
-                    var i = Constants.Length - 1;
+                    var i = constantCount - 1;
                     while (i > -1 && !ReferenceEquals(Constants[i--], expr)) {}
                     if (i == -1)
-                        Constants = Constants.WithLast(expr);
+                    {
+                        if (constantCount == 1)
+                            Constants = new[] { Constants[0], expr };
+                        else if (constantCount == 2)
+                            Constants = new[] {Constants[0], Constants[1], expr};
+                        else
+                        {
+                            var newConstants = new ConstantExpression[constantCount + 1];
+                            Array.Copy((Array)Constants, (Array)newConstants, constantCount);
+                            newConstants[constantCount] = expr;
+                            Constants = newConstants;
+                        }
+                    }
                 }
             }
 
@@ -521,6 +533,9 @@ namespace FastExpressionCompiler
                             return i;
                 return -1;
             }
+
+            public bool TryCatchFinallyContainsReturnGotoExpression() => 
+                TryCatchFinallyInfos?[++CurrentTryCatchFinallyIndex].ContainsReturnGotoExpression ?? false;
 
             // todo: use instead of Closure.Create
             public static object ConstructClosure(ConstantExpression[] constants)
@@ -1461,7 +1476,7 @@ namespace FastExpressionCompiler
                     switch (expr.NodeType)
                     {
                         case ExpressionType.Parameter:
-                            return parent.IgnoresResult() ||
+                            return (parent & ParentFlags.IgnoreResult) != 0 ||
                                    TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
 
                         case ExpressionType.TypeAs:
@@ -1485,7 +1500,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Constant:
                             var constantExpression = (ConstantExpression)expr;
-                            return IgnoresResult(parent) ||
+                            return (parent & ParentFlags.IgnoreResult) != 0 ||
                                    TryEmitConstant(constantExpression, constantExpression.Type, constantExpression.Value, il, ref closure);
 
                         case ExpressionType.Call:
@@ -1712,7 +1727,7 @@ namespace FastExpressionCompiler
                 var index = closure.GetLabelIndex(expr.Target);
                 if (index == -1)
                 {
-                    if (closure.Status == ClosureStatus.UserProvided || closure.Status == ClosureStatus.UserProvidedNoClosure)
+                    if (closure.Status != ClosureStatus.Constructed)
                         return false;
                     throw new InvalidOperationException("Cannot jump, no labels found");
                 }
@@ -1885,8 +1900,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                ++closure.CurrentTryCatchFinallyIndex;
-                var containsReturnGotoExpression = closure.TryCatchFinallyInfos?[closure.CurrentTryCatchFinallyIndex].ContainsReturnGotoExpression ?? false;
+                var containsReturnGotoExpression = closure.TryCatchFinallyContainsReturnGotoExpression();
                 il.BeginExceptionBlock();
 
                 if (!TryEmit(tryExpr.Body, paramExprs, il, ref closure, parent))
@@ -1942,7 +1956,6 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldloc, resultVar);
 
                 --closure.CurrentTryCatchFinallyIndex;
-
                 return true;
             }
 
@@ -1952,10 +1965,13 @@ namespace FastExpressionCompiler
             {
                 // if parameter is passed through, then just load it on stack
                 var paramType = paramExpr.Type;
-                var paramIndex = paramExprs.GetFirstIndex(paramExpr);
+                var paramIndex = paramExprs.Count - 1;
+                while (paramIndex >= 0 && !ReferenceEquals(paramExprs[paramIndex], paramExpr))
+                    --paramIndex;
+
                 if (paramIndex != -1)
                 {
-                    if (closure.HasClosure)
+                    if (closure.ClosureType != null)
                         paramIndex += 1; // shift parameter index by one, because the first one will be closure
 
                     closure.LastEmitIsAddress = !paramExpr.IsByRef && paramType.IsValueType() &&
@@ -2353,7 +2369,12 @@ namespace FastExpressionCompiler
                 var constantType = constantValue.GetType();
                 if (expr != null && IsClosureBoundConstant(constantValue, constantType.GetTypeInfo()))
                 {
-                    var constIndex = closure.Constants.GetFirstIndex(expr);
+                    var closureConstants = closure.Constants;
+
+                    var constIndex = closureConstants.Length - 1;
+                    while (constIndex >= 0 && !ReferenceEquals(closureConstants[constIndex], expr))
+                        --constIndex;
+
                     if (constIndex == -1 || !LoadClosureFieldOrItem(ref closure, il, constIndex, exprType))
                         return false;
                 }
@@ -2810,13 +2831,16 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Parameter:
                         var leftParamExpr = (ParameterExpression)left;
-                        var paramIndex = paramExprs.GetFirstIndex(leftParamExpr);
-                        var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
+                        var paramIndex = -1;
+                        for (var i = 0; paramIndex == -1 && i < paramExprs.Count; ++i)
+                            if (ReferenceEquals(paramExprs[i], leftParamExpr))
+                                paramIndex = i;
 
+                        var arithmeticNodeType = Tools.GetArithmeticFromArithmeticAssignOrSelf(nodeType);
                         if (paramIndex != -1)
                         {
                             // shift parameter index by one, because the first one will be closure
-                            if (closure.HasClosure)
+                            if (closure.ClosureType != null)
                                 paramIndex += 1;
 
                             if (paramIndex >= byte.MaxValue)
@@ -3167,7 +3191,7 @@ namespace FastExpressionCompiler
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
                 var nestedClosureInfo = nestedLambdaInfo.ClosureInfo;
-                if (!nestedClosureInfo.HasClosure)
+                if (nestedClosureInfo.ClosureType == null)
                     return true;
 
                 // If closure is array-based, the create a new array to represent closure for the nested lambda
