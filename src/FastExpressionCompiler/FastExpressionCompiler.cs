@@ -688,28 +688,25 @@ namespace FastExpressionCompiler
                 var fieldTypes = new Type[totalItemCount];
                 var fieldValues = new object[totalItemCount];
 
-                if (constants.Length != 0)
-                    for (var i = 0; i < constants.Length; i++)
+                for (var i = 0; i < constants.Length; i++)
+                {
+                    var constantExpr = constants[i];
+                    if (constantExpr != null)
                     {
-                        var constantExpr = constants[i];
-                        if (constantExpr != null)
-                        {
-                            fieldTypes[i] = constantExpr.Type;
-                            fieldValues[i] = constantExpr.Value;
-                        }
+                        fieldTypes[i] = constantExpr.Type;
+                        fieldValues[i] = constantExpr.Value;
                     }
+                }
 
-                if (nonPassedParams.Length != 0)
-                    for (var i = 0; i < nonPassedParams.Length; i++)
-                        fieldTypes[constants.Length + i] = nonPassedParams[i].Type;
+                for (var i = 0; i < nonPassedParams.Length; i++)
+                    fieldTypes[constants.Length + i] = nonPassedParams[i].Type;
 
-                if (nestedLambdas.Length != 0)
-                    for (var i = 0; i < nestedLambdas.Length; i++)
-                    {
-                        var lambda = nestedLambdas[i].Lambda;
-                        fieldValues[constPlusParamCount + i] = lambda;
-                        fieldTypes[constPlusParamCount + i] = lambda.GetType();
-                    }
+                for (var i = 0; i < nestedLambdas.Length; i++)
+                {
+                    var lambda = nestedLambdas[i].Lambda;
+                    fieldValues[constPlusParamCount + i] = lambda;
+                    fieldTypes[constPlusParamCount + i] = lambda.GetType();
+                }
 
                 var createClosure = createMethods[totalItemCount - 1].MakeGenericMethod(fieldTypes);
                 ClosureType = createClosure.ReturnType;
@@ -1560,6 +1557,13 @@ namespace FastExpressionCompiler
                             return TryEmitNestedLambda((LambdaExpression)expr, paramExprs, il, ref closure);
 
                         case ExpressionType.Invoke:
+                            // optimization #138: we inline the invoked lambda body (only for lambdas without arguments) 
+                            if (((InvocationExpression)expr).Expression is LambdaExpression lambdaExpr && lambdaExpr.Parameters.Count == 0)
+                            {
+                                expr = lambdaExpr.Body;
+                                continue;
+                            }
+
                             return TryEmitInvoke((InvocationExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.GreaterThan:
@@ -1816,8 +1820,9 @@ namespace FastExpressionCompiler
             private static bool TryEmitIndex(IndexExpression expr, ILGenerator il)
             {
                 var elemType = expr.Type;
-                if (expr.Indexer != null)
-                    return EmitMethodCall(il, expr.Indexer.FindPropertyGetMethod());
+                var indexerProp = expr.Indexer;
+                if (indexerProp != null)
+                    return EmitMethodCall(il, indexerProp.DeclaringType.FindPropertyGetMethod(indexerProp.Name));
 
                 if (expr.Arguments.Count == 1) // one dimensional array
                 {
@@ -1829,7 +1834,7 @@ namespace FastExpressionCompiler
                 }
 
                 // multi dimensional array
-                return EmitMethodCall(il, expr.Object?.Type.FindMethod("Get", false));
+                return EmitMethodCall(il, expr.Object?.Type.FindMethod("Get"));
             }
 
             private static bool TryEmitCoalesceOperator(BinaryExpression exprObj,
@@ -1850,14 +1855,11 @@ namespace FastExpressionCompiler
                     var loc = il.DeclareLocal(leftType);
                     il.Emit(OpCodes.Stloc_S, loc);
                     il.Emit(OpCodes.Ldloca_S, loc);
-
-                    if (!EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod()))
-                        return false;
+                    il.Emit(OpCodes.Call, leftType.FindNullableHasValueGetterMethod());
 
                     il.Emit(OpCodes.Brfalse, labelFalse);
                     il.Emit(OpCodes.Ldloca_S, loc);
-                    if (!EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod()))
-                        return false;
+                    il.Emit(OpCodes.Call, leftType.FindNullableGetValueOrDefaultMethod());
 
                     il.Emit(OpCodes.Br, labelDone);
                     il.MarkLabel(labelFalse);
@@ -2015,10 +2017,12 @@ namespace FastExpressionCompiler
                         paramIndex += 1; // shift parameter index by one, because the first one will be closure
 
                     closure.LastEmitIsAddress = !paramExpr.IsByRef && paramType.IsValueType() &&
-                        ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall ||
-                        (parent & ParentFlags.MemberAccess) != 0);
+                        ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall || (parent & ParentFlags.MemberAccess) != 0);
 
-                    EmitLoadParamArg(il, paramIndex, closure.LastEmitIsAddress);
+                    if (closure.LastEmitIsAddress)
+                        il.Emit(OpCodes.Ldarga_S, (byte)paramIndex);
+                    else
+                        EmitLoadParamArg(il, paramIndex);
 
                     if (paramExpr.IsByRef)
                     {
@@ -2091,39 +2095,18 @@ namespace FastExpressionCompiler
                 //todo: UInt64 as there is no OpCodes? Ldind_Ref?
             }
 
-            // loads argument at paramIndex onto evaluation stack
-            private static void EmitLoadParamArg(ILGenerator il, int paramIndex, bool asAddress)
+            private static void EmitLoadParamArg(ILGenerator il, int paramIndex)
             {
-                if (asAddress)
-                {
-                    if (paramIndex <= byte.MaxValue)
-                        il.Emit(OpCodes.Ldarga_S, (byte)paramIndex);
-                    else
-                        il.Emit(OpCodes.Ldarga, paramIndex);
-                    return;
-                }
-
-                switch (paramIndex)
-                {
-                    case 0:
-                        il.Emit(OpCodes.Ldarg_0);
-                        break;
-                    case 1:
-                        il.Emit(OpCodes.Ldarg_1);
-                        break;
-                    case 2:
-                        il.Emit(OpCodes.Ldarg_2);
-                        break;
-                    case 3:
-                        il.Emit(OpCodes.Ldarg_3);
-                        break;
-                    default:
-                        if (paramIndex <= byte.MaxValue)
-                            il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
-                        else
-                            il.Emit(OpCodes.Ldarg, paramIndex);
-                        break;
-                }
+                if (paramIndex == 0)
+                    il.Emit(OpCodes.Ldarg_0);
+                else if (paramIndex == 1)
+                    il.Emit(OpCodes.Ldarg_1);
+                else if (paramIndex == 2)
+                    il.Emit(OpCodes.Ldarg_2);
+                else if (paramIndex == 3)
+                    il.Emit(OpCodes.Ldarg_3);
+                else
+                    il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
             }
 
             private static bool TryEmitTypeAs(UnaryExpression expr,
@@ -2187,8 +2170,15 @@ namespace FastExpressionCompiler
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
-                    return TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, 0)
-                        && EmitMethodCall(il, method, parent);
+                {
+                    if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, 0))
+                        return false;
+
+                    il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                    if ((parent & ParentFlags.IgnoreResult) != 0 && method.ReturnType != typeof(void))
+                        il.Emit(OpCodes.Pop);
+                    return true;
+                }
 
                 var sourceType = opExpr.Type;
                 var sourceTypeIsNullable = sourceType.IsNullable();
@@ -2203,7 +2193,11 @@ namespace FastExpressionCompiler
                     if (!closure.LastEmitIsAddress)
                         DeclareAndLoadLocalVariable(il, sourceType);
 
-                    return EmitMethodCall(il, sourceType.FindValueGetterMethod(), parent);
+                    il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+
+                    if ((parent & ParentFlags.IgnoreResult) != 0)
+                        il.Emit(OpCodes.Pop);
+                    return true;
                 }
 
                 if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
@@ -2231,13 +2225,17 @@ namespace FastExpressionCompiler
                 if (!sourceTypeIsNullable && !sourceType.IsPrimitive())
                 {
                     var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
-
                     var convertOpMethod = method ?? sourceType.FindConvertOperator(sourceType, actualTargetType);
                     if (convertOpMethod != null)
                     {
-                        EmitMethodCall(il, convertOpMethod, parent);
+                        il.Emit(OpCodes.Call, convertOpMethod);
+
                         if (targetTypeIsNullable)
                             il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+
+                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                            il.Emit(OpCodes.Pop);
+
                         return true;
                     }
                 }
@@ -2251,10 +2249,13 @@ namespace FastExpressionCompiler
                         if (sourceTypeIsNullable)
                         {
                             DeclareAndLoadLocalVariable(il, sourceType);
-                            EmitMethodCall(il, sourceType.FindValueGetterMethod(), parent);
+                            il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
                         }
 
-                        EmitMethodCall(il, convertOpMethod, parent);
+                        il.Emit(OpCodes.Call, convertOpMethod);
+                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                            il.Emit(OpCodes.Pop);
+
                         return true;
                     }
                 }
@@ -2270,23 +2271,30 @@ namespace FastExpressionCompiler
                         if (sourceTypeIsNullable)
                         {
                             DeclareAndLoadLocalVariable(il, sourceType);
-                            EmitMethodCall(il, sourceType.FindValueGetterMethod(), parent);
+                            il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
                         }
 
-                        EmitMethodCall(il, convertOpMethod, parent);
+                        il.Emit(OpCodes.Call, convertOpMethod);
+                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                            il.Emit(OpCodes.Pop);
+
                         return true;
                     }
                 }
                 else if (!sourceTypeIsNullable)
                 {
                     var actualTargetType = targetTypeIsNullable ? underlyingNullableTargetType : targetType;
-
                     var convertOpMethod = method ?? actualTargetType.FindConvertOperator(sourceType, actualTargetType);
                     if (convertOpMethod != null)
                     {
-                        EmitMethodCall(il, convertOpMethod, parent);
+                        il.Emit(OpCodes.Call, convertOpMethod);
+
                         if (targetTypeIsNullable)
                             il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+
+                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                            il.Emit(OpCodes.Pop);
+
                         return true;
                     }
                 }
@@ -2308,9 +2316,7 @@ namespace FastExpressionCompiler
                     else
                     {
                         var sourceVar = DeclareAndLoadLocalVariable(il, sourceType);
-
-                        if (!EmitMethodCall(il, sourceType.FindNullableHasValueGetterMethod()))
-                            return false;
+                        il.Emit(OpCodes.Call, sourceType.FindNullableHasValueGetterMethod());
 
                         var labelSourceHasValue = il.DefineLabel();
                         il.Emit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
@@ -2325,17 +2331,15 @@ namespace FastExpressionCompiler
                         // if source nullable has a value:
                         il.MarkLabel(labelSourceHasValue);
                         il.Emit(OpCodes.Ldloca_S, sourceVar);
-                        if (!EmitMethodCall(il, sourceType.FindNullableGetValueOrDefaultMethod()))
-                            return false;
+                        il.Emit(OpCodes.Call, sourceType.FindNullableGetValueOrDefaultMethod());
 
                         if (!TryEmitValueConvert(underlyingNullableTargetType, il,
                             expr.NodeType == ExpressionType.ConvertChecked))
                         {
                             var convertOpMethod = method ?? underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
-                            if (convertOpMethod != null)
-                                EmitMethodCall(il, convertOpMethod, parent);
-                            else
+                            if (convertOpMethod == null)
                                 return false; // nor conversion nor conversion operator is found
+                            il.Emit(OpCodes.Call, convertOpMethod);
                         }
 
                         il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
@@ -2351,7 +2355,7 @@ namespace FastExpressionCompiler
                     if (sourceTypeIsNullable)
                     {
                         DeclareAndLoadLocalVariable(il, sourceType);
-                        EmitMethodCall(il, sourceType.FindValueGetterMethod(), parent);
+                        il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
                     }
 
                     // cast as the last resort and let's it fail if unlucky
@@ -2359,7 +2363,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Castclass, targetType);
                 }
 
-                if (IgnoresResult(parent))
+                if ((parent & ParentFlags.IgnoreResult) != 0)
                     il.Emit(OpCodes.Pop);
 
                 return true;
@@ -2857,7 +2861,6 @@ namespace FastExpressionCompiler
             private static bool TryEmitAssign(BinaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var exprType = expr.Type;
                 var left = expr.Left;
                 var right = expr.Right;
                 var leftNodeType = expr.Left.NodeType;
@@ -2929,11 +2932,8 @@ namespace FastExpressionCompiler
                             if ((closure.Status & ClosureStatus.HasClosure) != 0)
                                 ++paramIndex;
 
-                            if (paramIndex >= byte.MaxValue)
-                                return false;
-
                             if (leftParamExpr.IsByRef)
-                                EmitLoadParamArg(il, paramIndex, false);
+                                EmitLoadParamArg(il, paramIndex);
 
                             if (arithmeticNodeType == nodeType)
                             {
@@ -2999,7 +2999,7 @@ namespace FastExpressionCompiler
                             if (!TryEmit(right, paramExprs, il, ref closure, flags))
                                 return false;
 
-                            var valueVar = il.DeclareLocal(exprType); // store left value in variable
+                            var valueVar = il.DeclareLocal(expr.Type); // store left value in variable
                             if (closure.ClosureFields != null)
                             {
                                 il.Emit(OpCodes.Dup);
@@ -3013,8 +3013,8 @@ namespace FastExpressionCompiler
                                 il.Emit(OpCodes.Ldfld, ArrayClosure.ArrayField); // load array field
                                 EmitLoadConstantInt(il, paramInClosureIndex); // load array item index
                                 il.Emit(OpCodes.Ldloc, valueVar);
-                                if (exprType.IsValueType())
-                                    il.Emit(OpCodes.Box, exprType);
+                                if (expr.Type.IsValueType())
+                                    il.Emit(OpCodes.Box, expr.Type);
                                 il.Emit(OpCodes.Stelem_Ref); // put the variable into array
                                 il.Emit(OpCodes.Ldloc, valueVar);
                             }
@@ -3033,8 +3033,8 @@ namespace FastExpressionCompiler
 
                             if (isArrayClosure)
                             {
-                                if (exprType.IsValueType())
-                                    il.Emit(OpCodes.Box, exprType);
+                                if (expr.Type.IsValueType())
+                                    il.Emit(OpCodes.Box, expr.Type);
                                 il.Emit(OpCodes.Stelem_Ref); // put the variable into array
                             }
                             else
@@ -3074,7 +3074,7 @@ namespace FastExpressionCompiler
 
                         il.Emit(OpCodes.Dup);
 
-                        var rightVar = il.DeclareLocal(exprType); // store right value in variable
+                        var rightVar = il.DeclareLocal(expr.Type); // store right value in variable
                         il.Emit(OpCodes.Stloc, rightVar);
 
                         if (!EmitMemberAssign(il, member))
@@ -3099,13 +3099,13 @@ namespace FastExpressionCompiler
                             return false;
 
                         if ((parent & ParentFlags.IgnoreResult) != 0)
-                            return TryEmitIndexAssign(indexExpr, obj?.Type, exprType, il);
+                            return TryEmitIndexAssign(indexExpr, obj?.Type, expr.Type, il);
 
-                        var variable = il.DeclareLocal(exprType); // store value in variable to return
+                        var variable = il.DeclareLocal(expr.Type); // store value in variable to return
                         il.Emit(OpCodes.Dup);
                         il.Emit(OpCodes.Stloc, variable);
 
-                        if (!TryEmitIndexAssign(indexExpr, obj?.Type, exprType, il))
+                        if (!TryEmitIndexAssign(indexExpr, obj?.Type, expr.Type, il))
                             return false;
 
                         il.Emit(OpCodes.Ldloc, variable);
@@ -3153,7 +3153,7 @@ namespace FastExpressionCompiler
                 }
 
                 // multi dimensional array
-                return EmitMethodCall(il, instType?.FindMethod("Set", false));
+                return EmitMethodCall(il, instType?.FindMethod("Set"));
             }
 
             private static bool TryEmitMethodCall(MethodCallExpression expr,
@@ -3221,7 +3221,12 @@ namespace FastExpressionCompiler
                     }
 
                     closure.LastEmitIsAddress = false;
-                    return EmitMethodCall(il, prop.FindPropertyGetMethod());
+                    var propGetter = prop.DeclaringType.FindPropertyGetMethod(prop.Name);
+                    if (propGetter == null)
+                        return false;
+
+                    il.Emit(propGetter.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, propGetter);
+                    return true;
                 }
 
                 if (expr.Member is FieldInfo field)
@@ -3341,11 +3346,14 @@ namespace FastExpressionCompiler
                         EmitLoadConstantInt(il, nestedConstants.Length + nestedParamIndex);
                     }
 
-                    var paramIndex = paramExprs.GetFirstIndex(nestedUsedParam);
+                    var paramIndex = paramExprs.Count - 1;
+                    while (paramIndex != -1 && !ReferenceEquals(paramExprs[paramIndex], nestedUsedParam))
+                        --paramIndex;
+
                     if (paramIndex != -1) // load parameter from input params
                     {
                         // +1 is set cause of added first closure argument
-                        EmitLoadParamArg(il, 1 + paramIndex, false);
+                        EmitLoadParamArg(il, 1 + paramIndex);
                     }
                     else // load parameter from outer closure or from the locals
                     {
@@ -3423,17 +3431,14 @@ namespace FastExpressionCompiler
                     ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
                     : CurryClosureFuncs  .Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
 
-                return EmitMethodCall(il, closureMethod);
+                il.Emit(OpCodes.Call, closureMethod);
+                return true;
             }
 
             private static bool TryEmitInvoke(InvocationExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                // optimization #138: we inline the invoked lambda body (only for lambdas without arguments) 
                 var lambda = expr.Expression;
-                if (lambda is LambdaExpression lambdaExpr && lambdaExpr.Parameters.Count == 0)
-                    return TryEmit(lambdaExpr.Body, paramExprs, il, ref closure, parent);
-
                 if (!TryEmit(lambda, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
@@ -3444,7 +3449,13 @@ namespace FastExpressionCompiler
                         argExprs[i].Type.IsByRef ? i : -1))
                         return false;
 
-                return EmitMethodCall(il, lambda.Type.FindDelegateInvokeMethod(), parent);
+                var delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod();
+                il.Emit(OpCodes.Call, delegateInvokeMethod);
+
+                if ((parent & ParentFlags.IgnoreResult) != 0 && delegateInvokeMethod.ReturnType != typeof(void))
+                    il.Emit(OpCodes.Pop);
+
+                return true;
             }
 
             private static bool TryEmitSwitch(SwitchExpression expr,
@@ -3511,8 +3522,7 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     lVar = DeclareAndLoadLocalVariable(il, leftOpType);
-                    if (!EmitMethodCall(il, leftOpType.FindNullableGetValueOrDefaultMethod()))
-                        return false;
+                    il.Emit(OpCodes.Call, leftOpType.FindNullableGetValueOrDefaultMethod());
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
 
@@ -3549,8 +3559,7 @@ namespace FastExpressionCompiler
                 if (rightOpType.IsNullable())
                 {
                     rVar = DeclareAndLoadLocalVariable(il, rightOpType);
-                    if (!EmitMethodCall(il, rightOpType.FindNullableGetValueOrDefaultMethod()))
-                        return false;
+                    il.Emit(OpCodes.Call, rightOpType.FindNullableGetValueOrDefaultMethod());
                     // ReSharper disable once AssignNullToNotNullAttribute
                     rightOpType = Nullable.GetUnderlyingType(rightOpType);
                 }
@@ -3571,15 +3580,22 @@ namespace FastExpressionCompiler
                         return false;
 
                     // todo: for now handling only parameters of the same type
-                    foreach (var m in leftOpTypeInfo.DeclaredMethods)
-                        if (m.IsSpecialName && m.IsStatic && m.Name == methodName && 
+                    var methods = leftOpTypeInfo.DeclaredMethods.AsArray();
+                    for (var i = 0; i < methods.Length; i++)
+                    {
+                        var m = methods[i];
+                        if (m.IsSpecialName && m.IsStatic && m.Name == methodName &&
                             IsComparisonOperatorSignature(leftOpType, m.GetParameters()))
-                            return EmitMethodCall(il, m);
+                        {
+                            il.Emit(OpCodes.Call, m);
+                            return true;
+                        }
+                    }
 
                     if (expressionType != ExpressionType.Equal && expressionType != ExpressionType.NotEqual)
                         return false;
 
-                    EmitMethodCall(il, _objectEqualsMethod);
+                    il.Emit(OpCodes.Call, _objectEqualsMethod);
 
                     if (expressionType == ExpressionType.NotEqual) // invert result for not equal
                     {
@@ -3643,13 +3659,14 @@ namespace FastExpressionCompiler
             nullCheck:
                 if (leftIsNullable)
                 {
+                    var leftNullableHasValueGetterMethod = exprLeft.Type.FindNullableHasValueGetterMethod();
+
                     il.Emit(OpCodes.Ldloca_S, lVar);
-                    if (!EmitMethodCall(il, exprLeft.Type.FindNullableHasValueGetterMethod()))
-                        return false;
+                    il.Emit(OpCodes.Call, leftNullableHasValueGetterMethod);
+
                     // ReSharper disable once AssignNullToNotNullAttribute
                     il.Emit(OpCodes.Ldloca_S, rVar);
-                    if (!EmitMethodCall(il, exprLeft.Type.FindNullableHasValueGetterMethod()))
-                        return false;
+                    il.Emit(OpCodes.Call, leftNullableHasValueGetterMethod);
 
                     switch (expressionType)
                     {
@@ -3709,10 +3726,10 @@ namespace FastExpressionCompiler
                         DeclareAndLoadLocalVariable(il, lefType);
 
                     il.Emit(OpCodes.Dup);
-                    EmitMethodCall(il, lefType.FindNullableHasValueGetterMethod());
+                    il.Emit(OpCodes.Call, lefType.FindNullableHasValueGetterMethod());
 
                     il.Emit(OpCodes.Brfalse, leftNoValueLabel);
-                    EmitMethodCall(il, lefType.FindNullableGetValueOrDefaultMethod());
+                    il.Emit(OpCodes.Call, lefType.FindNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(leftExpr, paramExprs, il, ref closure, flags))
                     return false;
@@ -3731,10 +3748,9 @@ namespace FastExpressionCompiler
                         DeclareAndLoadLocalVariable(il, rightType);
 
                     il.Emit(OpCodes.Dup);
-                    EmitMethodCall(il, rightType.FindNullableHasValueGetterMethod());
-
+                    il.Emit(OpCodes.Call, rightType.FindNullableHasValueGetterMethod());
                     il.Emit(OpCodes.Brfalse, rightNoValueLabel);
-                    EmitMethodCall(il, rightType.FindNullableGetValueOrDefaultMethod());
+                    il.Emit(OpCodes.Call, rightType.FindNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(rightExpr, paramExprs, il, ref closure, flags))
                     return false;
@@ -3793,12 +3809,17 @@ namespace FastExpressionCompiler
                             if (expr.Left.Type != expr.Right.Type || expr.Left.Type != typeof(string))
                                 paraType = typeof(object);
 
-                            foreach (var m in typeof(string).GetTypeInfo().DeclaredMethods)
-                                if (m.Name == "Concat" && m.GetParameters().Length == 2 &&
-                                    m.GetParameters()[0].ParameterType == paraType)
+                            var methods = typeof(string).GetTypeInfo().DeclaredMethods.AsArray();
+                            for (var i = 0; i < methods.Length; i++)
+                            {
+                                var m = methods[i];
+                                if (m.IsStatic && m.Name == "Concat" && 
+                                    m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == paraType)
                                 {
-                                    method = m; break;
+                                    method = m;
+                                    break;
                                 }
+                            }
                         }
                         else
                         {
@@ -3815,15 +3836,21 @@ namespace FastExpressionCompiler
 
                             if (methodName != null)
                             {
-                                foreach (var m in exprType.GetTypeInfo().DeclaredMethods)
+                                var methods = exprType.GetTypeInfo().DeclaredMethods.AsArray();
+                                for (var i = 0; method == null && i < methods.Length; i++)
+                                {
+                                    var m = methods[i];
                                     if (m.IsSpecialName && m.IsStatic && m.Name == methodName)
-                                    {
-                                        method = m; break;
-                                    }
+                                        method = m;
+                                }
                             }
                         }
 
-                        return EmitMethodCall(il, method);
+                        if (method == null)
+                            return false;
+
+                        il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                        return true;
                     }
                 }
 
@@ -3895,7 +3922,8 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.Power:
-                        return EmitMethodCall(il, typeof(Math).FindMethod("Pow", false));
+                        il.Emit(OpCodes.Call, typeof(Math).FindMethod("Pow"));
+                        return true;
                 }
 
                 return false;
@@ -3975,27 +4003,44 @@ namespace FastExpressionCompiler
 
             private static Expression TryReduceCondition(Expression testExpr)
             {
-                if (testExpr is BinaryExpression b)
+                while (true)
                 {
-                    if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
+                    if (testExpr is BinaryExpression b)
                     {
-                        if (b.Left is ConstantExpression l && l.Value is bool lb)
-                            return lb ? b.Left : TryReduceCondition(b.Right);
+                        if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
+                        {
+                            if (b.Left is ConstantExpression l && l.Value is bool lb)
+                            {
+                                if (lb) return b.Left;
+                                testExpr = b.Right;
+                                continue;
+                            }
 
-                        if (b.Right is ConstantExpression r && r.Value is bool rb && rb == false)
-                            return TryReduceCondition(b.Left);
-                    }
-                    else if (b.NodeType == ExpressionType.AndAlso || b.NodeType == ExpressionType.And)
-                    {
-                        if (b.Left is ConstantExpression l && l.Value is bool lb)
-                            return !lb ? b.Left : TryReduceCondition(b.Right);
+                            if (b.Right is ConstantExpression r && r.Value is bool rb && rb == false)
+                            {
+                                testExpr = b.Left;
+                                continue;
+                            }
+                        }
+                        else if (b.NodeType == ExpressionType.AndAlso || b.NodeType == ExpressionType.And)
+                        {
+                            if (b.Left is ConstantExpression l && l.Value is bool lb)
+                            {
+                                if (!lb) return b.Left;
+                                testExpr = b.Right;
+                                continue;
+                            }
 
-                        if (b.Right is ConstantExpression r && r.Value is bool rb && rb)
-                            return TryReduceCondition(b.Left);
+                            if (b.Right is ConstantExpression r && r.Value is bool rb && rb)
+                            {
+                                testExpr = b.Left;
+                                continue;
+                            }
+                        }
                     }
+
+                    return testExpr;
                 }
-
-                return testExpr;
             }
 
             private static bool EmitMethodCall(ILGenerator il, MethodInfo method, ParentFlags parent = ParentFlags.Empty)
@@ -4069,38 +4114,61 @@ namespace FastExpressionCompiler
         internal static bool IsNullable(this Type type) =>
             type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(Nullable<>);
 
-        internal static MethodInfo FindMethod(this Type type, string methodName, bool isOperatorOrPropertyGetterSetter)
+        internal static MethodInfo FindMethod(this Type type, string methodName)
         {
             var methods = type.GetTypeInfo().DeclaredMethods.AsArray();
             for (var i = 0; i < methods.Length; i++)
             {
                 var method = methods[i];
-                if (method.IsSpecialName == isOperatorOrPropertyGetterSetter && method.Name == methodName)
+                if (method.Name == methodName)
                     return method;
             }
 
-            return type.GetTypeInfo().BaseType?.FindMethod(methodName, isOperatorOrPropertyGetterSetter);
+            return type.GetTypeInfo().BaseType?.FindMethod(methodName);
         }
 
-        internal static MethodInfo FindDelegateInvokeMethod(this Type type) =>
-            type.FindMethod("Invoke", false);
+        internal static MethodInfo FindDelegateInvokeMethod(this Type type) => type.FindMethod("Invoke");
 
         internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type)
         {
-            foreach (var m in type.GetTypeInfo().GetDeclaredMethods("GetValueOrDefault"))
-                if (m.GetParameters().Length == 0)
+            var methods = type.GetTypeInfo().DeclaredMethods.AsArray();
+            for (var i = 0; i < methods.Length; i++)
+            {
+                var m = methods[i];
+                if (m.GetParameters().Length == 0 && m.Name == "GetValueOrDefault")
                     return m;
+            }
+
             return null;
         }
 
         internal static MethodInfo FindValueGetterMethod(this Type type) =>
-            type.FindMethod("get_Value", true);
+            type.FindPropertyGetMethod("Value");
 
         internal static MethodInfo FindNullableHasValueGetterMethod(this Type type) =>
-            type.FindMethod("get_HasValue", true);
+            type.FindPropertyGetMethod("HasValue");
 
-        internal static MethodInfo FindPropertyGetMethod(this PropertyInfo prop) =>
-            prop.DeclaringType.FindMethod("get_" + prop.Name, true);
+        internal static MethodInfo FindPropertyGetMethod(this Type propHolderType, string propName)
+        {
+            var methods = propHolderType.GetTypeInfo().DeclaredMethods.AsArray();
+            for (var i = 0; i < methods.Length; i++)
+            {
+                var method = methods[i];
+                if (method.IsSpecialName)
+                {
+                    var methodName = method.Name;
+                    if (methodName.Length == propName.Length + 4 && methodName[0] == 'g' && methodName[3] == '_')
+                    {
+                        var j = propName.Length - 1;
+                        while (j != -1 && propName[j] == methodName[j + 4]) --j;
+                        if (j == -1)
+                            return method;
+                    }
+                }
+            }
+
+            return propHolderType.GetTypeInfo().BaseType?.FindPropertySetMethod(propName);
+        }
 
         internal static MethodInfo FindPropertySetMethod(this Type propHolderType, string propName)
         {
@@ -4126,27 +4194,44 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
-            foreach (var m in type.GetTypeInfo().DeclaredMethods)
-                if (m.IsStatic && m.IsSpecialName && m.ReturnType == targetType &&
-                    (m.Name == "op_Implicit" || m.Name == "op_Explicit") &&
-                    m.GetParameters()[0].ParameterType == sourceType)
-                    return m;
+            var methods = type.GetTypeInfo().DeclaredMethods.AsArray();
+            for (var i = 0; i < methods.Length; i++)
+            {
+                var m = methods[i];
+                if (m.IsStatic && m.IsSpecialName && m.ReturnType == targetType)
+                {
+                    var n = m.Name;
+                    // n == "op_Implicit" || n == "op_Explicit"
+                    if (n.Length == 11 && 
+                        n[2] == '_' && n[5] == 'p' && n[6] == 'l' && n[7] == 'i' && n[8] == 'c' && n[9] == 'i' && n[10] == 't' && 
+                        m.GetParameters()[0].ParameterType == sourceType)
+                        return m;
+                }
+            }
+
             return null;
         }
 
         internal static ConstructorInfo FindSingleParamConstructor(this Type type, Type paramType)
         {
-            foreach (var ctor in type.GetTypeInfo().DeclaredConstructors)
+            var ctors = type.GetTypeInfo().DeclaredConstructors.AsArray();
+            for (var i = 0; i < ctors.Length; i++)
             {
+                var ctor = ctors[i];
                 var parameters = ctor.GetParameters();
                 if (parameters.Length == 1 && parameters[0].ParameterType == paramType)
                     return ctor;
             }
+
             return null;
         }
 
-        public static T[] AsArray<T>(this IEnumerable<T> xs) =>
-            xs is T[] array ? array : xs == null ? null : new List<T>(xs).ToArray();
+        public static T[] AsArray<T>(this IEnumerable<T> xs)
+        {
+            if (xs is T[] array)
+                return array;
+            return xs == null ? null : new List<T>(xs).ToArray();
+        }
 
         private static class EmptyArray<T>
         {
