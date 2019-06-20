@@ -173,7 +173,34 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(y);
             Assert.AreSame(y.A, y.B);
         }
+
+        [Test]
+        public void Can_use_primitive_types_in_hoisted_lambda_closure()
+        {
+            var i = 3;
+            Expression<Func<int>> expr = () => i + 1;
+
+            var fs = expr.CompileSys();
+            Assert.IsNotNull(fs);
+
+            i = 13;
+            Assert.AreEqual(14, fs());
+        }
 #endif
+
+        [Test]
+        public void Can_Not_use_primitive_types_in_manual_lambda_closure()
+        {
+            var i = 3;
+            var expr = Lambda<Func<int>>(Increment(Constant(i)));
+
+            var fs = expr.CompileSys();
+            Assert.IsNotNull(fs);
+
+            i = 13;
+            Assert.AreEqual(4, fs());
+        }
+
 
         public class Y
         {

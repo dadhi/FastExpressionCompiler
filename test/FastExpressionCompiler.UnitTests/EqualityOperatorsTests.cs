@@ -69,7 +69,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             var dtNow = Constant(DateTime.Now);
             var e = Lambda<Func<bool>>(
-                GreaterThanOrEqual(Expression.Constant(DateTime.Now), dtNow));
+                GreaterThanOrEqual(Constant(DateTime.Now), dtNow));
 
             var f = e.CompileFast(true);
 
@@ -81,7 +81,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             var dtNow = Constant(DateTime.Now);
             var e = Lambda<Func<bool>>(
-                LessThanOrEqual(dtNow, Expression.Constant(DateTime.Now)));
+                LessThanOrEqual(dtNow, Constant(DateTime.Now)));
 
             var f = e.CompileFast(true);
 
