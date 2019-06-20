@@ -88,6 +88,16 @@ namespace FastExpressionCompiler.Benchmarks
                  CompileFast_WithoutClosure |   9.454 us | 0.0593 us | 0.0554 us |  1.06 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.93 KB |
  CompileFast_LightExpression_WithoutClosure |   8.057 us | 0.0526 us | 0.0439 us |  0.90 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.93 KB |
 
+        ## Changing BlockInfo to struct
+
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 254.985 us | 3.9906 us | 3.7328 us | 28.47 |    0.56 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  11.032 us | 0.0558 us | 0.0522 us |  1.23 |    0.01 |      0.6256 |      0.3052 |      0.0305 |             2.91 KB |
+                CompileFast_LightExpression |   8.961 us | 0.0921 us | 0.0769 us |  1.00 |    0.00 |      0.6256 |      0.3052 |      0.0305 |             2.91 KB |
+                 CompileFast_WithoutClosure |   9.530 us | 0.0917 us | 0.0858 us |  1.06 |    0.01 |      0.6256 |      0.3052 |      0.0305 |             2.88 KB |
+ CompileFast_LightExpression_WithoutClosure |   8.024 us | 0.0447 us | 0.0349 us |  0.90 |    0.01 |      0.6256 |      0.3052 |      0.0305 |             2.88 KB |
+
         */
         [MemoryDiagnoser]
         public class Compile_only

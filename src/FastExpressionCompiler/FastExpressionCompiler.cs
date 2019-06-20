@@ -348,16 +348,13 @@ namespace FastExpressionCompiler
             return closureAndParamTypes;
         }
 
-        private sealed class BlockInfo
+        private struct BlockInfo
         {
-            public readonly BlockInfo OuterBlock;
+            public object VarExprs; // ParameterExpression | IReadOnlyList<ParameterExpression>
+            public object LocalVars; // LocalBuilder | LocalBuilder[]
 
-            public readonly object VarExprs; // ParameterExpression | IReadOnlyList<ParameterExpression>
-            public readonly object LocalVars; // LocalBuilder | LocalBuilder[]
-
-            internal BlockInfo(BlockInfo outerBlock, object varExprs, object localVars)
+            internal BlockInfo(object varExprs, object localVars)
             {
-                OuterBlock = outerBlock;
                 VarExprs = varExprs;
                 LocalVars = localVars;
             }
@@ -381,11 +378,12 @@ namespace FastExpressionCompiler
 
             // Helpers to know if a Return GotoExpression's Label should be emitted.
             // First set bit is ContainsReturnGoto, the rest is ReturnLabelIndex
-            public int[] TryCatchFinallyInfos; 
+            private int[] _tryCatchFinallyInfos; 
             public int CurrentTryCatchFinallyIndex;
 
             // Helper to decide whether we are inside the block or not
-            private BlockInfo _currentBlockInfo;
+            private BlockInfo[] _blockStack;
+            public int TopBlockIndex;
 
             // Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
@@ -425,9 +423,10 @@ namespace FastExpressionCompiler
 
                 LastEmitIsAddress = false;
                 CurrentTryCatchFinallyIndex = -1;
-                TryCatchFinallyInfos = null;
+                _tryCatchFinallyInfos = null;
                 _labels = null;
-                _currentBlockInfo = null;
+                _blockStack = Tools.Empty<BlockInfo>();
+                TopBlockIndex = -1;
 
                 if (userProvidedClosure == null)
                 {
@@ -545,36 +544,36 @@ namespace FastExpressionCompiler
             public void AddTryCatchFinallyInfo()
             {
                 ++CurrentTryCatchFinallyIndex;
-                var infos = TryCatchFinallyInfos;
+                var infos = _tryCatchFinallyInfos;
                 if (infos == null)
-                    TryCatchFinallyInfos = new int[1];
+                    _tryCatchFinallyInfos = new int[1];
                 else if (infos.Length == 1)
-                    TryCatchFinallyInfos = new[] { infos[0], 0 };
+                    _tryCatchFinallyInfos = new[] { infos[0], 0 };
                 else if (infos.Length == 2)
-                    TryCatchFinallyInfos = new[] { infos[0], infos[1], 0 };
+                    _tryCatchFinallyInfos = new[] { infos[0], infos[1], 0 };
                 else
                 {
                     var sourceLength = infos.Length;
                     var newInfos = new int[sourceLength + 1];
                     Array.Copy(infos, newInfos, sourceLength);
-                    TryCatchFinallyInfos = newInfos;
+                    _tryCatchFinallyInfos = newInfos;
                 }
             }
 
             public void MarkAsContainsReturnGotoExpression()
             {
                 if (CurrentTryCatchFinallyIndex != -1)
-                    TryCatchFinallyInfos[CurrentTryCatchFinallyIndex] |= 1;
+                    _tryCatchFinallyInfos[CurrentTryCatchFinallyIndex] |= 1;
             }
 
             public void MarkReturnLabelIndex(int index)
             {
                 if (CurrentTryCatchFinallyIndex != -1)
-                    TryCatchFinallyInfos[CurrentTryCatchFinallyIndex] |= index << 1;
+                    _tryCatchFinallyInfos[CurrentTryCatchFinallyIndex] |= index << 1;
             }
 
             public bool TryCatchFinallyContainsReturnGotoExpression() =>
-                TryCatchFinallyInfos != null && (TryCatchFinallyInfos[++CurrentTryCatchFinallyIndex] & 1) != 0;
+                _tryCatchFinallyInfos != null && (_tryCatchFinallyInfos[++CurrentTryCatchFinallyIndex] & 1) != 0;
 
             // todo: use instead of Closure.Create
             public static object ConstructClosure(ConstantExpression[] constants)
@@ -715,63 +714,97 @@ namespace FastExpressionCompiler
                 return createClosure.Invoke(null, fieldValues);
             }
 
+            private static BlockInfo[] ExpandBlockStack(BlockInfo[] blockStack)
+            {
+                var newBlockStack = new BlockInfo[blockStack.Length + 3];
+                for (var i = 0; i < blockStack.Length; i++)
+                {
+                    ref var a = ref blockStack[i];
+                    ref var b = ref newBlockStack[i];
+                    b.VarExprs  = a.VarExprs;
+                    b.LocalVars = a.LocalVars;
+                }
+
+                return newBlockStack;
+            }
+
             /// LocalVar maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
-            public void PushBlockWithVars(ParameterExpression blockVarExpr, LocalBuilder localVar = null) =>
-                _currentBlockInfo = new BlockInfo(_currentBlockInfo, blockVarExpr, localVar);
+            public void PushBlockWithVars(ParameterExpression blockVarExpr, LocalBuilder localVar = null)
+            {
+                if (++TopBlockIndex >= _blockStack.Length)
+                    _blockStack = ExpandBlockStack(_blockStack);
+
+                ref var block = ref _blockStack[TopBlockIndex];
+                block.VarExprs = blockVarExpr;
+                block.LocalVars = localVar;
+            }
 
             /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
-            public void PushBlockWithVars(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars = null) =>
-                _currentBlockInfo = new BlockInfo(_currentBlockInfo, blockVarExprs, localVars);
+            public void PushBlockWithVars(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars = null)
+            {
+                if (++TopBlockIndex >= _blockStack.Length)
+                    _blockStack = ExpandBlockStack(_blockStack);
+
+                ref var block = ref _blockStack[TopBlockIndex];
+                block.VarExprs = blockVarExprs;
+                block.LocalVars = localVars;
+            }
 
             public void PushBlockAndConstructLocalVars(IReadOnlyList<ParameterExpression> blockVarExprs, ILGenerator il)
             {
                 var localVars = new LocalBuilder[blockVarExprs.Count];
                 for (var i = 0; i < localVars.Length; i++)
                     localVars[i] = il.DeclareLocal(blockVarExprs[i].Type);
-                _currentBlockInfo = new BlockInfo(_currentBlockInfo, blockVarExprs, localVars);
+
+                PushBlockWithVars(blockVarExprs, localVars);
             }
 
-            public void PopBlock() =>
-                _currentBlockInfo = _currentBlockInfo.OuterBlock;
+            public void PopBlock() => 
+                --TopBlockIndex;
 
             public bool IsLocalVar(object varParamExpr)
             {
-                for (var block = _currentBlockInfo; block != null; block = block.OuterBlock)
+                for (var i = TopBlockIndex; i > -1; --i)
                 {
-                    if (ReferenceEquals(block.VarExprs, varParamExpr))
+                    var varExprObj = _blockStack[i].VarExprs;
+                    if (ReferenceEquals(varExprObj, varParamExpr))
                         return true;
 
-                    if (block.VarExprs is IReadOnlyList<ParameterExpression> varExprs)
-                        for (var i = 0; i < varExprs.Count; i++)
-                            if (ReferenceEquals(varExprs[i], varParamExpr))
+                    if (varExprObj is IReadOnlyList<ParameterExpression> varExprs)
+                        for (var j = 0; j < varExprs.Count; j++)
+                            if (ReferenceEquals(varExprs[j], varParamExpr))
                                 return true;
                 }
-                return false;
-            }
 
-            public bool IsTryReturnLabel(int index)
-            {
-                var tryCatchFinallyInfos = TryCatchFinallyInfos;
-                if (tryCatchFinallyInfos != null)
-                    for (var i = 0; i < tryCatchFinallyInfos.Length; ++i)
-                        if (tryCatchFinallyInfos[i] >> 1 == index)
-                            return true;
                 return false;
             }
 
             public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                for (var block = _currentBlockInfo; block != null; block = block.OuterBlock)
+                for (var i = TopBlockIndex; i > -1; --i)
                 {
-                    if (ReferenceEquals(block.VarExprs, varParamExpr))
+                    ref var block = ref _blockStack[i];
+                    var varExprObj = block.VarExprs;
+
+                    if (ReferenceEquals(varExprObj, varParamExpr))
                         return (LocalBuilder)block.LocalVars;
 
-                    if (block.VarExprs is IReadOnlyList<ParameterExpression> varExprs)
-                        for (var i = 0; i < varExprs.Count; i++)
-                            if (ReferenceEquals(varExprs[i], varParamExpr))
-                                return ((LocalBuilder[])block.LocalVars)[i];
+                    if (varExprObj is IReadOnlyList<ParameterExpression> varExprs)
+                        for (var j = 0; j < varExprs.Count; j++)
+                            if (ReferenceEquals(varExprs[j], varParamExpr))
+                                return ((LocalBuilder[])block.LocalVars)[j];
                 }
                 return null;
+            }
+
+            public bool IsTryReturnLabel(int index)
+            {
+                var tryCatchFinallyInfos = _tryCatchFinallyInfos;
+                if (tryCatchFinallyInfos != null)
+                    for (var i = 0; i < tryCatchFinallyInfos.Length; ++i)
+                        if (tryCatchFinallyInfos[i] >> 1 == index)
+                            return true;
+                return false;
             }
         }
 
@@ -1701,17 +1734,16 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Throw:
                             {
-                                var opExpr = ((UnaryExpression)expr).Operand;
-                                if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                                if (!TryEmit(((UnaryExpression)expr).Operand, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                                     return false;
-
                                 il.Emit(OpCodes.Throw);
                                 return true;
                             }
 
                         case ExpressionType.Default:
-                            return expr.Type == typeof(void) || IgnoresResult(parent) ||
-                                   EmitDefault(expr.Type, il);
+                            if (expr.Type != typeof(void) && (parent & ParentFlags.IgnoreResult) == 0)
+                               EmitDefault(expr.Type, il);
+                            return true;
 
                         case ExpressionType.Index:
                             var indexExpr = (IndexExpression)expr;
@@ -1901,9 +1933,9 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitDefault(Type type, ILGenerator il)
+            private static void EmitDefault(Type type, ILGenerator il)
             {
-                if (type == typeof(string))
+                if (!type.GetTypeInfo().IsValueType)
                 {
                     il.Emit(OpCodes.Ldnull);
                 }
@@ -1930,12 +1962,8 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldc_R4, default(float));
                 else if (type == typeof(double))
                     il.Emit(OpCodes.Ldc_R8, default(double));
-                else if (type.IsValueType())
-                    il.Emit(OpCodes.Ldloc, InitValueTypeVariable(il, type));
                 else
-                    il.Emit(OpCodes.Ldnull);
-
-                return true;
+                    il.Emit(OpCodes.Ldloc, InitValueTypeVariable(il, type));
             }
 
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,
