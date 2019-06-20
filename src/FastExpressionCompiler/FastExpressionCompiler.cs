@@ -265,7 +265,6 @@ namespace FastExpressionCompiler
             var parentFlags = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, parentFlags))
                 return null;
-
             il.Emit(OpCodes.Ret);
 
             if (delegateType == typeof(Delegate))
@@ -313,7 +312,7 @@ namespace FastExpressionCompiler
 
         private static Type[] GetClosureAndParamTypes(Type closureType, IReadOnlyList<ParameterExpression> paramExprs)
         {
-            if (paramExprs == null || paramExprs.Count == 0)
+            if (paramExprs.Count == 0)
                 return new[] { closureType };
 
             if (paramExprs.Count == 1)
