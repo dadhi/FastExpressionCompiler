@@ -78,6 +78,15 @@ namespace FastExpressionCompiler.Benchmarks
                  CompileFast_WithoutClosure |  10.453 us | 0.0533 us | 0.0498 us |  1.10 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.98 KB |
  CompileFast_LightExpression_WithoutClosure |   8.564 us | 0.0408 us | 0.0341 us |  0.90 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.98 KB |
 
+        ## Some improvements But fluctuation in Compile
+
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 252.184 us | 1.3073 us | 1.2228 us | 28.21 |    0.19 |      1.9531 |      0.9766 |           - |            10.93 KB |
+                                CompileFast |  10.880 us | 0.0376 us | 0.0352 us |  1.22 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.08 KB |
+                CompileFast_LightExpression |   8.940 us | 0.0649 us | 0.0575 us |  1.00 |    0.00 |      0.6714 |      0.3357 |      0.0305 |             3.08 KB |
+                 CompileFast_WithoutClosure |   9.454 us | 0.0593 us | 0.0554 us |  1.06 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.93 KB |
+ CompileFast_LightExpression_WithoutClosure |   8.057 us | 0.0526 us | 0.0439 us |  0.90 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.93 KB |
 
         */
         [MemoryDiagnoser]

@@ -4003,44 +4003,27 @@ namespace FastExpressionCompiler
 
             private static Expression TryReduceCondition(Expression testExpr)
             {
-                while (true)
+                if (testExpr is BinaryExpression b)
                 {
-                    if (testExpr is BinaryExpression b)
+                    if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
                     {
-                        if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
-                        {
-                            if (b.Left is ConstantExpression l && l.Value is bool lb)
-                            {
-                                if (lb) return b.Left;
-                                testExpr = b.Right;
-                                continue;
-                            }
+                        if (b.Left is ConstantExpression l && l.Value is bool lb)
+                            return lb ? b.Left : TryReduceCondition(b.Right);
 
-                            if (b.Right is ConstantExpression r && r.Value is bool rb && rb == false)
-                            {
-                                testExpr = b.Left;
-                                continue;
-                            }
-                        }
-                        else if (b.NodeType == ExpressionType.AndAlso || b.NodeType == ExpressionType.And)
-                        {
-                            if (b.Left is ConstantExpression l && l.Value is bool lb)
-                            {
-                                if (!lb) return b.Left;
-                                testExpr = b.Right;
-                                continue;
-                            }
-
-                            if (b.Right is ConstantExpression r && r.Value is bool rb && rb)
-                            {
-                                testExpr = b.Left;
-                                continue;
-                            }
-                        }
+                        if (b.Right is ConstantExpression r && r.Value is bool rb && rb == false)
+                            return TryReduceCondition(b.Left);
                     }
+                    else if (b.NodeType == ExpressionType.AndAlso || b.NodeType == ExpressionType.And)
+                    {
+                        if (b.Left is ConstantExpression l && l.Value is bool lb)
+                            return !lb ? b.Left : TryReduceCondition(b.Right);
 
-                    return testExpr;
+                        if (b.Right is ConstantExpression r && r.Value is bool rb && rb)
+                            return TryReduceCondition(b.Left);
+                    }
                 }
+
+                return testExpr;
             }
 
             private static bool EmitMethodCall(ILGenerator il, MethodInfo method, ParentFlags parent = ParentFlags.Empty)
