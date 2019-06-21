@@ -140,6 +140,15 @@ namespace FastExpressionCompiler.Benchmarks
                              Create_n_Compile | 314.09 us | 1.6548 us | 1.5479 us | 11.49 |    0.08 |      2.9297 |      1.4648 |           - |            13.82 KB |
                          Create_n_CompileFast |  27.34 us | 0.1675 us | 0.1566 us |  1.00 |    0.00 |      1.3733 |      0.6714 |      0.0305 |             6.38 KB |
          Create_n_CompileFast_LightExpression |  12.53 us | 0.0818 us | 0.0765 us |  0.46 |    0.00 |      1.2512 |      0.6256 |      0.0458 |             5.78 KB |
+
+        ## Update
+
+                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+        ------------------------------------- |----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                             Create_n_Compile | 275.08 us | 2.0375 us | 1.9059 us | 11.17 |    0.15 |      2.9297 |      1.4648 |           - |            13.82 KB |
+                         Create_n_CompileFast |  24.63 us | 0.2710 us | 0.2535 us |  1.00 |    0.00 |      1.2512 |      0.6104 |      0.0305 |             5.86 KB |
+         Create_n_CompileFast_LightExpression |  11.86 us | 0.0723 us | 0.0641 us |  0.48 |    0.00 |      1.1292 |      0.5646 |      0.0458 |             5.22 KB |
+
         */
         [MemoryDiagnoser]
         public class Create_and_Compile

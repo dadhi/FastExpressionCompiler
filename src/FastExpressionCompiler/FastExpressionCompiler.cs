@@ -376,7 +376,7 @@ namespace FastExpressionCompiler
 
             // Helper to decide whether we are inside the block or not
             private BlockInfo[] _blockStack;
-            public int TopBlockIndex;
+            private int TopBlockIndex;
 
             // Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
@@ -567,42 +567,6 @@ namespace FastExpressionCompiler
 
             public bool TryCatchFinallyContainsReturnGotoExpression() =>
                 _tryCatchFinallyInfos != null && (_tryCatchFinallyInfos[++CurrentTryCatchFinallyIndex] & 1) != 0;
-
-            // todo: use instead of Closure.Create
-            public static object ConstructClosure(ConstantExpression[] constants)
-            {
-                var constantCount = constants.Length;
-                if (constantCount == 0)
-                    return null;
-
-                // Construct the array based closure when number of values is bigger than
-                // number of fields in biggest supported Closure class.
-                var createMethods = Closure.CreateMethods;
-                if (constantCount > createMethods.Length)
-                {
-                    var items = new object[constantCount];
-                    for (var i = 0; i < constants.Length; i++)
-                        items[i] = constants[i].Value;
-                    return new ArrayClosure(items);
-                }
-
-                // Construct the Closure Type and optionally Closure object with closed values stored as fields:
-                var fieldTypes = new Type[constantCount];
-                var fieldValues = new object[constantCount];
-
-                for (var i = 0; i < constantCount; i++)
-                {
-                    var constantExpr = constants[i];
-                    if (constantExpr != null)
-                    {
-                        fieldTypes[i] = constantExpr.Type;
-                        fieldValues[i] = constantExpr.Value;
-                    }
-                }
-
-                var createClosure = createMethods[constantCount - 1].MakeGenericMethod(fieldTypes);
-                return createClosure.Invoke(null, fieldValues);
-            }
 
             public Type ConstructClosureType()
             {

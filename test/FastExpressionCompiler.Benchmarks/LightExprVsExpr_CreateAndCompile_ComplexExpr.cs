@@ -6,9 +6,9 @@ using LE = FastExpressionCompiler.LightExpression.ExpressionCompiler;
 namespace FastExpressionCompiler.Benchmarks
 {
     [MemoryDiagnoser]
-    [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+    //[Orderer(SummaryOrderPolicy.FastestToSlowest)]
     //[ClrJob, CoreJob]
-    public class ExprInfoVsExpr_CreateAndCompile_ComplexExpr
+    public class LightExprVsExpr_CreateAndCompile_ComplexExpr
     {
         /**
         ## 25.01.2019
@@ -49,8 +49,8 @@ namespace FastExpressionCompiler.Benchmarks
     }
 
     [MemoryDiagnoser]
-    [Orderer(SummaryOrderPolicy.FastestToSlowest)]
-    public class ExprInfoVsExpr_Create_ComplexExpr
+    //[Orderer(SummaryOrderPolicy.FastestToSlowest)]
+    public class LightExprVsExpr_Create_ComplexExpr
     {
         /*
         ## 25.01.2019

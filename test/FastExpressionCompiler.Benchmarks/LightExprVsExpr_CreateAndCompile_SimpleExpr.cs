@@ -16,7 +16,7 @@ using LE = FastExpressionCompiler.LightExpression.Expression;
 
 //Job=Core Runtime = Core
 
-//Wtf?
+//
 //                                          Method |        Mean |        Error |       StdDev |  Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
 //------------------------------------------------ |------------:|-------------:|-------------:|-------:|--------:|------------:|------------:|------------:|--------------------:|
 //             CreateExpression_and_Compile_Invoke | 96,754.5 ns | 1,135.402 ns | 1,062.056 ns | 155.62 |    1.64 |      0.8545 |      0.3662 |           - |              4392 B |
@@ -27,8 +27,8 @@ using LE = FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.Benchmarks
 {
-    [MemoryDiagnoser, CoreJob]
-    public class ExprInfoVsExpr_CreateAndCompile_SimpleExpr
+    [MemoryDiagnoser]
+    public class LightExprVsExpr_CreateAndCompile_SimpleExpr
     {
         public class A { }
         public class B { }
@@ -112,7 +112,7 @@ namespace FastExpressionCompiler.Benchmarks
         public X ManualEmit_and_Invoke()
         {
             var method = new DynamicMethod(string.Empty, typeof(object), Type.EmptyTypes,
-                typeof(ExprInfoVsExpr_CreateAndCompile_SimpleExpr), skipVisibility: true);
+                typeof(LightExprVsExpr_CreateAndCompile_SimpleExpr), skipVisibility: true);
 
             var il = method.GetILGenerator();
 

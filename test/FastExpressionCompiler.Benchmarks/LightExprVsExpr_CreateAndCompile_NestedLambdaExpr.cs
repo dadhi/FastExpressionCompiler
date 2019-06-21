@@ -3,24 +3,23 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Order;
 using LEC = FastExpressionCompiler.LightExpression.ExpressionCompiler;
 using LE = FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.Benchmarks
 {
     [MemoryDiagnoser]
-    [Orderer(SummaryOrderPolicy.FastestToSlowest)]
-    public class ExprInfoVsExpr_CreateAndCompile_NestedLambdaExpr
+    //[Orderer(SummaryOrderPolicy.FastestToSlowest)]
+    public class LightExprVsExpr_CreateAndCompile_NestedLambdaExpr
     {
         /*
         ## 25.01.2019
 
                                        Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
         ------------------------------------- |----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-         CreateExpressionInfo_and_FastCompile |  20.68 us | 0.1641 us | 0.1535 us |  1.00 |    0.00 |      1.2512 |      0.6104 |      0.0610 |             5.85 KB |
-             CreateExpression_and_FastCompile |  25.29 us | 0.2089 us | 0.1852 us |  1.22 |    0.01 |      1.3428 |      0.6714 |      0.0610 |             6.24 KB |
                  CreateExpression_and_Compile | 275.27 us | 1.8691 us | 1.7484 us | 13.31 |    0.10 |      1.4648 |      0.4883 |           - |             8.42 KB |
+             CreateExpression_and_FastCompile |  25.29 us | 0.2089 us | 0.1852 us |  1.22 |    0.01 |      1.3428 |      0.6714 |      0.0610 |             6.24 KB |
+         CreateExpressionInfo_and_FastCompile |  20.68 us | 0.1641 us | 0.1535 us |  1.00 |    0.00 |      1.2512 |      0.6104 |      0.0610 |             5.85 KB |
 
          */
 

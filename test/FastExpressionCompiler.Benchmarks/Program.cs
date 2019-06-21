@@ -31,15 +31,15 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<SimpleExpr_ParamPlusParam>();
 
             //BenchmarkRunner.Run<ExprInfoVsExpr_Create_ComplexExpr>();
-            BenchmarkRunner.Run<ExprInfoVsExpr_CreateAndCompile_ComplexExpr>();
-            //BenchmarkRunner.Run<ExprInfoVsExpr_CreateAndCompile_NestedLambdaExpr>();
-            //BenchmarkRunner.Run<ExprInfoVsExpr_CreateAndCompile_SimpleExpr>();
+            //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
+            //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_NestedLambdaExpr>();
+            //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_SimpleExpr>();
 
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
-            //BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
+            BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Invoke>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
