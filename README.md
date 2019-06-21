@@ -197,13 +197,26 @@ Invoking compiled delegate comparing to normal delegate:
 
 ### FEC.LightExpression.Expression vs Expression
 
-`FastExpressionCompiler.LightExpression.Expression` is the lightweight version of `Expression`. 
+`FastExpressionCompiler.LightExpression.Expression` is the lightweight version of `System.Linq.Expressions.Expression`. 
+It is designed to be a __drop-in replacement__ for System Expression - just install __FastExpressionCompiler.LightExpression__ package instead of __FastExpressionCompiler__ and replace the usings:
+
+```cs
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
+```
+
+to
+
+```cs
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+```
 
 You may look at it as a bare wrapper over expression node which helps you to compose the computation tree.  
-It __won't do any node compatibility verification__ for the tree as the `Expression` does (and why the latter is slow).
+It __won't do any node compatibility verification__ for the tree as the `Expression` does and why the creation of the latter is slower.
 Hopefully you are checking the expression arguments yourself and not waiting for `Expression` exceptions to blow up - then you are safe.
 
-[Sample expression](https://github.com/dadhi/FastExpressionCompiler/blob/8cab34992be52e5f0f18805f21e0e6faab69493a/test/FastExpressionCompiler.UnitTests/ExpressionInfoTests.cs#L145)
+[Sample expression](https://github.com/dadhi/FastExpressionCompiler/blob/6da130c62f6adaa293f34a1a0c19ea4522f9c989/test/FastExpressionCompiler.LightExpression.UnitTests/LightExpressionTests.cs#L167)
 
 Creating expression:
 
@@ -242,10 +255,10 @@ the compilation is aborted, and null is returned enabling the fallback to normal
 
 ### Additional optimizations
 
-1. Using `ExpressionInfo` instead of `Expression` for _lightweight_ expression creation.  
-Won't speed-up compilation alone, but may speed-up construction+compilation.
+1. Using `FastExpressionCompiler.LightExpression.Expression` instead of `System.Linq.Expressions.Expression` for the _lightweight_ expression creation.  
+It won't speed-up compilation alone but may speed-up the construction.
 2. Using `expr.TryCompileWithPreCreatedClosure` and `expr.TryCompileWithoutClosure` when you know the 
-expression at hand and may optimize for delegate with closure or for "static" delegate.
+expression at hand and may optimize for delegate with the closure or for "static" delegate.
 
-Both optimizations are visible in benchmark results: search for `ExpressionInfo` and 
+Both optimizations are visible in benchmark results: search for `LightExpression` and 
 `FastCompiledLambdaWithPreCreatedClosure` respectively.

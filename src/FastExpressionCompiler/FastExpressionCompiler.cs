@@ -352,18 +352,11 @@ namespace FastExpressionCompiler
         {
             public object VarExprs; // ParameterExpression | IReadOnlyList<ParameterExpression>
             public object LocalVars; // LocalBuilder | LocalBuilder[]
-
-            internal BlockInfo(object varExprs, object localVars)
-            {
-                VarExprs = varExprs;
-                LocalVars = localVars;
-            }
         }
 
         [Flags]
         private enum ClosureStatus
         {
-            Initial       = 0,
             ToBeCollected = 1,
             UserProvided  = 1 << 1,
             HasClosure    = 1 << 2
