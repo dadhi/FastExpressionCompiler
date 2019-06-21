@@ -72,6 +72,14 @@ namespace FastExpressionCompiler.Benchmarks
            CompileFastWithPreCreatedClosure |   102.35 us |  0.9648 us |  0.8056 us |  1.47 |    0.01 |      6.1035 |      3.0518 |      0.4883 |            28.25 KB |
          CompileFastWithPreCreatedClosureLE |    69.74 us |  0.3595 us |  0.3002 us |  1.00 |    0.00 |      5.6152 |      2.8076 |      0.3662 |            25.79 KB |
 
+        ## v2.1 after closing the #196
+
+                                     Method |        Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+        ----------------------------------- |------------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                                    Compile | 1,377.31 us | 8.5576 us | 8.0048 us | 20.80 |    0.22 |      7.8125 |      3.9063 |           - |            42.05 KB |
+                                CompileFast |   104.74 us | 0.9695 us | 0.8594 us |  1.58 |    0.02 |      6.2256 |      3.0518 |      0.4883 |            28.74 KB |
+           CompileFastWithPreCreatedClosure |    99.44 us | 1.0721 us | 1.0029 us |  1.50 |    0.02 |      5.9814 |      2.9297 |      0.3662 |            27.83 KB |
+         CompileFastWithPreCreatedClosureLE |    66.22 us | 0.4996 us | 0.4673 us |  1.00 |    0.00 |      6.2256 |      3.0518 |      0.4883 |               29 KB |
          */
 
         public async Task<string> Foo(int a, int b) => await Task.FromResult((a + b).ToString());

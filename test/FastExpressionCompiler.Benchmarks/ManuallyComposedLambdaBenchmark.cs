@@ -61,6 +61,15 @@ namespace FastExpressionCompiler.Benchmarks
                             CompileFastWithPreCreatedClosure |   5.186 us | 0.0896 us | 0.0795 us |  1.06 |    0.02 |      0.3281 |      0.1602 |      0.0305 |              1.5 KB |
                                                  CompileFast |   7.257 us | 0.0648 us | 0.0606 us |  1.49 |    0.03 |      0.4349 |      0.2136 |      0.0305 |             1.99 KB |
                                                      Compile | 176.107 us | 1.3451 us | 1.2582 us | 36.05 |    0.75 |      0.9766 |      0.4883 |           - |              4.7 KB |
+
+            ## v2.1
+
+                                                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+            ------------------------------------------------ |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+             CompileFastWithPreCreatedClosureLightExpression |   4.500 us | 0.0166 us | 0.0155 us |  1.00 |    0.00 |      0.3204 |      0.1602 |      0.0305 |             1.47 KB |
+                            CompileFastWithPreCreatedClosure |   5.103 us | 0.0402 us | 0.0356 us |  1.13 |    0.01 |      0.3204 |      0.1602 |      0.0305 |             1.47 KB |
+                                                 CompileFast |   7.122 us | 0.0401 us | 0.0375 us |  1.58 |    0.01 |      0.4349 |      0.2136 |      0.0305 |             1.99 KB |
+                                                     Compile | 152.286 us | 0.6110 us | 0.5715 us | 33.84 |    0.20 |      0.9766 |      0.4883 |           - |              4.7 KB |
              */
             [Benchmark]
             public Func<B, X> Compile() => 
