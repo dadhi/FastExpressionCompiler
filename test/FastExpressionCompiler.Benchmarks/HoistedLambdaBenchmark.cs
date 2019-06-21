@@ -64,19 +64,19 @@ namespace FastExpressionCompiler.Benchmarks
 
             ## v2.1 With ArrayClosure object
 
-                            Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-            ---------------------- |----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-             DirectConstructorCall |  6.203 ns | 0.1898 ns | 0.3470 ns |  0.76 |    0.06 |      0.0068 |           - |           - |                32 B |
-                    CompiledLambda | 12.313 ns | 0.1124 ns | 0.1052 ns |  1.57 |    0.04 |      0.0068 |           - |           - |                32 B |
-                FastCompiledLambda |  7.840 ns | 0.2010 ns | 0.1881 ns |  1.00 |    0.00 |      0.0068 |           - |           - |                32 B |
+                            Method |     Mean |     Error |    StdDev | Ratio | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+            ---------------------- |---------:|----------:|----------:|------:|------------:|------------:|------------:|--------------------:|
+             DirectConstructorCall | 4.983 ns | 0.0459 ns | 0.0429 ns |  0.68 |      0.0068 |           - |           - |                32 B |
+                    CompiledLambda | 9.818 ns | 0.0425 ns | 0.0397 ns |  1.34 |      0.0068 |           - |           - |                32 B |
+                FastCompiledLambda | 7.351 ns | 0.0277 ns | 0.0259 ns |  1.00 |      0.0068 |           - |           - |                32 B |
 
             ## v2.1 With typed Closure object
 
-                            Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-            ---------------------- |----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-             DirectConstructorCall |  5.099 ns | 0.0283 ns | 0.0265 ns |  0.75 |    0.01 |      0.0068 |           - |           - |                32 B |
-                    CompiledLambda | 10.734 ns | 0.0228 ns | 0.0202 ns |  1.57 |    0.02 |      0.0068 |           - |           - |                32 B |
-                FastCompiledLambda |  6.829 ns | 0.0772 ns | 0.0684 ns |  1.00 |    0.00 |      0.0068 |           - |           - |                32 B |
+                            Method |     Mean |     Error |    StdDev | Ratio | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+            ---------------------- |---------:|----------:|----------:|------:|------------:|------------:|------------:|--------------------:|
+             DirectConstructorCall | 5.012 ns | 0.0330 ns | 0.0308 ns |  0.82 |      0.0068 |           - |           - |                32 B |
+                    CompiledLambda | 9.632 ns | 0.0411 ns | 0.0384 ns |  1.57 |      0.0068 |           - |           - |                32 B |
+                FastCompiledLambda | 6.131 ns | 0.0348 ns | 0.0308 ns |  1.00 |      0.0068 |           - |           - |                32 B |
 
              */
 
