@@ -136,7 +136,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int, int>>(block, param);
 
-            var fastCompiled = lambda.CompileFast<Func<int, int>>();
+            var fastCompiled = lambda.CompileFast<Func<int, int>>(true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(5, fastCompiled(8));

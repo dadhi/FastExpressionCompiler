@@ -39,7 +39,38 @@ namespace FastExpressionCompiler.UnitTests
 
                 var expr = Lambda<Func<Source, Dest>>(body, sourceParam);
 
-                //var fs = expr.Compile();
+#if LIGHT_EXPRESSION
+                var exprCode = expr.CodeString;
+var expectedCode =
+@"Lambda(typeof(Func<Source, Dest>),
+Condition(Equal(
+Parameter(typeof(Source), ""source""),
+Constant(null, typeof(Source))),
+Constant(null, typeof(Dest)),
+MemberInit(New(typeof(Dest).GetTypeInfo().DeclaredConstructors.ToArray()[0],
+new Expression[0]),
+Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3], Property(Parameter(typeof(Source), ""source""),
+typeof(Source).GetTypeInfo().DeclaredProperties.ToArray()[0])))),
+Parameter(typeof(Source), ""source""))";
+
+                Assert.AreEqual(expectedCode, exprCode);
+
+                var reincarnatedExpr = 
+                    Lambda(typeof(Func<Source, Dest>),
+                    Condition(Equal(
+                    Parameter(typeof(Source), "source"),
+                    Constant(null, typeof(Source))),
+                    Constant(null, typeof(Dest)),
+                    MemberInit(New(typeof(Dest).GetTypeInfo().DeclaredConstructors.ToArray()[0],
+                    new Expression[0]),
+                    Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3], Property(Parameter(typeof(Source), "source"),
+                    typeof(Source).GetTypeInfo().DeclaredProperties.ToArray()[0])))),
+                    Parameter(typeof(Source), "source"));
+
+                var reincarnatedCompiled = reincarnatedExpr.CompileFast(true);
+                //Assert.NotNull(reincarnatedCompiled); // todo: fix the parameters
+#endif
+
                 var ff = expr.CompileFast(true);
 
                 var dest = ff(new Source {Value = 42});

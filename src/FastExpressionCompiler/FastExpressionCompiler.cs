@@ -2679,7 +2679,6 @@ namespace FastExpressionCompiler
             private static bool EmitMemberInit(MemberInitExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                // todo: Use closureInfo Block to track the variable instead
                 LocalBuilder valueVar = null;
                 if (expr.Type.IsValueType())
                     valueVar = il.DeclareLocal(expr.Type);
