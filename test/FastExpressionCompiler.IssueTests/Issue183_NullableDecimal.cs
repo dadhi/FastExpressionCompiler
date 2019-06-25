@@ -30,10 +30,10 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void ConvertNullNullableParamToNullableDecimal_CheckAgainstTheSystemExprCompile()
         {
-            var ps = System.Linq.Expressions.Expression.Parameter(typeof(byte?), "b");
-            var fs = System.Linq.Expressions.Expression.Lambda<Func<byte?, decimal?>>(
-                System.Linq.Expressions.Expression.Convert(ps, typeof(decimal?)), ps)
-                .Compile();
+            var ps = Parameter(typeof(byte?), "b");
+            var fs = Lambda<Func<byte?, decimal?>>(
+                Convert(ps, typeof(decimal?)), ps)
+                .CompileSys();
             var xs = fs(null);
             Assert.IsNull(xs);
 

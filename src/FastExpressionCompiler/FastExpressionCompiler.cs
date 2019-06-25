@@ -289,7 +289,7 @@ namespace FastExpressionCompiler
             // Promote found constants and nested lambdas into outer closure
             var nestedConstants = nestedInfo.Constants;
             for (var i = 0; i < nestedConstants.Length; i++)
-                info.AddConstant(nestedConstants[i]);
+                info.AddConstant(nestedConstants.Items[i]);
 
             // Add nested constants to outer lambda closure.
             // At this moment we know that the NestedLambdaExprs are non-empty, cause we are doing this from the nested lambda already.
@@ -354,6 +354,37 @@ namespace FastExpressionCompiler
             public object LocalVars; // LocalBuilder | LocalBuilder[]
         }
 
+        internal struct LiveCountArray<T>
+        {
+            private const int EXPAND_BY = 3;
+
+            public int Length;
+            public T[] Items;
+
+            public LiveCountArray(T[] items)
+            {
+                Items = items;
+                Length = items.Length;
+            }
+
+            public void Push(T item)
+            {
+                if (++Length >= Items.Length)
+                    Items = Expand(Items);
+                Items[Length - 1] = item;
+            }
+
+            public void Pop() => --Length;
+
+            private static T[] Expand(T[] items)
+            {
+                var newItems = new T[items.Length + EXPAND_BY];
+                for (var i = 0; i < items.Length; i++)
+                    newItems[i] = items[i];
+                return newItems;
+            }
+        }
+
         [Flags]
         private enum ClosureStatus
         {
@@ -391,7 +422,7 @@ namespace FastExpressionCompiler
             public Type ClosureType;
 
             // Constant expressions to find an index (by reference) of constant expression from compiled expression.
-            public ConstantExpression[] Constants;
+            public LiveCountArray<ConstantExpression> Constants;
 
             // FieldInfos are needed to load field of closure object on stack in emitter.
             // It is also an indicator that we use typed Closure object and not an array.
@@ -424,21 +455,21 @@ namespace FastExpressionCompiler
                 if (userProvidedClosure == null)
                 {
                     Status = ClosureStatus.ToBeCollected;
-                    Constants = Tools.Empty<ConstantExpression>();
+                    Constants = new LiveCountArray<ConstantExpression>(Tools.Empty<ConstantExpression>());
                     ClosureType = null;
                     ClosureFields = null;
                 }
                 else if (usedProvidedClosureConstantExpressions == null)
                 {
                     Status = ClosureStatus.UserProvided;
-                    Constants = null;
+                    Constants = new LiveCountArray<ConstantExpression>(Tools.Empty<ConstantExpression>());
                     ClosureType = null;
                     ClosureFields = null;
                 }
                 else
                 {
                     Status = ClosureStatus.UserProvided | ClosureStatus.HasClosure;
-                    Constants = usedProvidedClosureConstantExpressions;
+                    Constants = new LiveCountArray<ConstantExpression>(usedProvidedClosureConstantExpressions);
                     ClosureType = userProvidedClosure.GetType();
                     ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
                 }
@@ -448,28 +479,10 @@ namespace FastExpressionCompiler
             {
                 Status |= ClosureStatus.HasClosure;
 
-                var constantCount = Constants.Length;
-                if (constantCount == 0)
-                    Constants = new[] { expr };
-                else
-                {
-                    var i = constantCount - 1;
-                    while (i > -1 && !ReferenceEquals(Constants[i--], expr)) { }
-                    if (i == -1)
-                    {
-                        if (constantCount == 1)
-                            Constants = new[] { Constants[0], expr };
-                        else if (constantCount == 2)
-                            Constants = new[] { Constants[0], Constants[1], expr };
-                        else
-                        {
-                            var newConstants = new ConstantExpression[constantCount + 1];
-                            Array.Copy(Constants, newConstants, constantCount);
-                            newConstants[constantCount] = expr;
-                            Constants = newConstants;
-                        }
-                    }
-                }
+                var i = Constants.Length - 1;
+                while (i != -1 && !ReferenceEquals(Constants.Items[i], expr)) --i;
+                if (i == -1)
+                    Constants.Push(expr);
             }
 
             public void AddNonPassedParam(ParameterExpression expr)
@@ -590,7 +603,7 @@ namespace FastExpressionCompiler
                 var fieldTypes = new Type[totalItemCount];
                 if (constants.Length != 0)
                     for (var i = 0; i < constants.Length; i++)
-                        fieldTypes[i] = constants[i].Type;
+                        fieldTypes[i] = constants.Items[i].Type;
 
                 if (nonPassedParams.Length != 0)
                     for (var i = 0; i < nonPassedParams.Length; i++)
@@ -627,7 +640,7 @@ namespace FastExpressionCompiler
                     var items = new object[totalItemCount];
                     if (constants.Length != 0)
                         for (var i = 0; i < constants.Length; i++)
-                            items[i] = constants[i].Value;
+                            items[i] = constants.Items[i].Value;
 
                     // skip non passed parameters as it is only for nested lambdas
 
@@ -645,7 +658,7 @@ namespace FastExpressionCompiler
 
                 for (var i = 0; i < constants.Length; i++)
                 {
-                    var constantExpr = constants[i];
+                    var constantExpr = constants.Items[i];
                     if (constantExpr != null)
                     {
                         fieldTypes[i] = constantExpr.Type;
@@ -2405,7 +2418,7 @@ namespace FastExpressionCompiler
                     var closureConstants = closure.Constants;
 
                     var constIndex = closureConstants.Length - 1;
-                    while (constIndex >= 0 && !ReferenceEquals(closureConstants[constIndex], expr))
+                    while (constIndex >= 0 && !ReferenceEquals(closureConstants.Items[constIndex], expr))
                         --constIndex;
 
                     if (constIndex == -1 || !LoadClosureFieldOrItem(ref closure, il, constIndex, exprType))
@@ -3294,10 +3307,12 @@ namespace FastExpressionCompiler
                 {
                     for (var nestedConstIndex = 0; nestedConstIndex < nestedConstants.Length; nestedConstIndex++)
                     {
-                        var nestedConstant = nestedConstants[nestedConstIndex];
+                        var nestedConstant = nestedConstants.Items[nestedConstIndex];
 
                         // Find constant index in the outer closure
-                        var outerConstIndex = outerConstants.GetFirstIndex(nestedConstant);
+                        var outerConstIndex = outerConstants.Length - 1;
+                        while (outerConstIndex != -1 && !ReferenceEquals(outerConstants.Items[outerConstIndex], nestedConstant))
+                            --outerConstIndex;
                         if (outerConstIndex == -1)
                             return false; // some error is here
 

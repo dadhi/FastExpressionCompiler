@@ -41,6 +41,13 @@ namespace FastExpressionCompiler.Benchmarks
                  Compile | 221.281 us | 0.9760 us | 0.8652 us | 30.16 |    0.25 |      0.7324 |      0.2441 |           - |             4.45 KB |
              CompileFast |   7.337 us | 0.0628 us | 0.0557 us |  1.00 |    0.00 |      0.4883 |      0.2441 |      0.0305 |             2.26 KB |
 
+            ## v2.1 with LiveCountArray for Constants
+
+                  Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+            ------------ |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                 Compile | 218.716 us | 1.1565 us | 1.0252 us | 30.12 |    0.17 |      0.7324 |      0.2441 |           - |             4.45 KB |
+             CompileFast |   7.255 us | 0.0383 us | 0.0359 us |  1.00 |    0.00 |      0.4883 |      0.2441 |      0.0381 |             2.23 KB |
+
              */
 
             [Benchmark]
