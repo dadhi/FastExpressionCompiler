@@ -149,6 +149,22 @@ namespace FastExpressionCompiler.Benchmarks
                          Create_n_CompileFast |  24.63 us | 0.2710 us | 0.2535 us |  1.00 |    0.00 |      1.2512 |      0.6104 |      0.0305 |             5.86 KB |
          Create_n_CompileFast_LightExpression |  11.86 us | 0.0723 us | 0.0641 us |  0.48 |    0.00 |      1.1292 |      0.5646 |      0.0458 |             5.22 KB |
 
+        ## Update 2 - remove `foreach` from Expression.cs
+
+                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+        ------------------------------------- |----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                             Create_n_Compile | 274.28 us | 1.8700 us | 1.7492 us | 11.66 |    0.08 |      2.9297 |      1.4648 |           - |            13.82 KB |
+                         Create_n_CompileFast |  23.53 us | 0.1047 us | 0.0875 us |  1.00 |    0.00 |      1.2512 |      0.6104 |      0.0305 |             5.86 KB |
+         Create_n_CompileFast_LightExpression |  11.42 us | 0.0630 us | 0.0558 us |  0.48 |    0.00 |      1.1139 |      0.5493 |      0.0458 |             5.16 KB |
+
+        ## Change the baseline to LightExpression
+
+                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
+        ------------------------------------- |----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
+                             Create_n_Compile | 276.43 us | 1.3206 us | 1.1707 us | 24.52 |    0.20 |      2.9297 |      1.4648 |           - |            13.82 KB |
+                         Create_n_CompileFast |  23.79 us | 0.1276 us | 0.1193 us |  2.11 |    0.02 |      1.2512 |      0.6104 |      0.0305 |             5.86 KB |
+         Create_n_CompileFast_LightExpression |  11.27 us | 0.0857 us | 0.0760 us |  1.00 |    0.00 |      1.1139 |      0.5493 |      0.0458 |             5.16 KB |
+
         */
         [MemoryDiagnoser]
         public class Create_and_Compile
@@ -156,10 +172,10 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark]
             public object Create_n_Compile() => CreateExpression().Compile();
 
-            [Benchmark(Baseline = true)]
+            [Benchmark]
             public object Create_n_CompileFast() => CreateExpression().CompileFast();
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public object Create_n_CompileFast_LightExpression() => LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression());
         }
 

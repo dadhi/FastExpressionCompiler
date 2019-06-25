@@ -850,14 +850,21 @@ namespace FastExpressionCompiler.LightExpression
 
         private static Type GetCoalesceType(Type left, Type right)
         {
-            var leftNonNullable = left.UnpackNullableOrSelf();
-            if (leftNonNullable != left && right.IsImplicitlyConvertibleTo(leftNonNullable))
-                return leftNonNullable;
+            var leftTypeInfo = left.GetTypeInfo();
+            if (leftTypeInfo.IsGenericType && leftTypeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
+                left = leftTypeInfo.GenericTypeArguments[0];
 
-            if (right.IsImplicitlyConvertibleTo(left))
+            if (right == left)
                 return left;
 
-            if (leftNonNullable.IsImplicitlyConvertibleTo(right))
+            if (leftTypeInfo.IsAssignableFrom(right.GetTypeInfo()) ||
+                right.IsImplicitlyBoxingConvertibleTo(left) ||
+                right.IsImplicitlyNumericConvertibleTo(left))
+                return left;
+
+            if (right.GetTypeInfo().IsAssignableFrom(leftTypeInfo) ||
+                left.IsImplicitlyBoxingConvertibleTo(right) ||
+                left.IsImplicitlyNumericConvertibleTo(right))
                 return right;
 
             throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
@@ -866,42 +873,39 @@ namespace FastExpressionCompiler.LightExpression
 
     internal static class TypeTools
     {
-        internal static Type UnpackNullableOrSelf(this Type type) =>
-            type.IsNullable() ? type.GetTypeInfo().GenericTypeArguments[0] : type;
-
-        internal static bool IsImplicitlyConvertibleTo(this Type source, Type target) =>
-            source == target ||
-            target.GetTypeInfo().IsAssignableFrom(source.GetTypeInfo()) ||
-            source.IsImplicitlyBoxingConvertibleTo(target) ||
-            source.IsImplicitlyNumericConvertibleTo(target);
-
         internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
-            source.IsValueType() &&
+            source.GetTypeInfo().IsValueType &&
             (target == typeof(object) ||
              target == typeof(ValueType)) ||
              source.GetTypeInfo().IsEnum && target == typeof(Enum);
 
         internal static PropertyInfo FindProperty(this Type type, string propertyName)
         {
-            foreach (var x in type.GetTypeInfo().DeclaredProperties)
-                if (x.Name == propertyName)
-                    return x;
+            var properties = type.GetTypeInfo().DeclaredProperties.AsArray();
+            for (var i = 0; i < properties.Length; i++)
+                if (properties[i].Name == propertyName)
+                    return properties[i];
+
             return type.GetTypeInfo().BaseType?.FindProperty(propertyName);
         }
 
         internal static FieldInfo FindField(this Type type, string fieldName)
         {
-            foreach (var x in type.GetTypeInfo().DeclaredFields)
-                if (x.Name == fieldName)
-                    return x;
+            var fields = type.GetTypeInfo().DeclaredFields.AsArray();
+            for (var i = 0; i < fields.Length; i++)
+                if (fields[i].Name == fieldName)
+                    return fields[i];
+
             return type.GetTypeInfo().BaseType?.FindField(fieldName);
         }
 
         internal static MethodInfo FindMethod(this Type type,
             string methodName, Type[] typeArgs, IReadOnlyList<Expression> args, bool isStatic = false)
         {
-            foreach(var m in type.GetTypeInfo().DeclaredMethods)
+            var methods = type.GetTypeInfo().DeclaredMethods.AsArray();
+            for (var i = 0; i < methods.Length; i++)
             {
+                var m = methods[i];
                 if (isStatic == m.IsStatic && methodName == m.Name)
                 {
                     typeArgs = typeArgs ?? Type.EmptyTypes;
@@ -912,7 +916,7 @@ namespace FastExpressionCompiler.LightExpression
                     {
                         args = args ?? Tools.Empty<Expression>();
                         var pars = m.GetParameters();
-                        if (args.Count == pars.Length && 
+                        if (args.Count == pars.Length &&
                             (args.Count == 0 || AreArgExpressionsAndParamsOfTheSameType(args, pars)))
                             return m;
                     }
@@ -938,8 +942,12 @@ namespace FastExpressionCompiler.LightExpression
             return true;
         }
 
-        public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs) => 
-            xs is IReadOnlyList<T> list ? list : xs == null ? null : new List<T>(xs);
+        public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs)
+        {
+            if (xs is IReadOnlyList<T> list)
+                return list;
+            return xs == null ? null : new List<T>(xs);
+        }
 
         internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
         {
@@ -1662,7 +1670,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.MemberAccess;
         public readonly MemberInfo Member;
-
         public readonly Expression Expression;
 
         protected MemberExpression(Expression expression, MemberInfo member)

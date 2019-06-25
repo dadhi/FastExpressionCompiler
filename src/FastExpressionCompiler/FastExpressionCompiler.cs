@@ -4092,11 +4092,8 @@ namespace FastExpressionCompiler
         {
             var methods = type.GetTypeInfo().DeclaredMethods.AsArray();
             for (var i = 0; i < methods.Length; i++)
-            {
-                var method = methods[i];
-                if (method.Name == methodName)
-                    return method;
-            }
+                if (methods[i].Name == methodName)
+                    return methods[i];
 
             return type.GetTypeInfo().BaseType?.FindMethod(methodName);
         }
