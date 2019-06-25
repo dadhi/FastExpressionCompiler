@@ -53,6 +53,8 @@ namespace FastExpressionCompiler.LightExpression
 
         /// Tries to print the expression in its constructing syntax - helpful to get it from debug and put into code to test,
         /// e.g. <code><![CDATA[ Lambda(New(typeof(X).GetTypeInfo().DeclaredConstructors.ToArray()[1]), Parameter(typeof(X), "x")) ]]></code>.
+        /// 
+        /// NOTE: It is trying hard but the Parameter expression are not consolidated into one. Hopefully R# will help you to refactor them into a single variable. 
         public abstract string CodeString { get; }
 
         /// <summary>Converts to Expression and outputs its as string</summary>

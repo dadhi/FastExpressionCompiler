@@ -2,6 +2,7 @@
 using System.Reflection;
 using System;
 using NUnit.Framework;
+using static System.Environment;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -42,16 +43,16 @@ namespace FastExpressionCompiler.UnitTests
 #if LIGHT_EXPRESSION
                 var exprCode = expr.CodeString;
 var expectedCode =
-@"Lambda(typeof(Func<Source, Dest>),
-Condition(Equal(
-Parameter(typeof(Source), ""source""),
-Constant(null, typeof(Source))),
-Constant(null, typeof(Dest)),
-MemberInit(New(typeof(Dest).GetTypeInfo().DeclaredConstructors.ToArray()[0],
-new Expression[0]),
-Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3], Property(Parameter(typeof(Source), ""source""),
-typeof(Source).GetTypeInfo().DeclaredProperties.ToArray()[0])))),
-Parameter(typeof(Source), ""source""))";
+"Lambda(typeof(Func<Source, Dest>)," + NewLine +
+"Condition(Equal(" + NewLine +
+"Parameter(typeof(Source), \"source\")," + NewLine +
+"Constant(null, typeof(Source)))," + NewLine +
+"Constant(null, typeof(Dest))," + NewLine +
+"MemberInit(New(typeof(Dest).GetTypeInfo().DeclaredConstructors.ToArray()[0]," + NewLine +
+"new Expression[0])," + NewLine +
+"Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3], Property(Parameter(typeof(Source), \"source\")," + NewLine +
+"typeof(Source).GetTypeInfo().DeclaredProperties.ToArray()[0]))))," + NewLine +
+"Parameter(typeof(Source), \"source\"))";
 
                 Assert.AreEqual(expectedCode, exprCode);
 
