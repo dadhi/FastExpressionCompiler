@@ -1,13 +1,13 @@
 ﻿using System;
 using NUnit.Framework;
 
-#if !LIGHT_EXPRESSION
-//using static FastExpressionCompiler.LightExpression.Expression;
-//namespace FastExpressionCompiler.LightExpression.IssueTests
-//#else
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.IssueTests
+#else
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
-//#endif
+#endif
 {
     [TestFixture]
     public class Issue204_Operation_could_destabilize_the_runtime__AutoMapper
@@ -87,4 +87,3 @@ namespace FastExpressionCompiler.IssueTests
         }
     }
 }
-#endif

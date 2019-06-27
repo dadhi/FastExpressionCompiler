@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <!--<TargetFrameworks Condition="'$(DevMode)' != 'true'">net46;netcoreapp2.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DevMode)' == 'true'">netcoreapp2.0</TargetFrameworks>-->
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net46;netcoreapp2.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">netcoreapp2.0</TargetFrameworks>
         
         <!--net46 is for ILVisualizer to work-->
-        <TargetFrameworks>net461</TargetFrameworks>
+        <!--<TargetFrameworks>net461</TargetFrameworks>-->
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
