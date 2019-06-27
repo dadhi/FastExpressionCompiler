@@ -367,11 +367,11 @@ namespace FastExpressionCompiler
                 Length = items.Length;
             }
 
-            public void Push(T item)
+            public ref T PushSlot()
             {
                 if (++Length >= Items.Length)
                     Items = Expand(Items);
-                Items[Length - 1] = item;
+                return ref Items[Length - 1];
             }
 
             public void Pop() => --Length;
@@ -482,7 +482,10 @@ namespace FastExpressionCompiler
                 var i = Constants.Length - 1;
                 while (i != -1 && !ReferenceEquals(Constants.Items[i], expr)) --i;
                 if (i == -1)
-                    Constants.Push(expr);
+                {
+                    ref var slot = ref Constants.PushSlot();
+                    slot = expr;
+                }
             }
 
             public void AddNonPassedParam(ParameterExpression expr)
