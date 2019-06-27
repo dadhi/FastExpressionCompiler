@@ -2,14 +2,14 @@
 using System.Reflection;
 using System;
 using NUnit.Framework;
-using static System.Environment;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+using static System.Environment;
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]

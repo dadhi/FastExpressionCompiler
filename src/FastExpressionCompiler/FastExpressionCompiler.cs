@@ -3967,12 +3967,24 @@ namespace FastExpressionCompiler
                 if (testExpr is BinaryExpression b)
                 {
                     if (b.NodeType == ExpressionType.Equal || b.NodeType == ExpressionType.NotEqual ||
-                        (!b.Left.Type.IsNullable() && !b.Right.Type.IsNullable()))
+                        !b.Left.Type.IsNullable() && !b.Right.Type.IsNullable())
                     {
                         if (b.Right is ConstantExpression r && r.Value == null)
+                        {
+                            // the null comparison for nullable is actually a `nullable.HasValue` check,
+                            // which implies member access on nullable struct - therefore loading it by address
+                            if (b.Left.Type.IsNullable())
+                                parent |= ParentFlags.MemberAccess;
                             comparedWithNull = TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult);
+                        }
                         else if (b.Left is ConstantExpression l && l.Value == null)
+                        {
+                            // the null comparison for nullable is actually a `nullable.HasValue` check,
+                            // which implies member access on nullable struct - therefore loading it by address
+                            if (b.Right.Type.IsNullable())
+                                parent |= ParentFlags.MemberAccess;
                             comparedWithNull = TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult);
+                        }
                     }
                 }
 
