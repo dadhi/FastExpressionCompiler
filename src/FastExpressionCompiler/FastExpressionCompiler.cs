@@ -288,7 +288,7 @@ namespace FastExpressionCompiler
 
             // Promote found constants and nested lambdas into outer closure
             var nestedConstants = nestedInfo.Constants;
-            for (var i = 0; i < nestedConstants.Length; i++)
+            for (var i = 0; i < nestedConstants.Count; i++)
                 info.AddConstant(nestedConstants.Items[i]);
 
             // Add nested constants to outer lambda closure.
@@ -358,23 +358,23 @@ namespace FastExpressionCompiler
         {
             private const int EXPAND_BY = 3;
 
-            public int Length;
+            public int Count;
             public T[] Items;
 
             public LiveCountArray(T[] items)
             {
                 Items = items;
-                Length = items.Length;
+                Count = items.Length;
             }
 
             public ref T PushSlot()
             {
-                if (++Length >= Items.Length)
+                if (++Count >= Items.Length)
                     Items = Expand(Items);
-                return ref Items[Length - 1];
+                return ref Items[Count - 1];
             }
 
-            public void Pop() => --Length;
+            public void Pop() => --Count;
 
             private static T[] Expand(T[] items)
             {
@@ -405,9 +405,8 @@ namespace FastExpressionCompiler
             private int[] _tryCatchFinallyInfos; 
             public int CurrentTryCatchFinallyIndex;
 
-            // Helper to decide whether we are inside the block or not
-            private BlockInfo[] _blockStack;
-            private int TopBlockIndex;
+            // Tracks the stack of blocks where are we in emit phase
+            private LiveCountArray<BlockInfo> _blockStack;
 
             // Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
@@ -435,7 +434,7 @@ namespace FastExpressionCompiler
             // All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas;
 
-            public int ClosedItemCount => Constants.Length + NonPassedParameters.Length + NestedLambdas.Length;
+            public int ClosedItemCount => Constants.Count + NonPassedParameters.Length + NestedLambdas.Length;
 
             #endregion
 
@@ -449,8 +448,7 @@ namespace FastExpressionCompiler
                 CurrentTryCatchFinallyIndex = -1;
                 _tryCatchFinallyInfos = null;
                 _labels = null;
-                _blockStack = Tools.Empty<BlockInfo>();
-                TopBlockIndex = -1;
+                _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
 
                 if (userProvidedClosure == null)
                 {
@@ -479,7 +477,7 @@ namespace FastExpressionCompiler
             {
                 Status |= ClosureStatus.HasClosure;
 
-                var i = Constants.Length - 1;
+                var i = Constants.Count - 1;
                 while (i != -1 && !ReferenceEquals(Constants.Items[i], expr)) --i;
                 if (i == -1)
                 {
@@ -593,7 +591,7 @@ namespace FastExpressionCompiler
                 var nonPassedParams = NonPassedParameters;
                 var nestedLambdas = NestedLambdas;
 
-                var constPlusParamCount = constants.Length + nonPassedParams.Length;
+                var constPlusParamCount = constants.Count + nonPassedParams.Length;
                 var totalItemCount = constPlusParamCount + nestedLambdas.Length;
 
                 // Construct the array based closure when number of values is bigger than
@@ -604,13 +602,13 @@ namespace FastExpressionCompiler
 
                 // Construct the Closure Type and optionally Closure object with closed values stored as fields:
                 var fieldTypes = new Type[totalItemCount];
-                if (constants.Length != 0)
-                    for (var i = 0; i < constants.Length; i++)
+                if (constants.Count != 0)
+                    for (var i = 0; i < constants.Count; i++)
                         fieldTypes[i] = constants.Items[i].Type;
 
                 if (nonPassedParams.Length != 0)
                     for (var i = 0; i < nonPassedParams.Length; i++)
-                        fieldTypes[constants.Length + i] = nonPassedParams[i].Type;
+                        fieldTypes[constants.Count + i] = nonPassedParams[i].Type;
 
                 if (nestedLambdas.Length != 0)
                     for (var i = 0; i < nestedLambdas.Length; i++)
@@ -632,7 +630,7 @@ namespace FastExpressionCompiler
                 var nonPassedParams = NonPassedParameters;
                 var nestedLambdas = NestedLambdas;
 
-                var constPlusParamCount = constants.Length + nonPassedParams.Length;
+                var constPlusParamCount = constants.Count + nonPassedParams.Length;
                 var totalItemCount = constPlusParamCount + nestedLambdas.Length;
 
                 // Construct the array based closure when number of values is bigger than
@@ -641,8 +639,8 @@ namespace FastExpressionCompiler
                 if (totalItemCount > createMethods.Length)
                 {
                     var items = new object[totalItemCount];
-                    if (constants.Length != 0)
-                        for (var i = 0; i < constants.Length; i++)
+                    if (constants.Count != 0)
+                        for (var i = 0; i < constants.Count; i++)
                             items[i] = constants.Items[i].Value;
 
                     // skip non passed parameters as it is only for nested lambdas
@@ -659,7 +657,7 @@ namespace FastExpressionCompiler
                 var fieldTypes = new Type[totalItemCount];
                 var fieldValues = new object[totalItemCount];
 
-                for (var i = 0; i < constants.Length; i++)
+                for (var i = 0; i < constants.Count; i++)
                 {
                     var constantExpr = constants.Items[i];
                     if (constantExpr != null)
@@ -670,7 +668,7 @@ namespace FastExpressionCompiler
                 }
 
                 for (var i = 0; i < nonPassedParams.Length; i++)
-                    fieldTypes[constants.Length + i] = nonPassedParams[i].Type;
+                    fieldTypes[constants.Count + i] = nonPassedParams[i].Type;
 
                 for (var i = 0; i < nestedLambdas.Length; i++)
                 {
@@ -703,10 +701,7 @@ namespace FastExpressionCompiler
             /// LocalVar maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
             public void PushBlockWithVars(ParameterExpression blockVarExpr, LocalBuilder localVar = null)
             {
-                if (++TopBlockIndex >= _blockStack.Length)
-                    _blockStack = ExpandBlockStack(_blockStack);
-
-                ref var block = ref _blockStack[TopBlockIndex];
+                ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExpr;
                 block.LocalVars = localVar;
             }
@@ -714,10 +709,7 @@ namespace FastExpressionCompiler
             /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
             public void PushBlockWithVars(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars = null)
             {
-                if (++TopBlockIndex >= _blockStack.Length)
-                    _blockStack = ExpandBlockStack(_blockStack);
-
-                ref var block = ref _blockStack[TopBlockIndex];
+                ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExprs;
                 block.LocalVars = localVars;
             }
@@ -731,14 +723,13 @@ namespace FastExpressionCompiler
                 PushBlockWithVars(blockVarExprs, localVars);
             }
 
-            public void PopBlock() => 
-                --TopBlockIndex;
+            public void PopBlock() => _blockStack.Pop();
 
             public bool IsLocalVar(object varParamExpr)
             {
-                for (var i = TopBlockIndex; i > -1; --i)
+                for (var i = _blockStack.Count - 1; i > -1; --i)
                 {
-                    var varExprObj = _blockStack[i].VarExprs;
+                    var varExprObj = _blockStack.Items[i].VarExprs;
                     if (ReferenceEquals(varExprObj, varParamExpr))
                         return true;
 
@@ -753,9 +744,9 @@ namespace FastExpressionCompiler
 
             public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                for (var i = TopBlockIndex; i > -1; --i)
+                for (var i = _blockStack.Count - 1; i > -1; --i)
                 {
-                    ref var block = ref _blockStack[i];
+                    ref var block = ref _blockStack.Items[i];
                     var varExprObj = block.VarExprs;
 
                     if (ReferenceEquals(varExprObj, varParamExpr))
@@ -2070,7 +2061,7 @@ namespace FastExpressionCompiler
                 if (nonPassedParamIndex == -1)
                     return false; // what??? no chance
 
-                var closureItemIndex = closure.Constants.Length + nonPassedParamIndex;
+                var closureItemIndex = closure.Constants.Count + nonPassedParamIndex;
                 return LoadClosureFieldOrItem(ref closure, il, closureItemIndex, paramType);
             }
 
@@ -2420,7 +2411,7 @@ namespace FastExpressionCompiler
                 {
                     var closureConstants = closure.Constants;
 
-                    var constIndex = closureConstants.Length - 1;
+                    var constIndex = closureConstants.Count - 1;
                     while (constIndex >= 0 && !ReferenceEquals(closureConstants.Items[constIndex], expr))
                         --constIndex;
 
@@ -2997,7 +2988,7 @@ namespace FastExpressionCompiler
                         if (nonPassedParamIndex == -1)
                             return false; // what??? no chance
 
-                        var paramInClosureIndex = closure.Constants.Length + nonPassedParamIndex;
+                        var paramInClosureIndex = closure.Constants.Count + nonPassedParamIndex;
 
                         il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
 
@@ -3286,7 +3277,7 @@ namespace FastExpressionCompiler
                 var outerNonPassedParams = closure.NonPassedParameters;
 
                 // Load compiled lambda on stack counting the offset
-                outerNestedLambdaIndex += outerConstants.Length + outerNonPassedParams.Length;
+                outerNestedLambdaIndex += outerConstants.Count + outerNonPassedParams.Length;
 
                 if (!LoadClosureFieldOrItem(ref closure, il, outerNestedLambdaIndex, nestedLambda.GetType()))
                     return false;
@@ -3306,14 +3297,14 @@ namespace FastExpressionCompiler
 
                 // Load constants on stack
                 var nestedConstants = nestedClosureInfo.Constants;
-                if (nestedConstants.Length != 0)
+                if (nestedConstants.Count != 0)
                 {
-                    for (var nestedConstIndex = 0; nestedConstIndex < nestedConstants.Length; nestedConstIndex++)
+                    for (var nestedConstIndex = 0; nestedConstIndex < nestedConstants.Count; nestedConstIndex++)
                     {
                         var nestedConstant = nestedConstants.Items[nestedConstIndex];
 
                         // Find constant index in the outer closure
-                        var outerConstIndex = outerConstants.Length - 1;
+                        var outerConstIndex = outerConstants.Count - 1;
                         while (outerConstIndex != -1 && !ReferenceEquals(outerConstants.Items[outerConstIndex], nestedConstant))
                             --outerConstIndex;
                         if (outerConstIndex == -1)
@@ -3352,7 +3343,7 @@ namespace FastExpressionCompiler
 
                         // Duplicate nested array on stack to store the item, and load index to where to store
                         il.Emit(OpCodes.Dup);
-                        EmitLoadConstantInt(il, nestedConstants.Length + nestedParamIndex);
+                        EmitLoadConstantInt(il, nestedConstants.Count + nestedParamIndex);
                     }
 
                     var paramIndex = paramExprs.Count - 1;
@@ -3378,7 +3369,7 @@ namespace FastExpressionCompiler
                         {
                             var outerParamIndex = outerNonPassedParams.GetFirstIndex(nestedUsedParam);
                             if (outerParamIndex == -1 ||
-                                !LoadClosureFieldOrItem(ref closure, il, outerConstants.Length + outerParamIndex,
+                                !LoadClosureFieldOrItem(ref closure, il, outerConstants.Count + outerParamIndex,
                                     nestedUsedParamType, nestedUsedParam))
                                 return false;
                         }
@@ -3415,10 +3406,10 @@ namespace FastExpressionCompiler
                         if (isNestedArrayClosure)
                         {
                             il.Emit(OpCodes.Dup);
-                            EmitLoadConstantInt(il, nestedConstants.Length + nestedNonPassedParams.Length + nestedLambdaIndex);
+                            EmitLoadConstantInt(il, nestedConstants.Count + nestedNonPassedParams.Length + nestedLambdaIndex);
                         }
 
-                        outerLambdaIndex += outerConstants.Length + outerNonPassedParams.Length;
+                        outerLambdaIndex += outerConstants.Count + outerNonPassedParams.Length;
 
                         var nestedNestedLambdaType = nestedNestedLambda.Lambda.GetType();
                         if (!LoadClosureFieldOrItem(ref closure, il, outerLambdaIndex, nestedNestedLambdaType))
