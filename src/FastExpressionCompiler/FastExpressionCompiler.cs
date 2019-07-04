@@ -239,9 +239,17 @@ namespace FastExpressionCompiler
             return (TDelegate)(object)method.CreateDelegate(delegateType);
         }
 
-        /// <summary>Compiles expression to delegate by emitting the IL. 
+        /// Compiles the expression body and parameters that constitute the lambda expression to the delegate by emitting the IL. 
         /// If sub-expressions are not supported by emitter, then the method returns null.
-        /// The usage should be calling the method, if result is null then calling the Expression.Compile.</summary>
+        /// If this method returns `null` then the client may call `Expression.Compile()` as fallback.
+        public static TDelegate TryCompile<TDelegate>(
+            Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
+            where TDelegate : class =>
+            (TDelegate)TryCompile(typeof(TDelegate), bodyExpr, paramExprs, paramTypes, returnType);
+
+        /// Compiles the expression body and parameters that constitute the lambda expression to the delegate by emitting the IL. 
+        /// If sub-expressions are not supported by emitter, then the method returns null.
+        /// If this method returns `null` then the client may call `Expression.Compile()` as fallback.
         public static object TryCompile(Type delegateType,
             Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
         {
@@ -682,20 +690,6 @@ namespace FastExpressionCompiler
                 ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
 
                 return createClosure.Invoke(null, fieldValues);
-            }
-
-            private static BlockInfo[] ExpandBlockStack(BlockInfo[] blockStack)
-            {
-                var newBlockStack = new BlockInfo[blockStack.Length + 3];
-                for (var i = 0; i < blockStack.Length; i++)
-                {
-                    ref var a = ref blockStack[i];
-                    ref var b = ref newBlockStack[i];
-                    b.VarExprs  = a.VarExprs;
-                    b.LocalVars = a.LocalVars;
-                }
-
-                return newBlockStack;
             }
 
             /// LocalVar maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
