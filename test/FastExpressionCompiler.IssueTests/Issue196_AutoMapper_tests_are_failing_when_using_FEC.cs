@@ -50,7 +50,8 @@ var expectedCode =
 "Constant(null, typeof(Dest))," + NewLine +
 "MemberInit(New(typeof(Dest).GetTypeInfo().DeclaredConstructors.ToArray()[0]," + NewLine +
 "new Expression[0])," + NewLine +
-"Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3], Property(Parameter(typeof(Source), \"source\")," + NewLine +
+"Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3]," + NewLine +
+"Property(Parameter(typeof(Source), \"source\")," + NewLine +
 "typeof(Source).GetTypeInfo().DeclaredProperties.ToArray()[0]))))," + NewLine +
 "Parameter(typeof(Source), \"source\"))";
 
