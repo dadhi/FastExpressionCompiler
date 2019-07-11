@@ -7,8 +7,13 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
+            //var a = new NestedLambdasVsVars();
+            //a.Init();
+            //a.Expression_with_sub_expressions_inlined();
+            BenchmarkRunner.Run<NestedLambdasVsVars>();
+
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
-            BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
+            //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
 
             //BenchmarkRunner.Run<NestedLambdaOverhead>();
