@@ -72,34 +72,21 @@ namespace FastExpressionCompiler.LightExpression
         /// Converts back to respective System Expression, so you may Compile it by usual means.
         internal SysExpr ToExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
         {
-            if (FindIfAlreadyConverted(ref exprsConverted, this, out var exprConvertedAlready))
-                return exprConvertedAlready;
-            return AddToConverted(ref exprsConverted, this, CreateSysExpression(ref exprsConverted));
+            var i = exprsConverted.Count - 1;
+            while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].LightExpr, this)) --i;
+            if (i != -1)
+                return exprsConverted.Items[i].SysExpr;
+
+            var sysExpr = CreateSysExpression(ref exprsConverted);
+
+            ref var item = ref exprsConverted.PushSlot();
+            item.LightExpr = this;
+            item.SysExpr = sysExpr;
+
+            return sysExpr;
         }
 
         internal abstract SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted);
-
-        internal static bool FindIfAlreadyConverted(ref LiveCountArray<LightAndSysExpr> exprsConverted, Expression lightExpr, out SysExpr sysExpr)
-        {
-            var i = exprsConverted.Count - 1;
-            while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].LightExpr, lightExpr)) --i;
-            if (i != -1)
-            {
-                sysExpr = exprsConverted.Items[i].SysExpr;
-                return true;
-            }
-
-            sysExpr = null;
-            return false;
-        }
-
-        internal static SysExpr AddToConverted(ref LiveCountArray<LightAndSysExpr> exprsConverted, Expression lightExpr, SysExpr sysExpr)
-        {
-            ref var item = ref exprsConverted.PushSlot();
-            item.LightExpr = lightExpr;
-            item.SysExpr = sysExpr;
-            return sysExpr;
-        }
 
         /// Tries to print the expression in its constructing syntax - helpful to get it from debug and put into code to test,
         /// e.g. <code><![CDATA[ Lambda(New(typeof(X).GetTypeInfo().DeclaredConstructors.ToArray()[1]), Parameter(typeof(X), "x")) ]]></code>.
