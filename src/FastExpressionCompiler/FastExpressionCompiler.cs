@@ -393,37 +393,6 @@ namespace FastExpressionCompiler
             public object LocalVars; // LocalBuilder | LocalBuilder[]
         }
 
-        internal struct LiveCountArray<T>
-        {
-            private const int EXPAND_BY = 3;
-
-            public int Count;
-            public T[] Items;
-
-            public LiveCountArray(T[] items)
-            {
-                Items = items;
-                Count = items.Length;
-            }
-
-            public ref T PushSlot()
-            {
-                if (++Count >= Items.Length)
-                    Items = Expand(Items);
-                return ref Items[Count - 1];
-            }
-
-            public void Pop() => --Count;
-
-            private static T[] Expand(T[] items)
-            {
-                var newItems = new T[items.Length + EXPAND_BY];
-                for (var i = 0; i < items.Length; i++)
-                    newItems[i] = items[i];
-                return newItems;
-            }
-        }
-
         [Flags]
         private enum ClosureStatus
         {
@@ -4381,6 +4350,37 @@ namespace FastExpressionCompiler
                 return list.Count == 0 ? default : list[0];
             using (var items = source.GetEnumerator())
                 return items.MoveNext() ? items.Current : default;
+        }
+    }
+
+    internal struct LiveCountArray<T>
+    {
+        private const int EXPAND_BY = 3;
+
+        public int Count;
+        public T[] Items;
+
+        public LiveCountArray(T[] items)
+        {
+            Items = items;
+            Count = items.Length;
+        }
+
+        public ref T PushSlot()
+        {
+            if (++Count >= Items.Length)
+                Items = Expand(Items);
+            return ref Items[Count - 1];
+        }
+
+        public void Pop() => --Count;
+
+        private static T[] Expand(T[] items)
+        {
+            var newItems = new T[items.Length + EXPAND_BY];
+            for (var i = 0; i < items.Length; i++)
+                newItems[i] = items[i];
+            return newItems;
         }
     }
 }
