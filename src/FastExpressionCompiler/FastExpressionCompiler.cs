@@ -4355,8 +4355,6 @@ namespace FastExpressionCompiler
 
     internal struct LiveCountArray<T>
     {
-        private const int EXPAND_BY = 3;
-
         public int Count;
         public T[] Items;
 
@@ -4377,8 +4375,12 @@ namespace FastExpressionCompiler
 
         private static T[] Expand(T[] items)
         {
-            var newItems = new T[items.Length + EXPAND_BY];
-            for (var i = 0; i < items.Length; i++)
+            if (items.Length == 0)
+                return new T[2];
+
+            var count = items.Length;
+            var newItems = new T[count << 1];
+            for (var i = 0; i < count; i++)
                 newItems[i] = items[i];
             return newItems;
         }
