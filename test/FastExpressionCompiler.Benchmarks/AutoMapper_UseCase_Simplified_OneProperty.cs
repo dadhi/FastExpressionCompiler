@@ -98,6 +98,14 @@ namespace FastExpressionCompiler.Benchmarks
                  CompileFast_WithoutClosure |   9.530 us | 0.0917 us | 0.0858 us |  1.06 |    0.01 |      0.6256 |      0.3052 |      0.0305 |             2.88 KB |
  CompileFast_LightExpression_WithoutClosure |   8.024 us | 0.0447 us | 0.0349 us |  0.90 |    0.01 |      0.6256 |      0.3052 |      0.0305 |             2.88 KB |
 
+        ## Updated BDN to 0.11.5
+                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+------------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+                                    Compile | 254.188 us | 1.8270 us | 1.7090 us | 27.01 |    0.35 | 1.9531 | 0.9766 |      - |  10.93 KB |
+                                CompileFast |  10.632 us | 0.0604 us | 0.0565 us |  1.13 |    0.02 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
+                CompileFast_LightExpression |   9.412 us | 0.1053 us | 0.0933 us |  1.00 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
+                 CompileFast_WithoutClosure |  10.073 us | 0.0732 us | 0.0649 us |  1.07 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
+ CompileFast_LightExpression_WithoutClosure |   8.062 us | 0.0471 us | 0.0393 us |  0.86 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
         */
         [MemoryDiagnoser]
         public class Compile_only
@@ -164,6 +172,14 @@ namespace FastExpressionCompiler.Benchmarks
                              Create_n_Compile | 276.43 us | 1.3206 us | 1.1707 us | 24.52 |    0.20 |      2.9297 |      1.4648 |           - |            13.82 KB |
                          Create_n_CompileFast |  23.79 us | 0.1276 us | 0.1193 us |  2.11 |    0.02 |      1.2512 |      0.6104 |      0.0305 |             5.86 KB |
          Create_n_CompileFast_LightExpression |  11.27 us | 0.0857 us | 0.0760 us |  1.00 |    0.00 |      1.1139 |      0.5493 |      0.0458 |             5.16 KB |
+
+        ## Update BDN from 0.11.3 -> 0.11.5, parameter is ripped off _param 
+
+                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        ------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+                             Create_n_Compile | 272.19 us | 0.9637 us | 0.9015 us | 23.84 |    0.24 | 2.9297 | 1.4648 |      - |  13.82 KB |
+                         Create_n_CompileFast |  23.55 us | 0.0579 us | 0.0513 us |  2.06 |    0.02 | 1.2817 | 0.6409 | 0.0305 |   5.93 KB |
+         Create_n_CompileFast_LightExpression |  11.42 us | 0.1127 us | 0.0999 us |  1.00 |    0.00 | 1.1292 | 0.5646 | 0.0458 |   5.18 KB |
 
         */
         [MemoryDiagnoser]
