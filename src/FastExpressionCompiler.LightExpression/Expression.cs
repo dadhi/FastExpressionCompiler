@@ -1701,7 +1701,8 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Object;
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Call(Object?.ToExpression(ref exprsConverted), Method, ToExpressions(Arguments, ref exprsConverted));
+            SysExpr.Call(Object?.ToExpression(ref exprsConverted), Method, 
+                ToExpressions(Arguments, ref exprsConverted));
 
         public override string CodeString
         {
@@ -1754,7 +1755,8 @@ namespace FastExpressionCompiler.LightExpression
             }
         }
 
-        internal PropertyExpression(Expression instance, PropertyInfo property) : base(instance, property) { }
+        internal PropertyExpression(Expression instance, PropertyInfo property) :
+            base(instance, property) { }
     }
 
     // todo: specialize to 2 class - with and without object expression

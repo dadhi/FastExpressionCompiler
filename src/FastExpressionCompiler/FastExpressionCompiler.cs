@@ -1365,10 +1365,9 @@ namespace FastExpressionCompiler
 
             var nestedLambdaExpr = nestedLambda.LambdaExpression;
             var nestedLambdaParamExprs = nestedLambdaExpr.Parameters;
-
-            ref var nestedLambdaClosureInfo = ref nestedLambda.ClosureInfo;
             var nestedLambdaParamTypes = Tools.GetParamTypes(nestedLambdaParamExprs);
 
+            ref var nestedLambdaClosureInfo = ref nestedLambda.ClosureInfo;
             if (!TryCollectBoundConstants(ref nestedLambdaClosureInfo, nestedLambdaExpr.Body, nestedLambdaParamExprs, true))
                 return false;
 
@@ -1379,9 +1378,11 @@ namespace FastExpressionCompiler
                         return false;
 
             var nestedClosureType = nestedLambdaClosureInfo.ConstructClosureType();
-            var nestedMethodParamTypes = nestedClosureType == null ? nestedLambdaParamTypes : GetClosureAndParamTypes(nestedClosureType, nestedLambdaParamTypes);
+            if (nestedClosureType != null)
+                nestedLambdaParamTypes = GetClosureAndParamTypes(nestedClosureType, nestedLambdaParamTypes);
+
             var nestedReturnType = nestedLambdaExpr.ReturnType;
-            var method = new DynamicMethod(string.Empty, nestedReturnType, nestedMethodParamTypes, typeof(ExpressionCompiler), true);
+            var method = new DynamicMethod(string.Empty, nestedReturnType, nestedLambdaParamTypes, typeof(ExpressionCompiler), true);
 
             var il = method.GetILGenerator();
             var parentFlags = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
@@ -1390,7 +1391,7 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Ret);
 
             // Include the closure as the first parameter, BUT don't bound to it. It will be bound later in EmitNestedLambda.
-            nestedLambda.Lambda = method.CreateDelegate(Tools.GetFuncOrActionType(nestedMethodParamTypes, nestedReturnType));
+            nestedLambda.Lambda = method.CreateDelegate(Tools.GetFuncOrActionType(nestedLambdaParamTypes, nestedReturnType));
 
             if (nestedClosureType != null)
                 CopyNestedClosureInfo(ref outerClosureInfo, outerLambdaParamExprs, ref nestedLambdaClosureInfo, nestedLambdaParamExprs);
@@ -4273,26 +4274,6 @@ namespace FastExpressionCompiler
             {
                 var parameterExpr = paramExprs[i];
                 paramTypes[i] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
-            }
-
-            return paramTypes;
-        }
-
-        private static Type[] GetClosureAndParamTypes(Type closureType, IReadOnlyList<ParameterExpression> paramExprs)
-        {
-            if (paramExprs.Count == 0)
-                return new[] { closureType };
-
-            if (paramExprs.Count == 1)
-                return new[] { closureType, paramExprs[0].IsByRef ? paramExprs[0].Type.MakeByRefType() : paramExprs[0].Type };
-
-            var paramTypes = new Type[paramExprs.Count + 1];
-            paramTypes[0] = closureType;
-
-            for (var i = 0; i < paramExprs.Count; i++)
-            {
-                var parameterExpr = paramExprs[i];
-                paramTypes[i + 1] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
             }
 
             return paramTypes;
