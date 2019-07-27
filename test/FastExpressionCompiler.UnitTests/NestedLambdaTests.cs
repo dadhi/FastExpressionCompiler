@@ -346,14 +346,20 @@ namespace FastExpressionCompiler.UnitTests
         public void Two_same_nested_lambdas_should_compile_once()
         {
             var n = Parameter(typeof(int), "n");
-            var nestedL = Lambda<Func<int, int>>(Add(n, Constant(1)), n);
+            var add = Lambda<Func<int, int>>(Add(n, Constant(1)), n);
+
+            var m = Parameter(typeof(int), "m");
+            var sub = Lambda<Func<int, int>>(Subtract(
+                m, Invoke(add, Constant(5))), 
+                m);
 
             var e = Lambda<Func<int>>(
-                Add(Invoke(nestedL, Constant(42)), Invoke(nestedL, Constant(13))));
+                Add(Invoke(sub, Constant(42)), 
+                    Invoke(add, Constant(13))));
 
             var f = e.CompileFast(true);
             Assert.IsNotNull(f);
-            Assert.AreEqual(57, f());
+            Assert.AreEqual(50, f());
         }
     }
 }
