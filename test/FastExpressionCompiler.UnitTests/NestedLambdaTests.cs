@@ -1,15 +1,114 @@
 ﻿using System;
-using System.Linq.Expressions;
 using NUnit.Framework;
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
 using static System.Linq.Expressions.Expression;
-
-// ReSharper disable CompareOfFloatsByEqualityOperator
-
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class NestedLambdaTests
     {
+#if !LIGHT_EXPRESSION
+        [Test]
+        public void Nested_Hoisted_Func_using_outer_parameter()
+        {
+            System.Linq.Expressions.Expression<Func<string, string>> expr = a => GetS(() => a);
+
+            var f = expr.TryCompile<Func<string, string>>();
+
+            Assert.AreEqual("a", f("a"));
+        }
+
+        [Test]
+        public void Nested_Hoisted_Func_using_outer_parameter_and_closed_value()
+        {
+            var b = new S { Value = "b" };
+
+            System.Linq.Expressions.Expression<Func<string, string>> expr = a => GetS(() => b.Append(a));
+
+            var f = expr.TryCompile<Func<string, string>>();
+
+            Assert.AreEqual("ba", f("a"));
+        }
+
+        [Test]
+        public void Nested_Hoisted_Action_using_outer_parameter_and_closed_value()
+        {
+            // The same hoisted expression: 
+            var s = new S();
+            System.Linq.Expressions.Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
+
+            var f = expr.TryCompile<Func<Action<string>>>();
+
+            f()("a");
+            Assert.AreEqual("a", s.Value);
+        }
+        [Test]
+        public void Nested_Hoisted_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda()
+        {
+            var b = new S { Value = "b" };
+
+            System.Linq.Expressions.Expression<Func<string, string>> expr =
+                a => GetS(
+                    () => b.Prepend(a,
+                        rest => b.Append(rest)));
+
+            var f = expr.TryCompile<Func<string, string>>();
+
+            Assert.AreEqual("abb", f("a"));
+        }
+
+        [Test]
+        public void Given_hoisted_expr_with_closure_over_parameters_in_nested_lambda_should_work()
+        {
+            System.Linq.Expressions.Expression<Func<object, object>> funcExpr = a =>
+                new Func<object>(() =>
+                    new Func<object>(() => a)())();
+
+            var func = funcExpr.Compile();
+
+            var arg1 = new object();
+            Assert.AreSame(arg1, func(arg1));
+
+            var arg2 = new object();
+            Assert.AreSame(arg2, func(arg2));
+
+            var funcFec = funcExpr.TryCompile<Func<object, object>>();
+
+            Assert.AreSame(arg1, funcFec(arg1));
+            Assert.AreSame(arg2, funcFec(arg2));
+        }
+
+#endif
+
+        public static string GetS(Func<string> getS)
+        {
+            return getS();
+        }
+
+        public class S
+        {
+            public string Value;
+
+            public string Append(string s)
+            {
+                return Value + s;
+            }
+
+            public string Prepend(string s, Func<string, string> restTransform)
+            {
+                return s + restTransform(Value);
+            }
+
+            public void SetValue(string s)
+            {
+                Value = s;
+            }
+        }
+
         [Test]
         public void Nested_lambda_using_outer_parameter()
         {
@@ -21,16 +120,6 @@ namespace FastExpressionCompiler.UnitTests
                 Call(GetType(), nameof(GetS), Type.EmptyTypes,
                     Lambda(aParam)),
                 aParam);
-
-            var f = expr.TryCompile<Func<string, string>>();
-
-            Assert.AreEqual("a", f("a"));
-        }
-
-        [Test]
-        public void Nested_Hoisted_Func_using_outer_parameter()
-        {
-            Expression<Func<string, string>> expr = a => GetS(() => a);
 
             var f = expr.TryCompile<Func<string, string>>();
 
@@ -61,31 +150,6 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Nested_Hoisted_Func_using_outer_parameter_and_closed_value()
-        {
-            var b = new S { Value = "b" };
-
-            Expression<Func<string, string>> expr = a => GetS(() => b.Append(a));
-
-            var f = expr.TryCompile<Func<string, string>>();
-
-            Assert.AreEqual("ba", f("a"));
-        }
-
-        [Test]
-        public void Nested_Hoisted_Action_using_outer_parameter_and_closed_value()
-        {
-            // The same hoisted expression: 
-            var s = new S();
-            Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
-
-            var f = expr.TryCompile<Func<Action<string>>>();
-
-            f()("a");
-            Assert.AreEqual("a", s.Value);
-        }
-
-        [Test]
         public void Nested_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda()
         {
             var b = new S { Value = "b" };
@@ -113,67 +177,6 @@ namespace FastExpressionCompiler.UnitTests
             var f = expr.TryCompile<Func<string, string>>();
 
             Assert.AreEqual("abb", f("a"));
-        }
-
-        [Test]
-        public void Nested_Hoisted_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda()
-        {
-            var b = new S { Value = "b" };
-
-            Expression<Func<string, string>> expr =
-                a => GetS(
-                    () => b.Prepend(a,
-                        rest => b.Append(rest)));
-
-            var f = expr.TryCompile<Func<string, string>>();
-
-            Assert.AreEqual("abb", f("a"));
-        }
-
-        public static string GetS(Func<string> getS)
-        {
-            return getS();
-        }
-
-        public class S
-        {
-            public string Value;
-
-            public string Append(string s)
-            {
-                return Value + s;
-            }
-
-            public string Prepend(string s, Func<string, string> restTransform)
-            {
-                return s + restTransform(Value);
-            }
-
-            public void SetValue(string s)
-            {
-                Value = s;
-            }
-        }
-
-        [Test]
-        public void Given_hoisted_expr_with_closure_over_parameters_in_nested_lambda_should_work()
-        {
-            Expression<Func<object, object>> funcExpr = a =>
-                new Func<object>(() =>
-                    new Func<object>(() => a)())();
-
-            var func = funcExpr.Compile();
-
-            var arg1 = new object();
-            Assert.AreSame(arg1, func(arg1));
-
-            var arg2 = new object();
-            Assert.AreSame(arg2, func(arg2));
-
-            var funcFec = funcExpr.TryCompile<Func<object, object>>();
-
-            Assert.AreSame(arg1, funcFec(arg1));
-            Assert.AreSame(arg2, funcFec(arg2));
         }
 
         [Test]
@@ -337,6 +340,20 @@ namespace FastExpressionCompiler.UnitTests
                     return this;
                 return then();
             }
+        }
+
+        [Test]
+        public void Two_same_nested_lambdas_should_compile_once()
+        {
+            var n = Parameter(typeof(int), "n");
+            var nestedL = Lambda<Func<int, int>>(Add(n, Constant(1)), n);
+
+            var e = Lambda<Func<int>>(
+                Add(Invoke(nestedL, Constant(42)), Invoke(nestedL, Constant(13))));
+
+            var f = e.CompileFast(true);
+            Assert.IsNotNull(f);
+            Assert.AreEqual(57, f());
         }
     }
 }

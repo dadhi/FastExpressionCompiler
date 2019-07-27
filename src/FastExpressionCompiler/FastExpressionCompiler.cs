@@ -274,10 +274,14 @@ namespace FastExpressionCompiler
                     if (!TryCompileNestedLambda(ref closureInfo, i, paramExprs))
                         return null;
 
-            var closureObject = closureInfo.ConstructClosureObject();
-            var methodParamTypes = closureObject == null ? paramTypes : GetClosureAndParamTypes(closureObject.GetType(), paramTypes);
+            object closureObject = null;
+            if ((closureInfo.Status & ClosureStatus.HasClosure) != 0)
+            {
+                closureObject = closureInfo.ConstructClosureObject();
+                paramTypes = GetClosureAndParamTypes(closureObject.GetType(), paramTypes);
+            }
 
-            var method = new DynamicMethod(string.Empty, returnType, methodParamTypes,
+            var method = new DynamicMethod(string.Empty, returnType, paramTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = method.GetILGenerator();
@@ -614,9 +618,6 @@ namespace FastExpressionCompiler
 
             public Type ConstructClosureType()
             {
-                if ((Status & ClosureStatus.HasClosure) == 0)
-                    return null;
-
                 var constants = Constants;
                 var nonPassedParams = NonPassedParameters;
                 var nestedLambdas = NestedLambdas;
@@ -653,9 +654,6 @@ namespace FastExpressionCompiler
 
             public object ConstructClosureObject()
             {
-                if ((Status & ClosureStatus.HasClosure) == 0)
-                    return null;
-
                 var constants = Constants;
                 var nonPassedParams = NonPassedParameters;
                 var nestedLambdas = NestedLambdas;
@@ -711,6 +709,7 @@ namespace FastExpressionCompiler
                 ClosureType = createClosure.ReturnType;
                 ClosureFields = ClosureType.GetTypeInfo().DeclaredFields.AsArray();
 
+                // todo: why instead of Reflection Invoke can't we have a `Func<object, object, R> f = (a, b) => new Closure((A)a, (B)b)`
                 return createClosure.Invoke(null, fieldValues);
             }
 
@@ -1040,29 +1039,32 @@ namespace FastExpressionCompiler
 
         private struct NestedLambdaInfo
         {
-            public readonly LambdaExpression LambdaExpression;
             public ClosureInfo ClosureInfo;
+            public readonly LambdaExpression LambdaExpression;
             public object Lambda;
             public bool IsAction => LambdaExpression.ReturnType == typeof(void);
 
             public NestedLambdaInfo(LambdaExpression lambdaExpression)
             {
-                LambdaExpression = lambdaExpression;
                 ClosureInfo = new ClosureInfo(null);
+                LambdaExpression = lambdaExpression;
                 Lambda = null;
             }
         }
 
         internal static class CurryClosureFuncs
         {
-            private static readonly IEnumerable<MethodInfo> _methods =
-                typeof(CurryClosureFuncs).GetTypeInfo().DeclaredMethods;
+            public static readonly MethodInfo[] Methods =
+                typeof(CurryClosureFuncs).GetTypeInfo().DeclaredMethods.AsArray();
 
-            public static readonly MethodInfo[] Methods = _methods.AsArray();
+            public static Func<R> Curry<C, R>(Func<C, R> f, C c) =>
+                () => f(c);
 
-            public static Func<R> Curry<C, R>(Func<C, R> f, C c) => () => f(c);
-            public static Func<T1, R> Curry<C, T1, R>(Func<C, T1, R> f, C c) => t1 => f(c, t1);
-            public static Func<T1, T2, R> Curry<C, T1, T2, R>(Func<C, T1, T2, R> f, C c) => (t1, t2) => f(c, t1, t2);
+            public static Func<T1, R> Curry<C, T1, R>(Func<C, T1, R> f, C c) =>
+                t1 => f(c, t1);
+
+            public static Func<T1, T2, R> Curry<C, T1, T2, R>(Func<C, T1, T2, R> f, C c) =>
+                (t1, t2) => f(c, t1, t2);
 
             public static Func<T1, T2, T3, R> Curry<C, T1, T2, T3, R>(Func<C, T1, T2, T3, R> f, C c) =>
                 (t1, t2, t3) => f(c, t1, t2, t3);
@@ -1080,14 +1082,17 @@ namespace FastExpressionCompiler
 
         internal static class CurryClosureActions
         {
-            private static readonly IEnumerable<MethodInfo> _methods =
-                typeof(CurryClosureActions).GetTypeInfo().DeclaredMethods;
+            public static readonly MethodInfo[] Methods =
+                typeof(CurryClosureActions).GetTypeInfo().DeclaredMethods.AsArray();
 
-            public static readonly MethodInfo[] Methods = _methods.AsArray();
+            public static Action Curry<C>(Action<C> a, C c) =>
+                () => a(c);
 
-            public static Action Curry<C>(Action<C> a, C c) => () => a(c);
-            public static Action<T1> Curry<C, T1>(Action<C, T1> f, C c) => t1 => f(c, t1);
-            public static Action<T1, T2> Curry<C, T1, T2>(Action<C, T1, T2> f, C c) => (t1, t2) => f(c, t1, t2);
+            public static Action<T1> Curry<C, T1>(Action<C, T1> f, C c) =>
+                t1 => f(c, t1);
+
+            public static Action<T1, T2> Curry<C, T1, T2>(Action<C, T1, T2> f, C c) =>
+                (t1, t2) => f(c, t1, t2);
 
             public static Action<T1, T2, T3> Curry<C, T1, T2, T3>(Action<C, T1, T2, T3> f, C c) =>
                 (t1, t2, t3) => f(c, t1, t2, t3);
@@ -1377,9 +1382,12 @@ namespace FastExpressionCompiler
                     if (!TryCompileNestedLambda(ref nestedLambdaClosureInfo, i, nestedLambdaParamExprs))
                         return false;
 
-            var nestedClosureType = nestedLambdaClosureInfo.ConstructClosureType();
-            if (nestedClosureType != null)
+            Type nestedClosureType = null;
+            if ((nestedLambdaClosureInfo.Status & ClosureStatus.HasClosure) != 0)
+            {
+                nestedClosureType = nestedLambdaClosureInfo.ConstructClosureType();
                 nestedLambdaParamTypes = GetClosureAndParamTypes(nestedClosureType, nestedLambdaParamTypes);
+            }
 
             var nestedReturnType = nestedLambdaExpr.ReturnType;
             var method = new DynamicMethod(string.Empty, nestedReturnType, nestedLambdaParamTypes, typeof(ExpressionCompiler), true);
