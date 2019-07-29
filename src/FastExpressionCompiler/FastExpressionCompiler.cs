@@ -275,13 +275,14 @@ namespace FastExpressionCompiler
                         return null;
 
             object closureObject = null;
+            var methodParamTypes = paramTypes;
             if ((closureInfo.Status & ClosureStatus.HasClosure) != 0)
             {
                 closureObject = closureInfo.ConstructClosureObject();
-                paramTypes = GetClosureAndParamTypes(closureObject.GetType(), paramTypes);
+                methodParamTypes = GetClosureAndParamTypes(closureObject.GetType(), paramTypes);
             }
 
-            var method = new DynamicMethod(string.Empty, returnType, paramTypes,
+            var method = new DynamicMethod(string.Empty, returnType, methodParamTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = method.GetILGenerator();
