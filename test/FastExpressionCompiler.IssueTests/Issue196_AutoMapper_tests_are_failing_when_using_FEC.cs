@@ -30,7 +30,8 @@ namespace FastExpressionCompiler.IssueTests
             [Test]
             public void Comparison_with_null_should_produce_optimal_Brtrue_or_Brfalse_opcodes()
             {
-                var sourceParam = Parameter(typeof(Source), "source");
+                var p = Parameter(typeof(Source), "source");
+                var sourceParam = p;
                 var body = Condition(
                     Equal(sourceParam, Constant(null, typeof(Source))),
                     Constant(null, typeof(Dest)),
@@ -60,17 +61,17 @@ var expectedCode =
                 var reincarnatedExpr = 
                     Lambda(typeof(Func<Source, Dest>),
                     Condition(Equal(
-                    Parameter(typeof(Source), "source"),
+                    p,
                     Constant(null, typeof(Source))),
                     Constant(null, typeof(Dest)),
                     MemberInit(New(typeof(Dest).GetTypeInfo().DeclaredConstructors.ToArray()[0],
                     new Expression[0]),
-                    Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3], Property(Parameter(typeof(Source), "source"),
+                    Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3], Property(p,
                     typeof(Source).GetTypeInfo().DeclaredProperties.ToArray()[0])))),
-                    Parameter(typeof(Source), "source"));
+                    p);
 
                 var reincarnatedCompiled = reincarnatedExpr.CompileFast(true);
-                //Assert.NotNull(reincarnatedCompiled); // todo: fix the parameters
+                Assert.NotNull(reincarnatedCompiled);
 #endif
 
                 var ff = expr.CompileFast(true);

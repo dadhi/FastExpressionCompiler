@@ -20,8 +20,7 @@ namespace FastExpressionCompiler.UnitTests
             var xConstExpr = Constant(x);
             var expr = Lambda<Func<X>>(xConstExpr);
 
-            var c = ExpressionCompiler.Closure.Create(x);
-            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(c, xConstExpr);
+            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(xConstExpr);
             Assert.IsNotNull(f);
 
             var result = f();
@@ -35,8 +34,7 @@ namespace FastExpressionCompiler.UnitTests
             var xConstExpr = Constant(x);
             var expr = Lambda<Func<X>>(xConstExpr);
 
-            var cx = new ClosureX(x);
-            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(cx, xConstExpr);
+            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(xConstExpr);
             Assert.IsNotNull(f);
 
             var result = f();
@@ -50,8 +48,7 @@ namespace FastExpressionCompiler.UnitTests
             var xConstExpr = Constant(x);
             var expr = Lambda<Func<X>>(Block(xConstExpr));
 
-            var cx = new ClosureX(x);
-            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(cx, xConstExpr);
+            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(xConstExpr);
             Assert.IsNotNull(f);
 
             var result = f();
@@ -70,8 +67,7 @@ namespace FastExpressionCompiler.UnitTests
                 Assign(intVariable, Constant(1)),
                 Call(intDoublerConstExpr, nameof(IntDoubler.Double), Type.EmptyTypes, intVariable)));
 
-            var cx = new ClosureIntHolder(intDoubler);
-            var f = expr.TryCompileWithPreCreatedClosure<Action>(cx, intDoublerConstExpr);
+            var f = expr.TryCompileWithPreCreatedClosure<Action>(intDoublerConstExpr);
             Assert.IsNotNull(f);
 
             f();
@@ -87,8 +83,7 @@ namespace FastExpressionCompiler.UnitTests
                 xConstExpr,
                 Catch(typeof(Exception), Default(xConstExpr.Type))));
 
-            var cx = new ClosureX(x);
-            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(cx, xConstExpr);
+            var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(xConstExpr);
             Assert.IsNotNull(f);
 
             var result = f();

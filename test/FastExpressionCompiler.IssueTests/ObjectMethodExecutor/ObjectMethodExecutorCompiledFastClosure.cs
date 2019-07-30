@@ -342,15 +342,7 @@ namespace Microsoft.Extensions.Internal
 
             var lambda = Expression.Lambda<MethodExecutorAsync>(returnValueExpression, targetParameter, parametersParameter);
 
-            var closure = ExpressionCompiler.Closure.Create(
-                getAwaiterFunc, 
-                isCompletedFunc, 
-                getResultFunc, 
-                onCompletedFunc,
-                unsafeOnCompletedFunc);
-
             return lambda.TryCompileWithPreCreatedClosure<MethodExecutorAsync>(
-                closure,
                 getAwaiterFuncConst, 
                 isCompletedFuncConst,
                 getResultFuncConst,

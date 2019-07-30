@@ -81,13 +81,13 @@ namespace FastExpressionCompiler.Benchmarks
 
             [Benchmark]
             public Func<B, X> CompileFastWithPreCreatedClosure() => 
-                _expr.TryCompileWithPreCreatedClosure<Func<B, X>>(ExpressionCompiler.Closure.Create(_a), _aConstExpr)
+                _expr.TryCompileWithPreCreatedClosure<Func<B, X>>(_aConstExpr)
                 ?? _expr.Compile();
 
             [Benchmark(Baseline = true)]
             public Func<B, X> CompileFastWithPreCreatedClosureLightExpression() =>
                 LightExpression.ExpressionCompiler.TryCompileWithPreCreatedClosure<Func<B, X>>(
-                    _leExpr, LightExpression.ExpressionCompiler.Closure.Create(_a), _aConstLEExpr)
+                    _leExpr, _aConstLEExpr)
                 ?? LightExpression.ExpressionCompiler.CompileSys(_leExpr);
         }
 
@@ -111,11 +111,11 @@ namespace FastExpressionCompiler.Benchmarks
             private static readonly Func<B, X> _lambdaCompiledFast = _expr.CompileFast();
 
             private static readonly Func<B, X> _lambdaCompiledFastWithClosure =
-                _expr.TryCompileWithPreCreatedClosure<Func<B, X>>(ExpressionCompiler.Closure.Create(_a), _aConstExpr);
+                _expr.TryCompileWithPreCreatedClosure<Func<B, X>>(_aConstExpr);
 
             private static readonly Func<B, X> _lambdaCompiledFastWithClosureLE =
                 LightExpression.ExpressionCompiler.TryCompileWithPreCreatedClosure<Func<B, X>>(
-                    _leExpr, LightExpression.ExpressionCompiler.Closure.Create(_a), _aConstLEExpr);
+                    _leExpr, _aConstLEExpr);
 
             private static readonly A _aa = new A();
             private static readonly B _bb = new B();

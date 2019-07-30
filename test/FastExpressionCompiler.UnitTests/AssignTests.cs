@@ -38,10 +38,13 @@ namespace FastExpressionCompiler.UnitTests
                     Assign(sParamExpr, Constant("aaa"))),
                 sParamExpr);
 
+            var fs = expr.CompileSys();
+            Assert.AreEqual("aaa", fs("ignored").Invoke());
+
             var f = expr.CompileFast(true);
 
             Assert.IsNotNull(f);
-            Assert.AreEqual("aaa", f("ignored")());
+            Assert.AreEqual("aaa", f("ignored").Invoke());
         }
 
         [Test]
