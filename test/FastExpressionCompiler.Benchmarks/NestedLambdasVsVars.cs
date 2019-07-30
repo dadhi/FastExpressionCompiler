@@ -37,6 +37,15 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  36.79 us | 0.3446 us | 0.3223 us |  0.80 |    0.01 | 2.9297 | 1.4648 | 0.1831 |  13.48 KB |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 870.74 us | 4.7653 us | 4.4574 us | 18.99 |    0.17 | 3.9063 | 1.9531 |      - |  20.96 KB |
 
+### Making same nested lambda to compiled Once
+
+|                                                                 Method |      Mean |      Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|----------------------------------------------------------------------- |----------:|-----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                           Expression_with_sub_expressions_CompiledFast |  34.15 us |  0.4092 us | 0.3827 us |  1.00 |    0.00 | 2.2583 | 1.0986 | 0.1831 |  10.34 KB |
+|                               Expression_with_sub_expressions_Compiled | 636.06 us |  4.1023 us | 3.6366 us | 18.62 |    0.25 | 5.8594 | 2.9297 |      - |  27.04 KB |
+| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  34.82 us |  0.3028 us | 0.2685 us |  1.02 |    0.02 | 2.8687 | 1.4038 | 0.1831 |   13.3 KB |
+|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 863.03 us | 10.2000 us | 9.5411 us | 25.28 |    0.34 | 3.9063 | 1.9531 |      - |  20.96 KB |
+
 
 ### Invocation
 
@@ -86,32 +95,32 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
         [Benchmark(Baseline = true)]
         public object Expression_with_sub_expressions_CompiledFast()
         {
-            //return _expr.CompileFast(true);
-            return _exprCompiledFast();
+            return _expr.CompileFast(true);
+            //return _exprCompiledFast();
             //return _expr.CompileFast(true).Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
-            //return _expr.Compile();
-            return _exprCompiled();
+            return _expr.Compile();
+            //return _exprCompiled();
             //return _expr.Compile().Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast()
         {
-            //return _exprWithVars.CompileFast(true);
-            return _exprWithVarsCompiledFast();
+            return _exprWithVars.CompileFast(true);
+            //return _exprWithVarsCompiledFast();
             //return _exprWithVars.CompileFast(true).Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_assigned_to_vars_in_block_Compile()
         {
-            //return _exprWithVars.Compile();
-            return _exprWithVarsCompiled();
+            return _exprWithVars.Compile();
+            //return _exprWithVarsCompiled();
             //return _exprWithVars.Compile().Invoke();
         }
 

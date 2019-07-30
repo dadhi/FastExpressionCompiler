@@ -265,7 +265,7 @@ namespace FastExpressionCompiler
             Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
         {
             var closureInfo = new ClosureInfo(false);
-            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false))
+            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo))
                 return null;
 
             var nestedLambdas = closureInfo.NestedLambdas;
@@ -382,7 +382,6 @@ namespace FastExpressionCompiler
 
             // All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas;
-
 #endregion
 
             // Populates info directly with provided closure object and constants.
@@ -455,30 +454,24 @@ namespace FastExpressionCompiler
                 }
             }
 
-            public void AddNestedLambda(LambdaExpression lambdaExpr)
+            public void AddNestedLambda(NestedLambdaInfo nestedLambdaInfo)
             {
                 Status |= ClosureStatus.HasClosure;
 
-                if (NestedLambdas.Length == 0)
-                {
-                    NestedLambdas = new[] { new NestedLambdaInfo(lambdaExpr) };
-                    return;
-                }
-
-                var count = NestedLambdas.Length;
-                for (var i = 0; i < count; ++i)
-                    if (ReferenceEquals(NestedLambdas[i].LambdaExpression, lambdaExpr))
-                        return;
-
-                if (NestedLambdas.Length == 1)
-                    NestedLambdas = new[] { NestedLambdas[0], new NestedLambdaInfo(lambdaExpr) };
-                else if (NestedLambdas.Length == 2)
-                    NestedLambdas = new[] { NestedLambdas[0], NestedLambdas[1], new NestedLambdaInfo(lambdaExpr) };
+                var lambdas = NestedLambdas;
+                var count = lambdas.Length;
+                if (count == 0)
+                    NestedLambdas = new[] { nestedLambdaInfo };
+                else if (count == 1)
+                    NestedLambdas = new[] { lambdas[0], nestedLambdaInfo };
+                else if (count == 2)
+                    NestedLambdas = new[] { lambdas[0], lambdas[1], nestedLambdaInfo };
                 else
                 {
                     var newItems = new NestedLambdaInfo[count + 1];
-                    Array.Copy(NestedLambdas, newItems, count);
-                    newItems[count] = new NestedLambdaInfo(lambdaExpr);
+                    for (var i = 0; i < count; ++i)
+                        newItems[i] = lambdas[i];
+                    newItems[count] = nestedLambdaInfo;
                     NestedLambdas = newItems;
                 }
             }
@@ -668,16 +661,16 @@ namespace FastExpressionCompiler
             public ArrayClosure(object[] items) => Items = items;
         }
 
-        private struct NestedLambdaInfo
+        private sealed class NestedLambdaInfo
         {
-            public ClosureInfo ClosureInfo;
             public readonly LambdaExpression LambdaExpression;
+            public ClosureInfo ClosureInfo;
             public object Lambda;
 
             public NestedLambdaInfo(LambdaExpression lambdaExpression)
             {
-                ClosureInfo = new ClosureInfo(false);
                 LambdaExpression = lambdaExpression;
+                ClosureInfo = new ClosureInfo(false);
                 Lambda = null;
             }
         }
@@ -691,7 +684,7 @@ namespace FastExpressionCompiler
 
         // @paramExprs is required for nested lambda compilation
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr,
-            IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda)
+            IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure)
         {
             while (true)
             {
@@ -732,14 +725,14 @@ namespace FastExpressionCompiler
                                 continue;
                             }
 
-                            if (!TryCollectBoundConstants(ref closure, methodCallExpr.Object, paramExprs, isNestedLambda))
+                            if (!TryCollectBoundConstants(ref closure, methodCallExpr.Object, paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
                         }
                         else if (methodArgsCount == 0)
                             return true;
 
                         for (var i = 0; i < methodArgsCount - 1; i++)
-                            if (!TryCollectBoundConstants(ref closure, methodArgs[i], paramExprs, isNestedLambda))
+                            if (!TryCollectBoundConstants(ref closure, methodArgs[i], paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
 
                         expr = methodArgs[methodArgsCount - 1];
@@ -759,7 +752,7 @@ namespace FastExpressionCompiler
                             return true;
 
                         for (var i = 0; i < ctorArgsCount - 1; i++)
-                            if (!TryCollectBoundConstants(ref closure, ctorArgs[i], paramExprs, isNestedLambda))
+                            if (!TryCollectBoundConstants(ref closure, ctorArgs[i], paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
 
                         expr = ctorArgs[ctorArgsCount - 1];
@@ -773,17 +766,39 @@ namespace FastExpressionCompiler
                             return true;
 
                         for (var i = 0; i < elemExprsCount - 1; i++)
-                            if (!TryCollectBoundConstants(ref closure, elemExprs[i], paramExprs, isNestedLambda))
+                            if (!TryCollectBoundConstants(ref closure, elemExprs[i], paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
 
                         expr = elemExprs[elemExprsCount - 1];
                         continue;
 
                     case ExpressionType.MemberInit:
-                        return TryCollectMemberInitExprConstants(ref closure, (MemberInitExpression)expr, paramExprs, isNestedLambda);
+                        return TryCollectMemberInitExprConstants(
+                            ref closure, (MemberInitExpression)expr, paramExprs, isNestedLambda, ref rootClosure);
 
                     case ExpressionType.Lambda:
-                        closure.AddNestedLambda((LambdaExpression)expr);
+                        var nestedLambdaExpr = (LambdaExpression)expr;
+
+                        // Look for the already collected lambdas if we have the same, starting from the root
+                        var nestedLambdas = rootClosure.NestedLambdas;
+                        if (nestedLambdas.Length != 0)
+                        {
+                            var foundLambdaInfo = FindCollectedNestedLambdaInfo(nestedLambdas, nestedLambdaExpr, out var foundInLambdas);
+                            if (foundLambdaInfo != null)
+                            {
+                                // if found on the same level, then we done
+                                if (foundInLambdas != closure.NestedLambdas)
+                                    closure.AddNestedLambda(foundLambdaInfo);
+                                return true;
+                            }
+                        }
+
+                        var nestedLambdaInfo = new NestedLambdaInfo(nestedLambdaExpr);
+                        if (!TryCollectBoundConstants(ref nestedLambdaInfo.ClosureInfo,
+                            nestedLambdaExpr.Body, nestedLambdaExpr.Parameters, true, ref rootClosure))
+                            return false;
+
+                        closure.AddNestedLambda(nestedLambdaInfo);
                         return true;
 
                     case ExpressionType.Invoke:
@@ -798,11 +813,11 @@ namespace FastExpressionCompiler
                             expr = (invokeExpr.Expression as LambdaExpression)?.Body ?? invokeExpr.Expression;
                             continue;
                         }
-                        else if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda))
+                        else if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
                             return false;
 
                         for (var i = 0; i < invokeArgs.Count - 1; i++)
-                            if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda))
+                            if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
 
                         expr = invokeArgs[invokeArgsCount - 1];
@@ -810,8 +825,8 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
-                        if (!TryCollectBoundConstants(ref closure, condExpr.Test, paramExprs, isNestedLambda) ||
-                            !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs, isNestedLambda))
+                        if (!TryCollectBoundConstants(ref closure, condExpr.Test, paramExprs, isNestedLambda, ref rootClosure) ||
+                            !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs, isNestedLambda, ref rootClosure))
                             return false;
                         expr = condExpr.IfTrue;
                         continue;
@@ -824,7 +839,7 @@ namespace FastExpressionCompiler
                         if (blockVarExprs.Count == 0)
                         {
                             for (var i = 0; i < blockExprs.Count - 1; i++)
-                                if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda))
+                                if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
                                     return false;
                             expr = blockExprs[blockExprs.Count - 1];
                             continue;
@@ -837,7 +852,7 @@ namespace FastExpressionCompiler
                                 closure.PushBlockWithVars(blockVarExprs);
 
                             for (var i = 0; i < blockExprs.Count; i++)
-                                if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda))
+                                if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
                                     return false;
 
                             closure.PopBlock();
@@ -856,7 +871,7 @@ namespace FastExpressionCompiler
                         var indexExpr = (IndexExpression)expr;
                         var indexArgs = indexExpr.Arguments;
                         for (var i = 0; i < indexArgs.Count; i++)
-                            if (!TryCollectBoundConstants(ref closure, indexArgs[i], paramExprs, isNestedLambda))
+                            if (!TryCollectBoundConstants(ref closure, indexArgs[i], paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
                         if (indexExpr.Object == null)
                             return true;
@@ -864,7 +879,7 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Try:
-                        return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs, isNestedLambda);
+                        return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs, isNestedLambda, ref rootClosure);
 
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
@@ -888,13 +903,13 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Switch:
                         var switchExpr = ((SwitchExpression)expr);
-                        if (!TryCollectBoundConstants(ref closure, switchExpr.SwitchValue, paramExprs, isNestedLambda) ||
+                        if (!TryCollectBoundConstants(ref closure, switchExpr.SwitchValue, paramExprs, isNestedLambda, ref rootClosure) ||
                             switchExpr.DefaultBody != null && 
-                            !TryCollectBoundConstants(ref closure, switchExpr.DefaultBody, paramExprs, isNestedLambda))
+                            !TryCollectBoundConstants(ref closure, switchExpr.DefaultBody, paramExprs, isNestedLambda, ref rootClosure))
                             return false;
                         var switchCases = switchExpr.Cases;
                         for (var i = 0; i < switchCases.Count - 1; i++)
-                            if (!TryCollectBoundConstants(ref closure, switchCases[i].Body, paramExprs, isNestedLambda))
+                            if (!TryCollectBoundConstants(ref closure, switchCases[i].Body, paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
                         expr = switchCases[switchCases.Count - 1].Body;
                         continue;
@@ -915,7 +930,7 @@ namespace FastExpressionCompiler
 
                         if (expr is BinaryExpression binaryExpr)
                         {
-                            if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs, isNestedLambda))
+                            if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
                             expr = binaryExpr.Right;
                             continue;
@@ -932,27 +947,52 @@ namespace FastExpressionCompiler
             }
         }
 
+        private static NestedLambdaInfo FindCollectedNestedLambdaInfo(
+            NestedLambdaInfo[] nestedLambdas, LambdaExpression nestedLambdaExpr, out NestedLambdaInfo[] foundInLambdas)
+        {
+            for (var i = 0; i < nestedLambdas.Length; i++)
+            {
+                var lambdaInfo = nestedLambdas[i];
+                if (ReferenceEquals(lambdaInfo.LambdaExpression, nestedLambdaExpr))
+                {
+                    foundInLambdas = nestedLambdas;
+                    return lambdaInfo;
+                }
+
+                var deeperNestedLambdas = lambdaInfo.ClosureInfo.NestedLambdas;
+                if (deeperNestedLambdas.Length != 0)
+                {
+                    var deeperLambdaInfo = FindCollectedNestedLambdaInfo(deeperNestedLambdas, nestedLambdaExpr, out foundInLambdas);
+                    if (deeperLambdaInfo != null)
+                        return deeperLambdaInfo;
+                }
+            }
+
+            foundInLambdas = null;
+            return null;
+        }
+
         private static bool TryCompileNestedLambda(ref ClosureInfo outerClosureInfo, int nestedLambdaIndex,
             IReadOnlyList<ParameterExpression> outerLambdaParamExprs)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
             // 3. Add the compiled lambda to closure of outer lambda for later invocation
-            ref var nestedLambda = ref outerClosureInfo.NestedLambdas[nestedLambdaIndex];
+            var nestedLambdaInfo = outerClosureInfo.NestedLambdas[nestedLambdaIndex];
+            if (nestedLambdaInfo.Lambda != null)
+                return true;
 
-            var nestedLambdaExpr = nestedLambda.LambdaExpression;
+            var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
+            ref var nestedLambdaClosureInfo = ref nestedLambdaInfo.ClosureInfo;
+
             var nestedLambdaParamExprs = nestedLambdaExpr.Parameters;
-            var nestedLambdaParamTypes = Tools.GetParamTypes(nestedLambdaParamExprs);
-
-            ref var nestedLambdaClosureInfo = ref nestedLambda.ClosureInfo;
-            if (!TryCollectBoundConstants(ref nestedLambdaClosureInfo, nestedLambdaExpr.Body, nestedLambdaParamExprs, true))
-                return false;
-
             var nestedLambdaNestedLambdas = nestedLambdaClosureInfo.NestedLambdas;
             if (nestedLambdaNestedLambdas.Length != 0)
                 for (var i = 0; i < nestedLambdaNestedLambdas.Length; ++i)
                     if (!TryCompileNestedLambda(ref nestedLambdaClosureInfo, i, nestedLambdaParamExprs))
                         return false;
+
+            var nestedLambdaParamTypes = Tools.GetParamTypes(nestedLambdaParamExprs);
 
             object closureObject = null;
             var methodParamTypes = nestedLambdaParamTypes;
@@ -972,7 +1012,7 @@ namespace FastExpressionCompiler
                 return false;
             il.Emit(OpCodes.Ret);
 
-            nestedLambda.Lambda = method.CreateDelegate(
+            nestedLambdaInfo.Lambda = method.CreateDelegate(
                 Tools.GetFuncOrActionType(nestedLambdaParamTypes, nestedReturnType), closureObject);
 
             var nestedNonPassedParams = nestedLambdaClosureInfo.NonPassedParameters;
@@ -994,14 +1034,14 @@ namespace FastExpressionCompiler
         }
 
         private static bool TryCollectMemberInitExprConstants(ref ClosureInfo closure, MemberInitExpression expr,
-            IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda)
+            IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure)
         {
             var newExpr = expr.NewExpression
 #if LIGHT_EXPRESSION
                           ?? expr.Expression
 #endif
                 ;
-            if (!TryCollectBoundConstants(ref closure, newExpr, paramExprs, isNestedLambda))
+            if (!TryCollectBoundConstants(ref closure, newExpr, paramExprs, isNestedLambda, ref rootClosure))
                 return false;
 
             var memberBindings = expr.Bindings;
@@ -1009,7 +1049,8 @@ namespace FastExpressionCompiler
             {
                 var memberBinding = memberBindings[i];
                 if (memberBinding.BindingType == MemberBindingType.Assignment &&
-                    !TryCollectBoundConstants(ref closure, ((MemberAssignment)memberBinding).Expression, paramExprs, isNestedLambda))
+                    !TryCollectBoundConstants(
+                        ref closure, ((MemberAssignment)memberBinding).Expression, paramExprs, isNestedLambda, ref rootClosure))
                     return false;
             }
 
@@ -1017,11 +1058,11 @@ namespace FastExpressionCompiler
         }
 
         private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr,
-            IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda)
+            IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure)
         {
             closure.AddTryCatchFinallyInfo();
 
-            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs, isNestedLambda))
+            if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs, isNestedLambda, ref rootClosure))
                 return false;
 
             var catchBlocks = tryExpr.Handlers;
@@ -1032,21 +1073,23 @@ namespace FastExpressionCompiler
                 if (catchExVar != null)
                 {
                     closure.PushBlockWithVars(catchExVar);
-                    if (!TryCollectBoundConstants(ref closure, catchExVar, paramExprs, isNestedLambda))
+                    if (!TryCollectBoundConstants(ref closure, catchExVar, paramExprs, isNestedLambda, ref rootClosure))
                         return false;
                 }
 
-                if (catchBlock.Filter != null && !TryCollectBoundConstants(ref closure, catchBlock.Filter, paramExprs, isNestedLambda))
+                if (catchBlock.Filter != null && 
+                    !TryCollectBoundConstants(ref closure, catchBlock.Filter, paramExprs, isNestedLambda, ref rootClosure))
                     return false;
 
-                if (!TryCollectBoundConstants(ref closure, catchBlock.Body, paramExprs, isNestedLambda))
+                if (!TryCollectBoundConstants(ref closure, catchBlock.Body, paramExprs, isNestedLambda, ref rootClosure))
                     return false;
 
                 if (catchExVar != null)
                     closure.PopBlock();
             }
 
-            if (tryExpr.Finally != null && !TryCollectBoundConstants(ref closure, tryExpr.Finally, paramExprs, isNestedLambda))
+            if (tryExpr.Finally != null && 
+                !TryCollectBoundConstants(ref closure, tryExpr.Finally, paramExprs, isNestedLambda, ref rootClosure))
                 return false;
 
             --closure.CurrentTryCatchFinallyIndex;
