@@ -2889,7 +2889,7 @@ namespace FastExpressionCompiler
                 if (outerNestedLambdaIndex == -1)
                     return false;
 
-                ref var nestedLambdaInfo = ref closure.NestedLambdas[outerNestedLambdaIndex];
+                var nestedLambdaInfo = closure.NestedLambdas[outerNestedLambdaIndex];
                 var nestedLambda = nestedLambdaInfo.Lambda;
 
                 // Load compiled lambda on stack counting the offset - nested lambdas are going after constants

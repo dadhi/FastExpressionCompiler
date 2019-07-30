@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.Benchmarks
             //var a = new NestedLambdasVsVars();
             //a.Init();
             //a.Expression_with_sub_expressions_CompiledFast();
-            //BenchmarkRunner.Run<NestedLambdasVsVars>();
+            BenchmarkRunner.Run<NestedLambdasVsVars>();
 
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
@@ -44,7 +44,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
-            BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
+            //BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Invoke>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
