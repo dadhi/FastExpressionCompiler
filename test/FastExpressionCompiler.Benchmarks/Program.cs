@@ -7,6 +7,8 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
+            //BenchmarkRunner.Run<ArrayCopy_vs_ManualForLoop>();
+
             //var a = new NestedLambdasVsVars();
             //a.Init();
             //a.Expression_with_sub_expressions_CompiledFast();

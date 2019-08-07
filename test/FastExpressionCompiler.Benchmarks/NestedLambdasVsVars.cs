@@ -37,15 +37,14 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  36.79 us | 0.3446 us | 0.3223 us |  0.80 |    0.01 | 2.9297 | 1.4648 | 0.1831 |  13.48 KB |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 870.74 us | 4.7653 us | 4.4574 us | 18.99 |    0.17 | 3.9063 | 1.9531 |      - |  20.96 KB |
 
-### Making same nested lambda to compiled Once
+### Making the same nested lambdas to be compiled Once
 
 |                                                                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |----------------------------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                           Expression_with_sub_expressions_CompiledFast |  33.52 us | 0.2768 us | 0.2589 us |  1.00 |    0.00 | 2.2583 | 1.0986 | 0.1831 |  10.31 KB |
-|                               Expression_with_sub_expressions_Compiled | 636.12 us | 4.3820 us | 4.0989 us | 18.98 |    0.20 | 5.8594 | 2.9297 |      - |  27.04 KB |
-| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  29.57 us | 0.2772 us | 0.2593 us |  0.88 |    0.01 | 1.9531 | 0.9766 | 0.1831 |   9.04 KB |
-|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 860.00 us | 2.8610 us | 2.3891 us | 25.67 |    0.24 | 3.9063 | 1.9531 |      - |  20.96 KB |
-
+|                           Expression_with_sub_expressions_CompiledFast |  33.54 us | 0.1710 us | 0.1516 us |  1.00 |    0.00 | 2.1973 | 1.0986 | 0.1831 |  10.24 KB |
+|                               Expression_with_sub_expressions_Compiled | 634.31 us | 3.4507 us | 3.2278 us | 18.91 |    0.11 | 5.8594 | 2.9297 |      - |  27.04 KB |
+| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  35.98 us | 0.2289 us | 0.2141 us |  1.07 |    0.01 | 2.1973 | 1.0986 | 0.1831 |  10.25 KB |
+|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 866.17 us | 3.9117 us | 3.4677 us | 25.82 |    0.13 | 3.9063 | 1.9531 |      - |  20.96 KB |
 
 
 ### Invocation
@@ -57,14 +56,14 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |    51.78 ns | 0.2234 ns | 0.2089 ns |  0.91 |    0.00 | 0.0593 |     - |     - |     280 B |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,644.84 ns | 5.2784 ns | 4.4077 ns | 28.77 |    0.10 | 0.0782 |     - |     - |     376 B |
 
-#### After fixing the nested lambdas
+#### After fixing the nested lambdas and making them compile once
 
 |                                                                 Method |        Mean |     Error |    StdDev |  Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 |----------------------------------------------------------------------- |------------:|----------:|----------:|-------:|--------:|-------:|------:|------:|----------:|
-|                           Expression_with_sub_expressions_CompiledFast |    14.34 ns | 0.0382 ns | 0.0357 ns |   1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
-|                               Expression_with_sub_expressions_Compiled | 1,088.67 ns | 3.3143 ns | 3.1002 ns |  75.90 |    0.28 | 0.0458 |     - |     - |     224 B |
-| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |    33.26 ns | 0.2119 ns | 0.1982 ns |   2.32 |    0.01 | 0.0067 |     - |     - |      32 B |
-|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,651.46 ns | 3.7118 ns | 3.2904 ns | 115.11 |    0.33 | 0.0782 |     - |     - |     376 B |
+|                           Expression_with_sub_expressions_CompiledFast |    14.02 ns | 0.0868 ns | 0.0811 ns |   1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
+|                               Expression_with_sub_expressions_Compiled | 1,090.71 ns | 3.4701 ns | 3.2459 ns |  77.81 |    0.54 | 0.0458 |     - |     - |     224 B |
+| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |    73.66 ns | 0.2877 ns | 0.2691 ns |   5.25 |    0.04 | 0.0762 |     - |     - |     360 B |
+|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,648.24 ns | 4.4338 ns | 4.1474 ns | 117.58 |    0.65 | 0.0782 |     - |     - |     376 B |
 
 
 ### Compilation + Invocation
@@ -75,6 +74,15 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 |                               Expression_with_sub_expressions_Compiled | 1,453.7 us | 7.153 us | 6.691 us |  3.15 |    0.03 | 5.8594 | 1.9531 |     - |  27.88 KB |
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |   436.5 us | 3.835 us | 3.587 us |  0.95 |    0.01 | 2.4414 | 0.9766 |     - |  12.89 KB |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,304.5 us | 9.004 us | 7.519 us |  2.83 |    0.03 | 3.9063 | 1.9531 |     - |  22.04 KB |
+
+#### After fixing the nested lambdas and making them compile once
+
+|                                                                 Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 | Gen 2 | Allocated |
+|----------------------------------------------------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|-------:|------:|----------:|
+|                           Expression_with_sub_expressions_CompiledFast |   412.2 us | 1.778 us | 1.663 us |  1.00 |    0.00 | 1.9531 | 0.9766 |     - |  10.27 KB |
+|                               Expression_with_sub_expressions_Compiled | 1,451.9 us | 8.963 us | 8.384 us |  3.52 |    0.03 | 5.8594 | 1.9531 |     - |  27.88 KB |
+| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |   727.8 us | 4.098 us | 3.422 us |  1.76 |    0.01 | 1.9531 | 0.9766 |     - |   10.6 KB |
+|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,297.8 us | 6.896 us | 6.450 us |  3.15 |    0.02 | 3.9063 | 1.9531 |     - |  22.04 KB |
 
 */
         private Expression<Func<A>> _expr, _exprWithVars;
@@ -97,33 +105,33 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
         [Benchmark(Baseline = true)]
         public object Expression_with_sub_expressions_CompiledFast()
         {
-            return _expr.CompileFast(true);
+            //return _expr.CompileFast(true);
             //return _exprCompiledFast();
-            //return _expr.CompileFast(true).Invoke();
+            return _expr.CompileFast(true).Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
-            return _expr.Compile();
+            //return _expr.Compile();
             //return _exprCompiled();
-            //return _expr.Compile().Invoke();
+            return _expr.Compile().Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast()
         {
-            return _exprWithVars.CompileFast(true);
+            //return _exprWithVars.CompileFast(true);
             //return _exprWithVarsCompiledFast();
-            //return _exprWithVars.CompileFast(true).Invoke();
+            return _exprWithVars.CompileFast(true).Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_assigned_to_vars_in_block_Compile()
         {
-            return _exprWithVars.Compile();
+            //return _exprWithVars.Compile();
             //return _exprWithVarsCompiled();
-            //return _exprWithVars.Compile().Invoke();
+            return _exprWithVars.Compile().Invoke();
         }
 
         public readonly object[] _objects = new object[3];
