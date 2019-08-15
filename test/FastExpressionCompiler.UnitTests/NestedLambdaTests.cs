@@ -361,5 +361,28 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(f);
             Assert.AreEqual(50, f());
         }
+
+        [Test]
+        public void Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda()
+        {
+            var nParam = Parameter(typeof(int), "n");
+            var add = Lambda<Func<int, int>>(
+                Add(nParam, Constant(1)), 
+                nParam);
+
+            var sub = Lambda<Func<int, int>>(
+                Subtract(nParam, Invoke(add, nParam)),
+                nParam);
+
+            var e = Lambda<Func<int>>(
+                Add(Invoke(sub, Constant(42)),
+                    Invoke(add, Constant(13))));
+
+            var fs =  e.CompileSys();
+            Assert.AreEqual(13, fs());
+
+            var f = e.CompileFast(true);
+            Assert.AreEqual(13, f());
+        }
     }
 }
