@@ -37,14 +37,13 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  36.79 us | 0.3446 us | 0.3223 us |  0.80 |    0.01 | 2.9297 | 1.4648 | 0.1831 |  13.48 KB |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 870.74 us | 4.7653 us | 4.4574 us | 18.99 |    0.17 | 3.9063 | 1.9531 |      - |  20.96 KB |
 
-### Making the same nested lambdas to be compiled Once
+### Making the same nested lambdas to be compiled Once and the split ArrayClosure
 
-|                                                                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|----------------------------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                           Expression_with_sub_expressions_CompiledFast |  33.54 us | 0.1710 us | 0.1516 us |  1.00 |    0.00 | 2.1973 | 1.0986 | 0.1831 |  10.24 KB |
-|                               Expression_with_sub_expressions_Compiled | 634.31 us | 3.4507 us | 3.2278 us | 18.91 |    0.11 | 5.8594 | 2.9297 |      - |  27.04 KB |
-| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  35.98 us | 0.2289 us | 0.2141 us |  1.07 |    0.01 | 2.1973 | 1.0986 | 0.1831 |  10.25 KB |
-|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 866.17 us | 3.9117 us | 3.4677 us | 25.82 |    0.13 | 3.9063 | 1.9531 |      - |  20.96 KB |
+|                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|--------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+| Expression_with_sub_expressions_CompiledFast |  34.11 us | 0.1718 us | 0.1435 us |  1.00 |    0.00 | 2.1973 | 1.0986 | 0.1831 |  10.22 KB |
+|     Expression_with_sub_expressions_Compiled | 643.10 us | 6.6755 us | 6.2443 us | 18.86 |    0.23 | 5.8594 | 2.9297 |      - |  27.04 KB |
+
 
 
 ### Invocation
@@ -56,14 +55,13 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |    51.78 ns | 0.2234 ns | 0.2089 ns |  0.91 |    0.00 | 0.0593 |     - |     - |     280 B |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,644.84 ns | 5.2784 ns | 4.4077 ns | 28.77 |    0.10 | 0.0782 |     - |     - |     376 B |
 
-#### After fixing the nested lambdas and making them compile once
+#### After fixing the nested lambdas and making them compile once and the split ArrayClosure
 
-|                                                                 Method |        Mean |     Error |    StdDev |  Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|----------------------------------------------------------------------- |------------:|----------:|----------:|-------:|--------:|-------:|------:|------:|----------:|
-|                           Expression_with_sub_expressions_CompiledFast |    14.02 ns | 0.0868 ns | 0.0811 ns |   1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
-|                               Expression_with_sub_expressions_Compiled | 1,090.71 ns | 3.4701 ns | 3.2459 ns |  77.81 |    0.54 | 0.0458 |     - |     - |     224 B |
-| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |    73.66 ns | 0.2877 ns | 0.2691 ns |   5.25 |    0.04 | 0.0762 |     - |     - |     360 B |
-|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,648.24 ns | 4.4338 ns | 4.1474 ns | 117.58 |    0.65 | 0.0782 |     - |     - |     376 B |
+|                                       Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|--------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+| Expression_with_sub_expressions_CompiledFast |    13.58 ns | 0.0945 ns | 0.0838 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
+|     Expression_with_sub_expressions_Compiled | 1,122.42 ns | 3.2589 ns | 2.8889 ns | 82.63 |    0.54 | 0.0458 |     - |     - |     224 B |
+
 
 
 ### Compilation + Invocation
@@ -106,19 +104,19 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
         public object Expression_with_sub_expressions_CompiledFast()
         {
             //return _expr.CompileFast(true);
-            //return _exprCompiledFast();
-            return _expr.CompileFast(true).Invoke();
+            return _exprCompiledFast();
+            //return _expr.CompileFast(true).Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
             //return _expr.Compile();
-            //return _exprCompiled();
-            return _expr.Compile().Invoke();
+            return _exprCompiled();
+            //return _expr.Compile().Invoke();
         }
 
-        [Benchmark]
+        //[Benchmark]
         public object Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast()
         {
             //return _exprWithVars.CompileFast(true);
@@ -126,7 +124,7 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
             return _exprWithVars.CompileFast(true).Invoke();
         }
 
-        [Benchmark]
+        //[Benchmark]
         public object Expression_with_sub_expressions_assigned_to_vars_in_block_Compile()
         {
             //return _exprWithVars.Compile();
