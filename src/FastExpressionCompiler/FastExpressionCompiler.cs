@@ -1602,12 +1602,12 @@ namespace FastExpressionCompiler
                 if (leftType.IsValueType()) // Nullable -> It's the only ValueType comparable to null
                 {
                     var loc = il.DeclareLocal(leftType);
-                    il.Emit(OpCodes.Stloc_S, loc);
-                    il.Emit(OpCodes.Ldloca_S, loc);
+                    il.Emit(OpCodes.Stloc, loc);
+                    il.Emit(OpCodes.Ldloca, loc);
                     il.Emit(OpCodes.Call, leftType.FindNullableHasValueGetterMethod());
 
                     il.Emit(OpCodes.Brfalse, labelFalse);
-                    il.Emit(OpCodes.Ldloca_S, loc);
+                    il.Emit(OpCodes.Ldloca, loc);
                     il.Emit(OpCodes.Call, leftType.FindNullableGetValueOrDefaultMethod());
 
                     il.Emit(OpCodes.Br, labelDone);
@@ -1697,7 +1697,7 @@ namespace FastExpressionCompiler
                 var resultVar = default(LocalBuilder);
 
                 if (returnsResult)
-                    il.Emit(OpCodes.Stloc_S, resultVar = il.DeclareLocal(exprType));
+                    il.Emit(OpCodes.Stloc, resultVar = il.DeclareLocal(exprType));
 
                 var catchBlocks = tryExpr.Handlers;
                 for (var i = 0; i < catchBlocks.Count; i++)
@@ -1715,7 +1715,7 @@ namespace FastExpressionCompiler
                     {
                         var exVar = il.DeclareLocal(exVarExpr.Type);
                         closure.PushBlockWithVars(exVarExpr, exVar);
-                        il.Emit(OpCodes.Stloc_S, exVar);
+                        il.Emit(OpCodes.Stloc, exVar);
                     }
 
                     if (!TryEmit(catchBlock.Body, paramExprs, il, ref closure, parent))
@@ -1725,7 +1725,7 @@ namespace FastExpressionCompiler
                         closure.PopBlock();
 
                     if (returnsResult)
-                        il.Emit(OpCodes.Stloc_S, resultVar);
+                        il.Emit(OpCodes.Stloc, resultVar);
                 }
 
                 var finallyExpr = tryExpr.Finally;
@@ -1767,7 +1767,18 @@ namespace FastExpressionCompiler
                     if (closure.LastEmitIsAddress)
                         il.Emit(OpCodes.Ldarga_S, (byte)paramIndex);
                     else
-                        EmitLoadParamArg(il, paramIndex);
+                    {
+                        if (paramIndex == 0)
+                            il.Emit(OpCodes.Ldarg_0);
+                        else if (paramIndex == 1)
+                            il.Emit(OpCodes.Ldarg_1);
+                        else if (paramIndex == 2)
+                            il.Emit(OpCodes.Ldarg_2);
+                        else if (paramIndex == 3)
+                            il.Emit(OpCodes.Ldarg_3);
+                        else
+                            il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
+                    }
 
                     if (paramExpr.IsByRef)
                     {
@@ -1789,7 +1800,7 @@ namespace FastExpressionCompiler
                 {
                     if (byRefIndex != -1 ||
                         paramType.IsValueType() && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
-                        il.Emit(OpCodes.Ldloca_S, variable);
+                        il.Emit(OpCodes.Ldloca, variable);
                     else
                         il.Emit(OpCodes.Ldloc, variable);
                     return true;
@@ -1797,7 +1808,7 @@ namespace FastExpressionCompiler
 
                 if (paramExpr.IsByRef)
                 {
-                    il.Emit(OpCodes.Ldloca_S, byRefIndex);
+                    il.Emit(OpCodes.Ldloca, byRefIndex);
                     return true;
                 }
 
@@ -1846,20 +1857,6 @@ namespace FastExpressionCompiler
                 else
                     il.Emit(OpCodes.Ldobj, type);
                 //todo: UInt64 as there is no OpCodes? Ldind_Ref?
-            }
-
-            private static void EmitLoadParamArg(ILGenerator il, int paramIndex)
-            {
-                if (paramIndex == 0)
-                    il.Emit(OpCodes.Ldarg_0);
-                else if (paramIndex == 1)
-                    il.Emit(OpCodes.Ldarg_1);
-                else if (paramIndex == 2)
-                    il.Emit(OpCodes.Ldarg_2);
-                else if (paramIndex == 3)
-                    il.Emit(OpCodes.Ldarg_3);
-                else
-                    il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
             }
 
             private static bool TryEmitTypeAs(UnaryExpression expr,
@@ -2339,14 +2336,14 @@ namespace FastExpressionCompiler
             {
                 var locVar = il.DeclareLocal(type);
                 il.Emit(OpCodes.Stloc, locVar);
-                il.Emit(OpCodes.Ldloca_S, locVar);
+                il.Emit(OpCodes.Ldloca, locVar);
                 return locVar;
             }
 
             private static LocalBuilder InitValueTypeVariable(ILGenerator il, Type exprType)
             {
                 var locVar = il.DeclareLocal(exprType);
-                il.Emit(OpCodes.Ldloca_S, locVar);
+                il.Emit(OpCodes.Ldloca, locVar);
                 il.Emit(OpCodes.Initobj, exprType);
                 return locVar;
             }
@@ -2661,7 +2658,18 @@ namespace FastExpressionCompiler
                                 ++paramIndex;
 
                             if (leftParamExpr.IsByRef)
-                                EmitLoadParamArg(il, paramIndex);
+                            {
+                                if (paramIndex == 0)
+                                    il.Emit(OpCodes.Ldarg_0);
+                                else if (paramIndex == 1)
+                                    il.Emit(OpCodes.Ldarg_1);
+                                else if (paramIndex == 2)
+                                    il.Emit(OpCodes.Ldarg_2);
+                                else if (paramIndex == 3)
+                                    il.Emit(OpCodes.Ldarg_3);
+                                else
+                                    il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
+                            }
 
                             if (arithmeticNodeType == nodeType)
                             {
@@ -3015,11 +3023,11 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Stloc, pairVar);
 
                 // - load the `NestedLambda` field
-                il.Emit(OpCodes.Ldloc_S, pairVar);
+                il.Emit(OpCodes.Ldloc, pairVar);
                 il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
 
                 // - load the `ConstantsAndNestedLambdas` field
-                il.Emit(OpCodes.Ldloc_S, pairVar);
+                il.Emit(OpCodes.Ldloc, pairVar);
                 il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
 
                 // - create `NonPassedParameters` array
@@ -3325,11 +3333,11 @@ namespace FastExpressionCompiler
                 {
                     var leftNullableHasValueGetterMethod = exprLeft.Type.FindNullableHasValueGetterMethod();
 
-                    il.Emit(OpCodes.Ldloca_S, lVar);
+                    il.Emit(OpCodes.Ldloca, lVar);
                     il.Emit(OpCodes.Call, leftNullableHasValueGetterMethod);
 
                     // ReSharper disable once AssignNullToNotNullAttribute
-                    il.Emit(OpCodes.Ldloca_S, rVar);
+                    il.Emit(OpCodes.Ldloca, rVar);
                     il.Emit(OpCodes.Call, leftNullableHasValueGetterMethod);
 
                     switch (expressionType)
@@ -3440,7 +3448,7 @@ namespace FastExpressionCompiler
                     {
                         var endL = il.DefineLabel();
                         var loc = InitValueTypeVariable(il, exprType);
-                        il.Emit(OpCodes.Ldloc_S, loc);
+                        il.Emit(OpCodes.Ldloc, loc);
                         il.Emit(OpCodes.Br_S, endL);
                         il.MarkLabel(valueLabel);
                         il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.GetFirst());
