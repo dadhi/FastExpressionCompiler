@@ -2084,7 +2084,7 @@ namespace FastExpressionCompiler
 
                         // if source nullable has a value:
                         il.MarkLabel(labelSourceHasValue);
-                        il.Emit(OpCodes.Ldloca_S, sourceVar);
+                        il.Emit(OpCodes.Ldloca, sourceVar);
                         il.Emit(OpCodes.Call, sourceType.FindNullableGetValueOrDefaultMethod());
 
                         if (!TryEmitValueConvert(underlyingNullableTargetType, il,
