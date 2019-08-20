@@ -1255,7 +1255,14 @@ namespace FastExpressionCompiler
                                    TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
 
                         case ExpressionType.TypeAs:
-                            return TryEmitTypeAs((UnaryExpression)expr, paramExprs, il, ref closure, parent);
+                        case ExpressionType.IsTrue:
+                        case ExpressionType.IsFalse:
+                        case ExpressionType.Increment:
+                        case ExpressionType.Decrement:
+                        case ExpressionType.Negate:
+                        case ExpressionType.UnaryPlus:
+                        case ExpressionType.Unbox:
+                            return TryEmitSimpleUnaryExpression((UnaryExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.TypeIs:
                             return TryEmitTypeIs((TypeBinaryExpression)expr, paramExprs, il, ref closure, parent);
@@ -1863,7 +1870,7 @@ namespace FastExpressionCompiler
                 //todo: UInt64 as there is no OpCodes? Ldind_Ref?
             }
 
-            private static bool TryEmitTypeAs(UnaryExpression expr,
+            private static bool TryEmitSimpleUnaryExpression(UnaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
@@ -1872,7 +1879,45 @@ namespace FastExpressionCompiler
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     il.Emit(OpCodes.Pop);
                 else
-                    il.Emit(OpCodes.Isinst, expr.Type);
+                {
+                    if (expr.NodeType == ExpressionType.TypeAs)
+                        il.Emit(OpCodes.Isinst, expr.Type);
+                    else if (expr.NodeType == ExpressionType.IsFalse)
+                    {
+                        Label falseLabel = il.DefineLabel();
+                        Label continueLabel = il.DefineLabel();
+                        il.Emit(OpCodes.Brfalse, falseLabel);
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.Emit(OpCodes.Br, continueLabel);
+                        il.MarkLabel(falseLabel);
+                        il.Emit(OpCodes.Ldc_I4_1);
+                        il.MarkLabel(continueLabel);
+                    }
+                    else if (expr.NodeType == ExpressionType.Increment)
+                    {
+                        il.Emit(OpCodes.Ldc_I4_1);
+                        il.Emit(OpCodes.Add);
+                    }
+                    else if (expr.NodeType == ExpressionType.Decrement)
+                    {
+                        il.Emit(OpCodes.Ldc_I4_1);
+                        il.Emit(OpCodes.Sub);
+                    }
+                    else if (expr.NodeType == ExpressionType.Negate)
+                    {
+                        il.Emit(OpCodes.Not);
+                        il.Emit(OpCodes.Ldc_I4_1);
+                        il.Emit(OpCodes.Add);
+                    }
+                    else if (expr.NodeType == ExpressionType.Unbox)
+                    {
+                        il.Emit(OpCodes.Unbox_Any);
+                    }
+                    else if (expr.NodeType == ExpressionType.IsTrue)
+                    { }
+                    else if (expr.NodeType == ExpressionType.UnaryPlus)
+                    { }
+                }
                 return true;
             }
 
