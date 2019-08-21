@@ -2186,50 +2186,52 @@ namespace FastExpressionCompiler
                     // If expression is small and there is no variables set then just read them by args and field
                     if (constantCount <= 3 && closure.ClosureItemsVariableLocation == -1)
                     {
-                        // Load constant from Closure - closure object is always a first argument
-                        il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
+                        EmitConstantsAndNestedLambdasFieldToStack(il, closure);
                         EmitLoadConstantInt(il, constIndex);
                         il.Emit(OpCodes.Ldelem_Ref);
 
-                        return true;
-                    }
-
-                    // When expressions are large its better to store constants into variables so they can be re-used later
-                    if (closure.ClosureItemsVariableLocation == -1)
-                    {
-                        // Load constant from Closure - closure object is always a first argument
-                        il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField); // Load Items field
-                        var closureItemsVarBuilder = il.DeclareLocal(typeof(object[]));
-                        var closureItemsVariableLocation = closureItemsVarBuilder.LocalIndex;
-
-                        closure.ClosureItemsVariableLocation = closureItemsVariableLocation;
-                        EmitStoreLocalVariable(il, closureItemsVariableLocation); // Store items array to variable
-
-                        // Store to variable
-                        closure.ConstantsVariableLocation = new int[constantCount];
-
-                        for (var i = 0; i < constantCount; i++)
+                        // source type is object, ConstantsAndNestedLambdas is object array
+                        if (exprType.IsValueType())
                         {
-                            var variableBuilder = il.DeclareLocal(closureConstants.Items[i].Type);
-                            var constantVariableLocation = variableBuilder.LocalIndex;
-                            // Store variable location for easy access later
-                            closure.ConstantsVariableLocation[i] = constantVariableLocation;
-
-                            EmitLoadLocalVariable(il, closureItemsVariableLocation);
-                            EmitLoadConstantInt(il, closureItemsVariableLocation);
-                            il.Emit(OpCodes.Ldelem_Ref);
-                            EmitStoreLocalVariable(il, constantVariableLocation);
+                            il.Emit(OpCodes.Unbox_Any, exprType);
                         }
                     }
-
-                    EmitLoadLocalVariable(il, closure.ConstantsVariableLocation[constIndex]);
-
-                    // source type is object, ConstantsAndNestedLambdas is object array
-                    if (exprType.IsValueType())
+                    else
                     {
-                        il.Emit(OpCodes.Unbox_Any, exprType);
+                        // When expressions are large its better to store constants into variables so they can be re-used later
+                        if (closure.ClosureItemsVariableLocation == -1)
+                        {
+                            EmitConstantsAndNestedLambdasFieldToStack(il, closure);
+                            var closureItemsVarBuilder = il.DeclareLocal(typeof(object[]));
+                            var closureItemsVariableLocation = closureItemsVarBuilder.LocalIndex;
+
+                            closure.ClosureItemsVariableLocation = closureItemsVariableLocation;
+                            EmitStoreLocalVariable(il, closureItemsVariableLocation); // Store items array to variable
+
+                            // Store to variable
+                            closure.ConstantsVariableLocation = new int[constantCount];
+
+                            for (var i = 0; i < constantCount; i++)
+                            {
+                                var type = closureConstants.Items[i].Type;
+                                var constantVariableLocation = il.DeclareLocal(type).LocalIndex;
+                                // Store variable location for easy access later
+                                closure.ConstantsVariableLocation[i] = constantVariableLocation;
+                                EmitLoadLocalVariable(il, closureItemsVariableLocation);
+                                EmitLoadConstantInt(il, i);
+                                il.Emit(OpCodes.Ldelem_Ref);
+
+                                // Unbox the variable if its value type, it needs to be done only once because its done on variable
+                                if (type.IsValueType())
+                                {
+                                    il.Emit(OpCodes.Unbox_Any, type);
+                                }
+                                    
+                                EmitStoreLocalVariable(il, constantVariableLocation);
+                            }
+                        }
+
+                        EmitLoadLocalVariable(il, closure.ConstantsVariableLocation[constIndex]);
                     }
                 }
                 else
@@ -3055,10 +3057,7 @@ namespace FastExpressionCompiler
                 var nestedLambda = nestedLambdaInfo.Lambda;
                 var constantsCount = closure.Constants.Count;
 
-                // Load compiled lambda on stack counting the offset - nested lambdas are going after constants
-                var nestedLambdaType = nestedLambda.GetType();
-                il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
+                EmitConstantsAndNestedLambdasFieldToStack(il, closure);
                 EmitLoadConstantInt(il, constantsCount + outerNestedLambdaIndex);
                 il.Emit(OpCodes.Ldelem_Ref); // load the array item object on stack and cast it lambda
 
@@ -3067,7 +3066,6 @@ namespace FastExpressionCompiler
                 var nestedNonPassedParams = nestedClosureInfo.NonPassedParameters;
                 if (nestedNonPassedParams.Length == 0)
                 {
-                    il.Emit(OpCodes.Castclass, nestedLambdaType);
                     return true;
                 }
 
@@ -3870,6 +3868,21 @@ namespace FastExpressionCompiler
                     default:
                         il.Emit(OpCodes.Stloc, (short)location);
                         break;
+                }
+            }
+
+            private static void EmitConstantsAndNestedLambdasFieldToStack(ILGenerator il, ClosureInfo closure)
+            {
+                // When there are no variables declared read first argument field
+                if (closure.ClosureItemsVariableLocation == -1)
+                {
+                    // Load constant from Closure - closure object is always a first argument
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
+                } else
+                {
+                    // Fast path, load local variable
+                    EmitLoadLocalVariable(il, closure.ClosureItemsVariableLocation);
                 }
             }
         }
