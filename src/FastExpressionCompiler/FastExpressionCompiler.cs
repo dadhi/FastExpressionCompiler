@@ -1579,11 +1579,7 @@ namespace FastExpressionCompiler
 
                 if (expr.Arguments.Count == 1) // one dimensional array
                 {
-                    if (elemType.IsValueType())
-                        il.Emit(OpCodes.Ldelem, elemType);
-                    else
-                        il.Emit(OpCodes.Ldelem_Ref);
-                    return true;
+                    return TryEmitArrayIndex(elemType, il);
                 }
 
                 // multi dimensional array
@@ -1830,7 +1826,12 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Emit(OpCodes.Ldelem_Ref);
-                il.Emit(paramType.IsValueType() ? OpCodes.Unbox_Any : OpCodes.Castclass, paramType);
+
+                // source type is object, NonPassedParams is object array
+                if (paramType.IsValueType())
+                {
+                    il.Emit(OpCodes.Unbox_Any);
+                }
                 return true;
             }
 
@@ -2177,7 +2178,12 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
                     EmitLoadConstantInt(il, constIndex);
                     il.Emit(OpCodes.Ldelem_Ref);
-                    il.Emit(exprType.IsValueType() ? OpCodes.Unbox_Any : OpCodes.Castclass, exprType);
+
+                    // source type is object, ConstantsAndNestedLambdas is object array
+                    if (exprType.IsValueType())
+                    {
+                        il.Emit(OpCodes.Unbox_Any, exprType);
+                    }
                 }
                 else
                 {
