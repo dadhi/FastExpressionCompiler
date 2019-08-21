@@ -391,7 +391,7 @@ namespace FastExpressionCompiler
             // This integer array stores location of individual constants in expression
             // Array is coupled with Constants LiveCountArray so that first index will hold index to first constant in stack
             public int[] ConstantsVariableLocation;
-            #endregion
+#endregion
 
             // Populates info directly with provided closure object and constants.
             public ClosureInfo(bool isUserProvided, ConstantExpression[] usedProvidedClosureConstantExpressions = null)
@@ -3873,7 +3873,7 @@ namespace FastExpressionCompiler
 
             private static void EmitConstantsAndNestedLambdasFieldToStack(ILGenerator il, ClosureInfo closure)
             {
-                // When there are no variables declared read first argument field
+                // When there are no variables declared read first argument and field
                 if (closure.ClosureItemsVariableLocation == -1)
                 {
                     // Load constant from Closure - closure object is always a first argument
