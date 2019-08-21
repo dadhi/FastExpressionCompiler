@@ -384,7 +384,14 @@ namespace FastExpressionCompiler
 
             // All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas;
-#endregion
+
+            // This integer stores location of Constants.Items local variable in stack
+            public int ClosureItemsVariableLocation;
+
+            // This integer array stores location of individual constants in expression
+            // Array is coupled with Constants LiveCountArray so that first index will hold index to first constant in stack
+            public int[] ConstantsVariableLocation;
+            #endregion
 
             // Populates info directly with provided closure object and constants.
             public ClosureInfo(bool isUserProvided, ConstantExpression[] usedProvidedClosureConstantExpressions = null)
@@ -392,6 +399,8 @@ namespace FastExpressionCompiler
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
 
+                ClosureItemsVariableLocation = -1;
+                ConstantsVariableLocation = null;
                 LastEmitIsAddress = false;
                 CurrentTryCatchFinallyIndex = -1;
                 _tryCatchFinallyInfos = null;
@@ -2166,18 +2175,56 @@ namespace FastExpressionCompiler
                 if (expr != null && IsClosureBoundConstant(constantValue, constantType.GetTypeInfo()))
                 {
                     var closureConstants = closure.Constants;
+                    var constantCount = closureConstants.Count;
+                    var constIndex = constantCount - 1;
 
-                    var constIndex = closureConstants.Count - 1;
                     while (constIndex >= 0 && !ReferenceEquals(closureConstants.Items[constIndex], expr))
                         --constIndex;
                     if (constIndex == -1)
                         return false;
 
-                    // Load constant from Closure - closure object is always a first argument
-                    il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
-                    EmitLoadConstantInt(il, constIndex);
-                    il.Emit(OpCodes.Ldelem_Ref);
+                    // If expression is small and there is no variables set then just read them by args and field
+                    if (constantCount <= 3 && closure.ClosureItemsVariableLocation == -1)
+                    {
+                        // Load constant from Closure - closure object is always a first argument
+                        il.Emit(OpCodes.Ldarg_0);
+                        il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
+                        EmitLoadConstantInt(il, constIndex);
+                        il.Emit(OpCodes.Ldelem_Ref);
+
+                        return true;
+                    }
+
+                    // When expressions are large its better to store constants into variables so they can be re-used later
+                    if (closure.ClosureItemsVariableLocation == -1)
+                    {
+                        // Load constant from Closure - closure object is always a first argument
+                        il.Emit(OpCodes.Ldarg_0);
+                        il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField); // Load Items field
+                        var closureItemsVarBuilder = il.DeclareLocal(typeof(object[]));
+                        var closureItemsVariableLocation = closureItemsVarBuilder.LocalIndex;
+
+                        closure.ClosureItemsVariableLocation = closureItemsVariableLocation;
+                        EmitStoreLocalVariable(il, closureItemsVariableLocation); // Store items array to variable
+
+                        // Store to variable
+                        closure.ConstantsVariableLocation = new int[constantCount];
+
+                        for (var i = 0; i < constantCount; i++)
+                        {
+                            var variableBuilder = il.DeclareLocal(closureConstants.Items[i].Type);
+                            var constantVariableLocation = variableBuilder.LocalIndex;
+                            // Store variable location for easy access later
+                            closure.ConstantsVariableLocation[i] = constantVariableLocation;
+
+                            EmitLoadLocalVariable(il, closureItemsVariableLocation);
+                            EmitLoadConstantInt(il, closureItemsVariableLocation);
+                            il.Emit(OpCodes.Ldelem_Ref);
+                            EmitStoreLocalVariable(il, constantVariableLocation);
+                        }
+                    }
+
+                    EmitLoadLocalVariable(il, closure.ConstantsVariableLocation[constIndex]);
 
                     // source type is object, ConstantsAndNestedLambdas is object array
                     if (exprType.IsValueType())
@@ -3772,6 +3819,56 @@ namespace FastExpressionCompiler
                         break;
                     default:
                         il.Emit(OpCodes.Ldc_I4, i);
+                        break;
+                }
+            }
+
+            private static void EmitLoadLocalVariable(ILGenerator il, int location)
+            {
+                switch (location)
+                {
+                    case 0:
+                        il.Emit(OpCodes.Ldloc_0);
+                        break;
+                    case 1:
+                        il.Emit(OpCodes.Ldloc_1);
+                        break;
+                    case 2:
+                        il.Emit(OpCodes.Ldloc_2);
+                        break;
+                    case 3:
+                        il.Emit(OpCodes.Ldloc_3);
+                        break;
+                    case int n when n > -129 && n < 128:
+                        il.Emit(OpCodes.Ldloc_S, (sbyte)location);
+                        break;
+                    default:
+                        il.Emit(OpCodes.Ldloc, (short)location);
+                        break;
+                }
+            }
+
+            private static void EmitStoreLocalVariable(ILGenerator il, int location)
+            {
+                switch (location)
+                {
+                    case 0:
+                        il.Emit(OpCodes.Stloc_0);
+                        break;
+                    case 1:
+                        il.Emit(OpCodes.Stloc_1);
+                        break;
+                    case 2:
+                        il.Emit(OpCodes.Stloc_2);
+                        break;
+                    case 3:
+                        il.Emit(OpCodes.Stloc_3);
+                        break;
+                    case int n when n > -129 && n < 128:
+                        il.Emit(OpCodes.Stloc_S, (sbyte)location);
+                        break;
+                    default:
+                        il.Emit(OpCodes.Stloc, (short)location);
                         break;
                 }
             }
