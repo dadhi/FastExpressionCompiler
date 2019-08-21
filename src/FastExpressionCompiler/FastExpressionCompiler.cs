@@ -1830,7 +1830,7 @@ namespace FastExpressionCompiler
                 // source type is object, NonPassedParams is object array
                 if (paramType.IsValueType())
                 {
-                    il.Emit(OpCodes.Unbox_Any);
+                    il.Emit(OpCodes.Unbox_Any, paramType);
                 }
                 return true;
             }
