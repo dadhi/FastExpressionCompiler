@@ -79,6 +79,15 @@ namespace FastExpressionCompiler.Benchmarks
             |     Invoke_Compiled | 1,385.24 ns | 2.8196 ns | 2.6375 ns | 25.10 |    0.33 | 0.0553 |     - |     - |     264 B |
             | Invoke_CompiledFast |    55.20 ns | 0.8883 ns | 0.7875 ns |  1.00 |    0.00 | 0.0220 |     - |     - |     104 B |
 
+            ## Loading the constants as variables - PR by @Havunen
+
+            |              Method |        Mean |      Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+            |-------------------- |------------:|-----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+            |    DirectMethodCall |    51.37 ns |  0.2191 ns | 0.1942 ns |  1.07 |    0.01 | 0.0356 |     - |     - |     168 B |
+            |     Invoke_Compiled | 1,399.33 ns | 10.3260 ns | 9.1538 ns | 29.24 |    0.30 | 0.0553 |     - |     - |     264 B |
+            | Invoke_CompiledFast |    47.85 ns |  0.2711 ns | 0.2536 ns |  1.00 |    0.00 | 0.0220 |     - |     - |     104 B |
+
+
              */
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
             private static readonly Func<X> _lambdaCompiledFast = _hoistedExpr.CompileFast();

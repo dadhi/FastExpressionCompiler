@@ -44,7 +44,12 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 | Expression_with_sub_expressions_CompiledFast |  34.11 us | 0.1718 us | 0.1435 us |  1.00 |    0.00 | 2.1973 | 1.0986 | 0.1831 |  10.22 KB |
 |     Expression_with_sub_expressions_Compiled | 643.10 us | 6.6755 us | 6.2443 us | 18.86 |    0.23 | 5.8594 | 2.9297 |      - |  27.04 KB |
 
+#### Removing cast-class and loading constants as variables - PR by @Havunen
 
+|                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|--------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+| Expression_with_sub_expressions_CompiledFast |  32.44 us | 0.3339 us | 0.3123 us |  1.00 |    0.00 | 2.0752 | 1.0376 | 0.1831 |   9.53 KB |
+|     Expression_with_sub_expressions_Compiled | 633.91 us | 4.2762 us | 4.0000 us | 19.54 |    0.23 | 5.8594 | 2.9297 |      - |  27.04 KB |
 
 ### Invocation
 
@@ -61,6 +66,14 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 |--------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
 | Expression_with_sub_expressions_CompiledFast |    13.58 ns | 0.0945 ns | 0.0838 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
 |     Expression_with_sub_expressions_Compiled | 1,122.42 ns | 3.2589 ns | 2.8889 ns | 82.63 |    0.54 | 0.0458 |     - |     - |     224 B |
+
+#### Removing cast-class and loading constants as variables - PR by @Havunen
+
+|                                       Method |        Mean |     Error |    StdDev |  Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|--------------------------------------------- |------------:|----------:|----------:|-------:|--------:|-------:|------:|------:|----------:|
+| Expression_with_sub_expressions_CompiledFast |    10.93 ns | 0.0488 ns | 0.0433 ns |   1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
+|     Expression_with_sub_expressions_Compiled | 1,105.25 ns | 4.5077 ns | 3.9960 ns | 101.08 |    0.47 | 0.0458 |     - |     - |     224 B |
+
 
 
 
@@ -103,16 +116,16 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
         [Benchmark(Baseline = true)]
         public object Expression_with_sub_expressions_CompiledFast()
         {
-            //return _expr.CompileFast(true);
-            return _exprCompiledFast();
+            return _expr.CompileFast(true);
+            //return _exprCompiledFast();
             //return _expr.CompileFast(true).Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
-            //return _expr.Compile();
-            return _exprCompiled();
+            return _expr.Compile();
+            //return _exprCompiled();
             //return _expr.Compile().Invoke();
         }
 

@@ -106,6 +106,7 @@ namespace FastExpressionCompiler.Benchmarks
                 CompileFast_LightExpression |   9.412 us | 0.1053 us | 0.0933 us |  1.00 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
                  CompileFast_WithoutClosure |  10.073 us | 0.0732 us | 0.0649 us |  1.07 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
  CompileFast_LightExpression_WithoutClosure |   8.062 us | 0.0471 us | 0.0393 us |  0.86 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
+
         */
         [MemoryDiagnoser]
         public class Compile_only

@@ -49,7 +49,6 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly FastExpressionCompiler.LightExpression.Expression<Func<B, X>> _leExpr = ComposeManualExprWithParams(_aConstLEExpr);
 
         [MemoryDiagnoser]
-        [Orderer(SummaryOrderPolicy.FastestToSlowest)]
         public class Compilation
         {
             /*
@@ -57,19 +56,20 @@ namespace FastExpressionCompiler.Benchmarks
 
                                                       Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
             ------------------------------------------------ |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-             CompileFastWithPreCreatedClosureLightExpression |   4.892 us | 0.0965 us | 0.0948 us |  1.00 |    0.00 |      0.3281 |      0.1602 |      0.0305 |              1.5 KB |
-                            CompileFastWithPreCreatedClosure |   5.186 us | 0.0896 us | 0.0795 us |  1.06 |    0.02 |      0.3281 |      0.1602 |      0.0305 |              1.5 KB |
-                                                 CompileFast |   7.257 us | 0.0648 us | 0.0606 us |  1.49 |    0.03 |      0.4349 |      0.2136 |      0.0305 |             1.99 KB |
                                                      Compile | 176.107 us | 1.3451 us | 1.2582 us | 36.05 |    0.75 |      0.9766 |      0.4883 |           - |              4.7 KB |
+                                                 CompileFast |   7.257 us | 0.0648 us | 0.0606 us |  1.49 |    0.03 |      0.4349 |      0.2136 |      0.0305 |             1.99 KB |
+                            CompileFastWithPreCreatedClosure |   5.186 us | 0.0896 us | 0.0795 us |  1.06 |    0.02 |      0.3281 |      0.1602 |      0.0305 |              1.5 KB |
+             CompileFastWithPreCreatedClosureLightExpression |   4.892 us | 0.0965 us | 0.0948 us |  1.00 |    0.00 |      0.3281 |      0.1602 |      0.0305 |              1.5 KB |
 
-            ## v2.1
+            ## v3.0
+                                                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            ------------------------------------------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+                                                     Compile | 180.105 us | 1.4696 us | 1.3746 us | 45.93 |    0.41 | 0.9766 | 0.4883 |      - |    4.7 KB |
+                                                 CompileFast |   4.333 us | 0.0628 us | 0.0588 us |  1.10 |    0.02 | 0.2975 | 0.1450 | 0.0229 |   1.38 KB |
+                            CompileFastWithPreCreatedClosure |   4.343 us | 0.0539 us | 0.0450 us |  1.11 |    0.01 | 0.2899 | 0.1450 | 0.0229 |   1.34 KB |
+             CompileFastWithPreCreatedClosureLightExpression |   3.922 us | 0.0325 us | 0.0304 us |  1.00 |    0.00 | 0.2899 | 0.1450 | 0.0229 |   1.34 KB |
 
-                                                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-            ------------------------------------------------ |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-             CompileFastWithPreCreatedClosureLightExpression |   4.500 us | 0.0166 us | 0.0155 us |  1.00 |    0.00 |      0.3204 |      0.1602 |      0.0305 |             1.47 KB |
-                            CompileFastWithPreCreatedClosure |   5.103 us | 0.0402 us | 0.0356 us |  1.13 |    0.01 |      0.3204 |      0.1602 |      0.0305 |             1.47 KB |
-                                                 CompileFast |   7.122 us | 0.0401 us | 0.0375 us |  1.58 |    0.01 |      0.4349 |      0.2136 |      0.0305 |             1.99 KB |
-                                                     Compile | 152.286 us | 0.6110 us | 0.5715 us | 33.84 |    0.20 |      0.9766 |      0.4883 |           - |              4.7 KB |
+
              */
             [Benchmark]
             public Func<B, X> Compile() => 
@@ -92,7 +92,6 @@ namespace FastExpressionCompiler.Benchmarks
         }
 
         [MemoryDiagnoser]
-        [Orderer(SummaryOrderPolicy.FastestToSlowest)]
         public class Invocation
         {
             /*
@@ -105,6 +104,16 @@ namespace FastExpressionCompiler.Benchmarks
                                     FastCompiledLambda | 10.98 ns | 0.0434 ns | 0.0406 ns |  1.03 |      0.0068 |           - |           - |                32 B |
                FastCompiledLambdaWithPreCreatedClosure | 11.10 ns | 0.0369 ns | 0.0345 ns |  1.04 |      0.0068 |           - |           - |                32 B |
                                         CompiledLambda | 11.13 ns | 0.0620 ns | 0.0518 ns |  1.05 |      0.0068 |           - |           - |                32 B |
+
+            ## V3 
+                                                Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+            ------------------------------------------ |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
+                                      DirectLambdaCall | 11.35 ns | 0.0491 ns | 0.0460 ns |  1.01 | 0.0068 |     - |     - |      32 B |
+                                        CompiledLambda | 11.68 ns | 0.0409 ns | 0.0342 ns |  1.04 | 0.0068 |     - |     - |      32 B |
+                                    FastCompiledLambda | 11.73 ns | 0.0905 ns | 0.0802 ns |  1.04 | 0.0068 |     - |     - |      32 B |
+               FastCompiledLambdaWithPreCreatedClosure | 11.26 ns | 0.0414 ns | 0.0387 ns |  1.00 | 0.0068 |     - |     - |      32 B |
+             FastCompiledLambdaWithPreCreatedClosureLE | 11.27 ns | 0.0594 ns | 0.0556 ns |  1.00 | 0.0068 |     - |     - |      32 B |
+
 
              */
             private static readonly Func<B, X> _lambdaCompiled = _expr.Compile();
