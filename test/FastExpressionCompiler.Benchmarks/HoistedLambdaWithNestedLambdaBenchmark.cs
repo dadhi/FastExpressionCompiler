@@ -43,6 +43,13 @@ namespace FastExpressionCompiler.Benchmarks
             |     Expression_Compile | 481.33 us | 0.6025 us | 0.5031 us | 29.47 |    0.09 | 2.4414 | 0.9766 |      - |  11.95 KB |
             | Expression_CompileFast |  16.33 us | 0.0555 us | 0.0492 us |  1.00 |    0.00 | 1.0986 | 0.5493 | 0.0916 |   5.13 KB |
 
+            ## v3.0 - after @Havunen PR
+
+            |                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |     Expression_Compile | 476.06 us | 1.8019 us | 1.6855 us | 31.35 |    0.17 | 2.4414 | 0.9766 |      - |  11.95 KB |
+            | Expression_CompileFast |  15.19 us | 0.0694 us | 0.0615 us |  1.00 |    0.00 | 1.0529 | 0.5188 | 0.0916 |   4.79 KB |
+
              */
             [Benchmark]
             public Func<X> Expression_Compile() => _hoistedExpr.Compile();
@@ -81,12 +88,11 @@ namespace FastExpressionCompiler.Benchmarks
 
             ## Loading the constants as variables - PR by @Havunen
 
-            |              Method |        Mean |      Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-            |-------------------- |------------:|-----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-            |    DirectMethodCall |    51.37 ns |  0.2191 ns | 0.1942 ns |  1.07 |    0.01 | 0.0356 |     - |     - |     168 B |
-            |     Invoke_Compiled | 1,399.33 ns | 10.3260 ns | 9.1538 ns | 29.24 |    0.30 | 0.0553 |     - |     - |     264 B |
-            | Invoke_CompiledFast |    47.85 ns |  0.2711 ns | 0.2536 ns |  1.00 |    0.00 | 0.0220 |     - |     - |     104 B |
-
+            |              Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+            |-------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+            |    DirectMethodCall |    50.67 ns | 0.5062 ns | 0.4735 ns |  1.03 |    0.01 | 0.0356 |     - |     - |     168 B |
+            |     Invoke_Compiled | 1,367.85 ns | 4.3648 ns | 3.8693 ns | 27.68 |    0.12 | 0.0553 |     - |     - |     264 B |
+            | Invoke_CompiledFast |    49.41 ns | 0.2142 ns | 0.2004 ns |  1.00 |    0.00 | 0.0220 |     - |     - |     104 B |
 
              */
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();

@@ -7,7 +7,10 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            //BenchmarkRunner.Run<ArrayCopy_vs_ManualForLoop>();
+            //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
+            BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
+
+            //BenchmarkRunner.Run<ArrayCopy_vs_ManualForLoop/*>();*/
 
             //var a = new NestedLambdasVsVars();
             //a.Init();
@@ -16,7 +19,7 @@ namespace FastExpressionCompiler.Benchmarks
 
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
-            BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
+            //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
 
             //BenchmarkRunner.Run<NestedLambdaOverhead>();
 
