@@ -2247,7 +2247,7 @@ namespace FastExpressionCompiler
                         return false;
 
                     // If expression is small and there is no variables set then just read them by args and field
-                    if (constCount <= 3 && closure.ConstantsAndNestedLambdasArrayVarIndex == -1)
+                    if (constCount <= 0 && closure.ConstantsAndNestedLambdasArrayVarIndex == -1)
                     {
                         // Load constants field from Closure - the closure object is always a first argument
                         il.Emit(OpCodes.Ldarg_0);
@@ -2284,7 +2284,11 @@ namespace FastExpressionCompiler
                                 EmitLoadArrayIndex(il, i);
                                 il.Emit(OpCodes.Ldelem_Ref);
 
-                                var constVarIndex = il.DeclareLocal(constItems[i].Type).LocalIndex;
+                                var varType = constItems[i].Type;
+                                if (varType.IsValueType())
+                                    il.Emit(OpCodes.Unbox_Any, varType);
+
+                                var constVarIndex = il.DeclareLocal(varType).LocalIndex;
                                 EmitStoreLocalVariable(il, constVarIndex);
                                 constVarIndexes[i] = constVarIndex;
                             }
@@ -2293,8 +2297,6 @@ namespace FastExpressionCompiler
                         }
 
                         EmitLoadLocalVariable(il, closure.ConstantsAndNestedLambdasItemVarIndexes[constIndex]);
-                        if (exprType.IsValueType())
-                            il.Emit(OpCodes.Unbox_Any, exprType);
                     }
                 }
                 else
