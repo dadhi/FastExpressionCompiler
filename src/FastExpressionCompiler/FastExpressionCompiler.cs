@@ -274,20 +274,25 @@ namespace FastExpressionCompiler
                     if (!TryCompileNestedLambda(ref closureInfo, i, paramExprs))
                         return null;
 
-            object closureObject = null;
+            ArrayClosure closure = null;
             var closurePlusParamTypes = paramTypes;
             if ((closureInfo.Status & ClosureStatus.HasClosure) != 0)
             {
                 //System.Diagnostics.Debug.Assert(closureInfo.NonPassedParameters.Length == 0,
                 //    "Never should happen for the root lambda - all used parameter should be passed to it");
-                closureObject = new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
+                closure = new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
                 closurePlusParamTypes = PrependClosureTypeToParamTypes(paramTypes);
             }
 
             var method = new DynamicMethod(string.Empty, 
                 returnType, closurePlusParamTypes, typeof(ExpressionCompiler), skipVisibility: true);
-
             var il = method.GetILGenerator();
+
+            if (closureInfo.ShouldEmitLoadConstantsAndNestedLambdasIntoVars())
+                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
+            else
+                closureInfo.ConstantsAndNestedLambdasFirstItemIndex = -1;
+
             var parentFlags = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, parentFlags))
                 return null;
@@ -296,7 +301,7 @@ namespace FastExpressionCompiler
             if (delegateType == typeof(Delegate))
                 delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
 
-            return method.CreateDelegate(delegateType, closureObject);
+            return method.CreateDelegate(delegateType, closure);
         }
 
         private static Type[] PrependClosureTypeToParamTypes(IReadOnlyList<ParameterExpression> paramExprs)
@@ -356,8 +361,6 @@ namespace FastExpressionCompiler
         // Track the info required to build a closure object + some context information not directly related to closure.
         private struct ClosureInfo
         {
-#region Emitting context to help track the state
-
             public bool LastEmitIsAddress;
 
             // Helpers to know if a Return GotoExpression's Label should be emitted.
@@ -371,10 +374,6 @@ namespace FastExpressionCompiler
             // Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
 
-#endregion
-
-#region Closure related state
-
             public ClosureStatus Status;
 
             // Constant expressions to find an index (by reference) of constant expression from compiled expression.
@@ -387,22 +386,16 @@ namespace FastExpressionCompiler
             // All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas;
 
-            // This integer stores location of Constants.Items local variable in stack
-            public int ConstantsAndNestedLambdasArrayVarIndex;
-
-            // This integer array stores location of individual constants in expression
-            // Array is coupled with Constants LiveCountArray so that first index will hold index to first constant in stack
-            public int[] ConstantsAndNestedLambdasItemVarIndexes;
-#endregion
+            // 1. Used by `TryCollectBoundConstants` `AddConstant` to count the multiple usages of constants to decide whether to store them in variables.
+            // When closure is created - then reset `ConstantsAndNestedLambdasFirstItemIndex` to `-1` if number of usages is less than constants+lambdas count
+            // 2. Them in Emit phase this  means a stored variable index so that for constant or nested lambda `i` its variable index is `firstIndex + i`
+            public int ConstantsAndNestedLambdasFirstItemIndex;
 
             // Populates info directly with provided closure object and constants.
             public ClosureInfo(bool isUserProvided, ConstantExpression[] usedProvidedClosureConstantExpressions = null)
             {
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
-
-                ConstantsAndNestedLambdasArrayVarIndex = -1;
-                ConstantsAndNestedLambdasItemVarIndexes = null;
 
                 LastEmitIsAddress = false;
                 CurrentTryCatchFinallyIndex = -1;
@@ -414,29 +407,45 @@ namespace FastExpressionCompiler
                 {
                     Status = ClosureStatus.ToBeCollected;
                     Constants = new LiveCountArray<ConstantExpression>(Tools.Empty<ConstantExpression>());
+                    ConstantsAndNestedLambdasFirstItemIndex = 0;
                 }
                 else if (usedProvidedClosureConstantExpressions == null)
                 {
                     Status = ClosureStatus.UserProvided;
                     Constants = new LiveCountArray<ConstantExpression>(Tools.Empty<ConstantExpression>());
+                    ConstantsAndNestedLambdasFirstItemIndex = -1;
                 }
                 else
                 {
                     Status = ClosureStatus.UserProvided | ClosureStatus.HasClosure;
                     Constants = new LiveCountArray<ConstantExpression>(usedProvidedClosureConstantExpressions);
+
+                    // todo: Can be improved by specifying how to emit pre-created constants
+                    ConstantsAndNestedLambdasFirstItemIndex = -1;
                 }
             }
+
+            /// Subject
+            public bool ShouldEmitLoadConstantsAndNestedLambdasIntoVars() => 
+                ConstantsAndNestedLambdasFirstItemIndex != 0 && ConstantsAndNestedLambdasFirstItemIndex >= Constants.Count + NestedLambdas.Length;
 
             public void AddConstant(ConstantExpression expr)
             {
                 Status |= ClosureStatus.HasClosure;
 
+                // todo: Could be optimized?
                 var i = Constants.Count - 1;
-                while (i != -1 && !ReferenceEquals(Constants.Items[i], expr)) --i;
+                var constItems = Constants.Items;
+                while (i != -1 && !ReferenceEquals(constItems[i], expr)) --i;
                 if (i == -1)
                 {
                     ref var slot = ref Constants.PushSlot();
                     slot = expr;
+                }
+                else
+                {
+                    // Count the multiple usages of the same constants
+                    ++ConstantsAndNestedLambdasFirstItemIndex;
                 }
             }
 
@@ -879,7 +888,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Lambda:
                         var nestedLambdaExpr = (LambdaExpression)expr;
 
-                        // Look for the already collected lambdas if we have the same, starting from the root
+                        // Look for the already collected lambdas and if we have the same lambda, start from the root
                         var nestedLambdas = rootClosure.NestedLambdas;
                         if (nestedLambdas.Length != 0)
                         {
@@ -925,7 +934,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
-                        if (!TryCollectBoundConstants(ref closure, condExpr.Test, paramExprs, isNestedLambda, ref rootClosure) ||
+                        if (!TryCollectBoundConstants(ref closure, condExpr.Test,    paramExprs, isNestedLambda, ref rootClosure) ||
                             !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs, isNestedLambda, ref rootClosure))
                             return false;
                         expr = condExpr.IfTrue;
@@ -1110,29 +1119,33 @@ namespace FastExpressionCompiler
 
             var nestedLambdaParamTypes = Tools.GetParamTypes(nestedLambdaParamExprs);
 
-            object closureObject = null;
+            ArrayClosure nestedLambdaClosure = null;
             var closurePlusParamTypes = nestedLambdaParamTypes;
             if ((nestedLambdaClosureInfo.Status & ClosureStatus.HasClosure) != 0)
             {
                 if (nestedLambdaClosureInfo.NonPassedParameters.Length == 0)
-                    closureObject = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
+                    nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
                 closurePlusParamTypes = PrependClosureTypeToParamTypes(nestedLambdaParamTypes);
             }
 
             var nestedReturnType = nestedLambdaExpr.ReturnType;
-            var method = new DynamicMethod(
-                string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ExpressionCompiler), true);
-
+            var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ExpressionCompiler), true);
             var il = method.GetILGenerator();
+
+            if (nestedLambdaClosureInfo.ShouldEmitLoadConstantsAndNestedLambdasIntoVars())
+                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedLambdaClosureInfo);
+            else
+                nestedLambdaClosureInfo.ConstantsAndNestedLambdasFirstItemIndex = -1;
+
             var parentFlags = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(nestedLambdaExpr.Body, nestedLambdaParamExprs, il, ref nestedLambdaClosureInfo, parentFlags))
                 return false;
             il.Emit(OpCodes.Ret);
 
-            if (closureObject != null)
+            if (nestedLambdaClosure != null)
             {
                 // Include the closure as the first parameter.
-                nestedLambdaInfo.Lambda = method.CreateDelegate(Tools.GetFuncOrActionType(nestedLambdaParamTypes, nestedReturnType), closureObject);
+                nestedLambdaInfo.Lambda = method.CreateDelegate(Tools.GetFuncOrActionType(nestedLambdaParamTypes, nestedReturnType), nestedLambdaClosure);
             }
             else
             {
@@ -2234,20 +2247,20 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                var constantValueType = constantValue.GetType();
-                if (expr != null && IsClosureBoundConstant(constantValue, constantValueType.GetTypeInfo()))
+                var constValueType = constantValue.GetType();
+                if (expr != null && IsClosureBoundConstant(constantValue, constValueType.GetTypeInfo()))
                 {
-                    var constItems = closure.Constants.Items;
-                    var constCount = closure.Constants.Count;
-
+                    ref var constants = ref closure.Constants;
+                    var constItems = constants.Items;
+                    var constCount = constants.Count;
                     var constIndex = constCount - 1;
                     while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], expr))
                         --constIndex;
                     if (constIndex == -1)
                         return false;
 
-                    // If expression is small and there is no variables set then just read them by args and field
-                    if (constCount <= 0 && closure.ConstantsAndNestedLambdasArrayVarIndex == -1)
+                    // If constants usages < then 2x of constant count then load them from closure, otherwise load the stored variable
+                    if (closure.ConstantsAndNestedLambdasFirstItemIndex == -1)
                     {
                         // Load constants field from Closure - the closure object is always a first argument
                         il.Emit(OpCodes.Ldarg_0);
@@ -2256,47 +2269,12 @@ namespace FastExpressionCompiler
                         // Get array element ref by specified index
                         EmitLoadArrayIndex(il, constIndex);
                         il.Emit(OpCodes.Ldelem_Ref);
-
-                        // source type is object, ConstantsAndNestedLambdas is object array
                         if (exprType.IsValueType())
                             il.Emit(OpCodes.Unbox_Any, exprType);
                     }
                     else
                     {
-                        // When expressions are large its better to store constants into variables so they can be re-used later
-                        // Store them first if not yet
-                        if (closure.ConstantsAndNestedLambdasArrayVarIndex == -1)
-                        {
-                            // Load constants field from Closure - the closure object is always a first argument
-                            il.Emit(OpCodes.Ldarg_0);
-                            il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
-
-                            var closureItemsVarLoc = il.DeclareLocal(typeof(object[])).LocalIndex;
-                            EmitStoreLocalVariable(il, closureItemsVarLoc); // Store items array to variable
-                            closure.ConstantsAndNestedLambdasArrayVarIndex = closureItemsVarLoc;
-
-                            // Store to variable
-                            var constVarIndexes = new int[constCount];
-                            for (var i = 0; i < constCount; i++)
-                            {
-                                // Store variable location for easy access later
-                                EmitLoadLocalVariable(il, closureItemsVarLoc);
-                                EmitLoadArrayIndex(il, i);
-                                il.Emit(OpCodes.Ldelem_Ref);
-
-                                var varType = constItems[i].Type;
-                                if (varType.IsValueType())
-                                    il.Emit(OpCodes.Unbox_Any, varType);
-
-                                var constVarIndex = il.DeclareLocal(varType).LocalIndex;
-                                EmitStoreLocalVariable(il, constVarIndex);
-                                constVarIndexes[i] = constVarIndex;
-                            }
-
-                            closure.ConstantsAndNestedLambdasItemVarIndexes = constVarIndexes;
-                        }
-
-                        EmitLoadLocalVariable(il, closure.ConstantsAndNestedLambdasItemVarIndexes[constIndex]);
+                        EmitLoadLocalVariable(il, closure.ConstantsAndNestedLambdasFirstItemIndex + constIndex);
                     }
                 }
                 else
@@ -2315,75 +2293,75 @@ namespace FastExpressionCompiler
                     }
 
                     // get raw enum type to light
-                    if (constantValueType.GetTypeInfo().IsEnum)
-                        constantValueType = Enum.GetUnderlyingType(constantValueType);
+                    if (constValueType.GetTypeInfo().IsEnum)
+                        constValueType = Enum.GetUnderlyingType(constValueType);
 
-                    if (constantValueType == typeof(int))
+                    if (constValueType == typeof(int))
                     {
                         EmitLoadConstantInt(il, (int)constantValue);
                     }
-                    else if (constantValueType == typeof(char))
+                    else if (constValueType == typeof(char))
                     {
                         EmitLoadConstantInt(il, (char)constantValue);
                     }
-                    else if (constantValueType == typeof(short))
+                    else if (constValueType == typeof(short))
                     {
                         EmitLoadConstantInt(il, (short)constantValue);
                     }
-                    else if (constantValueType == typeof(byte))
+                    else if (constValueType == typeof(byte))
                     {
                         EmitLoadConstantInt(il, (byte)constantValue);
                     }
-                    else if (constantValueType == typeof(ushort))
+                    else if (constValueType == typeof(ushort))
                     {
                         EmitLoadConstantInt(il, (ushort)constantValue);
                     }
-                    else if (constantValueType == typeof(sbyte))
+                    else if (constValueType == typeof(sbyte))
                     {
                         EmitLoadConstantInt(il, (sbyte)constantValue);
                     }
-                    else if (constantValueType == typeof(uint))
+                    else if (constValueType == typeof(uint))
                     {
                         unchecked
                         {
                             EmitLoadConstantInt(il, (int)(uint)constantValue);
                         }
                     }
-                    else if (constantValueType == typeof(long))
+                    else if (constValueType == typeof(long))
                     {
                         il.Emit(OpCodes.Ldc_I8, (long)constantValue);
                     }
-                    else if (constantValueType == typeof(ulong))
+                    else if (constValueType == typeof(ulong))
                     {
                         unchecked
                         {
                             il.Emit(OpCodes.Ldc_I8, (long)(ulong)constantValue);
                         }
                     }
-                    else if (constantValueType == typeof(float))
+                    else if (constValueType == typeof(float))
                     {
                         il.Emit(OpCodes.Ldc_R4, (float)constantValue);
                     }
-                    else if (constantValueType == typeof(double))
+                    else if (constValueType == typeof(double))
                     {
                         il.Emit(OpCodes.Ldc_R8, (double)constantValue);
                     }
-                    else if (constantValueType == typeof(bool))
+                    else if (constValueType == typeof(bool))
                     {
                         il.Emit((bool)constantValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                     }
-                    else if (constantValueType == typeof(IntPtr))
+                    else if (constValueType == typeof(IntPtr))
                     {
                         il.Emit(OpCodes.Ldc_I8, ((IntPtr)constantValue).ToInt64());
                     }
-                    else if (constantValueType == typeof(UIntPtr))
+                    else if (constValueType == typeof(UIntPtr))
                     {
                         unchecked
                         {
                             il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)constantValue).ToUInt64());
                         }
                     }
-                    else if (constantValueType == typeof(decimal))
+                    else if (constValueType == typeof(decimal))
                     {
                         EmitDecimalConstant((decimal)constantValue, il);
                     }
@@ -2395,10 +2373,52 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
-                else if (exprType == typeof(object) && constantValueType.IsValueType())
+                else if (exprType == typeof(object) && constValueType.IsValueType())
                     il.Emit(OpCodes.Box, constantValue.GetType()); // using normal type for Enum instead of underlying type
 
                 return true;
+            }
+
+            internal static void EmitLoadConstantsAndNestedLambdasIntoVars(ILGenerator il, ref ClosureInfo closure)
+            {
+                // Load constants array field from Closure - the closure object is always a first argument
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
+
+                ref var constants = ref closure.Constants;
+                var constItems = constants.Items;
+                var constCount = constants.Count;
+                for (var i = 0; i < constCount; i++)
+                {
+                    il.Emit(OpCodes.Dup); // duplicate `ArrayClosure.ConstantsAndNestedLambdasField` on a stack
+                    EmitLoadArrayIndex(il, i);
+                    il.Emit(OpCodes.Ldelem_Ref);
+
+                    var varType = constItems[i].Type;
+                    if (varType.IsValueType())
+                        il.Emit(OpCodes.Unbox_Any, varType);
+
+                    var varIndex = il.DeclareLocal(varType).LocalIndex;
+
+                    // Save the first variable index so that for constant `i` its variable index is `firstIndex + i`
+                    if (i == 0)
+                        closure.ConstantsAndNestedLambdasFirstItemIndex = varIndex;
+
+                    EmitStoreLocalVariable(il, varIndex);
+                }
+
+                var nestedLambdas = closure.NestedLambdas;
+                for (var i = 0; i < nestedLambdas.Length; i++)
+                {
+                    il.Emit(OpCodes.Dup); // duplicate `ArrayClosure.ConstantsAndNestedLambdasField` on a stack
+                    EmitLoadArrayIndex(il, constCount + i);
+                    il.Emit(OpCodes.Ldelem_Ref);
+
+                    var varType = nestedLambdas[i].Lambda.GetType();
+                    EmitStoreLocalVariable(il, il.DeclareLocal(varType).LocalIndex);
+                }
+
+                il.Emit(OpCodes.Pop); // remove the last `ArrayClosure.ConstantsAndNestedLambdasField` from stack
             }
 
             private static void EmitDecimalConstant(decimal value, ILGenerator il)
@@ -3121,23 +3141,22 @@ namespace FastExpressionCompiler
 
                 var nestedLambdaInfo = closure.NestedLambdas[outerNestedLambdaIndex];
                 var nestedLambda = nestedLambdaInfo.Lambda;
-                var constantsCount = closure.Constants.Count;
+                var nestedLambdaInClosureIndex = outerNestedLambdaIndex + closure.Constants.Count;
 
                 // When there are no variables declared read first argument and field
-                if (closure.ConstantsAndNestedLambdasArrayVarIndex == -1)
+                if (closure.ConstantsAndNestedLambdasFirstItemIndex == -1)
                 {
                     // Load constant from Closure - closure object is always a first argument
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
+                    EmitLoadArrayIndex(il, nestedLambdaInClosureIndex);
+                    il.Emit(OpCodes.Ldelem_Ref); // load the array item object
                 }
                 else
                 {
                     // Fast path, load local variable
-                    EmitLoadLocalVariable(il, closure.ConstantsAndNestedLambdasArrayVarIndex);
+                    EmitLoadLocalVariable(il, closure.ConstantsAndNestedLambdasFirstItemIndex + nestedLambdaInClosureIndex);
                 }
-
-                EmitLoadArrayIndex(il, constantsCount + outerNestedLambdaIndex);
-                il.Emit(OpCodes.Ldelem_Ref); // load the array item object
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
                 ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
@@ -3148,16 +3167,27 @@ namespace FastExpressionCompiler
                 //-------------------------------------------------------------------
                 // For the lambda with non-passed parameters (or variables) in closure
                 // we have loaded `NestedLambdaWithConstantsAndNestedLambdas` pair.
-                var pairVar = il.DeclareLocal(typeof(NestedLambdaWithConstantsAndNestedLambdas));
-                EmitStoreLocalVariable(il, pairVar.LocalIndex);
+                if (closure.ConstantsAndNestedLambdasFirstItemIndex == -1)
+                {
+                    var nestedLambdaAndClosureItemsVarIndex = il.DeclareLocal(typeof(NestedLambdaWithConstantsAndNestedLambdas)).LocalIndex;
+                    EmitStoreLocalVariable(il, nestedLambdaAndClosureItemsVarIndex);
 
-                // - load the `NestedLambda` field
-                EmitLoadLocalVariable(il, pairVar.LocalIndex);
-                il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
+                    // - load the `NestedLambda` field
+                    EmitLoadLocalVariable(il, nestedLambdaAndClosureItemsVarIndex);
+                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
 
-                // - load the `ConstantsAndNestedLambdas` field
-                EmitLoadLocalVariable(il, pairVar.LocalIndex);
-                il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
+                    // - load the `ConstantsAndNestedLambdas` field
+                    EmitLoadLocalVariable(il, nestedLambdaAndClosureItemsVarIndex);
+                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
+                }
+                else
+                {
+                    // we are already have variable loaded
+                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
+
+                    EmitLoadLocalVariable(il, closure.ConstantsAndNestedLambdasFirstItemIndex + nestedLambdaInClosureIndex);
+                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
+                }
 
                 // - create `NonPassedParameters` array
                 EmitLoadArrayIndex(il, nestedNonPassedParams.Length); // size of array

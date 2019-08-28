@@ -34,6 +34,13 @@ namespace FastExpressionCompiler.Benchmarks
             |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
             |     Compile | 406.719 us | 1.4416 us | 1.2780 us | 55.79 |    0.28 | 0.9766 | 0.4883 |      - |   6.26 KB |
             | CompileFast |   7.290 us | 0.0321 us | 0.0285 us |  1.00 |    0.00 | 0.4501 | 0.2213 | 0.0305 |   2.06 KB |
+
+            ## Optimizing storing closure constants into variables
+
+            |      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |     Compile | 410.536 us | 0.4969 us | 0.4404 us | 57.82 |    0.21 | 0.9766 | 0.4883 |      - |   6.26 KB |
+            | CompileFast |   7.100 us | 0.0271 us | 0.0240 us |  1.00 |    0.00 | 0.4272 | 0.2136 | 0.0305 |   1.96 KB |
             */
 
             private readonly Expression<Func<A>> _expr = CreateExpression();
@@ -56,6 +63,13 @@ namespace FastExpressionCompiler.Benchmarks
             |-------------------- |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
             |     Invoke_Compiled | 33.46 ns | 0.1606 ns | 0.1341 ns |  1.07 | 0.0339 |     - |     - |     160 B |
             | Invoke_CompiledFast | 31.36 ns | 0.1900 ns | 0.1778 ns |  1.00 | 0.0339 |     - |     - |     160 B |
+
+            ## Optimizing storing closure constants into variables
+
+            |              Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+            |-------------------- |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
+            |     Invoke_Compiled | 35.27 ns | 0.1923 ns | 0.1799 ns |  1.08 | 0.0339 |     - |     - |     160 B |
+            | Invoke_CompiledFast | 32.54 ns | 0.0633 ns | 0.0592 ns |  1.00 | 0.0339 |     - |     - |     160 B |
             */
 
             private readonly Func<A> _compiled     = CreateExpression().Compile();

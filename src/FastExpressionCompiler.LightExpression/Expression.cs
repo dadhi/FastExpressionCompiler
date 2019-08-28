@@ -133,10 +133,18 @@ namespace FastExpressionCompiler.LightExpression
 
         public static ConstantExpression Constant(object value, Type type = null)
         {
+            // todo: optimize by creating the `SameAsValueTypeConstantExpr`
+            //if (value != null && value.GetType() == type)
+            //{
+            //    ;
+            //}
+
             if (value is bool b)
                 return b ? _trueExpr : _falseExpr;
+
             if (type == null)
                 return value != null ? new ConstantExpression(value, value.GetType()) : _nullExpr;
+
             return new ConstantExpression(value, type);
         }
 
