@@ -39,8 +39,8 @@ namespace FastExpressionCompiler.Benchmarks
 
             |      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
             |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-            |     Compile | 410.536 us | 0.4969 us | 0.4404 us | 57.82 |    0.21 | 0.9766 | 0.4883 |      - |   6.26 KB |
-            | CompileFast |   7.100 us | 0.0271 us | 0.0240 us |  1.00 |    0.00 | 0.4272 | 0.2136 | 0.0305 |   1.96 KB |
+            |     Compile | 407.657 us | 0.9090 us | 0.8058 us | 58.66 |    0.32 | 0.9766 | 0.4883 |      - |   6.26 KB |
+            | CompileFast |   6.947 us | 0.0392 us | 0.0367 us |  1.00 |    0.00 | 0.4272 | 0.2136 | 0.0305 |   1.96 KB |
             */
 
             private readonly Expression<Func<A>> _expr = CreateExpression();

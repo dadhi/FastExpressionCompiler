@@ -31,7 +31,6 @@ namespace FastExpressionCompiler.Benchmarks
     ///           ActivatorCreateInstance | Core |    Core | 1.503 us | 0.0162 us | 0.0152 us |   1.00 |     0.00 | 0.2346 |      - |      - |   1.09 KB |
     /// 
     /// </summary>
-    [CoreJob, ClrJob]
     [MemoryDiagnoser]
     public class FEC_vs_ManualEmit_vs_Activator
     {

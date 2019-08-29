@@ -38,17 +38,17 @@ namespace FastExpressionCompiler.Benchmarks
 
             ## v3.0 - after fixing the nested lambda
 
-            |                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-            |----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-            |     Expression_Compile | 481.33 us | 0.6025 us | 0.5031 us | 29.47 |    0.09 | 2.4414 | 0.9766 |      - |  11.95 KB |
-            | Expression_CompileFast |  16.33 us | 0.0555 us | 0.0492 us |  1.00 |    0.00 | 1.0986 | 0.5493 | 0.0916 |   5.13 KB |
+                             Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            ----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+                 Expression_Compile | 481.33 us | 0.6025 us | 0.5031 us | 29.47 |    0.09 | 2.4414 | 0.9766 |      - |  11.95 KB |
+             Expression_CompileFast |  16.33 us | 0.0555 us | 0.0492 us |  1.00 |    0.00 | 1.0986 | 0.5493 | 0.0916 |   5.13 KB |
 
-            ## v3.0 - after @Havunen PR
+            ## v3.0
 
-            |                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-            |----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-            |     Expression_Compile | 476.06 us | 1.8019 us | 1.6855 us | 31.35 |    0.17 | 2.4414 | 0.9766 |      - |  11.95 KB |
-            | Expression_CompileFast |  15.19 us | 0.0694 us | 0.0615 us |  1.00 |    0.00 | 1.0529 | 0.5188 | 0.0916 |   4.79 KB |
+                             Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            ----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+                 Expression_Compile | 470.00 us | 1.3111 us | 1.1622 us | 29.65 |    0.26 | 2.4414 | 0.9766 |      - |  11.95 KB |
+             Expression_CompileFast |  15.86 us | 0.1507 us | 0.1410 us |  1.00 |    0.00 | 1.0376 | 0.5188 | 0.0305 |   4.77 KB |
 
              */
             [Benchmark]
@@ -86,15 +86,15 @@ namespace FastExpressionCompiler.Benchmarks
             |     Invoke_Compiled | 1,385.24 ns | 2.8196 ns | 2.6375 ns | 25.10 |    0.33 | 0.0553 |     - |     - |     264 B |
             | Invoke_CompiledFast |    55.20 ns | 0.8883 ns | 0.7875 ns |  1.00 |    0.00 | 0.0220 |     - |     - |     104 B |
 
-            ## Loading the constants as variables - PR by @Havunen
+            ## v3.0
 
             |              Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
             |-------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-            |    DirectMethodCall |    50.67 ns | 0.5062 ns | 0.4735 ns |  1.03 |    0.01 | 0.0356 |     - |     - |     168 B |
-            |     Invoke_Compiled | 1,367.85 ns | 4.3648 ns | 3.8693 ns | 27.68 |    0.12 | 0.0553 |     - |     - |     264 B |
-            | Invoke_CompiledFast |    49.41 ns | 0.2142 ns | 0.2004 ns |  1.00 |    0.00 | 0.0220 |     - |     - |     104 B |
+            |    DirectMethodCall |    49.95 ns | 0.0873 ns | 0.0817 ns |  1.06 |    0.00 | 0.0356 |     - |     - |     168 B |
+            |     Invoke_Compiled | 1,355.80 ns | 4.6952 ns | 4.3919 ns | 28.75 |    0.10 | 0.0553 |     - |     - |     264 B |
+            | Invoke_CompiledFast |    47.17 ns | 0.0356 ns | 0.0316 ns |  1.00 |    0.00 | 0.0220 |     - |     - |     104 B |
 
-             */
+            */
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
             private static readonly Func<X> _lambdaCompiledFast = _hoistedExpr.CompileFast();
 

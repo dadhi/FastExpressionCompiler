@@ -58,7 +58,7 @@ namespace FastExpressionCompiler.Benchmarks
                 CompileFast_LightExpression |   9.652 us | 0.0787 us | 0.0736 us |  0.82 |    0.01 |      0.7019 |      0.3510 |      0.0305 |             3.23 KB |
  CompileFast_LightExpression_WithoutClosure |   8.686 us | 0.0743 us | 0.0620 us |  0.74 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.09 KB |
  
-        ## More in-lining and simplifications - probably the main impact is in-lining in the TryEmit switch; plus remove some string allocation when looking for property setter
+## More in-lining and simplifications - probably the main impact is in-lining in the TryEmit switch; plus remove some string allocation when looking for property setter
 
                                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
 ------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
@@ -68,7 +68,7 @@ namespace FastExpressionCompiler.Benchmarks
                 CompileFast_LightExpression |   9.498 us | 0.0640 us | 0.0598 us |  0.83 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.13 KB |
  CompileFast_LightExpression_WithoutClosure |   8.682 us | 0.0880 us | 0.0735 us |  0.76 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.98 KB |
 
-        ## Changing baseline to CompileFast_LightExpression
+## Changing baseline to CompileFast_LightExpression
 
                                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
 ------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
@@ -78,17 +78,7 @@ namespace FastExpressionCompiler.Benchmarks
                  CompileFast_WithoutClosure |  10.453 us | 0.0533 us | 0.0498 us |  1.10 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.98 KB |
  CompileFast_LightExpression_WithoutClosure |   8.564 us | 0.0408 us | 0.0341 us |  0.90 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.98 KB |
 
-        ## Some improvements But fluctuation in Compile
-
-                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-                                    Compile | 252.184 us | 1.3073 us | 1.2228 us | 28.21 |    0.19 |      1.9531 |      0.9766 |           - |            10.93 KB |
-                                CompileFast |  10.880 us | 0.0376 us | 0.0352 us |  1.22 |    0.01 |      0.6714 |      0.3357 |      0.0305 |             3.08 KB |
-                CompileFast_LightExpression |   8.940 us | 0.0649 us | 0.0575 us |  1.00 |    0.00 |      0.6714 |      0.3357 |      0.0305 |             3.08 KB |
-                 CompileFast_WithoutClosure |   9.454 us | 0.0593 us | 0.0554 us |  1.06 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.93 KB |
- CompileFast_LightExpression_WithoutClosure |   8.057 us | 0.0526 us | 0.0439 us |  0.90 |    0.01 |      0.6409 |      0.3204 |      0.0305 |             2.93 KB |
-
-        ## Changing BlockInfo to struct
+## Changing BlockInfo to struct
 
                                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
 ------------------------------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
@@ -98,7 +88,7 @@ namespace FastExpressionCompiler.Benchmarks
                  CompileFast_WithoutClosure |   9.530 us | 0.0917 us | 0.0858 us |  1.06 |    0.01 |      0.6256 |      0.3052 |      0.0305 |             2.88 KB |
  CompileFast_LightExpression_WithoutClosure |   8.024 us | 0.0447 us | 0.0349 us |  0.90 |    0.01 |      0.6256 |      0.3052 |      0.0305 |             2.88 KB |
 
-        ## Updated BDN to 0.11.5
+## Updated BDN to 0.11.5
                                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 ------------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
                                     Compile | 254.188 us | 1.8270 us | 1.7090 us | 27.01 |    0.35 | 1.9531 | 0.9766 |      - |  10.93 KB |
@@ -106,6 +96,16 @@ namespace FastExpressionCompiler.Benchmarks
                 CompileFast_LightExpression |   9.412 us | 0.1053 us | 0.0933 us |  1.00 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
                  CompileFast_WithoutClosure |  10.073 us | 0.0732 us | 0.0649 us |  1.07 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
  CompileFast_LightExpression_WithoutClosure |   8.062 us | 0.0471 us | 0.0393 us |  0.86 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
+
+## V3
+
+|                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                                    Compile | 286.641 us | 0.7893 us | 0.7383 us | 30.85 |    0.13 | 1.9531 | 0.9766 |      - |  10.93 KB |
+|                                CompileFast |  10.521 us | 0.0412 us | 0.0365 us |  1.13 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
+|                CompileFast_LightExpression |   9.292 us | 0.0289 us | 0.0256 us |  1.00 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
+|                 CompileFast_WithoutClosure |   9.682 us | 0.0448 us | 0.0397 us |  1.04 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
+| CompileFast_LightExpression_WithoutClosure |   8.287 us | 0.0402 us | 0.0376 us |  0.89 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
 
         */
         [MemoryDiagnoser]
@@ -203,6 +203,7 @@ namespace FastExpressionCompiler.Benchmarks
                          Invoke_CompiledFast | 8.235 ns | 0.0529 ns | 0.0469 ns |  1.00 |      0.0051 |           - |           - |                24 B |
          Invoke_CompiledFast_LightExpression | 8.219 ns | 0.0264 ns | 0.0247 ns |  1.00 |      0.0051 |           - |           - |                24 B |
         */
+
         [MemoryDiagnoser]
         public class Invoke_compiled_delegate
         {

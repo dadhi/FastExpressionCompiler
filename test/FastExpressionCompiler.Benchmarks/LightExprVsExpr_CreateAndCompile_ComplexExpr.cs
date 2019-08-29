@@ -1,13 +1,10 @@
 ﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Order;
 using FastExpressionCompiler.LightExpression.UnitTests;
 using LE = FastExpressionCompiler.LightExpression.ExpressionCompiler;
 
 namespace FastExpressionCompiler.Benchmarks
 {
     [MemoryDiagnoser]
-    //[Orderer(SummaryOrderPolicy.FastestToSlowest)]
-    //[ClrJob, CoreJob]
     public class LightExprVsExpr_CreateAndCompile_ComplexExpr
     {
         /**
@@ -33,6 +30,14 @@ namespace FastExpressionCompiler.Benchmarks
          CreateLightExpression_and_CompileFast |  11.82 us | 0.0735 us | 0.0652 us |  1.00 |    0.00 |      1.5259 |      0.7629 |      0.0458 |             7.02 KB |
               CreateExpression_and_CompileFast |  17.41 us | 0.2181 us | 0.2040 us |  1.47 |    0.02 |      1.5259 |      0.7629 |      0.0305 |             7.11 KB |
                   CreateExpression_and_Compile | 239.20 us | 1.5860 us | 1.4835 us | 20.24 |    0.15 |      1.4648 |      0.7324 |           - |             7.16 KB |
+
+        ## v3.0
+
+                                        Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        -------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+                  CreateExpression_and_Compile | 258.60 us | 0.8574 us | 0.8020 us | 22.21 |    0.07 | 1.4648 | 0.4883 |      - |   7.16 KB |
+              CreateExpression_and_CompileFast |  16.93 us | 0.0623 us | 0.0583 us |  1.45 |    0.01 | 1.5259 | 0.7629 | 0.0305 |   7.11 KB |
+         CreateLightExpression_and_CompileFast |  11.65 us | 0.0347 us | 0.0325 us |  1.00 |    0.00 | 1.5259 | 0.7629 | 0.0458 |   7.03 KB |
          */
 
         [Benchmark]
@@ -49,7 +54,6 @@ namespace FastExpressionCompiler.Benchmarks
     }
 
     [MemoryDiagnoser]
-    //[Orderer(SummaryOrderPolicy.FastestToSlowest)]
     public class LightExprVsExpr_Create_ComplexExpr
     {
         /*

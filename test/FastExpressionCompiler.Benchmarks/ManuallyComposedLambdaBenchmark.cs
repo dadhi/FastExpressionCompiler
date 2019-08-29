@@ -62,13 +62,13 @@ namespace FastExpressionCompiler.Benchmarks
              CompileFastWithPreCreatedClosureLightExpression |   4.892 us | 0.0965 us | 0.0948 us |  1.00 |    0.00 |      0.3281 |      0.1602 |      0.0305 |              1.5 KB |
 
             ## v3.0
+
                                                       Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
             ------------------------------------------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-                                                     Compile | 180.105 us | 1.4696 us | 1.3746 us | 45.93 |    0.41 | 0.9766 | 0.4883 |      - |    4.7 KB |
-                                                 CompileFast |   4.333 us | 0.0628 us | 0.0588 us |  1.10 |    0.02 | 0.2975 | 0.1450 | 0.0229 |   1.38 KB |
-                            CompileFastWithPreCreatedClosure |   4.343 us | 0.0539 us | 0.0450 us |  1.11 |    0.01 | 0.2899 | 0.1450 | 0.0229 |   1.34 KB |
-             CompileFastWithPreCreatedClosureLightExpression |   3.922 us | 0.0325 us | 0.0304 us |  1.00 |    0.00 | 0.2899 | 0.1450 | 0.0229 |   1.34 KB |
-
+                                                     Compile | 179.369 us | 0.7382 us | 0.6905 us | 46.26 |    0.35 | 0.9766 | 0.4883 |      - |    4.7 KB |
+                                                 CompileFast |   4.273 us | 0.0268 us | 0.0250 us |  1.10 |    0.01 | 0.2975 | 0.1450 | 0.0229 |   1.38 KB |
+                            CompileFastWithPreCreatedClosure |   4.279 us | 0.0168 us | 0.0149 us |  1.10 |    0.01 | 0.2899 | 0.1373 | 0.0305 |   1.34 KB |
+             CompileFastWithPreCreatedClosureLightExpression |   3.877 us | 0.0369 us | 0.0327 us |  1.00 |    0.00 | 0.2899 | 0.1450 |      - |   1.34 KB |
 
              */
             [Benchmark]

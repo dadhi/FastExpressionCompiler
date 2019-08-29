@@ -8,7 +8,7 @@ namespace FastExpressionCompiler.Benchmarks
         public static void Main()
         {
             //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
-            BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
+            //BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<ArrayCopy_vs_ManualForLoop/*>();*/
 

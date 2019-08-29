@@ -51,6 +51,13 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 | Expression_with_sub_expressions_CompiledFast |  32.13 us | 0.2413 us | 0.2257 us |  1.00 |    0.00 | 2.0752 | 1.0376 | 0.1831 |   9.53 KB |
 |     Expression_with_sub_expressions_Compiled | 627.41 us | 4.8732 us | 4.5584 us | 19.53 |    0.18 | 5.8594 | 2.9297 |      - |  27.04 KB |
 
+#### Optimizing the use of closure variables
+
+|                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|--------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+| Expression_with_sub_expressions_CompiledFast |  31.92 us | 0.3207 us | 0.3000 us |  1.00 |    0.00 | 2.0752 | 1.0376 | 0.1831 |    9.5 KB |
+|     Expression_with_sub_expressions_Compiled | 628.53 us | 1.9982 us | 1.8691 us | 19.69 |    0.18 | 5.8594 | 2.9297 |      - |  27.04 KB |
+
 ### Invocation
 
 |                                                                 Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
@@ -69,29 +76,10 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 
 #### Removing cast-class and loading constants as variables - PR by @Havunen
 
-|                                       Method |        Mean |     Error |    StdDev |  Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|--------------------------------------------- |------------:|----------:|----------:|-------:|--------:|-------:|------:|------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |    10.80 ns | 0.0423 ns | 0.0395 ns |   1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
-|     Expression_with_sub_expressions_Compiled | 1,083.80 ns | 3.2282 ns | 3.0197 ns | 100.36 |    0.50 | 0.0458 |     - |     - |     224 B |
-
-
-### Compilation + Invocation
-
-|                                                                 Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 | Gen 2 | Allocated |
-|----------------------------------------------------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|-------:|------:|----------:|
-|                           Expression_with_sub_expressions_CompiledFast |   461.5 us | 2.955 us | 2.764 us |  1.00 |    0.00 | 4.3945 | 1.9531 |     - |  20.71 KB |
-|                               Expression_with_sub_expressions_Compiled | 1,453.7 us | 7.153 us | 6.691 us |  3.15 |    0.03 | 5.8594 | 1.9531 |     - |  27.88 KB |
-| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |   436.5 us | 3.835 us | 3.587 us |  0.95 |    0.01 | 2.4414 | 0.9766 |     - |  12.89 KB |
-|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,304.5 us | 9.004 us | 7.519 us |  2.83 |    0.03 | 3.9063 | 1.9531 |     - |  22.04 KB |
-
-#### After fixing the nested lambdas and making them compile once
-
-|                                                                 Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 | Gen 2 | Allocated |
-|----------------------------------------------------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|-------:|------:|----------:|
-|                           Expression_with_sub_expressions_CompiledFast |   412.2 us | 1.778 us | 1.663 us |  1.00 |    0.00 | 1.9531 | 0.9766 |     - |  10.27 KB |
-|                               Expression_with_sub_expressions_Compiled | 1,451.9 us | 8.963 us | 8.384 us |  3.52 |    0.03 | 5.8594 | 1.9531 |     - |  27.88 KB |
-| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |   727.8 us | 4.098 us | 3.422 us |  1.76 |    0.01 | 1.9531 | 0.9766 |     - |   10.6 KB |
-|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,297.8 us | 6.896 us | 6.450 us |  3.15 |    0.02 | 3.9063 | 1.9531 |     - |  22.04 KB |
+|                                       Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|--------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+| Expression_with_sub_expressions_CompiledFast |    11.01 ns | 0.0216 ns | 0.0202 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
+|     Expression_with_sub_expressions_Compiled | 1,090.85 ns | 0.9204 ns | 0.8159 ns | 99.03 |    0.20 | 0.0458 |     - |     - |     224 B |
 
 */
         private Expression<Func<A>> _expr, _exprWithVars;
@@ -114,16 +102,16 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
         [Benchmark(Baseline = true)]
         public object Expression_with_sub_expressions_CompiledFast()
         {
-            //return _expr.CompileFast(true);
-            return _exprCompiledFast();
+            return _expr.CompileFast(true);
+            //return _exprCompiledFast();
             //return _expr.CompileFast(true).Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
-            //return _expr.Compile();
-            return _exprCompiled();
+            return _expr.Compile();
+            //return _exprCompiled();
             //return _expr.Compile().Invoke();
         }
 

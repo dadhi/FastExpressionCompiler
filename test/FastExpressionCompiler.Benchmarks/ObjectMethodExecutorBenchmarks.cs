@@ -80,6 +80,16 @@ namespace FastExpressionCompiler.Benchmarks
                                 CompileFast |   104.74 us | 0.9695 us | 0.8594 us |  1.58 |    0.02 |      6.2256 |      3.0518 |      0.4883 |            28.74 KB |
            CompileFastWithPreCreatedClosure |    99.44 us | 1.0721 us | 1.0029 us |  1.50 |    0.02 |      5.9814 |      2.9297 |      0.3662 |            27.83 KB |
          CompileFastWithPreCreatedClosureLE |    66.22 us | 0.4996 us | 0.4673 us |  1.00 |    0.00 |      6.2256 |      3.0518 |      0.4883 |               29 KB |
+
+        ## V3
+
+                                     Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        ----------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+                                    Compile | 1,529.77 us | 3.4689 us | 3.2449 us | 24.66 |    0.07 | 7.8125 | 3.9063 |      - |  42.17 KB |
+                                CompileFast |    90.87 us | 0.3347 us | 0.2967 us |  1.46 |    0.01 | 5.7373 | 2.8076 | 0.3662 |  26.67 KB |
+           CompileFastWithPreCreatedClosure |    90.34 us | 0.2488 us | 0.2327 us |  1.46 |    0.01 | 5.7373 | 2.8076 | 0.3662 |  26.51 KB |
+         CompileFastWithPreCreatedClosureLE |    62.06 us | 0.2108 us | 0.1869 us |  1.00 |    0.00 | 5.9814 | 2.9297 | 0.3662 |  27.92 KB |
+
          */
 
         public async Task<string> Foo(int a, int b) => await Task.FromResult((a + b).ToString());
@@ -149,6 +159,14 @@ namespace FastExpressionCompiler.Benchmarks
                                 CompiledFast | 137.4 ns | 0.6253 ns | 0.5543 ns |  1.00 |      0.0422 |           - |           - |               200 B |
            CompiledFastWithPreCreatedClosure | 138.2 ns | 0.5283 ns | 0.4942 ns |  1.01 |      0.0422 |           - |           - |               200 B |
                                     Compiled | 145.0 ns | 0.4992 ns | 0.4670 ns |  1.06 |      0.0422 |           - |           - |               200 B |
+
+        ## V3
+                                      Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+        ------------------------------------ |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
+         CompiledFastWithPreCreatedClosureLE | 132.5 ns | 0.6429 ns | 0.6013 ns |  1.00 | 0.0422 |     - |     - |     200 B |
+           CompiledFastWithPreCreatedClosure | 134.0 ns | 0.1357 ns | 0.1203 ns |  1.01 | 0.0422 |     - |     - |     200 B |
+                                CompiledFast | 135.3 ns | 0.4344 ns | 0.3628 ns |  1.02 | 0.0422 |     - |     - |     200 B |
+                                    Compiled | 140.2 ns | 0.2053 ns | 0.1820 ns |  1.06 | 0.0422 |     - |     - |     200 B |
 
          */
         public async Task<string> Foo(int a, int b) => await Task.FromResult((a + b).ToString());

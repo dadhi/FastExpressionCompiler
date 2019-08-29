@@ -48,6 +48,12 @@ namespace FastExpressionCompiler.Benchmarks
                  Compile | 218.716 us | 1.1565 us | 1.0252 us | 30.12 |    0.17 |      0.7324 |      0.2441 |           - |             4.45 KB |
              CompileFast |   7.255 us | 0.0383 us | 0.0359 us |  1.00 |    0.00 |      0.4883 |      0.2441 |      0.0381 |             2.23 KB |
 
+            ## v3.0
+            
+                  Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            ------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+                 Compile | 246.296 us | 0.5909 us | 0.5527 us | 52.89 |    0.30 | 0.7324 | 0.2441 |      - |   4.45 KB |
+             CompileFast |   4.657 us | 0.0273 us | 0.0242 us |  1.00 |    0.00 | 0.3357 | 0.1678 | 0.0229 |   1.55 KB |
              */
 
             [Benchmark]
@@ -84,6 +90,14 @@ namespace FastExpressionCompiler.Benchmarks
              DirectConstructorCall | 5.012 ns | 0.0330 ns | 0.0308 ns |  0.82 |      0.0068 |           - |           - |                32 B |
                     CompiledLambda | 9.632 ns | 0.0411 ns | 0.0384 ns |  1.57 |      0.0068 |           - |           - |                32 B |
                 FastCompiledLambda | 6.131 ns | 0.0348 ns | 0.0308 ns |  1.00 |      0.0068 |           - |           - |                32 B |
+
+            ## v3.0
+            
+                            Method |      Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+            ---------------------- |----------:|----------:|----------:|------:|-------:|------:|------:|----------:|
+             DirectConstructorCall |  5.939 ns | 0.0134 ns | 0.0112 ns |  0.77 | 0.0068 |     - |     - |      32 B |
+                    CompiledLambda | 11.880 ns | 0.0291 ns | 0.0243 ns |  1.54 | 0.0068 |     - |     - |      32 B |
+                FastCompiledLambda |  7.723 ns | 0.0255 ns | 0.0239 ns |  1.00 | 0.0068 |     - |     - |      32 B |
 
              */
 
