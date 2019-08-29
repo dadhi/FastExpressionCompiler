@@ -885,10 +885,16 @@ namespace FastExpressionCompiler
                             if (foundLambdaInfo != null)
                             {
                                 // if the lambda is not found on the same level, then add it
-                                if (foundInLambdas != closure.NestedLambdas)
-                                    closure.AddNestedLambda(foundLambdaInfo);
-                                else
+                                if (foundInLambdas == closure.NestedLambdas)
                                     ++closure.ConstantsAndNestedLambdasMultipleUsageCount;
+                                else
+                                {
+                                    closure.AddNestedLambda(foundLambdaInfo);
+                                    var foundLambdaNonPassedParams = foundLambdaInfo.ClosureInfo.NonPassedParameters;
+                                    if (foundLambdaNonPassedParams.Length != 0)
+                                        PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, foundLambdaNonPassedParams);
+                                }
+
                                 return true;
                             }
                         }
@@ -899,6 +905,10 @@ namespace FastExpressionCompiler
                             return false;
 
                         closure.AddNestedLambda(nestedLambdaInfo);
+                        var nestedNonPassedParams = nestedLambdaInfo.ClosureInfo.NonPassedParameters;
+                        if (nestedNonPassedParams.Length != 0)
+                            PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, nestedNonPassedParams);
+
                         return true;
 
                     case ExpressionType.Invoke:
@@ -1047,6 +1057,32 @@ namespace FastExpressionCompiler
             }
         }
 
+        private static void PropagateNonPassedParamsToOuterLambda(
+            ref ClosureInfo closure, IReadOnlyList<ParameterExpression> paramExprs, 
+            IReadOnlyList<ParameterExpression> nestedLambdaParamExprs, ParameterExpression[] nestedNonPassedParams)
+        {
+            // If nested non passed parameter is not matched with any outer passed parameter, 
+            // then ensure it goes to outer non passed parameter.
+            // But check that having a non-passed parameter in root expression is invalid.
+            for (var i = 0; i < nestedNonPassedParams.Length; i++)
+            {
+                var nestedNonPassedParam = nestedNonPassedParams[i];
+
+                var isInNestedLambda = false;
+                if (nestedLambdaParamExprs.Count != 0)
+                    for (var p = 0; !isInNestedLambda && p < nestedLambdaParamExprs.Count; ++p)
+                        isInNestedLambda = ReferenceEquals(nestedLambdaParamExprs[p], nestedNonPassedParam);
+
+                var isInOuterLambda = false;
+                if (paramExprs.Count != 0)
+                    for (var p = 0; !isInNestedLambda && p < paramExprs.Count; ++p)
+                        isInOuterLambda = ReferenceEquals(paramExprs[p], nestedNonPassedParam);
+
+                if (!isInNestedLambda && !isInOuterLambda)
+                    closure.AddNonPassedParam(nestedNonPassedParam);
+            }
+        }
+
         private static NestedLambdaInfo FindAlreadyCollectedNestedLambdaInfo(
             NestedLambdaInfo[] nestedLambdas, LambdaExpression nestedLambdaExpr, out NestedLambdaInfo[] foundInLambdas)
         {
@@ -1091,22 +1127,6 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < nestedLambdaNestedLambdas.Length; ++i)
                     if (!TryCompileNestedLambda(ref nestedLambdaClosureInfo, i, nestedLambdaParamExprs))
                         return false;
-
-            var nestedNonPassedParams = nestedLambdaClosureInfo.NonPassedParameters;
-            if (nestedNonPassedParams.Length != 0)
-            {
-                // todo: Move to TryCollectBoundConstants for nested lambda
-                // If nested non passed parameter is not matched with any outer passed parameter, 
-                // then ensure it goes to outer non passed parameter.
-                // But check that having a non-passed parameter in root expression is invalid.
-                for (var i = 0; i < nestedNonPassedParams.Length; i++)
-                {
-                    var nestedNonPassedParam = nestedNonPassedParams[i];
-                    if (nestedLambdaParamExprs.GetFirstIndex(nestedNonPassedParam) == -1 &&
-                        outerLambdaParamExprs.GetFirstIndex(nestedNonPassedParam) == -1)
-                        outerClosureInfo.AddNonPassedParam(nestedNonPassedParam);
-                }
-            }
 
             var nestedLambdaParamTypes = Tools.GetParamTypes(nestedLambdaParamExprs);
 
@@ -4263,15 +4283,6 @@ namespace FastExpressionCompiler
                     throw new NotSupportedException(
                         string.Format("Func with so many ({0}) parameters is not supported!", paramTypes.Length));
             }
-        }
-
-        public static int GetFirstIndex<T>(this IReadOnlyList<T> source, T item)
-        {
-            if (source != null && source.Count != 0)
-                for (var i = 0; i < source.Count; ++i)
-                    if (ReferenceEquals(source[i], item))
-                        return i;
-            return -1;
         }
 
         public static T GetFirst<T>(this IEnumerable<T> source)

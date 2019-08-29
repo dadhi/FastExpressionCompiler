@@ -926,6 +926,15 @@ namespace FastExpressionCompiler.LightExpression
 
     internal static class TypeTools
     {
+        internal static int GetFirstIndex<T>(this IReadOnlyList<T> source, T item)
+        {
+            if (source.Count != 0)
+                for (var i = 0; i < source.Count; ++i)
+                    if (ReferenceEquals(source[i], item))
+                        return i;
+            return -1;
+        }
+
         internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
             source.GetTypeInfo().IsValueType &&
             (target == typeof(object) ||
@@ -1985,7 +1994,6 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    // todo: specialize for 1 catch block
     public sealed class TryExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Try;
