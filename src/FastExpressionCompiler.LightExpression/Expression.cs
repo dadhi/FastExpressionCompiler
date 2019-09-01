@@ -1641,14 +1641,7 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class TypedConstantExpression : ConstantExpression
     {
-        public override ExpressionType NodeType => ExpressionType.Constant;
         public override Type Type { get; }
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> _) =>
-            SysExpr.Constant(Value, Type);
-
-        public override string CodeString =>
-            $"Constant({Value.ToCode(NotRecognizedValueToCode)}, {Type.ToCode()})";
 
         internal TypedConstantExpression(object value, Type type) : base(value) => Type = type;
     }
