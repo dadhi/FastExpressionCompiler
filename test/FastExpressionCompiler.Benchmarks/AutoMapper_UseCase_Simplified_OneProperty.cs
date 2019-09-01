@@ -101,11 +101,11 @@ namespace FastExpressionCompiler.Benchmarks
 
 |                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |------------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                                    Compile | 286.641 us | 0.7893 us | 0.7383 us | 30.85 |    0.13 | 1.9531 | 0.9766 |      - |  10.93 KB |
-|                                CompileFast |  10.521 us | 0.0412 us | 0.0365 us |  1.13 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
-|                CompileFast_LightExpression |   9.292 us | 0.0289 us | 0.0256 us |  1.00 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
-|                 CompileFast_WithoutClosure |   9.682 us | 0.0448 us | 0.0397 us |  1.04 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
-| CompileFast_LightExpression_WithoutClosure |   8.287 us | 0.0402 us | 0.0376 us |  0.89 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
+|                                    Compile | 281.853 us | 0.8443 us | 0.7897 us | 29.53 |    0.11 | 1.9531 | 0.9766 |      - |  10.87 KB |
+|                                CompileFast |  11.076 us | 0.0551 us | 0.0488 us |  1.16 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
+|                CompileFast_LightExpression |   9.543 us | 0.0422 us | 0.0374 us |  1.00 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
+|                 CompileFast_WithoutClosure |  10.222 us | 0.1897 us | 0.1775 us |  1.07 |    0.02 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
+| CompileFast_LightExpression_WithoutClosure |   8.611 us | 0.1070 us | 0.1000 us |  0.90 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
 
         */
         [MemoryDiagnoser]
@@ -150,37 +150,13 @@ namespace FastExpressionCompiler.Benchmarks
                          Create_n_CompileFast |  27.34 us | 0.1675 us | 0.1566 us |  1.00 |    0.00 |      1.3733 |      0.6714 |      0.0305 |             6.38 KB |
          Create_n_CompileFast_LightExpression |  12.53 us | 0.0818 us | 0.0765 us |  0.46 |    0.00 |      1.2512 |      0.6256 |      0.0458 |             5.78 KB |
 
-        ## Update
+        ## V3
 
-                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-        ------------------------------------- |----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-                             Create_n_Compile | 275.08 us | 2.0375 us | 1.9059 us | 11.17 |    0.15 |      2.9297 |      1.4648 |           - |            13.82 KB |
-                         Create_n_CompileFast |  24.63 us | 0.2710 us | 0.2535 us |  1.00 |    0.00 |      1.2512 |      0.6104 |      0.0305 |             5.86 KB |
-         Create_n_CompileFast_LightExpression |  11.86 us | 0.0723 us | 0.0641 us |  0.48 |    0.00 |      1.1292 |      0.5646 |      0.0458 |             5.22 KB |
-
-        ## Update 2 - remove `foreach` from Expression.cs
-
-                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-        ------------------------------------- |----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-                             Create_n_Compile | 274.28 us | 1.8700 us | 1.7492 us | 11.66 |    0.08 |      2.9297 |      1.4648 |           - |            13.82 KB |
-                         Create_n_CompileFast |  23.53 us | 0.1047 us | 0.0875 us |  1.00 |    0.00 |      1.2512 |      0.6104 |      0.0305 |             5.86 KB |
-         Create_n_CompileFast_LightExpression |  11.42 us | 0.0630 us | 0.0558 us |  0.48 |    0.00 |      1.1139 |      0.5493 |      0.0458 |             5.16 KB |
-
-        ## Change the baseline to LightExpression
-
-                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-        ------------------------------------- |----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-                             Create_n_Compile | 276.43 us | 1.3206 us | 1.1707 us | 24.52 |    0.20 |      2.9297 |      1.4648 |           - |            13.82 KB |
-                         Create_n_CompileFast |  23.79 us | 0.1276 us | 0.1193 us |  2.11 |    0.02 |      1.2512 |      0.6104 |      0.0305 |             5.86 KB |
-         Create_n_CompileFast_LightExpression |  11.27 us | 0.0857 us | 0.0760 us |  1.00 |    0.00 |      1.1139 |      0.5493 |      0.0458 |             5.16 KB |
-
-        ## Update BDN from 0.11.3 -> 0.11.5, parameter is ripped off _param 
-
-                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-        ------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-                             Create_n_Compile | 272.19 us | 0.9637 us | 0.9015 us | 23.84 |    0.24 | 2.9297 | 1.4648 |      - |  13.82 KB |
-                         Create_n_CompileFast |  23.55 us | 0.0579 us | 0.0513 us |  2.06 |    0.02 | 1.2817 | 0.6409 | 0.0305 |   5.93 KB |
-         Create_n_CompileFast_LightExpression |  11.42 us | 0.1127 us | 0.0999 us |  1.00 |    0.00 | 1.1292 | 0.5646 | 0.0458 |   5.18 KB |
+        |                               Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        |------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+        |                     Create_n_Compile | 308.74 us | 1.0322 us | 0.9150 us | 25.20 |    0.11 | 2.9297 | 1.4648 |      - |   13.7 KB |
+        |                 Create_n_CompileFast |  24.20 us | 0.0807 us | 0.0715 us |  1.98 |    0.01 | 1.2512 | 0.6104 | 0.0305 |   5.87 KB |
+        | Create_n_CompileFast_LightExpression |  12.25 us | 0.0693 us | 0.0614 us |  1.00 |    0.00 | 1.1139 | 0.5493 | 0.0458 |   5.17 KB |
 
         */
         [MemoryDiagnoser]
@@ -197,11 +173,11 @@ namespace FastExpressionCompiler.Benchmarks
         }
 
         /*
-                                      Method |     Mean |     Error |    StdDev | Ratio | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-        ------------------------------------ |---------:|----------:|----------:|------:|------------:|------------:|------------:|--------------------:|
-                             Invoke_Compiled | 8.094 ns | 0.0358 ns | 0.0335 ns |  0.98 |      0.0051 |           - |           - |                24 B |
-                         Invoke_CompiledFast | 8.235 ns | 0.0529 ns | 0.0469 ns |  1.00 |      0.0051 |           - |           - |                24 B |
-         Invoke_CompiledFast_LightExpression | 8.219 ns | 0.0264 ns | 0.0247 ns |  1.00 |      0.0051 |           - |           - |                24 B |
+        |                              Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+        |------------------------------------ |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
+        |                     Invoke_Compiled | 8.740 ns | 0.0128 ns | 0.0100 ns |  0.93 | 0.0051 |     - |     - |      24 B |
+        |                 Invoke_CompiledFast | 9.496 ns | 0.0284 ns | 0.0252 ns |  1.02 | 0.0051 |     - |     - |      24 B |
+        | Invoke_CompiledFast_LightExpression | 9.349 ns | 0.0255 ns | 0.0213 ns |  1.00 | 0.0051 |     - |     - |      24 B |
         */
 
         [MemoryDiagnoser]
@@ -245,9 +221,9 @@ namespace FastExpressionCompiler.Benchmarks
             var srcParam = Parameter(typeof(Source), "source");
             var destParam = Parameter(typeof(Dest), "dest");
 
-            var typeMapDestVar   = Parameter(typeof(Dest), "d");
+            var typeMapDestVar = Parameter(typeof(Dest), "d");
             var resolvedValueVar = Parameter(typeof(int), "val");
-            var exceptionVar     = Parameter(typeof(Exception), "ex");
+            var exceptionVar = Parameter(typeof(Exception), "ex");
 
             var expression = Lambda<Func<Source, Dest, ResolutionContext, Dest>>(
                 Block(
@@ -260,7 +236,7 @@ namespace FastExpressionCompiler.Benchmarks
                                 Coalesce(destParam, New(typeof(Dest).GetTypeInfo().DeclaredConstructors.First()))),
                             TryCatch(
                                 /* Assign src.Value */
-                                Block(new[] { resolvedValueVar },
+                                Block(typeof(void), new[] { resolvedValueVar },
                                     Block(
                                         Assign(resolvedValueVar,
                                             Condition(Or(Equal(srcParam, Constant(null)), Constant(false)),
@@ -271,11 +247,9 @@ namespace FastExpressionCompiler.Benchmarks
                                     )
                                 ),
                                 Catch(exceptionVar,
-                                    Throw(
-                                        New(typeof(AutoMapperException).GetTypeInfo().DeclaredConstructors.First(),
-                                            Constant("Error mapping types."),
-                                            exceptionVar),
-                                        typeof(int))) // should skip this, cause does no make sense after the throw
+                                    Throw(New(typeof(AutoMapperException).GetTypeInfo().DeclaredConstructors.First(),
+                                        Constant("Error mapping types."),
+                                        exceptionVar))) // should skip this, cause does no make sense after the throw
                             ),
                             typeMapDestVar))
                 ),
