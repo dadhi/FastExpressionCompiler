@@ -131,26 +131,27 @@ namespace FastExpressionCompiler.LightExpression
 
         public static ParameterExpression Variable(Type type, string name = null) => Parameter(type, name);
 
+        private static readonly ConstantExpression _nullExpr  = new TypedConstantExpression(null, typeof(object));
+        private static readonly ConstantExpression _falseExpr = new ConstantExpression(false);
+        private static readonly ConstantExpression _trueExpr  = new ConstantExpression(true);
+        private static readonly ConstantExpression _0Expr     = new ConstantExpression(0);
+
         public static ConstantExpression Constant(object value, Type type = null)
         {
-            // todo: optimize by creating the `SameAsValueTypeConstantExpr`
-            //if (value != null && value.GetType() == type)
-            //{
-            //    ;
-            //}
+            if (value == null)
+                return type == null ? _nullExpr : new TypedConstantExpression(null, type);
 
             if (value is bool b)
                 return b ? _trueExpr : _falseExpr;
 
-            if (type == null)
-                return value != null ? new ConstantExpression(value, value.GetType()) : _nullExpr;
+            if (value is int n && n == 0)
+                return _0Expr;
 
-            return new ConstantExpression(value, type);
+            if (type == null || ReferenceEquals(type, value.GetType()))
+                return new ConstantExpression(value);
+
+            return new TypedConstantExpression(value, type);
         }
-
-        private static readonly ConstantExpression _nullExpr  = new ConstantExpression(null,  typeof(object));
-        private static readonly ConstantExpression _falseExpr = new ConstantExpression(false, typeof(bool));
-        private static readonly ConstantExpression _trueExpr  = new ConstantExpression(true,  typeof(bool));
 
         public static NewExpression New(Type type)
         {
@@ -1619,11 +1620,10 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class ConstantExpression : Expression
+    public class ConstantExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Constant;
-        public override Type Type { get; }
-
+        public override Type Type => Value.GetType();
         public readonly object Value;
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> _) =>
@@ -1636,11 +1636,21 @@ namespace FastExpressionCompiler.LightExpression
         public override string CodeString =>
             $"Constant({Value.ToCode(NotRecognizedValueToCode)}, {Type.ToCode()})";
 
-        internal ConstantExpression(object value, Type type)
-        {
-            Value = value;
-            Type = type;
-        }
+        internal ConstantExpression(object value) => Value = value;
+    }
+
+    public sealed class TypedConstantExpression : ConstantExpression
+    {
+        public override ExpressionType NodeType => ExpressionType.Constant;
+        public override Type Type { get; }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> _) =>
+            SysExpr.Constant(Value, Type);
+
+        public override string CodeString =>
+            $"Constant({Value.ToCode(NotRecognizedValueToCode)}, {Type.ToCode()})";
+
+        internal TypedConstantExpression(object value, Type type) : base(value) => Type = type;
     }
 
     public abstract class ArgumentsExpression : Expression
