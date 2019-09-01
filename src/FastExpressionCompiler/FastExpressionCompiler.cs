@@ -1471,25 +1471,7 @@ namespace FastExpressionCompiler
                             return true;
 
                         case ExpressionType.Loop:
-                            var loopExpr = (LoopExpression)expr;
-
-                            // Mark the start of the loop body:
-                            var loopBodyLabel = il.DefineLabel();
-                            il.MarkLabel(loopBodyLabel);
-
-                            if (loopExpr.ContinueLabel != null)
-                                il.MarkLabel(closure.GetOrCreateLabel(loopExpr.ContinueLabel, il));
-
-                            if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, parent))
-                                return false;
-
-                            // If loop hasn't exited, jump back to start of its body:
-                            il.Emit(OpCodes.Br, loopBodyLabel);
-
-                            if (loopExpr.BreakLabel != null)
-                                il.MarkLabel(closure.GetOrCreateLabel(loopExpr.BreakLabel, il));
-
-                            return true;
+                            return TryEmitLoop((LoopExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.Try:
                             return TryEmitTryCatchFinallyBlock((TryExpression)expr, paramExprs, il, ref closure,
@@ -1509,18 +1491,7 @@ namespace FastExpressionCompiler
                             return true;
 
                         case ExpressionType.Index:
-                            var indexExpr = (IndexExpression)expr;
-                            if (indexExpr.Object != null &&
-                                !TryEmit(indexExpr.Object, paramExprs, il, ref closure, parent))
-                                return false;
-
-                            var indexArgExprs = indexExpr.Arguments;
-                            for (var i = 0; i < indexArgExprs.Count; i++)
-                                if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, parent,
-                                    indexArgExprs[i].Type.IsByRef ? i : -1))
-                                    return false;
-
-                            return TryEmitIndex((IndexExpression)expr, il);
+                            return TryEmitIndex((IndexExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.Goto:
                             return TryEmitGoto((GotoExpression)expr, paramExprs, il, ref closure, parent);
@@ -1539,6 +1510,52 @@ namespace FastExpressionCompiler
                             return false;
                     }
                 }
+            }
+
+            private static bool TryEmitLoop(LoopExpression loopExpr, 
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+            {
+                // Mark the start of the loop body:
+                var loopBodyLabel = il.DefineLabel();
+                il.MarkLabel(loopBodyLabel);
+
+                if (loopExpr.ContinueLabel != null)
+                    il.MarkLabel(closure.GetOrCreateLabel(loopExpr.ContinueLabel, il));
+
+                if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, parent))
+                    return false;
+
+                // If loop hasn't exited, jump back to start of its body:
+                il.Emit(OpCodes.Br, loopBodyLabel);
+
+                if (loopExpr.BreakLabel != null)
+                    il.MarkLabel(closure.GetOrCreateLabel(loopExpr.BreakLabel, il));
+
+                return true;
+            }
+
+            private static bool TryEmitIndex(IndexExpression indexExpr, 
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+            {
+                if (indexExpr.Object != null &&
+                    !TryEmit(indexExpr.Object, paramExprs, il, ref closure, parent))
+                    return false;
+
+                var indexArgExprs = indexExpr.Arguments;
+                for (var i = 0; i < indexArgExprs.Count; i++)
+                    if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, parent,
+                        indexArgExprs[i].Type.IsByRef ? i : -1))
+                        return false;
+
+                var indexerProp = indexExpr.Indexer;
+                if (indexerProp != null)
+                    return EmitMethodCall(il, indexerProp.DeclaringType.FindPropertyGetMethod(indexerProp.Name));
+
+                if (indexExpr.Arguments.Count == 1) // one dimensional array
+                    return TryEmitArrayIndex(indexExpr.Type, il);
+
+                // multi dimensional array
+                return EmitMethodCall(il, indexExpr.Object?.Type.FindMethod("Get"));
             }
 
             private static bool TryEmitLabel(LabelExpression expr,
@@ -1610,22 +1627,6 @@ namespace FastExpressionCompiler
                     default:
                         return false;
                 }
-            }
-
-            private static bool TryEmitIndex(IndexExpression expr, ILGenerator il)
-            {
-                var elemType = expr.Type;
-                var indexerProp = expr.Indexer;
-                if (indexerProp != null)
-                    return EmitMethodCall(il, indexerProp.DeclaringType.FindPropertyGetMethod(indexerProp.Name));
-
-                if (expr.Arguments.Count == 1) // one dimensional array
-                {
-                    return TryEmitArrayIndex(elemType, il);
-                }
-
-                // multi dimensional array
-                return EmitMethodCall(il, expr.Object?.Type.FindMethod("Get"));
             }
 
             private static bool TryEmitCoalesceOperator(BinaryExpression exprObj,
@@ -1720,7 +1721,7 @@ namespace FastExpressionCompiler
                 else if (type == typeof(double))
                     il.Emit(OpCodes.Ldc_R8, default(double));
                 else
-                    il.Emit(OpCodes.Ldloc, InitValueTypeVariable(il, type));
+                    EmitLoadLocalVariable(il, InitValueTypeVariable(il, type).LocalIndex);
             }
 
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,

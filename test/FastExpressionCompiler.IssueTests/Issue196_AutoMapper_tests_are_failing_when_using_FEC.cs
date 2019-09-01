@@ -176,7 +176,7 @@ var expectedCode =
                 Assert.AreEqual(77, ff());
             }
 
-            [Test] // todo: investigate the IL
+            [Test] // todo: investigate and improve the IL
             public void TryCatch_with_void_rethrows_error_in_catch()
             {
                 var srcParam = Parameter(typeof(Source), "source");
