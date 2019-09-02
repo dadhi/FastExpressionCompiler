@@ -1650,10 +1650,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public readonly IReadOnlyList<Expression> Arguments;
 
-        protected ArgumentsExpression(IReadOnlyList<Expression> arguments)
-        {
-            Arguments = arguments ?? Tools.Empty<Expression>();
-        }
+        protected ArgumentsExpression(IReadOnlyList<Expression> arguments) => Arguments = arguments ?? Tools.Empty<Expression>();
     }
 
     public sealed class NewExpression : ArgumentsExpression
