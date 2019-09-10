@@ -55,8 +55,9 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 
 |                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |--------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |  31.92 us | 0.3207 us | 0.3000 us |  1.00 |    0.00 | 2.0752 | 1.0376 | 0.1831 |    9.5 KB |
-|     Expression_with_sub_expressions_Compiled | 628.53 us | 1.9982 us | 1.8691 us | 19.69 |    0.18 | 5.8594 | 2.9297 |      - |  27.04 KB |
+| Expression_with_sub_expressions_CompiledFast |  33.04 us | 0.2913 us | 0.2725 us |  1.00 |    0.00 | 2.0752 | 1.0376 | 0.1831 |   9.58 KB |
+|     Expression_with_sub_expressions_Compiled | 625.92 us | 2.5646 us | 2.3989 us | 18.95 |    0.18 | 5.8594 | 2.9297 |      - |  27.04 KB |
+
 
 ### Invocation
 
@@ -76,11 +77,10 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 
 #### Removing cast-class and loading constants as variables - PR by @Havunen
 
-|                                       Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|--------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |    11.01 ns | 0.0216 ns | 0.0202 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
-|     Expression_with_sub_expressions_Compiled | 1,090.85 ns | 0.9204 ns | 0.8159 ns | 99.03 |    0.20 | 0.0458 |     - |     - |     224 B |
-
+|                                       Method |        Mean |     Error |    StdDev |  Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|--------------------------------------------- |------------:|----------:|----------:|-------:|--------:|-------:|------:|------:|----------:|
+| Expression_with_sub_expressions_CompiledFast |    10.29 ns | 0.0537 ns | 0.0503 ns |   1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
+|     Expression_with_sub_expressions_Compiled | 1,079.40 ns | 1.2246 ns | 1.0226 ns | 104.99 |    0.49 | 0.0458 |     - |     - |     224 B |
 */
         private Expression<Func<A>> _expr, _exprWithVars;
 
@@ -119,16 +119,16 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
         public object Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast()
         {
             //return _exprWithVars.CompileFast(true);
-            //return _exprWithVarsCompiledFast();
-            return _exprWithVars.CompileFast(true).Invoke();
+            return _exprWithVarsCompiledFast();
+            //return _exprWithVars.CompileFast(true).Invoke();
         }
 
         //[Benchmark]
         public object Expression_with_sub_expressions_assigned_to_vars_in_block_Compile()
         {
             //return _exprWithVars.Compile();
-            //return _exprWithVarsCompiled();
-            return _exprWithVars.Compile().Invoke();
+            return _exprWithVarsCompiled();
+            //return _exprWithVars.Compile().Invoke();
         }
 
         public readonly object[] _objects = new object[3];

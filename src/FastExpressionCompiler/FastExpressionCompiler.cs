@@ -273,21 +273,25 @@ namespace FastExpressionCompiler
             var nestedLambdas = closureInfo.NestedLambdas;
             if (nestedLambdas.Length != 0)
                 for (var i = 0; i < nestedLambdas.Length; ++i)
-                    if (!TryCompileNestedLambda(ref closureInfo, i, paramExprs))
+                    if (!TryCompileNestedLambda(ref closureInfo, i))
                         return null;
 
-            ArrayClosure closure = null;
-            var closurePlusParamTypes = paramTypes;
+            ArrayClosure closure;
+            var closurePlusParamTypes = PrependClosureTypeToParamTypes(paramTypes);
             if ((closureInfo.Status & ClosureStatus.HasClosure) != 0)
             {
                 //System.Diagnostics.Debug.Assert(closureInfo.NonPassedParameters.Length == 0,
                 //    "Never should happen for the root lambda - all used parameter should be passed to it");
                 closure = new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
-                closurePlusParamTypes = PrependClosureTypeToParamTypes(paramTypes);
+            }
+            else
+            {
+                closure = ArrayClosure.Empty;
             }
 
             var method = new DynamicMethod(string.Empty, 
-                returnType, closurePlusParamTypes, typeof(ExpressionCompiler), skipVisibility: true);
+                returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+
             var il = method.GetILGenerator();
 
             if (closure != null)
@@ -375,6 +379,9 @@ namespace FastExpressionCompiler
             private KeyValuePair<LabelTarget, Label?>[] _labels;
 
             public ClosureStatus Status;
+
+            public bool IsUserProvidedWithoutClosure =>
+                (Status & ClosureStatus.HasClosure) == 0 && (Status & ClosureStatus.UserProvided) != 0;
 
             // Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public LiveCountArray<ConstantExpression> Constants;
@@ -657,6 +664,8 @@ namespace FastExpressionCompiler
 
         public class ArrayClosure
         {
+            public static readonly ArrayClosure Empty = new ArrayClosure(null);
+
             public static FieldInfo ConstantsAndNestedLambdasField =
                 typeof(ArrayClosure).GetTypeInfo().GetDeclaredField(nameof(ConstantsAndNestedLambdas));
 
@@ -1108,8 +1117,7 @@ namespace FastExpressionCompiler
             return null;
         }
 
-        private static bool TryCompileNestedLambda(ref ClosureInfo outerClosureInfo, int nestedLambdaIndex,
-            IReadOnlyList<ParameterExpression> outerLambdaParamExprs)
+        private static bool TryCompileNestedLambda(ref ClosureInfo outerClosureInfo, int nestedLambdaIndex)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
@@ -1125,31 +1133,30 @@ namespace FastExpressionCompiler
             var nestedLambdaNestedLambdas = nestedLambdaClosureInfo.NestedLambdas;
             if (nestedLambdaNestedLambdas.Length != 0)
                 for (var i = 0; i < nestedLambdaNestedLambdas.Length; ++i)
-                    if (!TryCompileNestedLambda(ref nestedLambdaClosureInfo, i, nestedLambdaParamExprs))
+                    if (!TryCompileNestedLambda(ref nestedLambdaClosureInfo, i))
                         return false;
 
             var nestedLambdaParamTypes = Tools.GetParamTypes(nestedLambdaParamExprs);
 
             ArrayClosure nestedLambdaClosure = null;
-            var closurePlusParamTypes = nestedLambdaParamTypes;
-            var hasClosure = (nestedLambdaClosureInfo.Status & ClosureStatus.HasClosure) != 0;
-            if (hasClosure)
-            {
-                if (nestedLambdaClosureInfo.NonPassedParameters.Length == 0)
-                    nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
-                closurePlusParamTypes = PrependClosureTypeToParamTypes(nestedLambdaParamTypes);
-            }
+            if (nestedLambdaClosureInfo.NonPassedParameters.Length == 0)
+                nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
+
+            var closurePlusParamTypes = PrependClosureTypeToParamTypes(nestedLambdaParamTypes);
 
             var nestedReturnType = nestedLambdaExpr.ReturnType;
-            var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ExpressionCompiler), true);
+            var method = new DynamicMethod(string.Empty, 
+                nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+
             var il = method.GetILGenerator();
 
-            if (hasClosure)
+            if ((nestedLambdaClosureInfo.Status & ClosureStatus.HasClosure) != 0)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedLambdaClosureInfo);
 
             var parentFlags = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(nestedLambdaExpr.Body, nestedLambdaParamExprs, il, ref nestedLambdaClosureInfo, parentFlags))
                 return false;
+
             il.Emit(OpCodes.Ret);
 
             if (nestedLambdaClosure != null)
@@ -1798,8 +1805,8 @@ namespace FastExpressionCompiler
                     --paramIndex;
                 if (paramIndex != -1)
                 {
-                    if ((closure.Status & ClosureStatus.HasClosure) != 0)
-                        paramIndex += 1; // shift parameter index by one, because the first one will be closure
+                    if (!closure.IsUserProvidedWithoutClosure)
+                        ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     closure.LastEmitIsAddress = !paramExpr.IsByRef && paramType.IsValueType() &&
                         ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall || 
@@ -2823,7 +2830,7 @@ namespace FastExpressionCompiler
                         if (paramIndex != -1)
                         {
                             // shift parameter index by one, because the first one will be closure
-                            if ((closure.Status & ClosureStatus.HasClosure) != 0)
+                            if (!closure.IsUserProvidedWithoutClosure)
                                 ++paramIndex;
 
                             if (leftParamExpr.IsByRef)

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Reflection;
 using System.Reflection.Emit;
 using ILDebugging.Decoder;
 using NUnit.Framework;
@@ -35,9 +34,11 @@ class Issue91_Issue95_Tests
         {
             var pParam = Parameter(typeof(string), "p");
 
-            var condition = Condition(NotEqual(pParam, Constant(null)),
+            var condition = Condition(
+                NotEqual(pParam, Constant(null)),
                 Constant(1),
                 Constant(0));
+
             var lambda = Lambda<Func<string, int>>(condition, pParam);
             var convert1 = lambda.CompileFast(true);
             Assert.NotNull(convert1);
@@ -46,7 +47,15 @@ class Issue91_Issue95_Tests
             // Check TryEmitInvertedNullComparison is used
             var il = ILReaderFactory.Create(convert1.Method);
             CollectionAssert.AreEqual(il.Select(x => x.OpCode),
-                new[] {OpCodes.Ldarg_0, OpCodes.Brfalse, OpCodes.Ldc_I4_1, OpCodes.Br, OpCodes.Ldc_I4_0, OpCodes.Ret});
+                new[] 
+                {
+                    OpCodes.Ldarg_1,
+                    OpCodes.Brfalse,
+                    OpCodes.Ldc_I4_1,
+                    OpCodes.Br,
+                    OpCodes.Ldc_I4_0,
+                    OpCodes.Ret
+                });
         }
 
         [Test]

@@ -21,15 +21,16 @@ namespace FastExpressionCompiler.IssueTests
             var typeBuilder = moduleBuilder.DefineType("MyType", TypeAttributes.Public);
 
             var methodBuilder = typeBuilder.DefineMethod("MyAdd",
-                MethodAttributes.Public | MethodAttributes.Static, 
-                CallingConventions.Standard /* */,
+                MethodAttributes.Public | MethodAttributes.Static, // static is required to be able to compile to method
+                CallingConventions.Standard,
                 typeof(int), new[] { typeof(int), typeof(int) });
 
             var paramA = Expression.Parameter(typeof(int));
             var paramB = Expression.Parameter(typeof(int));
-            var body = Expression.Add(paramA, paramB);
 
-            var funcExpr = Expression.Lambda<Func<int, int, int>>(body, paramA, paramB);
+            var funcExpr = Expression.Lambda<Func<int, int, int>>(
+                Expression.Add(paramA, paramB), 
+                paramA, paramB);
 
             funcExpr.CompileFastToIL(methodBuilder.GetILGenerator());
 

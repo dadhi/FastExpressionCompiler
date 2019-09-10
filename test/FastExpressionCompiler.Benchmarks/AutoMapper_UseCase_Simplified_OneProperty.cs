@@ -175,9 +175,9 @@ namespace FastExpressionCompiler.Benchmarks
         /*
         |                              Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
         |------------------------------------ |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
-        |                     Invoke_Compiled | 8.740 ns | 0.0128 ns | 0.0100 ns |  0.93 | 0.0051 |     - |     - |      24 B |
-        |                 Invoke_CompiledFast | 9.496 ns | 0.0284 ns | 0.0252 ns |  1.02 | 0.0051 |     - |     - |      24 B |
-        | Invoke_CompiledFast_LightExpression | 9.349 ns | 0.0255 ns | 0.0213 ns |  1.00 | 0.0051 |     - |     - |      24 B |
+        |                     Invoke_Compiled | 8.027 ns | 0.0938 ns | 0.0878 ns |  0.98 | 0.0051 |     - |     - |      24 B |
+        |                 Invoke_CompiledFast | 8.247 ns | 0.0379 ns | 0.0354 ns |  1.00 | 0.0051 |     - |     - |      24 B |
+        | Invoke_CompiledFast_LightExpression | 8.225 ns | 0.0318 ns | 0.0298 ns |  1.00 | 0.0051 |     - |     - |      24 B |
         */
 
         [MemoryDiagnoser]

@@ -112,7 +112,7 @@ IL_001C:  call        System.Nullable<System.UInt64>.get_HasValue
 IL_0021:  ret 
             */
             actual.Method.AssertOpCodes(
-                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
                 OpCodes.Call,   // get_Value getter
                 OpCodes.Stloc_0,
                 OpCodes.Ldloca_S,
@@ -312,7 +312,7 @@ IL_0021:  ret
             var compiledFast = expr.CompileFast(true);
 
             compiledFast.Method.AssertOpCodes(
-                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
                 OpCodes.Call,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
@@ -344,7 +344,7 @@ IL_0021:  ret
             var compiledFast = expr.CompileFast(true);
 
             compiledFast.Method.AssertOpCodes(
-                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
                 OpCodes.Call,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
@@ -353,7 +353,7 @@ IL_0021:  ret
                 OpCodes.Br_S,
                 OpCodes.Ldc_I4_1,
                 OpCodes.Brfalse,
-                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
                 OpCodes.Call,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
@@ -628,7 +628,7 @@ IL_0021:  ret
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be replaced with dup #
                 OpCodes.Ldloc_0, // 
-                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
                 OpCodes.Call, // ValueHolder<int?>.get_Value
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
@@ -659,7 +659,7 @@ IL_0021:  ret
             adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
                 OpCodes.Dup,
-                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
                 OpCodes.Call, // ValueHolder<int?>.get_Value
                 OpCodes.Stloc_0,
                 OpCodes.Ldloca_S,
@@ -698,7 +698,7 @@ IL_0021:  ret
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173
                 OpCodes.Ldloc_0,
-                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
                 OpCodes.Call, // ValueHolder<decimal?>.get_Value
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
@@ -738,7 +738,7 @@ IL_0021:  ret
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173
                 OpCodes.Ldloc_0,
-                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
                 OpCodes.Call,    // ValueHolder<decimal>.get_Value
                 OpCodes.Call,    // double Decimal.op_Explicit() 
                 OpCodes.Newobj,  // new Nullable<double>()

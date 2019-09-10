@@ -6,6 +6,14 @@ namespace FastExpressionCompiler.Benchmarks
 {
     public class GenericConverter
     {
+        /*
+
+        |      Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        |------------ |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+        |     Compile | 57.371 us | 0.2667 us | 0.2364 us |  8.82 |    0.08 | 0.9155 | 0.4272 |      - |    4.4 KB |
+        | CompileFast |  6.506 us | 0.0561 us | 0.0498 us |  1.00 |    0.00 | 0.4959 | 0.2441 | 0.0305 |   2.29 KB |
+
+         */
         [MemoryDiagnoser]
         public class Compilation
         {
