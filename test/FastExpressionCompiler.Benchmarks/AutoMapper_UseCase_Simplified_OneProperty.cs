@@ -184,8 +184,8 @@ namespace FastExpressionCompiler.Benchmarks
         public class Invoke_compiled_delegate
         {
             private static readonly Func<Source, Dest, ResolutionContext, Dest> _compiled = CreateExpression().Compile();
-            private static readonly Func<Source, Dest, ResolutionContext, Dest> _compiledFast = CreateExpression().CompileFast();
-            private static readonly Func<Source, Dest, ResolutionContext, Dest> _compiledFastLE = LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression());
+            private static readonly Func<Source, Dest, ResolutionContext, Dest> _compiledFast = CreateExpression().CompileFast(true);
+            private static readonly Func<Source, Dest, ResolutionContext, Dest> _compiledFastLE = LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression(), true);
 
             private static readonly Source _source = new Source { Value = 42 };
 

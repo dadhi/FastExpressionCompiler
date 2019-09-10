@@ -1,10 +1,16 @@
 ﻿using System;
 using System.Linq.Expressions;
+using System.Reflection.Emit;
+using System.Security;
 using BenchmarkDotNet.Attributes;
+
+[assembly: AllowPartiallyTrustedCallers]
+[assembly: SecurityTransparent]
+[assembly: SecurityRules(SecurityRuleSet.Level2, SkipVerificationInFullTrust = true)]
 
 namespace FastExpressionCompiler.Benchmarks
 {
-    [ClrJob, CoreJob, MemoryDiagnoser, DisassemblyDiagnoser(printIL: true, recursiveDepth: 20)]
+    [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true)]
     public class SimpleExpr_ParamPlusParam
     {
         private static Expression<Func<int, int, int>> CreateSumExpr()
@@ -14,27 +20,45 @@ namespace FastExpressionCompiler.Benchmarks
             return Expression.Lambda<Func<int, int, int>>(Expression.Add(aExp, bExp), aExp, bExp);
         }
 
-        private static Func<int, int, int> SumExpr_Lambda = (a, b) => a + b;
-        private static Func<int, int, int> SumExpr_Compiled = CreateSumExpr().Compile();
-        private static Func<int, int, int> SumExpr_CompiledFast = CreateSumExpr().CompileFast();
-        //private static Func<int, int, int> SumExprInfo_CompiledFast = CreateSumExprInfo().CompileFast();
+        private static Func<int, int, int> ManualEmit()
+        {
+            var closure = new ExpressionCompiler.ArrayClosure(Array.Empty<object>());
 
-        private static int A = 66;
-        private static int B = 34;
+            var method = new DynamicMethod(Guid.NewGuid().ToString(), 
+                typeof(int), new [] { closure.GetType(), typeof(int), typeof(int) }, 
+                closure.GetType(), true);
 
-        [Benchmark(OperationsPerInvoke = 50, Baseline = true)]
-        public int Inlined() => A + B;
+            var il = method.GetILGenerator();
 
-        [Benchmark(OperationsPerInvoke = 50)]
-        public int Lambda() => SumExpr_Lambda(A, B);
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Add);
+            il.Emit(OpCodes.Ret);
 
-        [Benchmark(OperationsPerInvoke = 50)]
-        public int Expr_Compiled() => SumExpr_Compiled(A, B);
+            return (Func<int, int, int>)method.CreateDelegate(typeof(Func<int, int, int>), closure);
+        }
 
-        [Benchmark(OperationsPerInvoke = 50)]
-        public int Expr_CompileFast() => SumExpr_CompiledFast(A, B);
+        private static readonly Func<int, int, int> _sumExprLambda = (a, b) => a + b;
+        private static readonly Func<int, int, int> _sumExprCompiled = CreateSumExpr().Compile();
+        private static readonly Func<int, int, int> _sumExprCompiledFast = CreateSumExpr().CompileFast();
+        private static readonly Func<int, int, int> _manuallyEmitted = ManualEmit();
 
-        //[Benchmark(OperationsPerInvoke = 50)]
-        //public int ExpressionInfo_CompileFast() => SumExprInfo_CompiledFast(A, B);
+        private static readonly int _a = 66;
+        private static readonly int _b = 34;
+
+        //[Benchmark(/*OperationsPerInvoke = 50, */Baseline = true)]
+        public int Inlined() => _a + _b;
+
+        //[Benchmark(/*OperationsPerInvoke = 50*/)]
+        public int Lambda() => _sumExprLambda(_a, _b);
+
+        [Benchmark(/*OperationsPerInvoke = 50*/Baseline = true)]
+        public int ExprCompiled() => _sumExprCompiled(_a, _b);
+
+        [Benchmark(/*OperationsPerInvoke = 50*/)]
+        public int ExprCompileFast() => _sumExprCompiledFast(_a, _b);
+
+        [Benchmark(/*OperationsPerInvoke = 50*/)]
+        public int ManuallyEmitted() => _manuallyEmitted(_a, _b);
     }
 }

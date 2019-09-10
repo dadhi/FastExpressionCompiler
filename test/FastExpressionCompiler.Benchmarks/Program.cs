@@ -7,6 +7,9 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
+            //BenchmarkRunner.Run<GenericConverter.Compilation>();
+            //BenchmarkRunner.Run<GenericConverter.Invocation>();
+
             //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
             //BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
 
