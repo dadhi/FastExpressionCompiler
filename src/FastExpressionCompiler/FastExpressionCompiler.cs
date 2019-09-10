@@ -200,8 +200,8 @@ namespace FastExpressionCompiler
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/></summary>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr) where TDelegate : class =>
-            (TDelegate)TryCompile(typeof(TDelegate), lambdaExpr.Body, lambdaExpr.Parameters, Tools.GetParamTypes(lambdaExpr.Parameters),
-                lambdaExpr.ReturnType);
+            (TDelegate)TryCompile(typeof(TDelegate), lambdaExpr.Body, lambdaExpr.Parameters, 
+                Tools.GetParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType);
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/> 
         /// with the provided closure object and constant expressions (or lack there of) -
@@ -218,6 +218,7 @@ namespace FastExpressionCompiler
             var paramTypes = PrependClosureTypeToParamTypes(lambdaExpr.Parameters);
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, paramTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
+
             var il = method.GetILGenerator();
 
             EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
@@ -277,39 +278,35 @@ namespace FastExpressionCompiler
                     if (!TryCompileNestedLambda(ref closureInfo, i))
                         return null;
 
-            var closurePlusParamTypes = GetClosureTypeToParamTypes(paramTypes);
+            var closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0 
+                ? ArrayClosure.Empty 
+                : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
 
-            ArrayClosure closure;
-            if ((closureInfo.Status & ClosureStatus.HasClosure) == 0)
-                closure = ArrayClosure.Empty;
-            else
-            {
-                //System.Diagnostics.Debug.Assert(closureInfo.NonPassedParameters.Length == 0,
-                //    "Never should happen for the root lambda - all used parameter should be passed to it");
-                closure = new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
-            }
+            // todo: in half of the cases we don't need the temporary `paramTypes`
+            var closurePlusParamTypes = GetClosureTypeToParamTypes(paramTypes);
 
             var method = new DynamicMethod(string.Empty, 
                 returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
             var il = method.GetILGenerator();
 
-            if (closure != null)
+            if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
 
             var parentFlags = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, parentFlags))
                 return null;
+
             il.Emit(OpCodes.Ret);
 
             if (delegateType == typeof(Delegate))
                 delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
 
-            var @delegate = method.CreateDelegate(delegateType, closure);
+            var compiledDelegate = method.CreateDelegate(delegateType, closure);
 
             ReturnClosureTypeToParamTypes(closurePlusParamTypes);
 
-            return @delegate;
+            return compiledDelegate;
         }
 
         private static Type[] PrependClosureTypeToParamTypes(IReadOnlyList<ParameterExpression> paramExprs)
@@ -1166,14 +1163,16 @@ namespace FastExpressionCompiler
                     if (!TryCompileNestedLambda(ref nestedLambdaClosureInfo, i))
                         return false;
 
-            var nestedLambdaParamTypes = Tools.GetParamTypes(nestedLambdaParamExprs);
-
             ArrayClosure nestedLambdaClosure = null;
             if (nestedLambdaClosureInfo.NonPassedParameters.Length == 0)
                 nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
 
             var nestedReturnType = nestedLambdaExpr.ReturnType;
+
+            // todo: in half of the cases we don't need this temporary `nestedLambdaParamTypes`
+            var nestedLambdaParamTypes = Tools.GetParamTypes(nestedLambdaParamExprs);
             var closurePlusParamTypes = GetClosureTypeToParamTypes(nestedLambdaParamTypes);
+
             var method = new DynamicMethod(string.Empty, 
                 nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
@@ -1185,19 +1184,22 @@ namespace FastExpressionCompiler
             var parentFlags = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(nestedLambdaExpr.Body, nestedLambdaParamExprs, il, ref nestedLambdaClosureInfo, parentFlags))
                 return false;
-
             il.Emit(OpCodes.Ret);
 
             if (nestedLambdaClosure != null)
             {
                 // Include the closure as the first parameter.
-                nestedLambdaInfo.Lambda = method.CreateDelegate(Tools.GetFuncOrActionType(nestedLambdaParamTypes, nestedReturnType), nestedLambdaClosure);
+                nestedLambdaInfo.Lambda = method.CreateDelegate(
+                    Tools.GetFuncOrActionType(nestedLambdaParamTypes, nestedReturnType), 
+                    nestedLambdaClosure);
             }
             else
             {
                 // Otherwise create a static or an open delegate to pass closure later with `TryEmitNestedLambda`,
                 // constructing the new closure with non-passed arguments and the rest of items
-                nestedLambdaInfo.Lambda = method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType));
+                nestedLambdaInfo.Lambda = method.CreateDelegate(
+                    Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType),
+                    null);
             }
 
             ReturnClosureTypeToParamTypes(closurePlusParamTypes);
