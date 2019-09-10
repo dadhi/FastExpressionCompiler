@@ -46,6 +46,7 @@ namespace FastExpressionCompiler
     using System.Linq.Expressions;
     using System.Reflection;
     using System.Reflection.Emit;
+    using System.Threading;
 
     /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
     /// Partial to extend with your things when used as source file.</summary>
@@ -276,17 +277,16 @@ namespace FastExpressionCompiler
                     if (!TryCompileNestedLambda(ref closureInfo, i))
                         return null;
 
+            var closurePlusParamTypes = GetClosureTypeToParamTypes(paramTypes);
+
             ArrayClosure closure;
-            var closurePlusParamTypes = PrependClosureTypeToParamTypes(paramTypes);
-            if ((closureInfo.Status & ClosureStatus.HasClosure) != 0)
+            if ((closureInfo.Status & ClosureStatus.HasClosure) == 0)
+                closure = ArrayClosure.Empty;
+            else
             {
                 //System.Diagnostics.Debug.Assert(closureInfo.NonPassedParameters.Length == 0,
                 //    "Never should happen for the root lambda - all used parameter should be passed to it");
                 closure = new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
-            }
-            else
-            {
-                closure = ArrayClosure.Empty;
             }
 
             var method = new DynamicMethod(string.Empty, 
@@ -305,7 +305,11 @@ namespace FastExpressionCompiler
             if (delegateType == typeof(Delegate))
                 delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
 
-            return method.CreateDelegate(delegateType, closure);
+            var @delegate = method.CreateDelegate(delegateType, closure);
+
+            ReturnClosureTypeToParamTypes(closurePlusParamTypes);
+
+            return @delegate;
         }
 
         private static Type[] PrependClosureTypeToParamTypes(IReadOnlyList<ParameterExpression> paramExprs)
@@ -327,22 +331,48 @@ namespace FastExpressionCompiler
         }
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
+        private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][];
 
-        private static Type[] PrependClosureTypeToParamTypes(Type[] paramTypes)
+        private static Type[] GetClosureTypeToParamTypes(Type[] paramTypes)
         {
             var paramCount = paramTypes.Length;
             if (paramCount == 0)
                 return _closureAsASingleParamType;
 
-            if (paramCount == 1)
-                return new[] { typeof(ArrayClosure), paramTypes[0] };
+            if (paramCount < _closureTypePlusParamTypesPool.Length)
+            {
+                var closureAndParamTypes = Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], null);
+                if (closureAndParamTypes != null)
+                {
+                    Array.Copy(paramTypes, 0, closureAndParamTypes, 1, paramCount);
+                    return closureAndParamTypes;
+                }
+            }
 
-            if (paramCount == 2)
-                return new[] { typeof(ArrayClosure), paramTypes[0], paramTypes[1] };
+            return PrependClosureTypeToParamTypes(paramTypes);
+        }
 
-            var closureAndParamTypes = new Type[paramCount + 1];
+        private static void ReturnClosureTypeToParamTypes(Type[] closurePlusParamTypes)
+        {
+            var paramCount = closurePlusParamTypes.Length - 1;
+            if (paramCount != 0 && paramCount < _closureTypePlusParamTypesPool.Length)
+                Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], closurePlusParamTypes);
+        }
+
+        private static Type[] PrependClosureTypeToParamTypes(Type[] paramTypes)
+        {
+            //if (paramCount == 0)
+            //    return _closureAsASingleParamType;
+
+            //if (paramCount == 1)
+            //    return new[] { typeof(ArrayClosure), paramTypes[0] };
+
+            //if (paramCount == 2)
+            //    return new[] { typeof(ArrayClosure), paramTypes[0], paramTypes[1] };
+
+            var closureAndParamTypes = new Type[paramTypes.Length + 1];
             closureAndParamTypes[0] = typeof(ArrayClosure);
-            Array.Copy(paramTypes, 0, closureAndParamTypes, 1, paramCount);
+            Array.Copy(paramTypes, 0, closureAndParamTypes, 1, paramTypes.Length);
             return closureAndParamTypes;
         }
 
@@ -1142,9 +1172,8 @@ namespace FastExpressionCompiler
             if (nestedLambdaClosureInfo.NonPassedParameters.Length == 0)
                 nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
 
-            var closurePlusParamTypes = PrependClosureTypeToParamTypes(nestedLambdaParamTypes);
-
             var nestedReturnType = nestedLambdaExpr.ReturnType;
+            var closurePlusParamTypes = GetClosureTypeToParamTypes(nestedLambdaParamTypes);
             var method = new DynamicMethod(string.Empty, 
                 nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
@@ -1171,6 +1200,7 @@ namespace FastExpressionCompiler
                 nestedLambdaInfo.Lambda = method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType));
             }
 
+            ReturnClosureTypeToParamTypes(closurePlusParamTypes);
             return true;
         }
 

@@ -41,6 +41,13 @@ namespace FastExpressionCompiler.Benchmarks
             |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
             |     Compile | 407.657 us | 0.9090 us | 0.8058 us | 58.66 |    0.32 | 0.9766 | 0.4883 |      - |   6.26 KB |
             | CompileFast |   6.947 us | 0.0392 us | 0.0367 us |  1.00 |    0.00 | 0.4272 | 0.2136 | 0.0305 |   1.96 KB |
+
+            ## Everything with closure
+
+            |      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |     Compile | 406.052 us | 1.1591 us | 1.0276 us | 58.31 |    0.44 | 0.9766 | 0.4883 |      - |   6.26 KB |
+            | CompileFast |   6.964 us | 0.0568 us | 0.0531 us |  1.00 |    0.00 | 0.4120 | 0.2060 | 0.0305 |   1.88 KB |
             */
 
             private readonly Expression<Func<A>> _expr = CreateExpression();
@@ -68,8 +75,8 @@ namespace FastExpressionCompiler.Benchmarks
 
             |              Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
             |-------------------- |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
-            |     Invoke_Compiled | 35.27 ns | 0.1923 ns | 0.1799 ns |  1.08 | 0.0339 |     - |     - |     160 B |
-            | Invoke_CompiledFast | 32.54 ns | 0.0633 ns | 0.0592 ns |  1.00 | 0.0339 |     - |     - |     160 B |
+            |     Invoke_Compiled | 34.06 ns | 0.1056 ns | 0.0937 ns |  1.01 | 0.0339 |     - |     - |     160 B |
+            | Invoke_CompiledFast | 33.70 ns | 0.0580 ns | 0.0453 ns |  1.00 | 0.0339 |     - |     - |     160 B |
             */
 
             private readonly Func<A> _compiled     = CreateExpression().Compile();
