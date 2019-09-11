@@ -51,12 +51,12 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 | Expression_with_sub_expressions_CompiledFast |  32.13 us | 0.2413 us | 0.2257 us |  1.00 |    0.00 | 2.0752 | 1.0376 | 0.1831 |   9.53 KB |
 |     Expression_with_sub_expressions_Compiled | 627.41 us | 4.8732 us | 4.5584 us | 19.53 |    0.18 | 5.8594 | 2.9297 |      - |  27.04 KB |
 
-#### Optimizing the use of closure variables
+#### Optimizing the use of closure variables and cleaning not necessary nested Lambda type creation
 
 |                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |--------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |  33.04 us | 0.2913 us | 0.2725 us |  1.00 |    0.00 | 2.0752 | 1.0376 | 0.1831 |   9.58 KB |
-|     Expression_with_sub_expressions_Compiled | 625.92 us | 2.5646 us | 2.3989 us | 18.95 |    0.18 | 5.8594 | 2.9297 |      - |  27.04 KB |
+| Expression_with_sub_expressions_CompiledFast |  29.11 us | 0.1346 us | 0.1193 us |  1.00 |    0.00 | 1.9531 | 0.9766 | 0.1831 |   8.95 KB |
+|     Expression_with_sub_expressions_Compiled | 633.11 us | 4.1526 us | 3.8843 us | 21.75 |    0.14 | 5.8594 | 2.9297 |      - |  27.04 KB |
 
 
 ### Invocation
@@ -93,25 +93,25 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
             _exprWithVars = CreateExpressionWithVars();
 
             _exprCompiledFast = _expr.CompileFast(true);
-            _exprCompiled     = _expr.Compile();
+            _exprCompiled = _expr.Compile();
 
             _exprWithVarsCompiledFast = _exprWithVars.CompileFast(true);
-            _exprWithVarsCompiled     = _exprWithVars.Compile();
+            _exprWithVarsCompiled = _exprWithVars.Compile();
         }
 
         [Benchmark(Baseline = true)]
         public object Expression_with_sub_expressions_CompiledFast()
         {
-            //return _expr.CompileFast(true);
-            return _exprCompiledFast();
+            return _expr.CompileFast(true);
+            //return _exprCompiledFast();
             //return _expr.CompileFast(true).Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
-            //return _expr.Compile();
-            return _exprCompiled();
+            return _expr.Compile();
+            //return _exprCompiled();
             //return _expr.Compile().Invoke();
         }
 
