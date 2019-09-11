@@ -154,7 +154,6 @@ namespace FastExpressionCompiler.UnitTests
     ```
         */
 
-
         [Test]
         public void Repeating_the_constants_should_load_variables()
         {

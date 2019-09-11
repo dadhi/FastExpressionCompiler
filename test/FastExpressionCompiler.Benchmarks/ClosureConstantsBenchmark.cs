@@ -61,7 +61,6 @@ namespace FastExpressionCompiler.Benchmarks
                 _expr.CompileFast(true);
         }
 
-
         [MemoryDiagnoser]
         public class Invocation
         {
