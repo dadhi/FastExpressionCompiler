@@ -14,6 +14,14 @@ namespace FastExpressionCompiler.Benchmarks
 |                    Compile | 58.287 us | 0.3045 us | 0.2848 us |  8.51 |    0.06 | 0.9155 | 0.4272 |      - |    4.4 KB |
 |                CompileFast |  6.563 us | 0.0345 us | 0.0322 us |  0.96 |    0.01 | 0.4883 | 0.2441 | 0.0305 |   2.25 KB |
 | CompileFast_WithoutClosure |  6.852 us | 0.0431 us | 0.0403 us |  1.00 |    0.00 | 0.4807 | 0.2365 | 0.0381 |   2.22 KB |
+
+
+|                                         Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|----------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                                        Compile | 58.354 us | 0.2345 us | 0.2079 us | 10.77 |    0.10 | 0.9155 | 0.4272 |      - |    4.4 KB |
+|                     CompileFast_WithoutClosure |  7.169 us | 0.0268 us | 0.0238 us |  1.32 |    0.01 | 0.4807 | 0.2365 | 0.0381 |   2.22 KB |
+| CompileFast_WithoutClosure_FromLightExpression |  5.418 us | 0.0416 us | 0.0369 us |  1.00 |    0.00 | 0.4272 | 0.2136 | 0.0305 |   1.97 KB |
+
          */
         [MemoryDiagnoser]
         public class Compilation

@@ -101,11 +101,11 @@ namespace FastExpressionCompiler.Benchmarks
 
 |                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |------------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                                    Compile | 281.853 us | 0.8443 us | 0.7897 us | 29.53 |    0.11 | 1.9531 | 0.9766 |      - |  10.87 KB |
-|                                CompileFast |  11.076 us | 0.0551 us | 0.0488 us |  1.16 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
-|                CompileFast_LightExpression |   9.543 us | 0.0422 us | 0.0374 us |  1.00 |    0.00 | 0.6409 | 0.3204 | 0.0305 |   2.98 KB |
-|                 CompileFast_WithoutClosure |  10.222 us | 0.1897 us | 0.1775 us |  1.07 |    0.02 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
-| CompileFast_LightExpression_WithoutClosure |   8.611 us | 0.1070 us | 0.1000 us |  0.90 |    0.01 | 0.6409 | 0.3204 | 0.0305 |   2.95 KB |
+|                                    Compile | 280.307 us | 0.6805 us | 0.6033 us | 28.04 |    0.09 | 1.9531 | 0.9766 |      - |  10.87 KB |
+|                                CompileFast |  11.420 us | 0.0560 us | 0.0496 us |  1.14 |    0.01 | 0.6256 | 0.3052 | 0.0305 |   2.91 KB |
+|                CompileFast_LightExpression |   9.996 us | 0.0259 us | 0.0229 us |  1.00 |    0.00 | 0.6256 | 0.3052 | 0.0305 |   2.91 KB |
+|                 CompileFast_WithoutClosure |  10.209 us | 0.0709 us | 0.0663 us |  1.02 |    0.01 | 0.6104 | 0.3052 | 0.0305 |   2.83 KB |
+| CompileFast_LightExpression_WithoutClosure |   9.065 us | 0.0656 us | 0.0614 us |  0.91 |    0.01 | 0.6104 | 0.3052 | 0.0305 |   2.83 KB |
 
         */
         [MemoryDiagnoser]
@@ -154,9 +154,9 @@ namespace FastExpressionCompiler.Benchmarks
 
         |                               Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
         |------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-        |                     Create_n_Compile | 308.74 us | 1.0322 us | 0.9150 us | 25.20 |    0.11 | 2.9297 | 1.4648 |      - |   13.7 KB |
-        |                 Create_n_CompileFast |  24.20 us | 0.0807 us | 0.0715 us |  1.98 |    0.01 | 1.2512 | 0.6104 | 0.0305 |   5.87 KB |
-        | Create_n_CompileFast_LightExpression |  12.25 us | 0.0693 us | 0.0614 us |  1.00 |    0.00 | 1.1139 | 0.5493 | 0.0458 |   5.17 KB |
+        |                     Create_n_Compile | 307.76 us | 1.1609 us | 1.0291 us | 24.15 |    0.08 | 2.9297 | 1.4648 |      - |   13.7 KB |
+        |                 Create_n_CompileFast |  25.47 us | 0.3394 us | 0.3175 us |  2.00 |    0.02 | 1.2512 | 0.6104 | 0.0305 |   5.81 KB |
+        | Create_n_CompileFast_LightExpression |  12.74 us | 0.0280 us | 0.0248 us |  1.00 |    0.00 | 1.0071 | 0.5035 | 0.0458 |   4.63 KB |
 
         */
         [MemoryDiagnoser]

@@ -413,7 +413,7 @@ namespace FastExpressionCompiler.LightExpression
             new LambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters, body.Type);
 
         public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) =>
-            new LambdaExpression(delegateType, body, parameters, delegateType.FindDelegateInvokeMethod().ReturnType);
+            new LambdaExpression(delegateType, body, parameters, GetDelegateReturnType(delegateType));
 
         public static LambdaExpression Lambda(Type delegateType, Expression body, ParameterExpression[] parameters, Type returnType) =>
             new LambdaExpression(delegateType, body, parameters, returnType);
@@ -425,14 +425,49 @@ namespace FastExpressionCompiler.LightExpression
             new Expression<TDelegate>(body, Tools.Empty<ParameterExpression>(), returnType);
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, params ParameterExpression[] parameters) =>
-            new Expression<TDelegate>(body, parameters, typeof(TDelegate).FindDelegateInvokeMethod().ReturnType);
+            new Expression<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
+
+        private static Type GetDelegateReturnType(Type delType)
+        {
+            var typeInfo = delType.GetTypeInfo();
+            if (typeInfo.IsGenericType)
+            {
+                var typeArguments = typeInfo.GenericTypeArguments;
+                var index = typeArguments.Length - 1;
+                var typeDef = typeInfo.GetGenericTypeDefinition();
+                if (typeDef == FuncTypes[index])
+                    return typeArguments[index];
+
+                if (typeDef == ActionTypes[index])
+                    return typeof(void);
+            }
+            else if (delType == typeof(Action))
+                return typeof(void);
+
+            return delType.FindDelegateInvokeMethod().ReturnType;
+        }
+
+        internal static readonly Type[] FuncTypes =
+        {
+            typeof(Func<>), typeof(Func<,>), typeof(Func<,,>), typeof(Func<,,,>), typeof(Func<,,,,>),
+            typeof(Func<,,,,,>), typeof(Func<,,,,,,>), typeof(Func<,,,,,,,>)
+        };
+
+        internal static readonly Type[] ActionTypes =
+        {
+            typeof(Action<>), typeof(Action<,>), typeof(Action<,,>), typeof(Action<,,,>),
+            typeof(Action<,,,,>), typeof(Action<,,,,,>), typeof(Action<,,,,,,>)
+        };
+
+        public static Expression<Func<T1, R>> Lambda<T1, R>(Expression body, ParameterExpression param1) =>
+            new Expression<Func<T1, R>>(body, new[] { param1 }, typeof(R));
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression[] parameters, Type returnType) =>
             new Expression<TDelegate>(body, parameters, returnType);
 
         /// todo: <paramref name="name"/> is ignored for now, the method is just for compatibility with SysExpression
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) =>
-            new Expression<TDelegate>(body, parameters, typeof(TDelegate).FindDelegateInvokeMethod().ReturnType);
+            new Expression<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
 
         /// <summary>Creates a BinaryExpression that represents applying an array index operator to an array of rank one.</summary>
         /// <param name="array">A Expression to set the Left property equal to.</param>
