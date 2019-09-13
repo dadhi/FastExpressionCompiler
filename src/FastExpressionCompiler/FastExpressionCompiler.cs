@@ -58,7 +58,8 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr,
             bool ifFastFailedReturnNull = false) where TDelegate : class =>
-            (TDelegate)(TryCompile(typeof(TDelegate), lambdaExpr.Body, lambdaExpr.Parameters, Tools.GetParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType)
+            (TDelegate)(TryCompileBoundToFirstClosureParam(typeof(TDelegate) == typeof(Delegate) ? lambdaExpr.Type : typeof(TDelegate), 
+                    lambdaExpr.Body, lambdaExpr.Parameters, GetClosureTypeToParamTypesFromPool(lambdaExpr.Parameters), lambdaExpr.ReturnType)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys()));
 
         /// Compiles a static method to the passed IL Generator.
@@ -78,8 +79,8 @@ namespace FastExpressionCompiler
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            (Delegate)TryCompile(lambdaExpr.Type, lambdaExpr.Body, lambdaExpr.Parameters,
-                Tools.GetParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType)
+            (Delegate)TryCompileBoundToFirstClosureParam(lambdaExpr.Type, lambdaExpr.Body, lambdaExpr.Parameters,
+                GetClosureTypeToParamTypesFromPool(lambdaExpr.Parameters), lambdaExpr.ReturnType)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Unifies Compile for System.Linq.Expressions and FEC.LightExpression</summary>
@@ -106,102 +107,115 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<R> CompileFast<R>(this Expression<Func<R>> lambdaExpr,
             bool ifFastFailedReturnNull = false) =>
-            (Func<R>)TryCompile(typeof(Func<R>), lambdaExpr.Body, lambdaExpr.Parameters, Tools.Empty<Type>(), typeof(R))
+            (Func<R>)TryCompileBoundToFirstClosureParam(typeof(Func<R>), 
+                lambdaExpr.Body, lambdaExpr.Parameters, _closureAsASingleParamType, typeof(R))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, R> CompileFast<T1, R>(this Expression<Func<T1, R>> lambdaExpr,
             bool ifFastFailedReturnNull = false) =>
-            (Func<T1, R>)TryCompile(typeof(Func<T1, R>), lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(T1) }, typeof(R))
+            (Func<T1, R>)TryCompileBoundToFirstClosureParam(typeof(Func<T1, R>), 
+                lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(ArrayClosure), typeof(T1) }, typeof(R))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, T2, R> CompileFast<T1, T2, R>(this Expression<Func<T1, T2, R>> lambdaExpr,
             bool ifFastFailedReturnNull = false) =>
-            (Func<T1, T2, R>)TryCompile(typeof(Func<T1, T2, R>), lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(T1), typeof(T2) },
+            (Func<T1, T2, R>)TryCompileBoundToFirstClosureParam(typeof(Func<T1, T2, R>), 
+                lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(ArrayClosure), typeof(T1), typeof(T2) },
                 typeof(R))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, T2, T3, R> CompileFast<T1, T2, T3, R>(
             this Expression<Func<T1, T2, T3, R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            (Func<T1, T2, T3, R>)TryCompile(typeof(Func<T1, T2, T3, R>), lambdaExpr.Body, lambdaExpr.Parameters,
-                new[] { typeof(T1), typeof(T2), typeof(T3) }, typeof(R))
+            (Func<T1, T2, T3, R>)TryCompileBoundToFirstClosureParam(typeof(Func<T1, T2, T3, R>), 
+                lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3) }, typeof(R))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, T2, T3, T4, R> CompileFast<T1, T2, T3, T4, R>(
             this Expression<Func<T1, T2, T3, T4, R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            (Func<T1, T2, T3, T4, R>)TryCompile(typeof(Func<T1, T2, T3, T4, R>), lambdaExpr.Body, lambdaExpr.Parameters,
-                new[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4) }, typeof(R))
+            (Func<T1, T2, T3, T4, R>)TryCompileBoundToFirstClosureParam(typeof(Func<T1, T2, T3, T4, R>), 
+                lambdaExpr.Body, lambdaExpr.Parameters,
+                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4) }, typeof(R))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, T2, T3, T4, T5, R> CompileFast<T1, T2, T3, T4, T5, R>(
             this Expression<Func<T1, T2, T3, T4, T5, R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            (Func<T1, T2, T3, T4, T5, R>)TryCompile(typeof(Func<T1, T2, T3, T4, T5, R>), lambdaExpr.Body, lambdaExpr.Parameters,
-                new[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5) }, typeof(R))
+            (Func<T1, T2, T3, T4, T5, R>)TryCompileBoundToFirstClosureParam(typeof(Func<T1, T2, T3, T4, T5, R>), 
+                lambdaExpr.Body, lambdaExpr.Parameters,
+                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5) }, typeof(R))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, T2, T3, T4, T5, T6, R> CompileFast<T1, T2, T3, T4, T5, T6, R>(
             this Expression<Func<T1, T2, T3, T4, T5, T6, R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            (Func<T1, T2, T3, T4, T5, T6, R>)TryCompile(typeof(Func<T1, T2, T3, T4, T5, T6, R>), lambdaExpr.Body, lambdaExpr.Parameters,
-                new[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6) }, typeof(R))
+            (Func<T1, T2, T3, T4, T5, T6, R>)TryCompileBoundToFirstClosureParam(typeof(Func<T1, T2, T3, T4, T5, T6, R>), 
+                lambdaExpr.Body, lambdaExpr.Parameters,
+                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6) }, typeof(R))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action CompileFast(this Expression<Action> lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            (Action)TryCompile(typeof(Action), lambdaExpr.Body, lambdaExpr.Parameters, Tools.Empty<Type>(), typeof(void))
+            (Action)TryCompileBoundToFirstClosureParam(typeof(Action), 
+                lambdaExpr.Body, lambdaExpr.Parameters, _closureAsASingleParamType, typeof(void))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1> CompileFast<T1>(this Expression<Action<T1>> lambdaExpr,
             bool ifFastFailedReturnNull = false) =>
-            (Action<T1>)TryCompile(typeof(Action<T1>), lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(T1) }, typeof(void))
+            (Action<T1>)TryCompileBoundToFirstClosureParam(typeof(Action<T1>), 
+                lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(ArrayClosure), typeof(T1) }, typeof(void))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1, T2> CompileFast<T1, T2>(this Expression<Action<T1, T2>> lambdaExpr,
             bool ifFastFailedReturnNull = false) =>
-            (Action<T1, T2>)TryCompile(typeof(Action<T1, T2>), lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(T1), typeof(T2) },
+            (Action<T1, T2>)TryCompileBoundToFirstClosureParam(typeof(Action<T1, T2>), 
+                lambdaExpr.Body, lambdaExpr.Parameters, new[] { typeof(ArrayClosure), typeof(T1), typeof(T2) },
                 typeof(void))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1, T2, T3> CompileFast<T1, T2, T3>(this Expression<Action<T1, T2, T3>> lambdaExpr,
             bool ifFastFailedReturnNull = false) =>
-            (Action<T1, T2, T3>)TryCompile(typeof(Action<T1, T2, T3>), lambdaExpr.Body, lambdaExpr.Parameters,
-                new[] { typeof(T1), typeof(T2), typeof(T3) }, typeof(void))
+            (Action<T1, T2, T3>)TryCompileBoundToFirstClosureParam(typeof(Action<T1, T2, T3>), 
+                lambdaExpr.Body, lambdaExpr.Parameters,
+                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3) }, typeof(void))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1, T2, T3, T4> CompileFast<T1, T2, T3, T4>(
             this Expression<Action<T1, T2, T3, T4>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            (Action<T1, T2, T3, T4>)TryCompile(typeof(Action<T1, T2, T3, T4>), lambdaExpr.Body, lambdaExpr.Parameters,
-                new[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4) }, typeof(void))
+            (Action<T1, T2, T3, T4>)TryCompileBoundToFirstClosureParam(typeof(Action<T1, T2, T3, T4>), 
+                lambdaExpr.Body, lambdaExpr.Parameters,
+                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4) }, typeof(void))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1, T2, T3, T4, T5> CompileFast<T1, T2, T3, T4, T5>(
             this Expression<Action<T1, T2, T3, T4, T5>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            (Action<T1, T2, T3, T4, T5>)TryCompile(typeof(Action<T1, T2, T3, T4, T5>), lambdaExpr.Body, lambdaExpr.Parameters,
-                new[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5) }, typeof(void))
+            (Action<T1, T2, T3, T4, T5>)TryCompileBoundToFirstClosureParam(typeof(Action<T1, T2, T3, T4, T5>), 
+                lambdaExpr.Body, lambdaExpr.Parameters,
+                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5) }, typeof(void))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1, T2, T3, T4, T5, T6> CompileFast<T1, T2, T3, T4, T5, T6>(
             this Expression<Action<T1, T2, T3, T4, T5, T6>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
-            (Action<T1, T2, T3, T4, T5, T6>)TryCompile(typeof(Action<T1, T2, T3, T4, T5, T6>), lambdaExpr.Body, lambdaExpr.Parameters,
-                new[] { typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6) }, typeof(void))
+            (Action<T1, T2, T3, T4, T5, T6>)TryCompileBoundToFirstClosureParam(typeof(Action<T1, T2, T3, T4, T5, T6>), 
+                lambdaExpr.Body, lambdaExpr.Parameters,
+                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6) }, typeof(void))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
 #endregion
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/></summary>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr) where TDelegate : class =>
-            (TDelegate)TryCompile(typeof(TDelegate), lambdaExpr.Body, lambdaExpr.Parameters, 
-                Tools.GetParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType);
+            (TDelegate)TryCompileBoundToFirstClosureParam(typeof(TDelegate) == typeof(Delegate) ? lambdaExpr.Type : typeof(TDelegate), 
+                lambdaExpr.Body, lambdaExpr.Parameters, GetClosureTypeToParamTypesFromPool(lambdaExpr.Parameters), lambdaExpr.ReturnType);
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/> 
         /// with the provided closure object and constant expressions (or lack there of) -
@@ -215,8 +229,8 @@ namespace FastExpressionCompiler
         {
             var closureInfo = new ClosureInfo(true, closureConstantsExprs);
 
-            var paramTypes = PrependClosureTypeToParamTypes(lambdaExpr.Parameters);
-            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, paramTypes,
+            var closurePlusParamTypes = GetClosureTypeToParamTypesFromPool(lambdaExpr.Parameters);
+            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = method.GetILGenerator();
@@ -229,7 +243,9 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Ret);
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-            return (TDelegate)(object)method.CreateDelegate(delegateType, ArrayClosure.Create(closureConstantsExprs));
+            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, ArrayClosure.Create(closureConstantsExprs));
+            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            return @delegate;
         }
 
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
@@ -237,10 +253,10 @@ namespace FastExpressionCompiler
             where TDelegate : class
         {
             var closureInfo = new ClosureInfo(true);
-            var paramTypes = Tools.GetParamTypes(lambdaExpr.Parameters);
+            var closurePlusParamTypes = GetClosureTypeToParamTypesFromPool(lambdaExpr.Parameters);
 
-            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, paramTypes,
-                typeof(ExpressionCompiler), skipVisibility: true);
+            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
+                typeof(ArrayClosure), skipVisibility: true);
 
             var il = method.GetILGenerator();
             var parentFlags = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
@@ -248,23 +264,25 @@ namespace FastExpressionCompiler
                 return null;
             il.Emit(OpCodes.Ret);
 
-            var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : Tools.GetFuncOrActionType(paramTypes, lambdaExpr.ReturnType);
-            return (TDelegate)(object)method.CreateDelegate(delegateType);
+            var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
+            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType);
+            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            return @delegate;
         }
 
-        /// Compiles the expression body and parameters that constitute the lambda expression to the delegate by emitting the IL. 
-        /// If sub-expressions are not supported by emitter, then the method returns null.
-        /// If this method returns `null` then the client may call `Expression.Compile()` as fallback.
+        #region Obsolete
+
+        /// Obsolete
+        [Obsolete("Not used - candidate for removal")]
         public static TDelegate TryCompile<TDelegate>(
             Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
             where TDelegate : class =>
             (TDelegate)TryCompile(typeof(TDelegate), bodyExpr, paramExprs, paramTypes, returnType);
 
-        /// Compiles the expression body and parameters that constitute the lambda expression to the delegate by emitting the IL. 
-        /// If sub-expressions are not supported by emitter, then the method returns null.
-        /// If this method returns `null` then the client may call `Expression.Compile()` as fallback.
+        /// Obsolete
+        [Obsolete("Not used - candidate for removal")]
         public static object TryCompile(Type delegateType,
-            Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType)
+            Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType) 
         {
             var closureInfo = new ClosureInfo(false);
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo))
@@ -276,14 +294,14 @@ namespace FastExpressionCompiler
                     if (!TryCompileNestedLambda(ref closureInfo, i))
                         return null;
 
-            var closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0 
-                ? ArrayClosure.Empty 
+            var closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
+                ? ArrayClosure.Empty
                 : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
 
             // todo: in half of the cases we don't need the temporary `paramTypes`
-            var closurePlusParamTypes = GetClosureTypeToParamTypes(paramTypes);
+            var closurePlusParamTypes = GetClosureTypeToParamTypesFromPool(paramTypes);
 
-            var method = new DynamicMethod(string.Empty, 
+            var method = new DynamicMethod(string.Empty,
                 returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
             var il = method.GetILGenerator();
@@ -300,24 +318,55 @@ namespace FastExpressionCompiler
             if (delegateType == typeof(Delegate))
                 delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
 
-            var compiledDelegate = method.CreateDelegate(delegateType, closure);
+            var @delegate = method.CreateDelegate(delegateType, closure);
+            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            return @delegate;
+        }
 
-            ReturnClosureTypeToParamTypes(closurePlusParamTypes);
+        #endregion
 
-            return compiledDelegate;
+        internal static object TryCompileBoundToFirstClosureParam(Type delegateType,
+            Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] closurePlusParamTypes, Type returnType)
+        {
+            var closureInfo = new ClosureInfo(false);
+            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo))
+                return null;
+
+            var nestedLambdas = closureInfo.NestedLambdas;
+            if (nestedLambdas.Length != 0)
+                for (var i = 0; i < nestedLambdas.Length; ++i)
+                    if (!TryCompileNestedLambda(ref closureInfo, i))
+                        return null;
+
+            var closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
+                ? ArrayClosure.Empty
+                : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
+
+            var method = new DynamicMethod(string.Empty,
+                returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+
+            var il = method.GetILGenerator();
+
+            if (closure.ConstantsAndNestedLambdas != null)
+                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
+
+            var parentFlags = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
+            if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, parentFlags))
+                return null;
+
+            il.Emit(OpCodes.Ret);
+
+            var @delegate = method.CreateDelegate(delegateType, closure);
+            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            return @delegate;
         }
 
         private static Type[] PrependClosureTypeToParamTypes(IReadOnlyList<ParameterExpression> paramExprs)
         {
-            if (paramExprs.Count == 0)
-                return _closureAsASingleParamType;
-
-            if (paramExprs.Count == 1)
-                return new[] { typeof(ArrayClosure), paramExprs[0].IsByRef ? paramExprs[0].Type.MakeByRefType() : paramExprs[0].Type };
-
-            var closureAndParamTypes = new Type[paramExprs.Count + 1];
+            var count = paramExprs.Count;
+            var closureAndParamTypes = new Type[count + 1];
             closureAndParamTypes[0] = typeof(ArrayClosure);
-            for (var i = 0; i < paramExprs.Count; i++)
+            for (var i = 0; i < count; i++)
             {
                 var parameterExpr = paramExprs[i];
                 closureAndParamTypes[i + 1] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
@@ -328,7 +377,7 @@ namespace FastExpressionCompiler
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
         private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][];
 
-        private static Type[] GetClosureTypeToParamTypes(Type[] paramTypes)
+        private static Type[] GetClosureTypeToParamTypesFromPool(Type[] paramTypes)
         {
             var paramCount = paramTypes.Length;
             if (paramCount == 0)
@@ -347,7 +396,7 @@ namespace FastExpressionCompiler
             return PrependClosureTypeToParamTypes(paramTypes);
         }
 
-        private static Type[] GetClosureTypeToParamTypes(IReadOnlyList<ParameterExpression> paramExprs)
+        private static Type[] GetClosureTypeToParamTypesFromPool(IReadOnlyList<ParameterExpression> paramExprs)
         {
             var paramCount = paramExprs.Count;
             if (paramCount == 0)
@@ -370,7 +419,7 @@ namespace FastExpressionCompiler
             return PrependClosureTypeToParamTypes(paramExprs);
         }
 
-        private static void ReturnClosureTypeToParamTypes(Type[] closurePlusParamTypes)
+        private static void ReturnClosureTypeToParamTypesToPool(Type[] closurePlusParamTypes)
         {
             var paramCount = closurePlusParamTypes.Length - 1;
             if (paramCount != 0 && paramCount < _closureTypePlusParamTypesPool.Length)
@@ -379,15 +428,6 @@ namespace FastExpressionCompiler
 
         private static Type[] PrependClosureTypeToParamTypes(Type[] paramTypes)
         {
-            //if (paramCount == 0)
-            //    return _closureAsASingleParamType;
-
-            //if (paramCount == 1)
-            //    return new[] { typeof(ArrayClosure), paramTypes[0] };
-
-            //if (paramCount == 2)
-            //    return new[] { typeof(ArrayClosure), paramTypes[0], paramTypes[1] };
-
             var closureAndParamTypes = new Type[paramTypes.Length + 1];
             closureAndParamTypes[0] = typeof(ArrayClosure);
             Array.Copy(paramTypes, 0, closureAndParamTypes, 1, paramTypes.Length);
@@ -1189,7 +1229,7 @@ namespace FastExpressionCompiler
                 nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
 
             var nestedReturnType = nestedLambdaExpr.ReturnType;
-            var closurePlusParamTypes = GetClosureTypeToParamTypes(nestedLambdaParamExprs);
+            var closurePlusParamTypes = GetClosureTypeToParamTypesFromPool(nestedLambdaParamExprs);
 
             var method = new DynamicMethod(string.Empty, 
                 nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
@@ -1217,7 +1257,7 @@ namespace FastExpressionCompiler
                     null);
             }
 
-            ReturnClosureTypeToParamTypes(closurePlusParamTypes);
+            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return true;
         }
 
