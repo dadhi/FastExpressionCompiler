@@ -2516,7 +2516,7 @@ namespace FastExpressionCompiler
                         if (varType.IsValueType())
                             il.Emit(OpCodes.Unbox_Any, varType);
 
-                        EmitStoreLocalVariable(il, il.DeclareLocal(varType).LocalIndex);
+                        EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(varType));
                     }
 
                     var nestedLambdas = closure.NestedLambdas;
@@ -2527,7 +2527,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldelem_Ref);
 
                         var varType = nestedLambdas[i].Lambda.GetType();
-                        EmitStoreLocalVariable(il, il.DeclareLocal(varType).LocalIndex);
+                        EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(varType));
                     }
 
                     il.Emit(OpCodes.Pop); // remove the last `ArrayClosure.ConstantsAndNestedLambdasField` from stack
@@ -2539,7 +2539,7 @@ namespace FastExpressionCompiler
 
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
-                    EmitStoreLocalVariable(il, il.DeclareLocal(typeof(object[])).LocalIndex);
+                    EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[])));
                 }
                 else
                 {
@@ -4104,8 +4104,8 @@ namespace FastExpressionCompiler
                     case 8:
                         il.Emit(OpCodes.Ldc_I4_8);
                         break;
-                    case int n when n > -129 && n < 128:
-                        il.Emit(OpCodes.Ldc_I4_S, (sbyte)i);
+                    case int n when n < 256:
+                        il.Emit(OpCodes.Ldc_I4_S, (byte)i);
                         break;
                     default:
                         il.Emit(OpCodes.Ldc_I4, i);
@@ -4437,7 +4437,7 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Ldarg_1); // load `il` argument
             il.Emit(OpCodes.Ldfld, LocalSignatureField);
             il.Emit(OpCodes.Ldarg_2); // load `type` argument
-            il.Emit(OpCodes.Ldarg_1); // load `pinned: false` argument
+            il.Emit(OpCodes.Ldc_I4_0); // load `pinned: false` argument
             il.Emit(OpCodes.Call, AddArgumentMethod);
 
             il.Emit(OpCodes.Ldarg_1); // load `il` argument
@@ -4457,11 +4457,11 @@ namespace FastExpressionCompiler
 
         /// Get via reflection
         public static readonly FieldInfo LocalSignatureField = typeof(ILGenerator).GetTypeInfo()
-            .GetField("m_localSignature", BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
+            .GetDeclaredField("m_localSignature");
 
         /// Get via reflection
         public static readonly FieldInfo LocalCountField = typeof(ILGenerator).GetTypeInfo()
-            .GetField("m_localCount", BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
+            .GetDeclaredField("m_localCount");
 
         /// Get via reflection
         public static readonly MethodInfo AddArgumentMethod = typeof(SignatureHelper).GetTypeInfo()

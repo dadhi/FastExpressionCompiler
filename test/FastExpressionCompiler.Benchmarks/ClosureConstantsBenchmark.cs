@@ -46,13 +46,8 @@ namespace FastExpressionCompiler.Benchmarks
 
             |      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
             |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-            |     Compile | 410.013 us | 2.5495 us | 2.2600 us | 58.70 |    0.29 | 0.9766 | 0.4883 |      - |   6.26 KB |
-            | CompileFast |   6.985 us | 0.0259 us | 0.0242 us |  1.00 |    0.00 | 0.4120 | 0.2060 | 0.0305 |   1.88 KB |
-
-            |      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-            |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-            |     Compile | 414.094 us | 0.9048 us | 0.8021 us | 58.15 |    0.26 | 0.9766 | 0.4883 |      - |   6.26 KB |
-            | CompileFast |   7.121 us | 0.0345 us | 0.0306 us |  1.00 |    0.00 | 0.3662 | 0.1831 | 0.0305 |   1.66 KB |
+            |     Compile | 412.592 us | 0.5961 us | 0.5284 us | 57.19 |    0.16 | 0.9766 | 0.4883 |      - |   6.26 KB |
+            | CompileFast |   7.215 us | 0.0183 us | 0.0153 us |  1.00 |    0.00 | 0.3586 | 0.1755 | 0.0305 |   1.66 KB |
 
             */
 
@@ -80,8 +75,8 @@ namespace FastExpressionCompiler.Benchmarks
 
             |              Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
             |-------------------- |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
-            |     Invoke_Compiled | 34.06 ns | 0.1056 ns | 0.0937 ns |  1.01 | 0.0339 |     - |     - |     160 B |
-            | Invoke_CompiledFast | 33.70 ns | 0.0580 ns | 0.0453 ns |  1.00 | 0.0339 |     - |     - |     160 B |
+            |     Invoke_Compiled | 37.24 ns | 0.1151 ns | 0.1020 ns |  1.07 | 0.0339 |     - |     - |     160 B |
+            | Invoke_CompiledFast | 34.88 ns | 0.1191 ns | 0.1056 ns |  1.00 | 0.0339 |     - |     - |     160 B |
             */
 
             private readonly Func<A> _compiled     = CreateExpression().Compile();
