@@ -4302,7 +4302,7 @@ namespace FastExpressionCompiler
         {
             if (xs is T[] array)
                 return array;
-            return xs == null ? null : new List<T>(xs).ToArray();
+            return xs == null ? null : xs.ToArray();
         }
 
         private static class EmptyArray<T>
@@ -4377,16 +4377,29 @@ namespace FastExpressionCompiler
                 case 7: return typeof(Func<,,,,,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], paramTypes[3], paramTypes[4], paramTypes[5], paramTypes[6], returnType);
                 default:
                     throw new NotSupportedException(
-                        string.Format("Func with so many ({0}) parameters is not supported!", paramTypes.Length));
+                        $"Func with so many ({paramTypes.Length}) parameters is not supported!");
             }
         }
 
         public static T GetFirst<T>(this IEnumerable<T> source)
         {
+            // This is pretty much Linq.FirstOrDefault except it does not need to check
+            // if source is IPartition<T> (but should it?)
+
             if (source is IList<T> list)
                 return list.Count == 0 ? default : list[0];
             using (var items = source.GetEnumerator())
                 return items.MoveNext() ? items.Current : default;
+        }
+
+        public static T GetFirst<T>(this IList<T> source)
+        {
+            return source.Count == 0 ? default : source[0];
+        }
+
+        public static T GetFirst<T>(this T[] source)
+        {
+            return source.Length == 0 ? default : source[0];
         }
     }
 
