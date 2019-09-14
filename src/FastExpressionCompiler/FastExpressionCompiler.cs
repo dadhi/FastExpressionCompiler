@@ -43,6 +43,7 @@ namespace FastExpressionCompiler
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Linq.Expressions;
     using System.Reflection;
     using System.Reflection.Emit;
@@ -4387,6 +4388,89 @@ namespace FastExpressionCompiler
             using (var items = source.GetEnumerator())
                 return items.MoveNext() ? items.Current : default;
         }
+    }
+
+    /// Hey
+    public static class ILGeneratorHacks
+    {
+        /*
+        // Original methods from ILGenerator.cs
+        
+        public virtual LocalBuilder DeclareLocal(Type localType)
+        {
+            return this.DeclareLocal(localType, false);
+        }
+
+        public virtual LocalBuilder DeclareLocal(Type localType, bool pinned)
+        {
+            MethodBuilder methodBuilder = this.m_methodBuilder as MethodBuilder;
+            if ((MethodInfo)methodBuilder == (MethodInfo)null)
+                throw new NotSupportedException();
+            if (methodBuilder.IsTypeCreated())
+                throw new InvalidOperationException(SR.InvalidOperation_TypeHasBeenCreated);
+            if (localType == (Type)null)
+                throw new ArgumentNullException(nameof(localType));
+            if (methodBuilder.m_bIsBaked)
+                throw new InvalidOperationException(SR.InvalidOperation_MethodBaked);
+            this.m_localSignature.AddArgument(localType, pinned);
+            LocalBuilder localBuilder = new LocalBuilder(this.m_localCount, localType, (MethodInfo)methodBuilder, pinned);
+            ++this.m_localCount;
+            return localBuilder;
+        }
+        */
+
+        /// Not allocating the LocalBuilder class
+        /// emitting this:
+        /// il.m_localSignature.AddArgument(type);
+        /// return PostInc(ref il.LocalCount);
+        public static Func<ILGenerator, Type, int> CompileGetNextLocalVarIndex()
+        {
+            if (LocalCountField == null || LocalSignatureField == null || AddArgumentMethod == null)
+                return (i, t) => i.DeclareLocal(t).LocalIndex;
+
+            var method = new DynamicMethod(string.Empty,
+                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type) },
+                typeof(ExpressionCompiler.ArrayClosure), skipVisibility: true);
+
+            var il = method.GetILGenerator();
+
+            il.Emit(OpCodes.Ldarg_1); // load `il` argument
+            il.Emit(OpCodes.Ldfld, LocalSignatureField);
+            il.Emit(OpCodes.Ldarg_2); // load `type` argument
+            il.Emit(OpCodes.Ldarg_1); // load `pinned: false` argument
+            il.Emit(OpCodes.Call, AddArgumentMethod);
+
+            il.Emit(OpCodes.Ldarg_1); // load `il` argument
+            il.Emit(OpCodes.Ldflda, LocalCountField);
+            il.Emit(OpCodes.Call, PostIncMethod);
+
+            il.Emit(OpCodes.Ret);
+
+            return (Func<ILGenerator, Type, int>)method.CreateDelegate(typeof(Func<ILGenerator, Type, int>), 
+                ExpressionCompiler.ArrayClosure.Empty);
+        }
+
+        internal static int PostInc(ref int i) => i++;
+
+        public static readonly MethodInfo PostIncMethod = typeof(ILGeneratorHacks).GetTypeInfo()
+            .GetDeclaredMethod(nameof(PostInc));
+
+        /// Get via reflection
+        public static readonly FieldInfo LocalSignatureField = typeof(ILGenerator).GetTypeInfo()
+            .GetField("m_localSignature", BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
+
+        /// Get via reflection
+        public static readonly FieldInfo LocalCountField = typeof(ILGenerator).GetTypeInfo()
+            .GetField("m_localCount", BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
+
+        /// Get via reflection
+        public static readonly MethodInfo AddArgumentMethod = typeof(SignatureHelper).GetTypeInfo()
+            .GetDeclaredMethods(nameof(SignatureHelper.AddArgument)).First(m => m.GetParameters().Length == 2);
+
+        private static Func<ILGenerator, Type, int> _getNextLocalVarIndex = CompileGetNextLocalVarIndex();
+
+        /// Does the job
+        public static int GetNextLocalVarIndex(this ILGenerator il, Type t) => _getNextLocalVarIndex(il, t);
     }
 
     internal struct LiveCountArray<T>

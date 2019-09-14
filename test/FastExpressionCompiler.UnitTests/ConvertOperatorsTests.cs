@@ -60,6 +60,25 @@ namespace FastExpressionCompiler.UnitTests
             f("hey");
         }
 
+        [Test]
+        public void Generic_converter_should_work()
+        {
+            var expr = GetGenericConverter<int, XEnum>();
+            var fs = expr.CompileSys();
+            Assert.AreEqual(XEnum.C, fs(2));
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual(XEnum.C, f(2));
+        }
+
+        public static Expression<Func<TFrom, TTo>> GetGenericConverter<TFrom, TTo>()
+        {
+            var fromParam = Parameter(typeof(TFrom));
+            return Lambda<Func<TFrom, TTo>>(Expression.Convert(fromParam, typeof(TTo)), fromParam);
+        }
+
+        public enum XEnum { A, B, C };
+
         public struct X
         {
             public static implicit operator X(string s) => new X("X:" + s);

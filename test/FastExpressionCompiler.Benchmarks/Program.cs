@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<GenericConverter.Invocation>();
 
             //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
-            //BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
+            BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<ArrayCopy_vs_ManualForLoop/*>();*/
 
@@ -22,7 +22,7 @@ namespace FastExpressionCompiler.Benchmarks
 
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
-            BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
+            //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
 
             //BenchmarkRunner.Run<NestedLambdaOverhead>();
 

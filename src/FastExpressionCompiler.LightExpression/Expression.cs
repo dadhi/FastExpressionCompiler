@@ -459,9 +459,6 @@ namespace FastExpressionCompiler.LightExpression
             typeof(Action<,,,,>), typeof(Action<,,,,,>), typeof(Action<,,,,,,>)
         };
 
-        public static Expression<Func<T1, R>> Lambda<T1, R>(Expression body, ParameterExpression param1) =>
-            new Expression<Func<T1, R>>(body, new[] { param1 }, typeof(R));
-
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression[] parameters, Type returnType) =>
             new Expression<TDelegate>(body, parameters, returnType);
 
