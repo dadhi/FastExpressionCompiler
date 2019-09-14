@@ -60,7 +60,7 @@ namespace FastExpressionCompiler
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr,
             bool ifFastFailedReturnNull = false) where TDelegate : class =>
             (TDelegate)(TryCompileBoundToFirstClosureParam(typeof(TDelegate) == typeof(Delegate) ? lambdaExpr.Type : typeof(TDelegate), 
-                    lambdaExpr.Body, lambdaExpr.Parameters, GetClosureTypeToParamTypesFromPool(lambdaExpr.Parameters), lambdaExpr.ReturnType)
+                    lambdaExpr.Body, lambdaExpr.Parameters, GetClosureTypeToParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys()));
 
         /// Compiles a static method to the passed IL Generator.
@@ -81,7 +81,7 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false) =>
             (Delegate)TryCompileBoundToFirstClosureParam(lambdaExpr.Type, lambdaExpr.Body, lambdaExpr.Parameters,
-                GetClosureTypeToParamTypesFromPool(lambdaExpr.Parameters), lambdaExpr.ReturnType)
+                GetClosureTypeToParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Unifies Compile for System.Linq.Expressions and FEC.LightExpression</summary>
@@ -216,7 +216,7 @@ namespace FastExpressionCompiler
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/></summary>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr) where TDelegate : class =>
             (TDelegate)TryCompileBoundToFirstClosureParam(typeof(TDelegate) == typeof(Delegate) ? lambdaExpr.Type : typeof(TDelegate), 
-                lambdaExpr.Body, lambdaExpr.Parameters, GetClosureTypeToParamTypesFromPool(lambdaExpr.Parameters), lambdaExpr.ReturnType);
+                lambdaExpr.Body, lambdaExpr.Parameters, GetClosureTypeToParamTypes(lambdaExpr.Parameters), lambdaExpr.ReturnType);
 
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/> 
         /// with the provided closure object and constant expressions (or lack there of) -
@@ -230,7 +230,7 @@ namespace FastExpressionCompiler
         {
             var closureInfo = new ClosureInfo(true, closureConstantsExprs);
 
-            var closurePlusParamTypes = GetClosureTypeToParamTypesFromPool(lambdaExpr.Parameters);
+            var closurePlusParamTypes = GetClosureTypeToParamTypes(lambdaExpr.Parameters);
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
 
@@ -254,7 +254,7 @@ namespace FastExpressionCompiler
             where TDelegate : class
         {
             var closureInfo = new ClosureInfo(true);
-            var closurePlusParamTypes = GetClosureTypeToParamTypesFromPool(lambdaExpr.Parameters);
+            var closurePlusParamTypes = GetClosureTypeToParamTypes(lambdaExpr.Parameters);
 
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
                 typeof(ArrayClosure), skipVisibility: true);
@@ -266,7 +266,7 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Ret);
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType);
+            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, ArrayClosure.Empty);
             ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return @delegate;
         }
@@ -283,46 +283,10 @@ namespace FastExpressionCompiler
         /// Obsolete
         [Obsolete("Not used - candidate for removal")]
         public static object TryCompile(Type delegateType,
-            Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType) 
-        {
-            var closureInfo = new ClosureInfo(false);
-            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo))
-                return null;
-
-            var nestedLambdas = closureInfo.NestedLambdas;
-            if (nestedLambdas.Length != 0)
-                for (var i = 0; i < nestedLambdas.Length; ++i)
-                    if (!TryCompileNestedLambda(ref closureInfo, i))
-                        return null;
-
-            var closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                ? ArrayClosure.Empty
-                : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
-
-            // todo: in half of the cases we don't need the temporary `paramTypes`
-            var closurePlusParamTypes = GetClosureTypeToParamTypesFromPool(paramTypes);
-
-            var method = new DynamicMethod(string.Empty,
-                returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
-
-            var il = method.GetILGenerator();
-
-            if (closure.ConstantsAndNestedLambdas != null)
-                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
-
-            var parentFlags = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
-            if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, parentFlags))
-                return null;
-
-            il.Emit(OpCodes.Ret);
-
-            if (delegateType == typeof(Delegate))
-                delegateType = Tools.GetFuncOrActionType(paramTypes, returnType);
-
-            var @delegate = method.CreateDelegate(delegateType, closure);
-            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
-            return @delegate;
-        }
+            Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] paramTypes, Type returnType) =>
+            TryCompileBoundToFirstClosureParam(
+                delegateType != typeof(Delegate) ? delegateType : Tools.GetFuncOrActionType(paramTypes, returnType), 
+                bodyExpr, paramExprs, GetClosureTypeToParamTypes(paramExprs), returnType);
 
         #endregion
 
@@ -378,26 +342,7 @@ namespace FastExpressionCompiler
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
         private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][];
 
-        private static Type[] GetClosureTypeToParamTypesFromPool(Type[] paramTypes)
-        {
-            var paramCount = paramTypes.Length;
-            if (paramCount == 0)
-                return _closureAsASingleParamType;
-
-            if (paramCount < _closureTypePlusParamTypesPool.Length)
-            {
-                var closureAndParamTypes = Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], null);
-                if (closureAndParamTypes != null)
-                {
-                    Array.Copy(paramTypes, 0, closureAndParamTypes, 1, paramCount);
-                    return closureAndParamTypes;
-                }
-            }
-
-            return PrependClosureTypeToParamTypes(paramTypes);
-        }
-
-        private static Type[] GetClosureTypeToParamTypesFromPool(IReadOnlyList<ParameterExpression> paramExprs)
+        private static Type[] GetClosureTypeToParamTypes(IReadOnlyList<ParameterExpression> paramExprs)
         {
             var paramCount = paramExprs.Count;
             if (paramCount == 0)
@@ -425,14 +370,6 @@ namespace FastExpressionCompiler
             var paramCount = closurePlusParamTypes.Length - 1;
             if (paramCount != 0 && paramCount < _closureTypePlusParamTypesPool.Length)
                 Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], closurePlusParamTypes);
-        }
-
-        private static Type[] PrependClosureTypeToParamTypes(Type[] paramTypes)
-        {
-            var closureAndParamTypes = new Type[paramTypes.Length + 1];
-            closureAndParamTypes[0] = typeof(ArrayClosure);
-            Array.Copy(paramTypes, 0, closureAndParamTypes, 1, paramTypes.Length);
-            return closureAndParamTypes;
         }
 
         private struct BlockInfo
@@ -1230,7 +1167,7 @@ namespace FastExpressionCompiler
                 nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
 
             var nestedReturnType = nestedLambdaExpr.ReturnType;
-            var closurePlusParamTypes = GetClosureTypeToParamTypesFromPool(nestedLambdaParamExprs);
+            var closurePlusParamTypes = GetClosureTypeToParamTypes(nestedLambdaParamExprs);
 
             var method = new DynamicMethod(string.Empty, 
                 nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
