@@ -2544,7 +2544,7 @@ namespace FastExpressionCompiler
                 if (elemType == null)
                     return false;
 
-                var arrVar = il.DeclareLocal(arrayType);
+                var arrVarIndex = il.GetNextLocalVarIndex(arrayType);
 
                 var rank = arrayType.GetArrayRank();
                 if (rank == 1) // one dimensional
@@ -2562,14 +2562,14 @@ namespace FastExpressionCompiler
                 }
 
                 il.Emit(OpCodes.Newarr, elemType);
-                il.Emit(OpCodes.Stloc, arrVar);
+                EmitStoreLocalVariable(il, arrVarIndex);
 
                 var isElemOfValueType = elemType.IsValueType();
 
                 for (int i = 0, n = elems.Count; i < n; i++)
                 {
-                    il.Emit(OpCodes.Ldloc, arrVar);
-                    EmitLoadConstantInt(il, i);
+                    EmitLoadLocalVariable(il, arrVarIndex);
+                    EmitLoadArrayIndex(il, i);
 
                     // loading element address for later copying of value into it.
                     if (isElemOfValueType)
@@ -2584,7 +2584,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Stelem_Ref);
                 }
 
-                il.Emit(OpCodes.Ldloc, arrVar);
+                EmitLoadLocalVariable(il, arrVarIndex);
                 return true;
             }
 
