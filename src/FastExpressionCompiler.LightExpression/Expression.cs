@@ -119,11 +119,15 @@ namespace FastExpressionCompiler.LightExpression
             if (arguments.Count == 0)
                 return $"new {typeof(T).Name}[0]";
 
-            var s = "";
+            var s = new StringBuilder();
             for (var i = 0; i < arguments.Count; i++)
-                s += (i > 0 ? "," + NewLine : "") + arguments[i].CodeString;
+            {
+                if (i > 0)
+                    s.Append(",");
+                s.Append(arguments[i].CodeString);
+            }
 
-            return s;
+            return s.ToString();
         }
 
         public static ParameterExpression Parameter(Type type, string name = null) =>
@@ -459,11 +463,11 @@ namespace FastExpressionCompiler.LightExpression
             typeof(Action<,,,,>), typeof(Action<,,,,,>), typeof(Action<,,,,,,>)
         };
 
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression[] parameters, Type returnType) =>
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression[] parameters, Type returnType) where TDelegate : class =>
             new Expression<TDelegate>(body, parameters, returnType);
 
         /// todo: <paramref name="name"/> is ignored for now, the method is just for compatibility with SysExpression
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) =>
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) where TDelegate : class =>
             new Expression<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
 
         /// <summary>Creates a BinaryExpression that represents applying an array index operator to an array of rank one.</summary>
@@ -775,15 +779,20 @@ namespace FastExpressionCompiler.LightExpression
             new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, typeof(bool));
 
         public static BlockExpression Block(params Expression[] expressions) =>
+            Block(expressions[expressions.Length - 1].Type, Tools.Empty<ParameterExpression>(), expressions);
+
+        public static BlockExpression Block(IReadOnlyList<Expression> expressions) =>
             Block(Tools.Empty<ParameterExpression>(), expressions);
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
-            Block(expressions[expressions.Length - 1].Type, variables.AsReadOnlyList(), expressions);
+            Block(variables.AsReadOnlyList(), new List<Expression>(expressions));
 
-        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
-            new BlockExpression(type, variables.AsReadOnlyList(), expressions);
+        public static BlockExpression Block(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) =>
+            Block(expressions[expressions.Count - 1].Type, variables, expressions);
 
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
+            new BlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
             new BlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
 
         /// <summary>
