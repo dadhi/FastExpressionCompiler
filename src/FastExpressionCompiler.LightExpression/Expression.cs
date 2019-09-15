@@ -160,7 +160,7 @@ namespace FastExpressionCompiler.LightExpression
         public static NewExpression New(Type type)
         {
             if (type.IsValueType())
-                return new ValueTypeNewExpression(type);
+                return new NewValueTypeExpression(type);
 
             foreach (var x in type.GetTypeInfo().DeclaredConstructors)
                 if (x.GetParameters().Length == 0)
@@ -1744,11 +1744,11 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class ValueTypeNewExpression : NewExpression
+    public sealed class NewValueTypeExpression : NewExpression
     {
         public override Type Type { get; }
 
-        internal ValueTypeNewExpression(Type type)
+        internal NewValueTypeExpression(Type type)
             : base(null, Tools.Empty<Expression>()) =>
             Type = type;
 
