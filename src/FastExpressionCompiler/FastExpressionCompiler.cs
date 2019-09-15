@@ -2184,14 +2184,14 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Call, sourceType.FindNullableHasValueGetterMethod());
 
                         var labelSourceHasValue = il.DefineLabel();
-                        il.Emit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
+                        il.Emit(OpCodes.Brtrue, labelSourceHasValue); // jump where source has a value
 
                         // otherwise, emit and load a `new Nullable<TTarget>()` struct (that's why a Init instead of New)
                         EmitLoadLocalVariable(il, InitValueTypeVariable(il, targetType));
 
                         // jump to completion
                         var labelDone = il.DefineLabel();
-                        il.Emit(OpCodes.Br_S, labelDone);
+                        il.Emit(OpCodes.Br, labelDone);
 
                         // if source nullable has a value:
                         il.MarkLabel(labelSourceHasValue);
@@ -3539,7 +3539,7 @@ namespace FastExpressionCompiler
 
                         il.Emit(OpCodes.Ldc_I4_0);
                         var doneLabel = il.DefineLabel();
-                        il.Emit(OpCodes.Br_S, doneLabel);
+                        il.Emit(OpCodes.Br, doneLabel);
 
                         il.MarkLabel(ifTrueLabel);
                         il.Emit(OpCodes.Ldc_I4_1);
@@ -3681,7 +3681,7 @@ namespace FastExpressionCompiler
                         var endL = il.DefineLabel();
                         var locIndex = InitValueTypeVariable(il, exprType);
                         EmitLoadLocalVariable(il, locIndex);
-                        il.Emit(OpCodes.Br_S, endL);
+                        il.Emit(OpCodes.Br, endL);
                         il.MarkLabel(valueLabel);
                         il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.GetFirst());
                         il.MarkLabel(endL);
