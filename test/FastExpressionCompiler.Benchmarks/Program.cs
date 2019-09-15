@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<GenericConverter.Compilation>();
             //BenchmarkRunner.Run<GenericConverter.Invocation>();
 
-            BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
+            //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
             //BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<ArrayCopy_vs_ManualForLoop/*>();*/
@@ -41,7 +41,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Compilation>();
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Invocation>();
 
-            //BenchmarkRunner.Run<SimpleExpr_ParamPlusParam>();
+            BenchmarkRunner.Run<SimpleExpr_ParamPlusParam>();
 
             //BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
             //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();

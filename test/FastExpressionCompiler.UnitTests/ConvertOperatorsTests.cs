@@ -69,6 +69,9 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
             Assert.AreEqual(XEnum.C, f(2));
+
+            var f1 = expr.TryCompileWithoutClosure<Func<int, XEnum>>();
+            Assert.AreEqual(XEnum.C, f1(2));
         }
 
         public static Expression<Func<TFrom, TTo>> GetGenericConverter<TFrom, TTo>()

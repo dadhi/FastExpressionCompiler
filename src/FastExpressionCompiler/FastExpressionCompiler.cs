@@ -68,7 +68,7 @@ namespace FastExpressionCompiler
         /// Check `IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod.cs` for example.
         public static bool CompileFastToIL(this LambdaExpression lambdaExpr, ILGenerator il, bool ifFastFailedReturnNull = false)
         {
-            var closureInfo = new ClosureInfo(true);
+            var closureInfo = new ClosureInfo(ClosureStatus.ShouldBeStaticMethod);
 
             var parentFlags = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(lambdaExpr.Body, lambdaExpr.Parameters, il, ref closureInfo, parentFlags))
@@ -228,7 +228,7 @@ namespace FastExpressionCompiler
             params ConstantExpression[] closureConstantsExprs)
             where TDelegate : class
         {
-            var closureInfo = new ClosureInfo(true, closureConstantsExprs);
+            var closureInfo = new ClosureInfo(ClosureStatus.UserProvided | ClosureStatus.HasClosure, closureConstantsExprs);
 
             var closurePlusParamTypes = GetClosureTypeToParamTypes(lambdaExpr.Parameters);
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
@@ -253,7 +253,7 @@ namespace FastExpressionCompiler
         public static TDelegate TryCompileWithoutClosure<TDelegate>(this LambdaExpression lambdaExpr)
             where TDelegate : class
         {
-            var closureInfo = new ClosureInfo(true);
+            var closureInfo = new ClosureInfo(ClosureStatus.UserProvided);
             var closurePlusParamTypes = GetClosureTypeToParamTypes(lambdaExpr.Parameters);
 
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
@@ -293,7 +293,7 @@ namespace FastExpressionCompiler
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType,
             Expression bodyExpr, IReadOnlyList<ParameterExpression> paramExprs, Type[] closurePlusParamTypes, Type returnType)
         {
-            var closureInfo = new ClosureInfo(false);
+            var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo))
                 return null;
 
@@ -383,48 +383,49 @@ namespace FastExpressionCompiler
         [Flags]
         private enum ClosureStatus
         {
-            ToBeCollected = 1,
-            UserProvided  = 1 << 1,
-            HasClosure    = 1 << 2
+            ToBeCollected        = 1,
+            UserProvided         = 1 << 1,
+            HasClosure           = 1 << 2,
+            ShouldBeStaticMethod = 1 << 3
         }
 
-        // Track the info required to build a closure object + some context information not directly related to closure.
+        /// Track the info required to build a closure object + some context information not directly related to closure.
         private struct ClosureInfo
         {
             public bool LastEmitIsAddress;
 
-            // Helpers to know if a Return GotoExpression's Label should be emitted.
-            // First set bit is ContainsReturnGoto, the rest is ReturnLabelIndex
+            /// Helpers to know if a Return GotoExpression's Label should be emitted.
+            /// First set bit is ContainsReturnGoto, the rest is ReturnLabelIndex
             private int[] _tryCatchFinallyInfos; 
             public int CurrentTryCatchFinallyIndex;
 
-            // Tracks the stack of blocks where are we in emit phase
+            /// Tracks the stack of blocks where are we in emit phase
             private LiveCountArray<BlockInfo> _blockStack;
 
-            // Dictionary for the used Labels in IL
+            /// Dictionary for the used Labels in IL
             private KeyValuePair<LabelTarget, Label?>[] _labels;
 
             public ClosureStatus Status;
 
-            public bool IsUserProvidedWithoutClosure =>
-                (Status & ClosureStatus.HasClosure) == 0 && (Status & ClosureStatus.UserProvided) != 0;
-
-            // Constant expressions to find an index (by reference) of constant expression from compiled expression.
+            /// Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public LiveCountArray<ConstantExpression> Constants;
 
-            // Parameters not passed through lambda parameter list But used inside lambda body.
-            // The top expression should Not contain not passed parameters. 
+            /// Parameters not passed through lambda parameter list But used inside lambda body.
+            /// The top expression should Not contain not passed parameters. 
             public ParameterExpression[] NonPassedParameters;
 
-            // All nested lambdas recursively nested in expression
+            /// All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas;
 
-            // Used by `TryCollectBoundConstants`to count the multiple usages of constants to decide whether to store them in variables.
+            /// Used by `TryCollectBoundConstants` to count the multiple usages of constants to decide whether to store them in variables.
             public int ConstantsAndNestedLambdasMultipleUsageCount;
 
-            // Populates info directly with provided closure object and constants.
-            public ClosureInfo(bool isUserProvided, ConstantExpression[] usedProvidedClosureConstantExpressions = null)
+            /// Populates info directly with provided closure object and constants.
+            public ClosureInfo(ClosureStatus status, ConstantExpression[] usedProvidedClosureConstantExpressions = null)
             {
+                Status = status;
+
+                Constants = new LiveCountArray<ConstantExpression>(usedProvidedClosureConstantExpressions ?? Tools.Empty<ConstantExpression>());
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
 
@@ -433,23 +434,8 @@ namespace FastExpressionCompiler
                 _tryCatchFinallyInfos = null;
                 _labels = null;
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
-                ConstantsAndNestedLambdasMultipleUsageCount = 0;
 
-                if (!isUserProvided)
-                {
-                    Status = ClosureStatus.ToBeCollected;
-                    Constants = new LiveCountArray<ConstantExpression>(Tools.Empty<ConstantExpression>());
-                }
-                else if (usedProvidedClosureConstantExpressions == null)
-                {
-                    Status = ClosureStatus.UserProvided;
-                    Constants = new LiveCountArray<ConstantExpression>(Tools.Empty<ConstantExpression>());
-                }
-                else
-                {
-                    Status = ClosureStatus.UserProvided | ClosureStatus.HasClosure;
-                    Constants = new LiveCountArray<ConstantExpression>(usedProvidedClosureConstantExpressions);
-                }
+                ConstantsAndNestedLambdasMultipleUsageCount = 0;
             }
 
             public void AddConstant(ConstantExpression expr)
@@ -747,7 +733,7 @@ namespace FastExpressionCompiler
             public NestedLambdaInfo(LambdaExpression lambdaExpression)
             {
                 LambdaExpression = lambdaExpression;
-                ClosureInfo = new ClosureInfo(false);
+                ClosureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
                 Lambda = null;
             }
         }
@@ -1830,7 +1816,7 @@ namespace FastExpressionCompiler
                     --paramIndex;
                 if (paramIndex != -1)
                 {
-                    if (!closure.IsUserProvidedWithoutClosure)
+                    if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     closure.LastEmitIsAddress = !paramExpr.IsByRef && paramType.IsValueType() &&
@@ -2855,7 +2841,7 @@ namespace FastExpressionCompiler
                         if (paramIndex != -1)
                         {
                             // shift parameter index by one, because the first one will be closure
-                            if (!closure.IsUserProvidedWithoutClosure)
+                            if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
                                 ++paramIndex;
 
                             if (leftParamExpr.IsByRef)

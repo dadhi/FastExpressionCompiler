@@ -10,6 +10,14 @@ using BenchmarkDotNet.Attributes;
 
 namespace FastExpressionCompiler.Benchmarks
 {
+    /*
+|                         Method |     Mean |     Error |    StdDev | Ratio | Gen 0 | Gen 1 | Gen 2 | Allocated |
+|------------------------------- |---------:|----------:|----------:|------:|------:|------:|------:|----------:|
+|                   ExprCompiled | 3.602 ns | 0.0031 ns | 0.0026 ns |  1.00 |     - |     - |     - |         - |
+|                ExprCompileFast | 1.771 ns | 0.0049 ns | 0.0044 ns |  0.49 |     - |     - |     - |         - |
+| ExprCompileFast_WithoutClosure | 1.789 ns | 0.0050 ns | 0.0047 ns |  0.50 |     - |     - |     - |         - |
+     */
+
     [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true)]
     public class SimpleExpr_ParamPlusParam
     {
@@ -40,7 +48,8 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly Func<int, int, int> _sumExprLambda = (a, b) => a + b;
         private static readonly Func<int, int, int> _sumExprCompiled = CreateSumExpr().Compile();
-        private static readonly Func<int, int, int> _sumExprCompiledFast = CreateSumExpr().CompileFast();
+        private static readonly Func<int, int, int> _sumExprCompiledFast = CreateSumExpr().CompileFast(true);
+        private static readonly Func<int, int, int> _sumExprCompiledFastWithoutClosure = CreateSumExpr().TryCompileWithoutClosure<Func<int, int, int>>();
         private static readonly Func<int, int, int> _manuallyEmitted = ManualEmit();
 
         private static readonly int _a = 66;
@@ -49,16 +58,20 @@ namespace FastExpressionCompiler.Benchmarks
         //[Benchmark(/*OperationsPerInvoke = 50, */Baseline = true)]
         public int Inlined() => _a + _b;
 
-        //[Benchmark(/*OperationsPerInvoke = 50*/)]
+        //[Benchmark(Baseline = true)]
         public int Lambda() => _sumExprLambda(_a, _b);
 
-        [Benchmark(/*OperationsPerInvoke = 50*/Baseline = true)]
+        //[Benchmark]
+        [Benchmark(Baseline = true)]
         public int ExprCompiled() => _sumExprCompiled(_a, _b);
 
-        [Benchmark(/*OperationsPerInvoke = 50*/)]
+        [Benchmark]
         public int ExprCompileFast() => _sumExprCompiledFast(_a, _b);
 
-        [Benchmark(/*OperationsPerInvoke = 50*/)]
+        [Benchmark]
+        public int ExprCompileFast_WithoutClosure() => _sumExprCompiledFastWithoutClosure(_a, _b);
+
+        //[Benchmark()]
         public int ManuallyEmitted() => _manuallyEmitted(_a, _b);
     }
 }
