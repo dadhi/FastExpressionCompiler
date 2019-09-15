@@ -2600,9 +2600,9 @@ namespace FastExpressionCompiler
             private static bool EmitMemberInit(MemberInitExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                LocalBuilder valueVar = null;
+                var valueVarIndex = -1;
                 if (expr.Type.IsValueType())
-                    valueVar = il.DeclareLocal(expr.Type);
+                    valueVarIndex = il.GetNextLocalVarIndex(expr.Type);
 
                 var newExpr = expr.NewExpression;
 #if LIGHT_EXPRESSION
@@ -2625,8 +2625,9 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Newobj, ctor);
                     else if (newExpr.Type.IsValueType())
                     {
-                        valueVar = valueVar ?? il.DeclareLocal(expr.Type);
-                        EmitLoadLocalVariableAddress(il, valueVar.LocalIndex);
+                        if (valueVarIndex == -1)
+                            valueVarIndex = il.GetNextLocalVarIndex(expr.Type);
+                        EmitLoadLocalVariableAddress(il, valueVarIndex);
                         il.Emit(OpCodes.Initobj, newExpr.Type);
                     }
                     else
@@ -2640,8 +2641,8 @@ namespace FastExpressionCompiler
                     if (binding.BindingType != MemberBindingType.Assignment)
                         return false;
 
-                    if (valueVar != null) // load local value address, to set its members
-                        il.Emit(OpCodes.Ldloca, valueVar);
+                    if (valueVarIndex != -1) // load local value address, to set its members
+                        EmitLoadLocalVariableAddress(il, valueVarIndex);
                     else
                         il.Emit(OpCodes.Dup); // duplicate member owner on stack
 
@@ -2650,8 +2651,8 @@ namespace FastExpressionCompiler
                         return false;
                 }
 
-                if (valueVar != null)
-                    il.Emit(OpCodes.Ldloc, valueVar);
+                if (valueVarIndex != -1)
+                    EmitLoadLocalVariable(il, valueVarIndex);
                 return true;
             }
 
