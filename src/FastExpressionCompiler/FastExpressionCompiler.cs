@@ -374,10 +374,8 @@ namespace FastExpressionCompiler
 
         private struct BlockInfo
         {
-            public object VarExprs; // ParameterExpression | IReadOnlyList<ParameterExpression>
-
-            // todo: store the LocalIndex instead of LocalBuilder the same as Constants variables
-            public object LocalVars; // LocalBuilder | LocalBuilder[]
+            public object VarExprs;     // ParameterExpression  | IReadOnlyList<ParameterExpression>
+            public int[]  VarIndexes;
         }
 
         [Flags]
@@ -600,26 +598,32 @@ namespace FastExpressionCompiler
             }
 
             /// LocalVar maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
-            public void PushBlockWithVars(ParameterExpression blockVarExpr, LocalBuilder localVar = null)
+            public void PushBlockWithVars(ParameterExpression blockVarExpr)
+            {
+                ref var block    = ref _blockStack.PushSlot();
+                block.VarExprs   = blockVarExpr;
+            }
+
+            public void PushBlockWithVars(ParameterExpression blockVarExpr, int varIndex)
             {
                 ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExpr;
-                block.LocalVars = localVar;
+                block.VarIndexes = new[] { varIndex };
             }
 
             /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
-            public void PushBlockWithVars(IReadOnlyList<ParameterExpression> blockVarExprs, LocalBuilder[] localVars = null)
+            public void PushBlockWithVars(IReadOnlyList<ParameterExpression> blockVarExprs, int[] localVarIndexes = null)
             {
-                ref var block = ref _blockStack.PushSlot();
-                block.VarExprs = blockVarExprs;
-                block.LocalVars = localVars;
+                ref var block    = ref _blockStack.PushSlot();
+                block.VarExprs   = blockVarExprs;
+                block.VarIndexes = localVarIndexes;
             }
 
             public void PushBlockAndConstructLocalVars(IReadOnlyList<ParameterExpression> blockVarExprs, ILGenerator il)
             {
-                var localVars = new LocalBuilder[blockVarExprs.Count];
+                var localVars = new int[blockVarExprs.Count];
                 for (var i = 0; i < localVars.Length; i++)
-                    localVars[i] = il.DeclareLocal(blockVarExprs[i].Type);
+                    localVars[i] = il.GetNextLocalVarIndex(blockVarExprs[i].Type);
 
                 PushBlockWithVars(blockVarExprs, localVars);
             }
@@ -643,7 +647,7 @@ namespace FastExpressionCompiler
                 return false;
             }
 
-            public LocalBuilder GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
+            public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
                 for (var i = _blockStack.Count - 1; i > -1; --i)
                 {
@@ -651,14 +655,14 @@ namespace FastExpressionCompiler
                     var varExprObj = block.VarExprs;
 
                     if (ReferenceEquals(varExprObj, varParamExpr))
-                        return (LocalBuilder)block.LocalVars;
+                        return block.VarIndexes[0];
 
                     if (varExprObj is IReadOnlyList<ParameterExpression> varExprs)
                         for (var j = 0; j < varExprs.Count; j++)
                             if (ReferenceEquals(varExprs[j], varParamExpr))
-                                return ((LocalBuilder[])block.LocalVars)[j];
+                                return block.VarIndexes[j];
                 }
-                return null;
+                return -1;
             }
 
             public bool IsTryReturnLabel(int index)
@@ -1446,7 +1450,7 @@ namespace FastExpressionCompiler
                             var blockVarExprs = blockExpr.Variables;
                             var blockVarCount = blockVarExprs.Count;
                             if (blockVarCount == 1)
-                                closure.PushBlockWithVars(blockVarExprs[0], il.DeclareLocal(blockVarExprs[0].Type));
+                                closure.PushBlockWithVars(blockVarExprs[0], il.GetNextLocalVarIndex(blockVarExprs[0].Type));
                             else if (blockVarCount > 1)
                                 closure.PushBlockAndConstructLocalVars(blockVarExprs, il);
 
@@ -1753,10 +1757,10 @@ namespace FastExpressionCompiler
 
                 var exprType = tryExpr.Type;
                 var returnsResult = exprType != typeof(void) && (containsReturnGotoExpression || !parent.IgnoresResult());
-                var resultVar = default(LocalBuilder);
+                var resultVarIndex = -1;
 
                 if (returnsResult)
-                    il.Emit(OpCodes.Stloc, resultVar = il.DeclareLocal(exprType));
+                    EmitStoreLocalVariable(il, resultVarIndex = il.GetNextLocalVarIndex(exprType));
 
                 var catchBlocks = tryExpr.Handlers;
                 for (var i = 0; i < catchBlocks.Count; i++)
@@ -1772,9 +1776,9 @@ namespace FastExpressionCompiler
                     var exVarExpr = catchBlock.Variable;
                     if (exVarExpr != null)
                     {
-                        var exVar = il.DeclareLocal(exVarExpr.Type);
-                        closure.PushBlockWithVars(exVarExpr, exVar);
-                        il.Emit(OpCodes.Stloc, exVar);
+                        var exVarIndex = il.GetNextLocalVarIndex(exVarExpr.Type);
+                        closure.PushBlockWithVars(exVarExpr, exVarIndex);
+                        EmitStoreLocalVariable(il, exVarIndex);
                     }
 
                     if (!TryEmit(catchBlock.Body, paramExprs, il, ref closure, parent))
@@ -1784,7 +1788,7 @@ namespace FastExpressionCompiler
                         closure.PopBlock();
 
                     if (returnsResult)
-                        il.Emit(OpCodes.Stloc, resultVar);
+                        EmitStoreLocalVariable(il, resultVarIndex);
                 }
 
                 var finallyExpr = tryExpr.Finally;
@@ -1798,7 +1802,7 @@ namespace FastExpressionCompiler
                 il.EndExceptionBlock();
 
                 if (returnsResult)
-                    il.Emit(OpCodes.Ldloc, resultVar);
+                    EmitLoadLocalVariable(il, resultVarIndex);
 
                 --closure.CurrentTryCatchFinallyIndex;
                 return true;
@@ -1854,20 +1858,20 @@ namespace FastExpressionCompiler
                 // If parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                 // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
                 // Parameter may represent a variable, so first look if this is the case
-                var variable = closure.GetDefinedLocalVarOrDefault(paramExpr);
-                if (variable != null)
+                var varIndex = closure.GetDefinedLocalVarOrDefault(paramExpr);
+                if (varIndex != -1)
                 {
                     if (byRefIndex != -1 ||
                         paramType.IsValueType() && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
-                        il.Emit(OpCodes.Ldloca, variable);
+                        EmitLoadLocalVariableAddress(il, varIndex);
                     else
-                        EmitLoadLocalVariable(il, variable.LocalIndex);
+                        EmitLoadLocalVariable(il, varIndex);
                     return true;
                 }
 
                 if (paramExpr.IsByRef)
                 {
-                    il.Emit(OpCodes.Ldloca, byRefIndex);
+                    EmitLoadLocalVariableAddress(il, byRefIndex);
                     return true;
                 }
 
@@ -2680,24 +2684,22 @@ namespace FastExpressionCompiler
             private static bool TryEmitIncDecAssign(UnaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                LocalBuilder localVar;
                 MemberExpression memberAccess;
                 bool useLocalVar;
 
                 var isVar = expr.Operand.NodeType == ExpressionType.Parameter;
                 var usesResult = !parent.IgnoresResult();
-
+                int localVarIndex;
                 if (isVar)
                 {
-                    localVar = closure.GetDefinedLocalVarOrDefault((ParameterExpression)expr.Operand);
-
-                    if (localVar == null)
+                    localVarIndex = closure.GetDefinedLocalVarOrDefault((ParameterExpression)expr.Operand);
+                    if (localVarIndex == -1)
                         return false;
 
                     memberAccess = null;
                     useLocalVar = true;
 
-                    il.Emit(OpCodes.Ldloc, localVar);
+                    EmitLoadLocalVariable(il, localVarIndex);
                 }
                 else if (expr.Operand.NodeType == ExpressionType.MemberAccess)
                 {
@@ -2707,7 +2709,7 @@ namespace FastExpressionCompiler
                         return false;
 
                     useLocalVar = (memberAccess.Expression != null) && (usesResult || memberAccess.Member is PropertyInfo);
-                    localVar = useLocalVar ? il.DeclareLocal(expr.Operand.Type) : null;
+                    localVarIndex = useLocalVar ? il.GetNextLocalVarIndex(expr.Operand.Type) : -1;
                 }
                 else
                     return false;
@@ -2717,11 +2719,11 @@ namespace FastExpressionCompiler
                     case ExpressionType.PreIncrementAssign:
                         il.Emit(OpCodes.Ldc_I4_1);
                         il.Emit(OpCodes.Add);
-                        StoreIncDecValue(il, usesResult, isVar, localVar);
+                        StoreIncDecValue(il, usesResult, isVar, localVarIndex);
                         break;
 
                     case ExpressionType.PostIncrementAssign:
-                        StoreIncDecValue(il, usesResult, isVar, localVar);
+                        StoreIncDecValue(il, usesResult, isVar, localVarIndex);
                         il.Emit(OpCodes.Ldc_I4_1);
                         il.Emit(OpCodes.Add);
                         break;
@@ -2729,45 +2731,45 @@ namespace FastExpressionCompiler
                     case ExpressionType.PreDecrementAssign:
                         il.Emit(OpCodes.Ldc_I4_M1);
                         il.Emit(OpCodes.Add);
-                        StoreIncDecValue(il, usesResult, isVar, localVar);
+                        StoreIncDecValue(il, usesResult, isVar, localVarIndex);
                         break;
 
                     case ExpressionType.PostDecrementAssign:
-                        StoreIncDecValue(il, usesResult, isVar, localVar);
+                        StoreIncDecValue(il, usesResult, isVar, localVarIndex);
                         il.Emit(OpCodes.Ldc_I4_M1);
                         il.Emit(OpCodes.Add);
                         break;
                 }
 
-                if (isVar || (useLocalVar && !usesResult))
-                    il.Emit(OpCodes.Stloc, localVar);
+                if (isVar || useLocalVar && !usesResult)
+                    EmitStoreLocalVariable(il, localVarIndex);
 
                 if (isVar)
                     return true;
 
                 if (useLocalVar && !usesResult)
-                    il.Emit(OpCodes.Ldloc, localVar);
+                    EmitLoadLocalVariable(il, localVarIndex);
 
                 if (!EmitMemberAssign(il, memberAccess.Member))
                     return false;
 
                 if (useLocalVar && usesResult)
-                    il.Emit(OpCodes.Ldloc, localVar);
+                    EmitLoadLocalVariable(il, localVarIndex);
 
                 return true;
             }
 
-            private static void StoreIncDecValue(ILGenerator il, bool usesResult, bool isVar, LocalBuilder localVar)
+            private static void StoreIncDecValue(ILGenerator il, bool usesResult, bool isVar, int localVarIndex)
             {
                 if (!usesResult)
                     return;
 
-                if (isVar || (localVar == null))
+                if (isVar || (localVarIndex == -1))
                     il.Emit(OpCodes.Dup);
                 else
                 {
-                    il.Emit(OpCodes.Stloc, localVar);
-                    il.Emit(OpCodes.Ldloc, localVar);
+                    EmitStoreLocalVariable(il, localVarIndex);
+                    EmitLoadLocalVariable(il, localVarIndex);
                 }
             }
 
@@ -2879,13 +2881,13 @@ namespace FastExpressionCompiler
                         }
                         else if (arithmeticNodeType != nodeType)
                         {
-                            var localVar = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
-                            if (localVar != null)
+                            var localVarIdx = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
+                            if (localVarIdx != -1)
                             {
                                 if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, parent))
                                     return false;
 
-                                il.Emit(OpCodes.Stloc, localVar);
+                                EmitStoreLocalVariable(il, localVarIdx);
                                 return true;
                             }
                         }
@@ -2893,8 +2895,8 @@ namespace FastExpressionCompiler
                         // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                         // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
                         // if it's a local variable, then store the right value in it
-                        var localVariable = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
-                        if (localVariable != null)
+                        var localVariableIdx = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
+                        if (localVariableIdx != -1)
                         {
                             if (!TryEmit(right, paramExprs, il, ref closure, flags))
                                 return false;
@@ -2905,7 +2907,7 @@ namespace FastExpressionCompiler
                             if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
                                 il.Emit(OpCodes.Dup);
 
-                            il.Emit(OpCodes.Stloc, localVariable);
+                            EmitStoreLocalVariable(il, localVariableIdx);
                             return true;
                         }
 
@@ -3082,7 +3084,7 @@ namespace FastExpressionCompiler
                     objIsValueType = objType.IsValueType();
                     if (objIsValueType && objExpr.NodeType != ExpressionType.Parameter && !closure.LastEmitIsAddress)
                     {
-                        var localVarIndex = il.DeclareLocal(objType).LocalIndex;
+                        var localVarIndex = il.GetNextLocalVarIndex(objType);
                         EmitStoreLocalVariable(il, localVarIndex);
                         EmitLoadLocalVariableAddress(il, localVarIndex);
                     }
@@ -3132,7 +3134,7 @@ namespace FastExpressionCompiler
                         if (!closure.LastEmitIsAddress &&
                             instanceExpr.NodeType != ExpressionType.Parameter && instanceExpr.Type.IsValueType())
                         {
-                            var localVarIndex = il.DeclareLocal(instanceExpr.Type).LocalIndex;
+                            var localVarIndex = il.GetNextLocalVarIndex(instanceExpr.Type);
                             EmitStoreLocalVariable(il, localVarIndex);
                             EmitLoadLocalVariableAddress(il, localVarIndex);
                         }
@@ -3234,8 +3236,8 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
-                    var nestedLambdaAndClosureItemsVarIndex =
-                        il.DeclareLocal(typeof(NestedLambdaWithConstantsAndNestedLambdas)).LocalIndex;
+                    var nestedLambdaAndClosureItemsVarIndex = 
+                        il.GetNextLocalVarIndex(typeof(NestedLambdaWithConstantsAndNestedLambdas));
                     EmitStoreLocalVariable(il, nestedLambdaAndClosureItemsVarIndex);
 
                     // - load the `NestedLambda` field
@@ -3284,10 +3286,10 @@ namespace FastExpressionCompiler
                         if (outerNonPassedParams.Length == 0)
                             return false; // impossible, better to throw?
 
-                        var variable = closure.GetDefinedLocalVarOrDefault(nestedParam);
-                        if (variable != null) // it's a local variable
+                        var variableIdx = closure.GetDefinedLocalVarOrDefault(nestedParam);
+                        if (variableIdx != -1) // it's a local variable
                         {
-                            EmitLoadLocalVariable(il, variable.LocalIndex);
+                            EmitLoadLocalVariable(il, variableIdx);
                         }
                         else // it's a parameter from the outer closure
                         {

@@ -101,11 +101,11 @@ namespace FastExpressionCompiler.Benchmarks
 
 |                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |------------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                                    Compile | 280.307 us | 0.6805 us | 0.6033 us | 28.04 |    0.09 | 1.9531 | 0.9766 |      - |  10.87 KB |
-|                                CompileFast |  11.420 us | 0.0560 us | 0.0496 us |  1.14 |    0.01 | 0.6256 | 0.3052 | 0.0305 |   2.91 KB |
-|                CompileFast_LightExpression |   9.996 us | 0.0259 us | 0.0229 us |  1.00 |    0.00 | 0.6256 | 0.3052 | 0.0305 |   2.91 KB |
-|                 CompileFast_WithoutClosure |  10.209 us | 0.0709 us | 0.0663 us |  1.02 |    0.01 | 0.6104 | 0.3052 | 0.0305 |   2.83 KB |
-| CompileFast_LightExpression_WithoutClosure |   9.065 us | 0.0656 us | 0.0614 us |  0.91 |    0.01 | 0.6104 | 0.3052 | 0.0305 |   2.83 KB |
+|                                    Compile | 285.602 us | 2.1509 us | 2.0119 us | 27.32 |    0.20 | 1.9531 | 0.9766 |      - |  10.87 KB |
+|                                CompileFast |  11.418 us | 0.0519 us | 0.0460 us |  1.09 |    0.00 | 0.6104 | 0.3052 | 0.0305 |   2.84 KB |
+|                CompileFast_LightExpression |  10.452 us | 0.0365 us | 0.0342 us |  1.00 |    0.00 | 0.6104 | 0.3052 | 0.0305 |   2.84 KB |
+|                 CompileFast_WithoutClosure |  10.437 us | 0.0225 us | 0.0200 us |  1.00 |    0.00 | 0.5951 | 0.2899 | 0.0305 |   2.76 KB |
+| CompileFast_LightExpression_WithoutClosure |   9.223 us | 0.0349 us | 0.0310 us |  0.88 |    0.00 | 0.5951 | 0.2899 | 0.0305 |   2.76 KB |
 
         */
         [MemoryDiagnoser]
@@ -189,13 +189,13 @@ namespace FastExpressionCompiler.Benchmarks
 
             private static readonly Source _source = new Source { Value = 42 };
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public Dest Invoke_Compiled() => _compiled(_source, null, null);
 
             [Benchmark]
             public Dest Invoke_CompiledFast() => _compiledFast(_source, null, null);
 
-            [Benchmark(Baseline = true)]
+            [Benchmark]
             public Dest Invoke_CompiledFast_LightExpression() => _compiledFastLE(_source, null, null);
         }
 

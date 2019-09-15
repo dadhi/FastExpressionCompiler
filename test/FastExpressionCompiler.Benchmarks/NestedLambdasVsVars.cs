@@ -79,8 +79,8 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 
 |                                       Method |        Mean |     Error |    StdDev |  Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 |--------------------------------------------- |------------:|----------:|----------:|-------:|--------:|-------:|------:|------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |    10.27 ns | 0.0724 ns | 0.0641 ns |   1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
-|     Expression_with_sub_expressions_Compiled | 1,087.32 ns | 1.2635 ns | 1.1819 ns | 105.87 |    0.59 | 0.0458 |     - |     - |     224 B |
+| Expression_with_sub_expressions_CompiledFast |    11.89 ns | 0.1250 ns | 0.1044 ns |   1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
+|     Expression_with_sub_expressions_Compiled | 1,261.20 ns | 2.1887 ns | 2.0473 ns | 106.04 |    0.99 | 0.0458 |     - |     - |     224 B |
 */
         private Expression<Func<A>> _expr, _exprWithVars;
 
@@ -102,16 +102,16 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
         [Benchmark(Baseline = true)]
         public object Expression_with_sub_expressions_CompiledFast()
         {
-            return _expr.CompileFast(true);
-            //return _exprCompiledFast();
+            //return _expr.CompileFast(true);
+            return _exprCompiledFast();
             //return _expr.CompileFast(true).Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
-            return _expr.Compile();
-            //return _exprCompiled();
+            //return _expr.Compile();
+            return _exprCompiled();
             //return _expr.Compile().Invoke();
         }
 
