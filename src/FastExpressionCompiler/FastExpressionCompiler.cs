@@ -2984,13 +2984,13 @@ namespace FastExpressionCompiler
 
                         il.Emit(OpCodes.Dup);
 
-                        var rightVar = il.DeclareLocal(expr.Type); // store right value in variable
-                        il.Emit(OpCodes.Stloc, rightVar);
+                        var rightVarIndex = il.GetNextLocalVarIndex(expr.Type); // store right value in variable
+                        EmitStoreLocalVariable(il, rightVarIndex);
 
                         if (!EmitMemberAssign(il, member))
                             return false;
 
-                        il.Emit(OpCodes.Ldloc, rightVar);
+                        EmitLoadLocalVariable(il, rightVarIndex);
                         return true;
 
                     case ExpressionType.Index:
@@ -3011,14 +3011,14 @@ namespace FastExpressionCompiler
                         if ((parent & ParentFlags.IgnoreResult) != 0)
                             return TryEmitIndexAssign(indexExpr, obj?.Type, expr.Type, il);
 
-                        var variable = il.DeclareLocal(expr.Type); // store value in variable to return
+                        var varIndex = il.GetNextLocalVarIndex(expr.Type); // store value in variable to return
                         il.Emit(OpCodes.Dup);
-                        il.Emit(OpCodes.Stloc, variable);
+                        EmitStoreLocalVariable(il, varIndex);
 
                         if (!TryEmitIndexAssign(indexExpr, obj?.Type, expr.Type, il))
                             return false;
 
-                        il.Emit(OpCodes.Ldloc, variable);
+                        EmitLoadLocalVariable(il, varIndex);
                         return true;
 
                     default: // todo: not yet support assignment targets
