@@ -1355,7 +1355,7 @@ namespace FastExpressionCompiler
                             if (newExpr.Constructor != null)
                                 il.Emit(OpCodes.Newobj, newExpr.Constructor);
                             else if (newExpr.Type.IsValueType())
-                                il.Emit(OpCodes.Ldloc, InitValueTypeVariable(il, newExpr.Type));
+                                EmitLoadLocalVariable(il, InitValueTypeVariable(il, newExpr.Type));
                             else
                                 return false;
                             return true;
@@ -1739,7 +1739,7 @@ namespace FastExpressionCompiler
                 else if (type == typeof(double))
                     il.Emit(OpCodes.Ldc_R8, default(double));
                 else
-                    EmitLoadLocalVariable(il, InitValueTypeVariable(il, type).LocalIndex);
+                    EmitLoadLocalVariable(il, InitValueTypeVariable(il, type));
             }
 
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr,
@@ -2183,7 +2183,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
 
                         // otherwise, emit and load a `new Nullable<TTarget>()` struct (that's why a Init instead of New)
-                        il.Emit(OpCodes.Ldloc, InitValueTypeVariable(il, targetType));
+                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, targetType));
 
                         // jump to completion
                         var labelDone = il.DefineLabel();
@@ -2527,12 +2527,12 @@ namespace FastExpressionCompiler
                 return null;
             });
 
-            private static LocalBuilder InitValueTypeVariable(ILGenerator il, Type exprType)
+            private static int InitValueTypeVariable(ILGenerator il, Type exprType)
             {
-                var locVar = il.DeclareLocal(exprType);
-                EmitLoadLocalVariableAddress(il, locVar.LocalIndex);
+                var locVarIndex = il.GetNextLocalVarIndex(exprType);
+                EmitLoadLocalVariableAddress(il, locVarIndex);
                 il.Emit(OpCodes.Initobj, exprType);
-                return locVar;
+                return locVarIndex;
             }
 
             private static bool EmitNewArray(NewArrayExpression expr,
@@ -3678,8 +3678,8 @@ namespace FastExpressionCompiler
                     if (exprType.IsNullable())
                     {
                         var endL = il.DefineLabel();
-                        var loc = InitValueTypeVariable(il, exprType);
-                        il.Emit(OpCodes.Ldloc, loc);
+                        var locIndex = InitValueTypeVariable(il, exprType);
+                        EmitLoadLocalVariable(il, locIndex);
                         il.Emit(OpCodes.Br_S, endL);
                         il.MarkLabel(valueLabel);
                         il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.GetFirst());
