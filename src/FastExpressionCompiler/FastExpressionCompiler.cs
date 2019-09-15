@@ -1662,13 +1662,13 @@ namespace FastExpressionCompiler
                 var leftType = left.Type;
                 if (leftType.IsValueType()) // Nullable -> It's the only ValueType comparable to null
                 {
-                    var loc = il.DeclareLocal(leftType);
-                    il.Emit(OpCodes.Stloc, loc);
-                    il.Emit(OpCodes.Ldloca, loc);
+                    var varIndex = il.GetNextLocalVarIndex(leftType);
+                    EmitStoreLocalVariable(il, varIndex);
+                    EmitLoadLocalVariableAddress(il, varIndex);
                     il.Emit(OpCodes.Call, leftType.FindNullableHasValueGetterMethod());
 
                     il.Emit(OpCodes.Brfalse, labelFalse);
-                    il.Emit(OpCodes.Ldloca, loc);
+                    EmitLoadLocalVariableAddress(il, varIndex);
                     il.Emit(OpCodes.Call, leftType.FindNullableGetValueOrDefaultMethod());
 
                     il.Emit(OpCodes.Br, labelDone);
@@ -2043,7 +2043,7 @@ namespace FastExpressionCompiler
 
                     if (!closure.LastEmitIsAddress)
                     {
-                        var localVarIndex = il.DeclareLocal(sourceType).LocalIndex;
+                        var localVarIndex = il.GetNextLocalVarIndex(sourceType);
                         EmitStoreLocalVariable(il, localVarIndex);
                         EmitLoadLocalVariableAddress(il, localVarIndex);
                     }
@@ -2103,7 +2103,7 @@ namespace FastExpressionCompiler
                     {
                         if (sourceTypeIsNullable)
                         {
-                            var localVarIndex = il.DeclareLocal(sourceType).LocalIndex;
+                            var localVarIndex = il.GetNextLocalVarIndex(sourceType);
                             EmitStoreLocalVariable(il, localVarIndex);
                             EmitLoadLocalVariableAddress(il, localVarIndex);
                             il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
@@ -2127,7 +2127,7 @@ namespace FastExpressionCompiler
                     {
                         if (sourceTypeIsNullable)
                         {
-                            var localVarIndex = il.DeclareLocal(sourceType).LocalIndex;
+                            var localVarIndex = il.GetNextLocalVarIndex(sourceType);
                             EmitStoreLocalVariable(il, localVarIndex);
                             EmitLoadLocalVariableAddress(il, localVarIndex);
                             il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
@@ -2174,7 +2174,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        var sourceVarIndex = il.DeclareLocal(sourceType).LocalIndex;
+                        var sourceVarIndex = il.GetNextLocalVarIndex(sourceType);
                         EmitStoreLocalVariable(il, sourceVarIndex);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
                         il.Emit(OpCodes.Call, sourceType.FindNullableHasValueGetterMethod());
@@ -2215,7 +2215,7 @@ namespace FastExpressionCompiler
                     // fixes #159
                     if (sourceTypeIsNullable)
                     {
-                        var sourceVarIndex = il.DeclareLocal(sourceType).LocalIndex;
+                        var sourceVarIndex = il.GetNextLocalVarIndex(sourceType);
                         EmitStoreLocalVariable(il, sourceVarIndex);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
                         il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
@@ -2267,7 +2267,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldnull);
                     else
                     {
-                        var valueTypeVarIndex = il.DeclareLocal(exprType).LocalIndex;
+                        var valueTypeVarIndex = il.GetNextLocalVarIndex(exprType);
                         EmitLoadLocalVariableAddress(il, valueTypeVarIndex);
                         il.Emit(OpCodes.Initobj, exprType);
                         EmitLoadLocalVariable(il, valueTypeVarIndex);
@@ -3409,7 +3409,7 @@ namespace FastExpressionCompiler
 
                 if (leftIsNullable)
                 {
-                    lVarIndex = il.DeclareLocal(leftOpType).LocalIndex;
+                    lVarIndex = il.GetNextLocalVarIndex(leftOpType);
                     EmitStoreLocalVariable(il, lVarIndex);
                     EmitLoadLocalVariableAddress(il, lVarIndex);
 
@@ -3449,7 +3449,7 @@ namespace FastExpressionCompiler
 
                 if (rightOpType.IsNullable())
                 {
-                    rVarIndex = il.DeclareLocal(rightOpType).LocalIndex;
+                    rVarIndex = il.GetNextLocalVarIndex(rightOpType);
                     EmitStoreLocalVariable(il, rVarIndex);
                     EmitLoadLocalVariableAddress(il, rVarIndex);
                     il.Emit(OpCodes.Call, rightOpType.FindNullableGetValueOrDefaultMethod());
