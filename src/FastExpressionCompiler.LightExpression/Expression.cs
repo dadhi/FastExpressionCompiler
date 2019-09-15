@@ -155,11 +155,14 @@ namespace FastExpressionCompiler.LightExpression
 
         public static NewExpression New(Type type)
         {
-            ConstructorInfo ctor = null;
+            if (type.IsValueType())
+                return new ValueTypeNewExpression(type);
+
             foreach (var x in type.GetTypeInfo().DeclaredConstructors)
                 if (x.GetParameters().Length == 0)
-                    ctor = x;
-            return new NewExpression(ctor, Tools.Empty<Expression>());
+                    return new NewExpression(x, Tools.Empty<Expression>());
+
+            throw new ArgumentException($"Type {type} is missing the default constructor");
         }
 
         public static NewExpression New(ConstructorInfo ctor) =>
@@ -1705,7 +1708,7 @@ namespace FastExpressionCompiler.LightExpression
         protected ArgumentsExpression(IReadOnlyList<Expression> arguments) => Arguments = arguments ?? Tools.Empty<Expression>();
     }
 
-    public sealed class NewExpression : ArgumentsExpression
+    public class NewExpression : ArgumentsExpression
     {
         public override ExpressionType NodeType => ExpressionType.New;
         public override Type Type => Constructor.DeclaringType;
@@ -1730,6 +1733,20 @@ namespace FastExpressionCompiler.LightExpression
         {
             Constructor = constructor;
         }
+    }
+
+    public sealed class ValueTypeNewExpression : NewExpression
+    {
+        public override Type Type { get; }
+
+        internal ValueTypeNewExpression(Type type)
+            : base(null, Tools.Empty<Expression>()) =>
+            Type = type;
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.New(Type);
+
+        public override string CodeString => $"New({Type.ToCode()})";
     }
 
     public sealed class NewArrayExpression : ArgumentsExpression
