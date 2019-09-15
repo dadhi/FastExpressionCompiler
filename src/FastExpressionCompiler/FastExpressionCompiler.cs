@@ -2925,18 +2925,17 @@ namespace FastExpressionCompiler
                             if (!TryEmit(right, paramExprs, il, ref closure, flags))
                                 return false;
 
-                            var valueVar = il.DeclareLocal(expr.Type); // store left value in variable
-
-                            il.Emit(OpCodes.Stloc, valueVar);
+                            var valueVarIndex = il.GetNextLocalVarIndex(expr.Type); // store left value in variable
+                            EmitStoreLocalVariable(il, valueVarIndex);
 
                             // load array field and param item index
                             il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
-                            EmitLoadConstantInt(il, nonPassedParamIndex);
-                            il.Emit(OpCodes.Ldloc, valueVar);
+                            EmitLoadArrayIndex(il, nonPassedParamIndex);
+                            EmitLoadLocalVariable(il, valueVarIndex);
                             if (expr.Type.IsValueType())
                                 il.Emit(OpCodes.Box, expr.Type);
                             il.Emit(OpCodes.Stelem_Ref); // put the variable into array
-                            il.Emit(OpCodes.Ldloc, valueVar);
+                            EmitLoadLocalVariable(il, valueVarIndex);
                         }
                         else
                         {
@@ -2957,15 +2956,15 @@ namespace FastExpressionCompiler
                     case ExpressionType.MemberAccess:
                         var assignFromLocalVar = right.NodeType == ExpressionType.Try;
 
-                        LocalBuilder resultLocalVar = null;
+                        var resultLocalVarIndex = -1;
                         if (assignFromLocalVar)
                         {
-                            resultLocalVar = il.DeclareLocal(right.Type);
+                            resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
 
                             if (!TryEmit(right, paramExprs, il, ref closure, ParentFlags.Empty))
                                 return false;
 
-                            il.Emit(OpCodes.Stloc, resultLocalVar);
+                            EmitStoreLocalVariable(il, resultLocalVarIndex);
                         }
 
                         var memberExpr = (MemberExpression)left;
@@ -2975,7 +2974,7 @@ namespace FastExpressionCompiler
                             return false;
 
                         if (assignFromLocalVar)
-                            il.Emit(OpCodes.Ldloc, resultLocalVar);
+                            EmitLoadLocalVariable(il, resultLocalVarIndex);
                         else if (!TryEmit(right, paramExprs, il, ref closure, ParentFlags.Empty))
                             return false;
 
@@ -3619,7 +3618,7 @@ namespace FastExpressionCompiler
 
                     if (!closure.LastEmitIsAddress)
                     {
-                        var localVarIndex = il.DeclareLocal(lefType).LocalIndex;
+                        var localVarIndex = il.GetNextLocalVarIndex(lefType);
                         EmitStoreLocalVariable(il, localVarIndex);
                         EmitLoadLocalVariableAddress(il, localVarIndex);
                     }
@@ -3645,7 +3644,7 @@ namespace FastExpressionCompiler
 
                     if (!closure.LastEmitIsAddress)
                     {
-                        var localVarIndex = il.DeclareLocal(rightType).LocalIndex;
+                        var localVarIndex = il.GetNextLocalVarIndex(rightType);
                         EmitStoreLocalVariable(il, localVarIndex);
                         EmitLoadLocalVariableAddress(il, localVarIndex);
                     }
