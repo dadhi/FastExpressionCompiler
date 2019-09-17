@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
-using System.Security;
 using BenchmarkDotNet.Attributes;
-
-[assembly: AllowPartiallyTrustedCallers]
-[assembly: SecurityTransparent]
-[assembly: SecurityRules(SecurityRuleSet.Level2, SkipVerificationInFullTrust = true)]
 
 namespace FastExpressionCompiler.Benchmarks
 {
@@ -18,7 +13,7 @@ namespace FastExpressionCompiler.Benchmarks
 | ExprCompileFast_WithoutClosure | 1.789 ns | 0.0050 ns | 0.0047 ns |  0.50 |     - |     - |     - |         - |
      */
 
-    [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true)]
+    [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true, recursiveDepth: 2)]
     public class SimpleExpr_ParamPlusParam
     {
         private static Expression<Func<int, int, int>> CreateSumExpr()
@@ -68,7 +63,7 @@ namespace FastExpressionCompiler.Benchmarks
         [Benchmark]
         public int ExprCompileFast() => _sumExprCompiledFast(_a, _b);
 
-        [Benchmark]
+        //[Benchmark]
         public int ExprCompileFast_WithoutClosure() => _sumExprCompiledFastWithoutClosure(_a, _b);
 
         //[Benchmark()]
