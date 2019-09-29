@@ -154,7 +154,6 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        [Ignore("Does not work yet")]
         public void NegateChecked_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -162,7 +161,8 @@ namespace FastExpressionCompiler.UnitTests
                 NegateChecked(param),
                 param);
 
-            int result = expression.CompileFast(true)(1);
+            var f = expression.CompileFast(true);
+            var result = f(1);
 
             Assert.AreEqual(-1, result);
         }

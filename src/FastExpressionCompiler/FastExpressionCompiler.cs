@@ -1313,6 +1313,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Increment:
                         case ExpressionType.Decrement:
                         case ExpressionType.Negate:
+                        case ExpressionType.NegateChecked:
                         case ExpressionType.UnaryPlus:
                         case ExpressionType.Unbox:
                             return TryEmitSimpleUnaryExpression((UnaryExpression)expr, paramExprs, il, ref closure, parent);
@@ -1991,12 +1992,9 @@ namespace FastExpressionCompiler
                             return false;
                         il.Emit(OpCodes.Sub);
                     }
-                    else if (expr.NodeType == ExpressionType.Negate)
+                    else if (expr.NodeType == ExpressionType.Negate || expr.NodeType == ExpressionType.NegateChecked)
                     {
-                        il.Emit(OpCodes.Not);
-                        if (!TryEmitNumberOne(il, expr.Type))
-                            return false;
-                        il.Emit(OpCodes.Add);
+                        il.Emit(OpCodes.Neg);
                     }
                     else if (expr.NodeType == ExpressionType.Unbox)
                     {
