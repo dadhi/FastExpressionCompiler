@@ -43,7 +43,7 @@
 
     <!-- SourceLink support -->
     <ItemGroup Condition=" '$(SourceLink)' != 'false' ">
-        <!-- TODO: Temporary diable source link to check the builds on Travis CI -->
+        <!-- TODO: Temporary disable source link to check the builds on Travis CI -->
         <!-- <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-18618-05" PrivateAssets="All" /> -->
     </ItemGroup> 
 
