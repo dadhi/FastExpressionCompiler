@@ -1333,6 +1333,10 @@ namespace FastExpressionCompiler
                                    TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, parent) &&
                                    TryEmitArrayIndex(expr.Type, il);
 
+                        case ExpressionType.ArrayLength:
+                            var arrLengthExpr = (UnaryExpression)expr;
+                            return TryEmitArrayLength(arrLengthExpr, paramExprs, il, ref closure, parent);
+
                         case ExpressionType.Constant:
                             var constantExpression = (ConstantExpression)expr;
                             if ((parent & ParentFlags.IgnoreResult) != 0)
@@ -1534,6 +1538,22 @@ namespace FastExpressionCompiler
                             return false;
                     }
                 }
+            }
+
+            private static bool TryEmitArrayLength(UnaryExpression arrLengthExpr,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
+                ParentFlags parent)
+            {
+                if (!TryEmit(arrLengthExpr.Operand, paramExprs, il, ref closure, parent))
+                    return false;
+
+                if ((parent & ParentFlags.IgnoreResult) == 0)
+                {
+                    il.Emit(OpCodes.Ldlen);
+                    il.Emit(OpCodes.Conv_I4);
+                }
+
+                return true;
             }
 
             private static bool TryEmitLoop(LoopExpression loopExpr, 
@@ -1939,7 +1959,9 @@ namespace FastExpressionCompiler
                 else
                 {
                     if (expr.NodeType == ExpressionType.TypeAs)
+                    {
                         il.Emit(OpCodes.Isinst, expr.Type);
+                    }
                     else if (expr.NodeType == ExpressionType.IsFalse)
                     {
                         Label falseLabel = il.DefineLabel();
@@ -1953,6 +1975,7 @@ namespace FastExpressionCompiler
                     }
                     else if (expr.NodeType == ExpressionType.Increment)
                     {
+                        // todo: consider different types of increment
                         il.Emit(OpCodes.Ldc_I4_1);
                         il.Emit(OpCodes.Add);
                     }

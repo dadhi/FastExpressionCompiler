@@ -18,7 +18,6 @@ namespace FastExpressionCompiler.UnitTests
     public class UnaryExpressionTests
     {
         [Test]
-        [Ignore("Does not work yet")]
         public void ArrayLength_compiles()
         {
             var param = Parameter(typeof(int[]), "i");
@@ -26,7 +25,8 @@ namespace FastExpressionCompiler.UnitTests
                 ArrayLength(param),
                 param);
 
-            int result = expression.CompileFast(true)(new[] { 1, 2, 3 });
+            var f = expression.CompileFast(true);
+            var result = f(new[] { 1, 2, 3 });
 
             Assert.AreEqual(3, result);
         }
