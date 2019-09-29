@@ -199,7 +199,6 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        [Ignore("Does not work yet")]
         public void PostDecrementAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -207,9 +206,11 @@ namespace FastExpressionCompiler.UnitTests
                 PostDecrementAssign(param),
                 param);
 
-            int result = expression.CompileFast(true)(2);
+            var fs = expression.CompileSys();
+            Assert.AreEqual(2, fs(2));
 
-            Assert.AreEqual(2, result);
+            var f = expression.CompileFast(true);
+            Assert.AreEqual(2, f(2));
         }
 
         [Test]
