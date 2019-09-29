@@ -1314,6 +1314,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Decrement:
                         case ExpressionType.Negate:
                         case ExpressionType.NegateChecked:
+                        case ExpressionType.OnesComplement:
                         case ExpressionType.UnaryPlus:
                         case ExpressionType.Unbox:
                             return TryEmitSimpleUnaryExpression((UnaryExpression)expr, paramExprs, il, ref closure, parent);
@@ -1955,12 +1956,11 @@ namespace FastExpressionCompiler
             {
                 // todo: support decimal here
                 if (expr.Type == typeof(decimal))
-                {
                     return false;
-                }
 
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, parent))
                     return false;
+
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     il.Emit(OpCodes.Pop);
                 else
@@ -1995,6 +1995,10 @@ namespace FastExpressionCompiler
                     else if (expr.NodeType == ExpressionType.Negate || expr.NodeType == ExpressionType.NegateChecked)
                     {
                         il.Emit(OpCodes.Neg);
+                    }
+                    else if (expr.NodeType == ExpressionType.OnesComplement)
+                    {
+                        il.Emit(OpCodes.Not);
                     }
                     else if (expr.NodeType == ExpressionType.Unbox)
                     {

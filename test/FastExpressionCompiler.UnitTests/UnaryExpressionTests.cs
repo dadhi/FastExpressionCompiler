@@ -181,7 +181,6 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        [Ignore("Does not work yet")]
         public void OnesComplement_compiles()
         {
             var param = Parameter(typeof(uint), "i");
@@ -189,9 +188,14 @@ namespace FastExpressionCompiler.UnitTests
                 OnesComplement(param),
                 param);
 
-            uint result = expression.CompileFast(true)(0xFFFF0000);
+            var fs = expression.CompileSys();
+            Assert.AreEqual(0x0000FFFF, fs(0xFFFF0000));
+            Assert.AreEqual(0xF000FFFF, fs(0x0FFF0000));
 
-            Assert.AreEqual(0x0000FFFF, result);
+
+            var f = expression.CompileFast(true);
+            Assert.AreEqual(0x0000FFFF, f(0xFFFF0000));
+            Assert.AreEqual(0xF000FFFF, f(0x0FFF0000));
         }
 
         [Test]
