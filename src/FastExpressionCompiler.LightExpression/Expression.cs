@@ -140,6 +140,12 @@ namespace FastExpressionCompiler.LightExpression
         private static readonly ConstantExpression _trueExpr  = new ConstantExpression(true);
         private static readonly ConstantExpression _0Expr     = new ConstantExpression(0);
 
+        public static ConstantExpression Constant(bool value) =>
+            value ? _trueExpr : _falseExpr;
+
+        public static ConstantExpression Constant(int value) =>
+            value == 0 ? _0Expr : new ConstantExpression(value);
+
         public static ConstantExpression Constant(object value, Type type = null)
         {
             if (value == null)
@@ -1650,6 +1656,7 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType => ExpressionType.Parameter;
         public override Type Type { get; }
 
+        // todo: we need the version without this members
         public readonly string Name;
         public readonly bool IsByRef;
 

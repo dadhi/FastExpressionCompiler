@@ -152,11 +152,11 @@ namespace FastExpressionCompiler.Benchmarks
 
         ## V3
 
-        |                               Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-        |------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-        |                     Create_n_Compile | 307.76 us | 1.1609 us | 1.0291 us | 24.15 |    0.08 | 2.9297 | 1.4648 |      - |   13.7 KB |
-        |                 Create_n_CompileFast |  25.47 us | 0.3394 us | 0.3175 us |  2.00 |    0.02 | 1.2512 | 0.6104 | 0.0305 |   5.81 KB |
-        | Create_n_CompileFast_LightExpression |  12.74 us | 0.0280 us | 0.0248 us |  1.00 |    0.00 | 1.0071 | 0.5035 | 0.0458 |   4.63 KB |
+                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        ------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+                             Create_n_Compile | 313.69 us | 1.5498 us | 1.4497 us | 24.31 |    0.21 | 2.9297 | 1.4648 |      - |   13.7 KB |
+                         Create_n_CompileFast |  25.06 us | 0.0842 us | 0.0788 us |  1.94 |    0.01 | 1.2512 | 0.6104 | 0.0305 |   5.77 KB |
+         Create_n_CompileFast_LightExpression |  12.90 us | 0.0798 us | 0.0708 us |  1.00 |    0.00 | 1.0071 | 0.5035 | 0.0458 |   4.64 KB |
 
         */
         [MemoryDiagnoser]

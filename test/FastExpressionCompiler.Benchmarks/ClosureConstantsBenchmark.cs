@@ -46,8 +46,8 @@ namespace FastExpressionCompiler.Benchmarks
 
             |      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
             |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-            |     Compile | 412.592 us | 0.5961 us | 0.5284 us | 57.19 |    0.16 | 0.9766 | 0.4883 |      - |   6.26 KB |
-            | CompileFast |   7.215 us | 0.0183 us | 0.0153 us |  1.00 |    0.00 | 0.3586 | 0.1755 | 0.0305 |   1.66 KB |
+            |     Compile | 414.394 us | 1.5334 us | 1.4344 us | 58.59 |    0.26 | 0.9766 | 0.4883 |      - |   6.26 KB |
+            | CompileFast |   7.074 us | 0.0311 us | 0.0276 us |  1.00 |    0.00 | 0.3510 | 0.1755 | 0.0305 |   1.62 KB |
 
             */
 
