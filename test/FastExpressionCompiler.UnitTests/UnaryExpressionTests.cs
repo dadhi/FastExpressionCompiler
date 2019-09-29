@@ -58,7 +58,6 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        [Ignore("fix me - AppVeyor on net46 says that Expected: 3.2000000000000002d But was: 2.2000000000000002d")]
         public void Increment_Constant_compiles()
         {
             var expression = Lambda<Func<double>>(
@@ -129,7 +128,9 @@ namespace FastExpressionCompiler.UnitTests
                 MakeUnary(ExpressionType.Increment, param, null),
                 param);
 
-            int result = expression.CompileFast(true)(2);
+            var f = expression.CompileFast(true);
+
+            var result = f(2);
 
             Assert.AreEqual(3, result);
         }
@@ -142,11 +143,13 @@ namespace FastExpressionCompiler.UnitTests
                 Negate(param),
                 param);
 
-            int result = expression.CompileFast(true)(1);
+            var result = expression.CompileFast(true)(1);
             Assert.AreEqual(-1, result);
-            int result2 = expression.CompileFast(true)(2);
+            
+            var result2 = expression.CompileFast(true)(2);
             Assert.AreEqual(-2, result2);
-            int result3 = expression.CompileFast(true)(-3);
+            
+            var result3 = expression.CompileFast(true)(-3);
             Assert.AreEqual(3, result3);
         }
 

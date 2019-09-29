@@ -1952,6 +1952,12 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
+                // todo: support decimal here
+                if (expr.Type == typeof(decimal))
+                {
+                    return false;
+                }
+
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, parent))
                     return false;
                 if ((parent & ParentFlags.IgnoreResult) != 0)
@@ -1964,8 +1970,8 @@ namespace FastExpressionCompiler
                     }
                     else if (expr.NodeType == ExpressionType.IsFalse)
                     {
-                        Label falseLabel = il.DefineLabel();
-                        Label continueLabel = il.DefineLabel();
+                        var falseLabel    = il.DefineLabel();
+                        var continueLabel = il.DefineLabel();
                         il.Emit(OpCodes.Brfalse, falseLabel);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Br, continueLabel);
@@ -1975,19 +1981,21 @@ namespace FastExpressionCompiler
                     }
                     else if (expr.NodeType == ExpressionType.Increment)
                     {
-                        // todo: consider different types of increment
-                        il.Emit(OpCodes.Ldc_I4_1);
+                        if (!TryEmitNumberOne(il, expr.Type))
+                            return false;
                         il.Emit(OpCodes.Add);
                     }
                     else if (expr.NodeType == ExpressionType.Decrement)
                     {
-                        il.Emit(OpCodes.Ldc_I4_1);
+                        if (!TryEmitNumberOne(il, expr.Type))
+                            return false;
                         il.Emit(OpCodes.Sub);
                     }
                     else if (expr.NodeType == ExpressionType.Negate)
                     {
                         il.Emit(OpCodes.Not);
-                        il.Emit(OpCodes.Ldc_I4_1);
+                        if (!TryEmitNumberOne(il, expr.Type))
+                            return false;
                         il.Emit(OpCodes.Add);
                     }
                     else if (expr.NodeType == ExpressionType.Unbox)
@@ -2348,76 +2356,8 @@ namespace FastExpressionCompiler
                     if (constValueType.GetTypeInfo().IsEnum)
                         constValueType = Enum.GetUnderlyingType(constValueType);
 
-                    if (constValueType == typeof(int))
-                    {
-                        EmitLoadConstantInt(il, (int)constantValue);
-                    }
-                    else if (constValueType == typeof(char))
-                    {
-                        EmitLoadConstantInt(il, (char)constantValue);
-                    }
-                    else if (constValueType == typeof(short))
-                    {
-                        EmitLoadConstantInt(il, (short)constantValue);
-                    }
-                    else if (constValueType == typeof(byte))
-                    {
-                        EmitLoadConstantInt(il, (byte)constantValue);
-                    }
-                    else if (constValueType == typeof(ushort))
-                    {
-                        EmitLoadConstantInt(il, (ushort)constantValue);
-                    }
-                    else if (constValueType == typeof(sbyte))
-                    {
-                        EmitLoadConstantInt(il, (sbyte)constantValue);
-                    }
-                    else if (constValueType == typeof(uint))
-                    {
-                        unchecked
-                        {
-                            EmitLoadConstantInt(il, (int)(uint)constantValue);
-                        }
-                    }
-                    else if (constValueType == typeof(long))
-                    {
-                        il.Emit(OpCodes.Ldc_I8, (long)constantValue);
-                    }
-                    else if (constValueType == typeof(ulong))
-                    {
-                        unchecked
-                        {
-                            il.Emit(OpCodes.Ldc_I8, (long)(ulong)constantValue);
-                        }
-                    }
-                    else if (constValueType == typeof(float))
-                    {
-                        il.Emit(OpCodes.Ldc_R4, (float)constantValue);
-                    }
-                    else if (constValueType == typeof(double))
-                    {
-                        il.Emit(OpCodes.Ldc_R8, (double)constantValue);
-                    }
-                    else if (constValueType == typeof(bool))
-                    {
-                        il.Emit((bool)constantValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                    }
-                    else if (constValueType == typeof(IntPtr))
-                    {
-                        il.Emit(OpCodes.Ldc_I8, ((IntPtr)constantValue).ToInt64());
-                    }
-                    else if (constValueType == typeof(UIntPtr))
-                    {
-                        unchecked
-                        {
-                            il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)constantValue).ToUInt64());
-                        }
-                    }
-                    else if (constValueType == typeof(decimal))
-                    {
-                        EmitDecimalConstant((decimal)constantValue, il);
-                    }
-                    else return false;
+                    if (!TryEmitNumberConstant(il, constantValue, constValueType))
+                        return false;
                 }
 
                 var underlyingNullableType = Nullable.GetUnderlyingType(exprType);
@@ -2427,6 +2367,115 @@ namespace FastExpressionCompiler
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
                 else if (exprType == typeof(object) && constValueType.IsValueType())
                     il.Emit(OpCodes.Box, constantValue.GetType()); // using normal type for Enum instead of underlying type
+
+                return true;
+            }
+
+            // todo: can we do something about boxing?
+            internal static bool TryEmitNumberConstant(ILGenerator il, object constantValue, Type constValueType)
+            {
+                if (constValueType == typeof(int))
+                {
+                    EmitLoadConstantInt(il, (int)constantValue);
+                }
+                else if (constValueType == typeof(char))
+                {
+                    EmitLoadConstantInt(il, (char)constantValue);
+                }
+                else if (constValueType == typeof(short))
+                {
+                    EmitLoadConstantInt(il, (short)constantValue);
+                }
+                else if (constValueType == typeof(byte))
+                {
+                    EmitLoadConstantInt(il, (byte)constantValue);
+                }
+                else if (constValueType == typeof(ushort))
+                {
+                    EmitLoadConstantInt(il, (ushort)constantValue);
+                }
+                else if (constValueType == typeof(sbyte))
+                {
+                    EmitLoadConstantInt(il, (sbyte)constantValue);
+                }
+                else if (constValueType == typeof(uint))
+                {
+                    unchecked
+                    {
+                        EmitLoadConstantInt(il, (int)(uint)constantValue);
+                    }
+                }
+                else if (constValueType == typeof(long))
+                {
+                    il.Emit(OpCodes.Ldc_I8, (long)constantValue);
+                }
+                else if (constValueType == typeof(ulong))
+                {
+                    unchecked
+                    {
+                        il.Emit(OpCodes.Ldc_I8, (long)(ulong)constantValue);
+                    }
+                }
+                else if (constValueType == typeof(float))
+                {
+                    il.Emit(OpCodes.Ldc_R4, (float)constantValue);
+                }
+                else if (constValueType == typeof(double))
+                {
+                    il.Emit(OpCodes.Ldc_R8, (double)constantValue);
+                }
+                else if (constValueType == typeof(bool))
+                {
+                    il.Emit((bool)constantValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                }
+                else if (constValueType == typeof(IntPtr))
+                {
+                    il.Emit(OpCodes.Ldc_I8, ((IntPtr)constantValue).ToInt64());
+                }
+                else if (constValueType == typeof(UIntPtr))
+                {
+                    unchecked
+                    {
+                        il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)constantValue).ToUInt64());
+                    }
+                }
+                else if (constValueType == typeof(decimal))
+                {
+                    EmitDecimalConstant((decimal)constantValue, il);
+                }
+                else
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            internal static bool TryEmitNumberOne(ILGenerator il, Type type)
+            {
+                if (type == typeof(int) || type == typeof(char) || type == typeof(short) ||
+                    type == typeof(byte) || type == typeof(ushort) || type == typeof(sbyte) ||
+                    type == typeof(uint))
+                {
+                    il.Emit(OpCodes.Ldc_I4_1);
+                }
+                else if (type == typeof(long) || type == typeof(ulong) ||
+                         type == typeof(IntPtr) || type == typeof(UIntPtr))
+                {
+                    il.Emit(OpCodes.Ldc_I8, (long)1);
+                }
+                else if (type == typeof(float))
+                {
+                    il.Emit(OpCodes.Ldc_R4, 1f);
+                }
+                else if (type == typeof(double))
+                {
+                    il.Emit(OpCodes.Ldc_R8, 1d);
+                }
+                else
+                {
+                    return false;
+                }
 
                 return true;
             }

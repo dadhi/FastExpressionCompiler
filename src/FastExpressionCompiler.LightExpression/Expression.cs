@@ -356,7 +356,9 @@ namespace FastExpressionCompiler.LightExpression
         /// <param name="type">The Type that specifies the type to be converted to (pass null if not applicable).</param>
         /// <returns>The UnaryExpression that results from calling the appropriate factory method.</returns>
         public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type) =>
-            new TypedUnaryExpression(unaryType, operand, type);
+            type == null 
+                ? new UnaryExpression(unaryType, operand) 
+                : new TypedUnaryExpression(unaryType, operand, type);
 
         /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation.</summary>
         /// <param name="expression">An Expression to set the Operand property equal to.</param>
