@@ -252,8 +252,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(3, f(2));
         }
 
-        [Test]
-        [Ignore("Does not work yet")]
+        [Test][Ignore("Not supported")]
         public void Quote_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -261,8 +260,10 @@ namespace FastExpressionCompiler.UnitTests
                 Quote(Lambda(param)),
                 param);
 
-            var resultExpression = expression.CompileFast(true)(2);
-            int result = resultExpression.Compile()();
+            var f = expression.CompileFast(true);
+            var resultExpression = f(2);
+
+            var result = resultExpression.Compile()();
 
             Assert.AreEqual(2, result);
         }

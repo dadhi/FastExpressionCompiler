@@ -1319,6 +1319,12 @@ namespace FastExpressionCompiler
                         case ExpressionType.Unbox:
                             return TryEmitSimpleUnaryExpression((UnaryExpression)expr, paramExprs, il, ref closure, parent);
 
+                        //case ExpressionType.Quote: // consider a constant
+                        //    var quoteExpr = (UnaryExpression)expr;
+                        //    if (!TryEmit(quoteExpr.Operand, paramExprs, il, ref closure, parent))
+                        //        return false;
+                        //    return false;
+
                         case ExpressionType.TypeIs:
                             return TryEmitTypeIs((TypeBinaryExpression)expr, paramExprs, il, ref closure, parent);
 
@@ -1348,7 +1354,7 @@ namespace FastExpressionCompiler
                                 il.Emit(OpCodes.Ldnull);
                                 return true;
                             }
-                            return TryEmitNotNullConstant(constantExpression, constantExpression.Type, constantExpression.Value, il, ref closure);
+                            return TryEmitNotNullConstant(true, constantExpression.Type, constantExpression.Value, il, ref closure);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, parent);
@@ -2299,15 +2305,15 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitNotNullConstant(
-                ConstantExpression expr, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure)
+                bool considerClosure, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure)
             {
                 var constValueType = constantValue.GetType();
-                if (expr != null && IsClosureBoundConstant(constantValue, constValueType.GetTypeInfo()))
+                if (considerClosure && IsClosureBoundConstant(constantValue, constValueType.GetTypeInfo()))
                 {
                     var constItems = closure.Constants.Items;
                     var constCount = closure.Constants.Count;
                     var constIndex = constCount - 1;
-                    while (constIndex != -1 && !ReferenceEquals(constItems[constIndex].Value, expr.Value))
+                    while (constIndex != -1 && !ReferenceEquals(constItems[constIndex].Value, constantValue))
                         --constIndex;
                     if (constIndex == -1)
                         return false;
@@ -3240,7 +3246,7 @@ namespace FastExpressionCompiler
                     {
                         var fieldValue = field.GetValue(null);
                         if (fieldValue != null)
-                            return TryEmitNotNullConstant(null, field.FieldType, fieldValue, il, ref closure);
+                            return TryEmitNotNullConstant(false, field.FieldType, fieldValue, il, ref closure);
 
                         il.Emit(OpCodes.Ldnull);
                     }
