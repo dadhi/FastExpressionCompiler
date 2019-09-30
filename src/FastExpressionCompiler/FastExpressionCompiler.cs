@@ -590,8 +590,10 @@ namespace FastExpressionCompiler
                     if (nestedClosureInfo.NonPassedParameters.Length == 0)
                         items[constCount + i] = nestedLambda.Lambda;
                     else
+                    {
                         items[constCount + i] = new NestedLambdaWithConstantsAndNestedLambdas(
                             nestedLambda.Lambda, nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas());
+                    }
                 }
 
                 // Note that `nonPassedParams` will be populated by when nested lambda is emitted
@@ -1155,7 +1157,12 @@ namespace FastExpressionCompiler
 
             ArrayClosure nestedLambdaClosure = null;
             if (nestedLambdaClosureInfo.NonPassedParameters.Length == 0)
-                nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
+            {
+                if ((nestedLambdaClosureInfo.Status & ClosureStatus.HasClosure) == 0)
+                    nestedLambdaClosure = ArrayClosure.Empty;
+                else
+                    nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
+            }
 
             var nestedReturnType = nestedLambdaExpr.ReturnType;
             var closurePlusParamTypes = GetClosureTypeToParamTypes(nestedLambdaParamExprs);
