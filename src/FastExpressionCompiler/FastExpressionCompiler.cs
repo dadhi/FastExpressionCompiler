@@ -567,6 +567,7 @@ namespace FastExpressionCompiler
             public bool TryCatchFinallyContainsReturnGotoExpression() =>
                 _tryCatchFinallyInfos != null && (_tryCatchFinallyInfos[++CurrentTryCatchFinallyIndex] & 1) != 0;
 
+            // todo: optimize for the case where no constants or no nested lambdas
             public object[] GetArrayOfConstantsAndNestedLambdas()
             {
                 var constItems = Constants.Items;
@@ -575,30 +576,36 @@ namespace FastExpressionCompiler
                 var nestedLambdas = NestedLambdas;
                 var nestedLambdasCount = nestedLambdas.Length;
 
-                if (constCount + nestedLambdasCount == 0)
+                var itemCount = constCount + nestedLambdasCount;
+                if (itemCount == 0)
                     return null;
 
-                var items = new object[constCount + nestedLambdasCount];
+                // by default reuse the constant values array, it very likely has a capacity (as of LiveCountArray) to accomodate for nested lambdas
+                var closureItems = constItems;
 
-                for (var i = 0; i < constCount; ++i)
-                    items[i] = constItems[i];
+                if (itemCount > constItems.Length)
+                {
+                    closureItems = new object[itemCount];
+                    for (var i = 0; i < constCount; ++i)
+                        closureItems[i] = constItems[i];
+                }
 
                 for (var i = 0; i < nestedLambdasCount; i++)
                 {
                     var nestedLambda = nestedLambdas[i];
                     ref var nestedClosureInfo = ref nestedLambda.ClosureInfo;
                     if (nestedClosureInfo.NonPassedParameters.Length == 0)
-                        items[constCount + i] = nestedLambda.Lambda;
+                        closureItems[constCount + i] = nestedLambda.Lambda;
                     else
                     {
-                        items[constCount + i] = new NestedLambdaWithConstantsAndNestedLambdas(
+                        closureItems[constCount + i] = new NestedLambdaWithConstantsAndNestedLambdas(
                             nestedLambda.Lambda, nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas());
                     }
                 }
 
                 // Note that `nonPassedParams` will be populated by when nested lambda is emitted
 
-                return items;
+                return closureItems;
             }
 
             /// LocalVar maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable

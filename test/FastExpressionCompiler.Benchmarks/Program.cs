@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<GenericConverter.Compilation>();
             //BenchmarkRunner.Run<GenericConverter.Invocation>();
 
-            //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
+            BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
             //BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<ArrayCopy_vs_ManualForLoop/*>();*/
@@ -34,7 +34,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Execute>();
 
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_CreateExecutor>();
-            BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
+            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
             //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Execute>();
             //BenchmarkRunner.Run<StaticTypeOfSwitch>();
 
