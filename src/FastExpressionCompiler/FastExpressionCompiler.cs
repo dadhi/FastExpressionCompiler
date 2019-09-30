@@ -1986,8 +1986,10 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
+                var exprType = expr.Type;
+
                 // todo: support decimal here
-                if (expr.Type == typeof(decimal))
+                if (exprType == typeof(decimal))
                     return false;
 
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, parent))
@@ -1999,7 +2001,7 @@ namespace FastExpressionCompiler
                 {
                     if (expr.NodeType == ExpressionType.TypeAs)
                     {
-                        il.Emit(OpCodes.Isinst, expr.Type);
+                        il.Emit(OpCodes.Isinst, exprType);
                     }
                     else if (expr.NodeType == ExpressionType.IsFalse)
                     {
@@ -2014,13 +2016,13 @@ namespace FastExpressionCompiler
                     }
                     else if (expr.NodeType == ExpressionType.Increment)
                     {
-                        if (!TryEmitNumberOne(il, expr.Type))
+                        if (!TryEmitNumberOne(il, exprType))
                             return false;
                         il.Emit(OpCodes.Add);
                     }
                     else if (expr.NodeType == ExpressionType.Decrement)
                     {
-                        if (!TryEmitNumberOne(il, expr.Type))
+                        if (!TryEmitNumberOne(il, exprType))
                             return false;
                         il.Emit(OpCodes.Sub);
                     }
@@ -2034,7 +2036,7 @@ namespace FastExpressionCompiler
                     }
                     else if (expr.NodeType == ExpressionType.Unbox)
                     {
-                        il.Emit(OpCodes.Unbox_Any);
+                        il.Emit(OpCodes.Unbox_Any, exprType);
                     }
                     else if (expr.NodeType == ExpressionType.IsTrue)
                     { }

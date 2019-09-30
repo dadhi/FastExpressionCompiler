@@ -253,7 +253,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        [Ignore("Not supported")]
+        [Ignore("Not supported yet")]
         public void Quote_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -312,7 +312,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(1, result);
         }
 
-        [Test][Ignore("todo: fix me")]
+        [Test]
         public void Unbox_compiles()
         {
             var param = Parameter(typeof(object), "o");
@@ -320,8 +320,10 @@ namespace FastExpressionCompiler.UnitTests
                 Unbox(param, typeof(int)),
                 param);
 
-            var f = expression.CompileFast(true);
+            var fs = expression.CompileSys();
+            Assert.AreEqual(1, fs(1));
 
+            var f = expression.CompileFast(true);
             Assert.AreEqual(1, f(1));
         }
     }
