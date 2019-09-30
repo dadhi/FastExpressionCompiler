@@ -214,7 +214,6 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        [Ignore("Does not work yet")]
         public void PostIncrementAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -222,13 +221,12 @@ namespace FastExpressionCompiler.UnitTests
                 PostIncrementAssign(param),
                 param);
 
-            int result = expression.CompileFast(true)(2);
+            var f = expression.CompileFast(true);
 
-            Assert.AreEqual(2, result);
+            Assert.AreEqual(2, f(2));
         }
 
         [Test]
-        [Ignore("Does not work yet")]
         public void PreDecrementAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -236,13 +234,12 @@ namespace FastExpressionCompiler.UnitTests
                 PreDecrementAssign(param),
                 param);
 
-            int result = expression.CompileFast(true)(2);
+            var f = expression.CompileFast(true);
 
-            Assert.AreEqual(1, result);
+            Assert.AreEqual(1, f(2));
         }
 
         [Test]
-        [Ignore("Does not work yet")]
         public void PreIncrementAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -250,9 +247,9 @@ namespace FastExpressionCompiler.UnitTests
                 PreIncrementAssign(param),
                 param);
 
-            int result = expression.CompileFast(true)(2);
+            var f = expression.CompileFast(true);
 
-            Assert.AreEqual(3, result);
+            Assert.AreEqual(3, f(2));
         }
 
         [Test]
