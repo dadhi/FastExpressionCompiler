@@ -567,22 +567,36 @@ namespace FastExpressionCompiler
             public bool TryCatchFinallyContainsReturnGotoExpression() =>
                 _tryCatchFinallyInfos != null && (_tryCatchFinallyInfos[++CurrentTryCatchFinallyIndex] & 1) != 0;
 
-            // todo: optimize for the case where no constants or no nested lambdas
             public object[] GetArrayOfConstantsAndNestedLambdas()
             {
-                var constItems = Constants.Items;
                 var constCount = Constants.Count;
-
                 var nestedLambdas = NestedLambdas;
-                var nestedLambdasCount = nestedLambdas.Length;
+                if (constCount == 0)
+                {
+                    if (nestedLambdas.Length == 0)
+                        return null;
 
-                var itemCount = constCount + nestedLambdasCount;
-                if (itemCount == 0)
-                    return null;
+                    var nestedLambdaItems = new object[nestedLambdas.Length];
+                    for (var i = 0; i < nestedLambdas.Length; i++)
+                    {
+                        var nestedLambda = nestedLambdas[i];
+                        if (nestedLambda.ClosureInfo.NonPassedParameters.Length == 0)
+                            nestedLambdaItems[i] = nestedLambda.Lambda;
+                        else
+                            nestedLambdaItems[i] = new NestedLambdaWithConstantsAndNestedLambdas(
+                                nestedLambda.Lambda, nestedLambda.ClosureInfo.GetArrayOfConstantsAndNestedLambdas());
+                    }
 
-                // by default reuse the constant values array, it very likely has a capacity (as of LiveCountArray) to accomodate for nested lambdas
+                    return nestedLambdaItems;
+                }
+
+                var constItems = Constants.Items;
+                if (nestedLambdas.Length == 0)
+                    return constItems;
+
+                var itemCount = constCount + nestedLambdas.Length;
+
                 var closureItems = constItems;
-
                 if (itemCount > constItems.Length)
                 {
                     closureItems = new object[itemCount];
@@ -590,20 +604,15 @@ namespace FastExpressionCompiler
                         closureItems[i] = constItems[i];
                 }
 
-                for (var i = 0; i < nestedLambdasCount; i++)
+                for (var i = 0; i < nestedLambdas.Length; i++)
                 {
                     var nestedLambda = nestedLambdas[i];
-                    ref var nestedClosureInfo = ref nestedLambda.ClosureInfo;
-                    if (nestedClosureInfo.NonPassedParameters.Length == 0)
+                    if (nestedLambda.ClosureInfo.NonPassedParameters.Length == 0)
                         closureItems[constCount + i] = nestedLambda.Lambda;
                     else
-                    {
                         closureItems[constCount + i] = new NestedLambdaWithConstantsAndNestedLambdas(
-                            nestedLambda.Lambda, nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas());
-                    }
+                            nestedLambda.Lambda, nestedLambda.ClosureInfo.GetArrayOfConstantsAndNestedLambdas());
                 }
-
-                // Note that `nonPassedParams` will be populated by when nested lambda is emitted
 
                 return closureItems;
             }
