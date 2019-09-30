@@ -85,12 +85,11 @@ namespace FastExpressionCompiler.Benchmarks
 
                                      Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
         ----------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-                                    Compile | 1,529.77 us | 3.4689 us | 3.2449 us | 24.66 |    0.07 | 7.8125 | 3.9063 |      - |  42.17 KB |
-                                CompileFast |    90.87 us | 0.3347 us | 0.2967 us |  1.46 |    0.01 | 5.7373 | 2.8076 | 0.3662 |  26.67 KB |
-           CompileFastWithPreCreatedClosure |    90.34 us | 0.2488 us | 0.2327 us |  1.46 |    0.01 | 5.7373 | 2.8076 | 0.3662 |  26.51 KB |
-         CompileFastWithPreCreatedClosureLE |    62.06 us | 0.2108 us | 0.1869 us |  1.00 |    0.00 | 5.9814 | 2.9297 | 0.3662 |  27.92 KB |
-
-         */
+                                    Compile | 1,574.21 us | 2.5959 us | 2.0267 us | 23.20 |    0.07 | 7.8125 | 3.9063 |      - |  42.17 KB |
+                                CompileFast |    98.17 us | 0.7560 us | 0.6702 us |  1.45 |    0.01 | 5.7373 | 2.8076 | 0.3662 |  26.36 KB |
+           CompileFastWithPreCreatedClosure |    98.22 us | 0.6903 us | 0.6120 us |  1.45 |    0.01 | 5.6152 | 2.8076 | 0.3662 |  26.07 KB |
+         CompileFastWithPreCreatedClosureLE |    67.90 us | 0.2061 us | 0.1928 us |  1.00 |    0.00 | 5.3711 | 2.6855 | 0.3662 |  24.71 KB |
+        */
 
         public async Task<string> Foo(int a, int b) => await Task.FromResult((a + b).ToString());
 
@@ -145,9 +144,7 @@ namespace FastExpressionCompiler.Benchmarks
         public object CompiledFast() => ((Task<string>)_compiledFast.Execute(this, _parameters)).Result;
     }
 
-    //[CoreJob, ClrJob]
     [MemoryDiagnoser]
-    [Orderer(SummaryOrderPolicy.FastestToSlowest)]
     public class ObjectExecutor_AsyncMethod_ExecuteAsync
     {
         /*

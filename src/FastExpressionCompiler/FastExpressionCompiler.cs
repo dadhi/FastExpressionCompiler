@@ -228,7 +228,11 @@ namespace FastExpressionCompiler
             params ConstantExpression[] closureConstantsExprs)
             where TDelegate : class
         {
-            var closureInfo = new ClosureInfo(ClosureStatus.UserProvided | ClosureStatus.HasClosure, closureConstantsExprs);
+            var constValues = new object[closureConstantsExprs.Length];
+            for (var i = 0; i < constValues.Length; i++)
+                constValues[i] = closureConstantsExprs[i].Value;
+
+            var closureInfo = new ClosureInfo(ClosureStatus.UserProvided | ClosureStatus.HasClosure, constValues);
 
             var closurePlusParamTypes = GetClosureTypeToParamTypes(lambdaExpr.Parameters);
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
@@ -244,7 +248,7 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Ret);
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, ArrayClosure.Create(closureConstantsExprs));
+            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(constValues));
             ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return @delegate;
         }
@@ -406,7 +410,7 @@ namespace FastExpressionCompiler
             public ClosureStatus Status;
 
             /// Constant expressions to find an index (by reference) of constant expression from compiled expression.
-            public LiveCountArray<ConstantExpression> Constants;
+            public LiveCountArray<object> Constants;
 
             /// Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters. 
@@ -419,11 +423,12 @@ namespace FastExpressionCompiler
             public int ConstantsAndNestedLambdasMultipleUsageCount;
 
             /// Populates info directly with provided closure object and constants.
-            public ClosureInfo(ClosureStatus status, ConstantExpression[] usedProvidedClosureConstantExpressions = null)
+            public ClosureInfo(ClosureStatus status, object[] constValues = null)
             {
                 Status = status;
 
-                Constants = new LiveCountArray<ConstantExpression>(usedProvidedClosureConstantExpressions ?? Tools.Empty<ConstantExpression>());
+                Constants = new LiveCountArray<object>(constValues ?? Tools.Empty<object>());
+
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
 
@@ -436,16 +441,17 @@ namespace FastExpressionCompiler
                 ConstantsAndNestedLambdasMultipleUsageCount = 0;
             }
 
-            public void AddConstant(ConstantExpression expr)
+            public void AddConstant(object value)
             {
                 Status |= ClosureStatus.HasClosure;
 
                 var constItems = Constants.Items;
                 var constIndex = Constants.Count - 1;
-                while (constIndex != -1 && !ReferenceEquals(constItems[constIndex].Value, expr.Value))
+                while (constIndex != -1 && 
+                    !ReferenceEquals(constItems[constIndex], value))
                     --constIndex;
                 if (constIndex == -1)
-                    Constants.PushSlot(expr);
+                    Constants.PushSlot(value);
                 else
                     ++ConstantsAndNestedLambdasMultipleUsageCount;
             }
@@ -575,7 +581,7 @@ namespace FastExpressionCompiler
                 var items = new object[constCount + nestedLambdasCount];
 
                 for (var i = 0; i < constCount; ++i)
-                    items[i] = constItems[i].Value;
+                    items[i] = constItems[i];
 
                 for (var i = 0; i < nestedLambdasCount; i++)
                 {
@@ -674,20 +680,13 @@ namespace FastExpressionCompiler
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+        // todo: find how to seal it
         public class ArrayClosure
         {
             public static readonly ArrayClosure Empty = new ArrayClosure(null);
 
             public static FieldInfo ConstantsAndNestedLambdasField =
                 typeof(ArrayClosure).GetTypeInfo().GetDeclaredField(nameof(ConstantsAndNestedLambdas));
-
-            public static ArrayClosure Create(ConstantExpression[] constantExprs)
-            {
-                var constants = new object[constantExprs.Length];
-                for (var i = 0; i < constants.Length; i++)
-                    constants[i] = constantExprs[i].Value;
-                return new ArrayClosure(constants);
-            }
 
             public readonly object[] ConstantsAndNestedLambdas;
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
@@ -816,8 +815,14 @@ namespace FastExpressionCompiler
                         var constantExpr = (ConstantExpression)expr;
                         var value = constantExpr.Value;
                         if (value != null && IsClosureBoundConstant(value, value.GetType().GetTypeInfo()))
-                            closure.AddConstant(constantExpr);
+                            closure.AddConstant(value);
                         return true;
+
+                    case ExpressionType.Quote:
+                        //var operand = ((UnaryExpression)expr).Operand;
+                        //if (operand != null && IsClosureBoundConstant(operand, expr.Type.GetTypeInfo()))
+                        //    closure.AddConstant(operand);
+                        return false;
 
                     case ExpressionType.Parameter:
                         // if parameter is used BUT is not in passed parameters and not in local variables,
@@ -1319,11 +1324,9 @@ namespace FastExpressionCompiler
                         case ExpressionType.Unbox:
                             return TryEmitSimpleUnaryExpression((UnaryExpression)expr, paramExprs, il, ref closure, parent);
 
-                        //case ExpressionType.Quote: // consider a constant
-                        //    var quoteExpr = (UnaryExpression)expr;
-                        //    if (!TryEmit(quoteExpr.Operand, paramExprs, il, ref closure, parent))
-                        //        return false;
-                        //    return false;
+                        case ExpressionType.Quote:
+                            //return TryEmitNotNullConstant(true, expr.Type, ((UnaryExpression)expr).Operand, il, ref closure);
+                            return false;
 
                         case ExpressionType.TypeIs:
                             return TryEmitTypeIs((TypeBinaryExpression)expr, paramExprs, il, ref closure, parent);
@@ -2313,7 +2316,8 @@ namespace FastExpressionCompiler
                     var constItems = closure.Constants.Items;
                     var constCount = closure.Constants.Count;
                     var constIndex = constCount - 1;
-                    while (constIndex != -1 && !ReferenceEquals(constItems[constIndex].Value, constantValue))
+                    while (constIndex != -1 && 
+                           !ReferenceEquals(constItems[constIndex], constantValue))
                         --constIndex;
                     if (constIndex == -1)
                         return false;
@@ -2506,7 +2510,7 @@ namespace FastExpressionCompiler
                         EmitLoadConstantInt(il, i);
                         il.Emit(OpCodes.Ldelem_Ref);
 
-                        var varType = constItems[i].Type;
+                        var varType = constItems[i].GetType();
                         if (varType.IsValueType())
                             il.Emit(OpCodes.Unbox_Any, varType);
 

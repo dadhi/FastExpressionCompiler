@@ -252,7 +252,8 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(3, f(2));
         }
 
-        [Test][Ignore("Not supported")]
+        [Test]
+        [Ignore("Not supported")]
         public void Quote_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -260,12 +261,16 @@ namespace FastExpressionCompiler.UnitTests
                 Quote(Lambda(param)),
                 param);
 
+            var fs = expression.CompileSys();
+            var resultExpression = fs(2);
+            var result1 = resultExpression.Compile().Invoke();
+            Assert.AreEqual(2, result1);
+
             var f = expression.CompileFast(true);
-            var resultExpression = f(2);
+            resultExpression = f(2);
 
-            var result = resultExpression.Compile()();
-
-            Assert.AreEqual(2, result);
+            var result2 = resultExpression.Compile().Invoke();
+            Assert.AreEqual(2, result2);
         }
 
         [Test]
@@ -307,8 +312,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(1, result);
         }
 
-        [Test]
-        [Ignore("Maybe works, but maybe value it's not yet boxed")]
+        [Test][Ignore("todo: fix me")]
         public void Unbox_compiles()
         {
             var param = Parameter(typeof(object), "o");
@@ -316,9 +320,9 @@ namespace FastExpressionCompiler.UnitTests
                 Unbox(param, typeof(int)),
                 param);
 
-            int result = expression.CompileFast(true)(1);
+            var f = expression.CompileFast(true);
 
-            Assert.AreEqual(1, result);
+            Assert.AreEqual(1, f(1));
         }
     }
 }
