@@ -986,6 +986,17 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Block:
+#if LIGHT_EXPRESSION
+                        if (expr is OneVariableTwoExpressionBlockExpression simpleBlock)
+                        {
+                            closure.PushBlockWithVars(simpleBlock.Variable);
+                            if (!TryCollectBoundConstants(ref closure, simpleBlock.Expression1, paramExprs, isNestedLambda, ref rootClosure) ||
+                                !TryCollectBoundConstants(ref closure, simpleBlock.Expression2, paramExprs, isNestedLambda, ref rootClosure))
+                                return false;
+                            closure.PopBlock();
+                            return true;
+                        }
+#endif
                         var blockExpr = (BlockExpression)expr;
                         var blockVarExprs = blockExpr.Variables;
                         var blockExprs = blockExpr.Expressions;
@@ -1008,7 +1019,6 @@ namespace FastExpressionCompiler
                             for (var i = 0; i < blockExprs.Count; i++)
                                 if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
                                     return false;
-
                             closure.PopBlock();
                         }
 
@@ -1485,8 +1495,18 @@ namespace FastExpressionCompiler
                             return TryEmitAssign((BinaryExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.Block:
+#if LIGHT_EXPRESSION
+                            if (expr is OneVariableTwoExpressionBlockExpression simpleBlockExpr)
+                            {
+                                closure.PushBlockWithVars(simpleBlockExpr.Variable, il.GetNextLocalVarIndex(simpleBlockExpr.Variable.Type));
+                                if (!TryEmit(simpleBlockExpr.Expression1, paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult) ||
+                                    !TryEmit(simpleBlockExpr.Expression2, paramExprs, il, ref closure, parent))
+                                    return false;
+                                closure.PopBlock();
+                                return true;
+                            }
+#endif
                             var blockExpr = (BlockExpression)expr;
-
                             var blockVarExprs = blockExpr.Variables;
                             var blockVarCount = blockVarExprs.Count;
                             if (blockVarCount == 1)
@@ -1494,12 +1514,9 @@ namespace FastExpressionCompiler
                             else if (blockVarCount > 1)
                                 closure.PushBlockAndConstructLocalVars(blockVarExprs, il);
 
-                            // Trim the expressions after the Throw - #196
-                            var statementExprs = blockExpr.Expressions;
+                            var statementExprs = blockExpr.Expressions; // Trim the expressions after the Throw - #196
                             var statementCount = statementExprs.Count;
-
-                            // The last (result) statement in block will provide the result
-                            expr = statementExprs[statementCount - 1];
+                            expr = statementExprs[statementCount - 1]; // The last (result) statement in block will provide the result
 
                             // Try to trim the statements up to the Throw (if any)
                             if (statementCount > 1)
