@@ -2085,13 +2085,12 @@ namespace FastExpressionCompiler.LightExpression
 
         public readonly IReadOnlyList<ParameterExpression> Variables;
         public readonly IReadOnlyList<Expression> Expressions;
-        public readonly Expression Result;
+        public Expression Result => Expressions[Expressions.Count - 1];
 
         internal BlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
         {
             Variables = variables ?? Tools.Empty<ParameterExpression>();
             Expressions = expressions ?? Tools.Empty<Expression>();
-            Result = Expressions[Expressions.Count - 1];
             Type = type;
         }
 
