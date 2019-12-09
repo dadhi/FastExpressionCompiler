@@ -13,11 +13,11 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Assert.AreEqual("42", GetAnA(42)?.GetTheAnswer());
 
             var n = Parameter(typeof(int), "n");
-            var getTheAnswer = Lambda<Func<int, string>>(
-                CallIfNotNull(
-                    Call(GetType().GetTypeInfo().GetDeclaredMethod(nameof(GetAnA)), n),
-                    typeof(A).GetTypeInfo().GetDeclaredMethod(nameof(A.GetTheAnswer))
-                    ), n);
+            var block = CallIfNotNull(
+                Call(GetType().GetTypeInfo().GetDeclaredMethod(nameof(GetAnA)), n),
+                typeof(A).GetTypeInfo().GetDeclaredMethod(nameof(A.GetTheAnswer)));
+
+            var getTheAnswer = Lambda<Func<int, string>>(block, n);
 
             var f = getTheAnswer.CompileFast(ifFastFailedReturnNull: true);
             Assert.IsNull(f(43));

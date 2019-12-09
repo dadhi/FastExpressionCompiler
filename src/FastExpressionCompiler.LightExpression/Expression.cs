@@ -190,14 +190,8 @@ namespace FastExpressionCompiler.LightExpression
         public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) =>
             new MethodCallExpression(instance, method, arguments.AsReadOnlyList());
 
-        public static Expression CallIfNotNull(Expression instance, MethodInfo method)
-        {
-            var instanceVar = Parameter(instance.Type, "f");
-            return Block(instanceVar,
-                Assign(instanceVar, instance),
-                Condition(Equal(instanceVar, Constant(null)),
-                    Constant(null), Call(instanceVar, method, Tools.Empty<Expression>())));
-        }
+        public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
+            CallIfNotNull(instance, method, Tools.Empty<Expression>());
 
         public static Expression CallIfNotNull(Expression instance, MethodInfo method, IEnumerable<Expression> arguments)
         {
@@ -2051,6 +2045,9 @@ namespace FastExpressionCompiler.LightExpression
     /// <summary>Optimized version for the specific block structure</summary> 
     public sealed class OneVariableTwoExpressionBlockExpression : Expression
     {
+        public static explicit operator BlockExpression(OneVariableTwoExpressionBlockExpression x) =>
+            Block(new[] { x.Variable }, x.Expression1, x.Expression2);
+
         public override ExpressionType NodeType => ExpressionType.Block;
         public override Type Type => Expression2.Type;
 
@@ -2067,15 +2064,9 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Block(Type,
-                ParameterExpression.ToParameterExpressions(new[] { Variable }, ref exprsConverted),
-                ToExpressions(new[] { Expression1, Expression2 }, ref exprsConverted));
+            ((BlockExpression)this).CreateSysExpression(ref exprsConverted);
 
-        public override string CodeString =>
-            "Block(" + NewLine +
-            $"{Type.ToCode()}," + NewLine +
-            $"new ParameterExpression[]{{ {ToParamsCode(new[] { Variable })} }}," + NewLine +
-            $"{ToParamsCode(new[] { Expression1, Expression2 })})";
+        public override string CodeString => ((BlockExpression)this).CodeString;
     }
 
     public sealed class BlockExpression : Expression
