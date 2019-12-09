@@ -11,7 +11,7 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included AddOrUpdateServiceFactory
+The above copyright notice and this permission notice shall be included
 all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
@@ -189,6 +189,24 @@ namespace FastExpressionCompiler.LightExpression
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) =>
             new MethodCallExpression(instance, method, arguments.AsReadOnlyList());
+
+        public static Expression CallIfNotNull(Expression instance, MethodInfo method)
+        {
+            var instanceVar = Parameter(instance.Type, "f");
+            return Block(instanceVar,
+                Assign(instanceVar, instance),
+                Condition(Equal(instanceVar, Constant(null)),
+                    Constant(null), Call(instanceVar, method, Tools.Empty<Expression>())));
+        }
+
+        public static Expression CallIfNotNull(Expression instance, MethodInfo method, IEnumerable<Expression> arguments)
+        {
+            var instanceVar = Parameter(instance.Type, "f");
+            return Block(instanceVar,
+                Assign(instanceVar, instance),
+                Condition(Equal(instanceVar, Constant(null)),
+                    Constant(null), Call(instanceVar, method, arguments)));
+        }
 
         public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
             Call(null, method, arguments);
@@ -801,10 +819,16 @@ namespace FastExpressionCompiler.LightExpression
         public static BlockExpression Block(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) =>
             Block(expressions[expressions.Count - 1].Type, variables, expressions);
 
-        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
-            new BlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
             new BlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+
+        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
+            new BlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+
+        public static Expression Block(ParameterExpression variable, Expression expression1, Expression expression2) =>
+            expression2.NodeType == ExpressionType.Throw || expression1.NodeType == ExpressionType.Throw
+                ? (Expression)Block(new[] {variable}, expression1, expression2)
+                : new OneVariableTwoExpressionBlockExpression(variable, expression1, expression2);
 
         /// <summary>
         /// Creates a LoopExpression with the given body and (optional) break target.
@@ -1796,6 +1820,7 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
+    // todo: add no arguments and single, two, three, etc. argument variants
     public class MethodCallExpression : ArgumentsExpression
     {
         public override ExpressionType NodeType => ExpressionType.Call;
@@ -2023,7 +2048,36 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    // todo: specialize to 1 var and 1 expression
+    /// <summary>Optimized version for the specific block structure</summary> 
+    public sealed class OneVariableTwoExpressionBlockExpression : Expression
+    {
+        public override ExpressionType NodeType => ExpressionType.Block;
+        public override Type Type => Expression2.Type;
+
+        public new readonly ParameterExpression Variable;
+        public readonly Expression Expression1;
+        public readonly Expression Expression2;
+        public Expression Result => Expression2;
+
+        internal OneVariableTwoExpressionBlockExpression(ParameterExpression variable, Expression expression1, Expression expression2)
+        {
+            Variable = variable;
+            Expression1 = expression1;
+            Expression2 = expression2;
+        }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.Block(Type,
+                ParameterExpression.ToParameterExpressions(new[] { Variable }, ref exprsConverted),
+                ToExpressions(new[] { Expression1, Expression2 }, ref exprsConverted));
+
+        public override string CodeString =>
+            "Block(" + NewLine +
+            $"{Type.ToCode()}," + NewLine +
+            $"new ParameterExpression[]{{ {ToParamsCode(new[] { Variable })} }}," + NewLine +
+            $"{ToParamsCode(new[] { Expression1, Expression2 })})";
+    }
+
     public sealed class BlockExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Block;
@@ -2032,6 +2086,14 @@ namespace FastExpressionCompiler.LightExpression
         public readonly IReadOnlyList<ParameterExpression> Variables;
         public readonly IReadOnlyList<Expression> Expressions;
         public readonly Expression Result;
+
+        internal BlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
+        {
+            Variables = variables ?? Tools.Empty<ParameterExpression>();
+            Expressions = expressions ?? Tools.Empty<Expression>();
+            Result = Expressions[Expressions.Count - 1];
+            Type = type;
+        }
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Block(Type,
@@ -2043,14 +2105,6 @@ namespace FastExpressionCompiler.LightExpression
                 $"{Type.ToCode()}," + NewLine +
                 $"new ParameterExpression[]{{ {(Variables.Count == 0 ? "" : ToParamsCode(Variables))} }}," + NewLine +
                 $"{ToParamsCode(Expressions)})";
-
-        internal BlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
-        {
-            Variables = variables ?? Tools.Empty<ParameterExpression>();
-            Expressions = expressions ?? Tools.Empty<Expression>();
-            Result = Expressions[Expressions.Count - 1];
-            Type = type;
-        }
     }
 
     public sealed class LoopExpression : Expression
