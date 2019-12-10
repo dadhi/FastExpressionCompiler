@@ -2185,9 +2185,9 @@ namespace FastExpressionCompiler.LightExpression
         {
             get
             {
-                var methodIndex = Method.DeclaringType.GetTypeInfo().DeclaredMethods.AsArray().GetFirstIndex(Method);
+                var methodIndex = Method.DeclaringType.GetTypeInfo().GetDeclaredMethods(Method.Name).AsArray().GetFirstIndex(Method);
                 return $"Call({Object?.CodeString ?? "null"}," + NewLine + 
-                       $"{Method.DeclaringType.ToCode()}.GetTypeInfo().DeclaredMethods.ToArray()[{methodIndex}]," + NewLine + 
+                       $"{Method.DeclaringType.ToCode()}.GetTypeInfo().GetDeclaredMethods(\"{Method.Name}\").ToArray()[{methodIndex}]," + NewLine + 
                        $"{ToParamsCode(Arguments)})";
             }
         }
