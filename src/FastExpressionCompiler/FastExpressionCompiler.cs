@@ -857,14 +857,27 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Call:
 #if LIGHT_EXPRESSION
-                        if (expr is OneArgumentMethodCallExpression oneArgCallExpr)
+                        if (expr is FewArgumentsMethodCallExpression fewArgsCallExpr)
                         {
-                            if (oneArgCallExpr.Object != null && 
-                                !TryCollectBoundConstants(ref closure, oneArgCallExpr.Object, paramExprs, isNestedLambda, ref rootClosure))
+                            if (fewArgsCallExpr.Object != null && 
+                                !TryCollectBoundConstants(ref closure, fewArgsCallExpr.Object, paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
-                            expr = oneArgCallExpr.Argument;
-                            continue;
 
+                            if (fewArgsCallExpr is TwoArgumentsMethodCallExpression twoArgsCallExpr)
+                            {
+                                if (!TryCollectBoundConstants(ref closure, twoArgsCallExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
+                                    return false;
+                                expr = twoArgsCallExpr.Argument2;
+                                continue;
+                            }
+
+                            if (fewArgsCallExpr is OneArgumentMethodCallExpression oneArgCallExpr)
+                            {
+                                expr = oneArgCallExpr.Argument;
+                                continue;
+                            }
+
+                            return true;
                         }
 #endif
                         var methodCallExpr = (MethodCallExpression)expr;
@@ -3211,9 +3224,9 @@ namespace FastExpressionCompiler
                 var objIsValueType = false;
 
 #if LIGHT_EXPRESSION
-                if (expr is OneArgumentMethodCallExpression oneArgCallExpr)
+                if (expr is FewArgumentsMethodCallExpression fewArgsCallExpr)
                 {
-                    objExpr = oneArgCallExpr.Object;
+                    objExpr = fewArgsCallExpr.Object;
                     if (objExpr != null)
                     {
                         if (!TryEmit(objExpr, paramExprs, il, ref closure, flags | ParentFlags.InstanceAccess))
@@ -3223,10 +3236,20 @@ namespace FastExpressionCompiler
                             EmitStoreLocalVariableAndLoadItsAddress(il, objExpr.Type);
                     }
 
-                    exprMethod = oneArgCallExpr.Method;
+                    exprMethod = fewArgsCallExpr.Method;
                     var args = exprMethod.GetParameters();
-                    if (!TryEmit(oneArgCallExpr.Argument, paramExprs, il, ref closure, flags, args[0].ParameterType.IsByRef ? 0 : -1))
-                        return false;
+
+                    if (fewArgsCallExpr is TwoArgumentsMethodCallExpression twoArgsCallExpr)
+                    {
+                        if (!TryEmit(twoArgsCallExpr.Argument1, paramExprs, il, ref closure, flags, args[0].ParameterType.IsByRef ? 0 : -1) ||
+                            !TryEmit(twoArgsCallExpr.Argument2, paramExprs, il, ref closure, flags, args[1].ParameterType.IsByRef ? 1 : -1))
+                            return false;
+                    }
+                    else if (fewArgsCallExpr is OneArgumentMethodCallExpression oneArgCallExpr)
+                    {
+                        if (!TryEmit(oneArgCallExpr.Argument, paramExprs, il, ref closure, flags, args[0].ParameterType.IsByRef ? 0 : -1))
+                            return false;
+                    }
 
                     if (objIsValueType && exprMethod.IsVirtual)
                         il.Emit(OpCodes.Constrained, objExpr.Type);

@@ -214,11 +214,25 @@ namespace FastExpressionCompiler.LightExpression
             return new MethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, args), args);
         }
 
+        public static FewArgumentsMethodCallExpression Call(MethodInfo method) =>
+            new FewArgumentsMethodCallExpression(null, method);
+
+        public static FewArgumentsMethodCallExpression Call(Expression instance, MethodInfo method) =>
+            new FewArgumentsMethodCallExpression(instance, method);
+
         public static OneArgumentMethodCallExpression Call(MethodInfo method, Expression argument) =>
             Call(null, method, argument);
 
         public static OneArgumentMethodCallExpression Call(Expression instance, MethodInfo method, Expression argument) =>
             new OneArgumentMethodCallExpression(instance, method, argument);
+
+        public static TwoArgumentsMethodCallExpression Call(MethodInfo method,
+            Expression argument1, Expression argument2) =>
+            new TwoArgumentsMethodCallExpression(null, method, argument1, argument2);
+
+        public static TwoArgumentsMethodCallExpression Call(Expression instance, MethodInfo method, 
+            Expression argument1, Expression argument2) =>
+            new TwoArgumentsMethodCallExpression(instance, method, argument1, argument2);
 
         public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
             CallIfNotNull(instance, method, Tools.Empty<Expression>());
@@ -1820,23 +1834,62 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public class OneArgumentMethodCallExpression : Expression
+    public class FewArgumentsMethodCallExpression : Expression
     {
-        public static explicit operator MethodCallExpression(OneArgumentMethodCallExpression x) =>
-            Call(x.Object, x.Method, new[] { x.Argument });
+        public static explicit operator MethodCallExpression(FewArgumentsMethodCallExpression x) =>
+            Call(x.Object, x.Method, Tools.Empty<Expression>());
 
         public override ExpressionType NodeType => ExpressionType.Call;
         public override Type Type => Method.ReturnType;
 
         public readonly MethodInfo Method;
         public readonly Expression Object;
-        public readonly Expression Argument;
 
-        internal OneArgumentMethodCallExpression(Expression @object, MethodInfo method, Expression argument)
+        internal FewArgumentsMethodCallExpression(Expression @object, MethodInfo method)
         {
             Object = @object;
             Method = method;
+        }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
+
+        public override string CodeString => ((MethodCallExpression)this).CodeString;
+    }
+
+    public class OneArgumentMethodCallExpression : FewArgumentsMethodCallExpression
+    {
+        public static explicit operator MethodCallExpression(OneArgumentMethodCallExpression x) =>
+            Call(x.Object, x.Method, new[] { x.Argument });
+
+        public readonly Expression Argument;
+
+        internal OneArgumentMethodCallExpression(Expression @object, MethodInfo method, Expression argument)
+            : base(@object, method)
+        {
             Argument = argument;
+        }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
+
+        public override string CodeString => ((MethodCallExpression)this).CodeString;
+    }
+
+    public class TwoArgumentsMethodCallExpression : FewArgumentsMethodCallExpression
+    {
+        public static explicit operator MethodCallExpression(TwoArgumentsMethodCallExpression x) =>
+            Call(x.Object, x.Method, new[] { x.Argument1, x.Argument2 });
+
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+
+        internal TwoArgumentsMethodCallExpression(Expression @object, MethodInfo method, 
+            Expression argument1, Expression argument2)
+            : base(@object, method)
+        {
+            Argument1 = argument1;
+            Argument2 = argument2;
         }
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
