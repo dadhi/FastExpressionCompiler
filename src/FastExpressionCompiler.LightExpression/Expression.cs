@@ -2702,51 +2702,6 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public class FewArgumentsLambdaExpression : Expression
-    {
-        public static explicit operator LambdaExpression(FewArgumentsLambdaExpression x) =>
-            new LambdaExpression(x.Type, x.Body, Tools.Empty<ParameterExpression>(), x.ReturnType);
-
-        public override ExpressionType NodeType => ExpressionType.Lambda;
-        public override Type Type { get; }
-
-        public readonly Expression Body;
-        public readonly Type ReturnType;
-
-        internal FewArgumentsLambdaExpression(Type delegateType, Expression body, Type returnType)
-        {
-            Type = delegateType;
-            Body = body;
-            ReturnType = returnType;
-        }
-
-        public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
-            (System.Linq.Expressions.LambdaExpression)ToExpression();
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Lambda(Type, Body.ToExpression(ref exprsConverted),
-                Tools.Empty<System.Linq.Expressions.ParameterExpression>());
-
-        public override string CodeString => ((LambdaExpression)this).CodeString;
-    }
-
-    public class OneArgumentLambdaExpression : FewArgumentsLambdaExpression
-    {
-        public static explicit operator LambdaExpression(OneArgumentLambdaExpression x) =>
-            new LambdaExpression(x.Type, x.Body, new[] { x.Parameter }, x.ReturnType);
-
-        public new readonly ParameterExpression Parameter;
-
-        internal OneArgumentLambdaExpression(Type delegateType, Expression body, ParameterExpression parameter, Type returnType) 
-            : base(delegateType, body, returnType) => Parameter = parameter;
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Lambda(Type, Body.ToExpression(ref exprsConverted), 
-                ParameterExpression.ToParameterExpressions(new []{ Parameter }, ref exprsConverted));
-
-        public override string CodeString => ((LambdaExpression)this).CodeString;
-    }
-
     public class LambdaExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Lambda;
