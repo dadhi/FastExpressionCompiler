@@ -190,6 +190,9 @@ namespace FastExpressionCompiler.LightExpression
         public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) =>
             new MethodCallExpression(instance, method, arguments.AsReadOnlyList());
 
+        public static OneArgumentMethodCallExpression Call(Expression instance, MethodInfo method, Expression argument) =>
+            new OneArgumentMethodCallExpression(instance, method, argument);
+
         public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
             CallIfNotNull(instance, method, Tools.Empty<Expression>());
 
@@ -1814,7 +1817,31 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    // todo: add no arguments and single, two, three, etc. argument variants
+    public class OneArgumentMethodCallExpression : Expression
+    {
+        public static explicit operator MethodCallExpression(OneArgumentMethodCallExpression x) =>
+            Call(x.Object, x.Method, new[] { x.Argument });
+
+        public override ExpressionType NodeType => ExpressionType.Call;
+        public override Type Type => Method.ReturnType;
+
+        public readonly MethodInfo Method;
+        public readonly Expression Object;
+        public readonly Expression Argument;
+
+        internal OneArgumentMethodCallExpression(Expression @object, MethodInfo method, Expression argument)
+        {
+            Object = @object;
+            Method = method;
+            Argument = argument;
+        }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
+
+        public override string CodeString => ((MethodCallExpression)this).CodeString;
+    }
+
     public class MethodCallExpression : ArgumentsExpression
     {
         public override ExpressionType NodeType => ExpressionType.Call;

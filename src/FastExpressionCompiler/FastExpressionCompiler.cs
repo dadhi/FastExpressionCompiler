@@ -856,6 +856,17 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.Call:
+#if LIGHT_EXPRESSION
+                        if (expr is OneArgumentMethodCallExpression oneArgCallExpr)
+                        {
+                            if (oneArgCallExpr.Object != null && 
+                                !TryCollectBoundConstants(ref closure, oneArgCallExpr.Object, paramExprs, isNestedLambda, ref rootClosure))
+                                return false;
+                            expr = oneArgCallExpr.Argument;
+                            continue;
+
+                        }
+#endif
                         var methodCallExpr = (MethodCallExpression)expr;
                         var methodArgs = methodCallExpr.Arguments;
                         var methodArgsCount = methodArgs.Count;
@@ -1393,7 +1404,7 @@ namespace FastExpressionCompiler
                             return TryEmitNotNullConstant(true, constantExpression.Type, constantExpression.Value, il, ref closure);
 
                         case ExpressionType.Call:
-                            return TryEmitMethodCall((MethodCallExpression)expr, paramExprs, il, ref closure, parent);
+                            return TryEmitMethodCall(expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.MemberAccess:
                             return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, parent);
@@ -3191,30 +3202,54 @@ namespace FastExpressionCompiler
                 return EmitMethodCall(il, instType?.FindMethod("Set"));
             }
 
-            private static bool TryEmitMethodCall(MethodCallExpression expr,
+            private static bool TryEmitMethodCall(Expression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var flags = parent & ~ParentFlags.IgnoreResult | ParentFlags.Call;
-
-                var objExpr = expr.Object;
+                Expression objExpr;
+                MethodInfo exprMethod;
                 var objIsValueType = false;
+
+#if LIGHT_EXPRESSION
+                if (expr is OneArgumentMethodCallExpression oneArgCallExpr)
+                {
+                    objExpr = oneArgCallExpr.Object;
+                    if (objExpr != null)
+                    {
+                        if (!TryEmit(objExpr, paramExprs, il, ref closure, flags | ParentFlags.InstanceAccess))
+                            return false;
+                        objIsValueType = objExpr.Type.IsValueType();
+                        if (objIsValueType && objExpr.NodeType != ExpressionType.Parameter && !closure.LastEmitIsAddress)
+                            EmitStoreLocalVariableAndLoadItsAddress(il, objExpr.Type);
+                    }
+
+                    exprMethod = oneArgCallExpr.Method;
+                    var args = exprMethod.GetParameters();
+                    if (!TryEmit(oneArgCallExpr.Argument, paramExprs, il, ref closure, flags, args[0].ParameterType.IsByRef ? 0 : -1))
+                        return false;
+
+                    if (objIsValueType && exprMethod.IsVirtual)
+                        il.Emit(OpCodes.Constrained, objExpr.Type);
+                    il.Emit(exprMethod.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, exprMethod);
+                    if (parent.IgnoresResult() && exprMethod.ReturnType != typeof(void))
+                        il.Emit(OpCodes.Pop);
+                    closure.LastEmitIsAddress = false;
+                    return true;
+                }
+#endif
+                var callExpr = (MethodCallExpression)expr;
+                objExpr = callExpr.Object;
                 if (objExpr != null)
                 {
                     if (!TryEmit(objExpr, paramExprs, il, ref closure, flags | ParentFlags.InstanceAccess))
                         return false;
-
-                    var objType = objExpr.Type;
-                    objIsValueType = objType.IsValueType();
+                    objIsValueType = objExpr.Type.IsValueType();
                     if (objIsValueType && objExpr.NodeType != ExpressionType.Parameter && !closure.LastEmitIsAddress)
-                    {
-                        var localVarIndex = il.GetNextLocalVarIndex(objType);
-                        EmitStoreLocalVariable(il, localVarIndex);
-                        EmitLoadLocalVariableAddress(il, localVarIndex);
-                    }
+                        EmitStoreLocalVariableAndLoadItsAddress(il, objExpr.Type);
                 }
 
-                var exprArgs = expr.Arguments;
-                var exprMethod = expr.Method;
+                exprMethod = callExpr.Method;
+                var exprArgs = callExpr.Arguments;
                 if (exprArgs.Count != 0)
                 {
                     var args = exprMethod.GetParameters();
@@ -3225,9 +3260,7 @@ namespace FastExpressionCompiler
 
                 if (objIsValueType && exprMethod.IsVirtual)
                     il.Emit(OpCodes.Constrained, objExpr.Type);
-
                 il.Emit(exprMethod.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, exprMethod);
-
                 if (parent.IgnoresResult() && exprMethod.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);
 
@@ -4184,6 +4217,13 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Stloc, location);
                         break;
                 }
+            }
+
+            private static void EmitStoreLocalVariableAndLoadItsAddress(ILGenerator il, Type type)
+            {
+                var localVarIndex = il.GetNextLocalVarIndex(type);
+                EmitStoreLocalVariable(il, localVarIndex);
+                EmitLoadLocalVariableAddress(il, localVarIndex);
             }
         }
     }
