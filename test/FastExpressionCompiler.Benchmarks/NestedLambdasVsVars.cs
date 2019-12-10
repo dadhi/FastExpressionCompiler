@@ -22,6 +22,16 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 
 ### Creation and Compilation:
 
+#### Baseline: BAD allocations!!! - todo: Try to simplify constants first
+
+|                                            Method |     Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|-------------------------------------------------- |---------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast | 1.537 us | 0.0292 us | 0.0312 us |  1.00 |    0.00 | 0.3891 |     - |     - |   1.79 KB |
+|      Expression_with_sub_expressions_CompiledFast | 3.072 us | 0.0126 us | 0.0098 us |  2.00 |    0.04 | 0.2594 |     - |     - |    1.2 KB |
+
+
+### Creation and Compilation:
+
 |                                            Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |-------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
 | LightExpression_with_sub_expressions_CompiledFast |  32.86 us | 0.2596 us | 0.2429 us |  1.00 |    0.00 | 2.3804 | 1.1597 | 0.1831 |  10.86 KB |
@@ -83,23 +93,25 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
             //_exprWithVarsCompiled = _exprWithVars.Compile();
         }
 
-        //[Benchmark(Baseline = true)]
+        [Benchmark(Baseline = true)]
         public object LightExpression_with_sub_expressions_CompiledFast()
         {
+            return CreateLightExpression();
             //return LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression(), true);
-            return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
-        }
-
-        //[Benchmark]
-        [Benchmark(Baseline = true)]
-        public object Expression_with_sub_expressions_CompiledFast()
-        {
-            //return CreateExpression().CompileFast(true);
-            //return _expr.CompileFast(true);
-            return _exprCompiledFast();
+            //return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
         }
 
         [Benchmark]
+        //[Benchmark(Baseline = true)]
+        public object Expression_with_sub_expressions_CompiledFast()
+        {
+            return CreateExpression();
+            //return CreateExpression().CompileFast(true);
+            //return _expr.CompileFast(true);
+            //return _exprCompiledFast();
+        }
+
+        //[Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
             //return CreateExpression().Compile();
