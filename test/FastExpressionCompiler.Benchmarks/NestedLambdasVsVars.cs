@@ -29,6 +29,12 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 | LightExpression_with_sub_expressions_CompiledFast | 1.537 us | 0.0292 us | 0.0312 us |  1.00 |    0.00 | 0.3891 |     - |     - |   1.79 KB |
 |      Expression_with_sub_expressions_CompiledFast | 3.072 us | 0.0126 us | 0.0098 us |  2.00 |    0.04 | 0.2594 |     - |     - |    1.2 KB |
 
+#### Strong-typed Lambdas:
+
+|                                            Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 | Gen 2 | Allocated |
+|-------------------------------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|-------:|------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |   220.7 ns |  0.92 ns |  0.77 ns |  1.00 |    0.00 | 0.1783 | 0.0005 |     - |     840 B |
+|      Expression_with_sub_expressions_CompiledFast | 3,120.9 ns | 17.37 ns | 16.25 ns | 14.14 |    0.09 | 0.2403 |      - |     - |    1136 B |
 
 ### Creation and Compilation:
 
@@ -151,28 +157,22 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
             var d = Convert(
                 Call(test, getOrAddMethod,
                     Constant(2),
-                    Lambda(
-                        New(_dCtor))),
+                    Lambda<Func<D>>(New(_dCtor))),
                 typeof(D));
 
             var c = Convert(
                 Call(test, getOrAddMethod,
                     Constant(1),
-                    Lambda(
-                        New(_cCtor, d))),
+                    Lambda<Func<C>>(New(_cCtor, d))),
                 typeof(C));
 
             var b = Convert(
                 Call(test, getOrAddMethod,
                     Constant(0),
-                    Lambda(
-                        New(_bCtor, c, d))),
+                    Lambda<Func<B>>(New(_bCtor, c, d))),
                 typeof(B));
 
-            var fe = Lambda<Func<A>>(
-                New(_aCtor, b, c));
-
-            return fe;
+            return Lambda<Func<A>>(New(_aCtor, b, c));
         }
 
         private LightExpression.Expression<Func<A>> CreateLightExpression()
@@ -182,28 +182,22 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
             var d = L.Convert(
                 L.Call(test, getOrAddMethod,
                     L.Constant(2),
-                    L.Lambda(
-                        L.New(_dCtor))),
+                    L.Lambda<Func<D>>(L.New(_dCtor), typeof(D))),
                 typeof(D));
 
             var c = L.Convert(
                 L.Call(test, getOrAddMethod,
                     L.Constant(1),
-                    L.Lambda(
-                        L.New(_cCtor, d))),
+                    L.Lambda<Func<C>>(L.New(_cCtor, d), typeof(C))),
                 typeof(C));
 
             var b = L.Convert(
                 L.Call(test, getOrAddMethod,
                     L.Constant(0),
-                    L.Lambda(
-                        L.New(_bCtor, c, d))),
+                    L.Lambda<Func<B>>(L.New(_bCtor, c, d), typeof(B))),
                 typeof(B));
 
-            var fe = L.Lambda<Func<A>>(
-                L.New(_aCtor, b, c));
-
-            return fe;
+            return L.Lambda<Func<A>>(L.New(_aCtor, b, c), typeof(A));
         }
 
         private Expression<Func<A>> CreateExpressionWithVars()

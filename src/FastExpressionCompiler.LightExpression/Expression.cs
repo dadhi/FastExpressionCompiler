@@ -207,15 +207,15 @@ namespace FastExpressionCompiler.LightExpression
         public static OneArgumentNewExpression New(ConstructorInfo ctor, Expression arg) =>
             new OneArgumentNewExpression(ctor, arg);
 
+        public static TwoArgumentsNewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1) =>
+            new TwoArgumentsNewExpression(ctor, arg0, arg1);
+
         public static ThreeArgumentsNewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2) =>
             new ThreeArgumentsNewExpression(ctor, arg0, arg1, arg2);
 
         public static FourArgumentsNewExpression New(ConstructorInfo ctor, 
             Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
             new FourArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3);
-
-        public static TwoArgumentsNewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1) =>
-            new TwoArgumentsNewExpression(ctor, arg0, arg1);
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) =>
             new MethodCallExpression(instance, method, arguments);
@@ -511,7 +511,8 @@ namespace FastExpressionCompiler.LightExpression
             new TypedUnaryExpression(ExpressionType.Unbox, expression, type);
 
         public static LambdaExpression Lambda(Expression body) =>
-            new LambdaExpression(Tools.GetFuncOrActionType(Tools.Empty<Type>(), body.Type), body, Tools.Empty<ParameterExpression>(), body.Type);
+            new LambdaExpression(Tools.GetFuncOrActionType(Tools.Empty<Type>(), body.Type), 
+                body, Tools.Empty<ParameterExpression>(), body.Type);
 
         public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) =>
             new LambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters, body.Type);
@@ -1943,7 +1944,6 @@ namespace FastExpressionCompiler.LightExpression
         public override string CodeString => ((NewExpression)this).CodeString;
     }
 
-
     public class NewExpression : ArgumentsExpression
     {
         public override ExpressionType NodeType => ExpressionType.New;
@@ -2700,6 +2700,33 @@ namespace FastExpressionCompiler.LightExpression
             Comparison = comparison;
             _cases = cases;
         }
+    }
+
+    public class FewArgsLambdaExpression : Expression
+    {
+        public override ExpressionType NodeType => ExpressionType.Lambda;
+        public override Type Type { get; }
+
+        public readonly Expression Body;
+        public readonly Type ReturnType;
+
+        internal FewArgsLambdaExpression(Type delegateType, Expression body, Type returnType)
+        {
+            Type = delegateType;
+            Body = body;
+            ReturnType = returnType;
+        }
+
+        public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
+            (System.Linq.Expressions.LambdaExpression)ToExpression();
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.Lambda(Type, Body.ToExpression(ref exprsConverted), 
+                Tools.Empty<System.Linq.Expressions.ParameterExpression>());
+
+        public override string CodeString =>
+            $"Lambda({Type.ToCode()}," + NewLine +
+            $"{Body.CodeString})";
     }
 
     public class LambdaExpression : Expression
