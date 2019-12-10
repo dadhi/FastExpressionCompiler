@@ -10,10 +10,10 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<GenericConverter.Compilation>();
             //BenchmarkRunner.Run<GenericConverter.Invocation>();
 
-            BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
+            //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
             //BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
 
-            //BenchmarkRunner.Run<ArrayCopy_vs_ManualForLoop/*>();*/
+            //BenchmarkRunner.Run<ArrayCopy_vs_ManualForLoop>();
 
             //var a = new NestedLambdasVsVars();
             //a.Init();

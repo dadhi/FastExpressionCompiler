@@ -863,21 +863,54 @@ namespace FastExpressionCompiler
                                 !TryCollectBoundConstants(ref closure, fewArgsCallExpr.Object, paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
 
-                            if (fewArgsCallExpr is TwoArgumentsMethodCallExpression twoArgsCallExpr)
+                            var argCount = fewArgsCallExpr.ArgCount;
+                            if (argCount == 0)
+                                return true;
+
+                            if (argCount == 1)
                             {
+                                expr = ((OneArgumentMethodCallExpression)fewArgsCallExpr).Argument;
+                                continue;
+                            }
+                            
+                            if (argCount == 2)
+                            {
+                                var twoArgsCallExpr = (TwoArgumentsMethodCallExpression)fewArgsCallExpr;
                                 if (!TryCollectBoundConstants(ref closure, twoArgsCallExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
                                     return false;
                                 expr = twoArgsCallExpr.Argument2;
                                 continue;
                             }
 
-                            if (fewArgsCallExpr is OneArgumentMethodCallExpression oneArgCallExpr)
+                            if (argCount == 3)
                             {
-                                expr = oneArgCallExpr.Argument;
+                                var threeArgsCallExpr = (ThreeArgumentsMethodCallExpression)fewArgsCallExpr;
+                                if (!TryCollectBoundConstants(ref closure, threeArgsCallExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, threeArgsCallExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
+                                    return false;
+                                expr = threeArgsCallExpr.Argument3;
                                 continue;
                             }
 
-                            return true;
+                            if (argCount == 4)
+                            {
+                                var fourArgsCallExpr = (FourArgumentsMethodCallExpression)fewArgsCallExpr;
+                                if (!TryCollectBoundConstants(ref closure, fourArgsCallExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, fourArgsCallExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, fourArgsCallExpr.Argument3, paramExprs, isNestedLambda, ref rootClosure))
+                                    return false;
+                                expr = fourArgsCallExpr.Argument4;
+                                continue;
+                            }
+
+                            var fiveArgsCallExpr = (FiveArgumentsMethodCallExpression)fewArgsCallExpr;
+                            if (!TryCollectBoundConstants(ref closure, fiveArgsCallExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+                                !TryCollectBoundConstants(ref closure, fiveArgsCallExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure) ||
+                                !TryCollectBoundConstants(ref closure, fiveArgsCallExpr.Argument3, paramExprs, isNestedLambda, ref rootClosure) ||
+                                !TryCollectBoundConstants(ref closure, fiveArgsCallExpr.Argument4, paramExprs, isNestedLambda, ref rootClosure))
+                                return false;
+                            expr = fiveArgsCallExpr.Argument5;
+                            continue;
                         }
 #endif
                         var methodCallExpr = (MethodCallExpression)expr;
@@ -3239,15 +3272,44 @@ namespace FastExpressionCompiler
                     exprMethod = fewArgsCallExpr.Method;
                     var args = exprMethod.GetParameters();
 
-                    if (fewArgsCallExpr is TwoArgumentsMethodCallExpression twoArgsCallExpr)
+                    var argCount = fewArgsCallExpr.ArgCount;
+                    if (argCount == 1)
                     {
+                        if (!TryEmit(((OneArgumentMethodCallExpression)fewArgsCallExpr).Argument, paramExprs, il, ref closure, flags, args[0].ParameterType.IsByRef ? 0 : -1))
+                            return false;
+                    }
+                    else if (argCount == 2)
+                    {
+                        var twoArgsCallExpr = (TwoArgumentsMethodCallExpression)fewArgsCallExpr;
                         if (!TryEmit(twoArgsCallExpr.Argument1, paramExprs, il, ref closure, flags, args[0].ParameterType.IsByRef ? 0 : -1) ||
                             !TryEmit(twoArgsCallExpr.Argument2, paramExprs, il, ref closure, flags, args[1].ParameterType.IsByRef ? 1 : -1))
                             return false;
                     }
-                    else if (fewArgsCallExpr is OneArgumentMethodCallExpression oneArgCallExpr)
+                    else if (argCount == 3)
                     {
-                        if (!TryEmit(oneArgCallExpr.Argument, paramExprs, il, ref closure, flags, args[0].ParameterType.IsByRef ? 0 : -1))
+                        var threeArgsCallExpr = (ThreeArgumentsMethodCallExpression)fewArgsCallExpr;
+                        if (!TryEmit(threeArgsCallExpr.Argument1, paramExprs, il, ref closure, flags, args[0].ParameterType.IsByRef ? 0 : -1) ||
+                            !TryEmit(threeArgsCallExpr.Argument2, paramExprs, il, ref closure, flags, args[1].ParameterType.IsByRef ? 1 : -1) ||
+                            !TryEmit(threeArgsCallExpr.Argument3, paramExprs, il, ref closure, flags, args[2].ParameterType.IsByRef ? 2 : -1))
+                            return false;
+                    }
+                    else if (argCount == 4)
+                    {
+                        var fourArgsCallExpr = (FourArgumentsMethodCallExpression)fewArgsCallExpr;
+                        if (!TryEmit(fourArgsCallExpr.Argument1, paramExprs, il, ref closure, flags, args[0].ParameterType.IsByRef ? 0 : -1) ||
+                            !TryEmit(fourArgsCallExpr.Argument2, paramExprs, il, ref closure, flags, args[1].ParameterType.IsByRef ? 1 : -1) ||
+                            !TryEmit(fourArgsCallExpr.Argument3, paramExprs, il, ref closure, flags, args[2].ParameterType.IsByRef ? 2 : -1) ||
+                            !TryEmit(fourArgsCallExpr.Argument4, paramExprs, il, ref closure, flags, args[3].ParameterType.IsByRef ? 3 : -1))
+                            return false;
+                    }
+                    else if (argCount == 5)
+                    {
+                        var fiveArgsCallExpr = (FiveArgumentsMethodCallExpression)fewArgsCallExpr;
+                        if (!TryEmit(fiveArgsCallExpr.Argument1, paramExprs, il, ref closure, flags, args[0].ParameterType.IsByRef ? 0 : -1) ||
+                            !TryEmit(fiveArgsCallExpr.Argument2, paramExprs, il, ref closure, flags, args[1].ParameterType.IsByRef ? 1 : -1) ||
+                            !TryEmit(fiveArgsCallExpr.Argument3, paramExprs, il, ref closure, flags, args[2].ParameterType.IsByRef ? 2 : -1) ||
+                            !TryEmit(fiveArgsCallExpr.Argument4, paramExprs, il, ref closure, flags, args[3].ParameterType.IsByRef ? 3 : -1) ||
+                            !TryEmit(fiveArgsCallExpr.Argument5, paramExprs, il, ref closure, flags, args[4].ParameterType.IsByRef ? 4 : -1))
                             return false;
                     }
 

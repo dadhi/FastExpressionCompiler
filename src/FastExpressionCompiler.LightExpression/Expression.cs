@@ -234,6 +234,30 @@ namespace FastExpressionCompiler.LightExpression
             Expression argument1, Expression argument2) =>
             new TwoArgumentsMethodCallExpression(instance, method, argument1, argument2);
 
+        public static ThreeArgumentsMethodCallExpression Call(MethodInfo method,
+            Expression argument1, Expression argument2, Expression argument3) =>
+            new ThreeArgumentsMethodCallExpression(null, method, argument1, argument2, argument3);
+
+        public static ThreeArgumentsMethodCallExpression Call(Expression instance, MethodInfo method,
+            Expression argument1, Expression argument2, Expression argument3) =>
+            new ThreeArgumentsMethodCallExpression(instance, method, argument1, argument2, argument3);
+
+        public static FourArgumentsMethodCallExpression Call(MethodInfo method,
+            Expression argument1, Expression argument2, Expression argument3, Expression argument4) =>
+            new FourArgumentsMethodCallExpression(null, method, argument1, argument2, argument3, argument4);
+
+        public static FourArgumentsMethodCallExpression Call(Expression instance, MethodInfo method,
+            Expression argument1, Expression argument2, Expression argument3, Expression argument4) =>
+            new FourArgumentsMethodCallExpression(instance, method, argument1, argument2, argument3, argument4);
+
+        public static FiveArgumentsMethodCallExpression Call(Expression instance, MethodInfo method,
+            Expression argument1, Expression argument2, Expression argument3, Expression argument4, Expression argument5) =>
+            new FiveArgumentsMethodCallExpression(instance, method, argument1, argument2, argument3, argument4, argument5);
+
+        public static FiveArgumentsMethodCallExpression Call(MethodInfo method,
+            Expression argument1, Expression argument2, Expression argument3, Expression argument4, Expression argument5) =>
+            new FiveArgumentsMethodCallExpression(null, method, argument1, argument2, argument3, argument4, argument5);
+
         public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
             CallIfNotNull(instance, method, Tools.Empty<Expression>());
 
@@ -1842,6 +1866,8 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType => ExpressionType.Call;
         public override Type Type => Method.ReturnType;
 
+        public virtual byte ArgCount => 0;
+
         public readonly MethodInfo Method;
         public readonly Expression Object;
 
@@ -1857,10 +1883,12 @@ namespace FastExpressionCompiler.LightExpression
         public override string CodeString => ((MethodCallExpression)this).CodeString;
     }
 
-    public class OneArgumentMethodCallExpression : FewArgumentsMethodCallExpression
+    public sealed class OneArgumentMethodCallExpression : FewArgumentsMethodCallExpression
     {
         public static explicit operator MethodCallExpression(OneArgumentMethodCallExpression x) =>
             Call(x.Object, x.Method, new[] { x.Argument });
+
+        public override byte ArgCount => 1;
 
         public readonly Expression Argument;
 
@@ -1876,10 +1904,12 @@ namespace FastExpressionCompiler.LightExpression
         public override string CodeString => ((MethodCallExpression)this).CodeString;
     }
 
-    public class TwoArgumentsMethodCallExpression : FewArgumentsMethodCallExpression
+    public sealed class TwoArgumentsMethodCallExpression : FewArgumentsMethodCallExpression
     {
         public static explicit operator MethodCallExpression(TwoArgumentsMethodCallExpression x) =>
             Call(x.Object, x.Method, new[] { x.Argument1, x.Argument2 });
+
+        public override byte ArgCount => 2;
 
         public readonly Expression Argument1;
         public readonly Expression Argument2;
@@ -1890,6 +1920,90 @@ namespace FastExpressionCompiler.LightExpression
         {
             Argument1 = argument1;
             Argument2 = argument2;
+        }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
+
+        public override string CodeString => ((MethodCallExpression)this).CodeString;
+    }
+
+    public sealed class ThreeArgumentsMethodCallExpression : FewArgumentsMethodCallExpression
+    {
+        public static explicit operator MethodCallExpression(ThreeArgumentsMethodCallExpression x) =>
+            Call(x.Object, x.Method, new[] { x.Argument1, x.Argument2, x.Argument3 });
+
+        public override byte ArgCount => 3;
+
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+        public readonly Expression Argument3;
+
+        internal ThreeArgumentsMethodCallExpression(Expression @object, MethodInfo method,
+            Expression argument1, Expression argument2, Expression argument3)
+            : base(@object, method)
+        {
+            Argument1 = argument1;
+            Argument2 = argument2;
+            Argument3 = argument3;
+        }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
+
+        public override string CodeString => ((MethodCallExpression)this).CodeString;
+    }
+
+    public sealed class FourArgumentsMethodCallExpression : FewArgumentsMethodCallExpression
+    {
+        public static explicit operator MethodCallExpression(FourArgumentsMethodCallExpression x) =>
+            Call(x.Object, x.Method, new[] { x.Argument1, x.Argument2, x.Argument3 });
+
+        public override byte ArgCount => 4;
+
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+        public readonly Expression Argument3;
+        public readonly Expression Argument4;
+
+        internal FourArgumentsMethodCallExpression(Expression @object, MethodInfo method,
+            Expression argument1, Expression argument2, Expression argument3, Expression argument4)
+            : base(@object, method)
+        {
+            Argument1 = argument1;
+            Argument2 = argument2;
+            Argument3 = argument3;
+            Argument4 = argument4;
+        }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
+
+        public override string CodeString => ((MethodCallExpression)this).CodeString;
+    }
+
+    public sealed class FiveArgumentsMethodCallExpression : FewArgumentsMethodCallExpression
+    {
+        public static explicit operator MethodCallExpression(FiveArgumentsMethodCallExpression x) =>
+            Call(x.Object, x.Method, new[] { x.Argument1, x.Argument2, x.Argument3 });
+
+        public override byte ArgCount => 5;
+
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+        public readonly Expression Argument3;
+        public readonly Expression Argument4;
+        public readonly Expression Argument5;
+
+        internal FiveArgumentsMethodCallExpression(Expression @object, MethodInfo method,
+            Expression argument1, Expression argument2, Expression argument3, Expression argument4, Expression argument5)
+            : base(@object, method)
+        {
+            Argument1 = argument1;
+            Argument2 = argument2;
+            Argument3 = argument3;
+            Argument4 = argument4;
+            Argument5 = argument5;
         }
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
