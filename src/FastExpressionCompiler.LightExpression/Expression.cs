@@ -135,29 +135,49 @@ namespace FastExpressionCompiler.LightExpression
 
         public static ParameterExpression Variable(Type type, string name = null) => Parameter(type, name);
 
-        private static readonly ConstantExpression _nullExpr  = new TypedConstantExpression(null, typeof(object));
-        private static readonly ConstantExpression _falseExpr = new ConstantExpression(false);
-        private static readonly ConstantExpression _trueExpr  = new ConstantExpression(true);
-        private static readonly ConstantExpression _0Expr     = new ConstantExpression(0);
+        public static readonly ConstantExpression NullConstant  = new TypedConstantExpression(null, typeof(object));
+        public static readonly ConstantExpression FalseConstant = new ConstantExpression(false);
+        public static readonly ConstantExpression TrueConstant  = new ConstantExpression(true);
+        public static readonly ConstantExpression ZeroConstant  = new ConstantExpression(0);
 
         public static ConstantExpression Constant(bool value) =>
-            value ? _trueExpr : _falseExpr;
+            value ? TrueConstant : FalseConstant;
 
         public static ConstantExpression Constant(int value) =>
-            value == 0 ? _0Expr : new ConstantExpression(value);
+            value == 0 ? ZeroConstant : new TypedConstantExpression<int>(value);
 
-        public static ConstantExpression Constant(object value, Type type = null)
+        public static ConstantExpression Constant<T>(T value) => 
+            new TypedConstantExpression<T>(value);
+
+        public static ConstantExpression Constant(object value)
         {
             if (value == null)
-                return type == null ? _nullExpr : new TypedConstantExpression(null, type);
+                return NullConstant;
 
             if (value is bool b)
-                return b ? _trueExpr : _falseExpr;
+                return b ? TrueConstant : FalseConstant;
 
             if (value is int n && n == 0)
-                return _0Expr;
+                return ZeroConstant;
 
-            if (type == null || ReferenceEquals(type, value.GetType()))
+            return new ConstantExpression(value);
+        }
+
+        public static ConstantExpression Constant(object value, Type type)
+        {
+            if (type == null)
+                return Constant(value);
+
+            if (value == null)
+                return new TypedConstantExpression(null, type);
+
+            if (value is bool b)
+                return b ? TrueConstant : FalseConstant;
+
+            if (value is int n && n == 0)
+                return ZeroConstant;
+
+            if (ReferenceEquals(type, value.GetType()))
                 return new ConstantExpression(value);
 
             return new TypedConstantExpression(value, type);
@@ -184,18 +204,18 @@ namespace FastExpressionCompiler.LightExpression
         public static FewArgumentsNewExpression New(ConstructorInfo ctor) =>
             new FewArgumentsNewExpression(ctor);
 
-        public static OneArgumentNewExpression New(ConstructorInfo ctor, Expression argument) =>
-            new OneArgumentNewExpression(ctor, argument);
+        public static OneArgumentNewExpression New(ConstructorInfo ctor, Expression arg) =>
+            new OneArgumentNewExpression(ctor, arg);
 
-        public static ThreeArgumentsNewExpression New(ConstructorInfo ctor, Expression argument1, Expression argument2, Expression argument3) =>
-            new ThreeArgumentsNewExpression(ctor, argument1, argument2, argument3);
+        public static ThreeArgumentsNewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2) =>
+            new ThreeArgumentsNewExpression(ctor, arg0, arg1, arg2);
 
         public static FourArgumentsNewExpression New(ConstructorInfo ctor, 
-            Expression argument1, Expression argument2, Expression argument3, Expression argument4) =>
-            new FourArgumentsNewExpression(ctor, argument1, argument2, argument3, argument4);
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
+            new FourArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3);
 
-        public static TwoArgumentsNewExpression New(ConstructorInfo ctor, Expression argument1, Expression argument2) =>
-            new TwoArgumentsNewExpression(ctor, argument1, argument2);
+        public static TwoArgumentsNewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1) =>
+            new TwoArgumentsNewExpression(ctor, arg0, arg1);
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) =>
             new MethodCallExpression(instance, method, arguments);
@@ -240,36 +260,36 @@ namespace FastExpressionCompiler.LightExpression
             new OneArgumentMethodCallExpression(instance, method, argument);
 
         public static TwoArgumentsMethodCallExpression Call(MethodInfo method,
-            Expression argument1, Expression argument2) =>
-            new TwoArgumentsMethodCallExpression(null, method, argument1, argument2);
+            Expression arg0, Expression arg1) =>
+            new TwoArgumentsMethodCallExpression(null, method, arg0, arg1);
 
         public static TwoArgumentsMethodCallExpression Call(Expression instance, MethodInfo method, 
-            Expression argument1, Expression argument2) =>
-            new TwoArgumentsMethodCallExpression(instance, method, argument1, argument2);
+            Expression arg0, Expression arg1) =>
+            new TwoArgumentsMethodCallExpression(instance, method, arg0, arg1);
 
         public static ThreeArgumentsMethodCallExpression Call(MethodInfo method,
-            Expression argument1, Expression argument2, Expression argument3) =>
-            new ThreeArgumentsMethodCallExpression(null, method, argument1, argument2, argument3);
+            Expression arg0, Expression arg1, Expression arg2) =>
+            new ThreeArgumentsMethodCallExpression(null, method, arg0, arg1, arg2);
 
         public static ThreeArgumentsMethodCallExpression Call(Expression instance, MethodInfo method,
-            Expression argument1, Expression argument2, Expression argument3) =>
-            new ThreeArgumentsMethodCallExpression(instance, method, argument1, argument2, argument3);
+            Expression arg0, Expression arg1, Expression arg2) =>
+            new ThreeArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2);
 
         public static FourArgumentsMethodCallExpression Call(MethodInfo method,
-            Expression argument1, Expression argument2, Expression argument3, Expression argument4) =>
-            new FourArgumentsMethodCallExpression(null, method, argument1, argument2, argument3, argument4);
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
+            new FourArgumentsMethodCallExpression(null, method, arg0, arg1, arg2, arg3);
 
         public static FourArgumentsMethodCallExpression Call(Expression instance, MethodInfo method,
-            Expression argument1, Expression argument2, Expression argument3, Expression argument4) =>
-            new FourArgumentsMethodCallExpression(instance, method, argument1, argument2, argument3, argument4);
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
+            new FourArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3);
 
         public static FiveArgumentsMethodCallExpression Call(Expression instance, MethodInfo method,
-            Expression argument1, Expression argument2, Expression argument3, Expression argument4, Expression argument5) =>
-            new FiveArgumentsMethodCallExpression(instance, method, argument1, argument2, argument3, argument4, argument5);
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
+            new FiveArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4);
 
         public static FiveArgumentsMethodCallExpression Call(MethodInfo method,
-            Expression argument1, Expression argument2, Expression argument3, Expression argument4, Expression argument5) =>
-            new FiveArgumentsMethodCallExpression(null, method, argument1, argument2, argument3, argument4, argument5);
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
+            new FiveArgumentsMethodCallExpression(null, method, arg0, arg1, arg2, arg3, arg4);
 
         public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
             CallIfNotNull(instance, method, Tools.Empty<Expression>());
@@ -1792,6 +1812,13 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type { get; }
 
         internal TypedConstantExpression(object value, Type type) : base(value) => Type = type;
+    }
+
+    public sealed class TypedConstantExpression<T> : ConstantExpression
+    {
+        public override Type Type => typeof(T);
+
+        internal TypedConstantExpression(object value) : base(value) { }
     }
 
     public abstract class ArgumentsExpression : Expression

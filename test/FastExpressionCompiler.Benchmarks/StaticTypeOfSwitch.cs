@@ -4,8 +4,6 @@ using BenchmarkDotNet.Attributes;
 
 namespace FastExpressionCompiler.Benchmarks
 {
-
-    [CoreJob, ClrJob]
     [MemoryDiagnoser]
     public class StaticTypeOfSwitch
     {

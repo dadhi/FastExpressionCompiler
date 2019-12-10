@@ -4,7 +4,7 @@ using BenchmarkDotNet.Attributes;
 
 namespace FastExpressionCompiler.Benchmarks
 {
-    [CoreJob, MemoryDiagnoser]
+    [MemoryDiagnoser]
     public class NestedLambdaOverhead
     {
         private static readonly Expression<Func<object>> _withoutNestedLambda = () =>

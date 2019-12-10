@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using static System.Linq.Expressions.Expression;
 using L = FastExpressionCompiler.LightExpression.Expression;
@@ -12,15 +14,24 @@ namespace FastExpressionCompiler.Benchmarks
         /*
 ## The results
 
-BenchmarkDotNet=v0.11.5, OS=Windows 10.0.17134.885 (1803/April2018Update/Redstone4)
+BenchmarkDotNet=v0.12.0, OS=Windows 10.0.18362
 Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
-Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
-.NET Core SDK=3.0.100-preview3-010431
-  [Host]     : .NET Core 2.1.12 (CoreCLR 4.6.27817.01, CoreFX 4.6.27818.01), 64bit RyuJIT
-  DefaultJob : .NET Core 2.1.12 (CoreCLR 4.6.27817.01, CoreFX 4.6.27818.01), 64bit RyuJIT
+.NET Core SDK=3.1.100
+  [Host]     : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
+  DefaultJob : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
+
+### Creation and Compilation:
+
+|                                            Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|-------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |  32.86 us | 0.2596 us | 0.2429 us |  1.00 |    0.00 | 2.3804 | 1.1597 | 0.1831 |  10.86 KB |
+|      Expression_with_sub_expressions_CompiledFast |  37.97 us | 0.1676 us | 0.1486 us |  1.16 |    0.01 | 2.2583 | 1.0986 | 0.1831 |  10.46 KB |
+|          Expression_with_sub_expressions_Compiled | 641.62 us | 4.5227 us | 4.2305 us | 19.53 |    0.18 | 5.8594 | 2.9297 |      - |  28.38 KB |
+
 
 ### Compilation
 
+#### V2
 |                                                                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |----------------------------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
 |                           Expression_with_sub_expressions_CompiledFast |  78.27 us | 0.3404 us | 0.3184 us |  1.00 |    0.00 | 4.3945 | 2.1973 | 0.2441 |  20.42 KB |
@@ -28,39 +39,18 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  46.36 us | 0.3881 us | 0.3441 us |  0.59 |    0.01 | 2.7466 | 1.3428 | 0.1831 |  12.61 KB |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 864.08 us | 2.0120 us | 1.8820 us | 11.04 |    0.06 | 3.9063 | 1.9531 |      - |  20.96 KB |
 
-#### After fixing the nested lambdas compilation and ArrayClosure only
 
-|                                                                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|----------------------------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                           Expression_with_sub_expressions_CompiledFast |  45.86 us | 0.3216 us | 0.3008 us |  1.00 |    0.00 | 3.0518 | 1.5259 | 0.3052 |  13.95 KB |
-|                               Expression_with_sub_expressions_Compiled | 645.33 us | 5.1962 us | 4.6063 us | 14.07 |    0.15 | 5.8594 | 2.9297 |      - |  27.04 KB |
-| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  36.79 us | 0.3446 us | 0.3223 us |  0.80 |    0.01 | 2.9297 | 1.4648 | 0.1831 |  13.48 KB |
-|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 870.74 us | 4.7653 us | 4.4574 us | 18.99 |    0.17 | 3.9063 | 1.9531 |      - |  20.96 KB |
-
-### Making the same nested lambdas to be compiled Once and the split ArrayClosure
-
-|                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|--------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |  34.11 us | 0.1718 us | 0.1435 us |  1.00 |    0.00 | 2.1973 | 1.0986 | 0.1831 |  10.22 KB |
-|     Expression_with_sub_expressions_Compiled | 643.10 us | 6.6755 us | 6.2443 us | 18.86 |    0.23 | 5.8594 | 2.9297 |      - |  27.04 KB |
-
-#### Removing cast-class and loading constants as variables - PR by @Havunen
-
-|                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|--------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |  32.13 us | 0.2413 us | 0.2257 us |  1.00 |    0.00 | 2.0752 | 1.0376 | 0.1831 |   9.53 KB |
-|     Expression_with_sub_expressions_Compiled | 627.41 us | 4.8732 us | 4.5584 us | 19.53 |    0.18 | 5.8594 | 2.9297 |      - |  27.04 KB |
-
-#### Optimizing the use of closure variables and cleaning not necessary nested Lambda type creation
-
-|                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|--------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |  29.11 us | 0.1346 us | 0.1193 us |  1.00 |    0.00 | 1.9531 | 0.9766 | 0.1831 |   8.95 KB |
-|     Expression_with_sub_expressions_Compiled | 633.11 us | 4.1526 us | 3.8843 us | 21.75 |    0.14 | 5.8594 | 2.9297 |      - |  27.04 KB |
+#### V3
+|                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |  26.08 us | 0.257 us | 0.227 us |  1.00 |    0.00 | 1.8921 | 0.9155 | 0.1221 |   8.88 KB |
+|      Expression_with_sub_expressions_CompiledFast |  28.57 us | 0.233 us | 0.207 us |  1.10 |    0.01 | 1.9226 | 0.9460 | 0.1831 |   8.89 KB |
+|          Expression_with_sub_expressions_Compiled | 557.58 us | 3.214 us | 2.684 us | 21.37 |    0.23 | 4.8828 | 1.9531 |      - |  26.37 KB |
 
 
 ### Invocation
 
+#### V2
 |                                                                 Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 |----------------------------------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
 |                           Expression_with_sub_expressions_CompiledFast |    57.17 ns | 0.1766 ns | 0.1566 ns |  1.00 |    0.00 | 0.0627 |     - |     - |     296 B |
@@ -68,21 +58,14 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |    51.78 ns | 0.2234 ns | 0.2089 ns |  0.91 |    0.00 | 0.0593 |     - |     - |     280 B |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,644.84 ns | 5.2784 ns | 4.4077 ns | 28.77 |    0.10 | 0.0782 |     - |     - |     376 B |
 
-#### After fixing the nested lambdas and making them compile once and the split ArrayClosure
-
-|                                       Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|--------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |    13.58 ns | 0.0945 ns | 0.0838 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
-|     Expression_with_sub_expressions_Compiled | 1,122.42 ns | 3.2589 ns | 2.8889 ns | 82.63 |    0.54 | 0.0458 |     - |     - |     224 B |
-
-#### Removing cast-class and loading constants as variables - PR by @Havunen
-
-|                                       Method |        Mean |     Error |    StdDev |  Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|--------------------------------------------- |------------:|----------:|----------:|-------:|--------:|-------:|------:|------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |    11.89 ns | 0.1250 ns | 0.1044 ns |   1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
-|     Expression_with_sub_expressions_Compiled | 1,261.20 ns | 2.1887 ns | 2.0473 ns | 106.04 |    0.99 | 0.0458 |     - |     - |     224 B |
+#### V3
+|                                       Method |        Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|--------------------------------------------- |------------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+| Expression_with_sub_expressions_CompiledFast |    10.69 ns | 0.087 ns | 0.081 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
+|     Expression_with_sub_expressions_Compiled | 1,029.87 ns | 6.556 ns | 6.132 ns | 96.33 |    0.95 | 0.0458 |     - |     - |     224 B |
 */
         private Expression<Func<A>> _expr, _exprWithVars;
+        private LightExpression.Expression<Func<A>> _lightExpr;
 
         private Func<A> _exprCompiledFast, _exprCompiled, _exprWithVarsCompiledFast, _exprWithVarsCompiled;
 
@@ -90,29 +73,38 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
         public void Init()
         {
             _expr         = CreateExpression();
-            _exprWithVars = CreateExpressionWithVars();
+            _lightExpr    = CreateLightExpression();
+            //_exprWithVars = CreateExpressionWithVars();
 
             _exprCompiledFast = _expr.CompileFast(true);
             _exprCompiled = _expr.Compile();
 
-            _exprWithVarsCompiledFast = _exprWithVars.CompileFast(true);
-            _exprWithVarsCompiled = _exprWithVars.Compile();
+            //_exprWithVarsCompiledFast = _exprWithVars.CompileFast(true);
+            //_exprWithVarsCompiled = _exprWithVars.Compile();
         }
 
+        //[Benchmark(Baseline = true)]
+        public object LightExpression_with_sub_expressions_CompiledFast()
+        {
+            //return LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression(), true);
+            return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
+        }
+
+        //[Benchmark]
         [Benchmark(Baseline = true)]
         public object Expression_with_sub_expressions_CompiledFast()
         {
+            //return CreateExpression().CompileFast(true);
             //return _expr.CompileFast(true);
             return _exprCompiledFast();
-            //return _expr.CompileFast(true).Invoke();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
+            //return CreateExpression().Compile();
             //return _expr.Compile();
             return _exprCompiled();
-            //return _expr.Compile().Invoke();
         }
 
         //[Benchmark]
@@ -132,36 +124,72 @@ Frequency=2156248 Hz, Resolution=463.7685 ns, Timer=TSC
         }
 
         public readonly object[] _objects = new object[3];
+        private static readonly ConstructorInfo _aCtor = typeof(A).GetTypeInfo().DeclaredConstructors.First();
+        private static readonly ConstructorInfo _bCtor = typeof(B).GetTypeInfo().DeclaredConstructors.First();
+        private static readonly ConstructorInfo _cCtor = typeof(C).GetTypeInfo().DeclaredConstructors.First();
+        private static readonly ConstructorInfo _dCtor = typeof(D).GetTypeInfo().DeclaredConstructors.First();
+
         public object GetOrAdd(int i, Func<object> getValue) =>
             _objects[i] ?? (_objects[i] = getValue());
 
         private Expression<Func<A>> CreateExpression()
         {
             var test = Constant(new NestedLambdasVsVars());
-
+            var getOrAddMethod = test.Type.GetMethod(nameof(GetOrAdd));
             var d = Convert(
-                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                Call(test, getOrAddMethod,
                     Constant(2),
                     Lambda(
-                        New(typeof(D).GetConstructors()[0], new Expression[0]))),
+                        New(_dCtor))),
                 typeof(D));
 
             var c = Convert(
-                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                Call(test, getOrAddMethod,
                     Constant(1),
                     Lambda(
-                        New(typeof(C).GetConstructors()[0], d))),
+                        New(_cCtor, d))),
                 typeof(C));
 
             var b = Convert(
-                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                Call(test, getOrAddMethod,
                     Constant(0),
                     Lambda(
-                        New(typeof(B).GetConstructors()[0], c, d))),
+                        New(_bCtor, c, d))),
                 typeof(B));
 
             var fe = Lambda<Func<A>>(
-                New(typeof(A).GetConstructors()[0], b, c));
+                New(_aCtor, b, c));
+
+            return fe;
+        }
+
+        private LightExpression.Expression<Func<A>> CreateLightExpression()
+        {
+            var test = L.Constant(new NestedLambdasVsVars());
+            var getOrAddMethod = test.Type.GetMethod(nameof(GetOrAdd));
+            var d = L.Convert(
+                L.Call(test, getOrAddMethod,
+                    L.Constant(2),
+                    L.Lambda(
+                        L.New(_dCtor))),
+                typeof(D));
+
+            var c = L.Convert(
+                L.Call(test, getOrAddMethod,
+                    L.Constant(1),
+                    L.Lambda(
+                        L.New(_cCtor, d))),
+                typeof(C));
+
+            var b = L.Convert(
+                L.Call(test, getOrAddMethod,
+                    L.Constant(0),
+                    L.Lambda(
+                        L.New(_bCtor, c, d))),
+                typeof(B));
+
+            var fe = L.Lambda<Func<A>>(
+                L.New(_aCtor, b, c));
 
             return fe;
         }
