@@ -190,21 +190,6 @@ namespace FastExpressionCompiler.LightExpression
         public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) =>
             new MethodCallExpression(instance, method, arguments.AsReadOnlyList());
 
-        public static OneArgumentMethodCallExpression Call(Expression instance, MethodInfo method, Expression argument) =>
-            new OneArgumentMethodCallExpression(instance, method, argument);
-
-        public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
-            CallIfNotNull(instance, method, Tools.Empty<Expression>());
-
-        public static Expression CallIfNotNull(Expression instance, MethodInfo method, IEnumerable<Expression> arguments)
-        {
-            var instanceVar = Parameter(instance.Type, "f");
-            return Block(instanceVar,
-                Assign(instanceVar, instance),
-                Condition(Equal(instanceVar, Constant(null)),
-                    Constant(null), Call(instanceVar, method, arguments)));
-        }
-
         public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
             Call(null, method, arguments);
 
@@ -227,6 +212,24 @@ namespace FastExpressionCompiler.LightExpression
         {
             var args = arguments.AsReadOnlyList();
             return new MethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, args), args);
+        }
+
+        public static OneArgumentMethodCallExpression Call(MethodInfo method, Expression argument) =>
+            Call(null, method, argument);
+
+        public static OneArgumentMethodCallExpression Call(Expression instance, MethodInfo method, Expression argument) =>
+            new OneArgumentMethodCallExpression(instance, method, argument);
+
+        public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
+            CallIfNotNull(instance, method, Tools.Empty<Expression>());
+
+        public static Expression CallIfNotNull(Expression instance, MethodInfo method, IEnumerable<Expression> arguments)
+        {
+            var instanceVar = Parameter(instance.Type, "f");
+            return Block(instanceVar,
+                Assign(instanceVar, instance),
+                Condition(Equal(instanceVar, Constant(null)),
+                    Constant(null), Call(instanceVar, method, arguments)));
         }
 
         public static MemberExpression Property(PropertyInfo property) =>
