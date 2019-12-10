@@ -1795,6 +1795,12 @@ namespace FastExpressionCompiler.LightExpression
 
         public readonly ConstructorInfo Constructor;
 
+        internal NewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) :
+            base(arguments)
+        {
+            Constructor = constructor;
+        }
+
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.New(Constructor, ToExpressions(Arguments, ref exprsConverted));
 
@@ -1806,12 +1812,6 @@ namespace FastExpressionCompiler.LightExpression
                 return $"New({Type.ToCode()}.GetTypeInfo().DeclaredConstructors.ToArray()[{ctorIndex}]," + NewLine + 
                        $"{ToParamsCode(Arguments)})";
             }
-        }
-
-        internal NewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) :
-            base(arguments)
-        {
-            Constructor = constructor;
         }
     }
 
