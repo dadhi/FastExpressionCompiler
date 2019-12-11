@@ -83,7 +83,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         private Expression<Func<A>> _expr, _exprWithVars;
         private LightExpression.Expression<Func<A>> _lightExpr;
 
-        private Func<A> _exprCompiledFast, _exprCompiled, _exprWithVarsCompiledFast, _exprWithVarsCompiled;
+        private Func<A> _exprCompiledFast, _exprCompiled;//, _exprWithVarsCompiledFast, _exprWithVarsCompiled;
 
         [GlobalSetup]
         public void Init()
@@ -125,21 +125,21 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
             return _exprCompiled();
         }
 
-        //[Benchmark]
-        public object Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast()
-        {
-            //return _exprWithVars.CompileFast(true);
-            return _exprWithVarsCompiledFast();
-            //return _exprWithVars.CompileFast(true).Invoke();
-        }
+        ////[Benchmark]
+        //public object Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast()
+        //{
+        //    //return _exprWithVars.CompileFast(true);
+        //    return _exprWithVarsCompiledFast();
+        //    //return _exprWithVars.CompileFast(true).Invoke();
+        //}
 
-        //[Benchmark]
-        public object Expression_with_sub_expressions_assigned_to_vars_in_block_Compile()
-        {
-            //return _exprWithVars.Compile();
-            return _exprWithVarsCompiled();
-            //return _exprWithVars.Compile().Invoke();
-        }
+        ////[Benchmark]
+        //public object Expression_with_sub_expressions_assigned_to_vars_in_block_Compile()
+        //{
+        //    //return _exprWithVars.Compile();
+        //    return _exprWithVarsCompiled();
+        //    //return _exprWithVars.Compile().Invoke();
+        //}
 
         public readonly object[] _objects = new object[3];
         private static readonly ConstructorInfo _aCtor = typeof(A).GetTypeInfo().DeclaredConstructors.First();
@@ -157,19 +157,19 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
             var d = Convert(
                 Call(test, getOrAddMethod,
                     Constant(2),
-                    Lambda<Func<D>>(New(_dCtor))),
+                    Lambda<Func<object>>(New(_dCtor))),
                 typeof(D));
 
             var c = Convert(
                 Call(test, getOrAddMethod,
                     Constant(1),
-                    Lambda<Func<C>>(New(_cCtor, d))),
+                    Lambda<Func<object>>(New(_cCtor, d))),
                 typeof(C));
 
             var b = Convert(
                 Call(test, getOrAddMethod,
                     Constant(0),
-                    Lambda<Func<B>>(New(_bCtor, c, d))),
+                    Lambda<Func<object>>(New(_bCtor, c, d))),
                 typeof(B));
 
             return Lambda<Func<A>>(New(_aCtor, b, c));
@@ -182,19 +182,19 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
             var d = L.Convert(
                 L.Call(test, getOrAddMethod,
                     L.Constant(2),
-                    L.Lambda<Func<D>>(L.New(_dCtor), typeof(D))),
+                    L.Lambda<Func<object>>(L.New(_dCtor), typeof(object))),
                 typeof(D));
 
             var c = L.Convert(
                 L.Call(test, getOrAddMethod,
                     L.Constant(1),
-                    L.Lambda<Func<C>>(L.New(_cCtor, d), typeof(C))),
+                    L.Lambda<Func<object>>(L.New(_cCtor, d), typeof(object))),
                 typeof(C));
 
             var b = L.Convert(
                 L.Call(test, getOrAddMethod,
                     L.Constant(0),
-                    L.Lambda<Func<B>>(L.New(_bCtor, c, d), typeof(B))),
+                    L.Lambda<Func<object>>(L.New(_bCtor, c, d), typeof(object))),
                 typeof(B));
 
             return L.Lambda<Func<A>>(L.New(_aCtor, b, c), typeof(A));

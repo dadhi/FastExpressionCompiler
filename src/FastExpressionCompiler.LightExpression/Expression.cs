@@ -220,79 +220,105 @@ namespace FastExpressionCompiler.LightExpression
             Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
             new FiveArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4);
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) =>
-            new MethodCallExpression(instance, method, arguments);
+        public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments)
+        {
+            if (arguments == null || arguments.Length == 0)
+                return new MethodCallExpression(method);
+            return new ManyArgumentsMethodCallExpression(method, arguments);
+        }
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) =>
-            new MethodCallExpression(instance, method, arguments.AsReadOnlyList());
+        public static MethodCallExpression Call(MethodInfo method, IEnumerable<Expression> arguments)
+        {
+            var args = arguments.AsReadOnlyList();
+            if (args == null || args.Count == 0)
+                return new MethodCallExpression(method);
+            return new ManyArgumentsMethodCallExpression(method, args);
+        }
 
-        public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
-            Call(null, method, arguments);
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments)
+        {
+            if (arguments == null || arguments.Length == 0)
+                return new InstanceMethodCallExpression(instance, method);
+            return new InstanceManyArgumentsMethodCallExpression(instance, method, arguments);
+        }
 
-        public static MethodCallExpression Call(MethodInfo method, IEnumerable<Expression> arguments) =>
-            Call(null, method, arguments.AsReadOnlyList());
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments)
+        {
+            var args = arguments.AsReadOnlyList();
+            if (args == null || args.Count == 0)
+                return new InstanceMethodCallExpression(instance, method);
+            return new InstanceManyArgumentsMethodCallExpression(instance, method, args);
+        }
 
-        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) =>
-            Call(null, type.FindMethod(methodName, typeArguments, arguments, isStatic: true), arguments);
+        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments)
+        {
+            if (arguments == null || arguments.Length == 0)
+                return new MethodCallExpression(type.FindMethod(methodName, typeArguments, arguments, isStatic: true));
+            return new ManyArgumentsMethodCallExpression(type.FindMethod(methodName, typeArguments, arguments, isStatic: true), arguments);
+        }
 
         public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments)
         {
             var args = arguments.AsReadOnlyList();
-            return Call(null, type.FindMethod(methodName, typeArguments, args, isStatic: true), args);
+            if (args == null || args.Count == 0)
+                return new MethodCallExpression(type.FindMethod(methodName, typeArguments, args, isStatic: true));
+            return new ManyArgumentsMethodCallExpression(type.FindMethod(methodName, typeArguments, args, isStatic: true), args);
         }
 
-        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments) =>
-            new MethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, arguments), arguments);
+        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments)
+        {
+            if (arguments == null || arguments.Length == 0)
+                return new InstanceMethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, arguments));
+            return new InstanceManyArgumentsMethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, arguments), arguments);
+        }
 
         public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments)
         {
             var args = arguments.AsReadOnlyList();
-            return new MethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, args), args);
+            if (args == null || args.Count == 0)
+                return new InstanceMethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, args));
+            return new InstanceManyArgumentsMethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, args), args);
         }
 
-        public static FewArgumentsMethodCallExpression Call(MethodInfo method) =>
-            new FewArgumentsMethodCallExpression(null, method);
+        public static MethodCallExpression Call(MethodInfo method) => 
+            new MethodCallExpression(method);
 
-        public static FewArgumentsMethodCallExpression Call(Expression instance, MethodInfo method) =>
-            new FewArgumentsMethodCallExpression(instance, method);
+        public static MethodCallExpression Call(Expression instance, MethodInfo method) =>
+            new InstanceMethodCallExpression(instance, method);
 
-        public static OneArgumentMethodCallExpression Call(MethodInfo method, Expression argument) =>
-            Call(null, method, argument);
+        public static MethodCallExpression Call(MethodInfo method, Expression argument) =>
+            new OneArgumentMethodCallExpression(method, argument);
 
-        public static OneArgumentMethodCallExpression Call(Expression instance, MethodInfo method, Expression argument) =>
-            new OneArgumentMethodCallExpression(instance, method, argument);
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression argument) =>
+            new InstanceOneArgumentMethodCallExpression(instance, method, argument);
 
-        public static TwoArgumentsMethodCallExpression Call(MethodInfo method,
-            Expression arg0, Expression arg1) =>
-            new TwoArgumentsMethodCallExpression(null, method, arg0, arg1);
+        public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1) =>
+            new TwoArgumentsMethodCallExpression(method, arg0, arg1);
 
-        public static TwoArgumentsMethodCallExpression Call(Expression instance, MethodInfo method, 
-            Expression arg0, Expression arg1) =>
-            new TwoArgumentsMethodCallExpression(instance, method, arg0, arg1);
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression arg0, Expression arg1) =>
+            new InstanceTwoArgumentsMethodCallExpression(instance, method, arg0, arg1);
 
-        public static ThreeArgumentsMethodCallExpression Call(MethodInfo method,
-            Expression arg0, Expression arg1, Expression arg2) =>
-            new ThreeArgumentsMethodCallExpression(null, method, arg0, arg1, arg2);
+        public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1, Expression arg2) =>
+            new ThreeArgumentsMethodCallExpression(method, arg0, arg1, arg2);
 
-        public static ThreeArgumentsMethodCallExpression Call(Expression instance, MethodInfo method,
-            Expression arg0, Expression arg1, Expression arg2) =>
-            new ThreeArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2);
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression arg0, Expression arg1, Expression arg2) =>
+            new InstanceThreeArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2);
 
-        public static FourArgumentsMethodCallExpression Call(MethodInfo method,
+        public static MethodCallExpression Call(MethodInfo method,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
-            new FourArgumentsMethodCallExpression(null, method, arg0, arg1, arg2, arg3);
+            new FourArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3);
 
-        public static FourArgumentsMethodCallExpression Call(Expression instance, MethodInfo method,
+        public static MethodCallExpression Call(Expression instance, MethodInfo method,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
-            new FourArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3);
+            new FourArgumentsInstanceMethodCallExpression(instance, method, arg0, arg1, arg2, arg3);
 
-        public static FiveArgumentsMethodCallExpression Call(Expression instance, MethodInfo method,
+        public static MethodCallExpression Call(MethodInfo method,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
-            new FiveArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4);
+            new FiveArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4);
 
-        public static FiveArgumentsMethodCallExpression Call(MethodInfo method,
+        public static MethodCallExpression Call(Expression instance, MethodInfo method,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
-            new FiveArgumentsMethodCallExpression(null, method, arg0, arg1, arg2, arg3, arg4);
+            new FiveArgumentsInstanceMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4);
 
         public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
             CallIfNotNull(instance, method, Tools.Empty<Expression>());
@@ -1993,168 +2019,18 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public class FewArgumentsMethodCallExpression : Expression
-    {
-        public static explicit operator MethodCallExpression(FewArgumentsMethodCallExpression x) =>
-            Call(x.Object, x.Method, Tools.Empty<Expression>());
-
-        public override ExpressionType NodeType => ExpressionType.Call;
-        public override Type Type => Method.ReturnType;
-
-        // todo: Maybe we don't need it and may replace with Method.GetParameters().Length
-        public virtual byte ArgCount => 0;
-
-        public readonly MethodInfo Method;
-        public readonly Expression Object;
-
-        internal FewArgumentsMethodCallExpression(Expression @object, MethodInfo method)
-        {
-            Object = @object;
-            Method = method;
-        }
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
-
-        public override string CodeString => ((MethodCallExpression)this).CodeString;
-    }
-
-    public sealed class OneArgumentMethodCallExpression : FewArgumentsMethodCallExpression
-    {
-        public static explicit operator MethodCallExpression(OneArgumentMethodCallExpression x) =>
-            Call(x.Object, x.Method, new[] { x.Argument });
-
-        public override byte ArgCount => 1;
-
-        public readonly Expression Argument;
-
-        internal OneArgumentMethodCallExpression(Expression @object, MethodInfo method, Expression argument)
-            : base(@object, method)
-        {
-            Argument = argument;
-        }
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
-
-        public override string CodeString => ((MethodCallExpression)this).CodeString;
-    }
-
-    public sealed class TwoArgumentsMethodCallExpression : FewArgumentsMethodCallExpression
-    {
-        public static explicit operator MethodCallExpression(TwoArgumentsMethodCallExpression x) =>
-            Call(x.Object, x.Method, new[] { x.Argument1, x.Argument2 });
-
-        public override byte ArgCount => 2;
-
-        public readonly Expression Argument1;
-        public readonly Expression Argument2;
-
-        internal TwoArgumentsMethodCallExpression(Expression @object, MethodInfo method, 
-            Expression argument1, Expression argument2)
-            : base(@object, method)
-        {
-            Argument1 = argument1;
-            Argument2 = argument2;
-        }
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
-
-        public override string CodeString => ((MethodCallExpression)this).CodeString;
-    }
-
-    public sealed class ThreeArgumentsMethodCallExpression : FewArgumentsMethodCallExpression
-    {
-        public static explicit operator MethodCallExpression(ThreeArgumentsMethodCallExpression x) =>
-            Call(x.Object, x.Method, new[] { x.Argument1, x.Argument2, x.Argument3 });
-
-        public override byte ArgCount => 3;
-
-        public readonly Expression Argument1;
-        public readonly Expression Argument2;
-        public readonly Expression Argument3;
-
-        internal ThreeArgumentsMethodCallExpression(Expression @object, MethodInfo method,
-            Expression argument1, Expression argument2, Expression argument3)
-            : base(@object, method)
-        {
-            Argument1 = argument1;
-            Argument2 = argument2;
-            Argument3 = argument3;
-        }
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
-
-        public override string CodeString => ((MethodCallExpression)this).CodeString;
-    }
-
-    public sealed class FourArgumentsMethodCallExpression : FewArgumentsMethodCallExpression
-    {
-        public static explicit operator MethodCallExpression(FourArgumentsMethodCallExpression x) =>
-            Call(x.Object, x.Method, new[] { x.Argument1, x.Argument2, x.Argument3 });
-
-        public override byte ArgCount => 4;
-
-        public readonly Expression Argument1;
-        public readonly Expression Argument2;
-        public readonly Expression Argument3;
-        public readonly Expression Argument4;
-
-        internal FourArgumentsMethodCallExpression(Expression @object, MethodInfo method,
-            Expression argument1, Expression argument2, Expression argument3, Expression argument4)
-            : base(@object, method)
-        {
-            Argument1 = argument1;
-            Argument2 = argument2;
-            Argument3 = argument3;
-            Argument4 = argument4;
-        }
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
-
-        public override string CodeString => ((MethodCallExpression)this).CodeString;
-    }
-
-    public sealed class FiveArgumentsMethodCallExpression : FewArgumentsMethodCallExpression
-    {
-        public static explicit operator MethodCallExpression(FiveArgumentsMethodCallExpression x) =>
-            Call(x.Object, x.Method, new[] { x.Argument1, x.Argument2, x.Argument3 });
-
-        public override byte ArgCount => 5;
-
-        public readonly Expression Argument1;
-        public readonly Expression Argument2;
-        public readonly Expression Argument3;
-        public readonly Expression Argument4;
-        public readonly Expression Argument5;
-
-        internal FiveArgumentsMethodCallExpression(Expression @object, MethodInfo method,
-            Expression argument1, Expression argument2, Expression argument3, Expression argument4, Expression argument5)
-            : base(@object, method)
-        {
-            Argument1 = argument1;
-            Argument2 = argument2;
-            Argument3 = argument3;
-            Argument4 = argument4;
-            Argument5 = argument5;
-        }
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            ((MethodCallExpression)this).CreateSysExpression(ref exprsConverted);
-
-        public override string CodeString => ((MethodCallExpression)this).CodeString;
-    }
-
-    public class MethodCallExpression : ArgumentsExpression
+    public class MethodCallExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Call;
         public override Type Type => Method.ReturnType;
 
+        public virtual Expression Object => null;
+        public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
+        public virtual int FewArgumentCount => 0;
+
         public readonly MethodInfo Method;
-        public readonly Expression Object;
+
+        internal MethodCallExpression(MethodInfo method) => Method = method;
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Call(Object?.ToExpression(ref exprsConverted), Method, 
@@ -2165,18 +2041,166 @@ namespace FastExpressionCompiler.LightExpression
             get
             {
                 var methodIndex = Method.DeclaringType.GetTypeInfo().GetDeclaredMethods(Method.Name).AsArray().GetFirstIndex(Method);
-                return $"Call({Object?.CodeString ?? "null"}," + NewLine + 
+                return $"Call({Object?.CodeString ?? "null"}," + NewLine +
                        $"{Method.DeclaringType.ToCode()}.GetTypeInfo().GetDeclaredMethods(\"{Method.Name}\").ToArray()[{methodIndex}]," + NewLine + 
                        $"{ToParamsCode(Arguments)})";
             }
         }
+    }
 
-        internal MethodCallExpression(Expression @object, MethodInfo method, IReadOnlyList<Expression> arguments)
-            : base(arguments)
+    public sealed class InstanceMethodCallExpression : MethodCallExpression
+    {
+        public override Expression Object { get; }
+
+        internal InstanceMethodCallExpression(Expression instance, MethodInfo method) : base(method) =>
+            Object = instance;
+    }
+
+    public class ManyArgumentsMethodCallExpression : MethodCallExpression
+    {
+        public override IReadOnlyList<Expression> Arguments { get; }
+        public override int FewArgumentCount => -1;
+
+        internal ManyArgumentsMethodCallExpression(MethodInfo method, IReadOnlyList<Expression> arguments) : base(method) =>
+            Arguments = arguments;
+    }
+
+    public sealed class InstanceManyArgumentsMethodCallExpression : ManyArgumentsMethodCallExpression
+    {
+        public override Expression Object { get; }
+
+        internal InstanceManyArgumentsMethodCallExpression(Expression instance, MethodInfo method, IReadOnlyList<Expression> arguments) 
+            : base(method, arguments) => Object = instance;
+    }
+
+    public class OneArgumentMethodCallExpression : MethodCallExpression
+    {
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument };
+        public override int FewArgumentCount => 1;
+
+        public readonly Expression Argument;
+
+        internal OneArgumentMethodCallExpression(MethodInfo method, Expression argument) : base(method) => 
+            Argument = argument;
+    }
+
+    public sealed class InstanceOneArgumentMethodCallExpression : OneArgumentMethodCallExpression
+    {
+        public override Expression Object { get; }
+
+        internal InstanceOneArgumentMethodCallExpression(Expression instance, MethodInfo method, Expression argument) 
+            : base(method, argument) => Object = instance;
+    }
+
+    public class TwoArgumentsMethodCallExpression : MethodCallExpression
+    {
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
+        public override int FewArgumentCount => 2;
+
+        public readonly Expression Argument0;
+        public readonly Expression Argument1;
+
+        internal TwoArgumentsMethodCallExpression(MethodInfo method, Expression argument0, Expression argument1) : base(method)
         {
-            Object = @object;
-            Method = method;
+            Argument0 = argument0;
+            Argument1 = argument1;
         }
+    }
+
+    public sealed class InstanceTwoArgumentsMethodCallExpression : TwoArgumentsMethodCallExpression
+    {
+        public override Expression Object { get; }
+
+        internal InstanceTwoArgumentsMethodCallExpression(Expression instance, MethodInfo method,
+            Expression argument0, Expression argument1) : base(method, argument0, argument1) => Object = instance;
+    }
+
+    public class ThreeArgumentsMethodCallExpression : MethodCallExpression
+    {
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
+        public override int FewArgumentCount => 3;
+
+        public readonly Expression Argument0;
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+
+        internal ThreeArgumentsMethodCallExpression(MethodInfo method, 
+            Expression argument0, Expression argument1, Expression argument2) : base(method)
+        {
+            Argument0 = argument0;
+            Argument1 = argument1;
+            Argument2 = argument2;
+        }
+    }
+
+    public sealed class InstanceThreeArgumentsMethodCallExpression : ThreeArgumentsMethodCallExpression
+    {
+        public override Expression Object { get; }
+
+        internal InstanceThreeArgumentsMethodCallExpression(Expression instance, MethodInfo method,
+            Expression argument0, Expression argument1, Expression argument2)
+            : base(method, argument0, argument1, argument2) => Object = instance;
+    }
+
+    public class FourArgumentsMethodCallExpression : MethodCallExpression
+    {
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
+        public override int FewArgumentCount => 4;
+
+        public readonly Expression Argument0;
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+        public readonly Expression Argument3;
+
+        internal FourArgumentsMethodCallExpression(MethodInfo method,
+            Expression argument0, Expression argument1, Expression argument2, Expression argument3) : base(method)
+        {
+            Argument0 = argument0;
+            Argument1 = argument1;
+            Argument2 = argument2;
+            Argument3 = argument3;
+        }
+    }
+
+    public sealed class FourArgumentsInstanceMethodCallExpression : FourArgumentsMethodCallExpression
+    {
+        public override Expression Object { get; }
+
+        internal FourArgumentsInstanceMethodCallExpression(Expression instance, MethodInfo method,
+            Expression argument0, Expression argument1, Expression argument2, Expression argument3)
+            : base(method, argument0, argument1, argument2, argument3) => Object = instance;
+    }
+
+    public class FiveArgumentsMethodCallExpression : MethodCallExpression
+    {
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
+        public override int FewArgumentCount => 5;
+
+        public readonly Expression Argument0;
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+        public readonly Expression Argument3;
+        public readonly Expression Argument4;
+
+        internal FiveArgumentsMethodCallExpression(MethodInfo method,
+            Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4) 
+            : base(method)
+        {
+            Argument0 = argument0;
+            Argument1 = argument1;
+            Argument2 = argument2;
+            Argument3 = argument3;
+            Argument4 = argument4;
+        }
+    }
+
+    public sealed class FiveArgumentsInstanceMethodCallExpression : FiveArgumentsMethodCallExpression
+    {
+        public override Expression Object { get; }
+
+        internal FiveArgumentsInstanceMethodCallExpression(Expression instance, MethodInfo method,
+            Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4) 
+            : base(method, argument0, argument1, argument2, argument3, argument4) => Object = instance;
     }
 
     public abstract class MemberExpression : Expression
