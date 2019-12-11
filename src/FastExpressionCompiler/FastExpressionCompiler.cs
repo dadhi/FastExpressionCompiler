@@ -945,58 +945,83 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.New:
+                        var newExpr = (NewExpression)expr;
 #if LIGHT_EXPRESSION
-                        if (expr is FewArgumentsNewExpression fewArgsNewExpr)
-                        {
-                            var argCount = fewArgsNewExpr.ArgCount;
-                            if (argCount == 0)
-                                return true;
-
-                            if (argCount == 1)
-                            {
-                                expr = ((OneArgumentNewExpression)fewArgsNewExpr).Argument;
-                                continue;
-                            }
-
-                            if (argCount == 2)
-                            {
-                                var twoArgsExpr = (TwoArgumentsNewExpression)fewArgsNewExpr;
-                                if (!TryCollectBoundConstants(ref closure, twoArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
-                                    return false;
-                                expr = twoArgsExpr.Argument2;
-                                continue;
-                            }
-
-                            if (argCount == 3)
-                            {
-                                var threeArgsExpr = (ThreeArgumentsNewExpression)fewArgsNewExpr;
-                                if (!TryCollectBoundConstants(ref closure, threeArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
-                                    !TryCollectBoundConstants(ref closure, threeArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
-                                    return false;
-                                expr = threeArgsExpr.Argument3;
-                                continue;
-                            }
-
-                            var fourArgsExpr = (FourArgumentsNewExpression)fewArgsNewExpr;
-                            if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
-                                !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure) || 
-                                !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument3, paramExprs, isNestedLambda, ref rootClosure))
-                                return false;
-                            expr = fourArgsExpr.Argument4;
-                            continue;
-                        }
-#endif
-
-                        var ctorArgs = ((NewExpression)expr).Arguments;
-                        var ctorArgsCount = ctorArgs.Count;
-                        if (ctorArgsCount == 0)
+                        var fewArgCount = newExpr.FewArgumentCount;
+                        if (fewArgCount == 0)
                             return true;
 
-                        for (var i = 0; i < ctorArgsCount - 1; i++)
+                        if (fewArgCount > 0)
+                        {
+                            if (fewArgCount == 1)
+                            {
+                                expr = ((OneArgumentNewExpression)newExpr).Argument;
+                                continue;
+                            }
+
+                            if (fewArgCount == 2)
+                            {
+                                var twoArgsExpr = (TwoArgumentsNewExpression)newExpr;
+                                if (!TryCollectBoundConstants(ref closure, twoArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure))
+                                    return false;
+                                expr = twoArgsExpr.Argument1;
+                                continue;
+                            }
+
+                            if (fewArgCount == 3)
+                            {
+                                var threeArgsExpr = (ThreeArgumentsNewExpression)newExpr;
+                                if (!TryCollectBoundConstants(ref closure, threeArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, threeArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
+                                    return false;
+                                expr = threeArgsExpr.Argument2;
+                                continue;
+                            }
+
+                            if (fewArgCount == 4)
+                            {
+                                var fourArgsExpr = (FourArgumentsNewExpression)newExpr;
+                                if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
+                                    return false;
+                                expr = fourArgsExpr.Argument3;
+                                continue;
+                            }
+
+                            if (fewArgCount == 4)
+                            {
+                                var fourArgsExpr = (FourArgumentsNewExpression)newExpr;
+                                if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
+                                    return false;
+                                expr = fourArgsExpr.Argument3;
+                                continue;
+                            }
+
+                            if (fewArgCount == 5)
+                            {
+                                var fourArgsExpr = (FiveArgumentsNewExpression)newExpr;
+                                if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure) ||
+                                    !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument3, paramExprs, isNestedLambda, ref rootClosure))
+                                    return false;
+                                expr = fourArgsExpr.Argument4;
+                                continue;
+                            }
+                        }
+#endif
+                        var ctorArgs = ((NewExpression)expr).Arguments;
+                        var ctorLastArgIndex = ctorArgs.Count - 1;
+                        if (ctorLastArgIndex == -1)
+                            return true;
+
+                        for (var i = 0; i < ctorLastArgIndex; i++)
                             if (!TryCollectBoundConstants(ref closure, ctorArgs[i], paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
-
-                        expr = ctorArgs[ctorArgsCount - 1];
+                        expr = ctorArgs[ctorLastArgIndex];
                         continue;
 
                     case ExpressionType.NewArrayBounds:
@@ -1680,58 +1705,63 @@ namespace FastExpressionCompiler
             private static bool TryEmitNew(Expression expr, IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
+                var newExpr = (NewExpression)expr;
 #if LIGHT_EXPRESSION
-                if (expr is FewArgumentsNewExpression fewArgsExpr)
+                var argCount = newExpr.FewArgumentCount;
+                if (argCount > 0)
                 {
-                    var argCount = fewArgsExpr.ArgCount;
-                    var fewArgsCtor = fewArgsExpr.Constructor;
-                    if (argCount != 0)
+                    var args = newExpr.Constructor.GetParameters();
+                    if (argCount == 1)
                     {
-                        var args = fewArgsCtor.GetParameters();
-                        if (argCount == 1)
-                        {
-                            var argExpr = ((OneArgumentNewExpression)fewArgsExpr).Argument;
-                            if (!TryEmit(argExpr, paramExprs, il, ref closure, parent, args[0].ParameterType.IsByRef ? 0 : -1))
-                                return false;
-                        }
-                        else if (argCount == 2)
-                        {
-                            var twoArgsExpr = (TwoArgumentsNewExpression)fewArgsExpr;
-                            if (!TryEmit(twoArgsExpr.Argument1, paramExprs, il, ref closure, parent, args[0].ParameterType.IsByRef ? 0 : -1) ||
-                                !TryEmit(twoArgsExpr.Argument2, paramExprs, il, ref closure, parent, args[1].ParameterType.IsByRef ? 1 : -1))
-                                return false;
-                        }
-                        else if (argCount == 3)
-                        {
-                            var threeArgsExpr = (ThreeArgumentsNewExpression)fewArgsExpr;
-                            if (!TryEmit(threeArgsExpr.Argument1, paramExprs, il, ref closure, parent, args[0].ParameterType.IsByRef ? 0 : -1) ||
-                                !TryEmit(threeArgsExpr.Argument2, paramExprs, il, ref closure, parent, args[1].ParameterType.IsByRef ? 1 : -1) ||
-                                !TryEmit(threeArgsExpr.Argument3, paramExprs, il, ref closure, parent, args[2].ParameterType.IsByRef ? 2 : -1))
-                                return false;
-                        }
-                        else if (argCount == 4)
-                        {
-                            var fourArgsExpr = (FourArgumentsNewExpression)fewArgsExpr;
-                            if (!TryEmit(fourArgsExpr.Argument1, paramExprs, il, ref closure, parent, args[0].ParameterType.IsByRef ? 0 : -1) ||
-                                !TryEmit(fourArgsExpr.Argument2, paramExprs, il, ref closure, parent, args[1].ParameterType.IsByRef ? 1 : -1) ||
-                                !TryEmit(fourArgsExpr.Argument3, paramExprs, il, ref closure, parent, args[2].ParameterType.IsByRef ? 2 : -1) ||
-                                !TryEmit(fourArgsExpr.Argument4, paramExprs, il, ref closure, parent, args[3].ParameterType.IsByRef ? 3 : -1))
-                                return false;
-                        }
+                        var argExpr = ((OneArgumentNewExpression)newExpr).Argument;
+                        if (!TryEmit(argExpr, paramExprs, il, ref closure, parent, args[0].ParameterType.IsByRef ? 0 : -1))
+                            return false;
+                    }
+                    else if (argCount == 2)
+                    {
+                        var twoArgsExpr = (TwoArgumentsNewExpression)newExpr;
+                        if (!TryEmit(twoArgsExpr.Argument0, paramExprs, il, ref closure, parent, args[0].ParameterType.IsByRef ? 0 : -1) ||
+                            !TryEmit(twoArgsExpr.Argument1, paramExprs, il, ref closure, parent, args[1].ParameterType.IsByRef ? 1 : -1))
+                            return false;
+                    }
+                    else if (argCount == 3)
+                    {
+                        var threeArgsExpr = (ThreeArgumentsNewExpression)newExpr;
+                        if (!TryEmit(threeArgsExpr.Argument0, paramExprs, il, ref closure, parent, args[0].ParameterType.IsByRef ? 0 : -1) ||
+                            !TryEmit(threeArgsExpr.Argument1, paramExprs, il, ref closure, parent, args[1].ParameterType.IsByRef ? 1 : -1) ||
+                            !TryEmit(threeArgsExpr.Argument2, paramExprs, il, ref closure, parent, args[2].ParameterType.IsByRef ? 2 : -1))
+                            return false;
+                    }
+                    else if (argCount == 4)
+                    {
+                        var fourArgsExpr = (FourArgumentsNewExpression)newExpr;
+                        if (!TryEmit(fourArgsExpr.Argument0, paramExprs, il, ref closure, parent, args[0].ParameterType.IsByRef ? 0 : -1) ||
+                            !TryEmit(fourArgsExpr.Argument1, paramExprs, il, ref closure, parent, args[1].ParameterType.IsByRef ? 1 : -1) ||
+                            !TryEmit(fourArgsExpr.Argument2, paramExprs, il, ref closure, parent, args[2].ParameterType.IsByRef ? 2 : -1) ||
+                            !TryEmit(fourArgsExpr.Argument3, paramExprs, il, ref closure, parent, args[3].ParameterType.IsByRef ? 3 : -1))
+                            return false;
+                    }
+                    else if (argCount == 5)
+                    {
+                        var fourArgsExpr = (FiveArgumentsNewExpression)newExpr;
+                        if (!TryEmit(fourArgsExpr.Argument0, paramExprs, il, ref closure, parent, args[0].ParameterType.IsByRef ? 0 : -1) ||
+                            !TryEmit(fourArgsExpr.Argument1, paramExprs, il, ref closure, parent, args[1].ParameterType.IsByRef ? 1 : -1) ||
+                            !TryEmit(fourArgsExpr.Argument2, paramExprs, il, ref closure, parent, args[2].ParameterType.IsByRef ? 2 : -1) ||
+                            !TryEmit(fourArgsExpr.Argument3, paramExprs, il, ref closure, parent, args[3].ParameterType.IsByRef ? 3 : -1) ||
+                            !TryEmit(fourArgsExpr.Argument4, paramExprs, il, ref closure, parent, args[4].ParameterType.IsByRef ? 4 : -1))
+                            return false;
                     }
 
                     // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                    if (fewArgsCtor != null)
-                        il.Emit(OpCodes.Newobj, fewArgsCtor);
-                    else if (fewArgsExpr.Type.IsValueType())
-                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, fewArgsExpr.Type));
+                    if (newExpr.Constructor != null)
+                        il.Emit(OpCodes.Newobj, newExpr.Constructor);
+                    else if (newExpr.Type.IsValueType())
+                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, newExpr.Type));
                     else
                         return false;
                     return true;
                 }
 #endif
-
-                var newExpr = (NewExpression)expr;
                 var argExprs = newExpr.Arguments;
                 if (argExprs.Count != 0)
                 {

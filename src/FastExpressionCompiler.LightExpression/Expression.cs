@@ -190,32 +190,35 @@ namespace FastExpressionCompiler.LightExpression
 
             foreach (var x in type.GetTypeInfo().DeclaredConstructors)
                 if (x.GetParameters().Length == 0)
-                    return new NewExpression(x, Tools.Empty<Expression>());
+                    return new NewExpression(x);
 
-            throw new ArgumentException($"Type {type} is missing the default constructor");
+            throw new ArgumentException($"The type {type} is missing the default constructor");
         }
 
         public static NewExpression New(ConstructorInfo ctor, params Expression[] arguments) =>
-            new NewExpression(ctor, arguments);
+            new ManyArgumentsNewExpression(ctor, arguments);
 
         public static NewExpression New(ConstructorInfo ctor, IEnumerable<Expression> arguments) =>
-            new NewExpression(ctor, arguments.AsReadOnlyList());
+            new ManyArgumentsNewExpression(ctor, arguments.AsReadOnlyList());
 
-        public static FewArgumentsNewExpression New(ConstructorInfo ctor) =>
-            new FewArgumentsNewExpression(ctor);
+        public static NewExpression New(ConstructorInfo ctor) => new NewExpression(ctor);
 
-        public static OneArgumentNewExpression New(ConstructorInfo ctor, Expression arg) =>
+        public static NewExpression New(ConstructorInfo ctor, Expression arg) =>
             new OneArgumentNewExpression(ctor, arg);
 
-        public static TwoArgumentsNewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1) =>
+        public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1) =>
             new TwoArgumentsNewExpression(ctor, arg0, arg1);
 
-        public static ThreeArgumentsNewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2) =>
+        public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2) =>
             new ThreeArgumentsNewExpression(ctor, arg0, arg1, arg2);
 
-        public static FourArgumentsNewExpression New(ConstructorInfo ctor, 
+        public static NewExpression New(ConstructorInfo ctor, 
             Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
             new FourArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3);
+
+        public static NewExpression New(ConstructorInfo ctor,
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
+            new FiveArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4);
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) =>
             new MethodCallExpression(instance, method, arguments);
@@ -1829,133 +1832,17 @@ namespace FastExpressionCompiler.LightExpression
         protected ArgumentsExpression(IReadOnlyList<Expression> arguments) => Arguments = arguments ?? Tools.Empty<Expression>();
     }
 
-    public class FewArgumentsNewExpression : Expression
-    {
-        public static explicit operator NewExpression(FewArgumentsNewExpression x) =>
-            New(x.Constructor, Tools.Empty<Expression>());
-
-        public override ExpressionType NodeType => ExpressionType.New;
-        public override Type Type => Constructor.DeclaringType;
-
-        // todo: Maybe we don't need it and may replace with Constructor.GetParameters().Length
-        public virtual int ArgCount => 0;
-
-        public readonly ConstructorInfo Constructor;
-
-        internal FewArgumentsNewExpression(ConstructorInfo constructor) => Constructor = constructor;
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.New(Constructor, Tools.Empty<SysExpr>());
-
-        public override string CodeString => ((NewExpression)this).CodeString;
-    }
-
-    public sealed class OneArgumentNewExpression : FewArgumentsNewExpression
-    {
-        public static explicit operator NewExpression(OneArgumentNewExpression x) =>
-            New(x.Constructor, new[] { x.Argument });
-
-        public override int ArgCount => 1;
-
-        public readonly Expression Argument;
-
-        internal OneArgumentNewExpression(ConstructorInfo constructor, Expression argument) : base(constructor) => 
-            Argument = argument;
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.New(Constructor, Argument.ToExpression(ref exprsConverted));
-
-        public override string CodeString => ((NewExpression)this).CodeString;
-    }
-
-    public sealed class TwoArgumentsNewExpression : FewArgumentsNewExpression
-    {
-        public static explicit operator NewExpression(TwoArgumentsNewExpression x) =>
-            New(x.Constructor, new[] { x.Argument1, x.Argument2 });
-
-        public override int ArgCount => 2;
-
-        public readonly Expression Argument1;
-        public readonly Expression Argument2;
-
-        internal TwoArgumentsNewExpression(ConstructorInfo constructor, 
-            Expression argument1, Expression argument2) : base(constructor)
-        {
-            Argument1 = argument1;
-            Argument2 = argument2;
-        }
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.New(Constructor, ToExpressions(new[] { Argument1, Argument2 }, ref exprsConverted));
-
-        public override string CodeString => ((NewExpression)this).CodeString;
-    }
-
-    public sealed class ThreeArgumentsNewExpression : FewArgumentsNewExpression
-    {
-        public static explicit operator NewExpression(ThreeArgumentsNewExpression x) =>
-            New(x.Constructor, new[] { x.Argument1, x.Argument2, x.Argument3 });
-
-        public override int ArgCount => 3;
-
-        public readonly Expression Argument1;
-        public readonly Expression Argument2;
-        public readonly Expression Argument3;
-
-        internal ThreeArgumentsNewExpression(ConstructorInfo constructor,
-            Expression argument1, Expression argument2, Expression argument3) : base(constructor)
-        {
-            Argument1 = argument1;
-            Argument2 = argument2;
-            Argument3 = argument3;
-        }
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.New(Constructor, ToExpressions(new[] { Argument1, Argument2, Argument3 }, ref exprsConverted));
-
-        public override string CodeString => ((NewExpression)this).CodeString;
-    }
-
-    public sealed class FourArgumentsNewExpression : FewArgumentsNewExpression
-    {
-        public static explicit operator NewExpression(FourArgumentsNewExpression x) =>
-            New(x.Constructor, new[] { x.Argument1, x.Argument2, x.Argument3, x.Argument4 });
-
-        public override int ArgCount => 4;
-
-        public readonly Expression Argument1;
-        public readonly Expression Argument2;
-        public readonly Expression Argument3;
-        public readonly Expression Argument4;
-
-        internal FourArgumentsNewExpression(ConstructorInfo constructor,
-            Expression argument1, Expression argument2, Expression argument3, Expression argument4) : base(constructor)
-        {
-            Argument1 = argument1;
-            Argument2 = argument2;
-            Argument3 = argument3;
-            Argument4 = argument4;
-        }
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.New(Constructor, 
-                ToExpressions(new[] { Argument1, Argument2, Argument3, Argument4 }, ref exprsConverted));
-
-        public override string CodeString => ((NewExpression)this).CodeString;
-    }
-
-    public class NewExpression : ArgumentsExpression
+    public class NewExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.New;
         public override Type Type => Constructor.DeclaringType;
 
         public readonly ConstructorInfo Constructor;
 
-        internal NewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) :
-            base(arguments)
-        {
-            Constructor = constructor;
-        }
+        public virtual int FewArgumentCount => 0;
+        public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
+
+        internal NewExpression(ConstructorInfo constructor) => Constructor = constructor;
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.New(Constructor, ToExpressions(Arguments, ref exprsConverted));
@@ -1965,7 +1852,7 @@ namespace FastExpressionCompiler.LightExpression
             get
             {
                 var ctorIndex = Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.ToArray().GetFirstIndex(Constructor);
-                return $"New({Type.ToCode()}.GetTypeInfo().DeclaredConstructors.ToArray()[{ctorIndex}]," + NewLine + 
+                return $"New({Type.ToCode()}.GetTypeInfo().DeclaredConstructors.ToArray()[{ctorIndex}]," + NewLine +
                        $"{ToParamsCode(Arguments)})";
             }
         }
@@ -1975,14 +1862,106 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override Type Type { get; }
 
-        internal NewValueTypeExpression(Type type)
-            : base(null, Tools.Empty<Expression>()) =>
-            Type = type;
+        internal NewValueTypeExpression(Type type) : base(null) => Type = type;
 
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.New(Type);
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) => SysExpr.New(Type);
 
         public override string CodeString => $"New({Type.ToCode()})";
+    }
+
+    public sealed class OneArgumentNewExpression : NewExpression
+    {
+        public readonly Expression Argument;
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument };
+        public override int FewArgumentCount => 1;
+
+        internal OneArgumentNewExpression(ConstructorInfo constructor, Expression argument) : base(constructor) =>
+            Argument = argument;
+    }
+
+    public sealed class TwoArgumentsNewExpression : NewExpression
+    {
+        public readonly Expression Argument0;
+        public readonly Expression Argument1;
+
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
+        public override int FewArgumentCount => 2;
+
+        internal TwoArgumentsNewExpression(ConstructorInfo constructor,
+            Expression argument0, Expression argument1) : base(constructor)
+        {
+            Argument0 = argument0;
+            Argument1 = argument1;
+        }
+    }
+
+    public sealed class ThreeArgumentsNewExpression : NewExpression
+    {
+        public readonly Expression Argument0;
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
+        public override int FewArgumentCount => 3;
+
+        internal ThreeArgumentsNewExpression(ConstructorInfo constructor,
+            Expression argument0, Expression argument1, Expression argument2) : base(constructor)
+        {
+            Argument0 = argument0;
+            Argument1 = argument1;
+            Argument2 = argument2;
+        }
+    }
+
+    public sealed class FourArgumentsNewExpression : NewExpression
+    {
+        public readonly Expression Argument0;
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+        public readonly Expression Argument3;
+
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
+        public override int FewArgumentCount => 4;
+
+        internal FourArgumentsNewExpression(ConstructorInfo constructor,
+            Expression argument0, Expression argument1, Expression argument2, Expression argument3) : base(constructor)
+        {
+            Argument0 = argument0;
+            Argument1 = argument1;
+            Argument2 = argument2;
+            Argument3 = argument3;
+        }
+    }
+
+    public sealed class FiveArgumentsNewExpression : NewExpression
+    {
+        public readonly Expression Argument0;
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+        public readonly Expression Argument3;
+        public readonly Expression Argument4;
+
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
+        public override int FewArgumentCount => 5;
+
+        internal FiveArgumentsNewExpression(ConstructorInfo constructor,
+            Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4) : base(constructor)
+        {
+            Argument0 = argument0;
+            Argument1 = argument1;
+            Argument2 = argument2;
+            Argument3 = argument3;
+            Argument4 = argument4;
+        }
+    }
+
+    public sealed class ManyArgumentsNewExpression : NewExpression
+    {
+        public override IReadOnlyList<Expression> Arguments { get; }
+        public override int FewArgumentCount => -1;
+
+        internal ManyArgumentsNewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : base(constructor) =>
+            Arguments = arguments;
     }
 
     public sealed class NewArrayExpression : ArgumentsExpression
