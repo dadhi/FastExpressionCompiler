@@ -95,22 +95,22 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         [Benchmark(Baseline = true)]
         public object LightExpression_with_sub_expressions_CompiledFast()
         {
-            return CreateLightExpression();
+            //return CreateLightExpression();
             //return LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression(), true);
-            //return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
+            return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
         }
 
         [Benchmark]
         //[Benchmark(Baseline = true)]
         public object Expression_with_sub_expressions_CompiledFast()
         {
-            return CreateExpression();
+            //return CreateExpression();
             //return CreateExpression().CompileFast(true);
-            //return _expr.CompileFast(true);
+            return _expr.CompileFast(true);
             //return _exprCompiledFast();
         }
 
-        //[Benchmark]
+        [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
             //return CreateExpression().Compile();

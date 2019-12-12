@@ -1513,15 +1513,17 @@ namespace FastExpressionCompiler
                             return TryEmitArrayLength(arrLengthExpr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.Constant:
-                            var constantExpression = (ConstantExpression)expr;
+                            var constExpr = (ConstantExpression)expr;
                             if ((parent & ParentFlags.IgnoreResult) != 0)
                                 return true;
-                            if (constantExpression.Value == null)
+
+                            if (constExpr.Value == null)
                             {
                                 il.Emit(OpCodes.Ldnull);
                                 return true;
                             }
-                            return TryEmitNotNullConstant(true, constantExpression.Type, constantExpression.Value, il, ref closure);
+
+                            return TryEmitNotNullConstant(true, constExpr.Type, constExpr.Value, il, ref closure);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall(expr, paramExprs, il, ref closure, parent);
@@ -2609,7 +2611,7 @@ namespace FastExpressionCompiler
             }
 
             // todo: can we do something about boxing?
-            internal static bool TryEmitNumberConstant(ILGenerator il, object constantValue, Type constValueType)
+            private static bool TryEmitNumberConstant(ILGenerator il, object constantValue, Type constValueType)
             {
                 if (constValueType == typeof(int))
                 {
