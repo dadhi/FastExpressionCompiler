@@ -22,27 +22,19 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 
 ### Creation and Compilation:
 
-#### Baseline: BAD allocations!!! - todo: Try to simplify constants first
-
-|                                            Method |     Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|-------------------------------------------------- |---------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast | 1.537 us | 0.0292 us | 0.0312 us |  1.00 |    0.00 | 0.3891 |     - |     - |   1.79 KB |
-|      Expression_with_sub_expressions_CompiledFast | 3.072 us | 0.0126 us | 0.0098 us |  2.00 |    0.04 | 0.2594 |     - |     - |    1.2 KB |
-
-#### Strong-typed Lambdas:
-
 |                                            Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 | Gen 2 | Allocated |
 |-------------------------------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|-------:|------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |   220.7 ns |  0.92 ns |  0.77 ns |  1.00 |    0.00 | 0.1783 | 0.0005 |     - |     840 B |
-|      Expression_with_sub_expressions_CompiledFast | 3,120.9 ns | 17.37 ns | 16.25 ns | 14.14 |    0.09 | 0.2403 |      - |     - |    1136 B |
+| LightExpression_with_sub_expressions_CompiledFast |   219.3 ns |  0.99 ns |  0.93 ns |  1.00 |    0.00 | 0.1664 | 0.0005 |     - |     784 B |
+|      Expression_with_sub_expressions_CompiledFast | 2,951.4 ns | 15.02 ns | 14.05 ns | 13.46 |    0.09 | 0.2594 |      - |     - |    1224 B |
+
 
 ### Creation and Compilation:
 
-|                                            Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|-------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |  32.86 us | 0.2596 us | 0.2429 us |  1.00 |    0.00 | 2.3804 | 1.1597 | 0.1831 |  10.86 KB |
-|      Expression_with_sub_expressions_CompiledFast |  37.97 us | 0.1676 us | 0.1486 us |  1.16 |    0.01 | 2.2583 | 1.0986 | 0.1831 |  10.46 KB |
-|          Expression_with_sub_expressions_Compiled | 641.62 us | 4.5227 us | 4.2305 us | 19.53 |    0.18 | 5.8594 | 2.9297 |      - |  28.38 KB |
+|                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |  26.36 us | 0.113 us | 0.100 us |  1.00 |    0.00 | 2.0752 | 1.0376 | 0.1831 |   9.66 KB |
+|      Expression_with_sub_expressions_CompiledFast |  30.99 us | 0.156 us | 0.146 us |  1.18 |    0.01 | 2.1973 | 1.0986 | 0.1831 |  10.22 KB |
+|          Expression_with_sub_expressions_Compiled | 563.10 us | 1.141 us | 0.953 us | 21.38 |    0.07 | 5.8594 | 2.9297 |      - |  27.52 KB |
 
 
 ### Compilation
@@ -57,11 +49,12 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 
 
 #### V3
+
 |                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |  26.08 us | 0.257 us | 0.227 us |  1.00 |    0.00 | 1.8921 | 0.9155 | 0.1221 |   8.88 KB |
-|      Expression_with_sub_expressions_CompiledFast |  28.57 us | 0.233 us | 0.207 us |  1.10 |    0.01 | 1.9226 | 0.9460 | 0.1831 |   8.89 KB |
-|          Expression_with_sub_expressions_Compiled | 557.58 us | 3.214 us | 2.684 us | 21.37 |    0.23 | 4.8828 | 1.9531 |      - |  26.37 KB |
+| LightExpression_with_sub_expressions_CompiledFast |  25.49 us | 0.171 us | 0.160 us |  1.00 |    0.00 | 1.9226 | 0.9460 | 0.1831 |   8.85 KB |
+|      Expression_with_sub_expressions_CompiledFast |  26.03 us | 0.214 us | 0.200 us |  1.02 |    0.01 | 1.8921 | 0.9155 | 0.1221 |   8.85 KB |
+|          Expression_with_sub_expressions_Compiled | 558.28 us | 1.755 us | 1.642 us | 21.90 |    0.15 | 4.8828 | 1.9531 |      - |  26.31 KB |
 
 
 ### Invocation
@@ -80,7 +73,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 | Expression_with_sub_expressions_CompiledFast |    10.69 ns | 0.087 ns | 0.081 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
 |     Expression_with_sub_expressions_Compiled | 1,029.87 ns | 6.556 ns | 6.132 ns | 96.33 |    0.95 | 0.0458 |     - |     - |     224 B |
 */
-        private Expression<Func<A>> _expr, _exprWithVars;
+        private Expression<Func<A>> _expr;//, _exprWithVars;
         private LightExpression.Expression<Func<A>> _lightExpr;
 
         private Func<A> _exprCompiledFast, _exprCompiled;//, _exprWithVarsCompiledFast, _exprWithVarsCompiled;
@@ -121,8 +114,8 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         public object Expression_with_sub_expressions_Compiled()
         {
             //return CreateExpression().Compile();
-            //return _expr.Compile();
-            return _exprCompiled();
+            return _expr.Compile();
+            //return _exprCompiled();
         }
 
         ////[Benchmark]

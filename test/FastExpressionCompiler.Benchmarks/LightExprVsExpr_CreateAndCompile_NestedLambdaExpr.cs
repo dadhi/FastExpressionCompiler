@@ -78,7 +78,9 @@ namespace FastExpressionCompiler.Benchmarks
             //Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
 
             var aParam = LE.Parameter(typeof(string), "a");
-            var expr = LE.Lambda(LE.Lambda(LE.Call(LE.Constant(_s), _setValueMethod, aParam), aParam));
+            var expr = LE.Lambda(
+                LE.Lambda(LE.Call(LE.Constant(_s), _setValueMethod, aParam), 
+                    aParam));
 
             return LEC.TryCompile<Func<Action<string>>>(expr);
         }
