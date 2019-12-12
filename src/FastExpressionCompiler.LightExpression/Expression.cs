@@ -155,33 +155,18 @@ namespace FastExpressionCompiler.LightExpression
                 return NullConstant;
 
             if (value is bool b)
-                return b ? TrueConstant : FalseConstant;
+                return Constant(b);
 
-            if (value is int n && n == 0)
-                return ZeroConstant;
+            if (value is int n)
+                return Constant(n);
 
             return new ConstantExpression(value);
         }
 
-        public static ConstantExpression Constant(object value, Type type)
-        {
-            if (type == null)
-                return Constant(value);
-
-            if (value == null)
-                return new TypedConstantExpression(null, type);
-
-            if (value is bool b)
-                return b ? TrueConstant : FalseConstant;
-
-            if (value is int n && n == 0)
-                return ZeroConstant;
-
-            if (ReferenceEquals(type, value.GetType()))
-                return new ConstantExpression(value);
-
-            return new TypedConstantExpression(value, type);
-        }
+        public static ConstantExpression Constant(object value, Type type) =>
+            value == null || type != value.GetType()
+                ? new TypedConstantExpression(value, type)
+                : Constant(value);
 
         public static NewExpression New(Type type)
         {
@@ -1825,7 +1810,10 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.Constant;
         public override Type Type => Value.GetType();
+
         public readonly object Value;
+
+        internal ConstantExpression(object value) => Value = value;
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> _) =>
             SysExpr.Constant(Value, Type);
@@ -1836,8 +1824,6 @@ namespace FastExpressionCompiler.LightExpression
 
         public override string CodeString =>
             $"Constant({Value.ToCode(NotRecognizedValueToCode)}, {Type.ToCode()})";
-
-        internal ConstantExpression(object value) => Value = value;
     }
 
     public sealed class TypedConstantExpression : ConstantExpression
@@ -1851,7 +1837,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override Type Type => typeof(T);
 
-        internal TypedConstantExpression(object value) : base(value) { }
+        internal TypedConstantExpression(T value) : base(value) { }
     }
 
     public abstract class ArgumentsExpression : Expression
