@@ -1062,7 +1062,16 @@ namespace FastExpressionCompiler.LightExpression
         /// <param name="left">An Expression to set the Left property equal to.</param>
         /// <param name="right">An Expression to set the Right property equal to.</param>
         /// <returns>A BinaryExpression that has the NodeType property equal to Coalesce and the Left and Right properties set to the specified values.</returns>
-        public static BinaryExpression Coalesce(Expression left, Expression right) => Coalesce(left, right, null);
+        public static BinaryExpression Coalesce(Expression left, Expression right) =>
+            new SimpleBinaryExpression(ExpressionType.Coalesce, left, right, GetCoalesceType(left.Type, right.Type));
+
+        /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
+        /// <param name="left">An Expression to set the Left property equal to.</param>
+        /// <param name="right">An Expression to set the Right property equal to.</param>
+        /// <param name="type">Result type</param>
+        /// <returns>A BinaryExpression that has the NodeType property equal to Coalesce and the Left and Right properties set to the specified values.</returns>
+        public static BinaryExpression Coalesce(Expression left, Expression right, Type type) =>
+            new SimpleBinaryExpression(ExpressionType.Coalesce, left, right, type);
 
         /// <summary>Creates a BinaryExpression that represents a coalescing operation, given a conversion function.</summary>
         /// <param name="left">An Expression to set the Left property equal to.</param>
@@ -1096,7 +1105,6 @@ namespace FastExpressionCompiler.LightExpression
             throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
         }
     }
-
 
     internal static class TypeTools
     {
