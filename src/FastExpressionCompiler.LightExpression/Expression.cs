@@ -2716,7 +2716,6 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Type ReturnType;
         public readonly Expression Body;
         public virtual IReadOnlyList<ParameterExpression> Parameters => Tools.Empty<ParameterExpression>();
-        public virtual int FewParameterCount => 0;
 
         public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
             (System.Linq.Expressions.LambdaExpression)ToExpression();
@@ -2741,21 +2740,9 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class OneParameterLambdaExpression : LambdaExpression
-    {
-        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter };
-        public override int FewParameterCount => 1;
-
-        public new readonly ParameterExpression Parameter;
-
-        internal OneParameterLambdaExpression(Type delegateType, Expression body, ParameterExpression parameter, Type returnType)
-            : base(delegateType, body, returnType) => Parameter = parameter;
-    }
-
     public sealed class ManyParametersLambdaExpression : LambdaExpression
     {
         public override IReadOnlyList<ParameterExpression> Parameters { get; }
-        public override int FewParameterCount => -1;
 
         internal ManyParametersLambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
          : base(delegateType, body, returnType) => Parameters = parameters;
@@ -2774,21 +2761,9 @@ namespace FastExpressionCompiler.LightExpression
             : base(typeof(TDelegate), body, returnType) { }
     }
 
-    public sealed class OneParameterExpression<TDelegate> : Expression<TDelegate>
-    {
-        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter };
-        public override int FewParameterCount => 1;
-
-        public new readonly ParameterExpression Parameter;
-
-        internal OneParameterExpression(Expression body, ParameterExpression parameter, Type returnType)
-            : base(body, returnType) => Parameter = parameter;
-    }
-
     public sealed class ManyParametersExpression<TDelegate> : Expression<TDelegate>
     {
         public override IReadOnlyList<ParameterExpression> Parameters { get; }
-        public override int FewParameterCount => -1;
 
         internal ManyParametersExpression(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
             : base(body, returnType) => Parameters = parameters;
