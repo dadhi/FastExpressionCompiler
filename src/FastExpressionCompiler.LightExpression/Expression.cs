@@ -155,10 +155,10 @@ namespace FastExpressionCompiler.LightExpression
                 return NullConstant;
 
             if (value is bool b)
-                return Constant(b);
+                return b ? TrueConstant : FalseConstant;
 
             if (value is int n)
-                return Constant(n);
+                return n == 0 ? ZeroConstant : new TypedConstantExpression<int>(n);
 
             return new ConstantExpression(value);
         }
