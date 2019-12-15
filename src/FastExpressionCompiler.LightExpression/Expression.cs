@@ -149,6 +149,9 @@ namespace FastExpressionCompiler.LightExpression
         public static ConstantExpression Constant<T>(T value) => 
             new TypedConstantExpression<T>(value);
 
+        public static ConstantExpression Constant(object value, Type type) =>
+            new TypedConstantExpression(value, type);
+
         public static ConstantExpression Constant(object value)
         {
             if (value == null)
@@ -162,11 +165,6 @@ namespace FastExpressionCompiler.LightExpression
 
             return new ConstantExpression(value);
         }
-
-        public static ConstantExpression Constant(object value, Type type) =>
-            value == null || type != value.GetType()
-                ? new TypedConstantExpression(value, type)
-                : Constant(value);
 
         public static NewExpression New(Type type)
         {
