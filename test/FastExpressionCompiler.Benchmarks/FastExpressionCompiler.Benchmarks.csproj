@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks Condition="'$(DevMode)' != 'true'">netcoreapp2.1</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DevMode)' == 'true'">netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
+    <!-- <TargetFrameworks>netcoreapp3.1</TargetFrameworks> -->
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
