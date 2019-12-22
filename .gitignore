@@ -253,3 +253,4 @@ paket-files/
 
 /test/FastExpressionCompiler.Benchmarks/BenchmarkDotNet.Artifacts/
 /test/FastExpressionCompiler.Benchmarks.FullClr/BenchmarkDotNet.Artifacts/
+ApiKey.txt

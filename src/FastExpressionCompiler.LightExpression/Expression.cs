@@ -267,25 +267,33 @@ namespace FastExpressionCompiler.LightExpression
             new MethodCallExpression(method);
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method) =>
-            new InstanceMethodCallExpression(instance, method);
+            instance == null
+            ? new MethodCallExpression(method)
+            : new InstanceMethodCallExpression(instance, method);
 
         public static MethodCallExpression Call(MethodInfo method, Expression argument) =>
             new OneArgumentMethodCallExpression(method, argument);
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression argument) =>
-            new InstanceOneArgumentMethodCallExpression(instance, method, argument);
+            instance == null
+            ? new OneArgumentMethodCallExpression(method, argument)
+            : new InstanceOneArgumentMethodCallExpression(instance, method, argument);
 
         public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1) =>
             new TwoArgumentsMethodCallExpression(method, arg0, arg1);
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression arg0, Expression arg1) =>
-            new InstanceTwoArgumentsMethodCallExpression(instance, method, arg0, arg1);
+            instance == null
+            ? new TwoArgumentsMethodCallExpression(method, arg0, arg1)
+            : new InstanceTwoArgumentsMethodCallExpression(instance, method, arg0, arg1);
 
         public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1, Expression arg2) =>
             new ThreeArgumentsMethodCallExpression(method, arg0, arg1, arg2);
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression arg0, Expression arg1, Expression arg2) =>
-            new InstanceThreeArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2);
+            instance == null
+            ? new ThreeArgumentsMethodCallExpression(method, arg0, arg1, arg2)
+            : new InstanceThreeArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2);
 
         public static MethodCallExpression Call(MethodInfo method,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
@@ -293,7 +301,9 @@ namespace FastExpressionCompiler.LightExpression
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
-            new FourArgumentsInstanceMethodCallExpression(instance, method, arg0, arg1, arg2, arg3);
+            instance == null 
+                ? new FourArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3)
+                : new InstanceFourArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3);
 
         public static MethodCallExpression Call(MethodInfo method,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
@@ -301,7 +311,9 @@ namespace FastExpressionCompiler.LightExpression
 
         public static MethodCallExpression Call(Expression instance, MethodInfo method,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
-            new FiveArgumentsInstanceMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4);
+            instance == null
+            ? new FiveArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4)
+            : new InstanceFiveArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4);
 
         public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
             CallIfNotNull(instance, method, Tools.Empty<Expression>());
@@ -2157,11 +2169,11 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class FourArgumentsInstanceMethodCallExpression : FourArgumentsMethodCallExpression
+    public sealed class InstanceFourArgumentsMethodCallExpression : FourArgumentsMethodCallExpression
     {
         public override Expression Object { get; }
 
-        internal FourArgumentsInstanceMethodCallExpression(Expression instance, MethodInfo method,
+        internal InstanceFourArgumentsMethodCallExpression(Expression instance, MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3)
             : base(method, argument0, argument1, argument2, argument3) => Object = instance;
     }
@@ -2189,11 +2201,11 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class FiveArgumentsInstanceMethodCallExpression : FiveArgumentsMethodCallExpression
+    public sealed class InstanceFiveArgumentsMethodCallExpression : FiveArgumentsMethodCallExpression
     {
         public override Expression Object { get; }
 
-        internal FiveArgumentsInstanceMethodCallExpression(Expression instance, MethodInfo method,
+        internal InstanceFiveArgumentsMethodCallExpression(Expression instance, MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4) 
             : base(method, argument0, argument1, argument2, argument3, argument4) => Object = instance;
     }

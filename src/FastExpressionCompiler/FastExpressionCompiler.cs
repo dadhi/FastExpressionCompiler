@@ -859,7 +859,7 @@ namespace FastExpressionCompiler
                         var callExpr = (MethodCallExpression)expr;
                         var callObjectExpr = callExpr.Object;
 #if LIGHT_EXPRESSION
-                        var fewCallArgCount = callExpr.FewArgumentCount;
+                        var fewCallArgCount = callExpr.InstanceFourArgumentsMethodCallExpression;
                         if (fewCallArgCount == 0)
                         {
                             if (callObjectExpr != null)
@@ -3396,7 +3396,7 @@ namespace FastExpressionCompiler
                 }
 
 #if LIGHT_EXPRESSION
-                var fewArgCount = callExpr.FewArgumentCount;
+                var fewArgCount = callExpr.InstanceFourArgumentsMethodCallExpression;
                 if (fewArgCount >= 0)
                 {
                     if (fewArgCount == 1)
