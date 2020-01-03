@@ -184,7 +184,7 @@ Compiling expression:
 |                                     CompileFast |   7.257 us | 0.0648 us | 0.0606 us |  1.49 |    0.03 |      0.4349 |      0.2136 |      0.0305 |             1.99 KB |
 |                                         Compile | 176.107 us | 1.3451 us | 1.2582 us | 36.05 |    0.75 |      0.9766 |      0.4883 |           - |              4.7 KB |
 
-Invoking compiled delegate comparing to normal delegate:
+Invoking compiled delegate compared to the normal delegate:
 
 |                                    Method |     Mean |     Error |    StdDev | Ratio | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
 |------------------------------------------ |---------:|----------:|----------:|------:|------------:|------------:|------------:|--------------------:|
@@ -198,14 +198,14 @@ Invoking compiled delegate comparing to normal delegate:
 ### FEC.LightExpression.Expression vs Expression
 
 `FastExpressionCompiler.LightExpression.Expression` is the lightweight version of `System.Linq.Expressions.Expression`. 
-It is designed to be a __drop-in replacement__ for System Expression - just install __FastExpressionCompiler.LightExpression__ package instead of __FastExpressionCompiler__ and replace the usings:
+It is designed to be a __drop-in replacement__ for System Expression - just install __FastExpressionCompiler.LightExpression__ package instead of __FastExpressionCompiler__ and replace the usings
 
 ```cs
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 ```
 
-to
+with
 
 ```cs
 using static FastExpressionCompiler.LightExpression.Expression;
