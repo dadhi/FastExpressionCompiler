@@ -99,13 +99,18 @@ namespace FastExpressionCompiler.Benchmarks
 
 ## V3
 
-|                                     Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|------------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                                    Compile | 285.602 us | 2.1509 us | 2.0119 us | 27.32 |    0.20 | 1.9531 | 0.9766 |      - |  10.87 KB |
-|                                CompileFast |  11.418 us | 0.0519 us | 0.0460 us |  1.09 |    0.00 | 0.6104 | 0.3052 | 0.0305 |   2.84 KB |
-|                CompileFast_LightExpression |  10.452 us | 0.0365 us | 0.0342 us |  1.00 |    0.00 | 0.6104 | 0.3052 | 0.0305 |   2.84 KB |
-|                 CompileFast_WithoutClosure |  10.437 us | 0.0225 us | 0.0200 us |  1.00 |    0.00 | 0.5951 | 0.2899 | 0.0305 |   2.76 KB |
-| CompileFast_LightExpression_WithoutClosure |   9.223 us | 0.0349 us | 0.0310 us |  0.88 |    0.00 | 0.5951 | 0.2899 | 0.0305 |   2.76 KB |
+BenchmarkDotNet=v0.12.0, OS=Windows 10.0.18362
+Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+.NET Core SDK=3.1.100
+  [Host]     : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
+  DefaultJob : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
+
+
+|                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|---------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                     Compile | 261.157 us | 0.5004 us | 0.4680 us | 28.76 |    0.13 | 1.9531 | 0.9766 |      - |  10.59 KB |
+|                 CompileFast |   9.641 us | 0.0420 us | 0.0350 us |  1.06 |    0.01 | 0.6256 | 0.3052 | 0.0305 |   2.93 KB |
+| CompileFast_LightExpression |   9.081 us | 0.0476 us | 0.0445 us |  1.00 |    0.00 | 0.6256 | 0.3052 | 0.0305 |   2.93 KB |
 
         */
         [MemoryDiagnoser]
@@ -124,11 +129,11 @@ namespace FastExpressionCompiler.Benchmarks
             public object CompileFast_LightExpression() =>
                 LightExpression.ExpressionCompiler.CompileFast(_lightExpression);
 
-            [Benchmark]
+            //[Benchmark]
             public object CompileFast_WithoutClosure() =>
                 _expression.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>();
 
-            [Benchmark]
+            //[Benchmark]
             public object CompileFast_LightExpression_WithoutClosure() => 
                 LightExpression.ExpressionCompiler.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>(_lightExpression);
         }
@@ -180,11 +185,18 @@ namespace FastExpressionCompiler.Benchmarks
         }
 
         /*
-        |                              Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-        |------------------------------------ |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
-        |                     Invoke_Compiled | 8.027 ns | 0.0938 ns | 0.0878 ns |  0.98 | 0.0051 |     - |     - |      24 B |
-        |                 Invoke_CompiledFast | 8.247 ns | 0.0379 ns | 0.0354 ns |  1.00 | 0.0051 |     - |     - |      24 B |
-        | Invoke_CompiledFast_LightExpression | 8.225 ns | 0.0318 ns | 0.0298 ns |  1.00 | 0.0051 |     - |     - |      24 B |
+BenchmarkDotNet=v0.12.0, OS=Windows 10.0.18362
+Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+.NET Core SDK=3.1.100
+  [Host]     : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
+  DefaultJob : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
+
+
+|                              Method |     Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|------------------------------------ |---------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+|                     Invoke_Compiled | 6.924 ns | 0.1364 ns | 0.1209 ns |  1.00 |    0.00 | 0.0051 |     - |     - |      24 B |
+|                 Invoke_CompiledFast | 7.193 ns | 0.1371 ns | 0.1524 ns |  1.04 |    0.02 | 0.0051 |     - |     - |      24 B |
+| Invoke_CompiledFast_LightExpression | 7.195 ns | 0.1428 ns | 0.2048 ns |  1.06 |    0.04 | 0.0051 |     - |     - |      24 B |
         */
 
         [MemoryDiagnoser]

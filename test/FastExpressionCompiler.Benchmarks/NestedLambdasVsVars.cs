@@ -67,29 +67,33 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |    51.78 ns | 0.2234 ns | 0.2089 ns |  0.91 |    0.00 | 0.0593 |     - |     - |     280 B |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,644.84 ns | 5.2784 ns | 4.4077 ns | 28.77 |    0.10 | 0.0782 |     - |     - |     376 B |
 
+
 #### V3
-|                                       Method |        Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|--------------------------------------------- |------------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-| Expression_with_sub_expressions_CompiledFast |    10.69 ns | 0.087 ns | 0.081 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
-|     Expression_with_sub_expressions_Compiled | 1,029.87 ns | 6.556 ns | 6.132 ns | 96.33 |    0.95 | 0.0458 |     - |     - |     224 B |
+BenchmarkDotNet=v0.12.0, OS=Windows 10.0.18362
+Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+.NET Core SDK=3.1.100
+  [Host]     : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
+  DefaultJob : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
+
+|                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |  11.63 ns | 0.054 ns | 0.048 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
+|          Expression_with_sub_expressions_Compiled | 861.85 ns | 4.985 ns | 4.663 ns | 74.13 |    0.47 | 0.0467 |     - |     - |     224 B |
 */
         private Expression<Func<A>> _expr;//, _exprWithVars;
         private LightExpression.Expression<Func<A>> _lightExpr;
 
-        private Func<A> _exprCompiledFast, _exprCompiled;//, _exprWithVarsCompiledFast, _exprWithVarsCompiled;
+        private Func<A> _exprCompiled, _exprCompiledFast, _lightExprCompiledFast;
 
         [GlobalSetup]
         public void Init()
         {
             _expr         = CreateExpression();
             _lightExpr    = CreateLightExpression();
-            //_exprWithVars = CreateExpressionWithVars();
 
-            _exprCompiledFast = _expr.CompileFast(true);
             _exprCompiled = _expr.Compile();
-
-            //_exprWithVarsCompiledFast = _exprWithVars.CompileFast(true);
-            //_exprWithVarsCompiled = _exprWithVars.Compile();
+            _exprCompiledFast = _expr.CompileFast(true);
+            _lightExprCompiledFast = LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
         }
 
         [Benchmark(Baseline = true)]
@@ -97,25 +101,26 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         {
             //return CreateLightExpression();
             //return LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression(), true);
-            return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
+            //return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
+            return _lightExprCompiledFast();
         }
 
-        [Benchmark]
+        //[Benchmark]
         //[Benchmark(Baseline = true)]
-        public object Expression_with_sub_expressions_CompiledFast()
-        {
-            //return CreateExpression();
-            //return CreateExpression().CompileFast(true);
-            return _expr.CompileFast(true);
-            //return _exprCompiledFast();
-        }
+        //public object Expression_with_sub_expressions_CompiledFast()
+        //{
+        //    //return CreateExpression();
+        //    //return CreateExpression().CompileFast(true);
+        //    //return _expr.CompileFast(true);
+        //    return _exprCompiledFast();
+        //}
 
         [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
             //return CreateExpression().Compile();
-            return _expr.Compile();
-            //return _exprCompiled();
+            //return _expr.Compile();
+            return _exprCompiled();
         }
 
         ////[Benchmark]

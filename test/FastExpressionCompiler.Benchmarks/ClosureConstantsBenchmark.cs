@@ -66,17 +66,17 @@ namespace FastExpressionCompiler.Benchmarks
         public class Invocation
         {
             /*
-            |              Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-            |-------------------- |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
-            |     Invoke_Compiled | 33.46 ns | 0.1606 ns | 0.1341 ns |  1.07 | 0.0339 |     - |     - |     160 B |
-            | Invoke_CompiledFast | 31.36 ns | 0.1900 ns | 0.1778 ns |  1.00 | 0.0339 |     - |     - |     160 B |
+BenchmarkDotNet=v0.12.0, OS=Windows 10.0.18362
+Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+.NET Core SDK=3.1.100
+  [Host]     : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
+  DefaultJob : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
 
-            ## Optimizing storing closure constants into variables
 
-            |              Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-            |-------------------- |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
-            |     Invoke_Compiled | 37.24 ns | 0.1151 ns | 0.1020 ns |  1.07 | 0.0339 |     - |     - |     160 B |
-            | Invoke_CompiledFast | 34.88 ns | 0.1191 ns | 0.1056 ns |  1.00 | 0.0339 |     - |     - |     160 B |
+|              Method |     Mean |    Error |   StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|-------------------- |---------:|---------:|---------:|------:|-------:|------:|------:|----------:|
+|     Invoke_Compiled | 37.25 ns | 0.153 ns | 0.128 ns |  1.00 | 0.0340 |     - |     - |     160 B |
+| Invoke_CompiledFast | 37.10 ns | 0.141 ns | 0.125 ns |  1.00 | 0.0340 |     - |     - |     160 B |
             */
 
             private readonly Func<A> _compiled     = CreateExpression().Compile();

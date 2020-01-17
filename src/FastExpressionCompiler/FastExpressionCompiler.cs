@@ -270,7 +270,7 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Ret);
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, ArrayClosure.Empty);
+            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyArrayClosure);
             ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return @delegate;
         }
@@ -308,7 +308,7 @@ namespace FastExpressionCompiler
                         return null;
 
             var closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                ? ArrayClosure.Empty
+                ? EmptyArrayClosure
                 : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
 
             var method = new DynamicMethod(string.Empty,
@@ -698,26 +698,25 @@ namespace FastExpressionCompiler
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-        // todo: find how to seal it
+        public static readonly ArrayClosure EmptyArrayClosure = new ArrayClosure(null);
+
+        public static FieldInfo ArrayClosureConstantsAndNestedLambdasField =
+            typeof(ArrayClosure).GetTypeInfo().GetDeclaredField(nameof(ArrayClosure.ConstantsAndNestedLambdas));
+
+        public static FieldInfo ArrayClosureWithNonPassedParamsField =
+            typeof(ArrayClosureWithNonPassedParams).GetTypeInfo().GetDeclaredField(nameof(ArrayClosureWithNonPassedParams.NonPassedParams));
+
+        public static ConstructorInfo ArrayClosureWithNonPassedParamsConstructor =
+            typeof(ArrayClosureWithNonPassedParams).GetTypeInfo().DeclaredConstructors.GetFirst();
+
         public class ArrayClosure
         {
-            public static readonly ArrayClosure Empty = new ArrayClosure(null);
-
-            public static FieldInfo ConstantsAndNestedLambdasField =
-                typeof(ArrayClosure).GetTypeInfo().GetDeclaredField(nameof(ConstantsAndNestedLambdas));
-
             public readonly object[] ConstantsAndNestedLambdas;
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 
         public sealed class ArrayClosureWithNonPassedParams : ArrayClosure
         {
-            public static FieldInfo NonPassedParamsField =
-                typeof(ArrayClosureWithNonPassedParams).GetTypeInfo().GetDeclaredField(nameof(NonPassedParams));
-
-            public static ConstructorInfo Constructor =
-                typeof(ArrayClosureWithNonPassedParams).GetTypeInfo().DeclaredConstructors.GetFirst();
-
             public readonly object[] NonPassedParams;
 
             public ArrayClosureWithNonPassedParams(object[] constantsAndNestedLambdas, object[] nonPassedParams) : base(constantsAndNestedLambdas) =>
@@ -1316,7 +1315,7 @@ namespace FastExpressionCompiler
             if (nestedLambdaClosureInfo.NonPassedParameters.Length == 0)
             {
                 if ((nestedLambdaClosureInfo.Status & ClosureStatus.HasClosure) == 0)
-                    nestedLambdaClosure = ArrayClosure.Empty;
+                    nestedLambdaClosure = EmptyArrayClosure;
                 else
                     nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
             }
@@ -2156,7 +2155,7 @@ namespace FastExpressionCompiler
 
                 // Load non-passed argument from Closure - closure object is always a first argument
                 il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
+                il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Emit(OpCodes.Ldelem_Ref);
 
@@ -2541,8 +2540,7 @@ namespace FastExpressionCompiler
                 if (considerClosure && IsClosureBoundConstant(constantValue, constValueType.GetTypeInfo()))
                 {
                     var constItems = closure.Constants.Items;
-                    var constCount = closure.Constants.Count;
-                    var constIndex = constCount - 1;
+                    var constIndex = closure.Constants.Count - 1;
                     while (constIndex != -1 && 
                            !ReferenceEquals(constItems[constIndex], constantValue))
                         --constIndex;
@@ -2553,7 +2551,7 @@ namespace FastExpressionCompiler
                     {
                         // Load constants field from Closure - the closure object is always a first argument
                         il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
+                        il.Emit(OpCodes.Ldfld, ArrayClosureConstantsAndNestedLambdasField);
 
                         EmitLoadConstantInt(il, constIndex);
                         il.Emit(OpCodes.Ldelem_Ref);
@@ -2726,7 +2724,7 @@ namespace FastExpressionCompiler
                 {
                     // Load constants array field from Closure - the closure object is always a first argument
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
+                    il.Emit(OpCodes.Ldfld, ArrayClosureConstantsAndNestedLambdasField);
 
                     var constItems = closure.Constants.Items;
                     var constCount = closure.Constants.Count;
@@ -2763,7 +2761,7 @@ namespace FastExpressionCompiler
                     closure.ConstantsAndNestedLambdasMultipleUsageCount = -1;
 
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
+                    il.Emit(OpCodes.Ldfld, ArrayClosureConstantsAndNestedLambdasField);
                     EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[])));
                 }
                 else
@@ -3239,7 +3237,7 @@ namespace FastExpressionCompiler
                             EmitStoreLocalVariable(il, valueVarIndex);
 
                             // load array field and param item index
-                            il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
+                            il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                             EmitLoadConstantInt(il, nonPassedParamIndex);
                             EmitLoadLocalVariable(il, valueVarIndex);
                             if (expr.Type.IsValueType())
@@ -3250,7 +3248,7 @@ namespace FastExpressionCompiler
                         else
                         {
                             // load array field and param item index
-                            il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
+                            il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                             EmitLoadConstantInt(il, nonPassedParamIndex);
 
                             if (!TryEmit(right, paramExprs, il, ref closure, flags))
@@ -3555,7 +3553,7 @@ namespace FastExpressionCompiler
                 {
                     // Load constant from Closure - closure object is always a first argument
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldfld, ArrayClosure.ConstantsAndNestedLambdasField);
+                    il.Emit(OpCodes.Ldfld, ArrayClosureConstantsAndNestedLambdasField);
                     EmitLoadConstantInt(il, nestedLambdaInClosureIndex);
                     il.Emit(OpCodes.Ldelem_Ref); // load the array item object
                 }
@@ -3656,7 +3654,7 @@ namespace FastExpressionCompiler
 
                             // Load the parameter from outer closure `Items` array
                             il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                            il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
+                            il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                             EmitLoadConstantInt(il, outerNonPassedParamIndex);
                             il.Emit(OpCodes.Ldelem_Ref);
                         }
@@ -3667,7 +3665,7 @@ namespace FastExpressionCompiler
                 }
 
                 // - create `ArrayClosureWithNonPassedParams` out of the both above
-                il.Emit(OpCodes.Newobj, ArrayClosureWithNonPassedParams.Constructor);
+                il.Emit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsConstructor);
 
                 // - call `Curry` method with nested lambda and array closure to produce a closed lambda with the expected signature
                 var lambdaTypeArgs = nestedLambda.GetType().GetTypeInfo().GenericTypeArguments;
@@ -4329,11 +4327,11 @@ namespace FastExpressionCompiler
                     case 8:
                         il.Emit(OpCodes.Ldc_I4_8);
                         break;
-                    case int n when n > -129 && n < 128:
-                        il.Emit(OpCodes.Ldc_I4_S, (sbyte)n);
-                        break;
                     default:
-                        il.Emit(OpCodes.Ldc_I4, i);
+                        if (i > -129 && i < 128)
+                            il.Emit(OpCodes.Ldc_I4_S, (sbyte)i);
+                        else
+                            il.Emit(OpCodes.Ldc_I4, i);
                         break;
                 }
             }
@@ -4348,83 +4346,68 @@ namespace FastExpressionCompiler
 
             private static void EmitLoadLocalVariable(ILGenerator il, int location)
             {
-                switch (location)
-                {
-                    case 0:
-                        il.Emit(OpCodes.Ldloc_0);
-                        break;
-                    case 1:
-                        il.Emit(OpCodes.Ldloc_1);
-                        break;
-                    case 2:
-                        il.Emit(OpCodes.Ldloc_2);
-                        break;
-                    case 3:
-                        il.Emit(OpCodes.Ldloc_3);
-                        break;
-                    case int n when n < 256:
-                        il.Emit(OpCodes.Ldloc_S, (byte)n);
-                        break;
-                    default:
-                        il.Emit(OpCodes.Ldloc, location);
-                        break;
-                }
+                if (location == 0)
+                    il.Emit(OpCodes.Ldloc_0);
+                else if (location == 1)
+                    il.Emit(OpCodes.Ldloc_1);
+                else if (location == 2)
+                    il.Emit(OpCodes.Ldloc_2);
+                else if (location == 3)
+                    il.Emit(OpCodes.Ldloc_3);
+                else if (location < 256)
+                    il.Emit(OpCodes.Ldloc_S, (byte)location);
+                else
+                    il.Emit(OpCodes.Ldloc, location);
             }
 
             private static void EmitStoreLocalVariable(ILGenerator il, int location)
             {
-                switch (location)
-                {
-                    case 0:
-                        il.Emit(OpCodes.Stloc_0);
-                        break;
-                    case 1:
-                        il.Emit(OpCodes.Stloc_1);
-                        break;
-                    case 2:
-                        il.Emit(OpCodes.Stloc_2);
-                        break;
-                    case 3:
-                        il.Emit(OpCodes.Stloc_3);
-                        break;
-                    case int n when n < 256:
-                        il.Emit(OpCodes.Stloc_S, (byte)n);
-                        break;
-                    default:
-                        il.Emit(OpCodes.Stloc, location);
-                        break;
-                }
+                if (location == 0)
+                    il.Emit(OpCodes.Stloc_0);
+                else if (location == 1)
+                    il.Emit(OpCodes.Stloc_1);
+                else if (location == 2)
+                    il.Emit(OpCodes.Stloc_2);
+                else if (location == 3)
+                    il.Emit(OpCodes.Stloc_3);
+                else if (location < 256)
+                    il.Emit(OpCodes.Stloc_S, (byte)location);
+                else
+                    il.Emit(OpCodes.Stloc, location);
             }
 
             private static int EmitStoreLocalVariableAndLoadItsAddress(ILGenerator il, Type type)
             {
                 var varIndex = il.GetNextLocalVarIndex(type);
-                switch (varIndex)
+                if (varIndex == 0)
                 {
-                    case 0:
-                        il.Emit(OpCodes.Stloc_0);
-                        il.Emit(OpCodes.Ldloca_S, (byte)0);
-                        break;
-                    case 1:
-                        il.Emit(OpCodes.Stloc_1);
-                        il.Emit(OpCodes.Ldloca_S, (byte)1);
-                        break;
-                    case 2:
-                        il.Emit(OpCodes.Stloc_2);
-                        il.Emit(OpCodes.Ldloca_S, (byte)2);
-                        break;
-                    case 3:
-                        il.Emit(OpCodes.Stloc_3);
-                        il.Emit(OpCodes.Ldloca_S, (byte)3);
-                        break;
-                    case int n when n < 256:
-                        il.Emit(OpCodes.Stloc_S,  (byte)n);
-                        il.Emit(OpCodes.Ldloca_S, (byte)n);
-                        break;
-                    default:
-                        il.Emit(OpCodes.Stloc,  varIndex);
-                        il.Emit(OpCodes.Ldloca, varIndex);
-                        break;
+                    il.Emit(OpCodes.Stloc_0);
+                    il.Emit(OpCodes.Ldloca_S, (byte)0);
+                }
+                else if (varIndex == 1)
+                {
+                    il.Emit(OpCodes.Stloc_1);
+                    il.Emit(OpCodes.Ldloca_S, (byte)1);
+                }
+                else if (varIndex == 2)
+                {
+                    il.Emit(OpCodes.Stloc_2);
+                    il.Emit(OpCodes.Ldloca_S, (byte)2);
+                }
+                else if (varIndex == 3)
+                {
+                    il.Emit(OpCodes.Stloc_3);
+                    il.Emit(OpCodes.Ldloca_S, (byte)3);
+                }
+                else if (varIndex < 256)
+                {
+                    il.Emit(OpCodes.Stloc_S, (byte)varIndex);
+                    il.Emit(OpCodes.Ldloca_S, (byte)varIndex);
+                }
+                else
+                {
+                    il.Emit(OpCodes.Stloc, varIndex);
+                    il.Emit(OpCodes.Ldloca, varIndex);
                 }
 
                 return varIndex;
@@ -4718,8 +4701,7 @@ namespace FastExpressionCompiler
 
             il.Emit(OpCodes.Ret);
 
-            return (Func<ILGenerator, Type, int>)method.CreateDelegate(typeof(Func<ILGenerator, Type, int>), 
-                ExpressionCompiler.ArrayClosure.Empty);
+            return (Func<ILGenerator, Type, int>)method.CreateDelegate(typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
         }
 
         internal static int PostInc(ref int i) => i++;
