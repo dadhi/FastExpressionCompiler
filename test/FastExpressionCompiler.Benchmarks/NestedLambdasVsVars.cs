@@ -52,9 +52,8 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 
 |                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |  25.49 us | 0.171 us | 0.160 us |  1.00 |    0.00 | 1.9226 | 0.9460 | 0.1831 |   8.85 KB |
-|      Expression_with_sub_expressions_CompiledFast |  26.03 us | 0.214 us | 0.200 us |  1.02 |    0.01 | 1.8921 | 0.9155 | 0.1221 |   8.85 KB |
-|          Expression_with_sub_expressions_Compiled | 558.28 us | 1.755 us | 1.642 us | 21.90 |    0.15 | 4.8828 | 1.9531 |      - |  26.31 KB |
+| LightExpression_with_sub_expressions_CompiledFast |  26.42 us | 0.111 us | 0.104 us |  1.00 |    0.00 | 1.8311 | 0.9155 | 0.1526 |   8.52 KB |
+|          Expression_with_sub_expressions_Compiled | 558.79 us | 2.005 us | 1.777 us | 21.14 |    0.10 | 4.8828 | 1.9531 |      - |  26.31 KB |
 
 
 ### Invocation
@@ -77,8 +76,8 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 
 |                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 |-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |  11.63 ns | 0.054 ns | 0.048 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
-|          Expression_with_sub_expressions_Compiled | 861.85 ns | 4.985 ns | 4.663 ns | 74.13 |    0.47 | 0.0467 |     - |     - |     224 B |
+| LightExpression_with_sub_expressions_CompiledFast |  10.55 ns | 0.064 ns | 0.054 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
+|          Expression_with_sub_expressions_Compiled | 846.81 ns | 5.042 ns | 4.210 ns | 80.27 |    0.67 | 0.0467 |     - |     - |     224 B |
 */
         private Expression<Func<A>> _expr;//, _exprWithVars;
         private LightExpression.Expression<Func<A>> _lightExpr;
@@ -101,8 +100,8 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         {
             //return CreateLightExpression();
             //return LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression(), true);
-            //return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
-            return _lightExprCompiledFast();
+            return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
+            //return _lightExprCompiledFast();
         }
 
         //[Benchmark]
@@ -111,7 +110,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         //{
         //    //return CreateExpression();
         //    //return CreateExpression().CompileFast(true);
-        //    //return _expr.CompileFast(true);
+            //return _expr.CompileFast(true);
         //    return _exprCompiledFast();
         //}
 
@@ -119,8 +118,8 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         public object Expression_with_sub_expressions_Compiled()
         {
             //return CreateExpression().Compile();
-            //return _expr.Compile();
-            return _exprCompiled();
+            return _expr.Compile();
+            //return _exprCompiled();
         }
 
         ////[Benchmark]

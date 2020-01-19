@@ -419,8 +419,8 @@ namespace FastExpressionCompiler
             /// All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas;
 
-            /// Used by `TryCollectBoundConstants` to count the multiple usages of constants to decide whether to store them in variables.
-            public int ConstantsAndNestedLambdasMultipleUsageCount;
+            /// Constant usage count and variable index
+            public LiveCountArray<int> ConstantUsage;
 
             /// Populates info directly with provided closure object and constants.
             public ClosureInfo(ClosureStatus status, object[] constValues = null)
@@ -428,6 +428,7 @@ namespace FastExpressionCompiler
                 Status = status;
 
                 Constants = new LiveCountArray<object>(constValues ?? Tools.Empty<object>());
+                ConstantUsage = new LiveCountArray<int>(constValues == null ? Tools.Empty<int>() : new int[constValues.Length]);
 
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
@@ -437,8 +438,6 @@ namespace FastExpressionCompiler
                 _tryCatchFinallyInfos = null;
                 _labels = null;
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
-
-                ConstantsAndNestedLambdasMultipleUsageCount = 0;
             }
 
             public void AddConstant(object value)
@@ -447,13 +446,17 @@ namespace FastExpressionCompiler
 
                 var constItems = Constants.Items;
                 var constIndex = Constants.Count - 1;
-                while (constIndex != -1 && 
-                    !ReferenceEquals(constItems[constIndex], value))
+                while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], value))
                     --constIndex;
                 if (constIndex == -1)
+                {
                     Constants.PushSlot(value);
+                    ConstantUsage.PushSlot(1);
+                }
                 else
-                    ++ConstantsAndNestedLambdasMultipleUsageCount;
+                {
+                    ++ConstantUsage.Items[constIndex];
+                }
             }
 
             public void AddNonPassedParam(ParameterExpression expr)
@@ -700,7 +703,7 @@ namespace FastExpressionCompiler
 
         public static readonly ArrayClosure EmptyArrayClosure = new ArrayClosure(null);
 
-        public static FieldInfo ArrayClosureConstantsAndNestedLambdasField =
+        public static FieldInfo ArrayClosureArrayField =
             typeof(ArrayClosure).GetTypeInfo().GetDeclaredField(nameof(ArrayClosure.ConstantsAndNestedLambdas));
 
         public static FieldInfo ArrayClosureWithNonPassedParamsField =
@@ -745,6 +748,7 @@ namespace FastExpressionCompiler
             public readonly LambdaExpression LambdaExpression;
             public ClosureInfo ClosureInfo;
             public object Lambda;
+            public int UsageCountOrVarIndex;
 
             public NestedLambdaInfo(LambdaExpression lambdaExpression)
             {
@@ -1060,7 +1064,9 @@ namespace FastExpressionCompiler
                             {
                                 // if the lambda is not found on the same level, then add it
                                 if (foundInLambdas == closure.NestedLambdas)
-                                    ++closure.ConstantsAndNestedLambdasMultipleUsageCount;
+                                {
+                                    ++foundLambdaInfo.UsageCountOrVarIndex;
+                                }
                                 else
                                 {
                                     closure.AddNestedLambda(foundLambdaInfo);
@@ -2541,37 +2547,21 @@ namespace FastExpressionCompiler
                 {
                     var constItems = closure.Constants.Items;
                     var constIndex = closure.Constants.Count - 1;
-                    while (constIndex != -1 && 
-                           !ReferenceEquals(constItems[constIndex], constantValue))
+                    while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], constantValue))
                         --constIndex;
                     if (constIndex == -1)
                         return false;
 
-                    if (closure.ConstantsAndNestedLambdasMultipleUsageCount == 0)
-                    {
-                        // Load constants field from Closure - the closure object is always a first argument
-                        il.Emit(OpCodes.Ldarg_0);
-                        il.Emit(OpCodes.Ldfld, ArrayClosureConstantsAndNestedLambdasField);
-
-                        EmitLoadConstantInt(il, constIndex);
-                        il.Emit(OpCodes.Ldelem_Ref);
-                        if (exprType.IsValueType())
-                            il.Emit(OpCodes.Unbox_Any, exprType);
-                    }
-                    else if (closure.ConstantsAndNestedLambdasMultipleUsageCount == -1)
-                    {
-                        // Load constants array from variable
-                        EmitLoadLocalVariable(il, 0);
-
-                        EmitLoadConstantInt(il, constIndex);
-                        il.Emit(OpCodes.Ldelem_Ref);
-                        if (exprType.IsValueType())
-                            il.Emit(OpCodes.Unbox_Any, exprType);
-                    }
+                    var varIndex = closure.ConstantUsage.Items[constIndex] - 1;
+                    if (varIndex > 0)
+                        EmitLoadLocalVariable(il, varIndex);
                     else
                     {
-                        // Just load the stored variable with constant
-                        EmitLoadLocalVariable(il, constIndex);
+                        il.Emit(OpCodes.Ldloc_0); // load constants array from variable
+                        EmitLoadConstantInt(il, constIndex);
+                        il.Emit(OpCodes.Ldelem_Ref);
+                        if (exprType.IsValueType())
+                            il.Emit(OpCodes.Unbox_Any, exprType);
                     }
                 }
                 else
@@ -2719,19 +2709,21 @@ namespace FastExpressionCompiler
 
             internal static void EmitLoadConstantsAndNestedLambdasIntoVars(ILGenerator il, ref ClosureInfo closure)
             {
-                var itemCount = closure.Constants.Count + closure.NestedLambdas.Length;
-                if (closure.ConstantsAndNestedLambdasMultipleUsageCount > itemCount)
+                // Load constants array field from Closure and store it into the variable
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldfld, ArrayClosureArrayField);
+                EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[])));
+
+                var constItems = closure.Constants.Items;
+                var constCount = closure.Constants.Count;
+                var constUsage = closure.ConstantUsage.Items;
+
+                int varIndex;
+                for (var i = 0; i < constCount; i++)
                 {
-                    // Load constants array field from Closure - the closure object is always a first argument
-                    il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldfld, ArrayClosureConstantsAndNestedLambdasField);
-
-                    var constItems = closure.Constants.Items;
-                    var constCount = closure.Constants.Count;
-
-                    for (var i = 0; i < constCount; i++)
+                    if (constUsage[i] > 1)
                     {
-                        il.Emit(OpCodes.Dup); // duplicate `ArrayClosure.ConstantsAndNestedLambdasField` on a stack
+                        il.Emit(OpCodes.Ldloc_0);// load array field variable on a stack
                         EmitLoadConstantInt(il, i);
                         il.Emit(OpCodes.Ldelem_Ref);
 
@@ -2739,35 +2731,25 @@ namespace FastExpressionCompiler
                         if (varType.IsValueType())
                             il.Emit(OpCodes.Unbox_Any, varType);
 
-                        EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(varType));
+                        varIndex = il.GetNextLocalVarIndex(varType);
+                        constUsage[i] = varIndex + 1; // to distinguish from the default 1
+                        EmitStoreLocalVariable(il, varIndex);
                     }
+                }
 
-                    var nestedLambdas = closure.NestedLambdas;
-                    for (var i = 0; i < nestedLambdas.Length; i++)
+                var nestedLambdas = closure.NestedLambdas;
+                for (var i = 0; i < nestedLambdas.Length; i++)
+                {
+                    var nestedLambda = nestedLambdas[i];
+                    if (nestedLambda.UsageCountOrVarIndex > 1)
                     {
-                        il.Emit(OpCodes.Dup); // duplicate `ArrayClosure.ConstantsAndNestedLambdasField` on a stack
+                        il.Emit(OpCodes.Ldloc_0);// load array field variable on a stack
                         EmitLoadConstantInt(il, constCount + i);
                         il.Emit(OpCodes.Ldelem_Ref);
-
-                        var varType = nestedLambdas[i].Lambda.GetType();
-                        EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(varType));
+                        varIndex = il.GetNextLocalVarIndex(nestedLambda.Lambda.GetType());
+                        nestedLambda.UsageCountOrVarIndex = varIndex + 1;
+                        EmitStoreLocalVariable(il, varIndex);
                     }
-
-                    il.Emit(OpCodes.Pop); // remove the last `ArrayClosure.ConstantsAndNestedLambdasField` from stack
-                }
-                else if (itemCount > 3)
-                {
-                    // indicates that ConstantsAndNestedLambdas array field is put into its own variable to save 1 op-code
-                    closure.ConstantsAndNestedLambdasMultipleUsageCount = -1;
-
-                    il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldfld, ArrayClosureConstantsAndNestedLambdasField);
-                    EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[])));
-                }
-                else
-                {
-                    // else reset
-                    closure.ConstantsAndNestedLambdasMultipleUsageCount = 0;
                 }
             }
 
@@ -3548,26 +3530,14 @@ namespace FastExpressionCompiler
                 var nestedLambda = nestedLambdaInfo.Lambda;
                 var nestedLambdaInClosureIndex = outerNestedLambdaIndex + closure.Constants.Count;
 
-                // When there are no variables declared read first argument and field
-                if (closure.ConstantsAndNestedLambdasMultipleUsageCount == 0)
-                {
-                    // Load constant from Closure - closure object is always a first argument
-                    il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldfld, ArrayClosureConstantsAndNestedLambdasField);
-                    EmitLoadConstantInt(il, nestedLambdaInClosureIndex);
-                    il.Emit(OpCodes.Ldelem_Ref); // load the array item object
-                }
-                else if (closure.ConstantsAndNestedLambdasMultipleUsageCount == -1)
-                {
-                    // Load constants array variable 
-                    EmitLoadLocalVariable(il, 0);
-                    EmitLoadConstantInt(il, nestedLambdaInClosureIndex);
-                    il.Emit(OpCodes.Ldelem_Ref); // load the array item object
-                }
+                var varIndex = nestedLambdaInfo.UsageCountOrVarIndex - 1;
+                if (varIndex > 0)
+                    EmitLoadLocalVariable(il, varIndex);
                 else
                 {
-                    // Just load the local variable
-                    EmitLoadLocalVariable(il, nestedLambdaInClosureIndex);
+                    il.Emit(OpCodes.Ldloc_0);
+                    EmitLoadConstantInt(il, nestedLambdaInClosureIndex);
+                    il.Emit(OpCodes.Ldelem_Ref); // load the array item object
                 }
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
@@ -3579,18 +3549,16 @@ namespace FastExpressionCompiler
                 //-------------------------------------------------------------------
                 // For the lambda with non-passed parameters (or variables) in closure
                 // we have loaded `NestedLambdaWithConstantsAndNestedLambdas` pair.
-                if (closure.ConstantsAndNestedLambdasMultipleUsageCount > 0)
+                if (varIndex > 0)
                 {
                     // we are already have variable loaded
                     il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
-
-                    EmitLoadLocalVariable(il, nestedLambdaInClosureIndex);
+                    EmitLoadLocalVariable(il, varIndex); // load the variable for the second time
                     il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
                 }
                 else
                 {
-                    var nestedLambdaAndClosureItemsVarIndex = 
-                        il.GetNextLocalVarIndex(typeof(NestedLambdaWithConstantsAndNestedLambdas));
+                    var nestedLambdaAndClosureItemsVarIndex = il.GetNextLocalVarIndex(typeof(NestedLambdaWithConstantsAndNestedLambdas));
                     EmitStoreLocalVariable(il, nestedLambdaAndClosureItemsVarIndex);
 
                     // - load the `NestedLambda` field
