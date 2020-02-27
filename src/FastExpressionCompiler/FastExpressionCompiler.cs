@@ -2095,6 +2095,8 @@ namespace FastExpressionCompiler
                     --paramIndex;
                 if (paramIndex != -1)
                 {
+                    bool isArgumentByRef = byRefIndex == paramIndex;
+
                     if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
@@ -2102,7 +2104,7 @@ namespace FastExpressionCompiler
                         ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall || 
                          (parent & ParentFlags.MemberAccess) != 0);
 
-                    if (closure.LastEmitIsAddress)
+                    if (closure.LastEmitIsAddress || (!paramExpr.IsByRef && isArgumentByRef))
                         il.Emit(OpCodes.Ldarga_S, (byte)paramIndex);
                     else
                     {
@@ -2118,6 +2120,7 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
                     }
 
+                    // TODO: This causes Lambda_Ref_Parameter_Passed_Into_Value_Method to fail since we don't dereference.
                     if (paramExpr.IsByRef)
                     {
                         if ((parent & ParentFlags.MemberAccess) != 0 && paramType.IsClass() ||
@@ -2314,7 +2317,7 @@ namespace FastExpressionCompiler
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
                 {
-                    if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, 0))
+                    if (!TryEmit(opExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1))
                         return false;
 
                     il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
