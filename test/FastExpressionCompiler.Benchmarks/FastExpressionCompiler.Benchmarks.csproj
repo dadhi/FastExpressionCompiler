@@ -4,6 +4,12 @@
     <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
      <!--<TargetFrameworks>netcoreapp3.1</TargetFrameworks>--> 
     <OutputType>Exe</OutputType>
+
+    <IsTestProject>false</IsTestProject>
+    <TieredCompilation>false</TieredCompilation><!--skip tiering jitting for the fare benchmarks -->
+    <DebugType>pdbonly</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+
   </PropertyGroup>
 
   <ItemGroup>
