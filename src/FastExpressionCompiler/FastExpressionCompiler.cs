@@ -2089,22 +2089,24 @@ namespace FastExpressionCompiler
             {
                 // if parameter is passed through, then just load it on stack
                 var paramType = paramExpr.Type;
+                var isParamByRef = paramExpr.IsByRef;
 
                 var paramIndex = paramExprs.Count - 1;
                 while (paramIndex != -1 && !ReferenceEquals(paramExprs[paramIndex], paramExpr))
                     --paramIndex;
                 if (paramIndex != -1)
                 {
-                    bool isArgumentByRef = byRefIndex == paramIndex;
+                    var isArgByRef = byRefIndex == paramIndex;
+                    closure.LastEmitIsAddress = 
+                        !isParamByRef && isArgByRef ||
+                        !isParamByRef && paramType.IsValueType() &&
+                        ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall || 
+                         (parent & ParentFlags.MemberAccess) != 0);
 
                     if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
-                    closure.LastEmitIsAddress = !paramExpr.IsByRef && paramType.IsValueType() &&
-                        ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall || 
-                         (parent & ParentFlags.MemberAccess) != 0);
-
-                    if (closure.LastEmitIsAddress || (!paramExpr.IsByRef && isArgumentByRef))
+                    if (closure.LastEmitIsAddress)
                         il.Emit(OpCodes.Ldarga_S, (byte)paramIndex);
                     else
                     {
@@ -2120,11 +2122,12 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
                     }
 
-                    // TODO: This causes Lambda_Ref_Parameter_Passed_Into_Value_Method to fail since we don't dereference.
-                    if (paramExpr.IsByRef)
+                    if (isParamByRef)
                     {
-                        if ((parent & ParentFlags.MemberAccess) != 0 && paramType.IsClass() ||
-                            (parent & ParentFlags.Coalesce) != 0)
+                        // emit dereference for reference
+                        if (paramType.IsClass() &&
+                            (!isArgByRef ||
+                             (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce)) != 0))
                             il.Emit(OpCodes.Ldind_Ref);
                         else if ((parent & ParentFlags.Arithmetic) != 0)
                             EmitDereference(il, paramType);
@@ -2140,14 +2143,15 @@ namespace FastExpressionCompiler
                 if (varIndex != -1)
                 {
                     if (byRefIndex != -1 ||
-                        paramType.IsValueType() && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
+                        paramType.IsValueType() && 
+                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
                         EmitLoadLocalVariableAddress(il, varIndex);
                     else
                         EmitLoadLocalVariable(il, varIndex);
                     return true;
                 }
 
-                if (paramExpr.IsByRef)
+                if (isParamByRef)
                 {
                     EmitLoadLocalVariableAddress(il, byRefIndex);
                     return true;

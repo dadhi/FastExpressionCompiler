@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection.Emit;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -47,7 +48,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<RefDelegate>(call, parameter);
 
-            var fastCompiled = lambda.CompileFast();
+            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
 
             var data = "test";
 
@@ -56,7 +57,6 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        [Ignore("todo: fixme")] // todo: fixme
         public void Lambda_Ref_Parameter_Passed_Into_Value_Method()
         {
             var parameter = Parameter(typeof(string).MakeByRefType());
@@ -64,11 +64,16 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<RefDelegate>(call, parameter);
 
-            var fastCompiled = lambda.CompileFast();
+            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
+            Assert.NotNull(fastCompiled);
+
+            fastCompiled.Method.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_Ref,
+                OpCodes.Call,
+                OpCodes.Ret);
 
             var data = "test";
-
-            Assert.NotNull(fastCompiled);
             Assert.AreEqual(data, fastCompiled(ref data));
         }
 
@@ -92,7 +97,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<string, string>>(body, parameter);
 
-            var fastCompiled = lambda.CompileFast();
+            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual("test", fastCompiled("test"));
