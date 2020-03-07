@@ -2124,13 +2124,25 @@ namespace FastExpressionCompiler
 
                     if (isParamByRef)
                     {
-                        // emit dereference for reference
+                        // if (!paramType.IsValueType()) 
+                        // {
+                        //     if (!isArgByRef ||
+                        //         (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce)) != 0)
+                        //         il.Emit(OpCodes.Ldind_Ref);
+                        // }
+                        // else 
+                        // {
+                        //     if ((parent & ParentFlags.Call) != 0 && !isArgByRef ||
+                        //         (parent & ParentFlags.Arithmetic) != 0)
+                        //         EmitValueTypeDereference(il, paramType);
+                        // }
+
                         if (paramType.IsClass() &&
                             (!isArgByRef ||
                              (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce)) != 0))
                             il.Emit(OpCodes.Ldind_Ref);
                         else if ((parent & ParentFlags.Arithmetic) != 0)
-                            EmitDereference(il, paramType);
+                            EmitValueTypeDereference(il, paramType);
                     }
 
                     return true;
@@ -2143,8 +2155,7 @@ namespace FastExpressionCompiler
                 if (varIndex != -1)
                 {
                     if (byRefIndex != -1 ||
-                        paramType.IsValueType() && 
-                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
+                        paramType.IsValueType() && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
                         EmitLoadLocalVariableAddress(il, varIndex);
                     else
                         EmitLoadLocalVariable(il, varIndex);
@@ -2179,7 +2190,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static void EmitDereference(ILGenerator il, Type type)
+            private static void EmitValueTypeDereference(ILGenerator il, Type type)
             {
                 if (type == typeof(Int32))
                     il.Emit(OpCodes.Ldind_I4);
@@ -3647,7 +3658,7 @@ namespace FastExpressionCompiler
 
                 var closureMethod = nestedLambdaInfo.LambdaExpression.ReturnType == typeof(void)
                     ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
-                    : CurryClosureFuncs.Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
+                    : CurryClosureFuncs  .Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
 
                 il.Emit(OpCodes.Call, closureMethod);
                 return true;
@@ -3661,11 +3672,13 @@ namespace FastExpressionCompiler
                     return false;
 
                 var argExprs = expr.Arguments;
-                for (var i = 0; i < argExprs.Count; i++)
-                    if (!TryEmit(argExprs[i], paramExprs, il, ref closure,
-                        parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess,
-                        argExprs[i].Type.IsByRef ? i : -1))
-                        return false;
+                if (argExprs.Count != 0) 
+                {
+                    var flags = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                    for (var i = 0; i < argExprs.Count; i++)
+                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, flags, argExprs[i].Type.IsByRef ? i : -1))
+                            return false;
+                }
 
                 var delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod();
                 il.Emit(OpCodes.Call, delegateInvokeMethod);
@@ -4406,17 +4419,20 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindMethod(this Type type, string methodName)
         {
-            var methods = type.GetTypeInfo().DeclaredMethods.AsArray();
+            var typeInfo = type.GetTypeInfo();
+            var methods = typeInfo.DeclaredMethods.AsArray();
             for (var i = 0; i < methods.Length; i++)
                 if (methods[i].Name == methodName)
                     return methods[i];
 
-            return type.GetTypeInfo().BaseType?.FindMethod(methodName);
+            return typeInfo.BaseType?.FindMethod(methodName);
         }
 
-        internal static MethodInfo DelegateTargetGetterMethod = typeof(Delegate).FindPropertyGetMethod("Target");
+        internal static MethodInfo DelegateTargetGetterMethod = 
+            typeof(Delegate).FindPropertyGetMethod("Target");
 
-        internal static MethodInfo FindDelegateInvokeMethod(this Type type) => type.FindMethod("Invoke");
+        internal static MethodInfo FindDelegateInvokeMethod(this Type type) => 
+            type.GetTypeInfo().GetDeclaredMethod("Invoke");
 
         internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type)
         {

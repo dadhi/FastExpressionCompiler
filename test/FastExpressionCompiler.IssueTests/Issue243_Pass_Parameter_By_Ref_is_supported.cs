@@ -24,6 +24,11 @@ namespace FastExpressionCompiler.UnitTests
             return test.ToString();
         }
 
+        public static string PassValueTypeByValue(int test)
+        {
+            return test.ToString();
+        }
+
         [Test]
         public void Lambda_Parameter_Passed_Into_Ref_Method()
         {
@@ -39,6 +44,8 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         public delegate string RefDelegate(ref string val);
+
+        public delegate string RefValueTypeDelegate(ref int val);
 
         [Test]
         public void Lambda_Ref_Parameter_Passed_Into_Ref_Method()
@@ -75,6 +82,27 @@ namespace FastExpressionCompiler.UnitTests
 
             var data = "test";
             Assert.AreEqual(data, fastCompiled(ref data));
+        }
+
+        [Test, Ignore("fix me")]// todo:
+        public void Lambda_Ref_ValueType_Parameter_Passed_Into_Value_Method()
+        {
+            var parameter = Parameter(typeof(int).MakeByRefType());
+            var call = Call(GetType().GetMethod(nameof(PassValueTypeByValue)), parameter);
+
+            var lambda = Lambda<RefValueTypeDelegate>(call, parameter);
+
+            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
+            Assert.NotNull(fastCompiled);
+
+            fastCompiled.Method.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_I4,
+                OpCodes.Call,
+                OpCodes.Ret);
+
+            var data = 42;
+            Assert.AreEqual(data.ToString(), fastCompiled(ref data));
         }
 
         [Test]

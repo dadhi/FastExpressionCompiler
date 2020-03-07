@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Reflection.Emit;
 using NUnit.Framework;
 #pragma warning disable 649
 #pragma warning disable 219
@@ -308,7 +309,7 @@ namespace FastExpressionCompiler.UnitTests
             AssertLocal(direct);
         }
 
-        private static void SetMinusOneAndOneForDoubleRefParameterInCallCall(ref int ref1, ref int ref2) { ref2 = -1; ref1 = 1; }
+        private static void SetMinusOneAndOneForDoubleRefParameterInCallCall(ref int ref1, ref int ref2) {  ref2 = -1; ref1 = 1; }
 
         [Test]
         public void SetMinusOneAndOneForDoubleRefParameterInCall()
@@ -320,12 +321,26 @@ namespace FastExpressionCompiler.UnitTests
             }
 
             var objRef = Parameter(typeof(int).MakeByRefType());
-            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(SetMinusOneAndOneForDoubleRefParameterInCallCall));
-            var lambda = Lambda<FuncRef<int, int>>(Block(new ParameterExpression[] { },
-                                                    Call(call, objRef, objRef),
-                                                    Constant(-1)
-                                                    ),
-                                                objRef);
+            var call = GetType().GetTypeInfo().GetDeclaredMethod(nameof(SetMinusOneAndOneForDoubleRefParameterInCallCall));
+            var lambda = Lambda<FuncRef<int, int>>(
+                Block(new ParameterExpression[0],
+                    Call(call, objRef, objRef),
+                    Constant(-1)
+                ),
+                objRef);
+
+            var compiledB = lambda.CompileFast<FuncRef<int, int>>(true);
+            compiledB.Method.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_1,
+                OpCodes.Call,
+                OpCodes.Ldc_I4_M1,
+                OpCodes.Ret);
+
+            LocalAssert(compiledB);
+
+            FuncRef<int, int> direct = SetIntoLocalVariableAndCallOtherRef;
+            LocalAssert(direct);
 
             void LocalAssert(FuncRef<int, int> invoke)
             {
@@ -333,12 +348,6 @@ namespace FastExpressionCompiler.UnitTests
                 Assert.AreEqual(-1, invoke(ref exampleA));
                 Assert.AreEqual(1, exampleA);
             }
-
-            var compiledB = lambda.CompileFast<FuncRef<int, int>>(true);
-            LocalAssert(compiledB);
-
-            FuncRef<int, int> direct = SetIntoLocalVariableAndCallOtherRef;
-            LocalAssert(direct);
         }
 
         private static void AsValueAndSetMinusOneAsRefCall(int ref1, ref int ref2) { ref2 = -1; }
