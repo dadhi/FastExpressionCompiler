@@ -252,8 +252,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(3, f(2));
         }
 
-        [Test]
-        [Ignore("Not supported yet")]
+        //[Test] // todo: Quote is not supported yet
         public void Quote_compiles()
         {
             var param = Parameter(typeof(int), "i");

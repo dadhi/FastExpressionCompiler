@@ -2126,10 +2126,10 @@ namespace FastExpressionCompiler
                         ((parent & ParentFlags.Call) != 0 && !isArgByRef ||
                          (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce | ParentFlags.Arithmetic)) != 0))
                     {
-                        if (!paramType.IsValueType()) 
-                            il.Emit(OpCodes.Ldind_Ref);
-                        else 
+                        if (paramType.IsValueType()) 
                             EmitValueTypeDereference(il, paramType);
+                        else 
+                            il.Emit(OpCodes.Ldind_Ref);
                     }
 
                     return true;
