@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(data, fastCompiled(ref data));
         }
 
-        [Test, Ignore("fix me")]// todo:
+        [Test]
         public void Lambda_Ref_ValueType_Parameter_Passed_Into_Value_Method()
         {
             var parameter = Parameter(typeof(int).MakeByRefType());

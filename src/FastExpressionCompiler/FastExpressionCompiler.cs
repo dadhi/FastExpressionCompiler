@@ -1479,7 +1479,7 @@ namespace FastExpressionCompiler
                     {
                         case ExpressionType.Parameter:
                             return (parent & ParentFlags.IgnoreResult) != 0 ||
-                                   TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
+                                TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
 
                         case ExpressionType.TypeAs:
                         case ExpressionType.IsTrue:
@@ -2096,7 +2096,7 @@ namespace FastExpressionCompiler
                     --paramIndex;
                 if (paramIndex != -1)
                 {
-                    var isArgByRef = byRefIndex == paramIndex;
+                    var isArgByRef = byRefIndex != -1;
                     closure.LastEmitIsAddress = 
                         !isParamByRef && isArgByRef ||
                         !isParamByRef && paramType.IsValueType() &&
@@ -2122,26 +2122,13 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
                     }
 
-                    if (isParamByRef)
+                    if (isParamByRef &&
+                        ((parent & ParentFlags.Call) != 0 && !isArgByRef ||
+                         (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce | ParentFlags.Arithmetic)) != 0))
                     {
-                        // if (!paramType.IsValueType()) 
-                        // {
-                        //     if (!isArgByRef ||
-                        //         (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce)) != 0)
-                        //         il.Emit(OpCodes.Ldind_Ref);
-                        // }
-                        // else 
-                        // {
-                        //     if ((parent & ParentFlags.Call) != 0 && !isArgByRef ||
-                        //         (parent & ParentFlags.Arithmetic) != 0)
-                        //         EmitValueTypeDereference(il, paramType);
-                        // }
-
-                        if (paramType.IsClass() &&
-                            (!isArgByRef ||
-                             (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce)) != 0))
+                        if (!paramType.IsValueType()) 
                             il.Emit(OpCodes.Ldind_Ref);
-                        else if ((parent & ParentFlags.Arithmetic) != 0)
+                        else 
                             EmitValueTypeDereference(il, paramType);
                     }
 
