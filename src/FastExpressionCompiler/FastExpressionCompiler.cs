@@ -2122,14 +2122,20 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
                     }
 
-                    if (isParamByRef &&
-                        ((parent & ParentFlags.Call) != 0 && !isArgByRef ||
-                         (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce | ParentFlags.Arithmetic)) != 0))
+                    if (isParamByRef) 
                     {
-                        if (paramType.IsValueType()) 
-                            EmitValueTypeDereference(il, paramType);
+                        if (paramType.IsValueType())
+                        {
+                            if ((parent & ParentFlags.Call) != 0 && !isArgByRef ||
+                                (parent & ParentFlags.Arithmetic) != 0)
+                                EmitValueTypeDereference(il, paramType);
+                        }
                         else 
-                            il.Emit(OpCodes.Ldind_Ref);
+                        {
+                            if ((parent & ParentFlags.Call) != 0 && !isArgByRef ||
+                                (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce)) != 0)
+                                il.Emit(OpCodes.Ldind_Ref);
+                        }
                     }
 
                     return true;

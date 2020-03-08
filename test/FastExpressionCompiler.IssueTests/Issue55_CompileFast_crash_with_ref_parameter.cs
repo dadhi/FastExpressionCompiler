@@ -645,11 +645,21 @@ namespace FastExpressionCompiler.UnitTests
         {
             var objRef = Parameter(typeof(StructWithIntField).MakeByRefType());
             var objVal = Parameter(typeof(int));
-            var prop = PropertyOrField(objRef, nameof(StructWithIntField.IntField));
-            var body = Assign(prop, objVal);
+            
+            var body = Assign(
+                PropertyOrField(objRef, nameof(StructWithIntField.IntField)), 
+                objVal);
+
             var lambda = Lambda<ActionRefIn<StructWithIntField, int>>(body, objRef, objVal);
 
             var compiledB = lambda.CompileFast<ActionRefIn<StructWithIntField, int>>(true);
+
+            compiledB.Method.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
+                OpCodes.Stfld,
+                OpCodes.Ret);
+
             var exampleB = default(StructWithIntField);
             compiledB(ref exampleB, 7);
             Assert.AreEqual(7, exampleB.IntField);
