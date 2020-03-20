@@ -9,6 +9,25 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class ArithmeticOperationsTests
     {
+        public static bool Run() 
+        {
+            var tests = new ArithmeticOperationsTests();
+            try
+            {
+                tests.Can_sum();
+                tests.Can_sum_with_manual_expr();
+                tests.Can_sum_bytes();
+                tests.Can_sum_signed_bytes();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Test failed: " + Environment.NewLine + ex);
+                return false;
+            }
+
+            return true;
+        }
+
         [Test]
         public void Can_sum()
         {

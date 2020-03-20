@@ -22,8 +22,9 @@ for:
         - image: Visual Studio 2019
 
     build_script:
-      - dotnet build -c:Release -v:m -p:DevMode=false
-      - dotnet test --no-build -c:Release -p:DevMode=false
+      - dotnet build -c Release -v:m -p:DevMode=false
+      - dotnet run -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+      - dotnet test --no-build -c Release -p:DevMode=false
 
     artifacts:
       - path: .\.dist\*.nupkg
