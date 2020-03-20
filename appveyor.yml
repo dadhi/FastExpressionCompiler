@@ -3,7 +3,7 @@ image:
   - Ubuntu
   - macOS
 
-version: 3.0.0-preview-{build}
+version: 3.0.0-preview-01-b{build}
 
 test: off
 

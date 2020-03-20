@@ -12,35 +12,35 @@
         <Title>$(Product)</Title>
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
-        <PackageReleaseNotes><![CDATA[
-## v3.0.0
+        <PackageReleaseNotes>
+            <![CDATA[## v3.0.0
 
 Thanks to the contributors!
 
 - fixed: #183 nullable types (nullable vs non-nullable operands) 
 
-        ]]>
-        </PackageReleaseNotes>
+        ]]></PackageReleaseNotes>
 
-        <AssemblyName>$(Product)</AssemblyName>
-        <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
-        <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+            <AssemblyName>$(Product)</AssemblyName>
+            <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
+            <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
 
-        <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
-    </PropertyGroup>
+            <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
+        </PropertyGroup>
 
-    <ItemGroup>
-        <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs" />
-    </ItemGroup>
+        <ItemGroup>
+            <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs"/>
+        </ItemGroup>
 
-    <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    </ItemGroup>
+        <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+            <PackageReference Include="System.ValueTuple" Version="4.5.0"/>
+        </ItemGroup>
 
-    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
-        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
-    </ItemGroup>
+        <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
+            <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
+        </ItemGroup>
 
-    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
-    </ItemGroup>
-</Project>
+        <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+            <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
+        </ItemGroup>
+    </Project>
