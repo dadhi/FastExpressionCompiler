@@ -4,7 +4,6 @@ image:
   - macOS
 
 version: 3.0.0-preview-{build}
-os: Visual Studio 2019
 
 test: off
 
