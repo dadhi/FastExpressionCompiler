@@ -6,7 +6,7 @@
         <LangVersion>Latest</LangVersion>
 
         <Authors>Maksim Volkau</Authors>
-        <Copyright>Copyright © 2016-2019 Maksim Volkau</Copyright>
+        <Copyright>Copyright © 2016-2020 Maksim Volkau</Copyright>
         <NeutralLanguage>en-US</NeutralLanguage>
 
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

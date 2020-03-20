@@ -16,14 +16,14 @@
     </PropertyGroup>
 
     <!--Signing all packages, oh boy-->
-    <PropertyGroup Condition=" '$(Sign)' != 'false' ">
+    <PropertyGroup>
         <SignAssembly>true</SignAssembly>
         <AssemblyOriginatorKeyFile>..\..\FastExpressionCompiler.snk</AssemblyOriginatorKeyFile>
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE" Visible="false" />
-        <None Include="..\..\FastExpressionCompiler.snk" Pack="true" PackagePath="FastExpressionCompiler.snk" Visible="false" />
+        <None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE" Visible="false"/>
+        <None Include="..\..\FastExpressionCompiler.snk" Pack="true" PackagePath="FastExpressionCompiler.snk" Visible="false"/>
     </ItemGroup>
 
     <PropertyGroup>
@@ -32,7 +32,7 @@
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <!-- <GeneratePackageOnBuild>true</GeneratePackageOnBuild> -->
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         
         <PackageOutputPath>..\..\.dist</PackageOutputPath>
 
@@ -41,10 +41,8 @@
         <IncludeSymbols>false</IncludeSymbols>
     </PropertyGroup>
 
-    <!-- SourceLink support -->
-    <ItemGroup Condition=" '$(SourceLink)' != 'false' ">
-        <!-- TODO: Temporary disable source link to check the builds on Travis CI -->
-        <!-- <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-18618-05" PrivateAssets="All" /> -->
-    </ItemGroup> 
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All"/>
+    </ItemGroup>
 
 </Project>

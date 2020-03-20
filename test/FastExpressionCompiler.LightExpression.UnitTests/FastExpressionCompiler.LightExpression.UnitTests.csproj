@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net46;netcoreapp2.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net472;netcoreapp3.1</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">netcoreapp3.1</TargetFrameworks>
+
         <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
     </PropertyGroup>
 
@@ -17,7 +19,7 @@
         <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' == 'net46'">
+    <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
         <Reference Include="Microsoft.CSharp">
             <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6\Microsoft.CSharp.dll</HintPath>
         </Reference>

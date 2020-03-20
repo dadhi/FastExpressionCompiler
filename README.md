@@ -20,8 +20,7 @@ FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/n
 [![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 
 
-- Windows: [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)
-- Linux, MacOS: [![Linux build](https://travis-ci.org/dadhi/FastExpressionCompiler.svg?branch=master)](https://travis-ci.org/dadhi/FastExpressionCompiler)
+Windows, Linux, MacOS [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)
 
 Targets: __.NET 4.5+__, __.NET Standard 1.3__, __.NET Standard 2.0__  
 Originally was developed as a part of [DryIoc], so check it out ;-)

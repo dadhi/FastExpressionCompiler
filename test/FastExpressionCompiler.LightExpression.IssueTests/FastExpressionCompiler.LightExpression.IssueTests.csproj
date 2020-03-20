@@ -1,24 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>netcoreapp2.0;netcoreapp2.2</TargetFrameworks>
-        <!-- <TargetFrameworks Condition="'$(DevMode)' == 'true'">netcoreapp3.1</TargetFrameworks> -->
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net472;netcoreapp3.1</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">netcoreapp3.1</TargetFrameworks>
 
         <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
     </PropertyGroup>
 
     <ItemGroup>
-        <None Remove="*.ncrunchproject" />
-        <Compile Include="..\FastExpressionCompiler.IssueTests\**\*.cs" Exclude="..\FastExpressionCompiler.IssueTests\obj\**\*.*" />
+        <None Remove="*.ncrunchproject"/>
+        <Compile Include="..\FastExpressionCompiler.IssueTests\**\*.cs" Exclude="..\FastExpressionCompiler.IssueTests\obj\**\*.*"/>
 
-        <Compile Remove="..\FastExpressionCompiler.IssueTests\ObjectMethodExecutor\**" />
-        <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke.cs" />
-        <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor.cs" />
-        <Compile Remove="..\FastExpressionCompiler.IssueTests\NServiceBus_PipelineExecutionExtensions.cs" />
-        <Compile Remove="..\FastExpressionCompiler.IssueTests\NServiceBus_PipelineExecutionExtensions.SUT.cs" />
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\ObjectMethodExecutor\**"/>
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke.cs"/>
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor.cs"/>
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\NServiceBus_PipelineExecutionExtensions.cs"/>
+        <Compile Remove="..\FastExpressionCompiler.IssueTests\NServiceBus_PipelineExecutionExtensions.SUT.cs"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
+        <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+        <Reference Include="Microsoft.CSharp">
+            <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6\Microsoft.CSharp.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
     <ItemGroup>
