@@ -7,25 +7,23 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 {
     [TestFixture]
-    public class ArithmeticOperationsTests
+    public class ArithmeticOperationsTests : TestBase
     {
-        public static bool Run() 
+        public override int Run() 
         {
-            var tests = new ArithmeticOperationsTests();
-            try
-            {
-                tests.Can_sum();
-                tests.Can_sum_with_manual_expr();
-                tests.Can_sum_bytes();
-                tests.Can_sum_signed_bytes();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Test failed: " + Environment.NewLine + ex);
-                return false;
-            }
-
-            return true;
+            Can_sum();
+            Can_sum_with_manual_expr();
+            Can_sum_bytes();
+            Can_sum_signed_bytes();
+            Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(1, 2, 3);
+            Can_sum_all_primitive_numeric_types_that_define_binary_operator_add((short)1, (short)2, (short)3);
+            Can_sum_all_primitive_numeric_types_that_define_binary_operator_add((ushort)1, (ushort)2, (ushort)3);
+            Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(2u, 3u, 5u);
+            Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(2ul, 3ul, 5ul);
+            Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(3L, 4L, 7L);
+            Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(4f, 5f, 9f);
+            Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(5d, 6d, 11d);
+            return 12;
         }
 
         [Test]
@@ -477,6 +475,21 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
             Assert.AreEqual("a1", f());
+        }
+
+        public override bool Equals(object obj)
+        {
+            return base.Equals(obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return base.ToString();
         }
 
         private sealed class NonPrimitiveInt32Class

@@ -8,12 +8,30 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            var result = ArithmeticOperationsTests.Run();
+            TestBase[] tests =
+            {
+                new ArithmeticOperationsTests()
+            };
 
-            if (result)
-                Console.WriteLine("Selected tests passed: " + nameof(ArithmeticOperationsTests));
+            var failed = false;
+            var totalTestCount = 0;
+            foreach (var test in tests)
+            {
+                try
+                {
+                    totalTestCount += test.Run();
+                }
+                catch (Exception ex)
+                {
+                    failed = true;
+                    Console.WriteLine($"Failed! {test.GetType().Name} with: {ex}");
+                }
+            }
+
+            if (failed)
+                Console.WriteLine("Some tests are FAILED! ERROR!");
             else
-                Console.WriteLine("Selected tests FAILED! ERROR! boing-boing!: " + nameof(ArithmeticOperationsTests));
+                Console.WriteLine($"{totalTestCount} tests are passing green!");
         }
     }
 }
