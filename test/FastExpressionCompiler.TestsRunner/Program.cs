@@ -29,7 +29,10 @@ namespace FastExpressionCompiler.UnitTests
             }
 
             if (failed)
+            {
                 Console.WriteLine("Some tests are FAILED! ERROR!");
+                Environment.Exit(1); // error
+            }
             else
                 Console.WriteLine($"{totalTestCount} tests are passing green!");
         }
