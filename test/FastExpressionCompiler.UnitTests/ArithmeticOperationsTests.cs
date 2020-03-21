@@ -9,12 +9,13 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class ArithmeticOperationsTests : TestBase
     {
-        public override int Run() 
+        public override int Run()
         {
             Can_sum();
             Can_sum_with_manual_expr();
             Can_sum_bytes();
             Can_sum_signed_bytes();
+
             Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(1, 2, 3);
             Can_sum_all_primitive_numeric_types_that_define_binary_operator_add((short)1, (short)2, (short)3);
             Can_sum_all_primitive_numeric_types_that_define_binary_operator_add((ushort)1, (ushort)2, (ushort)3);
@@ -23,7 +24,63 @@ namespace FastExpressionCompiler.UnitTests
             Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(3L, 4L, 7L);
             Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(4f, 5f, 9f);
             Can_sum_all_primitive_numeric_types_that_define_binary_operator_add(5d, 6d, 11d);
-            return 12;
+
+            Can_sum_with_unchecked_overflow();
+            Can_not_sum_with_checked_overflow();
+            Can_substract();
+            Can_substract_bytes();
+            Can_substract_signed_bytes();
+
+            Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract(3, 2, 1);
+            Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract((short)3, (short)2, (short)1);
+            Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract((ushort)3, (ushort)2, (ushort)1);
+            Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract(3u, 2u, 1u);
+            Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract(3ul, 2ul, 1ul);
+            Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract(3L, 2L, 1L);
+            Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract(3f, 2f, 1f);
+            Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract(3d, 2d, 1d);
+
+            Can_substract_with_unchecked_overflow();
+            Can_not_substract_with_checked_overflow();
+            Can_multiply();
+            Can_modulus_custom();
+            Can_modulus();
+            Can_bitor_1();
+            Can_bitand_1();
+            Can_bitxor_1();
+            Can_shift_left_1();
+            Can_shift_right_1();
+            Can_multiply_bytes();
+            Can_multiply_signed_bytes();
+
+            Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3, 2, 6);
+            Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply((short)3, (short)2, (short)6);
+            Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply((ushort)3, (ushort)2, (ushort)6);
+            Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3u, 2u, 6u);
+            Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3ul, 2ul, 6ul);
+            Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3L, 2L, 6L);
+            Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3f, 2f, 6f);
+            Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3d, 2d, 6d);
+            
+            Can_multiply_with_unchecked_overflow();
+            Can_not_multiply_with_checked_overflow();
+            Can_divide();
+            Can_divide_bytes();
+            Can_divide_signed_bytes();
+            Can_sum_decimal_numbers();
+            Can_substract_decimal_numbers();
+            Can_multiply_decimal_numbers();
+            Can_divide_decimal_numbers();
+
+            Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(6, 3, 2);
+            Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide((short)6, (short)3, (short)2);
+            Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide((ushort)6, (ushort)3, (ushort)2);
+            Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(6u, 3u, 2u);
+            Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(6L, 3L, 2L);
+            Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(6f, 3f, 2f);
+            Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(6d, 3d, 2d);
+
+            return 61;
         }
 
         [Test]
@@ -296,7 +353,6 @@ namespace FastExpressionCompiler.UnitTests
         public void Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(object param1, object param2, object expectedResult) =>
             expectedResult.ShouldBeResultOfArithmeticOperation((a1, a2) => Multiply(a1, a2), param1, param2);
 
-
         [Test]
         public void Can_multiply_with_unchecked_overflow()
         {
@@ -422,7 +478,7 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Can_calculate_arithmetic_operation_on_non_primitive_class()
         {
-            Expression<Func<NonPrimitiveInt32Class, NonPrimitiveInt32Class, NonPrimitiveInt32Class>> expr = (a1 ,a2) => a1 + a2;
+            Expression<Func<NonPrimitiveInt32Class, NonPrimitiveInt32Class, NonPrimitiveInt32Class>> expr = (a1, a2) => a1 + a2;
 
             var arithmeticFunc = expr.CompileFast(true);
 
