@@ -8,25 +8,23 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            TestBase[] tests =
-            {
-                new ArithmeticOperationsTests()
-            };
-
             var failed = false;
             var totalTestCount = 0;
-            foreach (var test in tests)
+            void TryRun(Func<int> run) 
             {
                 try
                 {
-                    totalTestCount += test.Run();
+                    totalTestCount += run();
                 }
                 catch (Exception ex)
                 {
                     failed = true;
-                    Console.WriteLine($"Failed! {test.GetType().Name} with: {ex}");
+                    Console.WriteLine($"Failed! {run.Method.DeclaringType.FullName} with: {ex}");
                 }
             }
+
+            TryRun(new ArithmeticOperationsTests().Run);
+            // TryRun(FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests.Run);
 
             if (failed)
             {
