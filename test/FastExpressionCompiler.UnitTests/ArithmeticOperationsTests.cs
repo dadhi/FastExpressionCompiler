@@ -22,58 +22,34 @@ namespace FastExpressionCompiler.UnitTests
             Can_sum_signed_bytes_converted_to_ints();
             Can_sum_all_primitive_numeric_types_that_define_binary_operator_add();
             Can_not_sum_with_checked_overflow();
-
-            // Can_substract_bytes();
-            // Can_substract_signed_bytes();
             Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract();
-
-            // Can_substract_with_unchecked_overflow();
-            // Can_not_substract_with_checked_overflow();
-            // Can_multiply();
-            // Can_modulus_custom();
-            // Can_modulus();
-            // Can_bitor_1();
-            // Can_bitand_1();
-            // Can_bitxor_1();
-            // Can_shift_left_1();
-            // Can_shift_right_1();
-            // Can_multiply_bytes();
-            // Can_multiply_signed_bytes();
-
-            // Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3, 2, 6);
-            // Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply((short)3, (short)2, (short)6);
-            // Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply((ushort)3, (ushort)2, (ushort)6);
-            // Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3u, 2u, 6u);
-            // Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3ul, 2ul, 6ul);
-            // Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3L, 2L, 6L);
-            // Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3f, 2f, 6f);
-            // Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply(3d, 2d, 6d);
+            Can_substract_with_unchecked_overflow();
+            Can_not_substract_with_checked_overflow();
+            Can_modulus_custom();
+            Can_modulus();
+            Can_bit_or_1();
+            Can_bit_and_1();
+            Can_bit_xor_1();
+            Can_shift_left_1();
+            Can_shift_right_1();
+            Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply();
+            Can_multiply_with_unchecked_overflow();
+            Can_not_multiply_with_checked_overflow();
+            Can_divide_bytes();
+            Can_divide_signed_bytes();
+            Can_sum_decimal_numbers();
+            Can_substract_decimal_numbers();
+            Can_multiply_decimal_numbers();
+            Can_divide_decimal_numbers();
+            Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide();
+            Can_calculate_arithmetic_operation_on_non_primitive_class();
+            Can_calculate_arithmetic_operation_on_non_primitive_value_type();
             
-            // Can_multiply_with_unchecked_overflow();
-            // Can_not_multiply_with_checked_overflow();
-            // Can_divide();
-            // Can_divide_bytes();
-            // Can_divide_signed_bytes();
-            // Can_sum_decimal_numbers();
-            // Can_substract_decimal_numbers();
-            // Can_multiply_decimal_numbers();
-            // Can_divide_decimal_numbers();
-
-            // Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(6, 3, 2);
-            // Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide((short)6, (short)3, (short)2);
-            // Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide((ushort)6, (ushort)3, (ushort)2);
-            // Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(6u, 3u, 2u);
-            // Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(6L, 3L, 2L);
-            // Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(6f, 3f, 2f);
-            // Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide(6d, 3d, 2d);
-
-            // Can_calculate_arithmetic_function_obeying_operator_precedence();
-            // Can_calculate_arithmetic_operation_on_non_primitive_class();Can_calculate_arithmetic_operation_on_non_primitive_value_type();
             // Can_calculate_arithmetic_operation_with_vectors();
             // Can_add_strings();
             // Can_add_string_and_not_string();
 
-            return 66;
+            return 25;
         }
 
         [Test]
@@ -102,11 +78,12 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(sumFunc(1, 3), 4);
         }
 
-        void AssertAdd<T, R>(T x, T y, R expected)
+        void AssertAdd<T, R>(T x, T y, R expected, bool convertArgsToResult = false)
         {
             var a = Parameter(typeof(T), "a");
             var b = Parameter(typeof(T), "b");
-            var expr = Lambda<Func<T, T, R>>(Add(a, b), a, b);
+            var add = !convertArgsToResult ? Add(a, b) : Add(Convert(a, typeof(R)), Convert(b, typeof(R)));
+            var expr = Lambda<Func<T, T, R>>(add, a, b);
 
             var f = expr.CompileFast(true);
 
@@ -117,8 +94,8 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Can_sum_all_primitive_numeric_types_that_define_binary_operator_add()
         {
-            AssertAdd<byte, byte>(1, 2, 3);
-            AssertAdd<sbyte, sbyte>(1, 2, 3);
+            AssertAdd<byte, int>(1, 2, 3, true);
+            AssertAdd<sbyte, int>(1, 2, 3, true);
             AssertAdd<short, short>(1, 2, 3);
             AssertAdd<ushort, ushort>(1, 2, 3);
             AssertAdd<int, int>(1, 2, 3);
@@ -148,11 +125,12 @@ namespace FastExpressionCompiler.UnitTests
             Assert.Throws<OverflowException>(() => sumFunc(int.MaxValue, 1));
         }
 
-        void AssertSub<T, R>(T x, T y, R expected) 
+        void AssertSub<T, R>(T x, T y, R expected, bool convertArgsToResult = false) 
         {
             var a = Parameter(typeof(T), "a");
             var b = Parameter(typeof(T), "b");
-            var expr = Lambda<Func<T, T, R>>(Subtract(a, b), a, b);
+            var sub = !convertArgsToResult ? Subtract(a, b) : Subtract(Convert(a, typeof(R)), Convert(b, typeof(R)));
+            var expr = Lambda<Func<T, T, R>>(sub, a, b);
             
             var f = expr.CompileFast(true);
             
@@ -163,8 +141,8 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract()
         {
-            AssertSub<byte, byte>  (5, 1, 4);
-            AssertSub<sbyte, sbyte>(5, 1, 4);
+            AssertSub<byte, int>(5, 1, 4, true);
+            AssertSub<sbyte, int>(5, 1, 4, true);
             AssertSub<short, short>(5, 1, 4);
             AssertSub<ushort, ushort>(5, 1, 4);
             AssertSub<int, int>(5, 1, 4);
@@ -341,17 +319,6 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.IsNotNull(f);
             Assert.Throws<OverflowException>(() => f(int.MaxValue, int.MaxValue));
-        }
-
-        [Test]
-        public void Can_divide()
-        {
-            Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 / arg2;
-
-            var func = expr.CompileFast(true);
-
-            Assert.IsNotNull(func);
-            Assert.AreEqual(func(7, 3), 2);
         }
 
         void AssertDivide<T, R>(T x, T y, R expected, bool convertArgsToResult = false)
