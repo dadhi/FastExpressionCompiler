@@ -2689,7 +2689,22 @@ namespace FastExpressionCompiler.LightExpression
         public override bool Equals(object obj) => 
             obj is SwitchCase other && other.Body == Body && ReferenceEquals(other.TestValues, TestValues);
 
-        public override int GetHashCode() => (Body, TestValues).GetHashCode();
+        public override int GetHashCode() => HashCombiner.Combine(Body, TestValues).GetHashCode();
+    }
+
+    internal static class HashCombiner
+    {
+        public static int Combine<T1, T2>(T1 a, T2 b) =>
+            Combine(a?.GetHashCode() ?? 0, b?.GetHashCode() ?? 0);
+
+        public static int Combine(int h1, int h2)
+        {
+            if (h1 == 0) return h2;
+            unchecked
+            {
+                return (h1 << 5) + h1 ^ h2;
+            }
+        }
     }
 
     public class SwitchExpression : Expression
