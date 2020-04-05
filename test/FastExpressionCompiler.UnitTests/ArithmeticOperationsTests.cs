@@ -236,7 +236,7 @@ namespace FastExpressionCompiler.UnitTests
             var b = Parameter(typeof(int), "b");
             var expr = Lambda<Func<int, int, int>>(ExclusiveOr(a, b), a, b);
 
-            var fs = expr.Compile();
+            var fs = expr.CompileSys();
             var f = expr.CompileFast(true);
 
             Assert.IsNotNull(f);
@@ -251,7 +251,7 @@ namespace FastExpressionCompiler.UnitTests
             var b = Parameter(typeof(int), "b");
             var expr = Lambda<Func<int, int, int>>(RightShift(a, b), a, b);
 
-            var fs = expr.Compile();
+            var fs = expr.CompileSys();
             var f = expr.CompileFast(true);
 
             Assert.IsNotNull(f);
@@ -266,7 +266,7 @@ namespace FastExpressionCompiler.UnitTests
             var b = Parameter(typeof(int), "b");
             var expr = Lambda<Func<int, int, int>>(LeftShift(a, b), a, b);
 
-            var fs = expr.Compile();
+            var fs = expr.CompileSys();
             var f = expr.CompileFast(true);
 
             Assert.IsNotNull(f);
@@ -396,6 +396,19 @@ namespace FastExpressionCompiler.UnitTests
             AssertAdd(new NonPrimitiveInt32ValueType(1), new NonPrimitiveInt32ValueType(2), new NonPrimitiveInt32ValueType(3));
         }
 
+#if !LIGHT_EXPRESSION
+
+        [Test]
+        public void Can_calculate_arithmetic_function_obeying_operator_precedence()
+        {
+            Expression<Func<int, int, int, int, int>> expr = (arg1, arg2, arg3, arg4) => arg1 + arg2 * arg3 / arg4;
+
+            var arithmeticFunc = expr.CompileFast(true);
+
+            Assert.IsNotNull(arithmeticFunc);
+            Assert.AreEqual(arithmeticFunc(1, 2, 3, 4), 2);
+        }
+
         [Test(Description = "Support all types and operations from System.Numerics ")]
         public void Can_calculate_arithmetic_operation_with_vectors()
         {
@@ -431,6 +444,8 @@ namespace FastExpressionCompiler.UnitTests
             var f = expr.CompileFast(true);
             Assert.AreEqual("a1", f());
         }
+
+#endif
 
         public override bool Equals(object obj)
         {
