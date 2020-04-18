@@ -761,7 +761,7 @@ namespace FastExpressionCompiler
         internal static class CurryClosureFuncs
         {
             public static readonly MethodInfo[] Methods =
-                typeof(CurryClosureFuncs).GetTypeInfo().DeclaredMethods.AsArray();
+                typeof(CurryClosureFuncs).GetDeclaredMethods();
 
             public static Func<R> Curry<C, R>(Func<C, R> f, C c) =>
                 () => f(c);
@@ -789,7 +789,7 @@ namespace FastExpressionCompiler
         internal static class CurryClosureActions
         {
             public static readonly MethodInfo[] Methods =
-                typeof(CurryClosureActions).GetTypeInfo().DeclaredMethods.AsArray();
+                typeof(CurryClosureActions).GetDeclaredMethods();
 
             public static Action Curry<C>(Action<C> a, C c) =>
                 () => a(c);
@@ -4033,7 +4033,7 @@ namespace FastExpressionCompiler
                             if (expr.Left.Type != expr.Right.Type || expr.Left.Type != typeof(string))
                                 paraType = typeof(object);
 
-                            var methods = typeof(string).GetTypeInfo().DeclaredMethods.AsArray();
+                            var methods = typeof(string).GetDeclaredMethods();
                             for (var i = 0; i < methods.Length; i++)
                             {
                                 var m = methods[i];
@@ -4060,7 +4060,7 @@ namespace FastExpressionCompiler
 
                             if (methodName != null)
                             {
-                                var methods = exprType.GetTypeInfo().DeclaredMethods.AsArray();
+                                var methods = exprType.GetDeclaredMethods();
                                 for (var i = 0; method == null && i < methods.Length; i++)
                                 {
                                     var m = methods[i];
@@ -4429,7 +4429,7 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type)
         {
-            var methods = type.GetTypeInfo().DeclaredMethods.AsArray();
+            var methods = type.GetDeclaredMethods();
             for (var i = 0; i < methods.Length; i++)
             {
                 var m = methods[i];
@@ -4448,7 +4448,7 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindPropertyGetMethod(this Type propHolderType, string propName)
         {
-            var methods = propHolderType.GetTypeInfo().DeclaredMethods.AsArray();
+            var methods = propHolderType.GetDeclaredMethods();
             for (var i = 0; i < methods.Length; i++)
             {
                 var method = methods[i];
@@ -4470,7 +4470,7 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindPropertySetMethod(this Type propHolderType, string propName)
         {
-            var methods = propHolderType.GetTypeInfo().DeclaredMethods.AsArray();
+            var methods = propHolderType.GetDeclaredMethods();
             for (var i = 0; i < methods.Length; i++)
             {
                 var method = methods[i];
@@ -4492,7 +4492,7 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
-            var methods = type.GetTypeInfo().DeclaredMethods.AsArray();
+            var methods = type.GetDeclaredMethods();
             for (var i = 0; i < methods.Length; i++)
             {
                 var m = methods[i];
@@ -4631,7 +4631,18 @@ namespace FastExpressionCompiler
 
     /// Hey
     public static class ILGeneratorHacks
-    {
+    {  
+        // TypeBuilder Hack
+        static FieldInfo m_listMethods = typeof(TypeBuilder).GetTypeInfo().GetDeclaredField("m_listMethods");
+
+        internal static MethodInfo[] GetDeclaredMethods(this Type type)
+        {
+ 
+            if (type is TypeBuilder typeBuilder)
+                return ((IEnumerable<MethodBuilder>)m_listMethods.GetValue(typeBuilder)).AsArray();
+            else
+                return type.GetTypeInfo().DeclaredMethods.ToArray();
+        }
         /*
         // Original methods from ILGenerator.cs
         
