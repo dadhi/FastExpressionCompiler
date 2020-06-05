@@ -23,7 +23,7 @@ namespace FastExpressionCompiler.UnitTests
             }
 
             TryRun(new ArithmeticOperationsTests().Run);
-            // TryRun(FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests.Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests().Run);
 
             if (failed)
             {
