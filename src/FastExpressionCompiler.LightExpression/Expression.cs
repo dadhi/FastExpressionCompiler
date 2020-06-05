@@ -1626,46 +1626,8 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class SimpleBinaryExpression : BinaryExpression
     {
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
-        {
-            switch (NodeType)
-            {
-                case ExpressionType.Add:
-                    return SysExpr.Add(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.Subtract:
-                    return SysExpr.Subtract(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.Multiply:
-                    return SysExpr.Multiply(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.Divide:
-                    return SysExpr.Divide(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.Power:
-                    return SysExpr.Power(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.Coalesce:
-                    return SysExpr.Coalesce(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.And:
-                    return SysExpr.And(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.AndAlso:
-                    return SysExpr.AndAlso(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.Or:
-                    return SysExpr.Or(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.OrElse:
-                    return SysExpr.OrElse(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.Equal:
-                    return SysExpr.Equal(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.NotEqual:
-                    return SysExpr.NotEqual(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.GreaterThan:
-                    return SysExpr.GreaterThan(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.GreaterThanOrEqual:
-                    return SysExpr.GreaterThanOrEqual(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.LessThan:
-                    return SysExpr.LessThan(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                case ExpressionType.LessThanOrEqual:
-                    return SysExpr.LessThanOrEqual(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-                default:
-                    throw new NotSupportedException($"Not a valid {NodeType} for arithmetic or boolean binary expression.");
-            }
-        }
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
 
         internal SimpleBinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type)
             : base(nodeType, left, right, type) { }
@@ -1802,7 +1764,7 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType => ExpressionType.Parameter;
         public override Type Type { get; }
 
-        // todo: we need the version without this members
+        // todo: @perf we need the version without this members
         public readonly string Name;
         public readonly bool IsByRef;
 

@@ -6,7 +6,7 @@ using NUnit.Framework;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
-using System.Linq.Expressions; // todo: remove later
+using System.Linq.Expressions; // todo: @remove later
 using static System.Linq.Expressions.Expression;
 using Expr = System.Linq.Expressions.Expression;
 using ParameterExpr = System.Linq.Expressions.ParameterExpression;
@@ -44,12 +44,16 @@ namespace FastExpressionCompiler.UnitTests
             Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide();
             Can_calculate_arithmetic_operation_on_non_primitive_class();
             Can_calculate_arithmetic_operation_on_non_primitive_value_type();
-            
-            // Can_calculate_arithmetic_operation_with_vectors();
-            // Can_add_strings();
-            // Can_add_string_and_not_string();
 
+#if !LIGHT_EXPRESSION
+            Can_calculate_arithmetic_operation_with_vectors();
+            Can_add_strings();
+            Can_add_string_and_not_string();
+
+            return 28;
+#else
             return 25;
+#endif
         }
 
         [Test]

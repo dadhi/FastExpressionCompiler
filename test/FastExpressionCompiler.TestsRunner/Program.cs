@@ -3,14 +3,13 @@ using FastExpressionCompiler.UnitTests;
 
 namespace FastExpressionCompiler.UnitTests
 {
-
     public class Program
     {
         public static void Main()
         {
             var failed = false;
             var totalTestCount = 0;
-            void TryRun(Func<int> run) 
+            void TryRun(Func<int> run)
             {
                 try
                 {
@@ -30,9 +29,10 @@ namespace FastExpressionCompiler.UnitTests
             {
                 Console.WriteLine("Some tests are FAILED! ERROR!");
                 Environment.Exit(1); // error
+                return;
             }
-            else
-                Console.WriteLine($"{totalTestCount} tests are passing green!");
+
+            Console.WriteLine($"{totalTestCount} tests are passing green!");
         }
     }
 }
