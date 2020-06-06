@@ -9,17 +9,58 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     // considers in/out/ref in C# represented by ByRef in expressions (i.e. single representation for 3 C# keywords)
     [TestFixture]
     public class Issue55_CompileFast_crash_with_ref_parameter
     {
+         public int Run()
+        {
+            RefDoNothingShouldNoCrash();
+            RefDoNothingShouldNoCrashCustomStruct();
+            RefFromConstant();
+            RefMethodCallingRefMethod();
+            RefMethodCallingRefMethodCustomStruct();
+            RefMethodCallingRefMethodWithLocal();
+            OutRefMethodCallingRefMethodWithLocal();
+            RefMethodCallingRefMethodWithLocalReturnLocalCalled();
+            VariableVariableRefVariableRefParameterReturn();
+            Ref1Ref2Ref3();
+            SetMinusOneAndOneForDoubleRefParameterInCall();
+            AsValueAndAsRef();
+            GenericRefFromConstant();
+            GenericRefFromConstantReturn();
+            BlockWithNonRefStatementLast();
+            RefReturnToVoid();
+            RefRefVoid();
+            RefRefReturnToVoid();
+            RefSetSetForFields();
+            RefDoNothingReturnCostant();
+            RefFromLargeConstant();
+            RefSetFromParameter();
+            NonGenericSetterFieldShould_not_crash();
+            GenericRefStructFieldShould_not_crash();
+            RefAssign();
+            RefAssignCustomStruct();
+            CoalesceIntoByRef();
+            ConstantOutInCondition();
+            ConstantOut();
+
+#if !LIGHT_EXPRESSION
+            IntPtrZeroReturn();
+            NewIntPtr13Return();
+            return 31;
+#else            
+            return 29;
+#endif
+        }
+ 
         delegate TResult FuncRef<T, out TResult>(ref T a1);
         delegate TResult FuncRefIn<T1, in T2, out TResult>(ref T1 a1, T2 a2);
         delegate void ActionRef<T>(ref T a1);
@@ -117,7 +158,7 @@ namespace FastExpressionCompiler.UnitTests
         private static void SetMinusBigInteger1(ref BigInteger localByRef) { localByRef = new BigInteger(-1); }
 
         [Test]
-        public void RefMethodCallingRefMethodCustomStuct()
+        public void RefMethodCallingRefMethodCustomStruct()
         {
             void CallOtherRef(ref BigInteger localByRef) => SetMinusBigInteger1(ref localByRef);
             var objRef = Parameter(typeof(BigInteger).MakeByRefType());
@@ -189,8 +230,6 @@ namespace FastExpressionCompiler.UnitTests
             direct(ref exampleC);
             Assert.AreEqual(0, exampleC);
         }
-
-
 
         private static void Set1AndMinus1(ref int ref1, ref int ref2) { ref2 = -1; ref1 = 1; }
 
@@ -423,8 +462,6 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(3, exampleC);
         }
 
-
-
         [Test]
         public void BlockWithNonRefStatementLast()
         {
@@ -492,7 +529,6 @@ namespace FastExpressionCompiler.UnitTests
             direct(ref exampleC, ref exampleC2);
             Assert.AreEqual(0, exampleC);
         }
-
 
         [Test]
         public void RefRefReturnToVoid()

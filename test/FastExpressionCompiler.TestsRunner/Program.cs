@@ -82,6 +82,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.IssueTests.Issue19_Nested_CallExpression_causes_AccessViolationException().Run);
             TryRun(new Issue44_Conversion_To_Nullable_Throws_Exception().Run);
             TryRun(new FastExpressionCompiler.LightExpression.IssueTests.Issue44_Conversion_To_Nullable_Throws_Exception().Run);
+            TryRun(new Issue55_CompileFast_crash_with_ref_parameter().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run);
 
             Console.WriteLine();
 
