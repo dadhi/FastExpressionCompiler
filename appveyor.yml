@@ -25,7 +25,7 @@ for:
 
     build_script:
       - dotnet build -c Release -v:m -p:DevMode=false
-      #- dotnet run -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+      - dotnet run -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
       - dotnet test --no-build -c Release -p:DevMode=false
 
     artifacts:

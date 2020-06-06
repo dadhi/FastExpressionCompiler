@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using FastExpressionCompiler.UnitTests;
 
 namespace FastExpressionCompiler.UnitTests
 {
@@ -32,6 +31,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests().Run);
             TryRun(new AssignTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run);
+            TryRun(new BinaryExpressionTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests().Run);
 
             if (failed)
             {

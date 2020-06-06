@@ -4,18 +4,66 @@ using NUnit.Framework;
 #if LIGHT_EXPRESSION
 using ExpressionType = System.Linq.Expressions.ExpressionType;
 using static FastExpressionCompiler.LightExpression.Expression;
-
 namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
     public class BinaryExpressionTests
     {
+        public int Run()
+        {
+            Add_compiles();
+            AddAssign_compiles();
+            AddAssignChecked_compiles();
+            AddChecked_compiles();
+            And_compiles();
+            AndAlso_compiles();
+            AndAssign_compiles();
+            ArrayIndex_compiles();
+            Assign_compiles();
+            Coalesce_compiles();
+            Divide_compiles();
+            DivideAssign_compiles();
+            Equal_compiles();
+            ExclusiveOr_compiles();
+            ExclusiveOrAssign_compiles();
+            GreaterThan_compiles();
+            GreaterThanOrEqual_compiles();
+            LeftShift_compiles();
+            LeftShiftAssign_compiles();
+            LessThan_compiles();
+            LessThanOrEqual_compiles();
+            MakeBinary_Add_compiles();
+            MakeBinary_ArrayIndex_compiles();
+            MakeBinary_Assign_compiles();
+            MakeBinary_Coalesce_compiles();
+            Modulo_compiles();
+            ModuloAssign_compiles();
+            Multiply_compiles();
+            MultiplyAssign_compiles();
+            MultiplyAssignChecked_compiles();
+            MultiplyChecked_compiles();
+            NotEqual_compiles();
+            Or_compiles();
+            OrAssign_compiles();
+            OrElse_compiles();
+            Power_compiles();
+            PowerAssign_compiles();
+            ReferenceEqual_compiles();
+            ReferenceNotEqual_compiles();
+            RightShift_compiles();
+            RightShiftAssign_compiles();
+            Subtract_compiles();
+            SubtractAssign_compiles();
+            SubtractAssignChecked_compiles();
+            SubtractChecked_compiles();
+            return 45;
+        }
+
         [Test]
         public void Add_compiles()
         {
@@ -598,7 +646,7 @@ namespace FastExpressionCompiler.UnitTests
                 SubtractChecked(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(3);
+            int result = expression.CompileFast(true)(3);
 
             Assert.AreEqual(1, result);
         }
