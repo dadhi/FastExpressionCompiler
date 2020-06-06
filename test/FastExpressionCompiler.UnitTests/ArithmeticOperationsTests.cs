@@ -8,8 +8,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
 using System.Linq.Expressions; // todo: @remove later
 using static System.Linq.Expressions.Expression;
-using Expr = System.Linq.Expressions.Expression;
-using ParameterExpr = System.Linq.Expressions.ParameterExpression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
