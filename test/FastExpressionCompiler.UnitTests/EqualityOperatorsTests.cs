@@ -13,6 +13,21 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class EqualityOperatorsTests
     {
+        public int Run()
+        {
+            Greater_or_equal_than_DateTime_constant();
+            Less_or_equal_than_DateTime_constant();
+
+#if !LIGHT_EXPRESSION
+            Greater_or_equal_than_DateTime_parameter();
+            Less_or_equal_than_DateTime_parameter();
+            Complex_expression_with_DateTime_Strings_and_Int();
+            return 5;
+#else
+            return 2;
+#endif        
+}
+
 #if !LIGHT_EXPRESSION
         [Test]
         public void Greater_or_equal_than_DateTime_parameter()
