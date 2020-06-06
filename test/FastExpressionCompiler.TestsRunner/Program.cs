@@ -35,6 +35,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests().Run);
             TryRun(new BlockTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.BlockTests().Run);
+            TryRun(new ClosureConstantTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.ClosureConstantTests().Run);
 
             if (failed)
             {
