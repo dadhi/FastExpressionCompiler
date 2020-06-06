@@ -14,6 +14,20 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class AssignTests
     {
+        public int Run()
+        {
+            Can_assign_to_parameter();
+            Can_assign_to_parameter_in_nested_lambda();
+            Parameter_test_try_catch_finally_result();
+            Local_Variable_test_try_catch_finally_result();
+            Member_test_prop();
+            Member_test_field();
+            Member_test_block_result_should_detect_non_block_variable();
+            Member_test_block_result();
+            Member_test_try_catch_finally_result();
+            return 9;
+        }
+
         [Test]
         public void Can_assign_to_parameter()
         {
@@ -214,7 +228,6 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(tryCatch.NestedTest);
             Assert.AreEqual("Value", tryCatch.NestedTest.Nested);
         }
-
         public class Test
         {
             public int Prop { get; set; }

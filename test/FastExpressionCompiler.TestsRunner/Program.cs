@@ -17,7 +17,7 @@ namespace FastExpressionCompiler.UnitTests
                 {
                     var testsPassed = run();
                     totalTestPassed += testsPassed;
-                    Console.WriteLine($"{testsPassed} of {testsTypeName} are passing.");
+                    Console.WriteLine($"{testsPassed, -4} of {testsTypeName} are passing.");
                 }
                 catch (Exception ex)
                 {
@@ -30,6 +30,8 @@ namespace FastExpressionCompiler.UnitTests
 
             TryRun(new ArithmeticOperationsTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests().Run);
+            TryRun(new AssignTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run);
 
             if (failed)
             {
@@ -38,7 +40,7 @@ namespace FastExpressionCompiler.UnitTests
                 return;
             }
 
-            Console.WriteLine($"{totalTestPassed} of all tests are passing in {sw.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"{totalTestPassed, -4} of all tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
     }
 }
