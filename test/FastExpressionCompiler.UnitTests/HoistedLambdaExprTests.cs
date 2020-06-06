@@ -7,6 +7,12 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class HoistedLambdaExprTests
     {
+        public int Run()
+        {
+            Should_compile_nested_lambda();
+            return 1;
+        }
+
         [Test]
         public void Should_compile_nested_lambda()
         {
