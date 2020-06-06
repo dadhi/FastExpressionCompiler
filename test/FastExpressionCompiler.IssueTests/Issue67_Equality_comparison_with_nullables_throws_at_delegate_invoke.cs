@@ -4,11 +4,26 @@ using System.Linq.Expressions;
 using NUnit.Framework;
 #pragma warning disable 219
 
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 {
     [TestFixture]
     public class Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke
     {
+        public int Run()
+        {
+            Comparing_nullable_equal_works();
+            Comparing_struct_equal_works();
+            Comparing_int_equal_works();
+            Comparing_nullable_equal_point_works();
+            Comparing_nullable_unequal_works();
+            Comparing_nullable_greater_works();
+            Comparing_nullable_greaterOrEqual_works();
+            Comparing_nullable_less_works();
+            Comparing_nullable_lessOrEqual_works();
+            Compare_nullable_to_null_should_work();
+            return 10;
+        }
+
         class Foo
         {
             public int? Prop { get; set; }

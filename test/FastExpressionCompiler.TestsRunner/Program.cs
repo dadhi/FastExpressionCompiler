@@ -84,6 +84,7 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.IssueTests.Issue44_Conversion_To_Nullable_Throws_Exception().Run);
             TryRun(new Issue55_CompileFast_crash_with_ref_parameter().Run);
             TryRun(new FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run);
+            TryRun(new Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke().Run);
 
             Console.WriteLine();
 
