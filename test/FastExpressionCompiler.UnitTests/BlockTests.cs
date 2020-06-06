@@ -16,6 +16,23 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class BlockTests
     {
+        public int Run()
+        {
+            Block_local_variable_assignment();
+            Block_local_variable_assignment_array_closure();
+            Block_local_variable_assignment_with_lambda();
+            Block_local_variable_assignment_with_lambda_array_closure();
+            Block_local_variable_assignment_with_lambda_with_param();
+            Block_local_variable_assignment_with_lambda_with_param_array_closure();
+            Block_local_variable_assignment_with_lambda_with_param_override();
+            Block_local_variable_assignment_with_lambda_with_param_override_array_closure();
+            Block_local_variable_assignment_return_with_variable();
+            Block_local_variable_assignment_return_with_variable_array_closure();
+            Block_local_variable_assignment_with_member_init();
+            Block_local_variable_assignment_with_member_init_array_closure();
+            return 12;
+        }
+
         [Test]
         public void Block_local_variable_assignment()
         {
@@ -28,7 +45,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int>>(block);
 
-            var fastCompiled = lambda.CompileFast<Func<int>>();
+            var fastCompiled = lambda.CompileFast<Func<int>>(true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(6, fastCompiled());
@@ -45,7 +62,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int>>(block);
 
-            var fastCompiled = lambda.CompileFast<Func<int>>();
+            var fastCompiled = lambda.CompileFast<Func<int>>(true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(6, fastCompiled());
@@ -62,7 +79,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int>>(block);
 
-            var fastCompiled = lambda.CompileFast<Func<int>>();
+            var fastCompiled = lambda.CompileFast<Func<int>>(true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(6, fastCompiled());
@@ -79,7 +96,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int>>(block);
 
-            var fastCompiled = lambda.CompileFast<Func<int>>();
+            var fastCompiled = lambda.CompileFast<Func<int>>(true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(6, fastCompiled());
@@ -118,7 +135,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int, int>>(block, param);
 
-            var fastCompiled = lambda.CompileFast<Func<int, int>>();
+            var fastCompiled = lambda.CompileFast<Func<int, int>>(true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(8, fastCompiled(8));
@@ -154,7 +171,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int, int>>(block, param);
 
-            var fastCompiled = lambda.CompileFast<Func<int, int>>();
+            var fastCompiled = lambda.CompileFast<Func<int, int>>(true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(5, fastCompiled(8));
@@ -171,7 +188,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int>>(block);
 
-            var fastCompiled = lambda.CompileFast<Func<int>>();
+            var fastCompiled = lambda.CompileFast<Func<int>>(true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(5, fastCompiled());
@@ -188,7 +205,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int>>(block);
 
-            var fastCompiled = lambda.CompileFast<Func<int>>();
+            var fastCompiled = lambda.CompileFast<Func<int>>(true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(5, fastCompiled());
@@ -225,7 +242,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int>>(block);
 
-            var fastCompiled = lambda.CompileFast<Func<int>>();
+            var fastCompiled = lambda.CompileFast<Func<int>>(true);
 
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(5, fastCompiled());

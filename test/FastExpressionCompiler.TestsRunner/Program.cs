@@ -33,6 +33,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run);
             TryRun(new BinaryExpressionTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests().Run);
+            TryRun(new BlockTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.BlockTests().Run);
 
             if (failed)
             {
