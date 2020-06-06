@@ -55,6 +55,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.LoopTests().Run);
             TryRun(new ManuallyComposedExprTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.ManuallyComposedExprTests().Run);
+            TryRun(new NestedLambdaTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run);
 
             if (failed)
             {
