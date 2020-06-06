@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class ConstantAndConversionTests
     {
-         public int Run()
+        public int Run()
         {
             Expressions_with_small_long_casts_should_not_crash();
             Expressions_with_larger_long_casts_should_not_crash();
