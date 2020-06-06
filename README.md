@@ -34,6 +34,8 @@ Moreover, the compiled delegate may be slower than manually created delegate bec
 _TL;DR;_
 > Expression.Compile creates a DynamicMethod and associates it with an anonymous assembly to run it in a sand-boxed environment. This makes it safe for a dynamic method to be emitted and executed by partially trusted code but adds some run-time overhead.
 
+See also [a deep dive to Delegate internals](https://mattwarren.org/2017/01/25/How-do-.NET-delegates-work/#different-types-of-delegates).
+
 `.CompileFast()` is __10-30x times faster__ than `.Compile()`.  
 The compiled delegate may be _in some cases_ 15x times faster than the one produced by `.Compile()`.
 
