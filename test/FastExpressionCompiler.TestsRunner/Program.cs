@@ -51,6 +51,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new GotoTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.GotoTests().Run);
             TryRun(new HoistedLambdaExprTests().Run);
+            TryRun(new LoopTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.LoopTests().Run);
 
             if (failed)
             {
