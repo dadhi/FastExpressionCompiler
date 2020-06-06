@@ -12,6 +12,12 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class GotoTests
     {
+        public int Run()
+        {
+            Can_goto_with_value();
+            return 1;
+        }
+
         [Test]
         public void Can_goto_with_value()
         {

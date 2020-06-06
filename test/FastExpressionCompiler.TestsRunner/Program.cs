@@ -48,6 +48,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.DefaultTests().Run);
             TryRun(new EqualityOperatorsTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.EqualityOperatorsTests().Run);
+            TryRun(new GotoTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.GotoTests().Run);
 
             if (failed)
             {
