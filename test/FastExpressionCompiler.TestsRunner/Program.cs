@@ -59,6 +59,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run);
             TryRun(new PreConstructedClosureTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.PreConstructedClosureTests().Run);
+            TryRun(new TryCatchTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run);
 
             if (failed)
             {
