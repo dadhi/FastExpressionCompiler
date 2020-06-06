@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             var failed = false;
             var totalTestPassed = 0;
-            void RunTest(Func<int> run, string name = null)
+            void Run(Func<int> run, string name = null)
             {
                 var testsName = name ?? run.Method.DeclaringType.FullName;
                 try
@@ -32,63 +32,65 @@ namespace FastExpressionCompiler.UnitTests
             Console.WriteLine("Running UnitTests...");
             Console.WriteLine();
 
-            RunTest(new ArithmeticOperationsTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests().Run);
-            RunTest(new AssignTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run);
-            RunTest(new BinaryExpressionTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests().Run);
-            RunTest(new BlockTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.BlockTests().Run);
-            RunTest(new ClosureConstantTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.ClosureConstantTests().Run);
-            RunTest(new CoalesceTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.CoalesceTests().Run);
-            RunTest(new ConditionalOperatorsTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.ConditionalOperatorsTests().Run);
-            RunTest(new ConstantAndConversionTests().Run);
-            RunTest(new ConvertOperatorsTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.ConvertOperatorsTests().Run);
-            RunTest(new DefaultTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.DefaultTests().Run);
-            RunTest(new EqualityOperatorsTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.EqualityOperatorsTests().Run);
-            RunTest(new GotoTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.GotoTests().Run);
-            RunTest(new HoistedLambdaExprTests().Run);
-            RunTest(new LoopTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.LoopTests().Run);
-            RunTest(new ManuallyComposedExprTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.ManuallyComposedExprTests().Run);
-            RunTest(new NestedLambdaTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run);
-            RunTest(new PreConstructedClosureTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.PreConstructedClosureTests().Run);
-            RunTest(new TryCatchTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run);
-            RunTest(new TypeBinaryExpressionTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.TypeBinaryExpressionTests().Run);
-            RunTest(new UnaryExpressionTests().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests().Run);
-            RunTest(new ValueTypeTests().Run);
+            Run(new ArithmeticOperationsTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests().Run);
+            Run(new AssignTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run);
+            Run(new BinaryExpressionTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests().Run);
+            Run(new BlockTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.BlockTests().Run);
+            Run(new ClosureConstantTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.ClosureConstantTests().Run);
+            Run(new CoalesceTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.CoalesceTests().Run);
+            Run(new ConditionalOperatorsTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.ConditionalOperatorsTests().Run);
+            Run(new ConstantAndConversionTests().Run);
+            Run(new ConvertOperatorsTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.ConvertOperatorsTests().Run);
+            Run(new DefaultTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.DefaultTests().Run);
+            Run(new EqualityOperatorsTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.EqualityOperatorsTests().Run);
+            Run(new GotoTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.GotoTests().Run);
+            Run(new HoistedLambdaExprTests().Run);
+            Run(new LoopTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.LoopTests().Run);
+            Run(new ManuallyComposedExprTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.ManuallyComposedExprTests().Run);
+            Run(new NestedLambdaTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run);
+            Run(new PreConstructedClosureTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.PreConstructedClosureTests().Run);
+            Run(new TryCatchTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run);
+            Run(new TypeBinaryExpressionTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.TypeBinaryExpressionTests().Run);
+            Run(new UnaryExpressionTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests().Run);
+            Run(new ValueTypeTests().Run);
 
             Console.WriteLine();
             Console.WriteLine("Running IssueTests...");
             Console.WriteLine();
 
-            RunTest(new Issue14_String_constant_comparisons_fail().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.IssueTests.Issue14_String_constant_comparisons_fail().Run);
-            RunTest(new Issue19_Nested_CallExpression_causes_AccessViolationException().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.IssueTests.Issue19_Nested_CallExpression_causes_AccessViolationException().Run);
-            RunTest(new Issue44_Conversion_To_Nullable_Throws_Exception().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.IssueTests.Issue44_Conversion_To_Nullable_Throws_Exception().Run);
-            RunTest(new Issue55_CompileFast_crash_with_ref_parameter().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run);
-            RunTest(new Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke().Run);
-            RunTest(new Issue71_Cannot_bind_to_the_target_method_because_its_signature().Run);
-            RunTest(new FastExpressionCompiler.LightExpression.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature().Run);
-            RunTest(() => new Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor().Run().GetAwaiter().GetResult(),
+            Run(new Issue14_String_constant_comparisons_fail().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue14_String_constant_comparisons_fail().Run);
+            Run(new Issue19_Nested_CallExpression_causes_AccessViolationException().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue19_Nested_CallExpression_causes_AccessViolationException().Run);
+            Run(new Issue44_Conversion_To_Nullable_Throws_Exception().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue44_Conversion_To_Nullable_Throws_Exception().Run);
+            Run(new Issue55_CompileFast_crash_with_ref_parameter().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run);
+            Run(new Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke().Run);
+            Run(new Issue71_Cannot_bind_to_the_target_method_because_its_signature().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature().Run);
+            Run(() => new Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor().Run().GetAwaiter().GetResult(),
                 nameof(Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor));
+            Run(new Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception().Run);
 
             Console.WriteLine();
 
