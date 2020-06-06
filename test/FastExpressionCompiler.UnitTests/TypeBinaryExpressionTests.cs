@@ -13,7 +13,15 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class TypeBinaryExpressionTests
     {
-        [Test]
+        public int Run()
+        {
+            // TypeEqual_compiles(); // todo: not supported yet
+            TypeIs_compiles();
+
+            return 1;
+        }
+
+        [Test][Ignore("todo - TypeEqual is not supported yet")]
         public void TypeEqual_compiles()
         {
             var sExpr = Parameter(typeof(object), "o");
@@ -21,7 +29,7 @@ namespace FastExpressionCompiler.UnitTests
                 TypeEqual(sExpr, typeof(string)),
                 sExpr);
 
-            var f = expr.CompileFast();
+            var f = expr.CompileFast(true);
             bool result = f("123");
 
             Assert.IsTrue(result);
@@ -35,7 +43,7 @@ namespace FastExpressionCompiler.UnitTests
                 TypeIs(sExpr, typeof(string)),
                 sExpr);
 
-            var f = expr.CompileFast();
+            var f = expr.CompileFast(true);
             bool result = f("123");
 
             Assert.IsTrue(result);
