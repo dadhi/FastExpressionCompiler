@@ -37,6 +37,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.BlockTests().Run);
             TryRun(new ClosureConstantTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.ClosureConstantTests().Run);
+            TryRun(new CoalesceTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.CoalesceTests().Run);
 
             if (failed)
             {
