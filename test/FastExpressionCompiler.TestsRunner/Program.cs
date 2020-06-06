@@ -63,6 +63,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run);
             TryRun(new TypeBinaryExpressionTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.TypeBinaryExpressionTests().Run);
+            TryRun(new UnaryExpressionTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests().Run);
 
             if (failed)
             {

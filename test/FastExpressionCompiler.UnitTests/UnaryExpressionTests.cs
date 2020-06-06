@@ -17,6 +17,34 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class UnaryExpressionTests
     {
+        public int Run()
+        {
+            ArrayLength_compiles();
+            Convert_compiles();
+            ConvertChecked_compiles();
+            Increment_Constant_compiles();
+            Decrement_compiles();
+            Increment_compiles();
+            IsFalse_compiles();
+            IsTrue_compiles();
+            MakeUnary_compiles();
+            Negate_compiles();
+            NegateChecked_compiles();
+            Not_compiles();
+            OnesComplement_compiles();
+            PostDecrementAssign_compiles();
+            PostIncrementAssign_compiles();
+            PreDecrementAssign_compiles();
+            PreIncrementAssign_compiles();
+            Throw_compiles();
+            TypeAs_compiles();
+            UnaryPlus_compiles();
+            Unbox_compiles();
+
+            return 21;
+        }
+
+
         [Test]
         public void ArrayLength_compiles()
         {
