@@ -13,6 +13,28 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class PreConstructedClosureTests
     {
+        public int Run()
+        {
+            Can_pass_closure_with_constant_to_TryCompile();
+            Can_pass_ANY_class_closure_with_constant_to_TryCompile();
+            Can_pass_closure_with_block_to_TryCompile();
+            Can_pass_closure_with_variable_block_to_TryCompile();
+            Can_pass_closure_with_try_catch_to_TryCompile();
+            Can_use_block_when_compiling_a_static_delegate();
+            Can_use_variable_block_when_compiling_a_static_delegate();
+            Can_Not_use_primitive_types_in_manual_lambda_closure();
+
+#if !LIGHT_EXPRESSION
+
+            Can_prevent_closure_creation_when_compiling_a_static_delegate();
+            Can_pass_closure_to_hoisted_expr_with_nested_lambda();
+            Can_use_primitive_types_in_hoisted_lambda_closure();
+            return 11;
+#else            
+            return 8;
+#endif
+        }
+
         [Test]
         public void Can_pass_closure_with_constant_to_TryCompile()
         {
@@ -153,7 +175,6 @@ namespace FastExpressionCompiler.UnitTests
             var result = f();
             Assert.IsNotNull(result);
         }
-
 
         [Test]
         public void Can_pass_closure_to_hoisted_expr_with_nested_lambda()
