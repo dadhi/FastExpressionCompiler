@@ -11,12 +11,9 @@ skip_commits:
   message: /skipci .*/
 
 build_script:
-  - dotnet run -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
-
-  - dotnet test -f netcoreapp3.1 -c:Release test/FastExpressionCompiler.UnitTests/FastExpressionCompiler.UnitTests.csproj
-  - dotnet test -f netcoreapp3.1 -c:Release test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.IssueTests.csproj
-  - dotnet test -f netcoreapp3.1 -c:Release test/FastExpressionCompiler.LightExpression.UnitTests/FastExpressionCompiler.LightExpression.UnitTests.csproj
-  - dotnet test -f netcoreapp3.1 -c:Release test/FastExpressionCompiler.LightExpression.IssueTests/FastExpressionCompiler.LightExpression.IssueTests.csproj
+  - dotnet run  -f netcoreapp3.1 -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+  - dotnet test -f netcoreapp3.1 -c Release test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.IssueTests.csproj
+  - dotnet test -f netcoreapp3.1 -c Release test/FastExpressionCompiler.LightExpression.IssueTests/FastExpressionCompiler.LightExpression.IssueTests.csproj
 
 for:
   - matrix:
@@ -25,8 +22,9 @@ for:
 
     build_script:
       - dotnet build -c Release -v:m -p:DevMode=false
-      - dotnet run -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
-      - dotnet test --no-build -c Release -p:DevMode=false
+      - dotnet run  --no-build -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+      - dotnet test --no-build -c Release -p:DevMode=false test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.IssueTests.csproj
+      - dotnet test --no-build -c Release -p:DevMode=false test/FastExpressionCompiler.LightExpression.IssueTests/FastExpressionCompiler.LightExpression.IssueTests.csproj
 
     artifacts:
       - path: .\.dist\*.nupkg
