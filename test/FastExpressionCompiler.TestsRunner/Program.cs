@@ -85,6 +85,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new Issue55_CompileFast_crash_with_ref_parameter().Run);
             TryRun(new FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run);
             TryRun(new Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke().Run);
+            TryRun(new Issue71_Cannot_bind_to_the_target_method_because_its_signature().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature().Run);
 
             Console.WriteLine();
 
