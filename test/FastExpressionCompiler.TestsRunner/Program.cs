@@ -44,6 +44,8 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new ConstantAndConversionTests().Run);
             TryRun(new ConvertOperatorsTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.ConvertOperatorsTests().Run);
+            TryRun(new DefaultTests().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.UnitTests.DefaultTests().Run);
 
             if (failed)
             {

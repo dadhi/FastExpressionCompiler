@@ -5,7 +5,6 @@ using System;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
@@ -13,6 +12,31 @@ namespace FastExpressionCompiler.UnitTests
 [TestFixture]
     public class DefaultTests
     {
+        public int Run()
+        {
+            void Can_compile_default_values_of<T>() => Can_compile_default_values(typeof(T), default(T));
+
+            Can_compile_default_values_of<int>();
+            Can_compile_default_values_of<bool>();
+            Can_compile_default_values_of<byte>();
+            Can_compile_default_values_of<char>();
+            Can_compile_default_values_of<ushort>();
+            Can_compile_default_values_of<uint>();
+            Can_compile_default_values_of<ulong>();
+            Can_compile_default_values_of<sbyte>();
+            Can_compile_default_values_of<short>();
+            Can_compile_default_values_of<long>();
+            Can_compile_default_values_of<string>();
+            Can_compile_default_values_of<float>();
+            Can_compile_default_values_of<double>();
+            Can_compile_default_values_of<object>();
+            Can_compile_default_decimal_value();
+            Can_compile_default_datetime_value();
+            Can_compile_default_timespan_value();
+
+            return 17;
+        }
+
         [Test]
         [TestCase(typeof(int), default(int))]
         [TestCase(typeof(bool), default(bool))]
