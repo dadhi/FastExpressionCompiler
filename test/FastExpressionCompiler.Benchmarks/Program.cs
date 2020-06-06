@@ -6,6 +6,8 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
+            BenchmarkRunner.Run<ReflectionInvoke_vs_CallWithObjectArgsAndNestedLambda>();
+            
             //BenchmarkRunner.Run<GenericConverter.Compilation>();
             //BenchmarkRunner.Run<GenericConverter.Invocation>();
 
@@ -19,7 +21,7 @@ namespace FastExpressionCompiler.Benchmarks
             //a.LightExpression_with_sub_expressions_CompiledFast();
             //a.Expression_with_sub_expressions_CompiledFast();
             //a.Expression_with_sub_expressions_Compiled();
-            BenchmarkRunner.Run<NestedLambdasVsVars>();
+            // BenchmarkRunner.Run<NestedLambdasVsVars>();
 
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
