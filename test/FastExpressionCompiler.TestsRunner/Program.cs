@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using FastExpressionCompiler.IssueTests;
 
 namespace FastExpressionCompiler.UnitTests
 {
@@ -16,7 +17,7 @@ namespace FastExpressionCompiler.UnitTests
                 {
                     var testsPassed = run();
                     totalTestPassed += testsPassed;
-                    Console.WriteLine($"{testsPassed, -4} of {testsTypeName} are passing.");
+                    Console.WriteLine($"{testsPassed,-4} of {testsTypeName} are passing.");
                 }
                 catch (Exception ex)
                 {
@@ -26,6 +27,10 @@ namespace FastExpressionCompiler.UnitTests
             }
 
             var sw = Stopwatch.StartNew();
+
+            Console.WriteLine();
+            Console.WriteLine("Running UnitTests...");
+            Console.WriteLine();
 
             TryRun(new ArithmeticOperationsTests().Run);
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests().Run);
@@ -67,6 +72,15 @@ namespace FastExpressionCompiler.UnitTests
             TryRun(new FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests().Run);
             TryRun(new ValueTypeTests().Run);
 
+            Console.WriteLine();
+            Console.WriteLine("Running IssueTests...");
+            Console.WriteLine();
+
+            TryRun(new Issue14_String_constant_comparisons_fail().Run);
+            TryRun(new FastExpressionCompiler.LightExpression.IssueTests.Issue14_String_constant_comparisons_fail().Run);
+
+            Console.WriteLine();
+
             if (failed)
             {
                 Console.WriteLine("ERROR: Some tests are FAILED!");
@@ -74,7 +88,7 @@ namespace FastExpressionCompiler.UnitTests
                 return;
             }
 
-            Console.WriteLine($"{totalTestPassed, -4} of all tests are passing in {sw.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"{totalTestPassed,-4} of all tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
     }
 }
