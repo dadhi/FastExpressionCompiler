@@ -10,16 +10,69 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
     public class Issue83_linq2db
     {
+        public int Run()
+        {
+            String_to_number_conversion_using_convert_with_method();
+            linq2db_NullReferenceException();
+            Jit_compiler_internal_limitation();
+            Struct_test();
+            Struct_test2();
+            NullableEnum();
+            NullableEnum2();
+            NewNullableTest();
+            TestToString();
+            Test2ToString();
+            TestDecimal();
+            TestDecimal1();
+            Test3Bool();
+            Test4Bool();
+            ConvertNullableTest();
+            ConvertNullable2Test();
+            ConvertTest();
+            ConvertTest2();
+            AddNullTest();
+            AddNullTest2();
+            Triple_convert_with_decimal_nullables();
+
+#if !LIGHT_EXPRESSION
+            linq2db_Expression();
+            Equal1_Test();
+            Equal2_Test();
+            Equal3_Test();
+            TypeAs_Test();
+            TypeIs_Test();
+            Enum_to_enum_conversion();
+            Enum_to_enumNull_conversion();
+            EnumNull_to_enum_conversion();
+            AccessViolationException_on_nullable_char_convert_to_object();
+            linq2db_InvalidProgramException();
+            linq2db_InvalidProgramException2();
+            linq2db_InvalidProgramException3();
+            linq2db_InvalidProgramException4();
+            TestDoubleConvertSupported();
+            TestLambdaInvokeSupported();
+            TestLambdaInvokeSupported2();
+            TestLambdaInvokeSupported3();
+            TestFirstLambda();
+            TestConverterFailure();
+            TestConverterNullable();
+            TestLdArg();
+            return 43;
+#else
+            return 21;
+#endif
+        }
+
         [Test]
         public void String_to_number_conversion_using_convert_with_method()
         {

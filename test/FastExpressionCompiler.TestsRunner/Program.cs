@@ -91,6 +91,10 @@ namespace FastExpressionCompiler.UnitTests
                 nameof(Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor));
             Run(new Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception().Run);
+            Run(new Issue78_blocks_with_constant_return().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue78_blocks_with_constant_return().Run);
+            Run(new Issue83_linq2db().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue83_linq2db().Run);
 
             Console.WriteLine();
 
