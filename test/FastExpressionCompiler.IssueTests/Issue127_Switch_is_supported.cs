@@ -3,15 +3,33 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
     public class Issue127_Switch_is_supported
     {
+        public int Run()
+        {
+            SwitchIsSupported1();
+            SwitchIsSupportedEnum();
+            SwitchIsSupportedEnum2();
+            SwitchIsSupported11();
+            SwitchIsSupported12();
+            SwitchIsSupported2();
+            SwitchIsSupported30();
+            SwitchIsSupported33();
+            SwitchIsSupported3();
+            SwitchIsSupported31();
+            SwitchIsSupported4();
+            SwitchIsSupported5();
+            SwitchIsSupported6();
+            return 13;
+        }
+
         [Test]
         public void SwitchIsSupported1()
         {
