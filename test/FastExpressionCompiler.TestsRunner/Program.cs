@@ -97,6 +97,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue83_linq2db().Run);
             Run(new Issue88_Constant_from_static_field().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue88_Constant_from_static_field().Run);
+            Run(new Issue91_Issue95_Tests().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue91_Issue95_Tests().Run);
 
             Console.WriteLine();
 
