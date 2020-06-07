@@ -103,6 +103,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue100_ExpressionInfo_wrong_return_type().Run);
             Run(new Issue101_Not_supported_Assign_Modes().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue101_Not_supported_Assign_Modes().Run);
+            Run(new Issue102_Label_and_Goto_Expression().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue102_Label_and_Goto_Expression().Run);
 
             Console.WriteLine();
 
