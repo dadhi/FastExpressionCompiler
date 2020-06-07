@@ -4,16 +4,30 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
     public class Issue101_Not_supported_Assign_Modes
     {
+        public int Run()
+        {
+            PreIncIsSupported();
+            PostIncIsSupported();
+            PreDecIsSupported();
+            PostDecIsSupported();
+            PreIncShortIsSupported();
+            PreInc3IsSupported();
+            ComplexSupported();
+            Complex2Supported();
+            Complex3Supported();
+            return 9;
+        }
+
         [Test]
         public void PreIncIsSupported()
         {

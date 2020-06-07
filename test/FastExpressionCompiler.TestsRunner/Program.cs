@@ -101,6 +101,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue91_Issue95_Tests().Run);
             Run(new Issue100_ExpressionInfo_wrong_return_type().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue100_ExpressionInfo_wrong_return_type().Run);
+            Run(new Issue101_Not_supported_Assign_Modes().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue101_Not_supported_Assign_Modes().Run);
 
             Console.WriteLine();
 
