@@ -88,7 +88,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var expr = Lambda<Func<string, int>>(body, p);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(10, compiled("10"));
         }
@@ -309,7 +309,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<IQueryRunner, IDataReader, InheritanceTests.InheritanceA>>(body, p1, p2);
 
 
-            var compiled = lambda.CompileFast();
+            var compiled = lambda.CompileFast(true);
            
             // NRE during execution of nested function
             var res = compiled(new QueryRunner(), new SQLiteDataReader(false));
@@ -464,7 +464,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var expr = Lambda<Func<Enum3, Enum2>>(body, p);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(Enum2.Value2, compiled(Enum3.Value2));
         }
@@ -483,7 +483,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var expr = Lambda<Func<Enum3, Enum3?>>(body, p);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
         }
@@ -502,7 +502,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var expr = Lambda<Func<Enum3?, Enum3>>(body, p);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
             Assert.Throws<InvalidOperationException>(() => compiled(null));
@@ -517,7 +517,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var expr = Lambda<Func<object>>(body);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(' ', compiled());
         }
@@ -596,7 +596,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<IQueryRunner, IDataReader, object>>(body, p1, p2);
 
 
-            var compiled = lambda.CompileFast();
+            var compiled = lambda.CompileFast(true);
             var c = lambda.Compile();
 
             Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
@@ -661,7 +661,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<IQueryRunner, IDataReader, object>>(body, p1, p2);
 
 
-            var compiled = lambda.CompileFast();
+            var compiled = lambda.CompileFast(true);
             var c = lambda.Compile();
 
             Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
@@ -706,7 +706,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var mapper = Lambda<Func<IDataReader, int>>(mapperBody, a3);
 
-            var compiled = mapper.CompileFast();
+            var compiled = mapper.CompileFast(true);
             var c = mapper.Compile();
 
             compiled(new SQLiteDataReader(true));
@@ -718,7 +718,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var mapperBody = Coalesce(Constant(null, typeof(int?)), Constant(7));
             var mapper = Lambda<Func<int>>(mapperBody);
-            var compiled = mapper.CompileFast();
+            var compiled = mapper.CompileFast(true);
             var c = mapper.Compile();
             compiled();
             c();
@@ -921,7 +921,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var expr = Lambda<Action<object, object>>(body, objParam, valueParam);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             var obj = new TestClass1();
 
