@@ -105,6 +105,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue101_Not_supported_Assign_Modes().Run);
             Run(new Issue102_Label_and_Goto_Expression().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue102_Label_and_Goto_Expression().Run);
+            Run(new Issue106_Power_support().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue106_Power_support().Run);
 
             Console.WriteLine();
 
