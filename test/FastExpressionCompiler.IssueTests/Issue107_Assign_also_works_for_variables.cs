@@ -3,16 +3,25 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
     public class Issue107_Assign_also_works_for_variables
     {
+        public int Run()
+        {
+            VariableAssignIsSupported();
+            VariableAssignIsSupportedWithUneededConstant();
+            VariableAssignIsSupportedWithConstantReturn();
+            VariableAddAssignIsSupported();
+            return 4;
+        }
+
         [Test]
         public void VariableAssignIsSupported()
         {

@@ -107,6 +107,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue102_Label_and_Goto_Expression().Run);
             Run(new Issue106_Power_support().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue106_Power_support().Run);
+            Run(new Issue107_Assign_also_works_for_variables().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue107_Assign_also_works_for_variables().Run);
 
             Console.WriteLine();
 
