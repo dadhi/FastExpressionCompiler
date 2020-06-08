@@ -111,6 +111,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue107_Assign_also_works_for_variables().Run);
             Run(new Issue127_Switch_is_supported().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue127_Switch_is_supported().Run);
+            Run(new Issue146_bool_par_error().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue146_bool_par_error().Run);
 
             Console.WriteLine();
 
