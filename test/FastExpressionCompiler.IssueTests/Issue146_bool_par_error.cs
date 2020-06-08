@@ -2,7 +2,7 @@
 using NUnit.Framework;
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
-#pragma warning disable 649 // Unaasigned fields
+#pragma warning disable 649 // Unassigned fields
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;

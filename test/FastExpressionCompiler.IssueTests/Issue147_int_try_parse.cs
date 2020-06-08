@@ -4,21 +4,25 @@ using System.Reflection;
 using NUnit.Framework;
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
-#pragma warning disable 649 // Unaasigned fields
+#pragma warning disable 649 // Unassigned fields
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
     public class Issue147_int_try_parse
     {
-        
+        public int Run()
+        {
+            Test1();
+            return 1;
+        }
+
         class MyObject
         {
             public bool a<b>(b i)
@@ -27,7 +31,6 @@ namespace FastExpressionCompiler.UnitTests
             }
         }
 
-#if !LIGHT_EXPRESSION
         [Test]
         public void Test1()
         {
@@ -51,17 +54,13 @@ namespace FastExpressionCompiler.UnitTests
 
             var conditionLambda = Lambda<Func<int>>(conditionBlock);
 
-            var conditionFunc = conditionLambda.Compile();
-
+            var conditionFunc = conditionLambda.CompileSys();
             var parsedValue = conditionFunc.Invoke();
 
-
-            var conditionFuncFast = conditionLambda.CompileFast();
-
+            var conditionFuncFast = conditionLambda.CompileFast(true);
             var parsedValueFast = conditionFuncFast.Invoke();
 
             Assert.AreEqual(parsedValue, parsedValueFast);
         }
-#endif
     }
 }
