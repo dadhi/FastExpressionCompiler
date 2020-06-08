@@ -115,6 +115,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue146_bool_par_error().Run);
             Run(new Issue147_int_try_parse().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue147_int_try_parse().Run);
+            Run(new Issue150_New_AttemptToReadProtectedMemory().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue150_New_AttemptToReadProtectedMemory().Run);
 
             Console.WriteLine();
 
