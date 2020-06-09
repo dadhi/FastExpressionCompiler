@@ -17,6 +17,19 @@ namespace FastExpressionCompiler.IssueTests
     {
         public class FastExpressionCompilerBug
         {
+            public int Run()
+            {
+                Comparison_with_null_should_produce_optimal_Brtrue_or_Brfalse_opcodes();
+                Logical_OrElse_should_be_reduced_if_one_of_operands_is_known_boolean_value();
+                Coalesce_should_produce_optimal_opcodes();
+                Setting_the_outside_variable();
+                TryCatch_setting_the_outside_variable();
+                TryCatch_with_void_rethrows_error_in_catch();
+                TryCatch_with_rethrow_error_in_catch_and_the_unreachable_code_after_the_throw();
+                TryCatch_with_non_void_rethrows_error_in_catch();
+                return 8;
+            }
+
             public class Source
             {
                 public int Value { get; set; }
