@@ -121,6 +121,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue153_MinValueMethodNotSupported().Run);
             Run(new Issue156_InvokeAction().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue156_InvokeAction().Run);
+            Run(new Issue159_NumericConversions().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue159_NumericConversions().Run);
 
             Console.WriteLine();
 

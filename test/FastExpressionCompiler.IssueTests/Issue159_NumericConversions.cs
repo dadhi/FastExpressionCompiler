@@ -5,14 +5,38 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     public class Issue159_NumericConversions
     {
+        public int Run() 
+        {
+            UnsignedLongComparisonsWithConversionsShouldWork();
+            IntToNullableUlong();
+            UnsignedNullableLongComparison();
+            UnsignedNullableLongComparisonsWithConversionsShouldWork();
+            FloatComparisonsWithConversionsShouldWork();
+            FloatComparisonsWithConversionsShouldWork2();
+            FloatToDecimalNullableShouldWork();
+            ComparisonsWithConversionsShouldWork3();
+            ComparisonsWithConversionsShouldWork4();
+            FloatComparisonsWithConversionsShouldWork3();
+            FloatComparisonsWithConversionsShouldWork4();
+            ConvertNullableFloatToDecimal();
+            NullableFloatComparisonsWithConversionsShouldWork();
+            DoubleComparisonsWithConversionsShouldWork();
+            DoubleComparisonsWithConversionsShouldWork2();
+            NullableIntToDoubleCastsShouldWork();
+            NullableIntToDoubleCastsShouldWork_with_MemberInit();
+            NullableDecimalToDoubleCastsShouldWork();
+            DecimalToNullableDoubleCastsShouldWork();
+            return 19;
+        }
+
         [Test]
         public void UnsignedLongComparisonsWithConversionsShouldWork()
         {
