@@ -4,16 +4,25 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
     public class Issue243_Pass_Parameter_By_Ref_is_supported
     {
+        public int Run()
+        {
+            Lambda_Parameter_Passed_Into_Ref_Method();
+            Lambda_Ref_Parameter_Passed_Into_Ref_Method();
+            Lambda_Ref_Parameter_Passed_Into_Value_Method();
+            Lambda_Ref_ValueType_Parameter_Passed_Into_Value_Method();
+            Lambda_Parameter_Passed_Into_Ref_Method_Extra_Assignment();
+            return 5;
+        }
+
         public static string PassByRef(ref string test)
         {
             return test.ToString();
