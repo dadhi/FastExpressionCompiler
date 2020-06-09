@@ -134,6 +134,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue181_TryEmitIncDecAssign_InvalidCastException().Run);
             Run(new Issue183_NullableDecimal().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue183_NullableDecimal().Run);
+            Run(new Issue190_Inc_Dec_Assign_Parent_Block_Var().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue190_Inc_Dec_Assign_Parent_Block_Var().Run);
 
 
             Console.WriteLine();
