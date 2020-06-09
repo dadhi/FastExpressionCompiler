@@ -5,18 +5,25 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using static System.Linq.Expressions.Expression;
 // ReSharper disable UnusedMember.Global
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issues170_Serializer_Person_Ref
+    public class Issue170_Serializer_Person_Ref
     {
-        delegate void DeserializeDelegate<T>(byte[] buffer, ref int offset, ref T value);
+        public int Run()
+        {
+            InvokeActionConstantIsSupported();
+            InvokeActionConstantIsSupportedSimple();
+            InvokeActionConstantIsSupportedSimpleStruct();
+            return 3;
+        }
 
+        delegate void DeserializeDelegate<T>(byte[] buffer, ref int offset, ref T value);
 
         class Person
         {
@@ -61,7 +68,7 @@ namespace FastExpressionCompiler.UnitTests
             var func = lambda.CompileSys();
             LocalAssert(func);
 
-            var funcFast = lambda.CompileFast();
+            var funcFast = lambda.CompileFast(true);
             LocalAssert(funcFast);
         }
 
@@ -96,7 +103,7 @@ namespace FastExpressionCompiler.UnitTests
             LocalAssert(func);
 
 
-            var funcFast = lambda.CompileFast();
+            var funcFast = lambda.CompileFast(true);
             LocalAssert(funcFast);
         }
 
@@ -127,7 +134,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.DoesNotThrow(() => lambda.CompileSys());
 
-            var funcFast = lambda.CompileFast();
+            var funcFast = lambda.CompileFast(true);
             LocalAssert(funcFast);
         }
     }

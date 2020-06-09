@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.IssueTests
     [TestFixture]
     public class Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast
     {
-        public int Run() 
+        public int Run()
         {
             Test();
             return 1;

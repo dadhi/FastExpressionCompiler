@@ -123,6 +123,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue156_InvokeAction().Run);
             Run(new Issue159_NumericConversions().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue159_NumericConversions().Run);
+            Run(new Issue170_Serializer_Person_Ref().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue170_Serializer_Person_Ref().Run);
             Run(new Issue174_NullReferenceInSetter().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue174_NullReferenceInSetter().Run);
             Run(new Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast().Run);
