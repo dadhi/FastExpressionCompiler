@@ -4,7 +4,6 @@ using NUnit.Framework;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
@@ -12,6 +11,13 @@ namespace FastExpressionCompiler.IssueTests
     [TestFixture]
     public class Issue197_Operation_could_destabilize_the_runtime
     {
+        public int Run()
+        {
+            Test();
+            Test2();
+            return 2;
+        }
+
         [Test]
         public void Test()
         {
