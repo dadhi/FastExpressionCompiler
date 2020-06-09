@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 {
     public class Issue174_NullReferenceInSetter
     {
-        public int Run() 
+        public int Run()
         {
             PropertyAssignmentFromEqualityComparisonShouldWork();
             return 1;
