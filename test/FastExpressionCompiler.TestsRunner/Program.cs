@@ -131,8 +131,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast().Run);
             Run(new Issue179_Add_something_like_LambdaExpression_CompileToMethod().Run);
 
-            Console.WriteLine();
 
+            Console.WriteLine();
             if (failed)
             {
                 Console.WriteLine("ERROR: Some tests are FAILED!");
