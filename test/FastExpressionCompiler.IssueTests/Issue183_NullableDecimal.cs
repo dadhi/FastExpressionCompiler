@@ -6,15 +6,24 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     public class Issue183_NullableDecimal
     {
+        public int Run()
+        {
+            ConvertDecimalParamToNullableDecimal();
+            ConvertNullNullableParamToNullableDecimal_CheckAgainstTheSystemExprCompile();
+            ConvertDecimalPropertyToNullableDecimal();
+            ConvertNullableBytePropertyToNullableDecimal();
+            NullableDecimalIssue();
+            return 5;
+        }
+
         [Test]
         public void ConvertDecimalParamToNullableDecimal()
         {

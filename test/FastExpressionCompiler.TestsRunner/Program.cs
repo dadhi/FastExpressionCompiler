@@ -132,6 +132,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new Issue179_Add_something_like_LambdaExpression_CompileToMethod().Run);
             Run(new Issue181_TryEmitIncDecAssign_InvalidCastException().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue181_TryEmitIncDecAssign_InvalidCastException().Run);
+            Run(new Issue183_NullableDecimal().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue183_NullableDecimal().Run);
 
 
             Console.WriteLine();
