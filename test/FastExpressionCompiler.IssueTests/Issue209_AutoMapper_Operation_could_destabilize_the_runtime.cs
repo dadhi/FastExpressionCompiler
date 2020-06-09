@@ -12,6 +12,12 @@ namespace FastExpressionCompiler.IssueTests
     [TestFixture]
     public class Issue209_AutoMapper_Operation_could_destabilize_the_runtime
     {
+        public int Run()
+        {
+            ShouldAlsoWork();
+            return 1;
+        }
+
         [Test]
         public void ShouldAlsoWork()
         {
