@@ -146,6 +146,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue209_AutoMapper_Operation_could_destabilize_the_runtime().Run);
             Run(new Issue243_Pass_Parameter_By_Ref_is_supported().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue243_Pass_Parameter_By_Ref_is_supported().Run);
+            Run(new Nested_lambdas_assigned_to_vars().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Nested_lambdas_assigned_to_vars().Run);
 
 
             Console.WriteLine();
