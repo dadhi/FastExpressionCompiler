@@ -74,7 +74,7 @@ namespace FastExpressionCompiler.IssueTests
                 block,
                 ulongParameter);
 
-            var ulongValueOrDefaultFunc = ulongValueOrDefaultLambda.CompileFast();
+            var ulongValueOrDefaultFunc = ulongValueOrDefaultLambda.CompileFast(true);
             var result = ulongValueOrDefaultFunc.Invoke(new ValueHolder<ulong> { Value = ulong.MaxValue });
 
             Assert.AreEqual(default(int), result.Value);
@@ -97,7 +97,7 @@ namespace FastExpressionCompiler.IssueTests
             var expected = ulongValHolderExpr.CompileSys();
             Assert.AreEqual(int.MaxValue, expected().Value);
 
-            var actual = ulongValHolderExpr.CompileFast();
+            var actual = ulongValHolderExpr.CompileFast(true);
             Assert.AreEqual(int.MaxValue, actual().Value);
         }
 
@@ -115,7 +115,7 @@ namespace FastExpressionCompiler.IssueTests
             var expectedResult = expected(new ValueHolder<ulong?> { Value = ulong.MaxValue });
             Assert.AreEqual(false, expectedResult);
 
-            var actual = lambdaExpr.CompileFast();
+            var actual = lambdaExpr.CompileFast(true);
 
             // todo: optimize to something like below
             /*
@@ -193,7 +193,7 @@ IL_0021:  ret
             var expectedResult = expected(new ValueHolder<ulong?> { Value = ulong.MaxValue });
             Assert.AreEqual(default(int?), expectedResult.Value);
 
-            var actual = ulongValueOrDefaultLambda.CompileFast();
+            var actual = ulongValueOrDefaultLambda.CompileFast(true);
             var actualResult = actual(new ValueHolder<ulong?> { Value = ulong.MaxValue });
             Assert.AreEqual(default(int?), actualResult.Value);
         }
@@ -237,7 +237,7 @@ IL_0021:  ret
 
             var source = new ValueHolder<float> { Value = 532.00f };
 
-            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
+            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast(true);
             var result = floatValueOrDefaultFunc.Invoke(source);
 
             Assert.AreEqual((short)532, result.Value);
@@ -282,7 +282,7 @@ IL_0021:  ret
 
             var source = new ValueHolder<float> { Value = 532.00f };
 
-            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
+            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast(true);
             var result = floatValueOrDefaultFunc.Invoke(source);
 
             Assert.AreEqual((short)532, result.Value);
@@ -465,7 +465,7 @@ IL_0021:  ret
 
             var source = new ValueHolder<float> { Value = 8532.00f };
 
-            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast();
+            var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast(true);
             var result = floatValueOrDefaultFunc.Invoke(source);
 
             Assert.AreEqual(8532.00m, result.Value);
@@ -570,7 +570,7 @@ IL_0021:  ret
 
             var source = new ValueHolder<double> { Value = double.MaxValue };
 
-            var doubleValueOrDefaultFunc = doubleValueOrDefaultLambda.CompileFast();
+            var doubleValueOrDefaultFunc = doubleValueOrDefaultLambda.CompileFast(true);
             var result = doubleValueOrDefaultFunc.Invoke(source);
 
             Assert.IsNull(result.Value);
@@ -615,7 +615,7 @@ IL_0021:  ret
 
             var source = new ValueHolder<double> { Value = double.MinValue };
 
-            var doubleValueOrDefaultFunc = doubleValueOrDefaultLambda.CompileFast();
+            var doubleValueOrDefaultFunc = doubleValueOrDefaultLambda.CompileFast(true);
             var result = doubleValueOrDefaultFunc.Invoke(source);
 
             Assert.AreEqual(default(decimal), result.Value);
@@ -647,7 +647,7 @@ IL_0021:  ret
                 block,
                 nullableIntHolderParam);
 
-            var adapt = adaptExpr.CompileFast();
+            var adapt = adaptExpr.CompileFast(true);
             adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be replaced with dup #
@@ -678,7 +678,7 @@ IL_0021:  ret
             var adaptExpr = Lambda<Func<ValueHolder<int?>, ValueHolder<double>>>(
                 memberInit, nullableIntHolderParam);
 
-            var adapt = adaptExpr.CompileFast();
+            var adapt = adaptExpr.CompileFast(true);
 
             adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
@@ -717,7 +717,7 @@ IL_0021:  ret
 
             var source = new ValueHolder<decimal?> { Value = 938378.637m };
 
-            var adapt = expr.CompileFast();
+            var adapt = expr.CompileFast(true);
             adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173
@@ -757,7 +757,7 @@ IL_0021:  ret
 
             var source = new ValueHolder<decimal> { Value = 5332.00m };
 
-            var adapt = expr.CompileFast();
+            var adapt = expr.CompileFast(true);
             adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173
