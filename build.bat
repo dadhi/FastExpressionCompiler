@@ -14,9 +14,7 @@ echo:
 echo:## Starting: TESTS...
 echo: 
 
-dotnet run  --no-build -c Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
-dotnet test --no-build -c Release -p:DevMode=false test/FastExpressionCompiler.IssueTests/FastExpressionCompiler.IssueTests.csproj
-dotnet test --no-build -c Release -p:DevMode=false test/FastExpressionCompiler.LightExpression.IssueTests/FastExpressionCompiler.LightExpression.IssueTests.csproj
+dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 
 if %ERRORLEVEL% neq 0 goto :error
 echo:## Finished: TESTS
