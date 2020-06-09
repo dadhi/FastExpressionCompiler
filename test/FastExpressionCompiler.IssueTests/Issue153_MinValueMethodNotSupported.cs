@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.IssueTests
             var minValueField = typeof(int).GetField("MinValue");
             var minValue = Field(null, minValueField);
             var minValueLambda = Lambda<Func<int>>(minValue);
-            var res = minValueLambda.CompileFast();
+            var res = minValueLambda.CompileFast(true);
             Assert.AreEqual(int.MinValue, res());
         }
     }

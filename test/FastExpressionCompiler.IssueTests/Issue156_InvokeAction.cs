@@ -5,15 +5,21 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     public class Issue156_InvokeAction
     {
+        public int Run() 
+        {
+            InvokeActionConstantIsSupported();
+            return 1;
+        }
+
         [Test]
         public void InvokeActionConstantIsSupported()
         {
@@ -25,7 +31,7 @@ namespace FastExpressionCompiler.UnitTests
             var actionInvoke = Invoke(actionConstant, one, two);
 
             var invokeLambda = Lambda<Action>(actionInvoke);
-            var invokeFunc = invokeLambda.CompileFast();
+            var invokeFunc = invokeLambda.CompileFast(true);
 
             invokeFunc.Invoke();
         }
