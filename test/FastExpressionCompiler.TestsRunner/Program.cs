@@ -117,6 +117,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue147_int_try_parse().Run);
             Run(new Issue150_New_AttemptToReadProtectedMemory().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue150_New_AttemptToReadProtectedMemory().Run);
+            Run(new Issue153_MinValueMethodNotSupported().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue153_MinValueMethodNotSupported().Run);
 
             Console.WriteLine();
 
