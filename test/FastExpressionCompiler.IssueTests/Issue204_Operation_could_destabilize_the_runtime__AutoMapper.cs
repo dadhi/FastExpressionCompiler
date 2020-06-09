@@ -12,6 +12,13 @@ namespace FastExpressionCompiler.IssueTests
     [TestFixture]
     public class Issue204_Operation_could_destabilize_the_runtime__AutoMapper
     {
+        public int Run()
+        {
+            Default_with_struct();
+            ShouldAlsoWork();
+            return 2;
+        }
+
         public enum Status
         {
             InProgress = 1,

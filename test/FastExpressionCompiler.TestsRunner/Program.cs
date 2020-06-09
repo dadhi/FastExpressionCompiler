@@ -140,6 +140,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC.FastExpressionCompilerBug().Run);
             Run(new Issue197_Operation_could_destabilize_the_runtime().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue197_Operation_could_destabilize_the_runtime().Run);
+            Run(new Issue204_Operation_could_destabilize_the_runtime__AutoMapper().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue204_Operation_could_destabilize_the_runtime__AutoMapper().Run);
 
 
             Console.WriteLine();
