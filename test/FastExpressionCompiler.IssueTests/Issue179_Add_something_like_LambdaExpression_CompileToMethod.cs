@@ -11,6 +11,12 @@ namespace FastExpressionCompiler.IssueTests
     [TestFixture]
     public class Issue179_Add_something_like_LambdaExpression_CompileToMethod
     {
+        public int Run()
+        {
+            Test();
+            return 1;
+        }
+
         [Test]
         public void Test()
         {
@@ -32,7 +38,7 @@ namespace FastExpressionCompiler.IssueTests
                 Expression.Add(paramA, paramB), 
                 paramA, paramB);
 
-            funcExpr.CompileFastToIL(methodBuilder.GetILGenerator());
+            funcExpr.CompileFastToIL(methodBuilder.GetILGenerator(), true);
 
             var dynamicType = typeBuilder.CreateType();
             var myAddMethod = dynamicType.GetTypeInfo().GetDeclaredMethod("MyAdd");
