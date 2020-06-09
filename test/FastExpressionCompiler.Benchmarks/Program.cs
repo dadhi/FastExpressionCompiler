@@ -6,7 +6,7 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<ReflectionInvoke_vs_CallWithObjectArgsAndNestedLambda>();
+            // BenchmarkRunner.Run<ReflectionInvoke_vs_CallWithObjectArgsAndNestedLambda>();
             
             //BenchmarkRunner.Run<GenericConverter.Compilation>();
             //BenchmarkRunner.Run<GenericConverter.Invocation>();
@@ -47,7 +47,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<SimpleExpr_ParamPlusParam>();
 
             //BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
-            //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
+            BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
             //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_NestedLambdaExpr>();
             //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_SimpleExpr>();
 
