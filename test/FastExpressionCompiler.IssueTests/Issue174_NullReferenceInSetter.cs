@@ -3,14 +3,20 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     public class Issue174_NullReferenceInSetter
     {
+        public int Run() 
+        {
+            PropertyAssignmentFromEqualityComparisonShouldWork();
+            return 1;
+        }
+
         [Test]
         public void PropertyAssignmentFromEqualityComparisonShouldWork()
         {
@@ -31,7 +37,7 @@ namespace FastExpressionCompiler.UnitTests
             var compiled = expr.CompileSys();
             Assert.IsTrue(compiled(source));
 
-            var compiledFast = expr.CompileFast();
+            var compiledFast = expr.CompileFast(true);
             Assert.IsTrue(compiledFast(source));
         }
 

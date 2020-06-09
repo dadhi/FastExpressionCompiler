@@ -123,6 +123,8 @@ namespace FastExpressionCompiler.UnitTests
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue156_InvokeAction().Run);
             Run(new Issue159_NumericConversions().Run);
             Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue159_NumericConversions().Run);
+            Run(new Issue174_NullReferenceInSetter().Run);
+            Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue174_NullReferenceInSetter().Run);
 
             Console.WriteLine();
 
