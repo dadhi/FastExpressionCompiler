@@ -228,12 +228,18 @@ namespace FastExpressionCompiler
             params ConstantExpression[] closureConstantsExprs)
             where TDelegate : class
         {
-            var constValues = new object[closureConstantsExprs.Length];
-            for (var i = 0; i < constValues.Length; i++)
-                constValues[i] = closureConstantsExprs[i].Value;
+            var closureConstants = new object[closureConstantsExprs.Length];
+            for (var i = 0; i < closureConstants.Length; i++)
+                closureConstants[i] = closureConstantsExprs[i].Value;
 
-            var closureInfo = new ClosureInfo(ClosureStatus.UserProvided | ClosureStatus.HasClosure, constValues);
+            var closureInfo = new ClosureInfo(ClosureStatus.UserProvided | ClosureStatus.HasClosure, closureConstants);
+            return TryCompileWithPreCreatedClosure<TDelegate>(lambdaExpr, ref closureInfo);
+        }
 
+        internal static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(this LambdaExpression lambdaExpr, 
+            ref ClosureInfo closureInfo)
+            where TDelegate : class
+        {
             var closurePlusParamTypes = GetClosureTypeToParamTypes(lambdaExpr.Parameters);
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
@@ -248,7 +254,7 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Ret);
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(constValues));
+            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(closureInfo.Constants.Items));
             ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return @delegate;
         }
@@ -352,7 +358,7 @@ namespace FastExpressionCompiler
             if (paramCount == 0)
                 return _closureAsASingleParamType;
 
-            if (paramCount < _closureTypePlusParamTypesPool.Length)
+            if (paramCount < 8)
             {
                 var closureAndParamTypes = Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], null);
                 if (closureAndParamTypes != null)
@@ -372,7 +378,7 @@ namespace FastExpressionCompiler
         private static void ReturnClosureTypeToParamTypesToPool(Type[] closurePlusParamTypes)
         {
             var paramCount = closurePlusParamTypes.Length - 1;
-            if (paramCount != 0 && paramCount < _closureTypePlusParamTypesPool.Length)
+            if (paramCount != 0 && paramCount < 8)
                 Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], closurePlusParamTypes);
         }
 
@@ -383,7 +389,7 @@ namespace FastExpressionCompiler
         }
 
         [Flags]
-        private enum ClosureStatus
+        internal enum ClosureStatus
         {
             ToBeCollected        = 1,
             UserProvided         = 1 << 1,
@@ -392,7 +398,7 @@ namespace FastExpressionCompiler
         }
 
         /// Track the info required to build a closure object + some context information not directly related to closure.
-        private struct ClosureInfo
+        internal struct ClosureInfo
         {
             public bool LastEmitIsAddress;
 
@@ -411,6 +417,9 @@ namespace FastExpressionCompiler
 
             /// Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public LiveCountArray<object> Constants;
+            // todo: @perf combine Constants and Usage to save the memory
+            /// Constant usage count and variable index
+            public LiveCountArray<int> ConstantUsageThenVarIndex;
 
             /// Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters. 
@@ -419,16 +428,16 @@ namespace FastExpressionCompiler
             /// All nested lambdas recursively nested in expression
             public NestedLambdaInfo[] NestedLambdas;
 
-            /// Constant usage count and variable index
-            public LiveCountArray<int> ConstantUsage;
-
-            /// Populates info directly with provided closure object and constants.
-            public ClosureInfo(ClosureStatus status, object[] constValues = null)
+            /// <summary>Populates info directly with provided closure object and constants.
+            /// If provided, the <paramref name="constUsage"/> should be the size of <paramref name="constValues"/>
+            /// </summary>
+            public ClosureInfo(ClosureStatus status, object[] constValues = null, int[] constUsage = null)
             {
                 Status = status;
 
                 Constants = new LiveCountArray<object>(constValues ?? Tools.Empty<object>());
-                ConstantUsage = new LiveCountArray<int>(constValues == null ? Tools.Empty<int>() : new int[constValues.Length]);
+                ConstantUsageThenVarIndex = new LiveCountArray<int>(
+                    constValues == null ? Tools.Empty<int>() : constUsage ?? new int[constValues.Length]);
 
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdas = Tools.Empty<NestedLambdaInfo>();
@@ -440,7 +449,7 @@ namespace FastExpressionCompiler
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
             }
 
-            public void AddConstant(object value)
+            public void AddConstantOrIncrementUsageCount(object value, Type type)
             {
                 Status |= ClosureStatus.HasClosure;
 
@@ -448,14 +457,15 @@ namespace FastExpressionCompiler
                 var constIndex = Constants.Count - 1;
                 while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], value))
                     --constIndex;
+
                 if (constIndex == -1)
                 {
                     Constants.PushSlot(value);
-                    ConstantUsage.PushSlot(1);
+                    ConstantUsageThenVarIndex.PushSlot(1);
                 }
                 else
                 {
-                    ++ConstantUsage.Items[constIndex];
+                    ++ConstantUsageThenVarIndex.Items[constIndex];
                 }
             }
 
@@ -595,7 +605,10 @@ namespace FastExpressionCompiler
 
                 var constItems = Constants.Items;
                 if (nestedLambdas.Length == 0)
+                {
+                    Array.Resize(ref constItems, constCount);
                     return constItems;
+                }
 
                 var itemCount = constCount + nestedLambdas.Length;
 
@@ -605,6 +618,10 @@ namespace FastExpressionCompiler
                     closureItems = new object[itemCount];
                     for (var i = 0; i < constCount; ++i)
                         closureItems[i] = constItems[i];
+                }
+                else
+                {
+                    Array.Resize(ref constItems, itemCount);
                 }
 
                 for (var i = 0; i < nestedLambdas.Length; i++)
@@ -743,7 +760,7 @@ namespace FastExpressionCompiler
             }
         }
 
-        private sealed class NestedLambdaInfo
+        internal sealed class NestedLambdaInfo
         {
             public readonly LambdaExpression LambdaExpression;
             public ClosureInfo ClosureInfo;
@@ -835,8 +852,15 @@ namespace FastExpressionCompiler
                     case ExpressionType.Constant:
                         var constantExpr = (ConstantExpression)expr;
                         var value = constantExpr.Value;
-                        if (value != null && IsClosureBoundConstant(value, value.GetType().GetTypeInfo()))
-                            closure.AddConstant(value);
+                        if (value != null)
+                        {
+                            // todo: @perf find the way to speed-up this
+
+                            var valueType = value.GetType();
+                            if (IsClosureBoundConstant(value, valueType.GetTypeInfo()))
+                                closure.AddConstantOrIncrementUsageCount(value, valueType);
+                        }
+
                         return true;
 
                     case ExpressionType.Quote:
@@ -926,7 +950,7 @@ namespace FastExpressionCompiler
                             continue;
                         }
 #endif
-                        var methodArgs = callExpr.Arguments;
+						var methodArgs = callExpr.Arguments;
                         var methodArgCount = methodArgs.Count;
                         if (methodArgCount == 0)
                         {
@@ -988,17 +1012,6 @@ namespace FastExpressionCompiler
                                     !TryCollectBoundConstants(ref closure, threeArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
                                     return false;
                                 expr = threeArgsExpr.Argument2;
-                                continue;
-                            }
-
-                            if (fewArgCount == 4)
-                            {
-                                var fourArgsExpr = (FourArgumentsNewExpression)newExpr;
-                                if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
-                                    !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
-                                    !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
-                                    return false;
-                                expr = fourArgsExpr.Argument3;
                                 continue;
                             }
 
@@ -1094,23 +1107,21 @@ namespace FastExpressionCompiler
                     case ExpressionType.Invoke:
                         var invokeExpr = (InvocationExpression)expr;
                         var invokeArgs = invokeExpr.Arguments;
-                        var invokeArgsCount = invokeArgs.Count;
-                        if (invokeArgsCount == 0)
+                        if (invokeArgs.Count == 0)
                         {
-                            // optimization #138: we inline the invoked lambda body (only for lambdas without arguments)
-                            // therefore we skipping collecting the lambda and invocation arguments and got directly to lambda body.
-                            // This approach is repeated in `TryEmitInvoke`
-                            expr = (invokeExpr.Expression as LambdaExpression)?.Body ?? invokeExpr.Expression;
+                            expr = invokeExpr.Expression;
                             continue;
                         }
-                        else if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
+
+                        if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
                             return false;
 
-                        for (var i = 0; i < invokeArgs.Count - 1; i++)
-                            if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-                                return false;
-
-                        expr = invokeArgs[invokeArgsCount - 1];
+                        var lastArgIndex = invokeArgs.Count - 1;
+                        if (lastArgIndex > 0)
+                            for (var i = 0; i < lastArgIndex; i++)
+                                    if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+                                        return false;
+                        expr = invokeArgs[lastArgIndex];
                         continue;
 
                     case ExpressionType.Conditional:
@@ -1479,7 +1490,7 @@ namespace FastExpressionCompiler
                     {
                         case ExpressionType.Parameter:
                             return (parent & ParentFlags.IgnoreResult) != 0 ||
-                                TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
+                                   TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
 
                         case ExpressionType.TypeAs:
                         case ExpressionType.IsTrue:
@@ -1550,13 +1561,6 @@ namespace FastExpressionCompiler
                             return TryEmitNestedLambda((LambdaExpression)expr, paramExprs, il, ref closure);
 
                         case ExpressionType.Invoke:
-                            // optimization #138: we inline the invoked lambda body (only for lambdas without arguments) 
-                            if (((InvocationExpression)expr).Expression is LambdaExpression lambdaExpr && lambdaExpr.Parameters.Count == 0)
-                            {
-                                expr = lambdaExpr.Body;
-                                continue;
-                            }
-
                             return TryEmitInvoke((InvocationExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.GreaterThan:
@@ -2134,7 +2138,7 @@ namespace FastExpressionCompiler
                         {
                             if ((parent & ParentFlags.Call) != 0 && !isArgByRef ||
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce)) != 0)
-                                il.Emit(OpCodes.Ldind_Ref);
+                            il.Emit(OpCodes.Ldind_Ref);
                         }
                     }
 
@@ -2563,7 +2567,7 @@ namespace FastExpressionCompiler
                     if (constIndex == -1)
                         return false;
 
-                    var varIndex = closure.ConstantUsage.Items[constIndex] - 1;
+                    var varIndex = closure.ConstantUsageThenVarIndex.Items[constIndex] - 1;
                     if (varIndex > 0)
                         EmitLoadLocalVariable(il, varIndex);
                     else
@@ -2727,7 +2731,7 @@ namespace FastExpressionCompiler
 
                 var constItems = closure.Constants.Items;
                 var constCount = closure.Constants.Count;
-                var constUsage = closure.ConstantUsage.Items;
+                var constUsage = closure.ConstantUsageThenVarIndex.Items;
 
                 int varIndex;
                 for (var i = 0; i < constCount; i++)
@@ -4738,7 +4742,7 @@ namespace FastExpressionCompiler
 
         public void Pop() => --Count;
 
-        private static T[] Expand(T[] items)
+        public static T[] Expand(T[] items)
         {
             if (items.Length == 0)
                 return new T[4];

@@ -8,6 +8,14 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            RunAllTests();
+
+            // todo: @fix #255
+            // new BlockTests().Run();
+        }
+
+        public static void RunAllTests()
+        {
             var failed = false;
             var totalTestPassed = 0;
             void Run(Func<int> run, string name = null)

@@ -236,7 +236,7 @@ namespace FastExpressionCompiler.LightExpression
             var defaultBody = Visit(node.DefaultBody);
             if (switchValue == node.SwitchValue && ReferenceEquals(cases, node.Cases) && defaultBody == node.DefaultBody)
                 return node;
-            return new SwitchExpression(node.Type, switchValue, defaultBody, node.Comparison, cases);
+            return new SwitchExpression(node.Type, switchValue, defaultBody, node.Comparison, cases.AsArray());
         }
 
         protected virtual CatchBlock VisitCatchBlock(CatchBlock node)
@@ -256,7 +256,7 @@ namespace FastExpressionCompiler.LightExpression
             var @finally = Visit(node.Finally);
             if (body == node.Body && ReferenceEquals(handlers, node.Handlers) && @finally == node.Finally)
                 return node;
-            return new TryExpression(body, @finally, handlers);
+            return new TryExpression(body, @finally, handlers.AsArray());
         }
 
         protected internal virtual Expression VisitTypeBinary(TypeBinaryExpression node)
@@ -281,7 +281,7 @@ namespace FastExpressionCompiler.LightExpression
             var bindings = VisitAndConvert(node.Bindings, VisitMemberBinding);
             if (newExpression == node.NewExpression && ReferenceEquals(bindings, node.Bindings))
                 return node;
-            return new MemberInitExpression(newExpression, bindings);
+            return new MemberInitExpression(newExpression, bindings.AsArray());
         }
 
         protected virtual MemberBinding VisitMemberBinding(MemberBinding node)
