@@ -8,7 +8,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            RunAllTests();
+            //RunAllTests();
+
+            new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
 
             // todo: @fix #255
             // new BlockTests().Run();
@@ -79,6 +81,7 @@ namespace FastExpressionCompiler.UnitTests
             Run(new UnaryExpressionTests().Run);
             Run(new FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests().Run);
             Run(new ValueTypeTests().Run);
+            Run(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run);
 
             Console.WriteLine();
             Console.WriteLine("Running IssueTests...");
