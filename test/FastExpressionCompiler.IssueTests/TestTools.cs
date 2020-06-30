@@ -14,4 +14,9 @@ namespace FastExpressionCompiler
         public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes) =>
             CollectionAssert.AreEqual(expectedCodes, ILReaderFactory.Create(method).Select(x => x.OpCode).ToArray());
     }
+
+    public interface ITest 
+    {
+        int Run();
+    }
 }

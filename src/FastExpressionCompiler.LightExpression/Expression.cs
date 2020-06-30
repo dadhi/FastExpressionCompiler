@@ -3005,6 +3005,15 @@ namespace FastExpressionCompiler.LightExpression
             return sb.Append(')');
         }
 
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            sb.Append("(...) => ");
+            sb.AppendLineIdent(lineIdent);
+            Body.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType);
+            return sb;
+        }
+
         internal LambdaExpression(Type delegateType, Expression body, Type returnType)
         {
             Body = body;
