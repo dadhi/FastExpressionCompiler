@@ -9,20 +9,20 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
     [TestFixture]
     public class NestedLambdasSharedToExpressionCodeStringTest
     {
-        public int Run() 
+        public int Run()
         {
             Should_output_a_valid_expression_code();
-            // Test_the_output_expression_code();
+            Test_the_output_expression_code();
             return 2;
         }
 
         [Test]
-        public void Should_output_a_valid_expression_code() 
+        public void Should_output_a_valid_expression_code()
         {
             var e = CreateExpression();
             var s = e.ToExpressionCodeString();
-            Assert.IsNotEmpty(s);
-            Console.WriteLine(s); // used for the output
+            // Console.WriteLine(s); // used for the output
+            StringAssert.Contains("new Expression[17];", s);
         }
 
         private LightExpression.Expression<Func<A>> CreateExpression()
@@ -51,45 +51,45 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         }
 
         [Test]
-        public void Test_the_output_expression_code() 
+        public void Test_the_output_expression_code()
         {
-            var e = new System.Collections.Generic.List<Expression>(); // unique expressions
+            var e = new Expression[17]; // unique expressions
             var expr = Lambda(/*$*/
-                typeof(System.Func<FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.A>),
-                e[0]=New(/*2 args*/
-                    typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.A).GetTypeInfo().DeclaredConstructors.ToArray()[0],
-                    e[1]=Convert(
-                    e[2]=Call(
-                        e[3]=Constant(default(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest)),
-                        typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest).GetTypeInfo().GetDeclaredMethods("GetOrAdd").ToArray()[0],
-                        e[4]=Constant(0),
-                        e[5]=Lambda(/*$*/
-                        typeof(System.Func<System.Object>),
-                        e[6]=New(/*2 args*/
-                            typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.B).GetTypeInfo().DeclaredConstructors.ToArray()[0],
-                            e[7]=Convert(
-                            e[8]=Call(
-                                e[3],
-                                typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest).GetTypeInfo().GetDeclaredMethods("GetOrAdd").ToArray()[0],
-                                e[9]=Constant(1),
-                                e[10]=Lambda(/*$*/
-                                typeof(System.Func<System.Object>),
-                                e[11]=New(/*1 args*/
-                                    typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.C).GetTypeInfo().DeclaredConstructors.ToArray()[0],
-                                    e[12]=Convert(
-                                    e[13]=Call(
-                                        e[3],
-                                        typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest).GetTypeInfo().GetDeclaredMethods("GetOrAdd").ToArray()[0],
-                                        e[14]=Constant(2),
-                                        e[15]=Lambda(/*$*/
-                                        typeof(System.Func<System.Object>),
-                                        e[16]=New(/*0 args*/
-                                            typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.D).GetTypeInfo().DeclaredConstructors.ToArray()[0],new Expression[0]),new ParameterExpression[0])),
-                                    typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.D))),new ParameterExpression[0])),
-                            typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.C)),
-                            e[12]),new ParameterExpression[0])),
-                    typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.B)),
-                    e[7]),new ParameterExpression[0]);
+              typeof(System.Func<FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.A>),
+              e[0] = New(/*2 args*/
+                typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.A).GetTypeInfo().DeclaredConstructors.ToArray()[0],
+                e[1] = Convert(
+                  e[2] = Call(
+                    e[3] = Constant(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest()),
+                    typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest).GetTypeInfo().GetDeclaredMethods("GetOrAdd").ToArray()[0],
+                    e[4] = Constant(0),
+                    e[5] = Lambda(/*$*/
+                      typeof(System.Func<System.Object>),
+                      e[6] = New(/*2 args*/
+                        typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.B).GetTypeInfo().DeclaredConstructors.ToArray()[0],
+                        e[7] = Convert(
+                          e[8] = Call(
+                            e[3],
+                            typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest).GetTypeInfo().GetDeclaredMethods("GetOrAdd").ToArray()[0],
+                            e[9] = Constant(1),
+                            e[10] = Lambda(/*$*/
+                              typeof(System.Func<System.Object>),
+                              e[11] = New(/*1 args*/
+                                typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.C).GetTypeInfo().DeclaredConstructors.ToArray()[0],
+                                e[12] = Convert(
+                                  e[13] = Call(
+                                    e[3],
+                                    typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest).GetTypeInfo().GetDeclaredMethods("GetOrAdd").ToArray()[0],
+                                    e[14] = Constant(2),
+                                    e[15] = Lambda(/*$*/
+                                      typeof(System.Func<System.Object>),
+                                      e[16] = New(/*0 args*/
+                                        typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.D).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0]), new ParameterExpression[0])),
+                                  typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.D))), new ParameterExpression[0])),
+                          typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.C)),
+                        e[12]), new ParameterExpression[0])),
+                  typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.B)),
+                e[7]), new ParameterExpression[0]);
             var f = expr.CompileFast<Func<A>>(true);
             Assert.IsNotNull(f);
             var a = f();
@@ -105,7 +105,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         public object GetOrAdd(int i, Func<object> getValue) =>
             _objects[i] ?? (_objects[i] = getValue());
 
-        public class A 
+        public class A
         {
             public B B { get; }
             public C C { get; }
