@@ -20,7 +20,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         public void Should_output_a_valid_expression_code()
         {
             var e = CreateExpression();
-            var s = e.ToExpressionCodeString();
+            var s = e.ToExpressionString();
             // Console.WriteLine(s); // used for the output
             StringAssert.Contains("new Expression[17];", s);
         }
