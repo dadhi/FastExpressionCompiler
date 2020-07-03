@@ -122,7 +122,7 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         /// <summary>Tries to convert to the correct C# code which expression is representing.</summary>
-        public string ToCSharpString() => ToCSharpString(new StringBuilder(1024), 2).ToString();
+        public string ToCSharpString() => ToCSharpString(new StringBuilder(1024), 4).ToString();
 
         /// <summary>Code printer with the provided configuration</summary>
         public virtual StringBuilder ToCSharpString(StringBuilder sb,
@@ -1330,13 +1330,13 @@ namespace FastExpressionCompiler.LightExpression
     /// <summary>Converts the object of known type into the valid C# code representation</summary>
     public static class ExpressionCodePrinter
     {
-        internal static StringBuilder AppendLineIdent(this StringBuilder sb, int lineIdent) =>
+        internal static StringBuilder NewLineIdent(this StringBuilder sb, int lineIdent) =>
             sb.AppendLine().Append(' ', lineIdent);
 
-        internal static StringBuilder AppendLineIdent(this StringBuilder sb, Expression expr, List<Expression> uniqueExprs,
+        internal static StringBuilder NewLineIdentExpr(this StringBuilder sb, Expression expr, List<Expression> uniqueExprs,
             int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
-            sb.AppendLineIdent(lineIdent);
+            sb.NewLineIdent(lineIdent);
             if (expr == null)
                 sb.Append("null");
             else
@@ -1344,18 +1344,46 @@ namespace FastExpressionCompiler.LightExpression
             return sb;
         }
 
-        internal static StringBuilder AppendLineIdent<T>(this StringBuilder sb, IReadOnlyList<T> exprs, List<Expression> uniqueExprs,
+        internal static StringBuilder NewLineIdentCs(this StringBuilder sb, Expression expr,
+            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            sb.NewLineIdent(lineIdent);
+            if (expr == null)
+                sb.Append("null");
+            else
+                expr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+            return sb;
+        }
+
+        internal static StringBuilder NewLineIdentExprs<T>(this StringBuilder sb, IReadOnlyList<T> exprs, List<Expression> uniqueExprs,
             int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
             where T : Expression
         {
             if (exprs.Count == 0)
-                return sb.Append("new ").Append(typeof(T).Name).Append("[0]");
+                return sb.Append(" new ").Append(typeof(T).Name).Append("[0]");
 
             for (var i = 0; i < exprs.Count; i++)
             {
                 if (i > 0)
                     sb.Append(',');
-                sb.AppendLineIdent(exprs[i], uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+                sb.NewLineIdentExpr(exprs[i], uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            }
+
+            return sb;
+        }
+
+        internal static StringBuilder NewLineIdentCss<T>(this StringBuilder sb, IReadOnlyList<T> exprs,
+            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+            where T : Expression
+        {
+            if (exprs.Count == 0)
+                return sb;
+
+            for (var i = 0; i < exprs.Count; i++)
+            {
+                if (i > 0)
+                    sb.Append(',');
+                sb.NewLineIdentCs(exprs[i], lineIdent, stripNamespace, printType, identSpaces);
             }
 
             return sb;
@@ -1560,21 +1588,21 @@ namespace FastExpressionCompiler.LightExpression
         {
             var name = Enum.GetName(typeof(ExpressionType), NodeType);
             sb.Append(name).Append('(');
-            sb.AppendLineIdent(Operand, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExpr(Operand, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
 
             if (NodeType == ExpressionType.Convert ||
                 NodeType == ExpressionType.Unbox ||
                 NodeType == ExpressionType.Throw)
             {
                 sb.Append(',');
-                sb.AppendLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
+                sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
             }
 
             if (NodeType == ExpressionType.Convert && Method != null)
             {
                 sb.Append(',');
                 var methodIndex = Method.DeclaringType.GetTypeInfo().GetDeclaredMethods(Method.Name).AsArray().GetFirstIndex(Method);
-                sb.AppendLineIdent(lineIdent).AppendTypeof(Method.DeclaringType, stripNamespace, printType)
+                sb.NewLineIdent(lineIdent).AppendTypeof(Method.DeclaringType, stripNamespace, printType)
                     .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(Method.Name).Append("\").ToArray()[").Append(methodIndex).Append("]");
             }
 
@@ -1631,8 +1659,8 @@ namespace FastExpressionCompiler.LightExpression
         {
             var name = Enum.GetName(typeof(ExpressionType), NodeType);
             sb.Append(name).Append('(');
-            sb.AppendLineIdent(Left, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(Right, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExpr(Left, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(Right, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -1680,8 +1708,8 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("TypeIs(");
-            sb.AppendLineIdent(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(lineIdent).AppendTypeof(TypeOperand, stripNamespace, printType);
+            sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdent(lineIdent).AppendTypeof(TypeOperand, stripNamespace, printType);
             return sb.Append(')');
         }
 
@@ -1713,9 +1741,9 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Coalesce(");
-            sb.AppendLineIdent(Left, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(Right, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(Conversion, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExpr(Left, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(Right, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(Conversion, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -1810,14 +1838,14 @@ namespace FastExpressionCompiler.LightExpression
             bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("MemberInit(");
-            sb.AppendLineIdent(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(lineIdent);
+            sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdent(lineIdent);
 
             for (var i = 0; i < Bindings.Count; i++)
             {
                 if (i > 0)
                     sb.Append(','); // insert the comma before the 2nd binding
-                sb.AppendLineIdent(lineIdent);
+                sb.NewLineIdent(lineIdent);
                 Bindings[i].CreateExpressionString(sb, uniqueExprs, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
             }
 
@@ -1843,6 +1871,13 @@ namespace FastExpressionCompiler.LightExpression
         public readonly string Name;
         public readonly bool IsByRef;
 
+        internal ParameterExpression(Type type, string name, bool isByRef)
+        {
+            Type = type;
+            Name = name;
+            IsByRef = isByRef;
+        }
+
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitParameter(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
@@ -1862,6 +1897,10 @@ namespace FastExpressionCompiler.LightExpression
             return sb.Append(')');
         }
 
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2) =>
+            sb.Append(Name); // todo: @fix where Name is null
+
         internal static System.Linq.Expressions.ParameterExpression[] ToParameterExpressions(
             IReadOnlyList<ParameterExpression> ps, ref LiveCountArray<LightAndSysExpr> exprsConverted)
         {
@@ -1875,13 +1914,6 @@ namespace FastExpressionCompiler.LightExpression
             for (var i = 0; i < result.Length; ++i)
                 result[i] = (System.Linq.Expressions.ParameterExpression)ps[i].ToExpression(ref exprsConverted);
             return result;
-        }
-
-        internal ParameterExpression(Type type, string name, bool isByRef)
-        {
-            Type = type;
-            Name = name;
-            IsByRef = isByRef;
         }
     }
 
@@ -1982,9 +2014,9 @@ namespace FastExpressionCompiler.LightExpression
             var args = Arguments;
             sb.Append("New(/*").Append(args.Count).Append(" args*/");
             var ctorIndex = Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.ToArray().GetFirstIndex(Constructor);
-            sb.AppendLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType)
+            sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType)
                 .Append(".GetTypeInfo().DeclaredConstructors.ToArray()[").Append(ctorIndex).Append("],");
-            sb.AppendLineIdent(args, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExprs(args, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
     }
@@ -2118,8 +2150,8 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append(NodeType == ExpressionType.NewArrayInit ? "NewArrayInit(" : "NewArrayBounds(");
-            sb.AppendLineIdent(lineIdent).AppendTypeof(Type.GetElementType(), stripNamespace, printType);
-            sb.AppendLineIdent(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdent(lineIdent).AppendTypeof(Type.GetElementType(), stripNamespace, printType);
+            sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -2153,13 +2185,13 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Call(");
-            sb.AppendLineIdent(Object, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(Object, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
 
             var methodIndex = Method.DeclaringType.GetTypeInfo().GetDeclaredMethods(Method.Name).AsArray().GetFirstIndex(Method);
-            sb.AppendLineIdent(lineIdent).AppendTypeof(Method.DeclaringType, stripNamespace, printType)
+            sb.NewLineIdent(lineIdent).AppendTypeof(Method.DeclaringType, stripNamespace, printType)
                 .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(Method.Name).Append("\").ToArray()[").Append(methodIndex).Append("],");
 
-            sb.AppendLineIdent(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
     }
@@ -2347,8 +2379,8 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Property(");
-            sb.AppendLineIdent(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(lineIdent).AppendTypeof(PropertyInfo.DeclaringType, stripNamespace, printType)
+            sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdent(lineIdent).AppendTypeof(PropertyInfo.DeclaringType, stripNamespace, printType)
                 .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(PropertyInfo.Name).Append("\")");
             return sb.Append(')');
         }
@@ -2371,8 +2403,8 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Field(");
-            sb.AppendLineIdent(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(lineIdent).AppendTypeof(FieldInfo.DeclaringType, stripNamespace, printType)
+            sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdent(lineIdent).AppendTypeof(FieldInfo.DeclaringType, stripNamespace, printType)
                 .Append(".GetTypeInfo().GetDeclaredField(\"").Append(FieldInfo.Name).Append("\")");
             return sb.Append(')');
         }
@@ -2415,13 +2447,13 @@ namespace FastExpressionCompiler.LightExpression
             sb.Append("Bind(");
 
             if (Member is FieldInfo)
-                sb.AppendLineIdent(lineIdent).AppendTypeof(Member.DeclaringType, stripNamespace, printType)
+                sb.NewLineIdent(lineIdent).AppendTypeof(Member.DeclaringType, stripNamespace, printType)
                     .Append(".GetTypeInfo().GetDeclaredField(\"").Append(Member.Name).Append("\"),");
             else // or the property to assign
-                sb.AppendLineIdent(lineIdent).AppendTypeof(Member.DeclaringType, stripNamespace, printType)
+                sb.NewLineIdent(lineIdent).AppendTypeof(Member.DeclaringType, stripNamespace, printType)
                     .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(Member.Name).Append("\"),");
 
-            sb.AppendLineIdent(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(")");
         }
 
@@ -2445,8 +2477,8 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Invoke(");
-            sb.AppendLineIdent(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(")");
         }
 
@@ -2496,12 +2528,12 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Condition(");
-            sb.AppendLineIdent(Test, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(IfTrue, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(IfFalse, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExpr(Test, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(IfTrue, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(IfFalse, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
 
             if (_type != null)
-                sb.Append(',').AppendLineIdent(lineIdent).AppendTypeof(_type, stripNamespace, printType);
+                sb.Append(',').NewLineIdent(lineIdent).AppendTypeof(_type, stripNamespace, printType);
 
             return sb.Append(')');
         }
@@ -2533,13 +2565,13 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("MakeIndex(");
-            sb.AppendLineIdent(Object, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExpr(Object, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
 
             var propIndex = Indexer.DeclaringType.GetTypeInfo().DeclaredProperties.AsArray().GetFirstIndex(Indexer);
-            sb.AppendLineIdent(lineIdent).AppendTypeof(Indexer.DeclaringType)
+            sb.NewLineIdent(lineIdent).AppendTypeof(Indexer.DeclaringType)
                 .Append(".GetTypeInfo().DeclaredProperties.ToArray()[").Append(propIndex).Append("],");
 
-            sb.AppendLineIdent(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -2609,18 +2641,18 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Block(");
-            sb.AppendLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType).Append(',');
+            sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType).Append(',');
 
             if (Variables.Count == 0)
-                sb.AppendLineIdent(lineIdent).Append("new ParameterExpression[0],");
+                sb.NewLineIdent(lineIdent).Append("new ParameterExpression[0],");
             else
             {
-                sb.AppendLineIdent(lineIdent).Append("new ParameterExpression[]{");
-                sb.AppendLineIdent(Variables, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
-                sb.AppendLineIdent(lineIdent).Append("},");
+                sb.NewLineIdent(lineIdent).Append("new ParameterExpression[]{");
+                sb.NewLineIdentExprs(Variables, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+                sb.NewLineIdent(lineIdent).Append("},");
             }
 
-            sb.AppendLineIdent(Expressions, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExprs(Expressions, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
     }
@@ -2646,18 +2678,18 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Loop(");
-            sb.AppendLineIdent(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
 
             if (BreakLabel != null)
             {
                 sb.Append(',');
-                sb.AppendLineIdent(lineIdent).Append("Label(\"break\")");
+                sb.NewLineIdent(lineIdent).Append("Label(\"break\")");
             }
 
             if (ContinueLabel != null)
             {
                 sb.Append(',');
-                sb.AppendLineIdent(lineIdent).Append("Label(\"continue\")");
+                sb.NewLineIdent(lineIdent).Append("Label(\"continue\")");
             }
 
             return sb.Append(')');
@@ -2717,21 +2749,21 @@ namespace FastExpressionCompiler.LightExpression
             if (Finally == null)
             {
                 sb.Append("TryCatch(");
-                sb.AppendLineIdent(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
                 ToCatchBlocksCode(Handlers, sb, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             }
             else if (Handlers == null)
             {
                 sb.Append("TryFinally(");
-                sb.AppendLineIdent(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-                sb.AppendLineIdent(Finally, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+                sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                sb.NewLineIdentExpr(Finally, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             }
             else
             {
                 sb.Append("TryCatchFinally(");
-                sb.AppendLineIdent(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
                 ToCatchBlocksCode(Handlers, sb, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-                sb.AppendLineIdent(Finally, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+                sb.NewLineIdentExpr(Finally, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             }
 
             return sb.Append(')');
@@ -2747,7 +2779,7 @@ namespace FastExpressionCompiler.LightExpression
             {
                 if (i > 0)
                     sb.Append(',');
-                sb.AppendLineIdent(lineIdent);
+                sb.NewLineIdent(lineIdent);
                 hs[i].CreateExpressionCodeString(sb, uniqueExprs, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
             }
 
@@ -2781,10 +2813,10 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces)
         {
             sb.Append("MakeCatchBlock(");
-            sb.AppendLineIdent(lineIdent).AppendTypeof(Test, stripNamespace, printType).Append(',');
-            sb.AppendLineIdent(Variable, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(Filter, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdent(lineIdent).AppendTypeof(Test, stripNamespace, printType).Append(',');
+            sb.NewLineIdentExpr(Variable, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(Filter, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
     }
@@ -2811,7 +2843,7 @@ namespace FastExpressionCompiler.LightExpression
             if (DefaultValue != null)
             {
                 sb.Append(',');
-                sb.AppendLineIdent(DefaultValue, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+                sb.NewLineIdentExpr(DefaultValue, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             }
 
             return sb.Append(')');
@@ -2853,9 +2885,9 @@ namespace FastExpressionCompiler.LightExpression
         {
             sb.Append("MakeGoto(");
             sb.Append(nameof(GotoExpressionKind)).Append('.').Append(Enum.GetName(typeof(GotoExpressionKind), Kind)).Append(',');
-            sb.AppendLineIdent(lineIdent).Append('"').Append(Target).Append("\",");
-            sb.AppendLineIdent(Value, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
+            sb.NewLineIdent(lineIdent).Append('"').Append(Target).Append("\",");
+            sb.NewLineIdentExpr(Value, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
             return sb.Append(')');
         }
     }
@@ -2875,8 +2907,8 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces)
         {
             sb.Append("SwitchCase(");
-            sb.AppendLineIdent(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(TestValues, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExprs(TestValues, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -2933,11 +2965,11 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Switch(");
-            sb.AppendLineIdent(SwitchValue, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(DefaultBody, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(SwitchValue, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(DefaultBody, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
 
             var methodIndex = Comparison.DeclaringType.GetTypeInfo().DeclaredMethods.AsArray().GetFirstIndex(Comparison);
-            sb.AppendLineIdent(lineIdent).AppendTypeof(Comparison.DeclaringType, stripNamespace, printType)
+            sb.NewLineIdent(lineIdent).AppendTypeof(Comparison.DeclaringType, stripNamespace, printType)
                 .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(Comparison.Name).Append("\").ToArray()[")
                 .Append(methodIndex).Append("],");
 
@@ -2955,7 +2987,7 @@ namespace FastExpressionCompiler.LightExpression
             {
                 if (i > 0)
                     sb.Append(',');
-                sb.AppendLineIdent(lineIdent);
+                sb.NewLineIdent(lineIdent);
                 items[i].CreateExpressionCodeString(sb, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             }
 
@@ -2999,18 +3031,31 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Lambda(/*$*/"); // bookmark the lambdas - $ means it casts something
-            sb.AppendLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType).Append(',');
-            sb.AppendLineIdent(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.AppendLineIdent(Parameters, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType).Append(',');
+            sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExprs(Parameters, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
-            sb.Append("(...) => ");
-            sb.AppendLineIdent(lineIdent);
-            Body.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType);
+            sb.Append('(');
+            for (var i = 0; i < Parameters.Count; i++)
+            {
+                if (i > 0)
+                    sb.Append(',');
+                var p = Parameters[i];
+                if (p.IsByRef)
+                    sb.Append("ref ");
+                sb.Append(p.Type.ToCode(stripNamespace, printType)).Append(' ');
+                sb.Append(p.Name == null ? "@p" + i : p.Name);
+            }
+
+            sb.Append(')');
+            sb.AppendLine().Append(' ', Math.Max(lineIdent - 4, 0)).Append('{');
+            sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType);
+            sb.AppendLine().Append(' ', Math.Max(lineIdent - 4, 0)).Append('}');
             return sb;
         }
 

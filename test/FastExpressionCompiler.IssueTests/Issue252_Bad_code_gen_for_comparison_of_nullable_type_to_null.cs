@@ -1,6 +1,7 @@
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
+using System.Text;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
@@ -28,7 +29,7 @@ namespace FastExpressionCompiler.IssueTests
             var callIfNotNull = IfThen(Not(Equal(parameterExpr, Constant(null, typeof(int?)))), callExpr);
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
 #if LIGHT_EXPRESSION
-            System.Console.WriteLine(expr.ToCSharpString());
+            System.Console.WriteLine(expr.ToCSharpString(new StringBuilder(), 4, stripNamespace: true));
 #endif
             var f = expr.CompileFast(true);
             f(2);
