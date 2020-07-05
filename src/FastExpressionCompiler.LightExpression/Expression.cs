@@ -126,7 +126,7 @@ namespace FastExpressionCompiler.LightExpression
 
         /// <summary>Code printer with the provided configuration</summary>
         public virtual StringBuilder ToCSharpString(StringBuilder sb,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2) => 
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) => 
             sb.Append("/*todo: do it yourself*/");
 
         /// <summary>Converts to Expression and outputs its as string</summary>
@@ -1898,7 +1898,7 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2) =>
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
             sb.Append(Name); // todo: @fix where Name is null
 
         internal static System.Linq.Expressions.ParameterExpression[] ToParameterExpressions(
@@ -2193,6 +2193,29 @@ namespace FastExpressionCompiler.LightExpression
 
             sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
+        }
+
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            if (Object != null)
+            {
+                Object.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                sb.Append('.');
+            }
+
+            sb.Append(Method.Name);
+            sb.AppendLine().Append(' ', Math.Max(0, lineIdent - identSpaces)).Append('(');
+
+            for (var i = 0; i < Arguments.Count; i++)
+            {
+                if (i > 0)
+                    sb.Append(',').AppendLine().Append(' ', lineIdent);
+                Arguments[i].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            }
+
+            sb.AppendLine().Append(' ', Math.Max(0, lineIdent - identSpaces)).Append(')');
+            return sb;
         }
     }
 
@@ -2517,6 +2540,14 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression IfFalse;
         private readonly Type _type;
 
+        internal ConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse, Type type = null)
+        {
+            Test = test;
+            IfTrue = ifTrue;
+            IfFalse = ifFalse;
+            _type = type;
+        }
+
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConditional(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
@@ -2538,12 +2569,11 @@ namespace FastExpressionCompiler.LightExpression
             return sb.Append(')');
         }
 
-        internal ConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse, Type type = null)
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            Test = test;
-            IfTrue = ifTrue;
-            IfFalse = ifFalse;
-            _type = type;
+            sb.Append("if (***)");
+            return sb;
         }
     }
 
@@ -3038,7 +3068,7 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
             sb.Append('(');
             for (var i = 0; i < Parameters.Count; i++)
@@ -3052,10 +3082,15 @@ namespace FastExpressionCompiler.LightExpression
                 sb.Append(p.Name == null ? "@p" + i : p.Name);
             }
 
-            sb.Append(')');
-            sb.AppendLine().Append(' ', Math.Max(lineIdent - 4, 0)).Append('{');
-            sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType);
-            sb.AppendLine().Append(' ', Math.Max(lineIdent - 4, 0)).Append('}');
+            sb.Append(") => ");
+            if (Body is BlockExpression == false)
+                sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType);
+            else
+            {
+                sb.AppendLine().Append(' ', Math.Max(lineIdent - 4, 0)).Append('{');
+                sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType);
+                sb.AppendLine().Append(' ', Math.Max(lineIdent - 4, 0)).Append('}');
+            }
             return sb;
         }
 
