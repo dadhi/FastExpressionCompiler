@@ -3115,7 +3115,7 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            sb.Append('(');
+            sb.Append("new ").Append(Type.ToCode(stripNamespace, printType)).Append('(');
             for (var i = 0; i < Parameters.Count; i++)
             {
                 if (i > 0)
