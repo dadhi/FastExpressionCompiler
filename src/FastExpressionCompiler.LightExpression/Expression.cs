@@ -785,16 +785,14 @@ namespace FastExpressionCompiler.LightExpression
             new ConditionalExpression(test, ifTrue, ifFalse, type);
 
         public static ConditionalExpression IfThen(Expression test, Expression ifTrue) =>
-            new ConditionalExpression(test, ifTrue, Default(ifTrue.Type), ifTrue.Type);
-            // todo: @incomplete check the tests, commented the old version
-            // Condition(test, ifTrue, Empty(), typeof(void));
+            new ConditionalExpression(test, ifTrue, Empty(), typeof(void));
+
+        public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) =>
+            new ConditionalExpression(test, ifTrue, ifFalse, typeof(void));
 
         public static DefaultExpression Empty() => new DefaultExpression(typeof(void));
 
         public static DefaultExpression Default(Type type) => new DefaultExpression(type);
-
-        public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) =>
-            Condition(test, ifTrue, ifFalse, typeof(void));
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
         /// <param name="left">An Expression to set the Left property equal to.</param>
