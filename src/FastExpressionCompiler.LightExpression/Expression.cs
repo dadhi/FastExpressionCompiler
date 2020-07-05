@@ -779,18 +779,19 @@ namespace FastExpressionCompiler.LightExpression
             Invoke(lambda, (IEnumerable<Expression>)args);
 
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) =>
-            new ConditionalExpression(test, ifTrue, ifFalse);
+            new ConditionalExpression(test, ifTrue, ifFalse, ifTrue.Type);
 
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Type type) =>
             new ConditionalExpression(test, ifTrue, ifFalse, type);
 
         public static ConditionalExpression IfThen(Expression test, Expression ifTrue) =>
-            Condition(test, ifTrue, Empty(), typeof(void));
+            new ConditionalExpression(test, ifTrue, Default(ifTrue.Type), ifTrue.Type);
+            // todo: @incomplete check the tests, commented the old version
+            // Condition(test, ifTrue, Empty(), typeof(void));
 
         public static DefaultExpression Empty() => new DefaultExpression(typeof(void));
 
-        public static DefaultExpression Default(Type type) =>
-            type == typeof(void) ? Empty() : new DefaultExpression(type);
+        public static DefaultExpression Default(Type type) => new DefaultExpression(type);
 
         public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) =>
             Condition(test, ifTrue, ifFalse, typeof(void));
@@ -1609,6 +1610,20 @@ namespace FastExpressionCompiler.LightExpression
             return sb.Append(')');
         }
 
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            switch (NodeType)
+            {
+                case ExpressionType.Not:
+                    sb.Append("!(");
+                    Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(')');
+                default: 
+                    return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            }
+        }
+
         public UnaryExpression(ExpressionType nodeType, Expression operand)
         {
             NodeType = nodeType;
@@ -1652,18 +1667,6 @@ namespace FastExpressionCompiler.LightExpression
 
         public readonly Expression Left, Right;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBinary(this);
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, int lineIdent = 0,
-            bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            var name = Enum.GetName(typeof(ExpressionType), NodeType);
-            sb.Append(name).Append('(');
-            sb.NewLineIdentExpr(Left, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(Right, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
-
         protected BinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type)
         {
             NodeType = nodeType;
@@ -1686,6 +1689,27 @@ namespace FastExpressionCompiler.LightExpression
             }
             else
                 Type = type;
+        }
+
+        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBinary(this);
+
+        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, int lineIdent = 0,
+            bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            var name = Enum.GetName(typeof(ExpressionType), NodeType);
+            sb.Append(name).Append('(');
+            sb.NewLineIdentExpr(Left, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(Right, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            return sb.Append(')');
+        }
+
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            sb.Append(" == ");
+            Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            return sb;
         }
     }
 
@@ -1967,8 +1991,21 @@ namespace FastExpressionCompiler.LightExpression
 
             return sb.Append(')');
         }
-    }
 
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            if (Value == null)
+                return sb.Append("null");
+            
+            if (Value is Type t) // todo: move this to ValueToCode, we should output `typeof(T)` anyway
+                return sb.AppendTypeof(t, stripNamespace, printType);
+
+            if (Value.GetType() != Type)
+                sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')');
+            return sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
+        }
+    }
 
     public sealed class TypedConstantExpression : ConstantExpression
     {
@@ -2205,8 +2242,10 @@ namespace FastExpressionCompiler.LightExpression
             }
 
             sb.Append(Method.Name);
-            sb.AppendLine().Append(' ', Math.Max(0, lineIdent - identSpaces)).Append('(');
+            if (Arguments.Count == 0)
+                return sb.Append("()");
 
+            sb.AppendLine().Append(' ', Math.Max(0, lineIdent - identSpaces)).Append('(');
             for (var i = 0; i < Arguments.Count; i++)
             {
                 if (i > 0)
@@ -2517,6 +2556,8 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType => ExpressionType.Default;
         public override Type Type { get; }
 
+        internal DefaultExpression(Type type) => Type = type;
+
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDefault(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
@@ -2526,7 +2567,9 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2) =>
             Type == typeof(void) ? sb.Append("Empty()") : sb.Append("Default(").AppendTypeof(Type, stripNamespace, printType).Append(')');
 
-        internal DefaultExpression(Type type) => Type = type;
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
+            sb.Append("default(").Append(Type.ToCode(stripNamespace, printType)).Append(')');
     }
 
     // todo: @test Test all conditional + try for the exact op-codes produced, should help with AutoMapper case
@@ -2540,7 +2583,7 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression IfFalse;
         private readonly Type _type;
 
-        internal ConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse, Type type = null)
+        internal ConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse, Type type)
         {
             Test = test;
             IfTrue = ifTrue;
@@ -2572,7 +2615,9 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            sb.Append("if (***)");
+            Test.ToCSharpString(sb,    lineIdent, stripNamespace, printType, identSpaces).Append(" ?");
+            sb.NewLineIdentCs(IfTrue,  lineIdent, stripNamespace, printType, identSpaces).Append(" :");
+            sb.NewLineIdentCs(IfFalse, lineIdent, stripNamespace, printType, identSpaces);
             return sb;
         }
     }
