@@ -1346,7 +1346,7 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         internal static StringBuilder NewLineIdentCs(this StringBuilder sb, Expression expr,
-            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
             sb.NewLineIdent(lineIdent);
             if (expr == null)
@@ -1374,7 +1374,7 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         internal static StringBuilder NewLineIdentCss<T>(this StringBuilder sb, IReadOnlyList<T> exprs,
-            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
             where T : Expression
         {
             if (exprs.Count == 0)
