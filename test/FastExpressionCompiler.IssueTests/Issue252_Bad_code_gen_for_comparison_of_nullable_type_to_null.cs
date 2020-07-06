@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System;
 
 #if LIGHT_EXPRESSION
 using System.Text;
@@ -31,11 +32,29 @@ namespace FastExpressionCompiler.IssueTests
                 callExpr);
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
 #if LIGHT_EXPRESSION
-            System.Console.WriteLine(expr.ToCSharpString(new StringBuilder(), 4, stripNamespace: true));
+            Console.WriteLine(expr.ToCSharpString(new StringBuilder(), 4, stripNamespace: true));
 #endif
             var f = expr.CompileFast(true);
             f(2);
             f(null);
+
+            Console.WriteLine("Generated IL:");
+            foreach (var op in f.Method.GetOpCodes())
+                Console.WriteLine(op);
+/*
+Expected IL - sharplab.io:
+
+        IL_0000: ldarga.s param
+        IL_0002: call instance bool valuetype [System.Private.CoreLib]System.Nullable`1<int32>::get_HasValue()
+        IL_0007: brfalse.s IL_0017
+
+        IL_0009: ldarga.s param
+        IL_000b: constrained. valuetype [System.Private.CoreLib]System.Nullable`1<int32>
+        IL_0011: callvirt instance string [System.Private.CoreLib]System.Object::ToString()
+        IL_0016: pop
+
+        IL_0017: ret
+*/
         }
 
         public delegate string Handler2(int? value);

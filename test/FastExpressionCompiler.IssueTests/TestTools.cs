@@ -12,7 +12,7 @@ namespace FastExpressionCompiler
             ILReaderFactory.Create(method).Select(x => x.OpCode).ToArray();
 
         public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes) =>
-            CollectionAssert.AreEqual(expectedCodes, ILReaderFactory.Create(method).Select(x => x.OpCode).ToArray());
+            CollectionAssert.AreEqual(expectedCodes, method.GetOpCodes());
     }
 
     public interface ITest 

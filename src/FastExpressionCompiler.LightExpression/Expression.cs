@@ -2625,13 +2625,16 @@ namespace FastExpressionCompiler.LightExpression
                 Test.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                 sb.Append(')');
                 sb.NewLine(lineIdent, identSpaces).Append('{');
-                sb.NewLineIdentCs(IfTrue, lineIdent, stripNamespace, printType, identSpaces);
+
+                // todo: @incomplete for BlockExpression it should not append ';' because BlickExpression does it itself
+                sb.NewLineIdentCs(IfTrue, lineIdent, stripNamespace, printType, identSpaces).Append(';');
+                
                 sb.NewLine(lineIdent, identSpaces).Append('}');
                 if (IfFalse != VoidDefault) 
                 {
                     sb.NewLine(lineIdent, identSpaces).Append("else");
                     sb.NewLine(lineIdent, identSpaces).Append('{');
-                    sb.NewLineIdentCs(IfFalse, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.NewLineIdentCs(IfFalse, lineIdent, stripNamespace, printType, identSpaces).Append(';');
                     sb.NewLine(lineIdent, identSpaces).Append('}');
                 }
             }
