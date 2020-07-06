@@ -15,7 +15,6 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Test_returning_void_Handler();
-            // Test_returning_string();
             return 1;
         }
 

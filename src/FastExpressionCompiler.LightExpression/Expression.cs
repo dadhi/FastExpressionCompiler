@@ -790,9 +790,12 @@ namespace FastExpressionCompiler.LightExpression
         public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) =>
             new ConditionalExpression(test, ifTrue, ifFalse, typeof(void));
 
-        public static DefaultExpression Empty() => new DefaultExpression(typeof(void));
+        public static readonly DefaultExpression VoidDefault = new DefaultExpression(typeof(void));
 
-        public static DefaultExpression Default(Type type) => new DefaultExpression(type);
+        public static DefaultExpression Empty() => VoidDefault;
+
+        public static DefaultExpression Default(Type type) =>
+            type == typeof(void) ? VoidDefault : new DefaultExpression(type);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
         /// <param name="left">An Expression to set the Left property equal to.</param>
@@ -1331,6 +1334,9 @@ namespace FastExpressionCompiler.LightExpression
     {
         internal static StringBuilder NewLineIdent(this StringBuilder sb, int lineIdent) =>
             sb.AppendLine().Append(' ', lineIdent);
+
+        internal static StringBuilder NewLine(this StringBuilder sb, int lineIdent, int identSpaces) =>
+            sb.AppendLine().Append(' ', Math.Max(lineIdent - identSpaces, 0));
 
         internal static StringBuilder NewLineIdentExpr(this StringBuilder sb, Expression expr, List<Expression> uniqueExprs,
             int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
@@ -2243,7 +2249,7 @@ namespace FastExpressionCompiler.LightExpression
             if (Arguments.Count == 0)
                 return sb.Append("()");
 
-            sb.AppendLine().Append(' ', Math.Max(0, lineIdent - identSpaces)).Append('(');
+            sb.NewLine(lineIdent, identSpaces).Append('(');
             for (var i = 0; i < Arguments.Count; i++)
             {
                 if (i > 0)
@@ -2251,7 +2257,7 @@ namespace FastExpressionCompiler.LightExpression
                 Arguments[i].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             }
 
-            sb.AppendLine().Append(' ', Math.Max(0, lineIdent - identSpaces)).Append(')');
+            sb.NewLine(lineIdent, identSpaces).Append(')');
             return sb;
         }
     }
@@ -2613,9 +2619,28 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            Test.ToCSharpString(sb,    lineIdent, stripNamespace, printType, identSpaces).Append(" ?");
-            sb.NewLineIdentCs(IfTrue,  lineIdent, stripNamespace, printType, identSpaces).Append(" :");
-            sb.NewLineIdentCs(IfFalse, lineIdent, stripNamespace, printType, identSpaces);
+            if (_type == typeof(void)) 
+            {
+                sb.Append("if (");
+                Test.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                sb.Append(')');
+                sb.NewLine(lineIdent, identSpaces).Append('{');
+                sb.NewLineIdentCs(IfTrue, lineIdent, stripNamespace, printType, identSpaces);
+                sb.NewLine(lineIdent, identSpaces).Append('}');
+                if (IfFalse != VoidDefault) 
+                {
+                    sb.NewLine(lineIdent, identSpaces).Append("else");
+                    sb.NewLine(lineIdent, identSpaces).Append('{');
+                    sb.NewLineIdentCs(IfFalse, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.NewLine(lineIdent, identSpaces).Append('}');
+                }
+            }
+            else 
+            {
+                Test.ToCSharpString(sb,    lineIdent, stripNamespace, printType, identSpaces).Append(" ?");
+                sb.NewLineIdentCs(IfTrue,  lineIdent, stripNamespace, printType, identSpaces).Append(" :");
+                sb.NewLineIdentCs(IfFalse, lineIdent, stripNamespace, printType, identSpaces);
+            }
             return sb;
         }
     }
@@ -3126,14 +3151,18 @@ namespace FastExpressionCompiler.LightExpression
             }
 
             sb.Append(") => ");
-            if (Body is BlockExpression == false)
+
+            if (ReturnType != typeof(void) && 
+                Body is BlockExpression == false)
                 sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType);
             else
             {
-                sb.AppendLine().Append(' ', Math.Max(lineIdent - 4, 0)).Append('{');
+                sb.NewLine(lineIdent, identSpaces).Append('{');
+                // todo: @incomplete for BlockExpression it should insert the `return` before the last expression
                 sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType);
-                sb.AppendLine().Append(' ', Math.Max(lineIdent - 4, 0)).Append('}');
+                sb.NewLine(lineIdent, identSpaces).Append('}');
             }
+
             return sb;
         }
 
