@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.UnitTests
             // RunAllTests();
 
             // todo: @fix #252
-            // new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
+            //new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
             new FastExpressionCompiler.LightExpression.IssueTests.Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
 
             // todo: @fix #255
@@ -35,7 +35,7 @@ namespace FastExpressionCompiler.UnitTests
                 catch (Exception ex)
                 {
                     failed = true;
-                    Console.WriteLine($"ERROR: Some of {testsName} are failed with {ex}!");
+                    Console.WriteLine($"ERROR: Tests `{testsName}` failed with '{ex}'");
                 }
             }
 

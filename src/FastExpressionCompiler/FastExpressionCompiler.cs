@@ -2303,6 +2303,15 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
+                if (expr.Operand.NodeType == ExpressionType.Equal) 
+                {
+                    var equalExpr = (BinaryExpression)expr.Operand;
+                    if (!TryEmitComparison(equalExpr.Left, equalExpr.Right, ExpressionType.NotEqual,
+                        paramExprs, il, ref closure, parent))
+                        return false;
+                    return true;
+                }
+
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, parent))
                     return false;
                 if ((parent & ParentFlags.IgnoreResult) > 0)
@@ -3740,8 +3749,18 @@ namespace FastExpressionCompiler
                 var leftOpType = exprLeft.Type;
                 var leftIsNullable = leftOpType.IsNullable();
                 var rightOpType = exprRight.Type;
-                if (exprRight is ConstantExpression c && c.Value == null && exprRight.Type == typeof(object))
-                    rightOpType = leftOpType;
+                if (exprRight is ConstantExpression r && r.Value == null)
+                {
+                    if (!TryEmit(exprLeft, paramExprs, il, ref closure, 
+                        parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall))
+                        return false;
+
+                    il.Emit(OpCodes.Call, leftOpType.FindNullableHasValueGetterMethod());
+                    return true;
+
+                    // if (exprRight.Type == typeof(object))
+                    //     rightOpType = leftOpType;
+                }
 
                 int lVarIndex = -1, rVarIndex = -1;
                 if (!TryEmit(exprLeft, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))

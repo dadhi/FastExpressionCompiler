@@ -35,12 +35,11 @@ namespace FastExpressionCompiler.IssueTests
             Console.WriteLine(expr.ToCSharpString(new StringBuilder(), 4, stripNamespace: true));
 #endif
             var f = expr.CompileFast(true);
+            f.Method.PrintIL();
+
             f(2);
             f(null);
 
-            Console.WriteLine("Generated IL:");
-            foreach (var op in f.Method.GetOpCodes())
-                Console.WriteLine(op);
 /*
 Expected IL - sharplab.io:
 
@@ -56,51 +55,5 @@ Expected IL - sharplab.io:
         IL_0017: ret
 */
         }
-
-        public delegate string Handler2(int? value);
-
-        [Test]
-        public void Test_returning_void_Handler_with_IfThenElse()
-        {
-            var parameterExpr = Parameter(typeof(int?), "param");
-
-            var callExpr = Call(parameterExpr, typeof(int?).GetMethod(nameof(object.ToString)));
-            var callIfNotNull = IfThenElse(
-                Not(Equal(parameterExpr, Constant(null, typeof(int?)))), 
-                callExpr,
-                Constant(null));
-
-            var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
-#if LIGHT_EXPRESSION
-            System.Console.WriteLine(expr.ToCSharpString(new StringBuilder(), 4, stripNamespace: true));
-#endif
-            var f = expr.CompileFast(true);
-
-            f(2);
-            f(null);
-        }
-
-
-//         [Test]
-//         public void Test_returning_string_Handler()
-//         {
-//             var parameterExpr = Parameter(typeof(int?), "param");
-
-//             var callExpr = Call(parameterExpr, typeof(int?).GetMethod(nameof(object.ToString)));
-//             var callIfNotNull = IfThen(
-//                 Not(Equal(parameterExpr, Constant(null, typeof(int?)))), 
-//                 callExpr,
-//                 Constant(null),
-//                 typeof(string));
-
-//             var expr = Lambda<Handler2>(callIfNotNull, parameterExpr);
-// #if LIGHT_EXPRESSION
-//             System.Console.WriteLine(expr.ToCSharpString(new StringBuilder(), 4, stripNamespace: true));
-// #endif
-//             var f = expr.CompileFast(true);
-
-//             Assert.AreEqual("2", f(2));
-//             Assert.AreEqual(null, f(null));
-//         }
     }
 }
