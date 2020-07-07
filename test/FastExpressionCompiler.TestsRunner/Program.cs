@@ -9,10 +9,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // RunAllTests();
+            RunAllTests();
 
             // todo: @fix #252
-            new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
+            // new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
 
             // todo: @fix #255
@@ -165,6 +165,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue243_Pass_Parameter_By_Ref_is_supported().Run);
                 Run(new Nested_lambdas_assigned_to_vars().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Nested_lambdas_assigned_to_vars().Run);
+
+                Run(new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run);
             });
 
             Task.WaitAll(unitTests, issueTests);

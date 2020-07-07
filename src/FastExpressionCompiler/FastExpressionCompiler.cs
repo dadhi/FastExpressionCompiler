@@ -36,8 +36,10 @@ THE SOFTWARE.
 */
 
 #if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression
 #else
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler
 #endif
 {
@@ -3751,17 +3753,6 @@ namespace FastExpressionCompiler
                 var rightOpType = exprRight.Type;
                 if (exprRight is ConstantExpression r && r.Value == null)
                 {
-                    // #252 - short-circuiting the checking for Nullable<X> `x != null`
-                    if (expressionType == ExpressionType.NotEqual)
-                    {
-                        if (!TryEmit(exprLeft, paramExprs, il, ref closure, 
-                            parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall))
-                            return false;
-
-                        il.Emit(OpCodes.Call, leftOpType.FindNullableHasValueGetterMethod());
-                        return true;
-                    }
-
                     if (exprRight.Type == typeof(object))
                         rightOpType = leftOpType;
                 }
@@ -4266,7 +4257,22 @@ namespace FastExpressionCompiler
 
             private static Expression TryReduceCondition(Expression testExpr)
             {
-                if (testExpr is BinaryExpression b)
+                // simplify the not `==` to `!=` and `!=` to `==`
+                if (testExpr.NodeType == ExpressionType.Not) 
+                {
+                    var op = TryReduceCondition(((UnaryExpression)testExpr).Operand);
+                    if (op.NodeType == ExpressionType.Equal)
+                    {
+                        var binOp = (BinaryExpression)op;
+                        return NotEqual(binOp.Left, binOp.Right);
+                    }
+                    else if (op.NodeType == ExpressionType.NotEqual)
+                    {
+                        var binOp = (BinaryExpression)op;
+                        return Equal(binOp.Left, binOp.Right);
+                    }
+                }
+                else if (testExpr is BinaryExpression b)
                 {
                     if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
                     {

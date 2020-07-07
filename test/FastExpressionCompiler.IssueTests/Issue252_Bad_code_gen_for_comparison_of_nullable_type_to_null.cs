@@ -15,9 +15,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Not_Equal_in_void_Handler_should_work();
+            Not_equal_in_void_Handler_should_work();
             Equal_in_void_Handler_should_work();
-            return 1;
+            return 2;
         }
 
         public delegate void Handler(int? value);
@@ -34,15 +34,13 @@ namespace FastExpressionCompiler.IssueTests
                 
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
             
-#if LIGHT_EXPRESSION
+#if LIGHT_EXPRESSION && DEBUG
             Console.WriteLine(expr.ToCSharpString(new StringBuilder(), 4, stripNamespace: true));
 #endif
             var f = expr.CompileFast(true);
-            f.Method.PrintIL();
-
+            // f.Method.PrintIL();
             f(2);
             f(null);
-
             /*
                 Expected IL - sharplab.io:
 
@@ -71,16 +69,14 @@ namespace FastExpressionCompiler.IssueTests
             
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
 
-#if LIGHT_EXPRESSION
+#if LIGHT_EXPRESSION && DEBUG
             Console.WriteLine(expr.ToCSharpString(new StringBuilder(), 4, stripNamespace: true));
 #endif
 
             var f = expr.CompileFast(true);
-            f.Method.PrintIL();
-
+            // f.Method.PrintIL();
             f(2);
             f(null);
-
             /*
                 Expected IL - sharplab.io:
 
