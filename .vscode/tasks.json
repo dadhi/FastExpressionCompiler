@@ -2,7 +2,21 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "build_testsrunner",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build_benchmarks",
             "command": "dotnet",
             "type": "process",
             "args": [

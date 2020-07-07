@@ -12,8 +12,8 @@ namespace FastExpressionCompiler.UnitTests
             // RunAllTests();
 
             // todo: @fix #252
-            //new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
-            new FastExpressionCompiler.LightExpression.IssueTests.Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
+            new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
 
             // todo: @fix #255
             // new BlockTests().Run();

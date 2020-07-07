@@ -12,8 +12,11 @@ namespace FastExpressionCompiler
         public static OpCode[] GetOpCodes(this MethodInfo method) =>
             ILReaderFactory.Create(method).Select(x => x.OpCode).ToArray();
 
-        public static void PrintIL(this MethodInfo method)
+        public static void PrintIL(this MethodInfo method, Action<string> printer = null)
         {
+            if (printer == null)
+                printer = x => System.Diagnostics.Debug.WriteLine(x);
+
             var ilReader = ILReaderFactory.Create(method);
             foreach (var il in ilReader)
             {

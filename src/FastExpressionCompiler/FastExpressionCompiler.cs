@@ -3751,15 +3751,19 @@ namespace FastExpressionCompiler
                 var rightOpType = exprRight.Type;
                 if (exprRight is ConstantExpression r && r.Value == null)
                 {
-                    if (!TryEmit(exprLeft, paramExprs, il, ref closure, 
-                        parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall))
-                        return false;
+                    // #252 - short-circuiting the checking for Nullable<X> `x != null`
+                    if (expressionType == ExpressionType.NotEqual)
+                    {
+                        if (!TryEmit(exprLeft, paramExprs, il, ref closure, 
+                            parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall))
+                            return false;
 
-                    il.Emit(OpCodes.Call, leftOpType.FindNullableHasValueGetterMethod());
-                    return true;
+                        il.Emit(OpCodes.Call, leftOpType.FindNullableHasValueGetterMethod());
+                        return true;
+                    }
 
-                    // if (exprRight.Type == typeof(object))
-                    //     rightOpType = leftOpType;
+                    if (exprRight.Type == typeof(object))
+                        rightOpType = leftOpType;
                 }
 
                 int lVarIndex = -1, rVarIndex = -1;

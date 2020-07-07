@@ -9,7 +9,7 @@
             "name": ".NET Core Launch (Benchmarks)",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
+            "preLaunchTask": "build_benchmarks",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/test/FastExpressionCompiler.Benchmarks/bin/Debug/netcoreapp3.1/FastExpressionCompiler.Benchmarks.exe",
             "args": [],
@@ -23,7 +23,7 @@
             "name": ".NET Core Launch (UnitTests)",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
+            "preLaunchTask": "build_testsrunner",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/test/FastExpressionCompiler.UnitTests/bin/Debug/netcoreapp3.1/FastExpressionCompiler.UnitTests.dll",
             "args": [],
@@ -37,7 +37,7 @@
             "name": ".NET Core Launch (TestsRunner)",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
+            "preLaunchTask": "build_testsrunner",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/test/FastExpressionCompiler.TestsRunner/bin/Debug/netcoreapp3.1/FastExpressionCompiler.TestsRunner.exe",
             "args": [],
