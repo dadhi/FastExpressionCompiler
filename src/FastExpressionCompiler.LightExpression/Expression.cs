@@ -122,7 +122,8 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         /// <summary>Tries to convert to the correct C# code which expression is representing.</summary>
-        public string ToCSharpString() => ToCSharpString(new StringBuilder(1024), 4).ToString();
+        public string ToCSharpString() => 
+            ToCSharpString(new StringBuilder(1024), 4, true).Append(';').ToString();
 
         /// <summary>Code printer with the provided configuration</summary>
         public virtual StringBuilder ToCSharpString(StringBuilder sb,
@@ -2085,6 +2086,14 @@ namespace FastExpressionCompiler.LightExpression
             sb.NewLineIdentExprs(args, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
+
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            sb.Append("new ").Append(Type.ToCode(stripNamespace, printType));
+            sb.Append('(').NewLineIdentCss(Arguments, lineIdent, stripNamespace, printType, identSpaces).Append(')');
+            return sb;
+        }
     }
 
     public sealed class NewValueTypeExpression : NewExpression
@@ -2271,18 +2280,7 @@ namespace FastExpressionCompiler.LightExpression
             }
 
             sb.Append(Method.Name);
-            if (Arguments.Count == 0)
-                return sb.Append("()");
-
-            sb.NewLine(lineIdent, identSpaces).Append('(');
-            for (var i = 0; i < Arguments.Count; i++)
-            {
-                if (i > 0)
-                    sb.Append(',').AppendLine().Append(' ', lineIdent);
-                Arguments[i].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-            }
-
-            sb.NewLine(lineIdent, identSpaces).Append(')');
+            sb.Append('(').NewLineIdentCss(Arguments, lineIdent, stripNamespace, printType, identSpaces).Append(')');
             return sb;
         }
     }
@@ -3170,7 +3168,7 @@ namespace FastExpressionCompiler.LightExpression
             for (var i = 0; i < Parameters.Count; i++)
             {
                 if (i > 0)
-                    sb.Append(',');
+                    sb.Append(", ");
                 var p = Parameters[i];
                 if (p.IsByRef)
                     sb.Append("ref ");
@@ -3187,7 +3185,7 @@ namespace FastExpressionCompiler.LightExpression
             {
                 sb.NewLine(lineIdent, identSpaces).Append('{');
                 // todo: @incomplete for BlockExpression it should insert the `return` before the last expression
-                sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType);
+                sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType).Append(';');
                 sb.NewLine(lineIdent, identSpaces).Append('}');
             }
 

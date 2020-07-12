@@ -1,6 +1,4 @@
 using NUnit.Framework;
-using System;
-
 #if LIGHT_EXPRESSION
 using System.Text;
 using static FastExpressionCompiler.LightExpression.Expression;

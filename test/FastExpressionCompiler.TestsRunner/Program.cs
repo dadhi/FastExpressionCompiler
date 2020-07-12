@@ -11,9 +11,6 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
-            // todo: @fix #252
-            // new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
 
             // todo: @fix #255
             // new BlockTests().Run();
@@ -168,6 +165,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run);
+
+                Run(new Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run);
             });
 
             Task.WaitAll(unitTests, issueTests);
