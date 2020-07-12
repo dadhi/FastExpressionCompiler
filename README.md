@@ -153,8 +153,8 @@ Compiling expression:
 
 |                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|     Expression_Compile | 481.33 us | 0.6025 us | 0.5031 us | 29.47 |    0.09 | 2.4414 | 0.9766 |      - |  11.95 KB |
-| Expression_CompileFast |  16.33 us | 0.0555 us | 0.0492 us |  1.00 |    0.00 | 1.0986 | 0.5493 | 0.0916 |   5.13 KB |
+|     Compile | 481.33 us | 0.6025 us | 0.5031 us | 29.47 |    0.09 | 2.4414 | 0.9766 |      - |  11.95 KB |
+| CompileFast |  16.33 us | 0.0555 us | 0.0492 us |  1.00 |    0.00 | 1.0986 | 0.5493 | 0.0916 |   5.13 KB |
 
 Invoking compiled delegate comparing to direct method call:
 
@@ -213,9 +213,9 @@ using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 ```
 
-You may look at it as a bare wrapper over expression node which helps you to compose the computation tree.  
-It __won't do any node compatibility verification__ for the tree as the `Expression` does and why the creation of the latter is slower.
-Hopefully you are checking the expression arguments yourself and not waiting for `Expression` exceptions to blow up - then you are safe.
+You may look at it as a bare-bone wrapper for the computation operation node which helps you to compose the computation tree (without messing with the IL emit directly).
+It __won't validate operations compatibility__ for the tree the way `System.Linq.Expression` does it, and partially why it is so slow.
+Hopefully you are checking the expression arguments yourself and not waiting for the `Expression` exceptions to blow-up.
 
 [Sample expression](https://github.com/dadhi/FastExpressionCompiler/blob/6da130c62f6adaa293f34a1a0c19ea4522f9c989/test/FastExpressionCompiler.LightExpression.UnitTests/LightExpressionTests.cs#L167)
 

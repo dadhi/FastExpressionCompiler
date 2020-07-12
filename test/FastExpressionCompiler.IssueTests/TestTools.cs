@@ -4,8 +4,12 @@ using System.Reflection;
 using System.Reflection.Emit;
 using ILDebugging.Decoder;
 using NUnit.Framework;
-
+#if LIGHT_EXPRESSION
+namespace FastExpressionCompiler.LightExpression
+#else
+using System.Linq.Expressions;
 namespace FastExpressionCompiler
+#endif
 {
     public static class TestTools
     {
@@ -14,6 +18,7 @@ namespace FastExpressionCompiler
 
         public static void PrintIL(this MethodInfo method, Action<string> print = null)
         {
+#if DEBUG //todo: @incomplete replace with debug conditional
             if (print == null)
                 print = x => System.Console.WriteLine(x);
 
@@ -34,6 +39,14 @@ namespace FastExpressionCompiler
                     print(il.OpCode.ToString());
             }
             print("<<< IL ends");
+#endif
+        }
+
+        public static void PrintCSharpString(this Expression expr)
+        {
+#if DEBUG
+            Console.WriteLine(expr.ToCSharpString());
+#endif
         }
 
         public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes) =>

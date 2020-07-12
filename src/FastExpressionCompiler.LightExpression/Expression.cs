@@ -1543,6 +1543,12 @@ namespace FastExpressionCompiler.LightExpression
 
         public virtual MethodInfo Method => null;
 
+        public UnaryExpression(ExpressionType nodeType, Expression operand)
+        {
+            NodeType = nodeType;
+            Operand = operand;
+        }
+
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitUnary(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
@@ -1619,6 +1625,10 @@ namespace FastExpressionCompiler.LightExpression
         {
             switch (NodeType)
             {
+                case ExpressionType.Convert:
+                    sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')');
+                    Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb;
                 case ExpressionType.Not:
                     sb.Append("!(");
                     Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
@@ -1626,12 +1636,6 @@ namespace FastExpressionCompiler.LightExpression
                 default: 
                     return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             }
-        }
-
-        public UnaryExpression(ExpressionType nodeType, Expression operand)
-        {
-            NodeType = nodeType;
-            Operand = operand;
         }
     }
 

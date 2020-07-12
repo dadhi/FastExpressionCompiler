@@ -32,7 +32,7 @@ namespace FastExpressionCompiler.IssueTests
         public void Conversion_to_nullable_should_work()
         {
             Expression<Func<int?>> expression = () => 42;
-            int? answer = expression.CompileFast().Invoke();
+            int? answer = expression.CompileFast(true).Invoke();
 
             Assert.IsTrue(answer.HasValue);
             Assert.AreEqual(42, answer.Value);
@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.IssueTests
         public void Conversion_to_nullable_should_work_with_null()
         {
             Expression<Func<int?>> expression = () => null;
-            int? answer = expression.CompileFast().Invoke();
+            int? answer = expression.CompileFast(true).Invoke();
 
             Assert.IsFalse(answer.HasValue);
         }
@@ -52,7 +52,10 @@ namespace FastExpressionCompiler.IssueTests
         public void Conversion_to_nullable_should_work_with_null_constructed_with_expressions()
         {
             var expr = Lambda<Func<int?>>(Convert(Constant(null), typeof(int?)));
-            int? answer = expr.CompileFast().Invoke();
+
+            expr.PrintCSharpString();
+
+            int? answer = expr.CompileFast(true).Invoke();
 
             Assert.IsFalse(answer.HasValue);
         }

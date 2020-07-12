@@ -33,12 +33,10 @@ namespace FastExpressionCompiler.IssueTests
                 callExpr);
                 
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
-            
-#if LIGHT_EXPRESSION && DEBUG
-            Console.WriteLine(expr.ToCSharpString(new StringBuilder(), 4, stripNamespace: true));
-#endif
+
+            expr.PrintCSharpString();
             var f = expr.CompileFast(true);
-            // f.Method.PrintIL();
+            f.Method.PrintIL();
             f(2);
             f(null);
             /*
@@ -69,12 +67,10 @@ namespace FastExpressionCompiler.IssueTests
             
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
 
-#if LIGHT_EXPRESSION && DEBUG
-            Console.WriteLine(expr.ToCSharpString(new StringBuilder(), 4, stripNamespace: true));
-#endif
+            expr.PrintCSharpString();
 
             var f = expr.CompileFast(true);
-            // f.Method.PrintIL();
+            f.Method.PrintIL();
             f(2);
             f(null);
             /*
