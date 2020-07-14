@@ -83,7 +83,7 @@ namespace FastExpressionCompiler.IssueTests
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
             Assert.NotNull(fastCompiled);
 
-            fastCompiled.Method.AssertOpCodes(
+            fastCompiled.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Ldind_Ref,
                 OpCodes.Call,

@@ -1633,19 +1633,25 @@ namespace FastExpressionCompiler.LightExpression
         {
             switch (NodeType)
             {
-                case ExpressionType.Convert:
-                    sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')');
-                    Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    return sb;
                 case ExpressionType.Not:
                     sb.Append("!(");
                     Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(')');
+                case ExpressionType.Convert:
+                case ExpressionType.ConvertChecked:
+                    sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')');
+                    Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb;
                 case ExpressionType.TypeAs:
                     sb.Append('(');
                     Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                     sb.Append(" as ").Append(Type.ToCode(stripNamespace, printType));
                     return sb.Append(')');
+                case ExpressionType.Throw:
+                    sb.Append("trow ");
+                    if (Type != null)
+                        sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')');
+                    return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                 default: 
                     return sb.Append(ToString()); // falling back ro ToString as a closest to C# code output 
             }

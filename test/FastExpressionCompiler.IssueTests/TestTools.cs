@@ -16,9 +16,21 @@ namespace FastExpressionCompiler
         public static OpCode[] GetOpCodes(this MethodInfo method) =>
             ILReaderFactory.Create(method).Select(x => x.OpCode).ToArray();
 
+        public static void AssertOpCodes(this Delegate @delegate, params OpCode[] expectedCodes) =>
+            AssertOpCodes(@delegate.Method, expectedCodes);
+
+        public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes) =>
+            CollectionAssert.AreEqual(expectedCodes, method.GetOpCodes(), "Unexpected IL OpCodes...");
+
+        [System.Diagnostics.Conditional("DEBUG")]
+        public static void PrintIL(this Delegate @delegate) => @delegate.Method.PrintIL();
+
+        [System.Diagnostics.Conditional("DEBUG")]
+        public static void PrintCSharpString(this Expression expr) =>Console.WriteLine(expr.ToCSharpString());
+
+        [System.Diagnostics.Conditional("DEBUG")]
         public static void PrintIL(this MethodInfo method, Action<string> print = null)
         {
-#if DEBUG //todo: @incomplete replace with debug conditional
             if (print == null)
                 print = x => System.Console.WriteLine(x);
 
@@ -35,25 +47,14 @@ namespace FastExpressionCompiler
                     print(il.OpCode + " " + t.Type.Name);
                 else if (il is InlineTokInstruction tok)
                     print(il.OpCode + " " + tok.Member.Name);
-                else 
+                else
                     print(il.OpCode.ToString());
             }
             print("<<< IL ends");
-#endif
         }
-
-        public static void PrintCSharpString(this Expression expr)
-        {
-#if DEBUG
-            Console.WriteLine(expr.ToCSharpString());
-#endif
-        }
-
-        public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes) =>
-            CollectionAssert.AreEqual(expectedCodes, method.GetOpCodes());
     }
 
-    public interface ITest 
+    public interface ITest
     {
         int Run();
     }

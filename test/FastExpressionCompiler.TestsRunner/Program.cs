@@ -11,6 +11,9 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            // todo: @incomplete, try other cases
+            // new FastExpressionCompiler.LightExpression.IssueTests
+            //     .Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run();
 
             // todo: @fix #255
             // new BlockTests().Run();

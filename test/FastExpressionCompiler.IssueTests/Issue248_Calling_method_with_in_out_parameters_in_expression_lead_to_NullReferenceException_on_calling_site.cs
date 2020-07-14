@@ -1,3 +1,4 @@
+using System.Reflection.Emit;
 using NUnit.Framework;
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -30,6 +31,23 @@ namespace FastExpressionCompiler.IssueTests
 
             var serialize = expr.CompileFast(true);
             Assert.IsNotNull(serialize);
+
+            serialize.PrintIL();
+
+            serialize.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
+                OpCodes.Ldflda,
+                OpCodes.Callvirt,
+                OpCodes.Ret);
+    /*
+    Expected IL:
+            IL_0000: ldarg.1
+            IL_0001: ldarg.2
+            IL_0002: ldflda valuetype [System.Private.CoreLib]System.Decimal C/Test::Field1
+            IL_0007: callvirt instance void C/ISerializer::WriteDecimal(valuetype [System.Private.CoreLib]System.Decimal& modreq([System.Private.CoreLib]System.Runtime.InteropServices.InAttribute))
+            IL_000c: ret
+    */
 
             var test = new Test { Field1 = 35m };
             serialize(new MySerializer(), ref test); // does nothing

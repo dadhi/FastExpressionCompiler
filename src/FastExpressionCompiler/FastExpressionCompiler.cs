@@ -1495,7 +1495,7 @@ namespace FastExpressionCompiler
                     {
                         case ExpressionType.Parameter:
                             return (parent & ParentFlags.IgnoreResult) != 0 ||
-                                   TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
+                                TryEmitParameter((ParameterExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
 
                         case ExpressionType.TypeAs:
                         case ExpressionType.IsTrue:
@@ -1550,7 +1550,7 @@ namespace FastExpressionCompiler
                             return TryEmitMethodCall(expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.MemberAccess:
-                            return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, parent);
+                            return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, parent, byRefIndex);
 
                         case ExpressionType.New:
                             return TryEmitNew(expr, paramExprs, il, ref closure, parent);
@@ -2135,7 +2135,11 @@ namespace FastExpressionCompiler
                     {
                         if (paramType.IsValueType())
                         {
-                            if ((parent & ParentFlags.Call) != 0 && !isArgByRef ||
+                            if ((parent & ParentFlags.Call) != 0 && 
+                                // #248 - skip the cases with `ref param.Field` were we are actually want to 
+                                // load the `Field` address not the `param`
+                                (parent & ParentFlags.MemberAccess) == 0 && 
+                                !isArgByRef ||
                                 (parent & ParentFlags.Arithmetic) != 0)
                                 EmitValueTypeDereference(il, paramType);
                         }
@@ -3473,16 +3477,18 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitMemberAccess(MemberExpression expr,
-                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent,
+                int byRefIndex = -1)
             {
                 if (expr.Member is PropertyInfo prop)
                 {
                     var instanceExpr = expr.Expression;
                     if (instanceExpr != null)
                     {
-                        if (!TryEmit(instanceExpr, paramExprs, il, ref closure,
-                            ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner &
-                            (parent | ParentFlags.Call | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)))
+                        var p = (parent | ParentFlags.Call | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)
+                            & ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner;
+
+                        if (!TryEmit(instanceExpr, paramExprs, il, ref closure, p))
                             return false;
 
                         if ((parent & ParentFlags.DupMemberOwner) != 0)
@@ -3510,16 +3516,27 @@ namespace FastExpressionCompiler
                     var instanceExpr = expr.Expression;
                     if (instanceExpr != null)
                     {
-                        if (!TryEmit(instanceExpr, paramExprs, il, ref closure,
-                            ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner &
-                            (parent | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)))
+                        var p = (parent | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)
+                            & ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner;
+
+                        if (!TryEmit(instanceExpr, paramExprs, il, ref closure, p, -1/*pi*/))
                             return false;
 
                         if ((parent & ParentFlags.DupMemberOwner) != 0)
                             il.Emit(OpCodes.Dup);
 
-                        closure.LastEmitIsAddress = field.FieldType.IsValueType() && (parent & ParentFlags.InstanceAccess) != 0;
-                        il.Emit(closure.LastEmitIsAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                        var isByAddress = false;
+                        if (field.FieldType.IsValueType()) 
+                        {
+                            if ((parent & ParentFlags.InstanceAccess) != 0)
+                                isByAddress = true;
+                            // #248 indicates that expression is argument passed by ref
+                            // todo: Maybe introduce ParentFlags.Argument
+                            else if ((parent & ParentFlags.Call) != 0 && byRefIndex != -1)
+                                isByAddress = true;
+                        }
+                        closure.LastEmitIsAddress = isByAddress;
+                        il.Emit(isByAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
                     }
                     else if (field.IsLiteral)
                     {
