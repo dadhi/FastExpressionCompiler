@@ -14,24 +14,25 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Test_1();
-            return 1;
+            Test_2();
+            return 2;
         }
 
         [Test]
         public void Test_1()
         {
             var serializer = Parameter(typeof(ISerializer), "serializer");
-            var method = typeof(ISerializer).GetMethod("WriteDecimal");
-            var data = Parameter(typeof(Test).MakeByRefType(), "data");
-            var field = Field(data, typeof(Test).GetField("Field1"));
-            var call = Call(serializer, method, field);
-            var expr = Lambda<SerializerDelegate>(call, serializer, data);
+            var data       = Parameter(typeof(Test).MakeByRefType(), "data");
+
+            var expr = Lambda<SerializerDelegate>(
+                Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimal)), 
+                Field(data, typeof(Test).GetField(nameof(Test.Field1)))), 
+                serializer, data);
 
             expr.PrintCSharpString();
 
             var serialize = expr.CompileFast(true);
             Assert.IsNotNull(serialize);
-
             serialize.PrintIL();
 
             serialize.AssertOpCodes(
@@ -40,18 +41,42 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldflda,
                 OpCodes.Callvirt,
                 OpCodes.Ret);
-    /*
-    Expected IL:
-            IL_0000: ldarg.1
-            IL_0001: ldarg.2
-            IL_0002: ldflda valuetype [System.Private.CoreLib]System.Decimal C/Test::Field1
-            IL_0007: callvirt instance void C/ISerializer::WriteDecimal(valuetype [System.Private.CoreLib]System.Decimal& modreq([System.Private.CoreLib]System.Runtime.InteropServices.InAttribute))
-            IL_000c: ret
-    */
 
             var test = new Test { Field1 = 35m };
             serialize(new MySerializer(), ref test); // does nothing
             Assert.AreEqual(35m, test.Field1);
+        }
+
+        [Test]
+        public void Test_2()
+        {
+            var serializer = Parameter(typeof(ISerializer), "serializer");
+            var data       = Parameter(typeof(Test).MakeByRefType(), "data");
+
+            var expr = Lambda<SerializerDelegate>(
+                Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimal)),
+                    Field(
+                        Field(data, typeof(Test).GetField(nameof(Test.NestedTest))), 
+                        typeof(NestedTest).GetField(nameof(NestedTest.Field1)))),
+                serializer, data);
+
+            expr.PrintCSharpString();
+
+            var serialize = expr.CompileFast(true);
+            Assert.IsNotNull(serialize);
+            serialize.PrintIL();
+
+            serialize.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
+                OpCodes.Ldflda,
+                OpCodes.Ldflda,
+                OpCodes.Callvirt,
+                OpCodes.Ret);
+
+            var test = new Test { NestedTest = { Field1 = 35m }};
+            serialize(new MySerializer(), ref test); // does nothing
+            Assert.AreEqual(35m, test.NestedTest.Field1);
         }
 
         public interface ISerializer
@@ -67,6 +92,12 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         public struct Test
+        {
+            public decimal Field1;
+            public NestedTest NestedTest;
+        }
+
+        public struct NestedTest
         {
             public decimal Field1;
         }

@@ -13,7 +13,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
-    public class Issue146_bool_par_error
+    public class Issue146_bool_par
     {
         public int Run()
         {
