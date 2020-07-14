@@ -173,6 +173,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run);
+                
+                Run(new Issue251_Bad_code_gen_for_byRef_parameters().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters().Run);
             });
 
             Task.WaitAll(unitTests, issueTests);

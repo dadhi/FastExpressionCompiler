@@ -2138,7 +2138,8 @@ namespace FastExpressionCompiler
                             if ((parent & ParentFlags.Call) != 0 && 
                                 // #248 - skip the cases with `ref param.Field` were we are actually want to 
                                 // load the `Field` address not the `param`
-                                (parent & ParentFlags.MemberAccess) == 0 && 
+                                (parent & ParentFlags.InstanceAccess) == 0 && 
+                                (parent & ParentFlags.MemberAccess)   == 0 && 
                                 !isArgByRef ||
                                 (parent & ParentFlags.Arithmetic) != 0)
                                 EmitValueTypeDereference(il, paramType);
@@ -3397,6 +3398,7 @@ namespace FastExpressionCompiler
                 var objExpr = callExpr.Object;
                 var method = callExpr.Method;
                 var methodParams = method.GetParameters();
+                
                 var objIsValueType = false;
                 if (objExpr != null)
                 {
@@ -3452,11 +3454,20 @@ namespace FastExpressionCompiler
                             return false;
                     }
 
-                    if (objIsValueType && method.IsVirtual)
+                    if (!objIsValueType) 
+                        il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                    else if (objExpr is ParameterExpression p && p.IsByRef || !method.IsVirtual) // #251 - no need for constrain or virtual call because it is already by-ref
+                        il.Emit(OpCodes.Call, method);
+                    else if (method.IsVirtual)
+                    {
+                        // todo: @check it is a value type so... can we de-virtualize the call?
                         il.Emit(OpCodes.Constrained, objExpr.Type);
-                    il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                        il.Emit(OpCodes.Callvirt, method);
+                    }
+                    
                     if (parent.IgnoresResult() && method.ReturnType != typeof(void))
                         il.Emit(OpCodes.Pop);
+
                     closure.LastEmitIsAddress = false;
                     return true;
                 }
@@ -3466,9 +3477,17 @@ namespace FastExpressionCompiler
                     if (!TryEmit(args[i], paramExprs, il, ref closure, flags, methodParams[i].ParameterType.IsByRef ? i : -1))
                         return false;
 
-                if (objIsValueType && method.IsVirtual)
+                if (!objIsValueType) 
+                    il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                else if (objExpr is ParameterExpression p && p.IsByRef || !method.IsVirtual) // #251 - no need for constrain or virtual call because it is already by-ref
+                    il.Emit(OpCodes.Call, method);
+                else if (method.IsVirtual)
+                {
+                    // todo: @check it is a value type so... can we de-virtualize the call?
                     il.Emit(OpCodes.Constrained, objExpr.Type);
-                il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                    il.Emit(OpCodes.Callvirt, method);
+                }
+
                 if (parent.IgnoresResult() && method.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);
 
