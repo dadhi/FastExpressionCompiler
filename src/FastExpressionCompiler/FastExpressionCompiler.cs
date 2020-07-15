@@ -1881,6 +1881,8 @@ namespace FastExpressionCompiler
 
                 il.MarkLabel(label);
 
+                // todo: @check do we need to emit the default value if it is `default(T)` or not `null`,
+                // because it is likely to be emit by Return (GotoExpression.Value)
                 return expr.DefaultValue == null || TryEmit(expr.DefaultValue, paramExprs, il, ref closure, parent);
             }
 
@@ -4272,8 +4274,7 @@ namespace FastExpressionCompiler
                 var labelIfFalse = il.DefineLabel();
                 il.Emit(comparedWithNull && testExpr.NodeType == ExpressionType.Equal ? OpCodes.Brtrue : OpCodes.Brfalse, labelIfFalse);
 
-                var ifTrueExpr = expr.IfTrue;
-                if (!TryEmit(ifTrueExpr, paramExprs, il, ref closure, parent & ParentFlags.IgnoreResult))
+                if (!TryEmit(expr.IfTrue, paramExprs, il, ref closure, parent & ParentFlags.IgnoreResult))
                     return false;
 
                 var ifFalseExpr = expr.IfFalse;
@@ -4296,9 +4297,9 @@ namespace FastExpressionCompiler
 
             private static Expression TryReduceCondition(Expression testExpr)
             {
-                // simplify the not `==` to `!=` and `!=` to `==`
-                if (testExpr.NodeType == ExpressionType.Not) 
+                if (testExpr.NodeType == ExpressionType.Not)
                 {
+                    // simplify the not `==` to `!=` and `!=` to `==`
                     var op = TryReduceCondition(((UnaryExpression)testExpr).Operand);
                     if (op.NodeType == ExpressionType.Equal)
                     {
