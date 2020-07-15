@@ -1879,6 +1879,8 @@ namespace FastExpressionCompiler
                 // define a new label or use the label provided by the preceding GoTo expression
                 var label = closure.GetOrCreateLabel(index, il);
 
+                // todo: @fixme Ensure that for each defined label it is placed once only - 
+                // there's should not be two `labelFoo:`.
                 il.MarkLabel(label);
 
                 // todo: @check do we need to emit the default value if it is `default(T)` or not `null`,
