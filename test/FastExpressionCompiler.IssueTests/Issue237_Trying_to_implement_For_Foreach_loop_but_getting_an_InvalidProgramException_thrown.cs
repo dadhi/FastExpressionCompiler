@@ -1,3 +1,4 @@
+#if NETCOREAPP3_1
 using System;
 using System.Linq;
 using System.Text;
@@ -273,3 +274,4 @@ namespace FastExpressionCompiler.IssueTests
             r.Sequence.Slice(r.Position);
     }
 }
+#endif
