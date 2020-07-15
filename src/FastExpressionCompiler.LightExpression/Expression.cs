@@ -2034,9 +2034,28 @@ namespace FastExpressionCompiler.LightExpression
             if (Value is Type t) // todo: move this to ValueToCode, we should output `typeof(T)` anyway
                 return sb.AppendTypeof(t, stripNamespace, printType);
 
+            // value with the cast
             if (Value.GetType() != Type)
-                sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')');
-            return sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
+            {
+                sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')'); 
+                return sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
+            }
+
+            sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
+            
+            // suffixes for literals
+            if (Type == typeof(float))
+                sb.Append('f');
+            else if (Type == typeof(uint))
+                sb.Append('u');
+            else if (Type == typeof(long))
+                sb.Append('l');
+            else if (Type == typeof(ulong))
+                sb.Append("ul");
+            else if (Type == typeof(decimal))
+                sb.Append('m');
+
+            return sb;
         }
     }
 
