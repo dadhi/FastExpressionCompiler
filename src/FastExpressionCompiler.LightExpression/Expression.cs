@@ -1382,16 +1382,13 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
             where T : Expression
         {
-            if (exprs.Count == 0)
-                return sb;
-
-            for (var i = 0; i < exprs.Count; i++)
-            {
-                if (i > 0)
-                    sb.Append(',');
-                sb.NewLineIdentCs(exprs[i], lineIdent, stripNamespace, printType, identSpaces);
-            }
-
+            if (exprs.Count != 0)
+                for (var i = 0; i < exprs.Count; i++)
+                {
+                    if (i > 0)
+                        sb.Append(',');
+                    sb.NewLineIdentCs(exprs[i], lineIdent, stripNamespace, printType, identSpaces);
+                }
             return sb;
         }
     }
@@ -2285,9 +2282,29 @@ namespace FastExpressionCompiler.LightExpression
                 sb.Append('.');
             }
 
-            sb.Append(Method.Name);
-            sb.Append('(').NewLineIdentCss(Arguments, lineIdent, stripNamespace, printType, identSpaces).Append(')');
-            return sb;
+            sb.Append(Method.Name).Append('(');
+            
+            var pars = Method.GetParameters();
+            if (Arguments.Count == 1)
+            {
+                if (pars[0].ParameterType.IsByRef)
+                    sb.Append("ref ");
+                Arguments[0].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            }
+            else if (Arguments.Count > 1)
+            {
+                for (var i = 0; i < Arguments.Count; i++)
+                {
+                    if (i > 0)
+                        sb.Append(',');
+                    sb.NewLineIdent(lineIdent);
+                    if (pars[i].ParameterType.IsByRef)
+                        sb.Append("ref ");
+                    Arguments[i].ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+                }
+            }
+
+            return sb.Append(')');
         }
     }
 
@@ -2459,6 +2476,18 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMember(this);
+
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            if (Expression != null)
+                Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            else
+                sb.NewLineIdent(lineIdent).Append(Member.DeclaringType.ToCode(stripNamespace, printType));
+
+            sb.Append('.').Append(Member.Name);
+            return sb;
+        }
     }
 
     // todo: @perf specialize to 2 classes - with and without object expression

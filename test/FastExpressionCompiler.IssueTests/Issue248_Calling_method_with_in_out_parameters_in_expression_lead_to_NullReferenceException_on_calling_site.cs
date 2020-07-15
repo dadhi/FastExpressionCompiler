@@ -15,7 +15,8 @@ namespace FastExpressionCompiler.IssueTests
         {
             Test_1();
             Test_2();
-            return 2;
+            Test_3();
+            return 3;
         }
 
         [Test]
@@ -26,7 +27,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var expr = Lambda<SerializerDelegate>(
                 Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimal)), 
-                Field(data, typeof(Test).GetField(nameof(Test.Field1)))), 
+                    Field(data, typeof(Test).GetField(nameof(Test.Field1)))), 
                 serializer, data);
 
             expr.PrintCSharpString();
@@ -79,16 +80,45 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(35m, test.NestedTest.Field1);
         }
 
+        [Test]
+        public void Test_3()
+        {
+            var serializer = Parameter(typeof(ISerializer), "serializer");
+            var data       = Parameter(typeof(Test).MakeByRefType(), "data");
+
+            var expr = Lambda<SerializerDelegate>(
+                Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimalByVal)), 
+                    Field(data, typeof(Test).GetField(nameof(Test.Field1)))),
+                serializer, data);
+
+            expr.PrintCSharpString();
+
+            var serialize = expr.CompileFast(true);
+            Assert.IsNotNull(serialize);
+            serialize.PrintIL();
+
+            serialize.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
+                OpCodes.Ldfld,
+                OpCodes.Callvirt,
+                OpCodes.Ret);
+
+            var test = new Test { Field1 = 35m };
+            serialize(new MySerializer(), ref test); // does nothing
+            Assert.AreEqual(35m, test.Field1);
+        }
+
         public interface ISerializer
         {
             void WriteDecimal(in decimal value);
+            void WriteDecimalByVal(decimal value);
         }
 
         class MySerializer : ISerializer
         {
-            public void WriteDecimal(in decimal value) { 
-                Assert.AreEqual(35m, value);
-            }
+            public void WriteDecimal(in decimal value) => Assert.AreEqual(35m, value);
+            public void WriteDecimalByVal(decimal value) => Assert.AreEqual(35m, value);
         }
 
         public struct Test
