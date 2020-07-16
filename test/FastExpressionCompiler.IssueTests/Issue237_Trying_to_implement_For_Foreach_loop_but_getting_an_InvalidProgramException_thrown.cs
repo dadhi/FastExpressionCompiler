@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var valueWord = Parameter(typeof(Word), "value");
             var wordValueVar = Variable(typeof(string), "wordValue");
-            var expr0 = Lambda<DeserializerDlg<Word>>(
+            var expr0 = Lambda<DeserializerDlg<Word>>(  
                 Block(new[] { reader, wordValueVar },
                     createReader,
                     IfThen(
@@ -71,6 +71,11 @@ namespace FastExpressionCompiler.IssueTests
                 input, valueWord, bytesRead);
             
             expr0.PrintCSharpString();
+
+            // sanity check
+            var f0sys = expr0.CompileSys();
+            Console.WriteLine("System Expression IL:");
+            f0sys.PrintIL();
 
             var f0 = expr0.CompileFast(true);
             f0.PrintIL();

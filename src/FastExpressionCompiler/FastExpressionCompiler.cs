@@ -1675,7 +1675,7 @@ namespace FastExpressionCompiler
                                         return false;
 
                             if (blockVarCount == 0)
-                                continue; // OMG, no recursion, continue with last expression
+                                continue; // OMG! no recursion, continue with the last expression
 
                             if (!TryEmit(expr, paramExprs, il, ref closure, parent))
                                 return false;
