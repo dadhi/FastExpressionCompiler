@@ -74,8 +74,9 @@ namespace FastExpressionCompiler.IssueTests
 
             // sanity check
             var f0sys = expr0.CompileSys();
-            Console.WriteLine("System Expression IL:");
-            f0sys.PrintIL();
+            Assert.IsNotNull(f0sys);
+            // Console.WriteLine("System Expression IL:");
+            // f0sys.PrintIL();
 
             var f0 = expr0.CompileFast(true);
             f0.PrintIL();
@@ -193,7 +194,8 @@ namespace FastExpressionCompiler.IssueTests
             return true;
         }
 
-        public static void Setup<T>(DeserializerDlg<T> des) => SerializerStorage<T>.TryDeserialize = des;
+        public static void Setup<T>(DeserializerDlg<T> des) => 
+            SerializerStorage<T>.TryDeserialize = des;
 
         private static class SerializerStorage<T>
         {

@@ -1671,8 +1671,30 @@ namespace FastExpressionCompiler
                             // handle the all statements in block excluding the last one
                             if (statementCount > 1)
                                 for (var i = 0; i < statementCount - 1; i++)
-                                    if (!TryEmit(statementExprs[i], paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
+                                {
+                                    var stExpr = statementExprs[i];
+                                    
+                                    // This is basically the return pattern (see #237), so we don't care for the rest of expressions
+                                    if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
+                                        statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
+                                    {
+                                        var p = parent & ~ParentFlags.IgnoreResult; // we are generating the return value and ensuring here that it is not popped-out
+                                        if (!TryEmit(gt.Value, paramExprs, il, ref closure, p))
+                                            return false;
+                                        
+                                        // todo: @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
+                                        // emitting the double `OpCodes.Emit` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
+                                        // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement), 
+                                        // so we should avoid it on our side.
+                                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                                            il.Emit(OpCodes.Ret);
+
+                                        return true; // done
+                                    }
+
+                                    if (!TryEmit(stExpr, paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult))
                                         return false;
+                                }
 
                             if (blockVarCount == 0)
                                 continue; // OMG! no recursion, continue with the last expression

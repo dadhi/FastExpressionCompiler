@@ -2364,8 +2364,10 @@ namespace FastExpressionCompiler.LightExpression
             var args = Arguments;
             if (args.Count == 1)
             {
-                if (pars[0].ParameterType.IsByRef)
-                    sb.Append("ref ");
+                var p = pars[0]; 
+                if (p.ParameterType.IsByRef)
+                    sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
+                
                 args[0].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             }
             else if (args.Count > 1)
@@ -2375,8 +2377,11 @@ namespace FastExpressionCompiler.LightExpression
                     if (i > 0)
                         sb.Append(',');
                     sb.NewLineIdent(lineIdent);
-                    if (pars[i].ParameterType.IsByRef)
-                        sb.Append("ref ");
+                    
+                    var p = pars[i]; 
+                    if (p.ParameterType.IsByRef)
+                        sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
+                    
                     args[i].ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
                 }
             }
