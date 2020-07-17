@@ -2366,7 +2366,7 @@ namespace FastExpressionCompiler.LightExpression
             {
                 var p = pars[0]; 
                 if (p.ParameterType.IsByRef)
-                    sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
+                    sb.Append(p.IsOut ? "out " : p.IsIn ? "in" : "ref ");
                 
                 args[0].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             }
@@ -3374,6 +3374,8 @@ namespace FastExpressionCompiler.LightExpression
                 var p = Parameters[i];
                 if (p.IsByRef)
                     sb.Append("ref ");
+                    // todo: @incomplete
+                    //sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
                 sb.Append(p.Type.ToCode(stripNamespace, printType)).Append(' ');
                 sb.Append(p.Name == null ? "@p" + i : p.Name);
             }

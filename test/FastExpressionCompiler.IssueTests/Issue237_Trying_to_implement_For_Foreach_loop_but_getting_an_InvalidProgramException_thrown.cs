@@ -75,8 +75,9 @@ namespace FastExpressionCompiler.IssueTests
             // sanity check
             var f0sys = expr0.CompileSys();
             Assert.IsNotNull(f0sys);
-            // Console.WriteLine("System Expression IL:");
-            // f0sys.PrintIL();
+            Console.WriteLine("<System Expression IL>");
+            Console.WriteLine(f0sys.Method.ToILString());
+            Console.WriteLine("</System Expression IL>");
 
             var f0 = expr0.CompileFast(true);
             f0.PrintIL();

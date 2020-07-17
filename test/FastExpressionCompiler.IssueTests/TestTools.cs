@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text;
 using System.Reflection;
 using System.Reflection.Emit;
 using ILDebugging.Decoder;
@@ -23,34 +24,49 @@ namespace FastExpressionCompiler
             CollectionAssert.AreEqual(expectedCodes, method.GetOpCodes(), "Unexpected IL OpCodes...");
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintIL(this Delegate @delegate) => @delegate.Method.PrintIL();
-
-        [System.Diagnostics.Conditional("DEBUG")]
         public static void PrintCSharpString(this Expression expr) =>Console.WriteLine(expr.ToCSharpString());
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintIL(this MethodInfo method, Action<string> print = null)
-        {
-            if (print == null)
-                print = x => System.Console.WriteLine(x);
+        public static void PrintIL(this Delegate @delegate) => @delegate.Method.PrintIL();
 
-            print(">>> IL starts");
+        [System.Diagnostics.Conditional("DEBUG")]
+        public static void PrintIL(this MethodInfo method)
+        {
+            var s = new StringBuilder();
+            s.Append("<IL>").AppendLine();
+            method.ToILString(s);
+            s.AppendLine().Append("</IL>");
+            Console.WriteLine(s);
+        }
+
+        public static StringBuilder ToILString(this MethodInfo method, StringBuilder s = null)
+        {
+            s = s ?? new StringBuilder();
 
             var ilReader = ILReaderFactory.Create(method);
+
+            var secondLine = false;
             foreach (var il in ilReader)
             {
+                if (secondLine) 
+                    s.AppendLine();
+                else 
+                    secondLine = true;
+                
+                s.Append(il.Offset.ToString().PadRight(4, ' ')).Append(' ').Append(il.OpCode);
                 if (il is InlineFieldInstruction f)
-                    print(il.OpCode + " " + f.Field.Name);
+                    s.Append(' ').Append(f.Field.Name);
                 else if (il is InlineMethodInstruction m)
-                    print(il.OpCode + " " + m.Method.Name);
+                    s.Append(' ').Append(m.Method.Name);
                 else if (il is InlineTypeInstruction t)
-                    print(il.OpCode + " " + t.Type.Name);
+                    s.Append(' ').Append(t.Type.Name);
                 else if (il is InlineTokInstruction tok)
-                    print(il.OpCode + " " + tok.Member.Name);
-                else
-                    print(il.OpCode.ToString());
+                    s.Append(' ').Append(tok.Member.Name);
+                else if (il is InlineBrTargetInstruction br)
+                    s.Append(' ').Append(br.TargetOffset);
             }
-            print("<<< IL ends");
+
+            return s;
         }
     }
 

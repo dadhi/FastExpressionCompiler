@@ -4261,6 +4261,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitConditional(ConditionalExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
+                // todo: @incomplete try try replace the NotEqual with Equal so we could use `OpCodes.Beq_s` - branch on equality
                 var testExpr = TryReduceCondition(expr.Test);
 
                 // detect a special simplistic case of comparison with `null`
