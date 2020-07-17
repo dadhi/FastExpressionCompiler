@@ -69,7 +69,7 @@ namespace FastExpressionCompiler.IssueTests
                     Assign(Property(valueWord, nameof(Word.Value)), wordValueVar),
                     returnTrue), 
                 input, valueWord, bytesRead);
-            
+
             expr0.PrintCSharpString();
 
             // sanity check

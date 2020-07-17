@@ -3367,21 +3367,24 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
             sb.Append("new ").Append(Type.ToCode(stripNamespace, printType)).Append('(');
-            for (var i = 0; i < Parameters.Count; i++)
+            if (Parameters.Count > 0)
             {
-                if (i > 0)
-                    sb.Append(", ");
-                var p = Parameters[i];
-                if (p.IsByRef)
-                    sb.Append("ref ");
-                    // todo: @incomplete
-                    //sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
-                sb.Append(p.Type.ToCode(stripNamespace, printType)).Append(' ');
-                sb.Append(p.Name == null ? "@p" + i : p.Name);
+                var pars = Type.FindDelegateInvokeMethod().GetParameters();
+
+                for (var i = 0; i < Parameters.Count; i++)
+                {
+                    if (i > 0)
+                        sb.Append(", ");
+                    var pe = Parameters[i];
+                    var p = pars[i];
+                    if (pe.IsByRef)
+                        sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
+                    sb.Append(pe.Type.ToCode(stripNamespace, printType)).Append(' ');
+                    sb.Append(pe.Name == null ? "@p" + i : pe.Name);
+                }
             }
 
             sb.Append(") => ");
-
             if (ReturnType != typeof(void) && 
                 Body is BlockExpression == false)
                 sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType);

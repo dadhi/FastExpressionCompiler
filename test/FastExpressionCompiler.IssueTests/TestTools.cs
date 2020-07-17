@@ -24,7 +24,8 @@ namespace FastExpressionCompiler
             CollectionAssert.AreEqual(expectedCodes, method.GetOpCodes(), "Unexpected IL OpCodes...");
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintCSharpString(this Expression expr) =>Console.WriteLine(expr.ToCSharpString());
+        public static void PrintCSharpString(this Expression expr) =>
+            Console.WriteLine(expr.ToCSharpString());
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void PrintIL(this Delegate @delegate) => @delegate.Method.PrintIL();

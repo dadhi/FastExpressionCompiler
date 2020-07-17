@@ -102,7 +102,7 @@ namespace FastExpressionCompiler
 #endif
             .Compile();
 
-        /// <summary>This is a polyfill for now so I can call ToCSharpString on either Lightweight or System expression</summary>
+        /// <summary>This is a polyfill for now so I can call the method on either Lightweight or System expression</summary>
         public static string ToCSharpString(this Expression expr) => expr.ToString();
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
