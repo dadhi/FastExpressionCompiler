@@ -4279,7 +4279,9 @@ namespace FastExpressionCompiler
                             // which implies member access on nullable struct - therefore loading it by address
                             if (b.Left.Type.IsNullable())
                                 parent |= ParentFlags.MemberAccess;
-                            comparedWithNull = TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult);
+                            if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                                return false;
+                            comparedWithNull = true; 
                         }
                         else if (b.Left is ConstantExpression l && l.Value == null)
                         {
@@ -4287,7 +4289,9 @@ namespace FastExpressionCompiler
                             // which implies member access on nullable struct - therefore loading it by address
                             if (b.Right.Type.IsNullable())
                                 parent |= ParentFlags.MemberAccess;
-                            comparedWithNull = TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult);
+                            if (!TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                                return false;
+                            comparedWithNull = true; 
                         }
                     }
                 }
@@ -4341,7 +4345,7 @@ namespace FastExpressionCompiler
                 }
                 else if (testExpr is BinaryExpression b)
                 {
-                    // let's make it equal, so we can use OpCodes.Beq
+                    // let's make it equal, so we can use single OpCodes.Beq instead of Ceq, then Brtrue or Brfalse
                     if (b.NodeType == ExpressionType.NotEqual) 
                     {
                         if (b.Right is ConstantExpression rc && rc.Value is bool rcb)
