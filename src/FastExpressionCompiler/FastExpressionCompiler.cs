@@ -4270,24 +4270,34 @@ namespace FastExpressionCompiler
                 var comparedWithNull = false;
                 if (testExpr is BinaryExpression b)
                 {
-                    if (b.NodeType == ExpressionType.Equal || b.NodeType == ExpressionType.NotEqual ||
-                        !b.Left.Type.IsNullable() && !b.Right.Type.IsNullable())
+                    if (b.NodeType == ExpressionType.Equal &&
+                        b.Right is ConstantExpression rc_ && rc_.Value is bool rcb && !rcb)
+                    {
+                        // todo: @incomplete - we can do a Brfalse the same 
+                        if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                            return false;
+                        comparedWithNull = true; 
+                    }
+                    // todo: @incomplete - remove double check for expression type
+                    else if (b.NodeType == ExpressionType.Equal || 
+                        b.NodeType == ExpressionType.NotEqual ||
+                        !b.Left.Type.IsNullable() && !b.Right.Type.IsNullable()) // todo: @unsure what is that part of condition, Equals?
                     {
                         if (b.Right is ConstantExpression rc && rc.Value == null)
                         {
                             // the null comparison for nullable is actually a `nullable.HasValue` check,
                             // which implies member access on nullable struct - therefore loading it by address
-                            if (b.Left.Type.IsNullable())
+                            if (b.Left.Type.IsNullable()) // todo: @perf split to avoid double check
                                 parent |= ParentFlags.MemberAccess;
                             if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                                 return false;
                             comparedWithNull = true; 
                         }
-                        else if (b.Left is ConstantExpression l && l.Value == null)
+                        else if (b.Left is ConstantExpression lc && lc.Value == null)
                         {
                             // the null comparison for nullable is actually a `nullable.HasValue` check,
                             // which implies member access on nullable struct - therefore loading it by address
-                            if (b.Right.Type.IsNullable())
+                            if (b.Right.Type.IsNullable()) // todo: @perf split to avoid double check
                                 parent |= ParentFlags.MemberAccess;
                             if (!TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                                 return false;
@@ -4301,7 +4311,9 @@ namespace FastExpressionCompiler
                     if (!TryEmit(testExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                         return false;
                 }
-
+                
+                // here we are checking the negative result to go into if-false branch,
+                // because if-true we don't need to jump and just proceed to emit `IfTrue` expression
                 var labelIfFalse = il.DefineLabel();
                 il.Emit(comparedWithNull && testExpr.NodeType == ExpressionType.Equal ? OpCodes.Brtrue : OpCodes.Brfalse, labelIfFalse);
 
