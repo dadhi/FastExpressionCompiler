@@ -4263,7 +4263,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitConditional(ConditionalExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                // todo: @incomplete try try replace the NotEqual with Equal so we could use `OpCodes.Beq_s` - branch on equality
+                // todo: @incomplete try to replace the NotEqual with Equal so we could use `OpCodes.Beq_s` - branch on equality
                 var testExpr = TryReduceCondition(expr.Test);
 
                 // detect a special simplistic case of comparison with `null`
@@ -4273,7 +4273,7 @@ namespace FastExpressionCompiler
                     if (b.NodeType == ExpressionType.Equal || b.NodeType == ExpressionType.NotEqual ||
                         !b.Left.Type.IsNullable() && !b.Right.Type.IsNullable())
                     {
-                        if (b.Right is ConstantExpression r && r.Value == null)
+                        if (b.Right is ConstantExpression rc && rc.Value == null)
                         {
                             // the null comparison for nullable is actually a `nullable.HasValue` check,
                             // which implies member access on nullable struct - therefore loading it by address
@@ -4341,20 +4341,26 @@ namespace FastExpressionCompiler
                 }
                 else if (testExpr is BinaryExpression b)
                 {
-                    if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
+                    // let's make it equal, so we can use OpCodes.Beq
+                    if (b.NodeType == ExpressionType.NotEqual) 
                     {
-                        if (b.Left is ConstantExpression l && l.Value is bool lb)
-                            return lb ? b.Left : TryReduceCondition(b.Right);
+                        if (b.Right is ConstantExpression rc && rc.Value is bool rcb)
+                            return rcb ? Equal(TryReduceCondition(b.Left), Constant(false)) : b;
+                    }
+                    else if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
+                    {
+                        if (b.Left is ConstantExpression lc && lc.Value is bool lcb)
+                            return lcb ? lc : TryReduceCondition(b.Right);
 
-                        if (b.Right is ConstantExpression r && r.Value is bool rb && rb == false)
+                        if (b.Right is ConstantExpression rc && rc.Value is bool rcb && !rcb)
                             return TryReduceCondition(b.Left);
                     }
                     else if (b.NodeType == ExpressionType.AndAlso || b.NodeType == ExpressionType.And)
                     {
-                        if (b.Left is ConstantExpression l && l.Value is bool lb)
-                            return !lb ? b.Left : TryReduceCondition(b.Right);
+                        if (b.Left is ConstantExpression lc && lc.Value is bool lcb)
+                            return !lcb ? lc : TryReduceCondition(b.Right);
 
-                        if (b.Right is ConstantExpression r && r.Value is bool rb && rb)
+                        if (b.Right is ConstantExpression rc && rc.Value is bool rcb && rcb)
                             return TryReduceCondition(b.Left);
                     }
                 }

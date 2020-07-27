@@ -29,7 +29,9 @@ namespace FastExpressionCompiler.IssueTests
             Setup_ShouldCompileExpressions();
             TryDeserialize_ShouldParseSimple();
 
-            return 1;
+            // Try_Beq_opcode();
+
+            return 2;
         }
 
         [SetUp]
@@ -60,7 +62,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var valueWord = Parameter(typeof(Word), "value");
             var wordValueVar = Variable(typeof(string), "wordValue");
-            var expr0 = Lambda<DeserializerDlg<Word>>(  
+            var expr0 = Lambda<DeserializerDlg<Word>>(
                 Block(new[] { reader, wordValueVar },
                     createReader,
                     IfThen(
@@ -74,10 +76,11 @@ namespace FastExpressionCompiler.IssueTests
 
             // sanity check
             var f0sys = expr0.CompileSys();
-            Assert.IsNotNull(f0sys);
-            Console.WriteLine("<System Expression IL>");
+            Console.WriteLine("------------");
+            Console.WriteLine("Expression 0");
+            Console.WriteLine("<System IL>");
             Console.WriteLine(f0sys.Method.ToILString());
-            Console.WriteLine("</System Expression IL>");
+            Console.WriteLine("</System IL>");
 
             var f0 = expr0.CompileFast(true);
             f0.PrintIL();
@@ -105,8 +108,15 @@ namespace FastExpressionCompiler.IssueTests
                         Assign(Property(valueSimple, nameof(Simple.Sentence)), contentVar),
                     returnTrue), 
                 input, valueSimple, bytesRead);
-            
+
             expr1.PrintCSharpString();
+
+            var f1sys = expr1.CompileSys();
+            Console.WriteLine("------------");
+            Console.WriteLine("Expression 1");
+            Console.WriteLine("<System IL>");
+            Console.WriteLine(f1sys.Method.ToILString());
+            Console.WriteLine("</System IL>");
 
             var f1 = expr1.CompileFast(true);
             f1.PrintIL();
@@ -124,7 +134,7 @@ namespace FastExpressionCompiler.IssueTests
             BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(5), 5);
             Encoding.UTF8.GetBytes(expected.Sentence[0].Value, buffer.Span.Slice(7));
             BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(13), 5);
-            Encoding.UTF8.GetBytes(expected.Sentence[01].Value, buffer.Span.Slice(15));
+            Encoding.UTF8.GetBytes(expected.Sentence[1].Value, buffer.Span.Slice(15));
 
             var deserialized = new Simple();
             var input = new ReadOnlySequence<byte>(buffer);
@@ -132,6 +142,35 @@ namespace FastExpressionCompiler.IssueTests
             Assert.True(Serializer.TryDeserialize(ref input, deserialized, out var bytesRead));
             Assert.AreEqual(buffer.Length, bytesRead);
             Assert.True(expected.Equals(deserialized));
+        }
+
+        [Test]
+        public void Try_Beq_opcode()
+        {
+            var returnTarget = Label(typeof(string));
+            var returnLabel = Label(returnTarget, Constant(default(string)));
+            var returnFalse = Block(Return(returnTarget, Constant("false"), typeof(string)), returnLabel);
+            var returnTrue =  Block(Return(returnTarget, Constant("true"),  typeof(string)), returnLabel);
+
+            var boolParam = Parameter(typeof(bool), "b");
+
+            var expr = Lambda<Func<bool, string>>(
+                Block(
+                    IfThen(Equal(boolParam, Constant(true)),
+                        returnTrue),
+                    returnFalse),
+                boolParam);
+
+            var fs = expr.CompileSys();
+            Console.WriteLine("<System IL>");
+            Console.WriteLine(fs.Method.ToILString());
+            Console.WriteLine("</System IL>");
+
+            var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
+            f.PrintIL();
+
+            Assert.AreEqual("true", f(true));
         }
     }
 
