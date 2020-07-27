@@ -56,9 +56,9 @@ namespace FastExpressionCompiler
                 
                 s.Append(il.Offset.ToString().PadRight(4, ' ')).Append(' ').Append(il.OpCode);
                 if (il is InlineFieldInstruction f)
-                    s.Append(' ').Append(f.Field.Name);
+                    s.Append(' ').Append(f.Field.DeclaringType.Name).Append('.').Append(f.Field.Name);
                 else if (il is InlineMethodInstruction m)
-                    s.Append(' ').Append(m.Method.Name);
+                    s.Append(' ').Append(m.Method.DeclaringType.Name).Append('.').Append(m.Method.Name);
                 else if (il is InlineTypeInstruction t)
                     s.Append(' ').Append(t.Type.Name);
                 else if (il is InlineTokInstruction tok)
