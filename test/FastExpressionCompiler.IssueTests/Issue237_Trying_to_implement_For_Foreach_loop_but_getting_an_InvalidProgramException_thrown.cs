@@ -147,8 +147,8 @@ namespace FastExpressionCompiler.IssueTests
 #pragma warning restore 659
         {
             return obj is Simple value
-                   && value.Identifier == Identifier
-                   && value.Sentence.SequenceEqual(Sentence);
+                && value.Identifier == Identifier
+                && value.Sentence.SequenceEqual(Sentence);
         }
     }
 

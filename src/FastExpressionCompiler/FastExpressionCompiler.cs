@@ -1442,7 +1442,7 @@ namespace FastExpressionCompiler
 
         // The minimal context-aware flags set by parent
         [Flags]
-        internal enum ParentFlags
+        internal enum ParentFlags : ushort
         {
             Empty = 0,
             IgnoreResult = 1 << 1,
@@ -1453,7 +1453,8 @@ namespace FastExpressionCompiler
             InstanceAccess = 1 << 6,
             DupMemberOwner = 1 << 7,
             TryCatch = 1 << 8,
-            InstanceCall = Call | InstanceAccess
+            InstanceCall = Call | InstanceAccess,
+            CtorCall = Call | (1 << 9)
         }
 
         internal static bool IgnoresResult(this ParentFlags parent) => (parent & ParentFlags.IgnoreResult) != 0;
@@ -1750,6 +1751,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitNew(Expression expr, IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {
+                parent |= ParentFlags.CtorCall;
                 var newExpr = (NewExpression)expr;
 #if LIGHT_EXPRESSION
                 var argCount = newExpr.FewArgumentCount;
