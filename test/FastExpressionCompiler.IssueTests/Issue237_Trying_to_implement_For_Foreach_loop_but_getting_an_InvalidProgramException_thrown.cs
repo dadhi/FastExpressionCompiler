@@ -40,62 +40,64 @@ namespace FastExpressionCompiler.IssueTests
         public void TestTestCode()
         {
             DeserializerDlg<Word> dlgWord = 
-                /*DeserializerDlg<Word>*/(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => 
+            /*DeserializerDlg<Word>*/(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => 
+            {
+                SequenceReader<Byte> reader;
+                String wordValue;
+
+                reader = new SequenceReader<Byte>(input);
+                if (ReaderExtensions.TryReadValue<String>(
+                    ref reader,
+                    out wordValue) == false)
                 {
-                    String wordValue;
-
-                    var reader = new SequenceReader<Byte>(input);
-                    if (ReaderExtensions.TryReadValue(
-                        ref reader,
-                        out wordValue) == false)
-                    {
-                        bytesRead = reader.Consumed;
-                        return false;
-                    }
-
-                    value.Value = wordValue;
                     bytesRead = reader.Consumed;
-                    return true;
-                };
+                    return false;
+                }
+
+                value.Value = wordValue;
+                bytesRead = reader.Consumed;
+                return true;
+            };
 
             DeserializerDlg<Simple> dlgSimple = 
-                /*DeserializerDlg<Simple>*/(ref ReadOnlySequence<Byte> input, Simple value, out Int64 bytesRead) =>
+            /*DeserializerDlg<Simple>*/(ref ReadOnlySequence<Byte> input, Simple value, out Int64 bytesRead) => 
+            {
+                SequenceReader<Byte> reader;
+                Int32 identifier;
+                Word content;
+                Int32 contentLength;
+
+                reader = new SequenceReader<Byte>(input);
+                if (ReaderExtensions.TryReadValue<Int32>(
+                    ref reader,
+                    out identifier) == false)
                 {
-                    Int32 identifier;
-                    Word content;
-                    Int32 contentLength;
-
-                    var reader = new SequenceReader<Byte>(input);
-                    if (ReaderExtensions.TryReadValue(
-                        ref reader,
-                        out identifier) == false)
-                    {
-                        bytesRead = reader.Consumed;
-                        return false;
-                    }
-
-                    if (ReaderExtensions.TryReadValue(
-                        ref reader,
-                        out contentLength) == false)
-                    {
-                        bytesRead = reader.Consumed;
-                        return false;
-                    }
-
-                    if (Serializer.TryDeserializeValues(
-                        ref reader,
-                        contentLength,
-                        out content) == false)
-                    {
-                        bytesRead = reader.Consumed;
-                        return false;
-                    }
-
-                    value.Identifier = identifier;
-                    value.Sentence = content;
                     bytesRead = reader.Consumed;
-                    return true;
-                };
+                    return false;
+                }
+
+                if (ReaderExtensions.TryReadValue<Int32>(
+                    ref reader,
+                    out contentLength) == false)
+                {
+                    bytesRead = reader.Consumed;
+                    return false;
+                }
+
+                if (Serializer.TryDeserializeValues<Word>(
+                    ref reader,
+                    contentLength,
+                    out content) == false)
+                {
+                    bytesRead = reader.Consumed;
+                    return false;
+                }
+
+                value.Identifier = identifier;
+                value.Sentence = content;
+                bytesRead = reader.Consumed;
+                return true;
+            }; 
         }
 
         [SetUp]

@@ -2358,12 +2358,23 @@ namespace FastExpressionCompiler.LightExpression
             else // for static method or static extension method we need to qualify with the class
                 sb.Append(Method.DeclaringType.ToCode(stripNamespace, printType));
             
-            sb.Append('.').Append(Method.Name).Append('(');
+            sb.Append('.').Append(Method.Name);
+            
+            if (Method.IsGenericMethod) 
+            {
+                sb.Append('<');
+                var typeArgs = Method.GetGenericArguments();
+                for (var i = 0; i < typeArgs.Length; i++)
+                    (i == 0 ? sb : sb.Append(", ")).Append(typeArgs[i].ToCode(stripNamespace, printType));
+                sb.Append('>');
+            }
+
+            sb.Append('(');
             var pars = Method.GetParameters();
             var args = Arguments;
             if (args.Count == 1)
             {
-                var p = pars[0]; 
+                var p = pars[0];
                 if (p.ParameterType.IsByRef)
                     sb.Append(p.IsOut ? "out " : p.IsIn ? "in" : "ref ");
                 
@@ -2373,10 +2384,7 @@ namespace FastExpressionCompiler.LightExpression
             {
                 for (var i = 0; i < args.Count; i++)
                 {
-                    if (i > 0)
-                        sb.Append(',');
-                    sb.NewLineIdent(lineIdent);
-                    
+                    (i == 0 ? sb : sb.Append(',')).NewLineIdent(lineIdent);
                     var p = pars[i]; 
                     if (p.ParameterType.IsByRef)
                         sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
