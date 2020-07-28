@@ -2354,12 +2354,11 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
             if (Object != null)
-            {
                 Object.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                sb.Append('.');
-            }
-
-            sb.Append(Method.Name).Append('(');
+            else // for static method or static extension method we need to qualify with the class
+                sb.Append(Method.DeclaringType.ToCode(stripNamespace, printType));
+            
+            sb.Append('.').Append(Method.Name).Append('(');
             var pars = Method.GetParameters();
             var args = Arguments;
             if (args.Count == 1)
@@ -2567,8 +2566,7 @@ namespace FastExpressionCompiler.LightExpression
             else
                 sb.NewLineIdent(lineIdent).Append(Member.DeclaringType.ToCode(stripNamespace, printType));
 
-            sb.Append('.').Append(Member.Name);
-            return sb;
+            return sb.Append('.').Append(Member.Name);
         }
     }
 
@@ -3366,7 +3364,16 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            sb.Append("new ").Append(Type.ToCode(stripNamespace, printType)).Append('(');
+            // The Type of delegate is put into comment because sometime doing `new` or cast to delegate type
+            // is not valid like in issue #237: 
+            // `new DeserializerDlg<Word>(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...};`
+            // and the cast is invalid too:
+            // `(DeserializerDlg<Word>)(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...};`
+            // 
+            // The valid thing is:
+            // DeserializerDlg<Word> d = (ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...};
+            // 
+            sb.Append("/*").Append(Type.ToCode(stripNamespace, printType)).Append("*/(");
             if (Parameters.Count > 0)
             {
                 var pars = Type.FindDelegateInvokeMethod().GetParameters();

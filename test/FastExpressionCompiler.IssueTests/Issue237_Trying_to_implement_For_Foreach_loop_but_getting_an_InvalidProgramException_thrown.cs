@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.IssueTests
     [TestFixture, Ignore("todo: fix me")]
     public class Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown : ITest
     {
-        private static readonly MethodInfo _tryRead =  typeof(ReaderExtensions).GetMethod(nameof(ReaderExtensions.TryReadValue));
+        private static readonly MethodInfo _tryRead = typeof(ReaderExtensions).GetMethod(nameof(ReaderExtensions.TryReadValue));
         private static readonly MethodInfo _tryDeserialize = typeof(Serializer).GetMethod(nameof(Serializer.TryDeserializeValues));
 
         public int Run()
@@ -31,7 +31,71 @@ namespace FastExpressionCompiler.IssueTests
 
             // Try_Beq_opcode();
 
+            // TestTestCode();
+
             return 2;
+        }
+
+        [Test]
+        public void TestTestCode()
+        {
+            DeserializerDlg<Word> dlgWord = 
+                /*DeserializerDlg<Word>*/(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => 
+                {
+                    String wordValue;
+
+                    var reader = new SequenceReader<Byte>(input);
+                    if (ReaderExtensions.TryReadValue(
+                        ref reader,
+                        out wordValue) == false)
+                    {
+                        bytesRead = reader.Consumed;
+                        return false;
+                    }
+
+                    value.Value = wordValue;
+                    bytesRead = reader.Consumed;
+                    return true;
+                };
+
+            DeserializerDlg<Simple> dlgSimple = 
+                /*DeserializerDlg<Simple>*/(ref ReadOnlySequence<Byte> input, Simple value, out Int64 bytesRead) =>
+                {
+                    Int32 identifier;
+                    Word content;
+                    Int32 contentLength;
+
+                    var reader = new SequenceReader<Byte>(input);
+                    if (ReaderExtensions.TryReadValue(
+                        ref reader,
+                        out identifier) == false)
+                    {
+                        bytesRead = reader.Consumed;
+                        return false;
+                    }
+
+                    if (ReaderExtensions.TryReadValue(
+                        ref reader,
+                        out contentLength) == false)
+                    {
+                        bytesRead = reader.Consumed;
+                        return false;
+                    }
+
+                    if (Serializer.TryDeserializeValues(
+                        ref reader,
+                        contentLength,
+                        out content) == false)
+                    {
+                        bytesRead = reader.Consumed;
+                        return false;
+                    }
+
+                    value.Identifier = identifier;
+                    value.Sentence = content;
+                    bytesRead = reader.Consumed;
+                    return true;
+                };
         }
 
         [SetUp]
@@ -69,7 +133,7 @@ namespace FastExpressionCompiler.IssueTests
                         NotEqual(Call(_tryRead.MakeGenericMethod(typeof(string)), reader, wordValueVar), Constant(true)),
                         returnFalse),
                     Assign(Property(valueWord, nameof(Word.Value)), wordValueVar),
-                    returnTrue), 
+                    returnTrue),
                 input, valueWord, bytesRead);
 
             expr0.PrintCSharpString();
@@ -87,10 +151,10 @@ namespace FastExpressionCompiler.IssueTests
 
             Serializer.Setup(f0);
 
-            var valueSimple   = Parameter(typeof(Simple), "value");
-            var identifierVar = Variable(typeof(int),     "identifier");
-            var contentVar    = Variable(typeof(Word[]),  "content");
-            var contentLenVar = Variable(typeof(int),     "contentLength");
+            var valueSimple = Parameter(typeof(Simple), "value");
+            var identifierVar = Variable(typeof(int), "identifier");
+            var contentVar = Variable(typeof(Word[]), "content");
+            var contentLenVar = Variable(typeof(int), "contentLength");
 
             var expr1 = Lambda<DeserializerDlg<Simple>>(
                     Block(new[] { reader, identifierVar, contentVar, contentLenVar },
@@ -106,7 +170,7 @@ namespace FastExpressionCompiler.IssueTests
                             returnFalse),
                         Assign(Property(valueSimple, nameof(Simple.Identifier)), identifierVar),
                         Assign(Property(valueSimple, nameof(Simple.Sentence)), contentVar),
-                    returnTrue), 
+                    returnTrue),
                 input, valueSimple, bytesRead);
 
             expr1.PrintCSharpString();
@@ -150,7 +214,7 @@ namespace FastExpressionCompiler.IssueTests
             var returnTarget = Label(typeof(string));
             var returnLabel = Label(returnTarget, Constant(default(string)));
             var returnFalse = Block(Return(returnTarget, Constant("false"), typeof(string)), returnLabel);
-            var returnTrue =  Block(Return(returnTarget, Constant("true"),  typeof(string)), returnLabel);
+            var returnTrue = Block(Return(returnTarget, Constant("true"), typeof(string)), returnLabel);
 
             var boolParam = Parameter(typeof(bool), "b");
 
@@ -234,7 +298,7 @@ namespace FastExpressionCompiler.IssueTests
             return true;
         }
 
-        public static void Setup<T>(DeserializerDlg<T> des) => 
+        public static void Setup<T>(DeserializerDlg<T> des) =>
             SerializerStorage<T>.TryDeserialize = des;
 
         private static class SerializerStorage<T>
