@@ -150,10 +150,16 @@ namespace FastExpressionCompiler.LightExpression
             return result;
         }
 
-        public static ParameterExpression Parameter(Type type, string name = null) =>
-            new ParameterExpression(type.IsByRef ? type.GetElementType() : type, name, type.IsByRef);
+        public static ParameterExpression Parameter(Type type, string name = null)
+        {
+            var isByRef = type.IsByRef;
+            return isByRef 
+                ? new ByRefParameterExpression(type.GetElementType(), name)
+                : new ParameterExpression(type, name);
+        }
 
-        public static ParameterExpression Variable(Type type, string name = null) => Parameter(type, name);
+        // never by ref, right?
+        public static ParameterExpression Variable(Type type, string name = null) => new ParameterExpression(type, name);
 
         public static readonly ConstantExpression NullConstant = new TypedConstantExpression(null, typeof(object));
         public static readonly ConstantExpression FalseConstant = new ConstantExpression(false);
@@ -1962,20 +1968,22 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class ParameterExpression : Expression
+    internal sealed class ByRefParameterExpression : ParameterExpression
+    {
+        public override bool IsByRef => true;
+        internal ByRefParameterExpression(Type type, string name) : base(type, name) {}
+    }
+
+    public class ParameterExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Parameter;
         public override Type Type { get; }
-
-        // todo: @perf we need the version without this members
         public readonly string Name;
-        public readonly bool IsByRef;
-
-        internal ParameterExpression(Type type, string name, bool isByRef)
+        public virtual bool IsByRef => false;
+        internal ParameterExpression(Type type, string name)
         {
             Type = type;
             Name = name;
-            IsByRef = isByRef;
         }
 
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitParameter(this);

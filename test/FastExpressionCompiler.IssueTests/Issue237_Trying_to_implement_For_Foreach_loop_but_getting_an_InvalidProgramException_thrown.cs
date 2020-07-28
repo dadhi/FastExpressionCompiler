@@ -59,45 +59,45 @@ namespace FastExpressionCompiler.IssueTests
                 return true;
             };
 
-            DeserializerDlg<Simple> dlgSimple = 
-            /*DeserializerDlg<Simple>*/(ref ReadOnlySequence<Byte> input, Simple value, out Int64 bytesRead) => 
-            {
-                SequenceReader<Byte> reader;
-                Int32 identifier;
-                Word content;
-                Int32 contentLength;
+            // DeserializerDlg<Simple> dlgSimple = 
+            // /*DeserializerDlg<Simple>*/(ref ReadOnlySequence<Byte> input, Simple value, out Int64 bytesRead) => 
+            // {
+            //     SequenceReader<Byte> reader;
+            //     Int32 identifier;
+            //     Word content;
+            //     Int32 contentLength;
 
-                reader = new SequenceReader<Byte>(input);
-                if (ReaderExtensions.TryReadValue<Int32>(
-                    ref reader,
-                    out identifier) == false)
-                {
-                    bytesRead = reader.Consumed;
-                    return false;
-                }
+            //     reader = new SequenceReader<Byte>(input);
+            //     if (ReaderExtensions.TryReadValue<Int32>(
+            //         ref reader,
+            //         out identifier) == false)
+            //     {
+            //         bytesRead = reader.Consumed;
+            //         return false;
+            //     }
 
-                if (ReaderExtensions.TryReadValue<Int32>(
-                    ref reader,
-                    out contentLength) == false)
-                {
-                    bytesRead = reader.Consumed;
-                    return false;
-                }
+            //     if (ReaderExtensions.TryReadValue<Int32>(
+            //         ref reader,
+            //         out contentLength) == false)
+            //     {
+            //         bytesRead = reader.Consumed;
+            //         return false;
+            //     }
 
-                if (Serializer.TryDeserializeValues<Word>(
-                    ref reader,
-                    contentLength,
-                    out content) == false)
-                {
-                    bytesRead = reader.Consumed;
-                    return false;
-                }
+            //     if (Serializer.TryDeserializeValues<Word>(
+            //         ref reader,
+            //         contentLength,
+            //         out content) == false)
+            //     {
+            //         bytesRead = reader.Consumed;
+            //         return false;
+            //     }
 
-                value.Identifier = identifier;
-                value.Sentence = content;
-                bytesRead = reader.Consumed;
-                return true;
-            }; 
+            //     value.Identifier = identifier;
+            //     value.Sentence = content;
+            //     bytesRead = reader.Consumed;
+            //     return true;
+            // }; 
         }
 
         [SetUp]
