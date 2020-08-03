@@ -28,11 +28,10 @@ namespace FastExpressionCompiler.IssueTests
         {
             // TestTestCode();
 
-            // Setup_ShouldCompileExpressions();
-            // TryDeserialize_ShouldParseSimple();
+            Setup_ShouldCompileExpressions();
+            TryDeserialize_ShouldParseSimple();
 
             // Try_Beq_opcode();
-
 
             return 2;
         }
@@ -186,7 +185,7 @@ namespace FastExpressionCompiler.IssueTests
             var contentType = contentVar.Type.ToCode(true, null);
             Console.WriteLine("!!!!!!" + contentType);
 #endif
-            var contentLenVar = Variable(typeof(int), "contentLength");
+            var contentLenVar = Variable(typeof(byte), "contentLength");
 
             var expr1 = Lambda<DeserializerDlg<Simple>>(
                     Block(new[] { reader, identifierVar, contentVar, contentLenVar },
@@ -195,10 +194,10 @@ namespace FastExpressionCompiler.IssueTests
                             NotEqual(Call(_tryRead.MakeGenericMethod(typeof(int)), reader, identifierVar), Constant(true)),
                             returnFalse),
                         IfThen(
-                            NotEqual(Call(_tryRead.MakeGenericMethod(typeof(int)), reader, contentLenVar), Constant(true)),
+                            NotEqual(Call(_tryRead.MakeGenericMethod(typeof(byte)), reader, contentLenVar), Constant(true)),
                             returnFalse),
                         IfThen(
-                            NotEqual(Call(_tryDeserialize.MakeGenericMethod(typeof(Word)), reader, contentLenVar, contentVar), Constant(true)),
+                            NotEqual(Call(_tryDeserialize.MakeGenericMethod(typeof(Word)), reader, Convert(contentLenVar, typeof(int)), contentVar), Constant(true)),
                             returnFalse),
                         Assign(Property(valueSimple, nameof(Simple.Identifier)), identifierVar),
                         Assign(Property(valueSimple, nameof(Simple.Sentence)), contentVar),
@@ -349,6 +348,9 @@ namespace FastExpressionCompiler.IssueTests
             ReaderStorage<int>.TryRead = (ref SequenceReader<byte> reader, out int value) =>
                 reader.TryReadBigEndian(out value);
 
+            ReaderStorage<byte>.TryRead = (ref SequenceReader<byte> reader, out byte value) =>
+                reader.TryRead(out value);
+
             ReaderStorage<string>.TryRead = (ref SequenceReader<byte> reader, out string value) =>
             {
                 value = default;
@@ -376,8 +378,10 @@ namespace FastExpressionCompiler.IssueTests
 
                     var hasNext = (readByte & 128) == 128;
 
-                    if (offset > 0) result += (readByte & sbyte.MaxValue) << offset;
-                    else result += (readByte & sbyte.MaxValue);
+                    if (offset > 0) 
+                        result += (readByte & sbyte.MaxValue) << offset;
+                    else 
+                        result += (readByte & sbyte.MaxValue);
 
                     if (result > short.MaxValue) result -= 65536;
                     if (!hasNext) break;
