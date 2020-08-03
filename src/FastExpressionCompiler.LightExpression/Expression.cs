@@ -1421,7 +1421,11 @@ namespace FastExpressionCompiler.LightExpression
 
             var typeInfo = type.GetTypeInfo();
             if (!typeInfo.IsGenericType)
-                return printType?.Invoke(type, typeString) ?? typeString;
+            {
+                if (printType != null)
+                    typeString = printType.Invoke(type, typeString);
+                return isArray ? typeString + "[]" : typeString;
+            }
 
             var s = new StringBuilder(typeString.Substring(0, typeString.IndexOf('`')));
             s.Append('<');
@@ -2926,8 +2930,10 @@ namespace FastExpressionCompiler.LightExpression
             {
                 for (var i = 0; i < vars.Count; i++)
                 {
-                    sb.NewLineIdent(lineIdent).Append(vars[i].Type.ToCode(stripNamespace, printType)).Append(' ');
-                    vars[i].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(';');
+                    var v = vars[i];
+                    sb.NewLineIdent(lineIdent);
+                    sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ');
+                    sb.Append(v.Name ?? "__" + v.Type.Name.Substring(0, 5) + i).Append(';');
                 }
                 sb.AppendLine(); // visually separate the variables from expressions
             }

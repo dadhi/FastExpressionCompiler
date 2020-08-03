@@ -26,12 +26,13 @@ namespace FastExpressionCompiler.IssueTests
 
         public int Run()
         {
-            Setup_ShouldCompileExpressions();
-            TryDeserialize_ShouldParseSimple();
+            // TestTestCode();
+
+            // Setup_ShouldCompileExpressions();
+            // TryDeserialize_ShouldParseSimple();
 
             // Try_Beq_opcode();
 
-            // TestTestCode();
 
             return 2;
         }
@@ -59,45 +60,70 @@ namespace FastExpressionCompiler.IssueTests
                 return true;
             };
 
-            // DeserializerDlg<Simple> dlgSimple = 
-            // /*DeserializerDlg<Simple>*/(ref ReadOnlySequence<Byte> input, Simple value, out Int64 bytesRead) => 
-            // {
-            //     SequenceReader<Byte> reader;
-            //     Int32 identifier;
-            //     Word content;
-            //     Int32 contentLength;
+            DeserializerDlg<Simple> dlgSimple = 
+            /*DeserializerDlg<Simple>*/(ref ReadOnlySequence<Byte> input, Simple value, out Int64 bytesRead) => 
+            {
+                SequenceReader<Byte> reader;
+                Int32 identifier;
+                Word[] content;
+                Int32 contentLength;
 
-            //     reader = new SequenceReader<Byte>(input);
-            //     if (ReaderExtensions.TryReadValue<Int32>(
-            //         ref reader,
-            //         out identifier) == false)
-            //     {
-            //         bytesRead = reader.Consumed;
-            //         return false;
-            //     }
+                reader = new SequenceReader<Byte>(input);
+                if (ReaderExtensions.TryReadValue<Int32>(
+                    ref reader,
+                    out identifier) == false)
+                {
+                    bytesRead = reader.Consumed;
+                    return false;
+                }
 
-            //     if (ReaderExtensions.TryReadValue<Int32>(
-            //         ref reader,
-            //         out contentLength) == false)
-            //     {
-            //         bytesRead = reader.Consumed;
-            //         return false;
-            //     }
+                if (ReaderExtensions.TryReadValue<Int32>(
+                    ref reader,
+                    out contentLength) == false)
+                {
+                    bytesRead = reader.Consumed;
+                    return false;
+                }
 
-            //     if (Serializer.TryDeserializeValues<Word>(
-            //         ref reader,
-            //         contentLength,
-            //         out content) == false)
-            //     {
-            //         bytesRead = reader.Consumed;
-            //         return false;
-            //     }
+                if (Serializer.TryDeserializeValues<Word>(
+                    ref reader,
+                    contentLength,
+                    out content) == false)
+                {
+                    bytesRead = reader.Consumed;
+                    return false;
+                }
 
-            //     value.Identifier = identifier;
-            //     value.Sentence = content;
-            //     bytesRead = reader.Consumed;
-            //     return true;
-            // }; 
+                value.Identifier = identifier;
+                value.Sentence = content;
+                bytesRead = reader.Consumed;
+                return true;
+            }; 
+
+            var expected = new Simple
+            { 
+                Identifier = 150, 
+                Sentence = new[] { new Word { Value = "hello" }, new Word { Value = "there" } } 
+            };
+            
+            Memory<byte> buffer = new byte[20];
+            BinaryPrimitives.WriteInt32BigEndian(buffer.Span, expected.Identifier);
+            buffer.Span.Slice(4)[0] = 2;
+            BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(5), 5);
+            Encoding.UTF8.GetBytes(expected.Sentence[0].Value, buffer.Span.Slice(7));
+            BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(13), 5);
+            Encoding.UTF8.GetBytes(expected.Sentence[1].Value, buffer.Span.Slice(15));
+
+            Serializer.Setup(dlgWord);
+            Serializer.Setup(dlgSimple);
+
+            var deserialized = new Simple();
+            var input = new ReadOnlySequence<byte>(buffer);
+            var isDeserialized = Serializer.TryDeserialize(ref input, deserialized, out var bytesRead);
+            
+            Assert.True(isDeserialized); // fails?
+            Assert.AreEqual(buffer.Length, bytesRead);
+            Assert.AreEqual(expected, deserialized);
         }
 
         [SetUp]
@@ -156,6 +182,10 @@ namespace FastExpressionCompiler.IssueTests
             var valueSimple = Parameter(typeof(Simple), "value");
             var identifierVar = Variable(typeof(int), "identifier");
             var contentVar = Variable(typeof(Word[]), "content");
+#if LIGHT_EXPRESSION
+            var contentType = contentVar.Type.ToCode(true, null);
+            Console.WriteLine("!!!!!!" + contentType);
+#endif
             var contentLenVar = Variable(typeof(int), "contentLength");
 
             var expr1 = Lambda<DeserializerDlg<Simple>>(
