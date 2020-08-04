@@ -4266,8 +4266,8 @@ namespace FastExpressionCompiler
                 // todo: @incomplete try to replace the NotEqual with Equal so we could use `OpCodes.Beq_s` - branch on equality
                 var testExpr = TryReduceCondition(expr.Test);
 
-                // detect a special simplistic case of comparison with `null`
-                var comparedWithNull = false;
+                // detect a special simplistic case of comparison with zero, e.g. `null`, `false`
+                var comparedWithZero = false;
                 if (testExpr is BinaryExpression b)
                 {
                     if (b.NodeType == ExpressionType.Equal)
@@ -4276,12 +4276,11 @@ namespace FastExpressionCompiler
                         {
                             if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                                 return false;
-                            comparedWithNull = true;
+                            comparedWithZero = true;
                         }
                     }
-                    else if (b.NodeType == ExpressionType.Equal || 
-                        b.NodeType == ExpressionType.NotEqual/* ||
-                        !b.Left.Type.IsNullable() && !b.Right.Type.IsNullable()*/) // todo: @unsure what is that part of condition, Equals?
+                    else if (b.NodeType == ExpressionType.Equal 
+                          || b.NodeType == ExpressionType.NotEqual)
                     {
                         if (b.Right is ConstantExpression rc && rc.Value == null)
                         {
@@ -4291,7 +4290,7 @@ namespace FastExpressionCompiler
                                 parent |= ParentFlags.MemberAccess;
                             if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                                 return false;
-                            comparedWithNull = true; 
+                            comparedWithZero = true; 
                         }
                         else if (b.Left is ConstantExpression lc && lc.Value == null)
                         {
@@ -4301,12 +4300,12 @@ namespace FastExpressionCompiler
                                 parent |= ParentFlags.MemberAccess;
                             if (!TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                                 return false;
-                            comparedWithNull = true; 
+                            comparedWithZero = true; 
                         }
                     }
                 }
 
-                if (!comparedWithNull)
+                if (!comparedWithZero)
                 {
                     if (!TryEmit(testExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                         return false;
@@ -4315,7 +4314,7 @@ namespace FastExpressionCompiler
                 // here we are checking the negative result to go into if-false branch,
                 // because if-true we don't need to jump and just proceed to emit `IfTrue` expression
                 var labelIfFalse = il.DefineLabel();
-                il.Emit(comparedWithNull && testExpr.NodeType == ExpressionType.Equal ? OpCodes.Brtrue : OpCodes.Brfalse, labelIfFalse);
+                il.Emit(comparedWithZero && testExpr.NodeType == ExpressionType.Equal ? OpCodes.Brtrue : OpCodes.Brfalse, labelIfFalse);
 
                 if (!TryEmit(expr.IfTrue, paramExprs, il, ref closure, parent & ParentFlags.IgnoreResult))
                     return false;
@@ -4357,6 +4356,7 @@ namespace FastExpressionCompiler
                 }
                 else if (testExpr is BinaryExpression b)
                 {
+                    // todo: @perf do we need this check or can generalize in TryEmitConditional 
                     // let's make it equal, so we can use single OpCodes.Beq instead of Ceq, then Brtrue or Brfalse
                     if (b.NodeType == ExpressionType.NotEqual) 
                     {

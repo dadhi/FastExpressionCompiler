@@ -33,7 +33,9 @@ namespace FastExpressionCompiler.IssueTests
 
             Try_OpCode_Beq_instead_of_Brtrue_or_Brfalse_because_it_less_instructions();
 
-            return 3;
+            Try_compare_strings();
+
+            return 4;
         }
 
         [Test]
@@ -244,6 +246,34 @@ namespace FastExpressionCompiler.IssueTests
             f.PrintIL();
 
             Assert.AreEqual("true", f(true));
+        }
+
+        public void Try_compare_strings()
+        {
+            var returnTarget = Label(typeof(string));
+            var returnLabel = Label(returnTarget, Constant(null, typeof(string)));
+            var returnFalse = Block(Return(returnTarget, Constant("false"), typeof(string)), returnLabel);
+            var returnTrue = Block(Return(returnTarget, Constant("true"), typeof(string)), returnLabel);
+
+            var strParam = Parameter(typeof(string), "s");
+
+            var expr = Lambda<Func<string, string>>(
+                Block(
+                    IfThen(Equal(strParam, Constant("42")),
+                        returnTrue),
+                    returnFalse
+                ),
+                strParam);
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("system compiled il");
+            
+            var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
+            f.PrintIL();
+
+            Assert.AreEqual("true",  f("42"));
+            Assert.AreEqual("false", f("35"));
         }
     }
 
