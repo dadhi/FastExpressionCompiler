@@ -33,15 +33,14 @@ namespace FastExpressionCompiler.IssueTests
             
             Try_compare_strings();
 
-            TestTestCode();
-            Setup_ShouldCompileExpressions();
-            TryDeserialize_ShouldParseSimple();
-
+            Should_Deserialize_Simple();
+            Should_Deserialize_Simple_via_manual_CSharp_code();
+            
             return 7;
         }
 
         [Test]
-        public void TestTestCode()
+        public void Should_Deserialize_Simple_via_manual_CSharp_code()
         {
             DeserializerDlg<Word> dlgWord = 
             /*DeserializerDlg<Word>*/(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => 
@@ -106,12 +105,12 @@ namespace FastExpressionCompiler.IssueTests
             Serializer.Setup(dlgWord);
             Serializer.Setup(dlgSimple);
 
-            TryDeserialize_ShouldParseSimple();
+            RunDeserializer();
         }
 
         // todo: @perf benchmark CompileSys and Invoke vs CompileFast and Invoke
-        [SetUp]
-        public void Setup_ShouldCompileExpressions()
+        [Test]
+        public void Should_Deserialize_Simple()
         {
             var reader = Variable(typeof(SequenceReader<byte>), "reader");
             var bytesRead = Parameter(typeof(long).MakeByRefType(), "bytesRead");
@@ -190,10 +189,11 @@ namespace FastExpressionCompiler.IssueTests
             f1.PrintIL();
 
             Serializer.Setup(f1);
+
+            RunDeserializer();
         }
 
-        [Test]
-        public void TryDeserialize_ShouldParseSimple()
+        public void RunDeserializer()
         {
             var expected = new Simple
             { 
