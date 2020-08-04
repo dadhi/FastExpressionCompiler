@@ -4,10 +4,6 @@
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">netcoreapp3.1</TargetFrameworks>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-        <NoWarn>1701;1702;1705;659</NoWarn>
-    </PropertyGroup>
-
     <ItemGroup>
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0"/>
     </ItemGroup>

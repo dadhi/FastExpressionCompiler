@@ -4,5 +4,6 @@
     <PropertyGroup>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
+        <NoWarn>$(NoWarn);1701;1702;1705;CS0659</NoWarn>
     </PropertyGroup>
 </Project>

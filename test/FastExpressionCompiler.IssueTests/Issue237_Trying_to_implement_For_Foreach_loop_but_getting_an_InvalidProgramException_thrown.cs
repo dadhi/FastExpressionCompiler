@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.IssueTests
 {
     internal delegate bool DeserializerDlg<in T>(ref ReadOnlySequence<byte> seq, T value, out long bytesRead);
 
-    [TestFixture, Ignore("todo: fix me")]
+    [TestFixture]
     public class Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown : ITest
     {
         private static readonly MethodInfo _tryRead = typeof(ReaderExtensions).GetMethod(nameof(ReaderExtensions.TryReadValue));
@@ -26,14 +26,14 @@ namespace FastExpressionCompiler.IssueTests
 
         public int Run()
         {
-            // TestTestCode();
+            TestTestCode();
 
             Setup_ShouldCompileExpressions();
             TryDeserialize_ShouldParseSimple();
 
-            // Try_Beq_opcode();
+            Try_OpCode_Beq_instead_of_Brtrue_or_Brfalse_because_it_less_instructions();
 
-            return 2;
+            return 3;
         }
 
         [Test]
@@ -65,7 +65,7 @@ namespace FastExpressionCompiler.IssueTests
                 SequenceReader<Byte> reader;
                 Int32 identifier;
                 Word[] content;
-                Int32 contentLength;
+                Byte contentLength;
 
                 reader = new SequenceReader<Byte>(input);
                 if (ReaderExtensions.TryReadValue<Int32>(
@@ -76,7 +76,7 @@ namespace FastExpressionCompiler.IssueTests
                     return false;
                 }
 
-                if (ReaderExtensions.TryReadValue<Int32>(
+                if (ReaderExtensions.TryReadValue<Byte>(
                     ref reader,
                     out contentLength) == false)
                 {
@@ -86,7 +86,7 @@ namespace FastExpressionCompiler.IssueTests
 
                 if (Serializer.TryDeserializeValues<Word>(
                     ref reader,
-                    contentLength,
+                    (Int32)contentLength,
                     out content) == false)
                 {
                     bytesRead = reader.Consumed;
@@ -99,30 +99,10 @@ namespace FastExpressionCompiler.IssueTests
                 return true;
             }; 
 
-            var expected = new Simple
-            { 
-                Identifier = 150, 
-                Sentence = new[] { new Word { Value = "hello" }, new Word { Value = "there" } } 
-            };
-            
-            Memory<byte> buffer = new byte[20];
-            BinaryPrimitives.WriteInt32BigEndian(buffer.Span, expected.Identifier);
-            buffer.Span.Slice(4)[0] = 2;
-            BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(5), 5);
-            Encoding.UTF8.GetBytes(expected.Sentence[0].Value, buffer.Span.Slice(7));
-            BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(13), 5);
-            Encoding.UTF8.GetBytes(expected.Sentence[1].Value, buffer.Span.Slice(15));
-
             Serializer.Setup(dlgWord);
             Serializer.Setup(dlgSimple);
 
-            var deserialized = new Simple();
-            var input = new ReadOnlySequence<byte>(buffer);
-            var isDeserialized = Serializer.TryDeserialize(ref input, deserialized, out var bytesRead);
-            
-            Assert.True(isDeserialized); // fails?
-            Assert.AreEqual(buffer.Length, bytesRead);
-            Assert.AreEqual(expected, deserialized);
+            TryDeserialize_ShouldParseSimple();
         }
 
         [SetUp]
@@ -181,10 +161,6 @@ namespace FastExpressionCompiler.IssueTests
             var valueSimple = Parameter(typeof(Simple), "value");
             var identifierVar = Variable(typeof(int), "identifier");
             var contentVar = Variable(typeof(Word[]), "content");
-#if LIGHT_EXPRESSION
-            var contentType = contentVar.Type.ToCode(true, null);
-            Console.WriteLine("!!!!!!" + contentType);
-#endif
             var contentLenVar = Variable(typeof(byte), "contentLength");
 
             var expr1 = Lambda<DeserializerDlg<Simple>>(
@@ -222,25 +198,37 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void TryDeserialize_ShouldParseSimple()
         {
-            var expected = new Simple { Identifier = 150, Sentence = new[] { new Word { Value = "hello" }, new Word { Value = "there" } } };
-            Memory<byte> buffer = new byte[20];
+            var expected = new Simple
+            { 
+                Identifier = 150, 
+                Sentence = new[] { new Word { Value = "hello" }, new Word { Value = "there" } } 
+            };
+            
+            Memory<byte> buffer = new byte[19];
+            // 4 bytes
             BinaryPrimitives.WriteInt32BigEndian(buffer.Span, expected.Identifier);
+            // 4+=1 byte for word count
             buffer.Span.Slice(4)[0] = 2;
+            // 5+=2 bytes for the 1st word length
             BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(5), 5);
+            // 7+=5 bytes for the 1st word
             Encoding.UTF8.GetBytes(expected.Sentence[0].Value, buffer.Span.Slice(7));
-            BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(13), 5);
-            Encoding.UTF8.GetBytes(expected.Sentence[1].Value, buffer.Span.Slice(15));
+            // 12+=2 bytes for the 2nd word length
+            BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(12), 5);
+            // 14+=5 bytes for the 2nd word
+            Encoding.UTF8.GetBytes(expected.Sentence[1].Value, buffer.Span.Slice(14));
 
             var deserialized = new Simple();
             var input = new ReadOnlySequence<byte>(buffer);
-
-            Assert.True(Serializer.TryDeserialize(ref input, deserialized, out var bytesRead));
+            var isDeserialized = Serializer.TryDeserialize(ref input, deserialized, out var bytesRead);
+            
+            Assert.True(isDeserialized);
             Assert.AreEqual(buffer.Length, bytesRead);
-            Assert.True(expected.Equals(deserialized));
+            Assert.AreEqual(expected, deserialized);
         }
 
         [Test]
-        public void Try_Beq_opcode()
+        public void Try_OpCode_Beq_instead_of_Brtrue_or_Brfalse_because_it_less_instructions()
         {
             var returnTarget = Label(typeof(string));
             var returnLabel = Label(returnTarget, Constant(default(string)));
@@ -269,26 +257,22 @@ namespace FastExpressionCompiler.IssueTests
         }
     }
 
-#pragma warning disable CS0659
     internal class Simple
-#pragma warning restore CS0659
     {
         public int Identifier { get; set; }
         public Word[] Sentence { get; set; }
 
-#pragma warning disable 659
-        public override bool Equals(object obj)
-#pragma warning restore 659
-        {
-            return obj is Simple value
+        public override bool Equals(object obj) =>
+            obj is Simple value
                 && value.Identifier == Identifier
                 && value.Sentence.SequenceEqual(Sentence);
-        }
     }
 
     internal class Word
     {
         public string Value { get; set; }
+        public override bool Equals(object obj) => 
+            obj is Word w && w.Value == Value; 
     }
 
     internal struct VarShort
