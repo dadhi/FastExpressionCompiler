@@ -4344,12 +4344,12 @@ namespace FastExpressionCompiler
                 {
                     // simplify the not `==` -> `!=`, `!=` -> `==`
                     var op = TryReduceCondition(((UnaryExpression)testExpr).Operand);
-                    if (op.NodeType == ExpressionType.Equal)
+                    if (op.NodeType == ExpressionType.Equal) // ensures that it is a BinaryExpression
                     {
                         var binOp = (BinaryExpression)op;
                         return NotEqual(binOp.Left, binOp.Right);
                     }
-                    else if (op.NodeType == ExpressionType.NotEqual)
+                    else if (op.NodeType == ExpressionType.NotEqual) // ensures that it is a BinaryExpression
                     {
                         var binOp = (BinaryExpression)op;
                         return Equal(binOp.Left, binOp.Right);
