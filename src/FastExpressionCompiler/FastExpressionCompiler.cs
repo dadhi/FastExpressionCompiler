@@ -4270,18 +4270,18 @@ namespace FastExpressionCompiler
                 var comparedWithNull = false;
                 if (testExpr is BinaryExpression b)
                 {
-                    if (b.NodeType == ExpressionType.Equal &&
-                        b.Right is ConstantExpression rc_ && rc_.Value is bool rcb && !rcb)
+                    if (b.NodeType == ExpressionType.Equal)
                     {
-                        // todo: @incomplete - we can do a Brfalse the same 
-                        if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
-                            return false;
-                        comparedWithNull = true; 
+                        if (b.Right is ConstantExpression brc && brc.Value is bool rcb && !rcb)
+                        {
+                            if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                                return false;
+                            comparedWithNull = true;
+                        }
                     }
-                    // todo: @incomplete - remove double check for expression type
                     else if (b.NodeType == ExpressionType.Equal || 
-                        b.NodeType == ExpressionType.NotEqual ||
-                        !b.Left.Type.IsNullable() && !b.Right.Type.IsNullable()) // todo: @unsure what is that part of condition, Equals?
+                        b.NodeType == ExpressionType.NotEqual/* ||
+                        !b.Left.Type.IsNullable() && !b.Right.Type.IsNullable()*/) // todo: @unsure what is that part of condition, Equals?
                     {
                         if (b.Right is ConstantExpression rc && rc.Value == null)
                         {
@@ -4342,7 +4342,7 @@ namespace FastExpressionCompiler
             {
                 if (testExpr.NodeType == ExpressionType.Not)
                 {
-                    // simplify the not `==` to `!=` and `!=` to `==`
+                    // simplify the not `==` -> `!=`, `!=` -> `==`
                     var op = TryReduceCondition(((UnaryExpression)testExpr).Operand);
                     if (op.NodeType == ExpressionType.Equal)
                     {
