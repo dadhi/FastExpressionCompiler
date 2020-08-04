@@ -1,4 +1,6 @@
 ﻿using BenchmarkDotNet.Attributes;
+using F = FastExpressionCompiler.IssueTests;
+using FL = FastExpressionCompiler.LightExpression.IssueTests;
 using static FastExpressionCompiler.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown;
 using static FastExpressionCompiler.LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown;
 
@@ -19,20 +21,43 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 | CompiledFast |    80.68 us |  1.609 us |   3.499 us |  1.00 |    0.00 | 3.9063 | 1.9531 | 0.1221 |  16.06 KB |
 |     Compiled | 4,442.98 us | 88.213 us | 191.768 us | 55.15 |    3.05 |      - |      - |      - |  27.55 KB |
 
+### Invocation
+
+|              Method |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|-------------------- |---------:|----------:|----------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+| Invoke_CompiledFast | 1.113 us | 0.0210 us | 0.0384 us | 1.132 us |  1.00 |    0.00 | 0.0954 |     - |     - |     400 B |
+|     Invoke_Compiled | 1.097 us | 0.0221 us | 0.0535 us | 1.090 us |  0.99 |    0.06 | 0.0992 |     - |     - |     424 B |
+
 */
     [MemoryDiagnoser]
     public class Deserialize_Simple
     {
-        [Benchmark(Baseline = true)]
+        // [Benchmark(Baseline = true)]
         public object CompiledFast() {
             CreateLightExpression_and_CompileFast(out var a, out var b);
             return new { a, b };
         }
 
-        [Benchmark]
+        // [Benchmark]
         public object Compiled() {
             CreateExpression_and_CompileSys(out var a, out var b);
             return new { a, b };
         }
+
+        static FL.DeserializerDlg<FL.Word> _desWord;
+        static FL.DeserializerDlg<FL.Simple> _desSimple;
+        static F.DeserializerDlg<F.Word> _desWordS;
+        static F.DeserializerDlg<F.Simple> _desSimpleS;
+        static Deserialize_Simple() 
+        {
+            CreateLightExpression_and_CompileFast(out _desWord, out _desSimple);
+            CreateExpression_and_CompileSys(out _desWordS, out _desSimpleS);
+        }
+
+        [Benchmark(Baseline = true)]
+        public bool Invoke_CompiledFast() => RunDeserializer(_desWord, _desSimple);
+
+        [Benchmark]
+        public object Invoke_Compiled() => RunDeserializer(_desWordS, _desSimpleS);
     }
 }

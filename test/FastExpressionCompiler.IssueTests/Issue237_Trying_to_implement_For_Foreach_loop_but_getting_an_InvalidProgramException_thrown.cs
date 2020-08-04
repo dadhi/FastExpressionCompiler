@@ -242,7 +242,37 @@ namespace FastExpressionCompiler.IssueTests
             desSimple = expr1.CompileFast();
         }
 #endif
-        // todo: @perf benchmark CompileSys and Invoke vs CompileFast and Invoke
+
+        public static bool RunDeserializer(DeserializerDlg<Word> desWord, DeserializerDlg<Simple> desSimple)
+        {
+            Serializer.Setup(desWord);
+            Serializer.Setup(desSimple);
+
+            var expected = new Simple
+            { 
+                Identifier = 150, 
+                Sentence = new[] { new Word { Value = "hello" }, new Word { Value = "there" } } 
+            };
+            
+            Memory<byte> buffer = new byte[19];
+            // 4 bytes
+            BinaryPrimitives.WriteInt32BigEndian(buffer.Span, expected.Identifier);
+            // 4+=1 byte for word count
+            buffer.Span.Slice(4)[0] = 2;
+            // 5+=2 bytes for the 1st word length
+            BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(5), 5);
+            // 7+=5 bytes for the 1st word
+            Encoding.UTF8.GetBytes(expected.Sentence[0].Value, buffer.Span.Slice(7));
+            // 12+=2 bytes for the 2nd word length
+            BinaryPrimitives.WriteInt16BigEndian(buffer.Span.Slice(12), 5);
+            // 14+=5 bytes for the 2nd word
+            Encoding.UTF8.GetBytes(expected.Sentence[1].Value, buffer.Span.Slice(14));
+
+            var deserialized = new Simple();
+            var input = new ReadOnlySequence<byte>(buffer);
+            return Serializer.TryDeserialize(ref input, deserialized, out var bytesRead);
+        }
+
         [Test]
         public void Should_Deserialize_Simple()
         {
