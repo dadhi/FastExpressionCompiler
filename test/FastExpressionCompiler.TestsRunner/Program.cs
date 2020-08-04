@@ -9,10 +9,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // RunAllTests();
+            RunAllTests();
 
-            new FastExpressionCompiler.LightExpression.IssueTests
-                .Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
+            // new FastExpressionCompiler.LightExpression.IssueTests
+            //     .Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
 
             // todo: @fix #255
             // new BlockTests().Run();
@@ -173,6 +173,9 @@ namespace FastExpressionCompiler.UnitTests
                 
                 Run(new Issue251_Bad_code_gen_for_byRef_parameters().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters().Run);
+
+                Run(new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
             });
 
             Task.WaitAll(unitTests, issueTests);

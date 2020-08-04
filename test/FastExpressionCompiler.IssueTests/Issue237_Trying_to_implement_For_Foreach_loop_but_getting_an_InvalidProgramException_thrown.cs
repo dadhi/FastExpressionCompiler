@@ -147,11 +147,7 @@ namespace FastExpressionCompiler.IssueTests
 
             // sanity check
             var f0sys = expr0.CompileSys();
-            Console.WriteLine("------------");
-            Console.WriteLine("Expression 0");
-            Console.WriteLine("<System IL>");
-            Console.WriteLine(f0sys.Method.ToILString());
-            Console.WriteLine("</System IL>");
+            f0sys.PrintIL("system compiled il");
 
             var f0 = expr0.CompileFast(true);
             f0.PrintIL();
@@ -183,11 +179,7 @@ namespace FastExpressionCompiler.IssueTests
             expr1.PrintCSharpString();
 
             var f1sys = expr1.CompileSys();
-            Console.WriteLine("------------");
-            Console.WriteLine("Expression 1");
-            Console.WriteLine("<System IL>");
-            Console.WriteLine(f1sys.Method.ToILString());
-            Console.WriteLine("</System IL>");
+            f1sys.PrintIL("system compiled il");
 
             var f1 = expr1.CompileFast(true);
             f1.PrintIL();
@@ -231,7 +223,7 @@ namespace FastExpressionCompiler.IssueTests
         public void Try_OpCode_Beq_instead_of_Brtrue_or_Brfalse_because_it_less_instructions()
         {
             var returnTarget = Label(typeof(string));
-            var returnLabel = Label(returnTarget, Constant(default(string)));
+            var returnLabel = Label(returnTarget, Constant(null, typeof(string)));
             var returnFalse = Block(Return(returnTarget, Constant("false"), typeof(string)), returnLabel);
             var returnTrue = Block(Return(returnTarget, Constant("true"), typeof(string)), returnLabel);
 
@@ -245,10 +237,8 @@ namespace FastExpressionCompiler.IssueTests
                 boolParam);
 
             var fs = expr.CompileSys();
-            Console.WriteLine("<System IL>");
-            Console.WriteLine(fs.Method.ToILString());
-            Console.WriteLine("</System IL>");
-
+            fs.PrintIL("system compiled il");
+            
             var f = expr.CompileFast(true);
             Assert.IsNotNull(f);
             f.PrintIL();

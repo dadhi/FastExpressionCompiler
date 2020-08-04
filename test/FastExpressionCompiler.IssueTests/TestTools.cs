@@ -28,15 +28,15 @@ namespace FastExpressionCompiler
             Console.WriteLine(expr.ToCSharpString());
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintIL(this Delegate @delegate) => @delegate.Method.PrintIL();
+        public static void PrintIL(this Delegate @delegate, string tag = null) => @delegate.Method.PrintIL(tag);
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintIL(this MethodInfo method)
+        public static void PrintIL(this MethodInfo method, string tag = null)
         {
             var s = new StringBuilder();
-            s.Append("<IL>").AppendLine();
+            s.Append(tag == null ? "<il>" : "<" + tag + ">").AppendLine();
             method.ToILString(s);
-            s.AppendLine().Append("</IL>");
+            s.AppendLine().Append(tag == null ? "</il>" : "</" + tag + ">");
             Console.WriteLine(s);
         }
 
