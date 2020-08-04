@@ -26,16 +26,18 @@ namespace FastExpressionCompiler.IssueTests
 
         public int Run()
         {
-            TestTestCode();
+            Conditional_with_Equal_true_should_shortcircuit_to_Brtrue_or_Brfalse();
+            Conditional_with_Equal_false_should_shortcircuit_to_Brtrue_or_Brfalse();
+            Conditional_with_NotEqual_true_should_shortcircuit_to_Brtrue_or_Brfalse();
+            Conditional_with_NotEqual_false_should_shortcircuit_to_Brtrue_or_Brfalse();
+            
+            Try_compare_strings();
 
+            TestTestCode();
             Setup_ShouldCompileExpressions();
             TryDeserialize_ShouldParseSimple();
 
-            Try_OpCode_Beq_instead_of_Brtrue_or_Brfalse_because_it_less_instructions();
-
-            Try_compare_strings();
-
-            return 4;
+            return 7;
         }
 
         [Test]
@@ -107,6 +109,7 @@ namespace FastExpressionCompiler.IssueTests
             TryDeserialize_ShouldParseSimple();
         }
 
+        // todo: @perf benchmark CompileSys and Invoke vs CompileFast and Invoke
         [SetUp]
         public void Setup_ShouldCompileExpressions()
         {
@@ -222,7 +225,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Try_OpCode_Beq_instead_of_Brtrue_or_Brfalse_because_it_less_instructions()
+        public void Conditional_with_Equal_true_should_shortcircuit_to_Brtrue_or_Brfalse()
         {
             var returnTarget = Label(typeof(string));
             var returnLabel = Label(returnTarget, Constant(null, typeof(string)));
@@ -245,7 +248,83 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNotNull(f);
             f.PrintIL();
 
-            Assert.AreEqual("true", f(true));
+            Assert.AreEqual("true",  f(true));
+            Assert.AreEqual("false", f(false));
+        }
+
+        [Test]
+        public void Conditional_with_Equal_false_should_shortcircuit_to_Brtrue_or_Brfalse()
+        {
+            var returnTarget = Label(typeof(string));
+            var returnLabel = Label(returnTarget, Constant(null, typeof(string)));
+            var returnFalse = Block(Return(returnTarget, Constant("false"), typeof(string)), returnLabel);
+            var returnTrue = Block(Return(returnTarget, Constant("true"), typeof(string)), returnLabel);
+
+            var boolParam = Parameter(typeof(bool), "b");
+
+            var expr = Lambda<Func<bool, string>>(
+                Block(
+                    IfThen(Equal(boolParam, Constant(false)),
+                        returnFalse),
+                    returnTrue),
+                boolParam);
+            
+            var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
+            f.PrintIL();
+
+            Assert.AreEqual("true",  f(true));
+            Assert.AreEqual("false", f(false));
+        }
+
+        [Test]
+        public void Conditional_with_NotEqual_true_should_shortcircuit_to_Brtrue_or_Brfalse()
+        {
+            var returnTarget = Label(typeof(string));
+            var returnLabel = Label(returnTarget, Constant(null, typeof(string)));
+            var returnFalse = Block(Return(returnTarget, Constant("false"), typeof(string)), returnLabel);
+            var returnTrue = Block(Return(returnTarget, Constant("true"), typeof(string)), returnLabel);
+
+            var boolParam = Parameter(typeof(bool), "b");
+
+            var expr = Lambda<Func<bool, string>>(
+                Block(
+                    IfThen(NotEqual(boolParam, Constant(true)),
+                        returnFalse),
+                    returnTrue),
+                boolParam);
+            
+            var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
+            f.PrintIL();
+
+            Assert.AreEqual("true",  f(true));
+            Assert.AreEqual("false", f(false));
+        }
+
+        [Test]
+        public void Conditional_with_NotEqual_false_should_shortcircuit_to_Brtrue_or_Brfalse()
+        {
+            var returnTarget = Label(typeof(string));
+            var returnLabel = Label(returnTarget, Constant(null, typeof(string)));
+            var returnFalse = Block(Return(returnTarget, Constant("false"), typeof(string)), returnLabel);
+            var returnTrue = Block(Return(returnTarget, Constant("true"), typeof(string)), returnLabel);
+
+            var boolParam = Parameter(typeof(bool), "b");
+
+            var expr = Lambda<Func<bool, string>>(
+                Block(
+                    IfThen(NotEqual(boolParam, Constant(false)),
+                        returnTrue),
+                    returnFalse),
+                boolParam);
+            
+            var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
+            f.PrintIL();
+
+            Assert.AreEqual("true",  f(true));
+            Assert.AreEqual("false", f(false));
         }
 
         public void Try_compare_strings()

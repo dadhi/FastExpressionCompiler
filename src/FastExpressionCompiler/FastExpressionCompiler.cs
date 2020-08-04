@@ -4263,82 +4263,97 @@ namespace FastExpressionCompiler
             private static bool TryEmitConditional(ConditionalExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                // todo: @incomplete try to replace the NotEqual with Equal so we could use `OpCodes.Beq_s` - branch on equality
                 var testExpr = TryReduceCondition(expr.Test);
 
-                // detect a special simplistic case of comparison with zero, e.g. `null`, `false`
-                var comparedWithZero = false;
+                // Detect a simplistic case when we can use `Brtrue` or `Brfalse`.
+                // We are checking the negative result to go into the `IfFalse` branch,
+                // because for `IfTrue` we don't need to jump and just need to proceed emitting the `IfTrue` expression
+                var useBrFalseOrTrue = -1;
                 if (testExpr is BinaryExpression b)
                 {
-                    if (b.NodeType == ExpressionType.Equal)
+                    if (b.NodeType == ExpressionType.Equal || b.NodeType == ExpressionType.NotEqual)
                     {
-                        if (b.Right is ConstantExpression brc && brc.Value is bool rcb && !rcb)
+                        if (b.Right is ConstantExpression rc)
                         {
-                            if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
-                                return false;
-                            comparedWithZero = true;
+                            if (rc.Value == null)
+                            {
+                                useBrFalseOrTrue = 0;
+                                
+                                // The null comparison for nullable is actually a `nullable.HasValue` check,
+                                // which implies member access on nullable struct - therefore loading it by address
+                                if (b.Left.Type.IsNullable())
+                                    parent |= ParentFlags.MemberAccess;
+                            }
+                            else if (rc.Value is bool rcb)
+                                useBrFalseOrTrue = rcb ? 1 : 0;
+                            if (useBrFalseOrTrue != -1)
+                            {
+                                if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                                    return false;
+                            }
                         }
-                    }
-                    else if (b.NodeType == ExpressionType.Equal 
-                          || b.NodeType == ExpressionType.NotEqual)
-                    {
-                        if (b.Right is ConstantExpression rc && rc.Value == null)
+                        else if (b.Left is ConstantExpression lc)
                         {
-                            // the null comparison for nullable is actually a `nullable.HasValue` check,
-                            // which implies member access on nullable struct - therefore loading it by address
-                            if (b.Left.Type.IsNullable()) // todo: @perf split to avoid double check
-                                parent |= ParentFlags.MemberAccess;
-                            if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
-                                return false;
-                            comparedWithZero = true; 
-                        }
-                        else if (b.Left is ConstantExpression lc && lc.Value == null)
-                        {
-                            // the null comparison for nullable is actually a `nullable.HasValue` check,
-                            // which implies member access on nullable struct - therefore loading it by address
-                            if (b.Right.Type.IsNullable()) // todo: @perf split to avoid double check
-                                parent |= ParentFlags.MemberAccess;
-                            if (!TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
-                                return false;
-                            comparedWithZero = true; 
+                            if (lc.Value == null) 
+                            {
+                                useBrFalseOrTrue = 0;
+                                if (b.Right.Type.IsNullable())
+                                    parent |= ParentFlags.MemberAccess;
+                            }
+                            else if (lc.Value is bool lcb)
+                                useBrFalseOrTrue = lcb ? 1 : 0;
+
+                            if (useBrFalseOrTrue != -1)
+                            {
+                                if (!TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                                    return false;
+                            }
                         }
                     }
                 }
 
-                if (!comparedWithZero)
+                if (useBrFalseOrTrue == -1)
                 {
                     if (!TryEmit(testExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                         return false;
                 }
-                
-                // here we are checking the negative result to go into if-false branch,
-                // because if-true we don't need to jump and just proceed to emit `IfTrue` expression
+
+                // The cases to branch to the `IfFalse` expression:
+                // - `x == true`  => `Brfalse`
+                // - `x != true`  => `Brtrue`
+                // - `x == false` => `Brtrue`
+                // - `x != false` => `Brfalse`
+                // - `x == null`  => `Brtrue`
+                // - `x != null`  => `Brfalse`
+                //
                 var labelIfFalse = il.DefineLabel();
-                il.Emit(comparedWithZero && testExpr.NodeType == ExpressionType.Equal ? OpCodes.Brtrue : OpCodes.Brfalse, labelIfFalse);
+                if (testExpr.NodeType == ExpressionType.Equal    && useBrFalseOrTrue == 0 ||
+                    testExpr.NodeType == ExpressionType.NotEqual && useBrFalseOrTrue == 1)
+                    il.Emit(OpCodes.Brtrue,  labelIfFalse);
+                else
+                    il.Emit(OpCodes.Brfalse, labelIfFalse);
 
                 if (!TryEmit(expr.IfTrue, paramExprs, il, ref closure, parent & ParentFlags.IgnoreResult))
                     return false;
 
                 var ifFalseExpr = expr.IfFalse;
                 if (ifFalseExpr.NodeType == ExpressionType.Default && ifFalseExpr.Type == typeof(void))
-                {
                     il.MarkLabel(labelIfFalse);
-                    return true;
+                else 
+                {
+                    var labelDone = il.DefineLabel();
+                    il.Emit(OpCodes.Br, labelDone);
+                    il.MarkLabel(labelIfFalse);
+                    if (!TryEmit(ifFalseExpr, paramExprs, il, ref closure, parent & ParentFlags.IgnoreResult))
+                        return false;
+                    il.MarkLabel(labelDone);
                 }
-
-                var labelDone = il.DefineLabel();
-                il.Emit(OpCodes.Br, labelDone);
-
-                il.MarkLabel(labelIfFalse);
-                if (!TryEmit(ifFalseExpr, paramExprs, il, ref closure, parent & ParentFlags.IgnoreResult))
-                    return false;
-
-                il.MarkLabel(labelDone);
                 return true;
             }
 
             private static Expression TryReduceCondition(Expression testExpr)
             {
+                // removing Not by turning Equal -> NotEqual, NotEqual -> Equal
                 if (testExpr.NodeType == ExpressionType.Not)
                 {
                     // simplify the not `==` -> `!=`, `!=` -> `==`
@@ -4356,14 +4371,7 @@ namespace FastExpressionCompiler
                 }
                 else if (testExpr is BinaryExpression b)
                 {
-                    // todo: @perf do we need this check or can generalize in TryEmitConditional 
-                    // let's make it equal, so we can use single OpCodes.Beq instead of Ceq, then Brtrue or Brfalse
-                    if (b.NodeType == ExpressionType.NotEqual) 
-                    {
-                        if (b.Right is ConstantExpression rc && rc.Value is bool rcb)
-                            return rcb ? Equal(TryReduceCondition(b.Left), Constant(false)) : b;
-                    }
-                    else if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
+                    if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
                     {
                         if (b.Left is ConstantExpression lc && lc.Value is bool lcb)
                             return lcb ? lc : TryReduceCondition(b.Right);
