@@ -16,7 +16,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    internal delegate bool DeserializerDlg<in T>(ref ReadOnlySequence<byte> seq, T value, out long bytesRead);
+    public delegate bool DeserializerDlg<in T>(ref ReadOnlySequence<byte> seq, T value, out long bytesRead);
 
     [TestFixture]
     public class Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown : ITest
@@ -35,7 +35,7 @@ namespace FastExpressionCompiler.IssueTests
 
             Should_Deserialize_Simple();
             Should_Deserialize_Simple_via_manual_CSharp_code();
-            
+
             return 7;
         }
 
@@ -108,6 +108,140 @@ namespace FastExpressionCompiler.IssueTests
             RunDeserializer();
         }
 
+// This is for benchmark
+#if !LIGHT_EXPRESSION
+        public static void CreateExpression_and_CompileSys(
+            out DeserializerDlg<Word> desWord, 
+            out DeserializerDlg<Simple> desSimple) 
+        {
+            var reader = Variable(typeof(SequenceReader<byte>), "reader");
+            var bytesRead = Parameter(typeof(long).MakeByRefType(), "bytesRead");
+            var input = Parameter(typeof(ReadOnlySequence<byte>).MakeByRefType(), "input");
+
+            var createReader = Assign(reader,
+                New(typeof(SequenceReader<byte>).GetConstructor(new[] { typeof(ReadOnlySequence<byte>) }), input));
+
+            var returnTarget = Label(typeof(bool));
+            var returnLabel = Label(returnTarget, Constant(default(bool)));
+            var returnFalse =
+                Block(
+                    Assign(bytesRead,
+                        Property(reader,
+                            typeof(SequenceReader<byte>).GetProperty(nameof(SequenceReader<byte>.Consumed)))),
+                    Block(Return(returnTarget, Constant(false), typeof(bool)), returnLabel));
+
+            var returnTrue =
+                Block(
+                    Assign(bytesRead,
+                        Property(reader,
+                            typeof(SequenceReader<byte>).GetProperty(nameof(SequenceReader<byte>.Consumed)))),
+                    Block(Return(returnTarget, Constant(true), typeof(bool)), returnLabel));
+
+            var valueWord = Parameter(typeof(Word), "value");
+            var wordValueVar = Variable(typeof(string), "wordValue");
+            var expr0 = Lambda<DeserializerDlg<Word>>(
+                Block(new[] { reader, wordValueVar },
+                    createReader,
+                    IfThen(
+                        NotEqual(Call(_tryRead.MakeGenericMethod(typeof(string)), reader, wordValueVar), Constant(true)),
+                        returnFalse),
+                    Assign(Property(valueWord, nameof(Word.Value)), wordValueVar),
+                    returnTrue),
+                input, valueWord, bytesRead);
+
+            desWord = expr0.Compile();
+
+            var valueSimple = Parameter(typeof(Simple), "value");
+            var identifierVar = Variable(typeof(int), "identifier");
+            var contentVar = Variable(typeof(Word[]), "content");
+            var contentLenVar = Variable(typeof(byte), "contentLength");
+
+            var expr1 = Lambda<DeserializerDlg<Simple>>(
+                    Block(new[] { reader, identifierVar, contentVar, contentLenVar },
+                        createReader,
+                        IfThen(
+                            NotEqual(Call(_tryRead.MakeGenericMethod(typeof(int)), reader, identifierVar), Constant(true)),
+                            returnFalse),
+                        IfThen(
+                            NotEqual(Call(_tryRead.MakeGenericMethod(typeof(byte)), reader, contentLenVar), Constant(true)),
+                            returnFalse),
+                        IfThen(
+                            NotEqual(Call(_tryDeserialize.MakeGenericMethod(typeof(Word)), reader, Convert(contentLenVar, typeof(int)), contentVar), Constant(true)),
+                            returnFalse),
+                        Assign(Property(valueSimple, nameof(Simple.Identifier)), identifierVar),
+                        Assign(Property(valueSimple, nameof(Simple.Sentence)), contentVar),
+                    returnTrue),
+                input, valueSimple, bytesRead);
+
+            desSimple = expr1.Compile();
+        }
+#else
+        public static void CreateLightExpression_and_CompileFast(
+            out DeserializerDlg<Word> desWord, 
+            out DeserializerDlg<Simple> desSimple) 
+        {
+            var reader = Variable(typeof(SequenceReader<byte>), "reader");
+            var bytesRead = Parameter(typeof(long).MakeByRefType(), "bytesRead");
+            var input = Parameter(typeof(ReadOnlySequence<byte>).MakeByRefType(), "input");
+
+            var createReader = Assign(reader,
+                New(typeof(SequenceReader<byte>).GetConstructor(new[] { typeof(ReadOnlySequence<byte>) }), input));
+
+            var returnTarget = Label(typeof(bool));
+            var returnLabel = Label(returnTarget, Constant(default(bool)));
+            var returnFalse =
+                Block(
+                    Assign(bytesRead,
+                        Property(reader,
+                            typeof(SequenceReader<byte>).GetProperty(nameof(SequenceReader<byte>.Consumed)))),
+                    Block(Return(returnTarget, Constant(false), typeof(bool)), returnLabel));
+
+            var returnTrue =
+                Block(
+                    Assign(bytesRead,
+                        Property(reader,
+                            typeof(SequenceReader<byte>).GetProperty(nameof(SequenceReader<byte>.Consumed)))),
+                    Block(Return(returnTarget, Constant(true), typeof(bool)), returnLabel));
+
+            var valueWord = Parameter(typeof(Word), "value");
+            var wordValueVar = Variable(typeof(string), "wordValue");
+            var expr0 = Lambda<DeserializerDlg<Word>>(
+                Block(new[] { reader, wordValueVar },
+                    createReader,
+                    IfThen(
+                        NotEqual(Call(_tryRead.MakeGenericMethod(typeof(string)), reader, wordValueVar), Constant(true)),
+                        returnFalse),
+                    Assign(Property(valueWord, nameof(Word.Value)), wordValueVar),
+                    returnTrue),
+                input, valueWord, bytesRead);
+
+            desWord = expr0.CompileFast();
+
+            var valueSimple = Parameter(typeof(Simple), "value");
+            var identifierVar = Variable(typeof(int), "identifier");
+            var contentVar = Variable(typeof(Word[]), "content");
+            var contentLenVar = Variable(typeof(byte), "contentLength");
+
+            var expr1 = Lambda<DeserializerDlg<Simple>>(
+                    Block(new[] { reader, identifierVar, contentVar, contentLenVar },
+                        createReader,
+                        IfThen(
+                            NotEqual(Call(_tryRead.MakeGenericMethod(typeof(int)), reader, identifierVar), Constant(true)),
+                            returnFalse),
+                        IfThen(
+                            NotEqual(Call(_tryRead.MakeGenericMethod(typeof(byte)), reader, contentLenVar), Constant(true)),
+                            returnFalse),
+                        IfThen(
+                            NotEqual(Call(_tryDeserialize.MakeGenericMethod(typeof(Word)), reader, Convert(contentLenVar, typeof(int)), contentVar), Constant(true)),
+                            returnFalse),
+                        Assign(Property(valueSimple, nameof(Simple.Identifier)), identifierVar),
+                        Assign(Property(valueSimple, nameof(Simple.Sentence)), contentVar),
+                    returnTrue),
+                input, valueSimple, bytesRead);
+
+            desSimple = expr1.CompileFast();
+        }
+#endif
         // todo: @perf benchmark CompileSys and Invoke vs CompileFast and Invoke
         [Test]
         public void Should_Deserialize_Simple()
@@ -147,8 +281,6 @@ namespace FastExpressionCompiler.IssueTests
                     returnTrue),
                 input, valueWord, bytesRead);
 
-            expr0.PrintCSharpString();
-
             // sanity check
             var f0sys = expr0.CompileSys();
             f0sys.PrintIL("system compiled il");
@@ -179,8 +311,6 @@ namespace FastExpressionCompiler.IssueTests
                         Assign(Property(valueSimple, nameof(Simple.Sentence)), contentVar),
                     returnTrue),
                 input, valueSimple, bytesRead);
-
-            expr1.PrintCSharpString();
 
             var f1sys = expr1.CompileSys();
             f1sys.PrintIL("system compiled il");
@@ -356,7 +486,7 @@ namespace FastExpressionCompiler.IssueTests
         }
     }
 
-    internal class Simple
+    public class Simple
     {
         public int Identifier { get; set; }
         public Word[] Sentence { get; set; }
@@ -367,7 +497,7 @@ namespace FastExpressionCompiler.IssueTests
                 && value.Sentence.SequenceEqual(Sentence);
     }
 
-    internal class Word
+    public class Word
     {
         public string Value { get; set; }
         public override bool Equals(object obj) => 

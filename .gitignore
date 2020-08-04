@@ -251,5 +251,5 @@ paket-files/
 .idea/
 *.sln.iml
 
-BenchmarkDotNet.Artifacts/*
+BenchmarkDotNet.Artifacts/
 ApiKey.txt
