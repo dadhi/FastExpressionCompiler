@@ -1,41 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFrameworks Condition="'$(DevMode)' != 'true'">net45;netstandard1.3;netstandard2.0</TargetFrameworks>
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">net45;netstandard2.0</TargetFrameworks>
-        
         <VersionPrefix>3.0.0</VersionPrefix>
         <VersionSuffix>preview-01</VersionSuffix>
-
         <Product>FastExpressionCompiler</Product>
-
         <PackageId>$(Product)</PackageId>
         <Title>$(Product)</Title>
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
-        <PackageReleaseNotes>
-            <![CDATA[## v2.1.0
-Thanks to the contributors
+        <PackageReleaseNotes><![CDATA[
+        
+        ## v3.0.0
+            
+            Thanks to the contributors
 
-- added: TODO
-
-]]></PackageReleaseNotes>
-
-            <AssemblyName>$(Product)</AssemblyName>
-            <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
-            <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
-        </PropertyGroup>
-
-        <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-            <PackageReference Include="System.ValueTuple" Version="4.5.0"/>
-        </ItemGroup>
-
-        <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
-            <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
-        </ItemGroup>
-
-        <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-            <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
-        </ItemGroup>
-
-    </Project>
+        ]]></PackageReleaseNotes>
+        <AssemblyName>$(Product)</AssemblyName>
+        <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
+        <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+    </PropertyGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+        <PackageReference Include="System.ValueTuple" Version="4.5.0"/>
+    </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
+    </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
+    </ItemGroup>
+</Project>

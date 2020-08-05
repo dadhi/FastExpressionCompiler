@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata minClientVersion="3.3.0">
+        <id>FastExpressionCompiler</id>
+        <version>3.0.0-preview-01</version>
+        <authors>Maksim Volkau</authors>
+        <copyright>Copyright © 2013-2020 Maksim Volkau</copyright>
+        <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
+        <license type="expression">MIT</license>
+        <iconUrl>https://github.com/dadhi/FastExpressionCompiler/blob/master/logo/logo128.png</iconUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
+        <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
+        <releaseNotes><![CDATA[
+        
+        ## v3.0.0
+            
+            Thanks to the contributors
+
+        ]]></releaseNotes>
+        <contentFiles>
+            <files include="cs/**/*.*" buildAction="Compile" />
+        </contentFiles>
+    </metadata>
+    <files>
+        <file src="..\LICENSE.txt" />
+        <file src="..\nuspecs\DryIoc.snk" />
+
+        <!--net35-->
+        <file src="..\src\DryIoc.Internal\Container.cs" target="content\net35\DryIoc" />
+        <file src="..\src\DryIoc.Internal\ImTools.cs" target="content\net35\DryIoc" />
+        <file src="..\src\DryIoc.Internal\FastExpressionCompiler.cs" target="content\net35\DryIoc" />
+
+        <!--net40-->
+        <file src="..\src\DryIoc.Internal\Container.cs" target="content\net40\DryIoc" />
+        <file src="..\src\DryIoc.Internal\ImTools.cs" target="content\net40\DryIoc" />
+        <file src="..\src\DryIoc.Internal\FastExpressionCompiler.cs" target="content\net40\DryIoc" />
+
+        <!--net45-->
+        <file src="..\src\DryIoc.Internal\Container.cs" target="content\net45\DryIoc" />
+        <file src="..\src\DryIoc.Internal\ImTools.cs" target="content\net45\DryIoc" />
+        <file src="..\src\DryIoc.Internal\FastExpressionCompiler.cs" target="content\net45\DryIoc" />
+        <file src="..\src\DryIoc.Internal\Expression.cs" target="content\net45\DryIoc" />
+
+        <!-- .netstandard 1.0 (based on PCL Profile259) -->
+        <file src="..\src\DryIoc.Internal\Container.cs" target="contentFiles\cs\netstandard1.0\DryIoc" />
+        <file src="..\src\DryIoc.Internal\ImTools.cs" target="contentFiles\cs\netstandard1.0\DryIoc" />
+        <file src="..\src\DryIoc.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard1.0\DryIoc" />
+
+        <!-- .netstandard 1.3 (based on PCL Profile259 except for FEC) -->
+        <file src="..\src\DryIoc.Internal\Container.cs" target="contentFiles\cs\netstandard1.3\DryIoc" />
+        <file src="..\src\DryIoc.Internal\ImTools.cs" target="contentFiles\cs\netstandard1.3\DryIoc" />
+        <file src="..\src\DryIoc.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard1.3\DryIoc" />
+        <file src="..\src\DryIoc.Internal\Expression.cs" target="contentFiles\cs\netstandard1.3\DryIoc" />
+
+        <!-- .netstandard 2.0 (based on PCL Profile259 except for FEC) -->
+        <file src="..\src\DryIoc.Internal\Container.cs" target="contentFiles\cs\netstandard2.0\DryIoc" />
+        <file src="..\src\DryIoc.Internal\ImTools.cs" target="contentFiles\cs\netstandard2.0\DryIoc" />
+        <file src="..\src\DryIoc.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard2.0\DryIoc" />
+        <file src="..\src\DryIoc.Internal\Expression.cs" target="contentFiles\cs\netstandard2.0\DryIoc" />
+
+        <!-- PCL Profile328: .NET Portable Subset (.NET Framework 4, Silverlight 5, Windows 8, Windows Phone 8.1, Windows Phone Silverlight 8) -->
+        <file src="..\src\DryIoc.Internal\Container.cs" target="content\portable-net4+sl5+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\DryIoc" />
+        <file src="..\src\DryIoc.Internal\ImTools.cs" target="content\portable-net4+sl5+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\DryIoc" />
+        <file src="..\src\DryIoc.Internal\FastExpressionCompiler.cs" target="content\portable-net4+sl5+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\DryIoc" />
+
+        <!-- PCL Profile259: .NET Portable Subset (.NET Framework 4.5, Windows 8, Windows Phone 8.1, Windows Phone Silverlight 8) -->
+        <file src="..\src\DryIoc.Internal\Container.cs" target="content\portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\DryIoc" />
+        <file src="..\src\DryIoc.Internal\ImTools.cs" target="content\portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\DryIoc" />
+        <file src="..\src\DryIoc.Internal\FastExpressionCompiler.cs" target="content\portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1\DryIoc" />
+
+    </files>
+</package>
