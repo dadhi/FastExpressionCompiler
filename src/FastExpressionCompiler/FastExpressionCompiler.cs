@@ -1237,6 +1237,11 @@ namespace FastExpressionCompiler
                     case ExpressionType.Default:
                         return true;
 
+                    case ExpressionType.TypeIs:
+                    case ExpressionType.TypeEqual:
+                        expr = ((TypeBinaryExpression)expr).Expression;
+                        continue;
+
                     default:
                         if (expr is UnaryExpression unaryExpr)
                         {
@@ -1515,7 +1520,8 @@ namespace FastExpressionCompiler
                             return false;
 
                         case ExpressionType.TypeIs:
-                            return TryEmitTypeIs((TypeBinaryExpression)expr, paramExprs, il, ref closure, parent);
+                        case ExpressionType.TypeEqual:
+                            return TryEmitTypeIsOrEqual((TypeBinaryExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.Not:
                             return TryEmitNot((UnaryExpression)expr, paramExprs, il, ref closure, parent);
@@ -2318,7 +2324,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitTypeIs(TypeBinaryExpression expr,
+            private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,
                 ParentFlags parent)
             {

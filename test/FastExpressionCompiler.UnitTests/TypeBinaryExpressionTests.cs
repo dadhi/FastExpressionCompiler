@@ -5,7 +5,6 @@ using NUnit.Framework;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
@@ -15,14 +14,14 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
-            // TypeEqual_compiles(); // todo: not supported yet
-            TypeIs_compiles();
+            TypeEqual_should_work();
+            TypeIs_should_work();
 
-            return 1;
+            return 2;
         }
 
-        [Test][Ignore("todo - TypeEqual is not supported yet")]
-        public void TypeEqual_compiles()
+        [Test]
+        public void TypeEqual_should_work()
         {
             var sExpr = Parameter(typeof(object), "o");
             var expr = Lambda<Func<object, bool>>(
@@ -30,13 +29,14 @@ namespace FastExpressionCompiler.UnitTests
                 sExpr);
 
             var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
             bool result = f("123");
 
             Assert.IsTrue(result);
         }
 
         [Test]
-        public void TypeIs_compiles()
+        public void TypeIs_should_work()
         {
             var sExpr = Parameter(typeof(object), "o");
             var expr = Lambda<Func<object, bool>>(

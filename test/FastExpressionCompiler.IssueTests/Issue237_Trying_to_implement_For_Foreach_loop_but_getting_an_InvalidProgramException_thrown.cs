@@ -5,7 +5,6 @@ using System.Text;
 using System.Buffers;
 using System.Reflection;
 using System.Buffers.Binary;
-
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
