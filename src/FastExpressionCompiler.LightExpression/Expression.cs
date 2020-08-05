@@ -770,16 +770,19 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression DivideAssign(Expression left, Expression right) =>
             new AssignBinaryExpression(ExpressionType.DivideAssign, left, right, left.Type);
 
-        // todo: @perf implement InvocationExpression without arguments and with single argument
+        public static InvocationExpression Invoke(LambdaExpression expression) =>
+            new InvocationExpression(expression, expression.ReturnType);
+
+        // todo: @perf optimize for a single argument
         public static InvocationExpression Invoke(LambdaExpression expression, Expression arg0) =>
-            new InvocationExpression(expression, new[] { arg0 }, expression.ReturnType);
+            new ManyArgumentsInvocationExpression(expression, new[] { arg0 }, expression.ReturnType);
 
         public static InvocationExpression Invoke(Expression expression, Expression arg0) =>
-            new InvocationExpression(expression, new[] { arg0 },
+            new ManyArgumentsInvocationExpression(expression, new[] { arg0 },
                 (expression as LambdaExpression)?.ReturnType ?? expression.Type.FindDelegateInvokeMethod().ReturnType);
 
         public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
-            new InvocationExpression(expression, args.AsReadOnlyList(),
+            new ManyArgumentsInvocationExpression(expression, args.AsReadOnlyList(),
                 (expression as LambdaExpression)?.ReturnType ?? expression.Type.FindDelegateInvokeMethod().ReturnType);
 
         public static InvocationExpression Invoke(Expression lambda, params Expression[] args) =>
@@ -2684,24 +2687,16 @@ namespace FastExpressionCompiler.LightExpression
         internal MemberAssignment(MemberInfo member, Expression expression) : base(member) => Expression = expression;
     }
 
-    // todo: @perf Split into the single argument and no arguments overloads
-    public sealed class InvocationExpression : ArgumentsExpression
+    public class InvocationExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Invoke;
-        public override Type Type { get; }
+        public override Type Type { get; } // todo: @perf use the Expression.Type 
+
+        public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
 
         public readonly Expression Expression;
 
-        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Invoke(");
-            sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(")");
-        }
-
-        internal InvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type) : base(arguments)
+        internal InvocationExpression(Expression expression, Type type)
         {
             Expression = expression;
             Type = type;
@@ -2711,6 +2706,15 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Invoke(Expression.ToExpression(ref exprsConverted), ToExpressions(Arguments, ref exprsConverted));
+
+        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            sb.Append("Invoke(");
+            sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            return sb.Append(")");
+        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -2722,6 +2726,15 @@ namespace FastExpressionCompiler.LightExpression
             sb.Append(")");
             return sb;
         }
+    }
+
+    public sealed class ManyArgumentsInvocationExpression : InvocationExpression
+    {
+        public override IReadOnlyList<Expression> Arguments { get; }
+
+        internal ManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type) 
+            : base(expression, type) =>
+            Arguments = arguments;
     }
 
     public sealed class DefaultExpression : Expression
