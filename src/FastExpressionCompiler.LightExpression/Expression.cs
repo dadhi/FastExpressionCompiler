@@ -771,20 +771,20 @@ namespace FastExpressionCompiler.LightExpression
             new AssignBinaryExpression(ExpressionType.DivideAssign, left, right, left.Type);
 
         public static InvocationExpression Invoke(LambdaExpression expression) =>
-            new InvocationExpression(expression, expression.ReturnType);
+            new InvocationExpression(expression);
 
-        // todo: @perf optimize for a single argument
         public static InvocationExpression Invoke(LambdaExpression expression, Expression arg0) =>
-            new ManyArgumentsInvocationExpression(expression, new[] { arg0 }, expression.ReturnType);
+            new ManyArgumentsInvocationExpression(expression, new[] { arg0 });
 
         public static InvocationExpression Invoke(Expression expression, Expression arg0) =>
-            new ManyArgumentsInvocationExpression(expression, new[] { arg0 },
-                (expression as LambdaExpression)?.ReturnType ?? expression.Type.FindDelegateInvokeMethod().ReturnType);
+            expression is LambdaExpression
+                ? new ManyArgumentsInvocationExpression(expression, new[] { arg0 })
+                : new TypedManyArgumentsInvocationExpression(expression, new[] { arg0 }, expression.Type.FindDelegateInvokeMethod().ReturnType);
 
         public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
-            new ManyArgumentsInvocationExpression(expression, args.AsReadOnlyList(),
-                (expression as LambdaExpression)?.ReturnType ?? expression.Type.FindDelegateInvokeMethod().ReturnType);
-
+            expression is LambdaExpression
+                ? new ManyArgumentsInvocationExpression(expression, args.AsReadOnlyList())
+                : new TypedManyArgumentsInvocationExpression(expression, args.AsReadOnlyList(), expression.Type.FindDelegateInvokeMethod().ReturnType);
         public static InvocationExpression Invoke(Expression lambda, params Expression[] args) =>
             Invoke(lambda, (IEnumerable<Expression>)args);
 
@@ -2690,18 +2690,16 @@ namespace FastExpressionCompiler.LightExpression
     public class InvocationExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Invoke;
-        public override Type Type { get; } // todo: @perf use the Expression.Type 
+
+        public override Type Type => ((LambdaExpression)Expression).ReturnType;
 
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
 
         public readonly Expression Expression;
 
-        internal InvocationExpression(Expression expression, Type type)
-        {
+        internal InvocationExpression(Expression expression) =>
             Expression = expression;
-            Type = type;
-        }
-
+        
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
@@ -2728,13 +2726,32 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class ManyArgumentsInvocationExpression : InvocationExpression
+    public sealed class TypedInvocationExpression : InvocationExpression
+    {
+        public override Type Type { get; }
+
+        internal TypedInvocationExpression(Expression expression, Type type) 
+            : base(expression) =>
+            Type = type;
+    }
+
+    public class ManyArgumentsInvocationExpression : InvocationExpression
     {
         public override IReadOnlyList<Expression> Arguments { get; }
 
-        internal ManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type) 
-            : base(expression, type) =>
+        internal ManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments) 
+            : base(expression) =>
             Arguments = arguments;
+    }
+
+
+    public sealed class TypedManyArgumentsInvocationExpression : ManyArgumentsInvocationExpression
+    {
+        public override Type Type { get; }
+
+        internal TypedManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type) 
+            : base(expression, arguments) =>
+            Type = type;
     }
 
     public sealed class DefaultExpression : Expression
