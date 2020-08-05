@@ -158,8 +158,8 @@ namespace FastExpressionCompiler.LightExpression
                 : new ParameterExpression(type, name);
         }
 
-        // never by ref, right?
-        public static ParameterExpression Variable(Type type, string name = null) => new ParameterExpression(type, name);
+        public static ParameterExpression Variable(Type type, string name = null) => 
+            new ParameterExpression(type, name);
 
         public static readonly ConstantExpression NullConstant = new TypedConstantExpression(null, typeof(object));
         public static readonly ConstantExpression FalseConstant = new ConstantExpression(false);
@@ -1982,7 +1982,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.Parameter;
         public override Type Type { get; }
-        public readonly string Name;
+        public string Name { get; internal set; } // todo: @hack - made it settable to set from the `BlockExpresssion.ToCSharpString`
         public virtual bool IsByRef => false;
         internal ParameterExpression(Type type, string name)
         {
@@ -2692,11 +2692,6 @@ namespace FastExpressionCompiler.LightExpression
 
         public readonly Expression Expression;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Invoke(Expression.ToExpression(ref exprsConverted), ToExpressions(Arguments, ref exprsConverted));
-
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
@@ -2710,6 +2705,22 @@ namespace FastExpressionCompiler.LightExpression
         {
             Expression = expression;
             Type = type;
+        }
+
+        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.Invoke(Expression.ToExpression(ref exprsConverted), ToExpressions(Arguments, ref exprsConverted));
+
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            sb.Append("new ").Append(Expression.Type.ToCode(stripNamespace, printType)).Append("(");
+            sb.NewLineIdentCs(Expression, lineIdent, stripNamespace, printType, identSpaces);
+            sb.Append(").Invoke(");
+            sb.NewLineIdentCss(Arguments, lineIdent, stripNamespace, printType, identSpaces);
+            sb.Append(")");
+            return sb;
         }
     }
 
@@ -2933,7 +2944,9 @@ namespace FastExpressionCompiler.LightExpression
                     var v = vars[i];
                     sb.NewLineIdent(lineIdent);
                     sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ');
-                    sb.Append(v.Name ?? "__" + v.Type.Name.Substring(0, 5) + i).Append(';');
+                    if (string.IsNullOrEmpty(v.Name)) 
+                        v.Name = "__" + v.Type.Name + "_" +  i;
+                    sb.Append(v.Name).Append(';');
                 }
                 sb.AppendLine(); // visually separate the variables from expressions
             }
