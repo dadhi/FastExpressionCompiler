@@ -962,19 +962,19 @@ namespace FastExpressionCompiler.LightExpression
             new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, typeof(bool));
 
         public static BlockExpression Block(params Expression[] expressions) =>
-            new BlockExpression(expressions.AsReadOnlyList());
+            new BlockExpression(expressions);
 
         public static BlockExpression Block(IReadOnlyList<Expression> expressions) =>
-            new BlockExpression(expressions.AsReadOnlyList());
+            new BlockExpression(expressions);
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
-            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions);
 
         public static BlockExpression Block(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) =>
             new ManyVariablesBlockExpression(variables, expressions);
 
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
-            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions);
 
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
             new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
