@@ -440,7 +440,7 @@ namespace FastExpressionCompiler
             {
                 Status = status;
 
-                Constants = new LiveCountArray<object>(constValues ?? Tools.Empty<object>());
+                Constants = new LiveCountArray<object>(constValues ?? Tools.Empty<object>()); //todo: @perf combine constValues != null conditions
                 ConstantUsageThenVarIndex = new LiveCountArray<int>(
                     constValues == null ? Tools.Empty<int>() : constUsage ?? new int[constValues.Length]);
 
@@ -450,7 +450,7 @@ namespace FastExpressionCompiler
                 LastEmitIsAddress = false;
                 CurrentTryCatchFinallyIndex = -1;
                 _tryCatchFinallyInfos = null;
-                _labels = null;
+                _labels = null; // todo: @perf Use LiveCountArray instead
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
             }
 
@@ -736,7 +736,7 @@ namespace FastExpressionCompiler
 
         public class ArrayClosure
         {
-            public readonly object[] ConstantsAndNestedLambdas;
+            public readonly object[] ConstantsAndNestedLambdas; // todo: @incomplete split into two to reduce copying
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 
@@ -1138,17 +1138,6 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Block:
-#if LIGHT_EXPRESSION
-                        if (expr is OneVariableTwoExpressionBlockExpression simpleBlock)
-                        {
-                            closure.PushBlockWithVars(simpleBlock.Variable);
-                            if (!TryCollectBoundConstants(ref closure, simpleBlock.Expression1, paramExprs, isNestedLambda, ref rootClosure) ||
-                                !TryCollectBoundConstants(ref closure, simpleBlock.Expression2, paramExprs, isNestedLambda, ref rootClosure))
-                                return false;
-                            closure.PopBlock();
-                            return true;
-                        }
-#endif
                         var blockExpr = (BlockExpression)expr;
                         var blockVarExprs = blockExpr.Variables;
                         var blockExprs = blockExpr.Expressions;
@@ -1636,17 +1625,7 @@ namespace FastExpressionCompiler
                             return TryEmitAssign((BinaryExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.Block:
-#if LIGHT_EXPRESSION
-                            if (expr is OneVariableTwoExpressionBlockExpression simpleBlockExpr)
-                            {
-                                closure.PushBlockWithVars(simpleBlockExpr.Variable, il.GetNextLocalVarIndex(simpleBlockExpr.Variable.Type));
-                                if (!TryEmit(simpleBlockExpr.Expression1, paramExprs, il, ref closure, parent | ParentFlags.IgnoreResult) ||
-                                    !TryEmit(simpleBlockExpr.Expression2, paramExprs, il, ref closure, parent))
-                                    return false;
-                                closure.PopBlock();
-                                return true;
-                            }
-#endif
+                        {
                             var blockExpr = (BlockExpression)expr;
                             var blockVarExprs = blockExpr.Variables;
                             var blockVarCount = blockVarExprs.Count;
@@ -1711,7 +1690,7 @@ namespace FastExpressionCompiler
 
                             closure.PopBlock();
                             return true;
-
+                        }
                         case ExpressionType.Loop:
                             return TryEmitLoop((LoopExpression)expr, paramExprs, il, ref closure, parent);
 

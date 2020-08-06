@@ -962,27 +962,42 @@ namespace FastExpressionCompiler.LightExpression
             new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, typeof(bool));
 
         public static BlockExpression Block(params Expression[] expressions) =>
-            Block(expressions[expressions.Length - 1].Type, Tools.Empty<ParameterExpression>(), expressions);
+            new BlockExpression(expressions.AsReadOnlyList());
 
         public static BlockExpression Block(IReadOnlyList<Expression> expressions) =>
-            Block(Tools.Empty<ParameterExpression>(), expressions);
+            new BlockExpression(expressions.AsReadOnlyList());
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
-            Block(variables.AsReadOnlyList(), new List<Expression>(expressions));
+            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions.AsReadOnlyList());
 
         public static BlockExpression Block(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) =>
-            Block(expressions[expressions.Count - 1].Type, variables, expressions);
+            new ManyVariablesBlockExpression(variables, expressions);
 
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
-            new BlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
 
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
-            new BlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
 
         public static Expression Block(ParameterExpression variable, Expression expression1, Expression expression2) =>
-            expression2.NodeType == ExpressionType.Throw || expression1.NodeType == ExpressionType.Throw
-                ? (Expression)Block(new[] { variable }, expression1, expression2)
-                : new OneVariableTwoExpressionBlockExpression(variable, expression1, expression2);
+            new ManyVariablesBlockExpression(new[] { variable }, new[] { expression1, expression2 });
+
+        public static BlockExpression MakeBlock(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions)
+        {
+            var vars  = variables.AsReadOnlyList();
+            var exprs = expressions.AsReadOnlyList();
+            var result = exprs[exprs.Count - 1];
+            if (result.Type == type) 
+            {
+                if (vars == null || vars.Count == 0)
+                    return new BlockExpression(exprs);
+                return new ManyVariablesBlockExpression(vars, exprs);
+            }
+
+            if (vars == null || vars.Count == 0)
+                return new TypedBlockExpression(type, exprs);
+            return new TypedManyVariablesBlockExpression(type, vars, exprs);
+        }
 
         /// <summary>
         /// Creates a LoopExpression with the given body and (optional) break target.
@@ -2890,52 +2905,17 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    /// <summary>Optimized version for the specific block structure</summary> 
-    public sealed class OneVariableTwoExpressionBlockExpression : Expression
-    {
-        public static explicit operator BlockExpression(OneVariableTwoExpressionBlockExpression x) =>
-            Block(new[] { x.Variable }, x.Expression1, x.Expression2);
-
-        public override ExpressionType NodeType => ExpressionType.Block;
-        public override Type Type => Expression2.Type;
-
-        public new readonly ParameterExpression Variable;
-        public readonly Expression Expression1;
-        public readonly Expression Expression2;
-        public Expression Result => Expression2;
-
-        internal OneVariableTwoExpressionBlockExpression(ParameterExpression variable, Expression expression1, Expression expression2)
-        {
-            Variable = variable;
-            Expression1 = expression1;
-            Expression2 = expression2;
-        }
-
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock((BlockExpression)this);
-
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            ((BlockExpression)this).CreateSysExpression(ref exprsConverted);
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2) =>
-            ((BlockExpression)this).ToExpressionString(sb, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
-    }
-
-    public sealed class BlockExpression : Expression
+    /// <summary>Base Block expression with no variables and with Type of its last (Result) exporession</summary>
+    public class BlockExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Block;
-        public override Type Type { get; }
+        public override Type Type => Result.Type;
 
-        public readonly IReadOnlyList<ParameterExpression> Variables;
+        public virtual IReadOnlyList<ParameterExpression> Variables => Tools.Empty<ParameterExpression>();
         public readonly IReadOnlyList<Expression> Expressions;
         public Expression Result => Expressions[Expressions.Count - 1];
 
-        internal BlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
-        {
-            Variables = variables ?? Tools.Empty<ParameterExpression>();
-            Expressions = expressions ?? Tools.Empty<Expression>();
-            Type = type;
-        }
+        internal BlockExpression(IReadOnlyList<Expression> expressions) => Expressions = expressions;
 
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock(this);
 
@@ -3021,6 +3001,33 @@ namespace FastExpressionCompiler.LightExpression
 
             return sb.Append(';');
         }
+    }
+
+    /// <summary>Block with no variable but user-specified type.</summary>
+    public sealed class TypedBlockExpression : BlockExpression
+    {
+        public override Type Type { get; }
+
+        internal TypedBlockExpression(Type type, IReadOnlyList<Expression> expressions) : base(expressions) => 
+            Type = type;
+    }
+
+    
+    public class ManyVariablesBlockExpression : BlockExpression
+    {
+        public override IReadOnlyList<ParameterExpression> Variables { get; }
+
+        internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) : base(expressions) => 
+            Variables = variables;
+    }
+
+    public sealed class TypedManyVariablesBlockExpression : ManyVariablesBlockExpression
+    {
+        public override Type Type { get; }
+
+        internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) 
+            : base(variables, expressions) =>
+            Type = type;
     }
 
     public sealed class LoopExpression : Expression

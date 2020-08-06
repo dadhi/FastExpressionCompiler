@@ -96,7 +96,7 @@ namespace FastExpressionCompiler.LightExpression
             var variables = VisitAndConvert(node.Variables);
             if (ReferenceEquals(expressions, node.Expressions) && ReferenceEquals(variables, node.Variables))
                 return node;
-            return new BlockExpression(node.Type, variables, expressions);
+            return Expression.MakeBlock(node.Type, variables, expressions);
         }
 
         protected internal virtual Expression VisitConditional(ConditionalExpression node)
