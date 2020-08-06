@@ -17,7 +17,8 @@
             // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
             "console": "internalConsole",
             "stopAtEntry": false,
-            "internalConsoleOptions": "openOnSessionStart"
+            "internalConsoleOptions": "openOnSessionStart",
+            "requireExactSource": false // allows to for moderate code editing while debugging
         },
         {
             "name": ".NET Core Launch (UnitTests)",
@@ -31,8 +32,9 @@
             // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
             "console": "internalConsole",
             "stopAtEntry": false,
-            "internalConsoleOptions": "openOnSessionStart"
-        },        
+            "internalConsoleOptions": "openOnSessionStart",
+            "requireExactSource": false // allows to for moderate code editing while debugging
+        },
         {
             "name": ".NET Core Launch (TestsRunner)",
             "type": "coreclr",
@@ -45,8 +47,9 @@
             // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
             "console": "internalConsole",
             "stopAtEntry": false,
-            "internalConsoleOptions": "openOnSessionStart"
-        },        
+            "internalConsoleOptions": "openOnSessionStart",
+            "requireExactSource": false // allows to for moderate code editing while debugging
+        },
         {
             "name": ".NET Core Attach",
             "type": "coreclr",

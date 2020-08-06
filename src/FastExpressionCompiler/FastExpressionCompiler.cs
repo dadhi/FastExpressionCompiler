@@ -428,10 +428,10 @@ namespace FastExpressionCompiler
 
             /// Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters. 
-            public ParameterExpression[] NonPassedParameters;
+            public ParameterExpression[] NonPassedParameters; // todo: @perf optimize for a single non passed parameter
 
             /// All nested lambdas recursively nested in expression
-            public NestedLambdaInfo[] NestedLambdas;
+            public NestedLambdaInfo[] NestedLambdas; // todo: @perf optimize for a single nested lambda
 
             /// <summary>Populates info directly with provided closure object and constants.
             /// If provided, the <paramref name="constUsage"/> should be the size of <paramref name="constValues"/>
@@ -642,7 +642,7 @@ namespace FastExpressionCompiler
                 return closureItems;
             }
 
-            /// LocalVar maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
+            /// LocalVar maybe a `null` in a collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
             public void PushBlockWithVars(ParameterExpression blockVarExpr)
             {
                 ref var block    = ref _blockStack.PushSlot();
@@ -955,7 +955,7 @@ namespace FastExpressionCompiler
                             continue;
                         }
 #endif
-						var methodArgs = callExpr.Arguments;
+                        var methodArgs = callExpr.Arguments;
                         var methodArgCount = methodArgs.Count;
                         if (methodArgCount == 0)
                         {
@@ -1103,7 +1103,7 @@ namespace FastExpressionCompiler
                             return false;
 
                         closure.AddNestedLambda(nestedLambdaInfo);
-                        var nestedNonPassedParams = nestedLambdaInfo.ClosureInfo.NonPassedParameters;
+                        var nestedNonPassedParams = nestedLambdaInfo.ClosureInfo.NonPassedParameters; // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
                         if (nestedNonPassedParams.Length != 0)
                             PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, nestedNonPassedParams);
 
@@ -2758,10 +2758,10 @@ namespace FastExpressionCompiler
             {
                 // Load constants array field from Closure and store it into the variable
                 il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldfld, ArrayClosureArrayField);
+                il.Emit(OpCodes.Ldfld, ArrayClosureArrayField); // todo: @perf / @bug what if lambda does not use nor constants nor nested lambdas and just needs a non-passed parameters / variables, should we even call the whole method then?
                 EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[])));
 
-                var constItems = closure.Constants.Items;
+                var constItems = closure.Constants.Items; // todo: @perf why do we getting when non constants is stored but just a nested lambda is present?
                 var constCount = closure.Constants.Count;
                 var constUsage = closure.ConstantUsageThenVarIndex.Items;
 
@@ -2785,7 +2785,7 @@ namespace FastExpressionCompiler
                 }
 
                 var nestedLambdas = closure.NestedLambdas;
-                for (var i = 0; i < nestedLambdas.Length; i++)
+                for (var i = 0; i < nestedLambdas.Length; i++) // todo: @perf do we even calling this if no constants and no UsageCountOrVarIndex in any of nested lambdas?
                 {
                     var nestedLambda = nestedLambdas[i];
                     if (nestedLambda.UsageCountOrVarIndex > 1)
@@ -3230,7 +3230,7 @@ namespace FastExpressionCompiler
                         // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                         // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
                         // if it's a local variable, then store the right value in it
-                        var localVariableIdx = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
+                        var localVariableIdx = closure.GetDefinedLocalVarOrDefault(leftParamExpr); // todo: @bug ? does the var index takes into account loading constants into vars?
                         if (localVariableIdx != -1)
                         {
                             if (!TryEmit(right, paramExprs, il, ref closure, flags))
@@ -3272,7 +3272,7 @@ namespace FastExpressionCompiler
                             if (expr.Type.IsValueType())
                                 il.Emit(OpCodes.Box, expr.Type);
                             il.Emit(OpCodes.Stelem_Ref); // put the variable into array
-                            EmitLoadLocalVariable(il, valueVarIndex);
+                            EmitLoadLocalVariable(il, valueVarIndex); // todo: @perf what if we just dup the `valueVar`?
                         }
                         else
                         {
