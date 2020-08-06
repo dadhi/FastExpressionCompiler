@@ -65,6 +65,18 @@ namespace FastExpressionCompiler
                     s.Append(' ').Append(tok.Member.Name);
                 else if (il is InlineBrTargetInstruction br)
                     s.Append(' ').Append(br.TargetOffset);
+                else if (il is ShortInlineBrTargetInstruction sbr)
+                    s.Append(' ').Append(sbr.TargetOffset);
+                else if (il is InlineStringInstruction si)
+                    s.Append(' ').Append(si.String);
+                else if (il is InlineIInstruction ii)
+                    s.Append(' ').Append(ii.Int32);
+                else if (il is ShortInlineIInstruction sii)
+                    s.Append(' ').Append(sii.Byte);
+                else if (il is InlineVarInstruction iv)
+                    s.Append(' ').Append(iv.Ordinal);
+                else if (il is ShortInlineVarInstruction siv)
+                    s.Append(' ').Append(siv.Ordinal);
             }
 
             return s;

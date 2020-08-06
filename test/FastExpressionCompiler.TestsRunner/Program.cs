@@ -11,11 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
-            // new FastExpressionCompiler.LightExpression.IssueTests
-            //     .Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
-
-            // todo: @fix #255
-            // new BlockTests().Run();
+            //new FastExpressionCompiler.LightExpression.UnitTests.BlockTests().Run();
         }
 
         public static void RunAllTests()

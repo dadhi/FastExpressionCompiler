@@ -9,6 +9,7 @@
     <ItemGroup>
         <None Remove="*.ncrunchproject"/>
         <Compile Include="..\FastExpressionCompiler.IssueTests\**\*.cs" Exclude="..\FastExpressionCompiler.IssueTests\obj\**\*.*"/>
+        <Compile Include="..\FastExpressionCompiler.UnitTests\TestTools.cs" />
 
         <Compile Remove="..\FastExpressionCompiler.IssueTests\ObjectMethodExecutor\**"/>
         <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke.cs"/>
