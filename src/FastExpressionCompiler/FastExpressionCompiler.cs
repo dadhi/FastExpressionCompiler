@@ -601,17 +601,12 @@ namespace FastExpressionCompiler
                     for (var i = 0; i < nestedLambdas.Length; i++)
                     {
                         var nestedLambda = nestedLambdas[i];
-                        if (nestedLambda.ClosureInfo.NonPassedParameters.Length == 0)
+                        if (nestedLambda.ClosureInfo.NonPassedParameters.Length == 0 ||
+                            nestedLambda.ClosureInfo.ContainsConstantsOrNestedLambdas() == false)
                             nestedLambdaItems[i] = nestedLambda.Lambda;
                         else
-                        {
-                            var nestedConstantsAndNestedLambdas = nestedLambda.ClosureInfo.GetArrayOfConstantsAndNestedLambdas();
-                            if (nestedConstantsAndNestedLambdas != null)
-                                nestedLambdaItems[i] = new NestedLambdaWithConstantsAndNestedLambdas(nestedLambda.Lambda, 
-                                    nestedConstantsAndNestedLambdas);
-                            else
-                                nestedLambdaItems[i] = nestedLambda.Lambda;
-                        }
+                            nestedLambdaItems[i] = new NestedLambdaWithConstantsAndNestedLambdas(
+                                nestedLambda.Lambda, nestedLambda.ClosureInfo.GetArrayOfConstantsAndNestedLambdas());
                     }
 
                     return nestedLambdaItems;
@@ -643,17 +638,12 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < nestedLambdas.Length; i++)
                 {
                     var nestedLambda = nestedLambdas[i];
-                    if (nestedLambda.ClosureInfo.NonPassedParameters.Length == 0)
+                    if (nestedLambda.ClosureInfo.NonPassedParameters.Length == 0 ||
+                        nestedLambda.ClosureInfo.ContainsConstantsOrNestedLambdas() == false)
                         closureItems[constCount + i] = nestedLambda.Lambda;
                     else
-                    {
-                        var nestedConstantsAndNestedLambdas = nestedLambda.ClosureInfo.GetArrayOfConstantsAndNestedLambdas();
-                        if (nestedConstantsAndNestedLambdas != null)
-                            closureItems[constCount + i] = new NestedLambdaWithConstantsAndNestedLambdas(
-                                nestedLambda.Lambda, nestedConstantsAndNestedLambdas);
-                        else
-                            closureItems[constCount + i] = nestedLambda.Lambda;
-                    }
+                        closureItems[constCount + i] = new NestedLambdaWithConstantsAndNestedLambdas(
+                            nestedLambda.Lambda, nestedLambda.ClosureInfo.GetArrayOfConstantsAndNestedLambdas());
                 }
 
                 return closureItems;
@@ -1365,7 +1355,8 @@ namespace FastExpressionCompiler
 
             var il = method.GetILGenerator();
 
-            if ((nestedClosureInfo.Status & ClosureStatus.HasClosure) != 0 && nestedClosureInfo.ContainsConstantsOrNestedLambdas())
+            if ((nestedClosureInfo.Status & ClosureStatus.HasClosure) != 0 && 
+                nestedClosureInfo.ContainsConstantsOrNestedLambdas())
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo);
 
             var parentFlags = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
