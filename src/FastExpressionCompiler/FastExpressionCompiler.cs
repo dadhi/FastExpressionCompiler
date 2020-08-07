@@ -748,6 +748,7 @@ namespace FastExpressionCompiler
                 NonPassedParams = nonPassedParams;
         }
 
+        // todo: @incomplete this class is required until we move to a single constants list per lambda hierarchy 
         public sealed class NestedLambdaWithConstantsAndNestedLambdas
         {
             public static FieldInfo NestedLambdaField =
@@ -770,7 +771,7 @@ namespace FastExpressionCompiler
             public readonly LambdaExpression LambdaExpression;
             public ClosureInfo ClosureInfo;
             public object Lambda;
-            public int UsageCountOrVarIndex;
+            public int LocalVarIndex;
 
             public NestedLambdaInfo(LambdaExpression lambdaExpression)
             {
@@ -1081,11 +1082,7 @@ namespace FastExpressionCompiler
                             if (foundLambdaInfo != null)
                             {
                                 // if the lambda is not found on the same level, then add it
-                                if (foundInLambdas == closure.NestedLambdas)
-                                {
-                                    ++foundLambdaInfo.UsageCountOrVarIndex;
-                                }
-                                else
+                                if (foundInLambdas != closure.NestedLambdas)
                                 {
                                     closure.AddNestedLambda(foundLambdaInfo);
                                     var foundLambdaNonPassedParams = foundLambdaInfo.ClosureInfo.NonPassedParameters;
@@ -2785,18 +2782,17 @@ namespace FastExpressionCompiler
                 }
 
                 var nestedLambdas = closure.NestedLambdas;
-                for (var i = 0; i < nestedLambdas.Length; i++) // todo: @perf do we even calling this if no constants and no UsageCountOrVarIndex in any of nested lambdas?
+                for (var i = 0; i < nestedLambdas.Length; i++)
                 {
                     var nestedLambda = nestedLambdas[i];
-                    if (nestedLambda.UsageCountOrVarIndex > 1)
-                    {
-                        il.Emit(OpCodes.Ldloc_0);// load array field variable on a stack
-                        EmitLoadConstantInt(il, constCount + i);
-                        il.Emit(OpCodes.Ldelem_Ref);
-                        varIndex = il.GetNextLocalVarIndex(nestedLambda.Lambda.GetType());
-                        nestedLambda.UsageCountOrVarIndex = varIndex + 1;
-                        EmitStoreLocalVariable(il, varIndex);
-                    }
+                    il.Emit(OpCodes.Ldloc_0);// load array field variable on a stack
+                    EmitLoadConstantInt(il, constCount + i);
+                    il.Emit(OpCodes.Ldelem_Ref);
+                    
+                    // store the nested lambda in the local variable 
+                    varIndex = il.GetNextLocalVarIndex(nestedLambda.Lambda.GetType());
+                    nestedLambda.LocalVarIndex = varIndex; // save the var index
+                    EmitStoreLocalVariable(il, varIndex);
                 }
             }
 
@@ -3608,15 +3604,7 @@ namespace FastExpressionCompiler
                 var nestedLambda = nestedLambdaInfo.Lambda;
                 var nestedLambdaInClosureIndex = outerNestedLambdaIndex + closure.Constants.Count;
 
-                var varIndex = nestedLambdaInfo.UsageCountOrVarIndex - 1;
-                if (varIndex > 0)
-                    EmitLoadLocalVariable(il, varIndex);
-                else
-                {
-                    il.Emit(OpCodes.Ldloc_0);
-                    EmitLoadConstantInt(il, nestedLambdaInClosureIndex);
-                    il.Emit(OpCodes.Ldelem_Ref); // load the array item object
-                }
+                EmitLoadLocalVariable(il, nestedLambdaInfo.LocalVarIndex);
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
                 ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
@@ -3627,26 +3615,10 @@ namespace FastExpressionCompiler
                 //-------------------------------------------------------------------
                 // For the lambda with non-passed parameters (or variables) in closure
                 // we have loaded `NestedLambdaWithConstantsAndNestedLambdas` pair.
-                if (varIndex > 0)
-                {
-                    // we are already have variable loaded
-                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
-                    EmitLoadLocalVariable(il, varIndex); // load the variable for the second time
-                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
-                }
-                else
-                {
-                    var nestedLambdaAndClosureItemsVarIndex = il.GetNextLocalVarIndex(typeof(NestedLambdaWithConstantsAndNestedLambdas));
-                    EmitStoreLocalVariable(il, nestedLambdaAndClosureItemsVarIndex);
 
-                    // - load the `NestedLambda` field
-                    EmitLoadLocalVariable(il, nestedLambdaAndClosureItemsVarIndex);
-                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
-
-                    // - load the `ConstantsAndNestedLambdas` field
-                    EmitLoadLocalVariable(il, nestedLambdaAndClosureItemsVarIndex);
-                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
-                }
+                il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
+                EmitLoadLocalVariable(il, nestedLambdaInfo.LocalVarIndex); // load the variable for the second time
+                il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
 
                 // - create `NonPassedParameters` array
                 EmitLoadConstantInt(il, nestedNonPassedParams.Length); // size of array
