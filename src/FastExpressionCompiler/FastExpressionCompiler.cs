@@ -454,6 +454,9 @@ namespace FastExpressionCompiler
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
             }
 
+            // todo: @perf move to Status flags
+            public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdas.Length > 0;
+
             public void AddConstantOrIncrementUsageCount(object value, Type type)
             {
                 Status |= ClosureStatus.HasClosure;
@@ -601,7 +604,7 @@ namespace FastExpressionCompiler
                         if (nestedLambda.ClosureInfo.NonPassedParameters.Length == 0)
                             nestedLambdaItems[i] = nestedLambda.Lambda;
                         else
-                            nestedLambdaItems[i] = new NestedLambdaWithConstantsAndNestedLambdas(
+                            nestedLambdaItems[i] = new NestedLambdaWithConstantsAndNestedLambdas( // todo: @perf use different class for case with no constants
                                 nestedLambda.Lambda, nestedLambda.ClosureInfo.GetArrayOfConstantsAndNestedLambdas());
                     }
 
@@ -731,20 +734,27 @@ namespace FastExpressionCompiler
         public static FieldInfo ArrayClosureWithNonPassedParamsField =
             typeof(ArrayClosureWithNonPassedParams).GetTypeInfo().GetDeclaredField(nameof(ArrayClosureWithNonPassedParams.NonPassedParams));
 
-        public static ConstructorInfo ArrayClosureWithNonPassedParamsConstructor =
-            typeof(ArrayClosureWithNonPassedParams).GetTypeInfo().DeclaredConstructors.GetFirst();
+        private static ConstructorInfo[] _nonPassedParamsArrayClosureCtors =
+            typeof(ArrayClosureWithNonPassedParams).GetTypeInfo().DeclaredConstructors.AsArray();
+        public static ConstructorInfo ArrayClosureWithNonPassedParamsConstructor = _nonPassedParamsArrayClosureCtors[0];
 
+        public static ConstructorInfo ArrayClosureWithNonPassedParamsConstructorWithoutConstants = _nonPassedParamsArrayClosureCtors[1];
         public class ArrayClosure
         {
             public readonly object[] ConstantsAndNestedLambdas; // todo: @incomplete split into two to reduce copying
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 
+        // todo: better to move the case with no constants to another class
         public sealed class ArrayClosureWithNonPassedParams : ArrayClosure
         {
             public readonly object[] NonPassedParams;
 
             public ArrayClosureWithNonPassedParams(object[] constantsAndNestedLambdas, object[] nonPassedParams) : base(constantsAndNestedLambdas) =>
+                NonPassedParams = nonPassedParams;
+
+            // todo: @perf optimize for this case
+            public ArrayClosureWithNonPassedParams(object[] nonPassedParams) : base(null) =>
                 NonPassedParams = nonPassedParams;
         }
 
@@ -1315,22 +1325,22 @@ namespace FastExpressionCompiler
                 return true;
 
             var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
-            ref var nestedLambdaClosureInfo = ref nestedLambdaInfo.ClosureInfo;
+            ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
 
             var nestedLambdaParamExprs = nestedLambdaExpr.Parameters;
-            var nestedLambdaNestedLambdas = nestedLambdaClosureInfo.NestedLambdas;
+            var nestedLambdaNestedLambdas = nestedClosureInfo.NestedLambdas;
             if (nestedLambdaNestedLambdas.Length != 0)
                 for (var i = 0; i < nestedLambdaNestedLambdas.Length; ++i)
-                    if (!TryCompileNestedLambda(ref nestedLambdaClosureInfo, i))
+                    if (!TryCompileNestedLambda(ref nestedClosureInfo, i))
                         return false;
 
             ArrayClosure nestedLambdaClosure = null;
-            if (nestedLambdaClosureInfo.NonPassedParameters.Length == 0)
+            if (nestedClosureInfo.NonPassedParameters.Length == 0)
             {
-                if ((nestedLambdaClosureInfo.Status & ClosureStatus.HasClosure) == 0)
+                if ((nestedClosureInfo.Status & ClosureStatus.HasClosure) == 0)
                     nestedLambdaClosure = EmptyArrayClosure;
                 else
-                    nestedLambdaClosure = new ArrayClosure(nestedLambdaClosureInfo.GetArrayOfConstantsAndNestedLambdas());
+                    nestedLambdaClosure = new ArrayClosure(nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas());
             }
 
             var nestedReturnType = nestedLambdaExpr.ReturnType;
@@ -1341,11 +1351,11 @@ namespace FastExpressionCompiler
 
             var il = method.GetILGenerator();
 
-            if ((nestedLambdaClosureInfo.Status & ClosureStatus.HasClosure) != 0)
-                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedLambdaClosureInfo);
+            if ((nestedClosureInfo.Status & ClosureStatus.HasClosure) != 0 && nestedClosureInfo.ContainsConstantsOrNestedLambdas())
+                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo);
 
             var parentFlags = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
-            if (!EmittingVisitor.TryEmit(nestedLambdaExpr.Body, nestedLambdaParamExprs, il, ref nestedLambdaClosureInfo, parentFlags))
+            if (!EmittingVisitor.TryEmit(nestedLambdaExpr.Body, nestedLambdaParamExprs, il, ref nestedClosureInfo, parentFlags))
                 return false;
             il.Emit(OpCodes.Ret);
 
@@ -2755,8 +2765,8 @@ namespace FastExpressionCompiler
             {
                 // Load constants array field from Closure and store it into the variable
                 il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldfld, ArrayClosureArrayField); // todo: @perf / @bug what if lambda does not use nor constants nor nested lambdas and just needs a non-passed parameters / variables, should we even call the whole method then?
-                EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[])));
+                il.Emit(OpCodes.Ldfld, ArrayClosureArrayField);
+                EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[]))); // always does Stloc_0
 
                 var constItems = closure.Constants.Items; // todo: @perf why do we getting when non constants is stored but just a nested lambda is present?
                 var constCount = closure.Constants.Count;
@@ -2767,7 +2777,7 @@ namespace FastExpressionCompiler
                 {
                     if (constUsage[i] > 1)
                     {
-                        il.Emit(OpCodes.Ldloc_0);// load array field variable on a stack
+                        il.Emit(OpCodes.Ldloc_0);// SHOULD BE always at 0 locaton; load array field variable on the stack
                         EmitLoadConstantInt(il, i);
                         il.Emit(OpCodes.Ldelem_Ref);
 
@@ -2785,7 +2795,7 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < nestedLambdas.Length; i++)
                 {
                     var nestedLambda = nestedLambdas[i];
-                    il.Emit(OpCodes.Ldloc_0);// load array field variable on a stack
+                    il.Emit(OpCodes.Ldloc_0);// SHOULD BE always at 0 locaton; load array field variable on the stack
                     EmitLoadConstantInt(il, constCount + i);
                     il.Emit(OpCodes.Ldelem_Ref);
                     
@@ -3617,11 +3627,16 @@ namespace FastExpressionCompiler
                 // we have loaded `NestedLambdaWithConstantsAndNestedLambdas` pair.
 
                 il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
-                EmitLoadLocalVariable(il, nestedLambdaInfo.LocalVarIndex); // load the variable for the second time
-                il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
+                
+                var containsConstants = nestedClosureInfo.ContainsConstantsOrNestedLambdas();
+                if (containsConstants) 
+                {
+                    EmitLoadLocalVariable(il, nestedLambdaInfo.LocalVarIndex); // load the variable for the second time
+                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
+                }
 
                 // - create `NonPassedParameters` array
-                EmitLoadConstantInt(il, nestedNonPassedParams.Length); // size of array
+                EmitLoadConstantInt(il, nestedNonPassedParams.Length); // load the length of array
                 il.Emit(OpCodes.Newarr, typeof(object));
 
                 // - populate the `NonPassedParameters` array
@@ -3683,7 +3698,10 @@ namespace FastExpressionCompiler
                 }
 
                 // - create `ArrayClosureWithNonPassedParams` out of the both above
-                il.Emit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsConstructor);
+                if (containsConstants)
+                    il.Emit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsConstructor);
+                else
+                    il.Emit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsConstructorWithoutConstants);
 
                 // - call `Curry` method with nested lambda and array closure to produce a closed lambda with the expected signature
                 var lambdaTypeArgs = nestedLambda.GetType().GetTypeInfo().GenericTypeArguments;
@@ -4432,7 +4450,7 @@ namespace FastExpressionCompiler
             {
                 if (location == 0)
                     il.Emit(OpCodes.Stloc_0);
-                else if (location == 1)
+                else if (location == 1) // todo: @perf make this a first branch because often the 0 location is occupied by stored closure array field
                     il.Emit(OpCodes.Stloc_1);
                 else if (location == 2)
                     il.Emit(OpCodes.Stloc_2);
