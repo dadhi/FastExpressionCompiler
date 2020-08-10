@@ -3071,6 +3071,13 @@ namespace FastExpressionCompiler.LightExpression
         public readonly LabelTarget BreakLabel;
         public readonly LabelTarget ContinueLabel;
 
+        internal LoopExpression(Expression body, LabelTarget breakLabel, LabelTarget continueLabel)
+        {
+            Body = body;
+            BreakLabel = breakLabel;
+            ContinueLabel = continueLabel;
+        }
+
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLoop(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
@@ -3099,14 +3106,12 @@ namespace FastExpressionCompiler.LightExpression
             return sb.Append(')');
         }
 
-        internal LoopExpression(Expression body, LabelTarget breakLabel, LabelTarget continueLabel)
-        {
-            Body = body;
-            BreakLabel = breakLabel;
-            ContinueLabel = continueLabel;
-        }
+        // todo: @incomplete to implement
+        // public override StringBuilder ToCSharpString(StringBuilder sb,
+        //     int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) {}
     }
 
+    // todo: @perf minimize the memory with the specific case overrides
     public sealed class TryExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Try;
@@ -3116,6 +3121,13 @@ namespace FastExpressionCompiler.LightExpression
         public IReadOnlyList<CatchBlock> Handlers => _handlers;
         private readonly CatchBlock[] _handlers;
         public readonly Expression Finally;
+
+        internal TryExpression(Expression body, Expression @finally, CatchBlock[] handlers)
+        {
+            Body = body;
+            _handlers = handlers;
+            Finally = @finally;
+        }
 
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTry(this);
 
@@ -3190,12 +3202,9 @@ namespace FastExpressionCompiler.LightExpression
             return sb;
         }
 
-        internal TryExpression(Expression body, Expression @finally, CatchBlock[] handlers)
-        {
-            Body = body;
-            _handlers = handlers;
-            Finally = @finally;
-        }
+        // todo: @incomplete implement
+        // public override StringBuilder ToCSharpString(StringBuilder sb,
+        //     int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
     }
 
     public struct CatchBlock
@@ -3424,6 +3433,10 @@ namespace FastExpressionCompiler.LightExpression
                 result[i] = ToSwitchCase(ref switchCases[i], ref exprsConverted);
             return result;
         }
+
+        // todo: @incomplete impelement
+        // public override StringBuilder ToCSharpString(StringBuilder sb,
+        //     int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
     }
 
     public class LambdaExpression : Expression
