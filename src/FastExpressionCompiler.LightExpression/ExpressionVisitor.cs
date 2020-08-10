@@ -252,11 +252,19 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitTry(TryExpression node)
         {
             var body = Visit(node.Body);
-            var handlers = VisitAndConvert(node.Handlers, VisitCatchBlock);
-            var @finally = Visit(node.Finally);
+            
+            var handlers = node.Handlers == null || node.Handlers.Count == 0
+                ? node.Handlers
+                : VisitAndConvert(node.Handlers, VisitCatchBlock);
+            
+            var @finally = node.Finally != null ? Visit(node.Finally) : node.Finally;
+
             if (body == node.Body && ReferenceEquals(handlers, node.Handlers) && @finally == node.Finally)
                 return node;
-            return new TryExpression(body, @finally, handlers.AsArray());
+
+            return @finally == null
+                ? new TryExpression(body, handlers.AsArray())
+                : new WithFinallyTryExpression(body, handlers.AsArray(), @finally);
         }
 
         protected internal virtual Expression VisitTypeBinary(TypeBinaryExpression node)

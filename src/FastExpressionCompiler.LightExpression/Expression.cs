@@ -1016,13 +1016,13 @@ namespace FastExpressionCompiler.LightExpression
             new LoopExpression(body, @break, @continue);
 
         public static TryExpression TryCatch(Expression body, params CatchBlock[] handlers) =>
-            new TryExpression(body, null, handlers);
+            new TryExpression(body, handlers);
 
         public static TryExpression TryCatchFinally(Expression body, Expression @finally, params CatchBlock[] handlers) =>
-            new TryExpression(body, @finally, handlers);
+            new WithFinallyTryExpression(body, handlers, @finally);
 
         public static TryExpression TryFinally(Expression body, Expression @finally) =>
-            new TryExpression(body, @finally, null);
+            new WithFinallyTryExpression(body, null, @finally);
 
         public static CatchBlock Catch(ParameterExpression variable, Expression body) =>
             new CatchBlock(variable, body, null, variable.Type);
@@ -3136,8 +3136,7 @@ namespace FastExpressionCompiler.LightExpression
         //     int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) {}
     }
 
-    // todo: @perf minimize the memory with the specific case overrides
-    public sealed class TryExpression : Expression
+    public class TryExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Try;
         public override Type Type => Body.Type;
@@ -3145,13 +3144,12 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Body;
         public IReadOnlyList<CatchBlock> Handlers => _handlers;
         private readonly CatchBlock[] _handlers;
-        public readonly Expression Finally;
+        public virtual Expression Finally => null;
 
-        internal TryExpression(Expression body, Expression @finally, CatchBlock[] handlers)
+        internal TryExpression(Expression body, CatchBlock[] handlers)
         {
             Body = body;
             _handlers = handlers;
-            Finally = @finally;
         }
 
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTry(this);
@@ -3227,9 +3225,61 @@ namespace FastExpressionCompiler.LightExpression
             return sb;
         }
 
-        // todo: @incomplete implement
-        // public override StringBuilder ToCSharpString(StringBuilder sb,
-        //     int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            sb.Append("try");
+            sb.NewLine(lineIdent, identSpaces).Append('{');
+            sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType, identSpaces);
+            sb.Append(';');
+            sb.NewLine(lineIdent, identSpaces).Append('}');
+            
+            if (_handlers != null && _handlers.Length > 0) 
+            {
+                for (var i = 0; i < _handlers.Length; i++)
+                {
+                    var h = _handlers[i];
+                    sb.NewLine(lineIdent, identSpaces).Append("catch (");
+                    var exTypeName = h.Test.ToCode(stripNamespace, printType);
+                    sb.Append(exTypeName);
+                    if (h.Variable != null) 
+                    {
+                        if (string.IsNullOrEmpty(h.Variable.Name))
+                            h.Variable.Name = "ex" + exTypeName; // todo: @hack
+                        sb.Append(' ').Append(h.Variable.Name); 
+                    }
+                    sb.Append(')');
+                    if (h.Filter != null) 
+                    {
+                        sb.Append("when (");
+                        sb.NewLineIdentCs(h.Filter, lineIdent, stripNamespace, printType, identSpaces);
+                        sb.NewLine(lineIdent, identSpaces).Append(')');
+                    }
+                    sb.NewLine(lineIdent, identSpaces).Append('{');            
+                    sb.NewLineIdentCs(h.Body, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.NewLine(lineIdent, identSpaces).Append('}');
+                }
+            }
+
+            if (Finally != null) 
+            {
+                sb.Append("finally");
+                sb.NewLine(lineIdent, identSpaces).Append('{');
+                sb.NewLineIdentCs(Finally, lineIdent, stripNamespace, printType, identSpaces);
+                sb.NewLine(lineIdent, identSpaces).Append('}');
+            }
+
+            return sb;
+        }
+    }
+
+    public sealed class WithFinallyTryExpression : TryExpression
+    {
+        public override Expression Finally { get; }
+
+        internal WithFinallyTryExpression(Expression body, CatchBlock[] handlers, Expression @finally)
+            : base(body, handlers) =>
+            Finally = @finally;
     }
 
     public struct CatchBlock

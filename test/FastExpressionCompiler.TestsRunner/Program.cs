@@ -9,8 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // RunAllTests();
-            new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run();
+            RunAllTests();
+            // new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run();
         }
 
         public static void RunAllTests()
