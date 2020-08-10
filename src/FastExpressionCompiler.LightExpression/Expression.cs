@@ -58,12 +58,6 @@ namespace FastExpressionCompiler.LightExpression
 
         public abstract Expression Accept(ExpressionVisitor visitor);
 
-        internal struct LightAndSysExpr
-        {
-            public Expression LightExpr;
-            public SysExpr SysExpr;
-        }
-
         public SysExpr ToExpression()
         {
             var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
@@ -77,14 +71,13 @@ namespace FastExpressionCompiler.LightExpression
             var i = exprsConverted.Count - 1;
             while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].LightExpr, this)) --i;
             if (i != -1)
-                return exprsConverted.Items[i].SysExpr;
+                return (SysExpr)exprsConverted.Items[i].SysExpr;
 
             var sysExpr = CreateSysExpression(ref exprsConverted);
 
             ref var item = ref exprsConverted.PushSlot();
             item.LightExpr = this;
             item.SysExpr = sysExpr;
-
             return sysExpr;
         }
 
@@ -1049,14 +1042,36 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression Throw(Expression value, Type type) =>
             new TypedUnaryExpression(ExpressionType.Throw, value, type);
 
-        public static LabelExpression Label(LabelTarget target, Expression defaultValue = null) =>
-            new LabelExpression(target, defaultValue);
+        public static LabelExpression Label(LabelTarget target) =>
+            new LabelExpression(target);
 
-        public static LabelTarget Label(Type type = null, string name = null) =>
-            SysExpr.Label(type ?? typeof(void), name);
+        public static LabelExpression Label(LabelTarget target, Expression defaultValue) =>
+            defaultValue == null
+            ? new LabelExpression(target)
+            : new WithDefaultValueLabelExpression(target, defaultValue);
+
+        public static LabelTarget Label() => new LabelTarget();
+
+        public static LabelTarget Label(Type type) =>
+            type == null 
+            ? new LabelTarget()
+            : new TypedLabelTarget(type);
 
         public static LabelTarget Label(string name) =>
-            SysExpr.Label(typeof(void), name);
+            name == null 
+            ? new LabelTarget()
+            : new NamedLabelTarget(name);
+
+        public static LabelTarget Label(Type type, string name) 
+        {
+            if (type == null)
+                return name == null 
+                    ? new LabelTarget()
+                    : new NamedLabelTarget(name);
+            if (name == null)
+                return new TypedLabelTarget(type);
+            return new TypedNamedLabelTarget(type, name);
+        }
 
         /// <summary>Creates a BinaryExpression, given the left and right operands, by calling an appropriate factory method.</summary>
         /// <param name="binaryType">The ExpressionType that specifies the type of binary operation.</param>
@@ -1188,6 +1203,12 @@ namespace FastExpressionCompiler.LightExpression
 
             throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
         }
+    }
+
+    internal struct LightAndSysExpr
+    {
+        public object LightExpr;
+        public object SysExpr;
     }
 
     internal static class TypeTools
@@ -1720,6 +1741,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType { get; }
         public override Type Type { get; }
+        public virtual MethodInfo Method => null; // todo: @incomplete - add support
 
         public readonly Expression Left, Right;
 
@@ -2673,17 +2695,14 @@ namespace FastExpressionCompiler.LightExpression
 
         public abstract MemberBindingType BindingType { get; }
 
+        internal MemberBinding(MemberInfo member) => Member = member;
+
         public string ToExpressionString() => CreateExpressionString(new StringBuilder(128), new List<Expression>(), 2).ToString();
 
         public abstract StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2);
 
-        internal abstract System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<Expression.LightAndSysExpr> exprsConverted);
-
-        internal MemberBinding(MemberInfo member)
-        {
-            Member = member;
-        }
+        internal abstract System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted);
     }
 
     public sealed class MemberAssignment : MemberBinding
@@ -2692,7 +2711,9 @@ namespace FastExpressionCompiler.LightExpression
 
         public override MemberBindingType BindingType => MemberBindingType.Assignment;
 
-        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<Expression.LightAndSysExpr> exprsConverted) =>
+        internal MemberAssignment(MemberInfo member, Expression expression) : base(member) => Expression = expression;
+
+        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Bind(Member, Expression.ToExpression(ref exprsConverted));
 
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
@@ -2711,7 +2732,7 @@ namespace FastExpressionCompiler.LightExpression
             return sb.Append(")");
         }
 
-        internal MemberAssignment(MemberInfo member, Expression expression) : base(member) => Expression = expression;
+        // todo: @incomplete implement ToCSharpCode
     }
 
     public class InvocationExpression : Expression
@@ -3081,9 +3102,13 @@ namespace FastExpressionCompiler.LightExpression
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLoop(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            BreakLabel == null ? SysExpr.Loop(Body.ToExpression(ref exprsConverted)) :
-            ContinueLabel == null ? SysExpr.Loop(Body.ToExpression(ref exprsConverted), BreakLabel) :
-            SysExpr.Loop(Body.ToExpression(ref exprsConverted), BreakLabel, ContinueLabel);
+            BreakLabel == null 
+            ? SysExpr.Loop(Body.ToExpression(ref exprsConverted)) :
+            ContinueLabel == null 
+            ? SysExpr.Loop(Body.ToExpression(ref exprsConverted), BreakLabel.ToSystemLabelTarget(ref exprsConverted)) :
+            SysExpr.Loop(Body.ToExpression(ref exprsConverted), 
+                BreakLabel.ToSystemLabelTarget(ref exprsConverted),
+                ContinueLabel.ToSystemLabelTarget(ref exprsConverted));
 
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
@@ -3234,25 +3259,22 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class LabelExpression : Expression
+    public class LabelExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Label;
         public override Type Type => Target.Type;
 
-        // todo: @improve Introduce proper LabelTarget instead of system one
         public readonly LabelTarget Target;
-        public readonly Expression DefaultValue;
+        public  virtual Expression DefaultValue => null;
 
-        internal LabelExpression(LabelTarget target, Expression defaultValue)
-        {
-            Target = target;
-            DefaultValue = defaultValue;
-        }
+        internal LabelExpression(LabelTarget target) => Target = target;
 
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLabel(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            DefaultValue == null ? SysExpr.Label(Target) : SysExpr.Label(Target, DefaultValue.ToExpression(ref exprsConverted));
+            DefaultValue == null 
+                ? SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted)) 
+                : SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted), DefaultValue.ToExpression(ref exprsConverted));
 
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
@@ -3275,6 +3297,60 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
+    public sealed class WithDefaultValueLabelExpression : LabelExpression
+    {
+        public override Expression DefaultValue { get; }
+        internal WithDefaultValueLabelExpression(LabelTarget target, Expression defaultValue) : base(target) =>
+            DefaultValue = defaultValue;
+    }
+
+    public class LabelTarget 
+    {
+        public virtual Type Type => typeof(void);
+        public virtual string Name => null;
+
+        internal System.Linq.Expressions.LabelTarget ToSystemLabelTarget(ref LiveCountArray<LightAndSysExpr> converted) 
+        {
+            var i = converted.Count - 1;
+            while (i != -1 && !ReferenceEquals(converted.Items[i].LightExpr, this)) --i;
+            if (i != -1)
+                return (System.Linq.Expressions.LabelTarget)converted.Items[i].SysExpr;
+
+            var sysItem = Name == null
+                ? SysExpr.Label(Type) 
+                : SysExpr.Label(Type, Name);
+
+            ref var item = ref converted.PushSlot();
+            item.LightExpr = this;
+            item.SysExpr = sysItem;
+            return sysItem;
+        }
+
+        public override string ToString() => Type.ToCode(true, null) + Name?.ToString();
+    }
+
+    public sealed class TypedLabelTarget : LabelTarget
+    {
+        public override Type Type { get; }
+
+        public TypedLabelTarget(Type type) => Type = type;
+    }
+
+    public class NamedLabelTarget : LabelTarget
+    {
+        public override string Name { get; }
+
+        public NamedLabelTarget(string name) => Name = name;
+    }
+
+    public sealed class TypedNamedLabelTarget : NamedLabelTarget
+    {
+        public override Type Type { get; }
+
+        public TypedNamedLabelTarget(Type type, string name) : base(name) => Type = type;
+    }
+
+    // todo: @perf minimize the memory for special cases
     public sealed class GotoExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Goto;
@@ -3296,8 +3372,8 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             Value == null
-            ? SysExpr.Goto(Target, Type)
-            : SysExpr.Goto(Target, Value.ToExpression(ref exprsConverted), Type);
+            ? SysExpr.Goto(Target.ToSystemLabelTarget(ref exprsConverted), Type)
+            : SysExpr.Goto(Target.ToSystemLabelTarget(ref exprsConverted), Value.ToExpression(ref exprsConverted), Type);
 
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
