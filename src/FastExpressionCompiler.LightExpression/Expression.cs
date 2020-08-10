@@ -361,10 +361,12 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public static MemberExpression Property(PropertyInfo property) =>
-            new PropertyExpression(null, property);
+            new PropertyExpression(property);
 
         public static MemberExpression Property(Expression instance, PropertyInfo property) =>
-            new PropertyExpression(instance, property);
+            instance == null 
+                ? new PropertyExpression(property)
+                : new InstancePropertyExpression(instance, property);
 
         public static MemberExpression Property(Expression expression, string propertyName) =>
             Property(expression, expression.Type.FindProperty(propertyName)
@@ -376,12 +378,12 @@ namespace FastExpressionCompiler.LightExpression
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
             new IndexExpression(instance, indexer, arguments.AsReadOnlyList());
 
-        public static MemberExpression PropertyOrField(Expression expression, string propertyName) =>
-            expression.Type.FindProperty(propertyName) != null ?
-                (MemberExpression)new PropertyExpression(expression, expression.Type.FindProperty(propertyName)
-                    ?? throw new ArgumentException($"Declared property with the name '{propertyName}' is not found in '{expression.Type}'", nameof(propertyName))) :
-                new FieldExpression(expression, expression.Type.FindField(propertyName)
-                    ?? throw new ArgumentException($"Declared field with the name '{propertyName}' is not found '{expression.Type}'", nameof(propertyName)));
+        public static MemberExpression PropertyOrField(Expression expression, string memberName) =>
+            expression.Type.FindProperty(memberName) != null 
+                ? (MemberExpression)Property(expression, expression.Type.FindProperty(memberName)
+                    ?? throw new ArgumentException($"Declared property with the name '{memberName}' is not found in '{expression.Type}'", nameof(memberName)))
+                : Field(expression, expression.Type.FindField(memberName)
+                    ?? throw new ArgumentException($"Declared field with the name '{memberName}' is not found '{expression.Type}'", nameof(memberName)));
 
         public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member)
         {
@@ -402,13 +404,15 @@ namespace FastExpressionCompiler.LightExpression
             new IndexExpression(array, null, indexes.AsReadOnlyList());
 
         public static MemberExpression Field(FieldInfo field) =>
-            new FieldExpression(null, field);
+            new FieldExpression(field);
 
         public static MemberExpression Field(Expression instance, FieldInfo field) =>
-            new FieldExpression(instance, field);
+            instance == null 
+                ? new FieldExpression(field)
+                : new InstanceFieldExpression(instance, field);
 
         public static MemberExpression Field(Expression instance, string fieldName) =>
-            new FieldExpression(instance, instance.Type.FindField(fieldName));
+            Field(instance, instance.Type.FindField(fieldName));
 
         /// <summary>Creates a UnaryExpression that represents a bitwise complement operation.</summary>
         /// <param name="expression">An Expression to set the Operand property equal to.</param>
@@ -2586,13 +2590,10 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.MemberAccess;
         public readonly MemberInfo Member;
-        public readonly Expression Expression;
 
-        protected MemberExpression(Expression expression, MemberInfo member)
-        {
-            Expression = expression;
-            Member = member;
-        }
+        public virtual Expression Expression => null;
+
+        protected MemberExpression(MemberInfo member) => Member = member;
 
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMember(this);
 
@@ -2608,11 +2609,12 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    // todo: @perf specialize to 2 classes - with and without object expression
-    public sealed class PropertyExpression : MemberExpression
+    public class PropertyExpression : MemberExpression
     {
         public override Type Type => PropertyInfo.PropertyType;
         public PropertyInfo PropertyInfo => (PropertyInfo)Member;
+
+        internal PropertyExpression(PropertyInfo property) : base(property) { }
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Property(Expression?.ToExpression(ref exprsConverted), PropertyInfo);
@@ -2626,17 +2628,22 @@ namespace FastExpressionCompiler.LightExpression
                 .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(PropertyInfo.Name).Append("\")");
             return sb.Append(')');
         }
-
-        internal PropertyExpression(Expression instance, PropertyInfo property) :
-            base(instance, property)
-        { }
     }
 
-    // todo: @perf specialize to 2 classes - with and without object expression
-    public sealed class FieldExpression : MemberExpression
+    public sealed class InstancePropertyExpression : PropertyExpression
+    {
+        public override Expression Expression { get; }
+
+        internal InstancePropertyExpression(Expression instance, PropertyInfo property) : base(property) =>
+            Expression = instance;
+    }
+
+    public class FieldExpression : MemberExpression
     {
         public override Type Type => FieldInfo.FieldType;
         public FieldInfo FieldInfo => (FieldInfo)Member;
+
+        internal FieldExpression(FieldInfo field) : base(field) { }
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Field(Expression?.ToExpression(ref exprsConverted), FieldInfo);
@@ -2651,8 +2658,14 @@ namespace FastExpressionCompiler.LightExpression
             return sb.Append(')');
         }
 
-        internal FieldExpression(Expression instance, FieldInfo field)
-            : base(instance, field) { }
+    }
+
+    public sealed class InstanceFieldExpression : FieldExpression
+    {
+        public override Expression Expression { get; }
+
+        internal InstanceFieldExpression(Expression instance, FieldInfo field) : base(field) =>
+            Expression = instance;
     }
 
     public abstract class MemberBinding
