@@ -20,7 +20,7 @@ namespace FastExpressionCompiler.Benchmarks
         }
 
         [Benchmark]
-        public object NewExpressionInfo()
+        public object NewLightExpression()
         {
             return LE.New(_xCtor, LE.Constant(_y));
         }

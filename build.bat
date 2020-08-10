@@ -10,6 +10,7 @@ if %ERRORLEVEL% neq 0 goto :error
 
 echo:
 echo:## Finished: RESTORE and BUILD
+
 echo: 
 echo:## Starting: TESTS...
 echo: 
@@ -17,13 +18,12 @@ echo:
 dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 
 if %ERRORLEVEL% neq 0 goto :error
+echo:
 echo:## Finished: TESTS
 
 echo: 
-echo:## Finished: TESTS
-echo: 
 echo:## Starting: PACKAGING...
-echo: 
+echo:
 
 dotnet pack ".\src\FastExpressionCompiler" -c:Release -restore:False -p:DevMode=false
 dotnet pack ".\src\FastExpressionCompiler.LightExpression" -c:Release -restore:False -p:DevMode=false

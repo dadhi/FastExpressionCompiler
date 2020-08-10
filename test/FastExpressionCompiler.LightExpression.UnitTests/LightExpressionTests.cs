@@ -213,7 +213,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         public class D2 : ID { }
 
         [Test]
-        public void Can_embed_normal_Expression_into_ExpressionInfo_eg_as_Constructor_argument()
+        public void Can_embed_normal_Expression_into_LightExpression_eg_as_Constructor_argument()
         {
             var func = Lambda(New(_ctorOfP, New(_ctorOfB))).CompileFast<Func<P>>();
 
