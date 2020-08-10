@@ -793,16 +793,16 @@ namespace FastExpressionCompiler.LightExpression
             Invoke(lambda, (IEnumerable<Expression>)args);
 
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) =>
-            new ConditionalExpression(test, ifTrue, ifFalse, ifTrue.Type);
+            new WithFalseBranchConditionalExpression(test, ifTrue, ifFalse);
 
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Type type) =>
-            new ConditionalExpression(test, ifTrue, ifFalse, type);
+            new TypedWithFalseBranchConditionalExpression(test, ifTrue, ifFalse, type);
 
         public static ConditionalExpression IfThen(Expression test, Expression ifTrue) =>
-            new ConditionalExpression(test, ifTrue, Empty(), typeof(void));
+            new ConditionalExpression(test, ifTrue); // absence of ifFalse automatically mean void type of all expression
 
         public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) =>
-            new ConditionalExpression(test, ifTrue, ifFalse, typeof(void));
+            new VoidWithFalseBranchConditionalExpression(test, ifTrue, ifFalse);
 
         public static readonly DefaultExpression VoidDefault = new DefaultExpression(typeof(void));
 
@@ -2657,7 +2657,6 @@ namespace FastExpressionCompiler.LightExpression
                 .Append(".GetTypeInfo().GetDeclaredField(\"").Append(FieldInfo.Name).Append("\")");
             return sb.Append(')');
         }
-
     }
 
     public sealed class InstanceFieldExpression : FieldExpression
@@ -2804,30 +2803,25 @@ namespace FastExpressionCompiler.LightExpression
     }
 
     // todo: @test Test all conditional + try for the exact op-codes produced, should help with AutoMapper case
-    public sealed class ConditionalExpression : Expression
+    public class ConditionalExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Conditional;
-        public override Type Type => _type ?? IfTrue.Type;
+        public override Type Type => typeof(void);
 
         public readonly Expression Test;
         public readonly Expression IfTrue;
-        public readonly Expression IfFalse;
-        private readonly Type _type;
+        public virtual Expression IfFalse => VoidDefault;
 
-        internal ConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse, Type type)
+        internal ConditionalExpression(Expression test, Expression ifTrue)
         {
             Test = test;
             IfTrue = ifTrue;
-            IfFalse = ifFalse;
-            _type = type;
         }
 
         public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConditional(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            _type == null
-                ? SysExpr.Condition(Test.ToExpression(ref exprsConverted), IfTrue.ToExpression(ref exprsConverted), IfFalse.ToExpression(ref exprsConverted))
-                : SysExpr.Condition(Test.ToExpression(ref exprsConverted), IfTrue.ToExpression(ref exprsConverted), IfFalse.ToExpression(ref exprsConverted), _type);
+            SysExpr.Condition(Test.ToExpression(ref exprsConverted), IfTrue.ToExpression(ref exprsConverted), IfFalse.ToExpression(ref exprsConverted), Type);
 
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
@@ -2836,9 +2830,7 @@ namespace FastExpressionCompiler.LightExpression
             sb.NewLineIdentExpr(Test, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
             sb.NewLineIdentExpr(IfTrue, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
             sb.NewLineIdentExpr(IfFalse, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
-
-            if (_type != null)
-                sb.Append(',').NewLineIdent(lineIdent).AppendTypeof(_type, stripNamespace, printType);
+            sb.Append(',').NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
 
             return sb.Append(')');
         }
@@ -2846,7 +2838,7 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
          {
-            if (_type == typeof(void)) 
+            if (Type == typeof(void)) 
             {
                 sb.Append("if (");
                 Test.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
@@ -2880,6 +2872,32 @@ namespace FastExpressionCompiler.LightExpression
 
             return sb;
         }
+    }
+
+    public class VoidWithFalseBranchConditionalExpression : ConditionalExpression
+    {
+        public override Expression IfFalse { get; }
+
+        internal VoidWithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse)
+            : base(test, ifTrue) =>
+            IfFalse = ifFalse;
+    }
+
+    public sealed class WithFalseBranchConditionalExpression : VoidWithFalseBranchConditionalExpression
+    {
+        public override Type Type => IfTrue.Type;
+
+        internal WithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse)
+            : base(test, ifTrue, ifFalse) {}
+    }
+
+    public sealed class TypedWithFalseBranchConditionalExpression : VoidWithFalseBranchConditionalExpression
+    {
+        public override Type Type { get; }
+
+        internal TypedWithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse, Type type)
+            : base(test, ifTrue, ifFalse) =>
+            Type = type;
     }
 
     /// <summary>For indexer property or array access.</summary>
