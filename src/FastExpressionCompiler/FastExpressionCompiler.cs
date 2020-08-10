@@ -744,7 +744,7 @@ namespace FastExpressionCompiler
         public static ConstructorInfo ArrayClosureWithNonPassedParamsConstructorWithoutConstants = _nonPassedParamsArrayClosureCtors[1];
         public class ArrayClosure
         {
-            public readonly object[] ConstantsAndNestedLambdas; // todo: @incomplete split into two to reduce copying 
+            public readonly object[] ConstantsAndNestedLambdas; // todo: @feature split into two to reduce copying - it mostly need to set up nested lamdbas and constants externally without closure collecting phase
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 
@@ -2611,12 +2611,13 @@ namespace FastExpressionCompiler
                     if (constIndex == -1)
                         return false;
 
+                    // todo: @incomplete - are we still using the usage to decide for the vars?
                     var varIndex = closure.ConstantUsageThenVarIndex.Items[constIndex] - 1;
                     if (varIndex > 0)
                         EmitLoadLocalVariable(il, varIndex);
                     else
                     {
-                        il.Emit(OpCodes.Ldloc_0); // load constants array from variable
+                        il.Emit(OpCodes.Ldloc_0); // load constants array from the 0 variable // todo: @incomplete until we optimize for a single constant case - then we need a check here for number of constants
                         EmitLoadConstantInt(il, constIndex);
                         il.Emit(OpCodes.Ldelem_Ref);
                         if (exprType.IsValueType())
@@ -2657,7 +2658,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            // todo: can we do something about boxing?
+            // todo: @perf can we do something about boxing?
             private static bool TryEmitNumberConstant(ILGenerator il, object constantValue, Type constValueType)
             {
                 if (constValueType == typeof(int))
@@ -2768,6 +2769,7 @@ namespace FastExpressionCompiler
 
             internal static void EmitLoadConstantsAndNestedLambdasIntoVars(ILGenerator il, ref ClosureInfo closure)
             {
+                // todo: @perf load the field to `var` only if the constants are more than 1
                 // Load constants array field from Closure and store it into the variable
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldfld, ArrayClosureArrayField);
@@ -2780,7 +2782,7 @@ namespace FastExpressionCompiler
                 int varIndex;
                 for (var i = 0; i < constCount; i++)
                 {
-                    if (constUsage[i] > 1)
+                    if (constUsage[i] > 1) // todo: @incomplete should we proceed to do this or simplify an remove the usages for the closure info?
                     {
                         il.Emit(OpCodes.Ldloc_0);// SHOULD BE always at 0 locaton; load array field variable on the stack
                         EmitLoadConstantInt(il, i);
@@ -3241,8 +3243,8 @@ namespace FastExpressionCompiler
                         // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                         // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
                         // if it's a local variable, then store the right value in it
-                        var localVariableIdx = closure.GetDefinedLocalVarOrDefault(leftParamExpr); // todo: @bug ? does the var index takes into account loading constants into vars?
-                        if (localVariableIdx != -1)
+                        var localVarIndex = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
+                        if (localVarIndex != -1)
                         {
                             if (!TryEmit(right, paramExprs, il, ref closure, flags))
                                 return false;
@@ -3253,7 +3255,7 @@ namespace FastExpressionCompiler
                             if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
                                 il.Emit(OpCodes.Dup);
 
-                            EmitStoreLocalVariable(il, localVariableIdx);
+                            EmitStoreLocalVariable(il, localVarIndex);
                             return true;
                         }
 
@@ -3638,10 +3640,6 @@ namespace FastExpressionCompiler
                     EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex); // load the variable for the second time
                     il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
                 }
-                else
-                {
-                    // we are already loaded the nested lambda, because it is not wrapped in NestedLambdaWithConstantsAndNestedLambdas
-                }
 
                 // - create `NonPassedParameters` array
                 EmitLoadConstantInt(il, nestedNonPassedParams.Length); // load the length of array
@@ -3680,10 +3678,12 @@ namespace FastExpressionCompiler
                         if (outerNonPassedParams.Length == 0)
                             return false; // impossible, better to throw?
 
-                        var variableIdx = closure.GetDefinedLocalVarOrDefault(nestedParam); // rename to paramVarIndex
-                        if (variableIdx != -1) // it's a local variable
+                        var outerLocalVarIndex = closure.GetDefinedLocalVarOrDefault(nestedParam);
+                        if (outerLocalVarIndex != -1) // it's a local variable
                         {
-                            EmitLoadLocalVariable(il, variableIdx);
+                            EmitLoadLocalVariable(il, outerLocalVarIndex);
+                            if (nestedParam.Type.IsValueType()) // don't forget to box the value type when we store it into object array, (fixes #255)
+                                il.Emit(OpCodes.Box, nestedParam.Type);
                         }
                         else // it's a parameter from the outer closure
                         {

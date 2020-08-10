@@ -27,16 +27,16 @@ namespace FastExpressionCompiler.UnitTests
             Block_local_variable_assignment_with_member_init();
             Block_local_variable_assignment_with_member_init_array_closure();
             Block_local_variable_assignment_with_lambda_invoke();
+            Block_returning_the_nested_lambda_assigning_the_outer_parameter();
+            Block_calling_non_void_method_returning_the_nested_lambda_assigning_the_outer_parameter();
+            Block_assigning_local_variable_then_returning_the_nested_lambda_which_reassigns_the_variable();
+            Block_assigning_local_ValueType_variable_then_returning_the_nested_lambda_which_reassigns_the_variable();
+            Block_local_variable_assignment_with_lambda_invoke_plus_external_assignment();
+            Block_local_variable_assignment_with_lambda_invoke_array_closure();
+            Block_local_variable_assignment_with_lambda_invoke_with_param_override();
+            Block_local_variable_assignment_with_lambda_invoke_with_param_override_array_closure();
 
-            // todo: @fix #255 Nested Lambda Invoke does not work in Block
-            // Block_local_variable_assignment_returning_the_nested_lambda_which_reassigns_the_variable();
-
-            // Block_local_variable_assignment_with_lambda_invoke_plus_external_assignment();
-            // Block_local_variable_assignment_with_lambda_invoke_array_closure();
-            // Block_local_variable_assignment_with_lambda_invoke_with_param_override();
-            // Block_local_variable_assignment_with_lambda_invoke_with_param_override_array_closure();
-
-            return 13;
+            return 17;
         }
 
         [Test]
@@ -98,17 +98,72 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(6, f());
         }
 
-        // todo: @fix Invoke CLR crash
+        public static int Inc(int i) => i + 1; 
+
         [Test]
-        public void Block_local_variable_assignment_returning_the_nested_lambda_which_reassigns_the_variable()
+        public void Block_calling_non_void_method_returning_the_nested_lambda_assigning_the_outer_parameter()
         {
-            var variable = Variable(typeof(int));
+            var p = Parameter(typeof(int), "p");
 
-            var block = Block(new[] { variable },
-                Assign(variable, Constant(35)),
-                Lambda(Assign(variable, Constant(42))));
+            var lambda = Lambda<Func<int, Func<int>>>(
+                Block(
+                    Call(null, GetType().GetTypeInfo().GetDeclaredMethod(nameof(Inc)), p),
+                    Lambda(Assign(p, Constant(42)))
+                ),
+                p);
 
-            var lambda = Lambda<Func<Func<int>>>(block);
+#if LIGHT_EXPRESSION
+            lambda.PrintCSharpString();
+#endif
+            var s = lambda.CompileSys();
+            s.PrintIL("system il");
+
+            var f = lambda.CompileFast<Func<int, Func<int>>>(true);
+            f.PrintIL("fec il");
+
+            Assert.NotNull(f);
+            var ff = f(17);
+            Assert.IsInstanceOf<Func<int>>(ff);
+
+            Assert.AreEqual(42, ff());
+        }
+
+        [Test]
+        public void Block_returning_the_nested_lambda_assigning_the_outer_parameter()
+        {
+            var p = Parameter(typeof(int), "p");
+
+            var lambda = Lambda<Func<int, Func<int>>>(
+                    Lambda(Assign(p, Constant(42))),
+                p);
+
+#if LIGHT_EXPRESSION
+            lambda.PrintCSharpString();
+#endif
+            var s = lambda.CompileSys();
+            s.PrintIL("system il");
+
+            var f = lambda.CompileFast<Func<int, Func<int>>>(true);
+            f.PrintIL("fec il");
+
+            Assert.NotNull(f);
+            var ff = f(17);
+            Assert.IsInstanceOf<Func<int>>(ff);
+
+            Assert.AreEqual(42, ff());
+        }
+
+        [Test]
+        public void Block_assigning_local_variable_then_returning_the_nested_lambda_which_reassigns_the_variable()
+        {
+            var variable = Variable(typeof(string));
+
+            var lambda = Lambda<Func<Func<string>>>(
+                Block(new[] { variable },
+                    Assign(variable, Constant("35")),
+                    Lambda(Assign(variable, Constant("42")))
+                )
+            );
 
 #if LIGHT_EXPRESSION
             lambda.PrintCSharpString();
@@ -117,14 +172,35 @@ namespace FastExpressionCompiler.UnitTests
             var s = lambda.CompileSys();
             s.PrintIL("system il");
 
-            var f = lambda.CompileFast<Func<Func<int>>>(true);
+            var f = lambda.CompileFast(true);
             f.PrintIL("fec il");
 
             Assert.NotNull(f);
-            Assert.AreEqual(6, f()());
+            var ff = f();
+            Assert.IsInstanceOf<Func<string>>(ff);
+            Assert.AreEqual("42", ff());
         }
 
-        // todo: @fix Invoke CLR crash
+        [Test]
+        public void Block_assigning_local_ValueType_variable_then_returning_the_nested_lambda_which_reassigns_the_variable()
+        {
+            var variable = Variable(typeof(int));
+
+            var lambda = Lambda<Func<Func<int>>>(
+                Block(new[] { variable },
+                    Assign(variable, Constant(35)),
+                    Lambda(Assign(variable, Constant(42)))
+                )
+            );
+
+            var f = lambda.CompileFast(true);
+            Assert.NotNull(f);
+
+            var ff = f();
+            Assert.IsInstanceOf<Func<int>>(ff);
+            Assert.AreEqual(42, ff());
+        }
+
         [Test]
         public void Block_local_variable_assignment_with_lambda_invoke_plus_external_assignment()
         {
@@ -136,18 +212,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = Lambda<Func<int>>(block);
 
-#if LIGHT_EXPRESSION
-            lambda.PrintCSharpString();
-#endif
-
-            var s = lambda.CompileSys();
-            s.PrintIL("system il");
-
             var f = lambda.CompileFast<Func<int>>(true);
-            f.PrintIL("fec il");
-
-            // Assert.NotNull(fastCompiled);
-            // Assert.AreEqual(6, fastCompiled());
+            Assert.AreEqual(6, f());
         }
 
         [Test]

@@ -10,8 +10,6 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             RunAllTests();
-
-            //new FastExpressionCompiler.LightExpression.UnitTests.BlockTests().Run();
         }
 
         public static void RunAllTests()
@@ -84,7 +82,6 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new ValueTypeTests().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run);
             });
-
 
             var issueTests = Task.Run(() => 
             {
