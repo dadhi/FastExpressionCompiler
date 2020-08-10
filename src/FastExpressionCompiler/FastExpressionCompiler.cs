@@ -394,7 +394,7 @@ namespace FastExpressionCompiler
         }
 
         [Flags]
-        internal enum ClosureStatus
+        internal enum ClosureStatus : byte
         {
             ToBeCollected        = 1,
             UserProvided         = 1 << 1,
@@ -454,7 +454,6 @@ namespace FastExpressionCompiler
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
             }
 
-            // todo: @perf move to Status flags
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdas.Length > 0;
 
             public void AddConstantOrIncrementUsageCount(object value, Type type)
@@ -1552,7 +1551,8 @@ namespace FastExpressionCompiler
                                 return true;
                             }
 
-                            return TryEmitNotNullConstant(true, constExpr.Type, constExpr.Value, il, ref closure);
+                            return TryEmitNotNullConstant(closure.ContainsConstantsOrNestedLambdas(),
+                                constExpr.Type, constExpr.Value, il, ref closure);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall(expr, paramExprs, il, ref closure, parent);
