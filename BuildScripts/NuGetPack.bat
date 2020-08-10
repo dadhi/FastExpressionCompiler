@@ -11,11 +11,14 @@ echo:
 if not exist %PACKAGEDIR% md %PACKAGEDIR% 
 
 echo:
-echo:DryIoc source and internal packages
+echo:Source and internal packages
 echo:===================================
-%NUGET% pack %NUSPECS%\DryIoc.nuspec -OutputDirectory %PACKAGEDIR% -NonInteractive
+%NUGET% pack %NUSPECS%\FastExpressionCompiler.src.nuspec -OutputDirectory %PACKAGEDIR% -NonInteractive
+%NUGET% pack %NUSPECS%\FastExpressionCompiler.LightExpression.src.nuspec -OutputDirectory %PACKAGEDIR% -NonInteractive
+
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '.\BuildScripts\MakeInternal.ps1'";
-%NUGET% pack %NUSPECS%\DryIoc.Internal.nuspec -OutputDirectory %PACKAGEDIR% -NonInteractive
+%NUGET% pack %NUSPECS%\FastExpressionCompiler.Internal.src.nuspec -OutputDirectory %PACKAGEDIR% -NonInteractive
+%NUGET% pack %NUSPECS%\FastExpressionCompiler.LightExpression.Internal.src.nuspec -OutputDirectory %PACKAGEDIR% -NonInteractive
 
 
 REM if not "%1"=="-nopause" pause 

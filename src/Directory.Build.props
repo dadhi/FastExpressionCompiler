@@ -12,7 +12,7 @@
         <RepositoryType>git</RepositoryType>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
 
-        <!-- <PackageIconUrl></PackageIconUrl> -->
+        <!-- <PackageIcon></PackageIcon> -->
     </PropertyGroup>
 
     <!--Signing all packages, oh boy-->

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata minClientVersion="3.3.0">
+        <id>FastExpressionCompiler.LightExpression.Internal.src</id>
+        <version>3.0.0-preview-01</version>
+        <authors>Maksim Volkau</authors>
+        <copyright>Copyright © 2013-2020 Maksim Volkau</copyright>
+        <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
+        <license type="expression">MIT</license>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
+        <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
+        <releaseNotes><![CDATA[
+        
+        ## v3.0.0
+            
+            Thanks to the contributors
+
+        ]]></releaseNotes>
+        <contentFiles>
+            <files include="cs/**/*.*" buildAction="Compile" />
+        </contentFiles>
+    </metadata>
+    <files>
+        <file src="..\LICENSE" />
+        <file src="..\FastExpressionCompiler.snk" />
+
+        <!--net45-->
+        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs"   target="content\net45\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\Expression.cs"               target="content\net45\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\ExpressionVisitor.cs"        target="content\net45\FastExpressionCompiler.LightExpression" />
+
+        <!-- .netstandard 1.0 -->
+        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs"   target="contentFiles\cs\netstandard1.0\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\Expression.cs"               target="contentFiles\cs\netstandard1.0\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\ExpressionVisitor.cs"        target="contentFiles\cs\netstandard1.0\FastExpressionCompiler.LightExpression" />
+
+        <!-- .netstandard 1.3 -->
+        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs"   target="contentFiles\cs\netstandard1.3\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\Expression.cs"               target="contentFiles\cs\netstandard1.3\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\ExpressionVisitor.cs"        target="contentFiles\cs\netstandard1.3\FastExpressionCompiler.LightExpression" />
+
+        <!-- .netstandard 2.0 -->
+        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs"   target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\Expression.cs"               target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\ExpressionVisitor.cs"        target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
+
+    </files>
+</package>

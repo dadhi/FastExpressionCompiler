@@ -253,3 +253,5 @@ paket-files/
 
 BenchmarkDotNet.Artifacts/
 ApiKey.txt
+
+FastExpressionCompiler.Internal/

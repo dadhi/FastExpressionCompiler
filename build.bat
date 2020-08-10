@@ -27,9 +27,13 @@ echo:
 
 dotnet pack ".\src\FastExpressionCompiler" -c:Release -restore:False -p:DevMode=false
 dotnet pack ".\src\FastExpressionCompiler.LightExpression" -c:Release -restore:False -p:DevMode=false
+echo:
+echo:## Finished: DLL PACKAGING
 
-echo: 
-echo:## Finished: PACKAGING
+call BuildScripts\NugetPack.bat
+if %ERRORLEVEL% neq 0 goto :error
+echo:
+echo:## Finished: SOURCE PACKAGING
 echo: 
 echo:## Finished: ALL ##
 echo:
