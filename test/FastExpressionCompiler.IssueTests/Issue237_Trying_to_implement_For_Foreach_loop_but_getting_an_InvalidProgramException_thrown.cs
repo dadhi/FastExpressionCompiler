@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.IssueTests
             Conditional_with_Equal_false_should_shortcircuit_to_Brtrue_or_Brfalse();
             Conditional_with_NotEqual_true_should_shortcircuit_to_Brtrue_or_Brfalse();
             Conditional_with_NotEqual_false_should_shortcircuit_to_Brtrue_or_Brfalse();
-            
+
             Try_compare_strings();
 
             Should_Deserialize_Simple();
@@ -310,6 +310,8 @@ namespace FastExpressionCompiler.IssueTests
                     returnTrue),
                 input, valueWord, bytesRead);
 
+            expr0.PrintCSharpString();
+
             // sanity check
             var f0sys = expr0.CompileSys();
             f0sys.PrintIL("system compiled il");
@@ -340,6 +342,8 @@ namespace FastExpressionCompiler.IssueTests
                         Assign(Property(valueSimple, nameof(Simple.Sentence)), contentVar),
                     returnTrue),
                 input, valueSimple, bytesRead);
+
+            expr1.PrintCSharpString();
 
             var f1sys = expr1.CompileSys();
             f1sys.PrintIL("system compiled il");

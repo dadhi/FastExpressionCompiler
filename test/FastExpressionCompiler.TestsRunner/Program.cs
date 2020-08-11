@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
             // new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run();
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
         }
 
         public static void RunAllTests()

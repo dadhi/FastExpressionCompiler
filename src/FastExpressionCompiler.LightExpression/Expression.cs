@@ -3086,7 +3086,10 @@ namespace FastExpressionCompiler.LightExpression
                 expr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
                 
                 // preventing the `};` kind of situation and emphasing the conditional block with empty line
-                if (expr is ConditionalExpression && expr.Type == typeof(void))
+                if (expr is ConditionalExpression && expr.Type == typeof(void) ||
+                    expr is TryExpression ||
+                    expr is LoopExpression ||
+                    expr is SwitchExpression)
                     sb.AppendLine();
                 else
                     sb.Append(';');
@@ -3098,7 +3101,8 @@ namespace FastExpressionCompiler.LightExpression
             else
             {
                 // inline the last nested block - it will care about the `return` and ending `;` by itself
-                if (lastExpr is BlockExpression)
+                if (lastExpr is BlockExpression || 
+                    lastExpr is LabelExpression)
                     return lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
 
                 sb.NewLineIdent(lineIdent).Append("return ");
@@ -3395,8 +3399,22 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            sb.NewLineIdent(lineIdent);
             Target.ToCSharpString(sb).Append(':');
+            
+            sb.NewLineIdent(lineIdent);
+            if (Type == typeof(void))
+                return sb.Append("return;");
+
+            if (DefaultValue == null)
+                sb.Append("return default(").Append(Type.ToCode(stripNamespace, printType)).Append(");");
+
+            sb.Append("return ");
+            DefaultValue.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            return sb.Append(';');
+        }
     }
 
     public sealed class WithDefaultValueLabelExpression : LabelExpression
