@@ -1033,7 +1033,8 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception.</summary>
         /// <param name="value">An Expression to set the Operand property equal to.</param>
         /// <returns>A UnaryExpression that represents the exception.</returns>
-        public static UnaryExpression Throw(Expression value) => Throw(value, typeof(void));
+        public static UnaryExpression Throw(Expression value) => 
+            new VoidUnaryExpression(ExpressionType.Throw, value);
 
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception with a given type.</summary>
         /// <param name="value">An Expression to set the Operand property equal to.</param>
@@ -1129,6 +1130,9 @@ namespace FastExpressionCompiler.LightExpression
         /// <returns>A BinaryExpression that has the NodeType property equal to NotEqual and the Left and Right properties set to the specified values.</returns>
         public static BinaryExpression ReferenceNotEqual(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, typeof(bool));
+
+        public static GotoExpression Return(LabelTarget target) =>
+            MakeGoto(GotoExpressionKind.Return, target, null, typeof(void));
 
         public static GotoExpression Return(LabelTarget target, Expression value = null, Type type = null) =>
             MakeGoto(GotoExpressionKind.Return, target, value, type);
@@ -1699,13 +1703,18 @@ namespace FastExpressionCompiler.LightExpression
                     return sb.Append(')');
                 case ExpressionType.Throw:
                     sb.Append("trow ");
-                    if (Type != null)
-                        sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')');
-                    return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(';');
                 default: 
                     return sb.Append(ToString()); // falling back ro ToString as a closest to C# code output 
             }
         }
+    }
+
+    public sealed class VoidUnaryExpression : UnaryExpression
+    {
+        public override Type Type => typeof(void);
+
+        public VoidUnaryExpression(ExpressionType nodeType, Expression operand) : base(nodeType, operand) {}
     }
 
     public class TypedUnaryExpression : UnaryExpression
@@ -1737,6 +1746,7 @@ namespace FastExpressionCompiler.LightExpression
             Method = method;
     }
 
+    // todo: @per minimize the memory consumption
     public abstract class BinaryExpression : Expression
     {
         public override ExpressionType NodeType { get; }
@@ -1749,7 +1759,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             NodeType = nodeType;
 
-            Left = left;
+            Left  = left;
             Right = right;
 
             if (nodeType == ExpressionType.Equal ||
@@ -1864,10 +1874,8 @@ namespace FastExpressionCompiler.LightExpression
         public readonly LambdaExpression Conversion;
 
         internal CoalesceConversionBinaryExpression(Expression left, Expression right, LambdaExpression conversion)
-            : base(ExpressionType.Coalesce, left, right, null)
-        {
+            : base(ExpressionType.Coalesce, left, right, null) =>
             Conversion = conversion;
-        }
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Coalesce(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), Conversion.ToLambdaExpression());
@@ -3231,7 +3239,6 @@ namespace FastExpressionCompiler.LightExpression
             sb.Append("try");
             sb.NewLine(lineIdent, identSpaces).Append('{');
             sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType, identSpaces);
-            sb.Append(';');
             sb.NewLine(lineIdent, identSpaces).Append('}');
             
             if (_handlers != null && _handlers.Length > 0) 
@@ -3282,6 +3289,7 @@ namespace FastExpressionCompiler.LightExpression
             Finally = @finally;
     }
 
+    // todo: @perf convert to class and minimize the memory for the general cases
     public struct CatchBlock
     {
         public readonly ParameterExpression Variable;
@@ -3341,10 +3349,8 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
-        {
-            return sb.Append(Target).Append(':');
-        }
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
+            Target.ToCSharpString(sb).Append(':');
     }
 
     public sealed class WithDefaultValueLabelExpression : LabelExpression
@@ -3376,6 +3382,29 @@ namespace FastExpressionCompiler.LightExpression
             return sysItem;
         }
 
+        public StringBuilder CreateExpressionString(StringBuilder sb, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null) 
+        {
+            sb.Append("Label(");
+            sb.Append(Type.ToCode(stripNamespace, printType));
+            if (Name != null)
+                sb.Append(", ").Append(Name);
+            sb.Append(")");
+            return sb;
+        }
+
+        public StringBuilder ToCSharpString(StringBuilder sb)
+        {
+            if (Name == null)
+            {
+                if (Type == typeof(void))
+                    return sb.Append("void_").Append(GetHashCode());
+                return sb.Append(Type.ToCode(true, null)).Append('_').Append(GetHashCode());
+            }
+
+            return sb.Append(Name);
+        }
+        
         public override string ToString() => Type.ToCode(true, null) + Name?.ToString();
     }
 
@@ -3430,7 +3459,8 @@ namespace FastExpressionCompiler.LightExpression
         {
             sb.Append("MakeGoto(");
             sb.Append(nameof(GotoExpressionKind)).Append('.').Append(Enum.GetName(typeof(GotoExpressionKind), Kind)).Append(',');
-            sb.NewLineIdent(lineIdent).Append('"').Append(Target).Append("\",");
+            sb.NewLineIdent(lineIdent).Append('"');
+            Target.CreateExpressionString(sb, stripNamespace, printType).Append("\",");
             sb.NewLineIdentExpr(Value, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
             sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
             return sb.Append(')');
@@ -3439,7 +3469,8 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            return sb.Append("goto ").Append(Target);
+            sb.Append("goto ");
+            return Target.ToCSharpString(sb).Append(';');
         }
     }
 
