@@ -958,6 +958,9 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression NotEqual(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.NotEqual, left, right, typeof(bool));
 
+        public static BlockExpression Block(IEnumerable<Expression> expressions) =>
+            new BlockExpression(expressions.AsReadOnlyList());
+
         public static BlockExpression Block(params Expression[] expressions) =>
             new BlockExpression(expressions);
 
