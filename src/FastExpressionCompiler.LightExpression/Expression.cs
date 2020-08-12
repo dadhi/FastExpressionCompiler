@@ -40,6 +40,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using SysExpr = System.Linq.Expressions.Expression;
 
@@ -3958,6 +3959,35 @@ namespace FastExpressionCompiler.LightExpression
         internal ManyParametersTypedReturnExpression(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
             : base(body, returnType) =>
             Parameters = parameters;
+    }
+
+    public sealed class DynamicExpression : Expression
+    {
+        public override ExpressionType NodeType => ExpressionType.Dynamic;
+        public override Type Type => typeof(object);
+
+        public Type DelegateType { get; }
+        public CallSiteBinder Binder { get; }
+        public IReadOnlyList<Expression> Arguments { get; }
+
+        public DynamicExpression(Type delegateType, CallSiteBinder binder, IReadOnlyList<Expression> arguments)
+        {
+            DelegateType = delegateType;
+            Binder = binder;
+            Arguments = arguments;
+        }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.MakeDynamic(DelegateType, Binder, ToExpressions(Arguments, ref exprsConverted));
+
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDynamic(this);
+
+        // todo: @incomplete implement the bare minimum
+        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, 
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            return null;
+        }
     }
 }
 

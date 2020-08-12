@@ -300,7 +300,7 @@ namespace FastExpressionCompiler.LightExpression
             return new MemberInitExpression(newExpression, bindings.AsArray());
         }
 
-        protected virtual MemberBinding VisitMemberBinding(MemberBinding node)
+        protected internal virtual MemberBinding VisitMemberBinding(MemberBinding node)
         {
             switch (node.BindingType)
             {
@@ -313,12 +313,14 @@ namespace FastExpressionCompiler.LightExpression
             }
         }
 
-        protected virtual MemberAssignment VisitMemberAssignment(MemberAssignment node)
+        protected internal virtual MemberAssignment VisitMemberAssignment(MemberAssignment node)
         {
             var expression = Visit(node.Expression);
             if (expression == node.Expression)
                 return node;
             return new MemberAssignment(node.Member, expression);
         }
+
+        protected internal virtual Expression VisitDynamic(DynamicExpression node) => node;
     }
 }

@@ -25,8 +25,8 @@ echo:
 echo:## Starting: PACKAGING...
 echo:
 
-dotnet pack ".\src\FastExpressionCompiler" -c:Release -restore:False -p:DevMode=false
-dotnet pack ".\src\FastExpressionCompiler.LightExpression" -c:Release -restore:False -p:DevMode=false
+dotnet pack ".\src\FastExpressionCompiler" -c:Release -restore:False
+dotnet pack ".\src\FastExpressionCompiler.LightExpression" -c:Release -restore:False
 echo:
 echo:## Finished: DLL PACKAGING
 
