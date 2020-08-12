@@ -81,7 +81,7 @@ namespace FastExpressionCompiler.LightExpression
             throw new InvalidOperationException($"Converting visited node is not compatible from {x?.GetType()} to {typeof(T)}");
         }
 
-        protected virtual Expression VisitBinary(BinaryExpression node)
+        protected internal virtual Expression VisitBinary(BinaryExpression node)
         {
             var left = Visit(node.Left); 
             var right = Visit(node.Right);
@@ -92,7 +92,7 @@ namespace FastExpressionCompiler.LightExpression
                 );
         }
 
-        protected virtual Expression VisitBlock(BlockExpression node)
+        protected internal virtual Expression VisitBlock(BlockExpression node)
         {
             var expressions = Visit(node.Expressions);
             var variables = VisitAndConvert(node.Variables);
@@ -101,7 +101,7 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.MakeBlock(node.Type, variables, expressions);
         }
 
-        protected virtual Expression VisitConditional(ConditionalExpression node)
+        protected internal virtual Expression VisitConditional(ConditionalExpression node)
         {
             var test = Visit(node.Test);
             var ifTrue = Visit(node.IfTrue);
@@ -111,13 +111,13 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.Condition(test, ifTrue, ifFalse, node.Type);
         }
 
-        protected virtual Expression VisitConstant(ConstantExpression node) => node;
+        protected internal virtual Expression VisitConstant(ConstantExpression node) => node;
 
-        protected virtual Expression VisitDefault(DefaultExpression node) => node;
+        protected internal virtual Expression VisitDefault(DefaultExpression node) => node;
 
         protected virtual LabelTarget VisitLabelTarget(LabelTarget node) => node;
 
-        protected virtual Expression VisitGoto(GotoExpression node)
+        protected internal virtual Expression VisitGoto(GotoExpression node)
         {
             var target = VisitLabelTarget(node.Target);
             var value = Visit(node.Value);
@@ -126,7 +126,7 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.Goto(target, value, node.Type);
         }
 
-        protected virtual Expression VisitInvocation(InvocationExpression node)
+        protected internal virtual Expression VisitInvocation(InvocationExpression node)
         {
             var expression = Visit(node.Expression);
             var arguments = Visit(node.Arguments);
@@ -135,7 +135,7 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.Invoke(expression, arguments);
         }
 
-        protected virtual Expression VisitLabel(LabelExpression node)
+        protected internal virtual Expression VisitLabel(LabelExpression node)
         {
             var target = VisitLabelTarget(node.Target);
             var value = Visit(node.DefaultValue);
@@ -144,7 +144,7 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.Label(target, value);
         }
 
-        protected virtual Expression VisitLambda(LambdaExpression node)
+        protected internal virtual Expression VisitLambda(LambdaExpression node)
         {
             var body = Visit(node.Body);
             var parameters = VisitAndConvert(node.Parameters);
@@ -156,7 +156,7 @@ namespace FastExpressionCompiler.LightExpression
                 : new ManyParametersLambdaExpression(node.Type, body, parameters, node.ReturnType);
         }
 
-        protected virtual Expression VisitLambda<T>(Expression<T> node)
+        protected internal virtual Expression VisitLambda<T>(Expression<T> node)
         {
             var body = Visit(node.Body);
             var parameters = VisitAndConvert(node.Parameters);
@@ -168,7 +168,7 @@ namespace FastExpressionCompiler.LightExpression
                 : new ManyParametersExpression<T>(body, parameters, node.ReturnType);
         }
 
-        protected virtual Expression VisitLoop(LoopExpression node)
+        protected internal virtual Expression VisitLoop(LoopExpression node)
         {
             var breakLabel = VisitLabelTarget(node.BreakLabel);
             var continueLabel = VisitLabelTarget(node.ContinueLabel);
@@ -178,7 +178,7 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.Loop(body, breakLabel, continueLabel);
         }
 
-        protected virtual Expression VisitMember(MemberExpression node)
+        protected internal virtual Expression VisitMember(MemberExpression node)
         {
             var expression = Visit(node.Expression);
             if (expression == node.Expression)
@@ -186,7 +186,7 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.MakeMemberAccess(expression, node.Member);
         }
 
-        protected virtual Expression VisitIndex(IndexExpression node)
+        protected internal virtual Expression VisitIndex(IndexExpression node)
         {
             var instance = Visit(node.Object);
             var arguments = Visit(node.Arguments);
@@ -195,7 +195,7 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.MakeIndex(instance, node.Indexer, arguments);
         }
 
-        protected virtual Expression VisitMethodCall(MethodCallExpression node)
+        protected internal virtual Expression VisitMethodCall(MethodCallExpression node)
         {
             var instance = Visit(node.Object);
             var arguments = Visit(node.Arguments);
@@ -204,7 +204,7 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.Call(instance, node.Method, node.Arguments);
         }
 
-        protected virtual Expression VisitNewArray(NewArrayExpression node)
+        protected internal virtual Expression VisitNewArray(NewArrayExpression node)
         {
             var expressions = Visit(node.Expressions);
             if (ReferenceEquals(expressions, node.Expressions))
@@ -212,7 +212,7 @@ namespace FastExpressionCompiler.LightExpression
             return new NewArrayExpression(node.NodeType, node.Type, expressions);
         }
 
-        protected virtual Expression VisitNew(NewExpression node)
+        protected internal virtual Expression VisitNew(NewExpression node)
         {
             var arguments = Visit(node.Arguments);
             if (ReferenceEquals(arguments, node.Arguments))
@@ -220,7 +220,7 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.New(node.Constructor, arguments);
         }
 
-        protected virtual Expression VisitParameter(ParameterExpression node) => node;
+        protected internal virtual Expression VisitParameter(ParameterExpression node) => node;
 
         protected virtual SwitchCase VisitSwitchCase(SwitchCase node)
         {
@@ -231,7 +231,7 @@ namespace FastExpressionCompiler.LightExpression
             return new SwitchCase(body, testValues);
         }
 
-        protected virtual Expression VisitSwitch(SwitchExpression node)
+        protected internal virtual Expression VisitSwitch(SwitchExpression node)
         {
             var switchValue = Visit(node.SwitchValue);
             var cases = VisitAndConvert(node.Cases, VisitSwitchCase);
@@ -251,7 +251,7 @@ namespace FastExpressionCompiler.LightExpression
             return new CatchBlock(variable, body, filter, node.Test);
         }
 
-        protected virtual Expression VisitTry(TryExpression node)
+        protected internal virtual Expression VisitTry(TryExpression node)
         {
             var body = Visit(node.Body);
             
@@ -269,7 +269,7 @@ namespace FastExpressionCompiler.LightExpression
                 : new WithFinallyTryExpression(body, handlers.AsArray(), @finally);
         }
 
-        protected virtual Expression VisitTypeBinary(TypeBinaryExpression node)
+        protected internal virtual Expression VisitTypeBinary(TypeBinaryExpression node)
         {
             var expression = Visit(node.Expression);
             if (expression == node.Expression)
@@ -277,7 +277,7 @@ namespace FastExpressionCompiler.LightExpression
             return new TypeBinaryExpression(node.NodeType, expression, node.TypeOperand);
         }
 
-        protected virtual Expression VisitUnary(UnaryExpression node)
+        protected internal virtual Expression VisitUnary(UnaryExpression node)
         {
             var operand = Visit(node.Operand);
             if (operand == node.Operand)
@@ -285,7 +285,7 @@ namespace FastExpressionCompiler.LightExpression
             return Expression.MakeUnary(node.NodeType, operand, node.Type);
         }
 
-        protected virtual Expression VisitMemberInit(MemberInitExpression node)
+        protected internal virtual Expression VisitMemberInit(MemberInitExpression node)
         {
             var newExpression = Visit(node.NewExpression);
             var bindings = VisitAndConvert(node.Bindings, VisitMemberBinding);

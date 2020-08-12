@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>All expressions should have a Type.</summary>
         public abstract Type Type { get; }
 
-        public abstract Expression Accept(ExpressionVisitor visitor);
+        protected internal abstract Expression Accept(ExpressionVisitor visitor);
 
         public SysExpr ToExpression()
         {
@@ -1682,7 +1682,7 @@ namespace FastExpressionCompiler.LightExpression
             Operand = operand;
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitUnary(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitUnary(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
         {
@@ -1857,7 +1857,7 @@ namespace FastExpressionCompiler.LightExpression
                 Type = type;
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => 
+        protected internal override Expression Accept(ExpressionVisitor visitor) => 
             visitor.VisitBinary(this);
 
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, int lineIdent = 0,
@@ -1914,7 +1914,7 @@ namespace FastExpressionCompiler.LightExpression
             TypeOperand = typeOperand;
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTypeBinary(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTypeBinary(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.TypeIs(Expression.ToExpression(ref exprsConverted), TypeOperand);
@@ -2063,7 +2063,7 @@ namespace FastExpressionCompiler.LightExpression
             Bindings = bindings ?? Tools.Empty<MemberBinding>();
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMemberInit(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMemberInit(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.MemberInit((System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref exprsConverted),
@@ -2121,7 +2121,7 @@ namespace FastExpressionCompiler.LightExpression
             Name = name;
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitParameter(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitParameter(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Parameter(IsByRef ? Type.MakeByRefType() : Type, Name);
@@ -2169,7 +2169,7 @@ namespace FastExpressionCompiler.LightExpression
 
         internal ConstantExpression(object value) => Value = value;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> _) => SysExpr.Constant(Value, Type);
 
@@ -2278,7 +2278,7 @@ namespace FastExpressionCompiler.LightExpression
 
         internal NewExpression(ConstructorInfo constructor) => Constructor = constructor;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNew(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNew(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.New(Constructor, ToExpressions(Arguments, ref exprsConverted));
@@ -2435,7 +2435,7 @@ namespace FastExpressionCompiler.LightExpression
         // I made it a ICollection for now to use Arguments as input, without changing Arguments type
         public IReadOnlyList<Expression> Expressions => Arguments;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             NodeType == ExpressionType.NewArrayInit
@@ -2473,7 +2473,7 @@ namespace FastExpressionCompiler.LightExpression
 
         internal MethodCallExpression(MethodInfo method) => Method = method;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMethodCall(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMethodCall(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Call(Object?.ToExpression(ref exprsConverted), Method,
@@ -2704,7 +2704,7 @@ namespace FastExpressionCompiler.LightExpression
 
         protected MemberExpression(MemberInfo member) => Member = member;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMember(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMember(this);
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -2835,7 +2835,7 @@ namespace FastExpressionCompiler.LightExpression
         internal InvocationExpression(Expression expression) =>
             Expression = expression;
         
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Invoke(Expression.ToExpression(ref exprsConverted), ToExpressions(Arguments, ref exprsConverted));
@@ -2896,7 +2896,7 @@ namespace FastExpressionCompiler.LightExpression
 
         internal DefaultExpression(Type type) => Type = type;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDefault(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDefault(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             Type == typeof(void) ? SysExpr.Empty() : SysExpr.Default(Type);
@@ -2926,7 +2926,7 @@ namespace FastExpressionCompiler.LightExpression
             IfTrue = ifTrue;
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConditional(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConditional(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Condition(Test.ToExpression(ref exprsConverted), IfTrue.ToExpression(ref exprsConverted), IfFalse.ToExpression(ref exprsConverted), Type);
@@ -3017,7 +3017,7 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Object;
         public readonly PropertyInfo Indexer;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitIndex(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitIndex(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeIndex(Object.ToExpression(ref exprsConverted), Indexer, ToExpressions(Arguments, ref exprsConverted));
@@ -3056,7 +3056,7 @@ namespace FastExpressionCompiler.LightExpression
 
         internal BlockExpression(IReadOnlyList<Expression> expressions) => Expressions = expressions;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Block(Type,
@@ -3190,7 +3190,7 @@ namespace FastExpressionCompiler.LightExpression
             ContinueLabel = continueLabel;
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLoop(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLoop(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             BreakLabel == null 
@@ -3243,7 +3243,7 @@ namespace FastExpressionCompiler.LightExpression
             _handlers = handlers;
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTry(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTry(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             Finally == null ?
@@ -3410,7 +3410,7 @@ namespace FastExpressionCompiler.LightExpression
 
         internal LabelExpression(LabelTarget target) => Target = target;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLabel(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLabel(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             DefaultValue == null 
@@ -3538,7 +3538,7 @@ namespace FastExpressionCompiler.LightExpression
 
         internal GotoExpression(LabelTarget target) => Target = target;
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitGoto(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitGoto(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeGoto(Kind, Target.ToSystemLabelTarget(ref exprsConverted), Value?.ToExpression(ref exprsConverted), Type);
@@ -3711,7 +3711,7 @@ namespace FastExpressionCompiler.LightExpression
             _cases = cases;
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitSwitch(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitSwitch(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Switch(SwitchValue.ToExpression(ref exprsConverted),
@@ -3791,7 +3791,7 @@ namespace FastExpressionCompiler.LightExpression
                 Type = Tools.GetFuncOrActionType(Tools.Empty<Type>(), ReturnType);
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
 
         public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
             (System.Linq.Expressions.LambdaExpression)ToExpression();
@@ -3870,7 +3870,10 @@ namespace FastExpressionCompiler.LightExpression
 
     public class Expression<TDelegate> : LambdaExpression
     {
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
+        internal Expression(Expression body, Type returnType)
+            : base(typeof(TDelegate), body, returnType) { }
+
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
 
         public new System.Linq.Expressions.Expression<TDelegate> ToLambdaExpression()
         {
@@ -3878,9 +3881,6 @@ namespace FastExpressionCompiler.LightExpression
             return SysExpr.Lambda<TDelegate>(Body.ToExpression(ref exprsConverted),
                 ParameterExpression.ToParameterExpressions(Parameters, ref exprsConverted));
         }
-
-        internal Expression(Expression body, Type returnType)
-            : base(typeof(TDelegate), body, returnType) { }
     }
 
     public sealed class ManyParametersExpression<TDelegate> : Expression<TDelegate>
