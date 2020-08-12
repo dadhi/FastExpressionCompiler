@@ -115,7 +115,7 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual Expression VisitDefault(DefaultExpression node) => node;
 
-        protected virtual LabelTarget VisitLabelTarget(LabelTarget node) => node;
+        protected internal virtual LabelTarget VisitLabelTarget(LabelTarget node) => node;
 
         protected internal virtual Expression VisitGoto(GotoExpression node)
         {
