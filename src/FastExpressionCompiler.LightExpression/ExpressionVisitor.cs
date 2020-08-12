@@ -247,7 +247,7 @@ namespace FastExpressionCompiler.LightExpression
             return new SwitchExpression(node.Type, switchValue, defaultBody, node.Comparison, cases.AsArray());
         }
 
-        protected virtual CatchBlock VisitCatchBlock(CatchBlock node)
+        protected internal virtual CatchBlock VisitCatchBlock(CatchBlock node)
         {
             var variable = VisitAndConvert(node.Variable);
             var filter = Visit(node.Filter);
