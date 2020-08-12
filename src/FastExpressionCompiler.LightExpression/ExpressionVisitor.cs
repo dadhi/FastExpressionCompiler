@@ -87,7 +87,9 @@ namespace FastExpressionCompiler.LightExpression
             var right = Visit(node.Right);
             if (node.Left == left && node.Right == right)
                 return node;
-            return Expression.MakeBinary(node.NodeType, left, right);
+            return Expression.MakeBinary(node.NodeType, left, right
+                // , node.Type // todo: @bug
+                );
         }
 
         protected internal virtual Expression VisitBlock(BlockExpression node)

@@ -644,6 +644,10 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression ArrayIndex(Expression array, Expression index) =>
             new ArrayIndexExpression(array, index, array.Type.GetElementType());
 
+        // todo: @incomplete implement this as a MethodCallExpression
+        // public static BinaryExpression ArrayIndex(Expression array, IEnumerable<Expression> indices) =>
+        //     new MultiDimensionalArrayIndexExpression(array,  indices, array.Type.GetElementType());
+
         public static MemberAssignment Bind(MemberInfo member, Expression expression) =>
             new MemberAssignment(member, expression);
 
@@ -657,10 +661,16 @@ namespace FastExpressionCompiler.LightExpression
         public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
             new NewArrayExpression(ExpressionType.NewArrayInit, type.MakeArrayType(), initializers);
 
-        public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
+        public static NewArrayExpression MakeArrayBounds(Type type, IReadOnlyList<Expression> bounds) =>
             new NewArrayExpression(ExpressionType.NewArrayBounds,
-                bounds.Length == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Length),
+                bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count),
                 bounds);
+
+        public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
+            MakeArrayBounds(type, (IReadOnlyList<Expression>)bounds);
+        
+        public static NewArrayExpression NewArrayBounds(Type type, IEnumerable<Expression> bounds) =>
+            MakeArrayBounds(type, bounds.AsReadOnlyList());
 
         /// <summary>Creates a BinaryExpression that represents an assignment operation.</summary>
         /// <param name="left">An Expression to set the Left property equal to.</param>
@@ -923,6 +933,7 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression Equal(Expression left, Expression right) =>
             new SimpleBinaryExpression(ExpressionType.Equal, left, right, typeof(bool));
 
+        // todo: @bug fix all comparison to the type bool 
         /// <summary>Creates a BinaryExpression that represents a "greater than" numeric comparison.</summary>
         /// <param name="left">An Expression to set the Left property equal to.</param>
         /// <param name="right">An Expression to set the Right property equal to.</param>
@@ -964,14 +975,11 @@ namespace FastExpressionCompiler.LightExpression
         public static BlockExpression Block(params Expression[] expressions) =>
             new BlockExpression(expressions);
 
-        public static BlockExpression Block(IReadOnlyList<Expression> expressions) =>
-            new BlockExpression(expressions);
-
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
             new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions);
 
-        public static BlockExpression Block(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) =>
-            new ManyVariablesBlockExpression(variables, expressions);
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
+            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions.AsReadOnlyList());
 
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
             new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions);
@@ -1077,6 +1085,7 @@ namespace FastExpressionCompiler.LightExpression
             return new TypedNamedLabelTarget(type, name);
         }
 
+        // todo: @incomplete / @bug seems wrong for Equal etc.
         /// <summary>Creates a BinaryExpression, given the left and right operands, by calling an appropriate factory method.</summary>
         /// <param name="binaryType">The ExpressionType that specifies the type of binary operation.</param>
         /// <param name="left">An Expression that represents the left operand.</param>
@@ -1111,68 +1120,88 @@ namespace FastExpressionCompiler.LightExpression
             }
         }
 
-        public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type = null)
+        public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type)
         {
             switch (kind) 
             {
                 case GotoExpressionKind.Return:
-                    return value == null && type == null
-                        ? new ReturnGotoExpression(target)
-                        : type == null
-                            ? new ReturnValueGotoExpression(target, value)
-                            : (GotoExpression)new ReturnTypedValueGotoExpression(target, value, type);
+                    if (value == null && type == null)
+                        return new ReturnGotoExpression(target);
+                    if (value == null)
+                        return new ReturnTypedGotoExpression(target, type);
+                    if (type == null)
+                        return new ReturnValueGotoExpression(target, value);
+                    return new ReturnTypedValueGotoExpression(target, value, type);
                 case GotoExpressionKind.Break:
-                    return value == null && type == null
-                        ? new BreakGotoExpression(target)
-                        : type == null
-                            ? new BreakValueGotoExpression(target, value)
-                            : (GotoExpression)new BreakTypedValueGotoExpression(target, value, type);
+                    if (value == null && type == null)
+                        return new BreakGotoExpression(target);
+                    if (value == null)
+                        return new BreakTypedGotoExpression(target, type);
+                    if (type == null)
+                        return new BreakValueGotoExpression(target, value);
+                    return new BreakTypedValueGotoExpression(target, value, type);
                 case GotoExpressionKind.Continue:
-                    return value == null && type == null
+                    return type == null
                         ? new ContinueGotoExpression(target)
-                        : type == null
-                            ? new ContinueValueGotoExpression(target, value)
-                            : (GotoExpression)new ContinueTypedValueGotoExpression(target, value, type);
+                        : (GotoExpression)new ContinueTypedGotoExpression(target, type);
                 case GotoExpressionKind.Goto:
                 default:
-                    return value == null && type == null
-                        ? new GotoExpression(target)
-                        : type == null
-                            ? new ValueGotoExpression(target, value)
-                            : new TypedValueGotoExpression(target, value, type);
+                    if (value == null && type == null)
+                        return new GotoExpression(target);
+                    if (value == null)
+                        return new TypedGotoExpression(target, type);
+                    if (type == null)
+                        return new ValueGotoExpression(target, value);
+                    return new TypedValueGotoExpression(target, value, type);
             }
         }
 
-        public static GotoExpression Break(LabelTarget target, Expression value = null, Type type = null) =>
+        public static GotoExpression Goto(LabelTarget target) => new GotoExpression(target);
+
+        public static GotoExpression Goto(LabelTarget target, Expression value) =>
+            value == null ? new GotoExpression(target) : new ValueGotoExpression(target, value);
+
+        public static GotoExpression Goto(LabelTarget target, Type type) =>
+            type == null ? new GotoExpression(target) : new TypedGotoExpression(target, type);
+
+        public static GotoExpression Goto(LabelTarget target, Expression value, Type type) =>
+            MakeGoto(GotoExpressionKind.Goto, target, value, type);
+
+        public static GotoExpression Break(LabelTarget target) => new BreakGotoExpression(target);
+
+        public static GotoExpression Break(LabelTarget target, Expression value) =>
+            value == null 
+                ? new BreakGotoExpression(target) 
+                : (GotoExpression)new BreakValueGotoExpression(target, value);
+
+        public static GotoExpression Break(LabelTarget target, Type type) =>
+            type == null 
+                ? new BreakGotoExpression(target) 
+                : (GotoExpression)new BreakTypedGotoExpression(target, type);
+
+        public static GotoExpression Break(LabelTarget target, Expression value, Type type) =>
             MakeGoto(GotoExpressionKind.Break, target, value, type);
 
         public static GotoExpression Continue(LabelTarget target) =>
             new ContinueGotoExpression(target);
 
-        // todo: @incomplete find the full list of overloads in ms docs
-        public static GotoExpression Continue(LabelTarget target, Type type = null) =>
-            MakeGoto(GotoExpressionKind.Continue, target, null, type);
+        public static GotoExpression Continue(LabelTarget target, Type type) =>
+            type == null ? new ContinueGotoExpression(target) : (GotoExpression)new ContinueTypedGotoExpression(target, type);
 
         public static GotoExpression Return(LabelTarget target) =>
             new ReturnGotoExpression(target);
+
+        public static GotoExpression Return(LabelTarget target, Type type) =>
+            type == null
+            ? new ReturnGotoExpression(target)
+            : (GotoExpression)new ReturnTypedGotoExpression(target, type);
 
         public static GotoExpression Return(LabelTarget target, Expression value) =>
             value == null
             ? new ReturnGotoExpression(target)
             : (GotoExpression)new ReturnValueGotoExpression(target, value);
 
-        public static GotoExpression Return(LabelTarget target, Expression value = null, Type type = null) =>
-            MakeGoto(GotoExpressionKind.Return, target, value, type);
-
-        public static GotoExpression Goto(LabelTarget target) =>
-            new GotoExpression(target);
-
-        public static GotoExpression Goto(LabelTarget target, Expression value) =>
-            value == null
-            ? new GotoExpression(target)
-            : new ValueGotoExpression(target, value);
-
-        public static GotoExpression Goto(LabelTarget target, Expression value = null, Type type = null) =>
+        public static GotoExpression Return(LabelTarget target, Expression value, Type type) =>
             MakeGoto(GotoExpressionKind.Return, target, value, type);
 
         /// <summary>Creates a BinaryExpression that represents a reference equality comparison.</summary>
@@ -1795,7 +1824,7 @@ namespace FastExpressionCompiler.LightExpression
             Method = method;
     }
 
-    // todo: @per minimize the memory consumption
+    // todo: @perf minimize the memory consumption - bind Type to bool for boolean expressions
     public abstract class BinaryExpression : Expression
     {
         public override ExpressionType NodeType { get; }
@@ -1828,7 +1857,8 @@ namespace FastExpressionCompiler.LightExpression
                 Type = type;
         }
 
-        public override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBinary(this);
+        public override Expression Accept(ExpressionVisitor visitor) => 
+            visitor.VisitBinary(this);
 
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, int lineIdent = 0,
             bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
@@ -1911,11 +1941,11 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class SimpleBinaryExpression : BinaryExpression
     {
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-
         internal SimpleBinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type)
             : base(nodeType, left, right, type) { }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
     }
 
     public class CoalesceConversionBinaryExpression : BinaryExpression
@@ -1951,11 +1981,11 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class ArrayIndexExpression : BinaryExpression
     {
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.ArrayIndex(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-
         internal ArrayIndexExpression(Expression left, Expression right, Type type)
             : base(ExpressionType.ArrayIndex, left, right, type) { }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.ArrayIndex(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
     }
 
     public sealed class AssignBinaryExpression : BinaryExpression
@@ -3540,10 +3570,16 @@ namespace FastExpressionCompiler.LightExpression
 
     public class ValueGotoExpression : GotoExpression
     {
-        public override Type Type => Value.Type;
         public override Expression Value { get; }
         internal ValueGotoExpression(LabelTarget target, Expression value) : base(target) =>
             Value = value;
+    }
+
+    public class TypedGotoExpression : GotoExpression
+    {
+        public override Type Type { get; }
+        internal TypedGotoExpression(LabelTarget target, Type type) : base(target) =>
+            Type = type;
     }
 
     public class TypedValueGotoExpression : ValueGotoExpression
@@ -3557,6 +3593,12 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Return;
         internal ReturnGotoExpression(LabelTarget target) : base(target) {}
+    }
+
+    public sealed class ReturnTypedGotoExpression : TypedGotoExpression
+    {
+        public override GotoExpressionKind Kind => GotoExpressionKind.Return;
+        internal ReturnTypedGotoExpression(LabelTarget target, Type type) : base(target, type) {}
     }
 
     public sealed class ReturnValueGotoExpression : ValueGotoExpression
@@ -3583,6 +3625,12 @@ namespace FastExpressionCompiler.LightExpression
         internal BreakValueGotoExpression(LabelTarget target, Expression value) : base(target, value) {}
     }
 
+    public sealed class BreakTypedGotoExpression : TypedGotoExpression
+    {
+        public override GotoExpressionKind Kind => GotoExpressionKind.Break;
+        internal BreakTypedGotoExpression(LabelTarget target, Type type) : base(target, type) {}
+    }
+
     public sealed class BreakTypedValueGotoExpression : TypedValueGotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Break;
@@ -3595,16 +3643,10 @@ namespace FastExpressionCompiler.LightExpression
         internal ContinueGotoExpression(LabelTarget target) : base(target) {}
     }
 
-    public sealed class ContinueValueGotoExpression : ValueGotoExpression
+    public sealed class ContinueTypedGotoExpression : TypedGotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
-        internal ContinueValueGotoExpression(LabelTarget target, Expression value) : base(target, value) {}
-    }
-
-    public sealed class ContinueTypedValueGotoExpression : TypedValueGotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
-        internal ContinueTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) {}
+        internal ContinueTypedGotoExpression(LabelTarget target, Type type) : base(target, type) {}
     }
 
     public struct SwitchCase
