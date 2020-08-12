@@ -87,7 +87,7 @@ namespace FastExpressionCompiler
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Unifies Compile for System.Linq.Expressions and FEC.LightExpression</summary>
-        public static TDelegate CompileSys<TDelegate>(this Expression<TDelegate> lambdaExpr) where TDelegate : class =>
+        public static TDelegate CompileSys<TDelegate>(this Expression<TDelegate> lambdaExpr) where TDelegate : System.Delegate =>
             lambdaExpr
 #if LIGHT_EXPRESSION
             .ToLambdaExpression()
@@ -106,14 +106,13 @@ namespace FastExpressionCompiler
         public static string ToCSharpString(this Expression expr) => expr.ToString();
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static TDelegate CompileFast<TDelegate>(this Expression<TDelegate> lambdaExpr,
-            bool ifFastFailedReturnNull = false)
-            where TDelegate : class => ((LambdaExpression)lambdaExpr).CompileFast<TDelegate>(ifFastFailedReturnNull);
+        public static TDelegate CompileFast<TDelegate>(this Expression<TDelegate> lambdaExpr, bool ifFastFailedReturnNull = false)
+            where TDelegate : System.Delegate => 
+            ((LambdaExpression)lambdaExpr).CompileFast<TDelegate>(ifFastFailedReturnNull);
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Func<R> CompileFast<R>(this Expression<Func<R>> lambdaExpr,
-            bool ifFastFailedReturnNull = false) =>
-            (Func<R>)TryCompileBoundToFirstClosureParam(typeof(Func<R>), 
+        public static Func<R> CompileFast<R>(this Expression<Func<R>> lambdaExpr, bool ifFastFailedReturnNull = false) =>
+            (Func<R>)TryCompileBoundToFirstClosureParam(typeof(Func<R>),
                 lambdaExpr.Body, lambdaExpr.Parameters, _closureAsASingleParamType, typeof(R))
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
@@ -4683,6 +4682,9 @@ namespace FastExpressionCompiler
 
             return paramTypes;
         }
+
+        public static Type GetFuncOrActionType(Type returnType) =>
+            returnType == typeof(void) ? typeof(Action) : typeof(Func<>).MakeGenericType(returnType);
 
         public static Type GetFuncOrActionType(Type[] paramTypes, Type returnType)
         {
