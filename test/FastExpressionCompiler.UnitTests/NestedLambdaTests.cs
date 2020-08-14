@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class NestedLambdaTests
+    public class NestedLambdaTests : ITest
     {
         public int Run()
         {

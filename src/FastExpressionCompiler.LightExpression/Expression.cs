@@ -1166,17 +1166,12 @@ namespace FastExpressionCompiler.LightExpression
             new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
-        public static BinaryExpression Coalesce(Expression left, Expression right)
-        {
-            var coalesceType = GetCoalesceType(left.Type, right.Type);
-            if (coalesceType == left.Type)
-                return new LeftTypedBinaryExpression(ExpressionType.Coalesce, left, right);
-            return new TypedBinaryExpression(ExpressionType.Coalesce, left, right, coalesceType);
-        }
+        public static BinaryExpression Coalesce(Expression left, Expression right) =>
+            new CoalesceBinaryExpression(left, right, GetCoalesceType(left.Type, right.Type));
 
         /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
         public static BinaryExpression Coalesce(Expression left, Expression right, Type type) =>
-            new TypedBinaryExpression(ExpressionType.Coalesce, left, right, type);
+            new CoalesceBinaryExpression(left, right, type);
 
         /// <summary>Creates a BinaryExpression that represents a coalescing operation, given a conversion function.</summary>
         public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) =>
@@ -1845,25 +1840,30 @@ namespace FastExpressionCompiler.LightExpression
             NodeType = nodeType;
     }
 
-    // todo: @perf merge with CoalesceBinaryExpression - save NodeType space
-    internal sealed class TypedBinaryExpression : BinaryExpression
+    internal class CoalesceBinaryExpression : BinaryExpression
     {
-        public override ExpressionType NodeType { get; }
+        public override ExpressionType NodeType => ExpressionType.Coalesce;
         public override Type Type { get; }
-        internal TypedBinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type) : base(left, right)
-        {
-            NodeType = nodeType;
+        internal CoalesceBinaryExpression(Expression left, Expression right, Type type) : base(left, right) =>
             Type = type;
+
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            Left .ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            sb.Append(" ?? ").NewLineIdent(lineIdent);
+            Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            return sb;
         }
     }
 
-    public sealed class CoalesceConversionBinaryExpression : BinaryExpression
+    internal sealed class CoalesceConversionBinaryExpression : CoalesceBinaryExpression
     {
-        public override ExpressionType NodeType => ExpressionType.Coalesce;
         public override Type Type => Right.Type;
         public override LambdaExpression Conversion { get; }
 
-        internal CoalesceConversionBinaryExpression(Expression left, Expression right, LambdaExpression conversion) : base(left, right)  =>
+        internal CoalesceConversionBinaryExpression(Expression left, Expression right, LambdaExpression conversion) 
+            : base(left, right, right.Type) =>
             Conversion = conversion;
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
@@ -1877,15 +1877,6 @@ namespace FastExpressionCompiler.LightExpression
             sb.NewLineIdentExpr(Right, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
             sb.NewLineIdentExpr(Conversion, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
-        }
-
-        public override StringBuilder ToCSharpString(StringBuilder sb,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
-        {
-            Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-            sb.Append(" ?? ").NewLineIdent(lineIdent);
-            Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-            return sb;
         }
     }
 
