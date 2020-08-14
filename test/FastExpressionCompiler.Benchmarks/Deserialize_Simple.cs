@@ -38,6 +38,11 @@ namespace FastExpressionCompiler.Benchmarks
     | CompiledFast |    55.62 us |  0.758 us |  0.672 us |  1.00 |    0.00 | 3.9063 | 1.9531 | 0.1221 |  16.03 KB |
     |     Compiled | 3,143.27 us | 40.633 us | 36.020 us | 56.52 |    0.88 | 3.9063 |      - |      - |  27.75 KB |
 
+    |       Method |        Mean |     Error |     StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+    |------------- |------------:|----------:|-----------:|------:|--------:|-------:|-------:|-------:|----------:|
+    | CompiledFast |    77.90 us |  1.551 us |   4.401 us |  1.00 |    0.00 | 3.7842 | 1.8311 | 0.1221 |  15.61 KB |
+    |     Compiled | 4,409.87 us | 87.777 us | 162.701 us | 56.96 |    3.73 |      - |      - |      - |  27.72 KB |
+
     ### Invocation
 
     |              Method |     Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
@@ -49,14 +54,14 @@ namespace FastExpressionCompiler.Benchmarks
     [MemoryDiagnoser]
     public class Deserialize_Simple
     {
-        // [Benchmark(Baseline = true)]
+        [Benchmark(Baseline = true)]
         public object CompiledFast()
         {
             CreateLightExpression_and_CompileFast(out var a, out var b);
             return new { a, b };
         }
 
-        // [Benchmark]
+        [Benchmark]
         public object Compiled()
         {
             CreateExpression_and_CompileSys(out var a, out var b);
@@ -73,10 +78,10 @@ namespace FastExpressionCompiler.Benchmarks
             CreateExpression_and_CompileSys(out _desWordS, out _desSimpleS);
         }
 
-        [Benchmark(Baseline = true)]
+        // [Benchmark(Baseline = true)]
         public bool Invoke_CompiledFast() => RunDeserializer(_desWord, _desSimple);
 
-        [Benchmark]
+        // [Benchmark]
         public object Invoke_Compiled() => RunDeserializer(_desWordS, _desSimpleS);
     }
 }
