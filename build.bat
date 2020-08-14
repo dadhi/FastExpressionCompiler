@@ -16,20 +16,15 @@ echo:## Starting: TESTS...
 echo: 
 
 dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner.Net472/FastExpressionCompiler.TestsRunner.Net472.csproj
 
 if %ERRORLEVEL% neq 0 goto :error
 echo:
 echo:## Finished: TESTS
 
 echo: 
-echo:## Starting: PACKAGING...
+echo:## Starting: SOURCE PACKAGING...
 echo:
-
-dotnet pack ".\src\FastExpressionCompiler" -c:Release -restore:False
-dotnet pack ".\src\FastExpressionCompiler.LightExpression" -c:Release -restore:False
-echo:
-echo:## Finished: DLL PACKAGING
-
 call BuildScripts\NugetPack.bat
 if %ERRORLEVEL% neq 0 goto :error
 echo:
