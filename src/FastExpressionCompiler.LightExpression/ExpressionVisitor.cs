@@ -293,7 +293,7 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual Expression VisitMemberInit(MemberInitExpression node)
         {
-            var newExpression = Visit(node.NewExpression);
+            var newExpression = VisitAndConvert(node.NewExpression);
             var bindings = VisitAndConvert(node.Bindings, VisitMemberBinding);
             if (newExpression == node.NewExpression && ReferenceEquals(bindings, node.Bindings))
                 return node;
@@ -321,6 +321,26 @@ namespace FastExpressionCompiler.LightExpression
             return new MemberAssignment(node.Member, expression);
         }
 
+        protected internal virtual Expression VisitListInit(ListInitExpression node)
+        {
+            var newExpression = VisitAndConvert(node.NewExpression);
+            var initializers = VisitAndConvert(node.Initializers, VisitElementInit);
+            if (newExpression == node.NewExpression && ReferenceEquals(initializers, node.Initializers))
+                return node;
+            return new ListInitExpression(newExpression, initializers.AsReadOnlyList());
+        }
+
+        protected virtual ElementInit VisitElementInit(ElementInit node) 
+        {
+            var arguments = VisitAndConvert(node.Arguments);
+            if (arguments == node.Arguments)
+                return node;
+            return new ElementInit(node.AddMethod, arguments);
+        }
+
         protected internal virtual Expression VisitDynamic(DynamicExpression node) => node;
+
+        protected internal virtual Expression VisitExtension(Expression node) =>
+            node.VisitChildren(this);
     }
 }

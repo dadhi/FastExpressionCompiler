@@ -59,6 +59,8 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal abstract Expression Accept(ExpressionVisitor visitor);
 
+        protected internal virtual Expression VisitChildren(ExpressionVisitor visitor) => this;
+
         public SysExpr ToExpression()
         {
             var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
@@ -116,12 +118,12 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         /// <summary>Tries to convert to the correct C# code which expression is representing.</summary>
-        public string ToCSharpString() => 
+        public string ToCSharpString() =>
             ToCSharpString(new StringBuilder(1024), 4, true).Append(';').ToString();
 
         /// <summary>Code printer with the provided configuration</summary>
         public virtual StringBuilder ToCSharpString(StringBuilder sb,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) => 
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
             sb.Append(ToString()); // falling back ToString and hoping for the best 
 
         /// <summary>Converts to Expression and outputs its as string</summary>
@@ -147,12 +149,12 @@ namespace FastExpressionCompiler.LightExpression
         public static ParameterExpression Parameter(Type type, string name = null)
         {
             var isByRef = type.IsByRef;
-            return isByRef 
+            return isByRef
                 ? new ByRefParameterExpression(type.GetElementType(), name)
                 : new ParameterExpression(type, name);
         }
 
-        public static ParameterExpression Variable(Type type, string name = null) => 
+        public static ParameterExpression Variable(Type type, string name = null) =>
             new ParameterExpression(type, name);
 
         public static readonly ConstantExpression NullConstant = new TypedConstantExpression(null, typeof(object));
@@ -358,7 +360,7 @@ namespace FastExpressionCompiler.LightExpression
             new PropertyExpression(property);
 
         public static MemberExpression Property(Expression instance, PropertyInfo property) =>
-            instance == null 
+            instance == null
                 ? new PropertyExpression(property)
                 : new InstancePropertyExpression(instance, property);
 
@@ -373,7 +375,7 @@ namespace FastExpressionCompiler.LightExpression
             new IndexExpression(instance, indexer, arguments.AsReadOnlyList());
 
         public static MemberExpression PropertyOrField(Expression expression, string memberName) =>
-            expression.Type.FindProperty(memberName) != null 
+            expression.Type.FindProperty(memberName) != null
                 ? (MemberExpression)Property(expression, expression.Type.FindProperty(memberName)
                     ?? throw new ArgumentException($"Declared property with the name '{memberName}' is not found in '{expression.Type}'", nameof(memberName)))
                 : Field(expression, expression.Type.FindField(memberName)
@@ -401,7 +403,7 @@ namespace FastExpressionCompiler.LightExpression
             new FieldExpression(field);
 
         public static MemberExpression Field(Expression instance, FieldInfo field) =>
-            instance == null 
+            instance == null
                 ? new FieldExpression(field)
                 : new InstanceFieldExpression(instance, field);
 
@@ -699,7 +701,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
             MakeArrayBounds(type, (IReadOnlyList<Expression>)bounds);
-        
+
         public static NewArrayExpression NewArrayBounds(Type type, IEnumerable<Expression> bounds) =>
             MakeArrayBounds(type, bounds.AsReadOnlyList());
 
@@ -761,6 +763,12 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a BinaryExpression that represents a division assignment operation that does not have overflow checking.</summary>
         public static BinaryExpression DivideAssign(Expression left, Expression right) =>
             new AssignBinaryExpression(ExpressionType.DivideAssign, left, right);
+
+        public static ElementInit ElementInit(MethodInfo addMethod, params Expression[] arguments) =>
+            new ElementInit(addMethod, arguments);
+
+        public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) =>
+            new ElementInit(addMethod, arguments.AsReadOnlyList());
 
         public static InvocationExpression Invoke(LambdaExpression expression) =>
             new InvocationExpression(expression);
@@ -911,10 +919,10 @@ namespace FastExpressionCompiler.LightExpression
 
         public static BlockExpression MakeBlock(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions)
         {
-            var vars  = variables.AsReadOnlyList();
+            var vars = variables.AsReadOnlyList();
             var exprs = expressions.AsReadOnlyList();
             var result = exprs[exprs.Count - 1];
-            if (result.Type == type) 
+            if (result.Type == type)
             {
                 if (vars == null || vars.Count == 0)
                     return new BlockExpression(exprs);
@@ -963,7 +971,7 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception.</summary>
         /// <param name="value">An Expression to set the Operand property equal to.</param>
         /// <returns>A UnaryExpression that represents the exception.</returns>
-        public static UnaryExpression Throw(Expression value) => 
+        public static UnaryExpression Throw(Expression value) =>
             new VoidUnaryExpression(ExpressionType.Throw, value);
 
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception with a given type.</summary>
@@ -984,19 +992,19 @@ namespace FastExpressionCompiler.LightExpression
         public static LabelTarget Label() => new LabelTarget();
 
         public static LabelTarget Label(Type type) =>
-            type == null 
+            type == null
             ? new LabelTarget()
             : new TypedLabelTarget(type);
 
         public static LabelTarget Label(string name) =>
-            name == null 
+            name == null
             ? new LabelTarget()
             : new NamedLabelTarget(name);
 
-        public static LabelTarget Label(Type type, string name) 
+        public static LabelTarget Label(Type type, string name)
         {
             if (type == null)
-                return name == null 
+                return name == null
                     ? new LabelTarget()
                     : new NamedLabelTarget(name);
             if (name == null)
@@ -1007,45 +1015,45 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a <see cref="BinaryExpression" />, given the left and right operands, by calling an appropriate factory method.</summary>
         public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right)
         {
-            switch (binaryType) 
+            switch (binaryType)
             {
-                case ExpressionType.Add:                return Add(left, right);
-                case ExpressionType.AddChecked:         return AddChecked(left, right);
-                case ExpressionType.Subtract:           return Subtract(left, right);
-                case ExpressionType.SubtractChecked:    return SubtractChecked(left, right);
-                case ExpressionType.Multiply:           return Multiply(left, right);
-                case ExpressionType.MultiplyChecked:    return MultiplyChecked(left, right);
-                case ExpressionType.Divide:             return Divide(left, right);
-                case ExpressionType.Modulo:             return Modulo(left, right);
-                case ExpressionType.Power:              return Power(left, right);
-                case ExpressionType.And:                return And(left, right);
-                case ExpressionType.AndAlso:            return AndAlso(left, right);
-                case ExpressionType.Or:                 return Or(left, right);
-                case ExpressionType.OrElse:             return OrElse(left, right);
-                case ExpressionType.LessThan:           return LessThan(left, right);
-                case ExpressionType.LessThanOrEqual:    return LessThanOrEqual(left, right);
-                case ExpressionType.GreaterThan:        return GreaterThan(left, right);
+                case ExpressionType.Add: return Add(left, right);
+                case ExpressionType.AddChecked: return AddChecked(left, right);
+                case ExpressionType.Subtract: return Subtract(left, right);
+                case ExpressionType.SubtractChecked: return SubtractChecked(left, right);
+                case ExpressionType.Multiply: return Multiply(left, right);
+                case ExpressionType.MultiplyChecked: return MultiplyChecked(left, right);
+                case ExpressionType.Divide: return Divide(left, right);
+                case ExpressionType.Modulo: return Modulo(left, right);
+                case ExpressionType.Power: return Power(left, right);
+                case ExpressionType.And: return And(left, right);
+                case ExpressionType.AndAlso: return AndAlso(left, right);
+                case ExpressionType.Or: return Or(left, right);
+                case ExpressionType.OrElse: return OrElse(left, right);
+                case ExpressionType.LessThan: return LessThan(left, right);
+                case ExpressionType.LessThanOrEqual: return LessThanOrEqual(left, right);
+                case ExpressionType.GreaterThan: return GreaterThan(left, right);
                 case ExpressionType.GreaterThanOrEqual: return GreaterThanOrEqual(left, right);
-                case ExpressionType.Equal:              return Equal(left, right);
-                case ExpressionType.NotEqual:           return NotEqual(left, right);
-                case ExpressionType.ExclusiveOr:        return ExclusiveOr(left, right);
-                case ExpressionType.Coalesce:           return Coalesce(left, right);
-                case ExpressionType.ArrayIndex:         return ArrayIndex(left, right);
-                case ExpressionType.RightShift:         return RightShift(left, right);
-                case ExpressionType.LeftShift:          return LeftShift(left, right);
-                case ExpressionType.Assign:             return Assign(left, right);
-                case ExpressionType.AddAssign:          return AddAssign(left, right);
-                case ExpressionType.AndAssign:          return AndAssign(left, right);
-                case ExpressionType.DivideAssign:       return DivideAssign(left, right);
-                case ExpressionType.ExclusiveOrAssign:  return ExclusiveOrAssign(left, right);
-                case ExpressionType.LeftShiftAssign:    return LeftShiftAssign(left, right);
-                case ExpressionType.ModuloAssign:       return ModuloAssign(left, right);
-                case ExpressionType.MultiplyAssign:     return MultiplyAssign(left, right);
-                case ExpressionType.OrAssign:           return OrAssign(left, right);
-                case ExpressionType.PowerAssign:        return PowerAssign(left, right);
-                case ExpressionType.RightShiftAssign:   return RightShiftAssign(left, right);
-                case ExpressionType.SubtractAssign:     return SubtractAssign(left, right);
-                case ExpressionType.AddAssignChecked:   return AddAssignChecked(left, right);
+                case ExpressionType.Equal: return Equal(left, right);
+                case ExpressionType.NotEqual: return NotEqual(left, right);
+                case ExpressionType.ExclusiveOr: return ExclusiveOr(left, right);
+                case ExpressionType.Coalesce: return Coalesce(left, right);
+                case ExpressionType.ArrayIndex: return ArrayIndex(left, right);
+                case ExpressionType.RightShift: return RightShift(left, right);
+                case ExpressionType.LeftShift: return LeftShift(left, right);
+                case ExpressionType.Assign: return Assign(left, right);
+                case ExpressionType.AddAssign: return AddAssign(left, right);
+                case ExpressionType.AndAssign: return AndAssign(left, right);
+                case ExpressionType.DivideAssign: return DivideAssign(left, right);
+                case ExpressionType.ExclusiveOrAssign: return ExclusiveOrAssign(left, right);
+                case ExpressionType.LeftShiftAssign: return LeftShiftAssign(left, right);
+                case ExpressionType.ModuloAssign: return ModuloAssign(left, right);
+                case ExpressionType.MultiplyAssign: return MultiplyAssign(left, right);
+                case ExpressionType.OrAssign: return OrAssign(left, right);
+                case ExpressionType.PowerAssign: return PowerAssign(left, right);
+                case ExpressionType.RightShiftAssign: return RightShiftAssign(left, right);
+                case ExpressionType.SubtractAssign: return SubtractAssign(left, right);
+                case ExpressionType.AddAssignChecked: return AddAssignChecked(left, right);
                 case ExpressionType.SubtractAssignChecked: return SubtractAssignChecked(left, right);
                 case ExpressionType.MultiplyAssignChecked: return MultiplyAssignChecked(left, right);
                 default: throw new ArgumentException($"Unhandled binary node type: `{binaryType}`");
@@ -1054,7 +1062,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type)
         {
-            switch (kind) 
+            switch (kind)
             {
                 case GotoExpressionKind.Return:
                     if (value == null && type == null)
@@ -1102,13 +1110,13 @@ namespace FastExpressionCompiler.LightExpression
         public static GotoExpression Break(LabelTarget target) => new BreakGotoExpression(target);
 
         public static GotoExpression Break(LabelTarget target, Expression value) =>
-            value == null 
-                ? new BreakGotoExpression(target) 
+            value == null
+                ? new BreakGotoExpression(target)
                 : (GotoExpression)new BreakValueGotoExpression(target, value);
 
         public static GotoExpression Break(LabelTarget target, Type type) =>
-            type == null 
-                ? new BreakGotoExpression(target) 
+            type == null
+                ? new BreakGotoExpression(target)
                 : (GotoExpression)new BreakTypedGotoExpression(target, type);
 
         public static GotoExpression Break(LabelTarget target, Expression value, Type type) =>
@@ -1175,8 +1183,8 @@ namespace FastExpressionCompiler.LightExpression
 
         /// <summary>Creates a BinaryExpression that represents a coalescing operation, given a conversion function.</summary>
         public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) =>
-            conversion == null 
-                ? Coalesce(left, right) 
+            conversion == null
+                ? Coalesce(left, right)
                 : new CoalesceConversionBinaryExpression(left, right, conversion);
 
         private static Type GetCoalesceType(Type left, Type right)
@@ -1211,7 +1219,7 @@ namespace FastExpressionCompiler.LightExpression
     internal static class TypeTools
     {
         internal static Type GetNonRefType(this Type type) => type.IsByRef ? type.GetElementType() : type;
- 
+
         internal static int GetFirstIndex<T>(this IReadOnlyList<T> source, T item)
         {
             if (source.Count != 0)
@@ -1655,17 +1663,17 @@ namespace FastExpressionCompiler.LightExpression
             sb.Append(name).Append('(');
             sb.NewLineIdentExpr(Operand, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
 
-            if (NodeType == ExpressionType.Convert        ||
+            if (NodeType == ExpressionType.Convert ||
                 NodeType == ExpressionType.ConvertChecked ||
-                NodeType == ExpressionType.Unbox          ||
-                NodeType == ExpressionType.Throw          ||
+                NodeType == ExpressionType.Unbox ||
+                NodeType == ExpressionType.Throw ||
                 NodeType == ExpressionType.TypeAs)
             {
                 sb.Append(',');
                 sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
             }
 
-            if ((NodeType == ExpressionType.Convert || NodeType == ExpressionType.ConvertChecked) 
+            if ((NodeType == ExpressionType.Convert || NodeType == ExpressionType.ConvertChecked)
                 && Method != null)
             {
                 sb.Append(',');
@@ -1699,7 +1707,7 @@ namespace FastExpressionCompiler.LightExpression
                 case ExpressionType.Throw:
                     sb.Append("trow ");
                     return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(';');
-                default: 
+                default:
                     return sb.Append(ToString()); // falling back ro ToString as a closest to C# code output 
             }
         }
@@ -1709,7 +1717,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override Type Type => typeof(void);
 
-        public VoidUnaryExpression(ExpressionType nodeType, Expression operand) : base(nodeType, operand) {}
+        public VoidUnaryExpression(ExpressionType nodeType, Expression operand) : base(nodeType, operand) { }
     }
 
     public class TypedUnaryExpression : UnaryExpression
@@ -1753,7 +1761,7 @@ namespace FastExpressionCompiler.LightExpression
         // internal bool IsLifted => NodeType != ExpressionType.Coalesce && NodeType != ExpressionType.Assign 
         //     && Left.Type.IsNullable()
         //     && (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRefType().IsEquivalentTo(Left.Type));
- 
+
         // todo: @feature - not supported yet
         /// <summary>Gets a value that indicates whether the expression tree node represents a lifted call to an operator whose return type is lifted to a nullable type.</summary>
         public bool IsLiftedToNull => false;//IsLifted && Type.IsNullable();
@@ -1762,11 +1770,11 @@ namespace FastExpressionCompiler.LightExpression
 
         protected BinaryExpression(Expression left, Expression right)
         {
-            Left  = left;
+            Left = left;
             Right = right;
         }
 
-        protected internal override Expression Accept(ExpressionVisitor visitor) => 
+        protected internal override Expression Accept(ExpressionVisitor visitor) =>
             visitor.VisitBinary(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
@@ -1777,7 +1785,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             var name = Enum.GetName(typeof(ExpressionType), NodeType);
             sb.Append("MakeBinary(").Append(typeof(ExpressionType).Name).Append('.').Append(name).Append(',');
-            sb.NewLineIdentExpr(Left,  uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(Left, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
             sb.NewLineIdentExpr(Right, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
@@ -1796,7 +1804,7 @@ namespace FastExpressionCompiler.LightExpression
 
         ExpressionType.Or is excluded because it should return the Left.Type for the bitwise operations
     */
-    internal class LogicalBinaryExpression : BinaryExpression 
+    internal class LogicalBinaryExpression : BinaryExpression
     {
         public override ExpressionType NodeType { get; }
         public override Type Type => typeof(bool);
@@ -1809,7 +1817,7 @@ namespace FastExpressionCompiler.LightExpression
             if (NodeType == ExpressionType.Equal)
             {
                 Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                if (Right is ConstantExpression r && r.Value is bool rb && rb) 
+                if (Right is ConstantExpression r && r.Value is bool rb && rb)
                     return sb;
                 sb.Append(" == ");
                 Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
@@ -1850,7 +1858,7 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            Left .ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             sb.Append(" ?? ").NewLineIdent(lineIdent);
             Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             return sb;
@@ -1862,7 +1870,7 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => Right.Type;
         public override LambdaExpression Conversion { get; }
 
-        internal CoalesceConversionBinaryExpression(Expression left, Expression right, LambdaExpression conversion) 
+        internal CoalesceConversionBinaryExpression(Expression left, Expression right, LambdaExpression conversion)
             : base(left, right, right.Type) =>
             Conversion = conversion;
 
@@ -1873,7 +1881,7 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Coalesce(");
-            sb.NewLineIdentExpr(Left,  uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(Left, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
             sb.NewLineIdentExpr(Right, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
             sb.NewLineIdentExpr(Conversion, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
@@ -1911,6 +1919,93 @@ namespace FastExpressionCompiler.LightExpression
                     // todo: @incomplete
                     return sb.Append(ToString());
             }
+        }
+    }
+
+    public interface IArgumentProvider
+    {
+        Expression GetArgument(int index);
+
+        int ArgumentCount { get; }
+    }
+
+    public sealed class ElementInit : IArgumentProvider
+    {
+        public readonly MethodInfo AddMethod;
+        public readonly IReadOnlyList<Expression> Arguments;
+
+        internal ElementInit(MethodInfo addMethod, IReadOnlyList<Expression> arguments)
+        {
+            AddMethod = addMethod;
+            Arguments = arguments;
+        }
+
+        public int ArgumentCount => Arguments.Count;
+
+        public Expression GetArgument(int index) => Arguments[index];
+    }
+
+    // todo: @feature not supported yet
+    public sealed class ListInitExpression : Expression
+    {
+        public override ExpressionType NodeType => ExpressionType.ListInit;
+
+        public override Type Type => NewExpression.Type;
+
+        public readonly NewExpression NewExpression;
+        public readonly IReadOnlyList<ElementInit> Initializers;
+
+        internal ListInitExpression(NewExpression newExpression, IReadOnlyList<ElementInit> initializers)
+        {
+            NewExpression = newExpression;
+            Initializers = initializers;
+        }
+
+        protected internal override Expression Accept(ExpressionVisitor visitor) =>
+            visitor.VisitListInit(this);
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions) =>
+            SysExpr.ListInit(
+                (System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref convertedExpressions),
+                ToExpressions(Initializers, ref convertedExpressions));
+
+        private static System.Linq.Expressions.ElementInit[] ToExpressions(IReadOnlyList<ElementInit> elemInits, ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        {
+            if (elemInits.Count == 0)
+                return Tools.Empty<System.Linq.Expressions.ElementInit>();
+
+            var result = new System.Linq.Expressions.ElementInit[elemInits.Count];
+            for (var i = 0; i < result.Length; ++i)
+                result[i] = SysExpr.ElementInit(elemInits[i].AddMethod,
+                    ToExpressions(elemInits[i].Arguments, ref exprsConverted));
+            return result;
+        }
+
+        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            sb.Append("ListInit(");
+            sb.NewLineIdentExpr(NewExpression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            for (int i = 0; i < Initializers.Count; i++)
+            {
+                var init = Initializers[i];
+                if (i > 0) sb.Append(",");
+
+                sb.NewLineIdent(lineIdent).Append("ElementInit(");
+                for (int j = 0; j < init.Arguments.Count; j++)
+                {
+                    var a = init.Arguments[j];
+                    if (j > 0) sb.Append(",");
+
+                    var m = init.AddMethod;
+                    var methodIndex = m.DeclaringType.GetTypeInfo().GetDeclaredMethods(m.Name).AsArray().GetFirstIndex(m);
+                    sb.NewLineIdent(lineIdent).AppendTypeof(m.DeclaringType, stripNamespace, printType)
+                        .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(m.Name).Append("\").ToArray()[").Append(methodIndex).Append("],");
+                    sb.NewLineIdentExprs(init.Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+                }
+                sb.Append(")");
+            }
+
+            return sb.Append(")");
         }
     }
 
@@ -2015,7 +2110,7 @@ namespace FastExpressionCompiler.LightExpression
     internal sealed class ByRefParameterExpression : ParameterExpression
     {
         public override bool IsByRef => true;
-        internal ByRefParameterExpression(Type type, string name) : base(type, name) {}
+        internal ByRefParameterExpression(Type type, string name) : base(type, name) { }
     }
 
     public class ParameterExpression : Expression
@@ -2125,19 +2220,19 @@ namespace FastExpressionCompiler.LightExpression
         {
             if (Value == null)
                 return sb.Append("null");
-            
+
             if (Value is Type t) // todo: move this to ValueToCode, we should output `typeof(T)` anyway
                 return sb.AppendTypeof(t, stripNamespace, printType);
 
             // value with the cast
             if (Value.GetType() != Type)
             {
-                sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')'); 
+                sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')');
                 return sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
             }
 
             sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
-            
+
             // suffixes for literals
             if (Type == typeof(float))
                 sb.Append('f');
@@ -2223,7 +2318,7 @@ namespace FastExpressionCompiler.LightExpression
                     args[i].ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
                 }
             }
-            
+
             return sb.Append(')');
         }
     }
@@ -2409,10 +2504,10 @@ namespace FastExpressionCompiler.LightExpression
                 Object.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             else // for static method or static extension method we need to qualify with the class
                 sb.Append(Method.DeclaringType.ToCode(stripNamespace, printType));
-            
+
             sb.Append('.').Append(Method.Name);
-            
-            if (Method.IsGenericMethod) 
+
+            if (Method.IsGenericMethod)
             {
                 sb.Append('<');
                 var typeArgs = Method.GetGenericArguments();
@@ -2429,7 +2524,7 @@ namespace FastExpressionCompiler.LightExpression
                 var p = pars[0];
                 if (p.ParameterType.IsByRef)
                     sb.Append(p.IsOut ? "out " : p.IsIn ? "in" : "ref ");
-                
+
                 args[0].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             }
             else if (args.Count > 1)
@@ -2437,10 +2532,10 @@ namespace FastExpressionCompiler.LightExpression
                 for (var i = 0; i < args.Count; i++)
                 {
                     (i == 0 ? sb : sb.Append(',')).NewLineIdent(lineIdent);
-                    var p = pars[i]; 
+                    var p = pars[i];
                     if (p.ParameterType.IsByRef)
                         sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
-                    
+
                     args[i].ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
                 }
             }
@@ -2743,7 +2838,7 @@ namespace FastExpressionCompiler.LightExpression
 
         internal InvocationExpression(Expression expression) =>
             Expression = expression;
-        
+
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
@@ -2774,7 +2869,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override Type Type { get; }
 
-        internal TypedInvocationExpression(Expression expression, Type type) 
+        internal TypedInvocationExpression(Expression expression, Type type)
             : base(expression) =>
             Type = type;
     }
@@ -2783,7 +2878,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override IReadOnlyList<Expression> Arguments { get; }
 
-        internal ManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments) 
+        internal ManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments)
             : base(expression) =>
             Arguments = arguments;
     }
@@ -2793,7 +2888,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override Type Type { get; }
 
-        internal TypedManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type) 
+        internal TypedManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type)
             : base(expression, arguments) =>
             Type = type;
     }
@@ -2854,8 +2949,8 @@ namespace FastExpressionCompiler.LightExpression
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
-         {
-            if (Type == typeof(void)) 
+        {
+            if (Type == typeof(void))
             {
                 sb.Append("if (");
                 Test.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
@@ -2868,7 +2963,7 @@ namespace FastExpressionCompiler.LightExpression
                     sb.NewLineIdentCs(IfTrue, lineIdent, stripNamespace, printType, identSpaces).Append(';');
 
                 sb.NewLine(lineIdent, identSpaces).Append('}');
-                if (IfFalse != VoidDefault) 
+                if (IfFalse != VoidDefault)
                 {
                     sb.NewLine(lineIdent, identSpaces).Append("else");
                     sb.NewLine(lineIdent, identSpaces).Append('{');
@@ -2880,10 +2975,10 @@ namespace FastExpressionCompiler.LightExpression
                     sb.NewLine(lineIdent, identSpaces).Append('}');
                 }
             }
-            else 
+            else
             {
-                Test.ToCSharpString(sb,    lineIdent, stripNamespace, printType, identSpaces).Append(" ?");
-                sb.NewLineIdentCs(IfTrue,  lineIdent, stripNamespace, printType, identSpaces).Append(" :");
+                Test.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(" ?");
+                sb.NewLineIdentCs(IfTrue, lineIdent, stripNamespace, printType, identSpaces).Append(" :");
                 sb.NewLineIdentCs(IfFalse, lineIdent, stripNamespace, printType, identSpaces);
             }
 
@@ -2905,7 +3000,7 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => IfTrue.Type;
 
         internal WithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse)
-            : base(test, ifTrue, ifFalse) {}
+            : base(test, ifTrue, ifFalse) { }
     }
 
     public sealed class TypedWithFalseBranchConditionalExpression : VoidWithFalseBranchConditionalExpression
@@ -3002,8 +3097,8 @@ namespace FastExpressionCompiler.LightExpression
                     var v = vars[i];
                     sb.NewLineIdent(lineIdent);
                     sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ');
-                    if (string.IsNullOrEmpty(v.Name)) 
-                        v.Name = "__" + v.Type.Name + "_" +  i;
+                    if (string.IsNullOrEmpty(v.Name))
+                        v.Name = "__" + v.Type.Name + "_" + i;
                     sb.Append(v.Name).Append(';');
                 }
                 sb.AppendLine(); // visually separate the variables from expressions
@@ -3015,9 +3110,9 @@ namespace FastExpressionCompiler.LightExpression
                 sb.NewLineIdent(lineIdent);
 
                 var expr = exprs[i];
-                
+
                 // this is basically the return pattern (see #237), so we don't care for the rest of expressions if any
-                if (expr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return && 
+                if (expr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                     exprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                 {
                     sb.Append("return ");
@@ -3026,7 +3121,7 @@ namespace FastExpressionCompiler.LightExpression
 
                 // otherwise proceed normally with the next (and not the last) expression
                 expr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
-                
+
                 // preventing the `};` kind of situation and emphasing the conditional block with empty line
                 if (expr is ConditionalExpression && expr.Type == typeof(void) ||
                     expr is TryExpression ||
@@ -3035,7 +3130,7 @@ namespace FastExpressionCompiler.LightExpression
                     sb.AppendLine();
                 else
                     sb.Append(';');
-            } 
+            }
 
             var lastExpr = exprs[exprs.Count - 1];
             if (Type == typeof(void))
@@ -3043,7 +3138,7 @@ namespace FastExpressionCompiler.LightExpression
             else
             {
                 // inline the last nested block - it will care about the `return` and ending `;` by itself
-                if (lastExpr is BlockExpression || 
+                if (lastExpr is BlockExpression ||
                     lastExpr is LabelExpression)
                     return lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
 
@@ -3060,16 +3155,16 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override Type Type { get; }
 
-        internal TypedBlockExpression(Type type, IReadOnlyList<Expression> expressions) : base(expressions) => 
+        internal TypedBlockExpression(Type type, IReadOnlyList<Expression> expressions) : base(expressions) =>
             Type = type;
     }
 
-    
+
     public class ManyVariablesBlockExpression : BlockExpression
     {
         public override IReadOnlyList<ParameterExpression> Variables { get; }
 
-        internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) : base(expressions) => 
+        internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) : base(expressions) =>
             Variables = variables;
     }
 
@@ -3077,7 +3172,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override Type Type { get; }
 
-        internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) 
+        internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
             : base(variables, expressions) =>
             Type = type;
     }
@@ -3102,11 +3197,11 @@ namespace FastExpressionCompiler.LightExpression
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLoop(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            BreakLabel == null 
+            BreakLabel == null
             ? SysExpr.Loop(Body.ToExpression(ref exprsConverted)) :
-            ContinueLabel == null 
+            ContinueLabel == null
             ? SysExpr.Loop(Body.ToExpression(ref exprsConverted), BreakLabel.ToSystemLabelTarget(ref exprsConverted)) :
-            SysExpr.Loop(Body.ToExpression(ref exprsConverted), 
+            SysExpr.Loop(Body.ToExpression(ref exprsConverted),
                 BreakLabel.ToSystemLabelTarget(ref exprsConverted),
                 ContinueLabel.ToSystemLabelTarget(ref exprsConverted));
 
@@ -3232,8 +3327,8 @@ namespace FastExpressionCompiler.LightExpression
             sb.NewLine(lineIdent, identSpaces).Append('{');
             sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType, identSpaces);
             sb.NewLine(lineIdent, identSpaces).Append('}');
-            
-            if (_handlers != null && _handlers.Length > 0) 
+
+            if (_handlers != null && _handlers.Length > 0)
             {
                 for (var i = 0; i < _handlers.Length; i++)
                 {
@@ -3241,26 +3336,26 @@ namespace FastExpressionCompiler.LightExpression
                     sb.NewLine(lineIdent, identSpaces).Append("catch (");
                     var exTypeName = h.Test.ToCode(stripNamespace, printType);
                     sb.Append(exTypeName);
-                    if (h.Variable != null) 
+                    if (h.Variable != null)
                     {
                         if (string.IsNullOrEmpty(h.Variable.Name))
                             h.Variable.Name = "ex" + exTypeName; // todo: @hack
-                        sb.Append(' ').Append(h.Variable.Name); 
+                        sb.Append(' ').Append(h.Variable.Name);
                     }
                     sb.Append(')');
-                    if (h.Filter != null) 
+                    if (h.Filter != null)
                     {
                         sb.Append("when (");
                         sb.NewLineIdentCs(h.Filter, lineIdent, stripNamespace, printType, identSpaces);
                         sb.NewLine(lineIdent, identSpaces).Append(')');
                     }
-                    sb.NewLine(lineIdent, identSpaces).Append('{');            
+                    sb.NewLine(lineIdent, identSpaces).Append('{');
                     sb.NewLineIdentCs(h.Body, lineIdent, stripNamespace, printType, identSpaces);
                     sb.NewLine(lineIdent, identSpaces).Append('}');
                 }
             }
 
-            if (Finally != null) 
+            if (Finally != null)
             {
                 sb.Append("finally");
                 sb.NewLine(lineIdent, identSpaces).Append('{');
@@ -3315,15 +3410,15 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => Target.Type;
 
         public readonly LabelTarget Target;
-        public  virtual Expression DefaultValue => null;
+        public virtual Expression DefaultValue => null;
 
         internal LabelExpression(LabelTarget target) => Target = target;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLabel(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            DefaultValue == null 
-                ? SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted)) 
+            DefaultValue == null
+                ? SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted))
                 : SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted), DefaultValue.ToExpression(ref exprsConverted));
 
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
@@ -3345,7 +3440,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             sb.NewLineIdent(lineIdent);
             Target.ToCSharpString(sb).Append(':');
-            
+
             sb.NewLineIdent(lineIdent);
             if (Type == typeof(void))
                 return sb.Append("return;");
@@ -3366,12 +3461,12 @@ namespace FastExpressionCompiler.LightExpression
             DefaultValue = defaultValue;
     }
 
-    public class LabelTarget 
+    public class LabelTarget
     {
         public virtual Type Type => typeof(void);
         public virtual string Name => null;
 
-        internal System.Linq.Expressions.LabelTarget ToSystemLabelTarget(ref LiveCountArray<LightAndSysExpr> converted) 
+        internal System.Linq.Expressions.LabelTarget ToSystemLabelTarget(ref LiveCountArray<LightAndSysExpr> converted)
         {
             var i = converted.Count - 1;
             while (i != -1 && !ReferenceEquals(converted.Items[i].LightExpr, this)) --i;
@@ -3379,7 +3474,7 @@ namespace FastExpressionCompiler.LightExpression
                 return (System.Linq.Expressions.LabelTarget)converted.Items[i].SysExpr;
 
             var sysItem = Name == null
-                ? SysExpr.Label(Type) 
+                ? SysExpr.Label(Type)
                 : SysExpr.Label(Type, Name);
 
             ref var item = ref converted.PushSlot();
@@ -3388,8 +3483,8 @@ namespace FastExpressionCompiler.LightExpression
             return sysItem;
         }
 
-        public StringBuilder CreateExpressionString(StringBuilder sb, 
-            bool stripNamespace = false, Func<Type, string, string> printType = null) 
+        public StringBuilder CreateExpressionString(StringBuilder sb,
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
             sb.Append("Label(");
             sb.Append(Type.ToCode(stripNamespace, printType));
@@ -3410,7 +3505,7 @@ namespace FastExpressionCompiler.LightExpression
 
             return sb.Append(Name);
         }
-        
+
         public override string ToString() => Type.ToCode(true, null) + Name?.ToString();
     }
 
@@ -3456,14 +3551,14 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("MakeGoto(");
-            
+
             sb.Append(nameof(GotoExpressionKind)).Append('.').Append(Enum.GetName(typeof(GotoExpressionKind), Kind)).Append(',');
-            
+
             sb.NewLineIdent(lineIdent).Append('"');
             Target.CreateExpressionString(sb, stripNamespace, printType).Append("\",");
-            
+
             sb.NewLineIdentExpr(Value, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            
+
             sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
 
             return sb.Append(')');
@@ -3501,61 +3596,61 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class ReturnGotoExpression : GotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Return;
-        internal ReturnGotoExpression(LabelTarget target) : base(target) {}
+        internal ReturnGotoExpression(LabelTarget target) : base(target) { }
     }
 
     public sealed class ReturnTypedGotoExpression : TypedGotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Return;
-        internal ReturnTypedGotoExpression(LabelTarget target, Type type) : base(target, type) {}
+        internal ReturnTypedGotoExpression(LabelTarget target, Type type) : base(target, type) { }
     }
 
     public sealed class ReturnValueGotoExpression : ValueGotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Return;
-        internal ReturnValueGotoExpression(LabelTarget target, Expression value) : base(target, value) {}
+        internal ReturnValueGotoExpression(LabelTarget target, Expression value) : base(target, value) { }
     }
 
     public sealed class ReturnTypedValueGotoExpression : TypedValueGotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Return;
-        internal ReturnTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) {}
+        internal ReturnTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
     }
 
     public sealed class BreakGotoExpression : GotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Break;
-        internal BreakGotoExpression(LabelTarget target) : base(target) {}
+        internal BreakGotoExpression(LabelTarget target) : base(target) { }
     }
 
     public sealed class BreakValueGotoExpression : ValueGotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Break;
-        internal BreakValueGotoExpression(LabelTarget target, Expression value) : base(target, value) {}
+        internal BreakValueGotoExpression(LabelTarget target, Expression value) : base(target, value) { }
     }
 
     public sealed class BreakTypedGotoExpression : TypedGotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Break;
-        internal BreakTypedGotoExpression(LabelTarget target, Type type) : base(target, type) {}
+        internal BreakTypedGotoExpression(LabelTarget target, Type type) : base(target, type) { }
     }
 
     public sealed class BreakTypedValueGotoExpression : TypedValueGotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Break;
-        internal BreakTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) {}
+        internal BreakTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
     }
 
     public sealed class ContinueGotoExpression : GotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
-        internal ContinueGotoExpression(LabelTarget target) : base(target) {}
+        internal ContinueGotoExpression(LabelTarget target) : base(target) { }
     }
 
     public sealed class ContinueTypedGotoExpression : TypedGotoExpression
     {
         public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
-        internal ContinueTypedGotoExpression(LabelTarget target, Type type) : base(target, type) {}
+        internal ContinueTypedGotoExpression(LabelTarget target, Type type) : base(target, type) { }
     }
 
     public struct SwitchCase
@@ -3743,7 +3838,7 @@ namespace FastExpressionCompiler.LightExpression
             }
 
             sb.Append(") => ");
-            if (ReturnType != typeof(void) && 
+            if (ReturnType != typeof(void) &&
                 Body is BlockExpression == false)
                 sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType);
             else
@@ -3858,7 +3953,7 @@ namespace FastExpressionCompiler.LightExpression
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDynamic(this);
 
         // todo: @incomplete implement the bare minimum
-        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, 
+        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             return null;
