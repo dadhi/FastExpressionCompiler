@@ -306,8 +306,9 @@ namespace FastExpressionCompiler.LightExpression
             {
                 case MemberBindingType.Assignment:
                     return VisitMemberAssignment((MemberAssignment)node);
-                //case MemberBindingType.MemberBinding:
-                //case MemberBindingType.ListBinding:
+                case MemberBindingType.MemberBinding:
+                    return VisitMemberMemberBinding((MemberMemberBinding)node);
+                case MemberBindingType.ListBinding:
                 default:
                     throw new NotSupportedException($"Unhandled Binding Type: {node.BindingType}");
             }
@@ -319,6 +320,14 @@ namespace FastExpressionCompiler.LightExpression
             if (expression == node.Expression)
                 return node;
             return new MemberAssignment(node.Member, expression);
+        }
+        
+        protected internal virtual MemberMemberBinding VisitMemberMemberBinding(MemberMemberBinding node)
+        {
+            var bindings = VisitAndConvert(node.Bindings, b => VisitMemberBinding(b));
+            if (bindings == node.Bindings)
+                return node;
+            return new MemberMemberBinding(node.Member, bindings);
         }
 
         protected internal virtual Expression VisitListInit(ListInitExpression node)

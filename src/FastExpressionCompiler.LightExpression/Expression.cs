@@ -684,6 +684,12 @@ namespace FastExpressionCompiler.LightExpression
         public static MemberAssignment Bind(MemberInfo member, Expression expression) =>
             new MemberAssignment(member, expression);
 
+        public static MemberMemberBinding MemberBind(MemberInfo member, params MemberBinding[] bindings) =>
+            new MemberMemberBinding(member, bindings);
+ 
+        public static MemberMemberBinding MemberBind(MemberInfo member, IEnumerable<MemberBinding> bindings) =>
+            new MemberMemberBinding(member, bindings.AsReadOnlyList());
+ 
         public static MemberInitExpression MemberInit(NewExpression newExpr, params MemberBinding[] bindings) =>
             new MemberInitExpression(newExpr, bindings);
 
@@ -2783,7 +2789,6 @@ namespace FastExpressionCompiler.LightExpression
     public abstract class MemberBinding
     {
         public readonly MemberInfo Member;
-
         public abstract MemberBindingType BindingType { get; }
 
         internal MemberBinding(MemberInfo member) => Member = member;
@@ -2799,7 +2804,6 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class MemberAssignment : MemberBinding
     {
         public readonly Expression Expression;
-
         public override MemberBindingType BindingType => MemberBindingType.Assignment;
 
         internal MemberAssignment(MemberInfo member, Expression expression) : base(member) => Expression = expression;
@@ -2824,6 +2828,55 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         // todo: @incomplete implement ToCSharpCode
+    }
+
+    public sealed class MemberMemberBinding : MemberBinding
+    {
+        public override MemberBindingType BindingType => MemberBindingType.MemberBinding;
+
+        public IReadOnlyList<MemberBinding> Bindings { get; }
+
+        internal MemberMemberBinding(MemberInfo member, IReadOnlyList<MemberBinding> bindings)
+            : base(member) =>
+            Bindings = bindings;
+
+        private static System.Linq.Expressions.MemberBinding[] ToMemberBindings(IReadOnlyList<MemberBinding> items, 
+            ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        {
+            if (items.Count == 0)
+                return Tools.Empty<System.Linq.Expressions.MemberBinding>();
+
+            var result = new System.Linq.Expressions.MemberBinding[items.Count];
+            for (var i = 0; i < result.Length; ++i)
+                result[i] = items[i].ToMemberBinding(ref exprsConverted);
+            return result;
+        }
+
+        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.MemberBind(Member, ToMemberBindings(Bindings, ref exprsConverted));
+
+        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            sb.Append("MemberBind(");
+
+            if (Member is FieldInfo)
+                sb.NewLineIdent(lineIdent).AppendTypeof(Member.DeclaringType, stripNamespace, printType)
+                    .Append(".GetTypeInfo().GetDeclaredField(\"").Append(Member.Name).Append("\"),");
+            else // or the property to assign
+                sb.NewLineIdent(lineIdent).AppendTypeof(Member.DeclaringType, stripNamespace, printType)
+                    .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(Member.Name).Append("\"),");
+
+            for (int i = 0; i < Bindings.Count; i++)
+            {
+                var b = Bindings[i];
+                if (i > 0) sb.Append(",");
+                sb.NewLineIdent(lineIdent);
+                b.CreateExpressionString(sb, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            }
+            
+            return sb.Append(")");
+        }
     }
 
     public class InvocationExpression : Expression
