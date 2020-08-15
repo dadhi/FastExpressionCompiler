@@ -228,7 +228,7 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual Expression VisitParameter(ParameterExpression node) => node;
 
-        protected virtual SwitchCase VisitSwitchCase(SwitchCase node)
+        protected internal virtual SwitchCase VisitSwitchCase(SwitchCase node)
         {
             var testValues = Visit(node.TestValues);
             var body = Visit(node.Body);
@@ -309,6 +309,7 @@ namespace FastExpressionCompiler.LightExpression
                 case MemberBindingType.MemberBinding:
                     return VisitMemberMemberBinding((MemberMemberBinding)node);
                 case MemberBindingType.ListBinding:
+                    return VisitMemberListBinding((MemberListBinding)node);
                 default:
                     throw new NotSupportedException($"Unhandled Binding Type: {node.BindingType}");
             }
@@ -330,6 +331,14 @@ namespace FastExpressionCompiler.LightExpression
             return new MemberMemberBinding(node.Member, bindings);
         }
 
+        protected internal virtual MemberListBinding VisitMemberListBinding(MemberListBinding node)
+        {
+            var newItems = VisitAndConvert(node.Initializers, x => VisitElementInit(x));
+            if (newItems == node.Initializers)
+                return node;
+            return new MemberListBinding(node.Member, newItems);
+        }
+
         protected internal virtual Expression VisitListInit(ListInitExpression node)
         {
             var newExpression = VisitAndConvert(node.NewExpression);
@@ -339,7 +348,7 @@ namespace FastExpressionCompiler.LightExpression
             return new ListInitExpression(newExpression, initializers.AsReadOnlyList());
         }
 
-        protected virtual ElementInit VisitElementInit(ElementInit node) 
+        protected internal virtual ElementInit VisitElementInit(ElementInit node) 
         {
             var arguments = VisitAndConvert(node.Arguments);
             if (arguments == node.Arguments)

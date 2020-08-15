@@ -690,6 +690,12 @@ namespace FastExpressionCompiler.LightExpression
         public static MemberMemberBinding MemberBind(MemberInfo member, IEnumerable<MemberBinding> bindings) =>
             new MemberMemberBinding(member, bindings.AsReadOnlyList());
  
+        public static MemberListBinding ListBind(MemberInfo member, params ElementInit[] initializers) =>
+            new MemberListBinding(member, initializers);
+ 
+        public static MemberListBinding ListBind(MemberInfo member, IEnumerable<ElementInit> initializers) =>
+            new MemberListBinding(member, initializers.AsReadOnlyList());
+
         public static MemberInitExpression MemberInit(NewExpression newExpr, params MemberBinding[] bindings) =>
             new MemberInitExpression(newExpr, bindings);
 
@@ -1459,10 +1465,22 @@ namespace FastExpressionCompiler.LightExpression
     public static class CodePrinter
     {
         /// <summary>Converts the `typeof(<paramref name="type"/>)` into the proper C# representation.</summary>
-        public static StringBuilder AppendTypeof(this StringBuilder sb, Type type, bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+        public static StringBuilder AppendTypeof(this StringBuilder sb, Type type, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
             type == null
                 ? sb.Append("null")
                 : sb.Append("typeof(").Append(type.ToCode(stripNamespace, printType)).Append(')');
+
+        internal static StringBuilder AppendFieldOrProperty(this StringBuilder sb, MemberInfo member, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null) 
+        {
+            if (member is FieldInfo)
+                return sb.AppendTypeof(member.DeclaringType, stripNamespace, printType)
+                    .Append(".GetTypeInfo().GetDeclaredField(\"").Append(member.Name).Append("\"),");
+            
+            return sb.AppendTypeof(member.DeclaringType, stripNamespace, printType)
+                .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(member.Name).Append("\"),");
+        }
 
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
         public static string ToCode(this Type type, bool stripNamespace = false, Func<Type, string, string> printType = null)
@@ -1947,15 +1965,32 @@ namespace FastExpressionCompiler.LightExpression
         public readonly MethodInfo AddMethod;
         public readonly IReadOnlyList<Expression> Arguments;
 
+        public int ArgumentCount => Arguments.Count;
+        public Expression GetArgument(int index) => Arguments[index];
+
         internal ElementInit(MethodInfo addMethod, IReadOnlyList<Expression> arguments)
         {
             AddMethod = addMethod;
             Arguments = arguments;
         }
 
-        public int ArgumentCount => Arguments.Count;
+        internal StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, 
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            sb.Append("ElementInit(");
+            for (int j = 0; j < Arguments.Count; j++)
+            {
+                var a = Arguments[j];
+                if (j > 0) sb.Append(",");
 
-        public Expression GetArgument(int index) => Arguments[index];
+                var m = AddMethod;
+                var methodIndex = m.DeclaringType.GetTypeInfo().GetDeclaredMethods(m.Name).AsArray().GetFirstIndex(m);
+                sb.NewLineIdent(lineIdent).AppendTypeof(m.DeclaringType, stripNamespace, printType)
+                    .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(m.Name).Append("\").ToArray()[").Append(methodIndex).Append("],");
+                sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            }
+            return sb.Append(")");
+        }
     }
 
     // todo: @feature not supported yet
@@ -1980,9 +2015,10 @@ namespace FastExpressionCompiler.LightExpression
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions) =>
             SysExpr.ListInit(
                 (System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref convertedExpressions),
-                ToExpressions(Initializers, ref convertedExpressions));
+                ToElementInits(Initializers, ref convertedExpressions));
 
-        private static System.Linq.Expressions.ElementInit[] ToExpressions(IReadOnlyList<ElementInit> elemInits, ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        internal static System.Linq.Expressions.ElementInit[] ToElementInits(IReadOnlyList<ElementInit> elemInits, 
+            ref LiveCountArray<LightAndSysExpr> exprsConverted)
         {
             if (elemInits.Count == 0)
                 return Tools.Empty<System.Linq.Expressions.ElementInit>();
@@ -1994,7 +2030,8 @@ namespace FastExpressionCompiler.LightExpression
             return result;
         }
 
-        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, 
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("ListInit(");
             sb.NewLineIdentExpr(NewExpression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
@@ -2002,20 +2039,8 @@ namespace FastExpressionCompiler.LightExpression
             {
                 var init = Initializers[i];
                 if (i > 0) sb.Append(",");
-
-                sb.NewLineIdent(lineIdent).Append("ElementInit(");
-                for (int j = 0; j < init.Arguments.Count; j++)
-                {
-                    var a = init.Arguments[j];
-                    if (j > 0) sb.Append(",");
-
-                    var m = init.AddMethod;
-                    var methodIndex = m.DeclaringType.GetTypeInfo().GetDeclaredMethods(m.Name).AsArray().GetFirstIndex(m);
-                    sb.NewLineIdent(lineIdent).AppendTypeof(m.DeclaringType, stripNamespace, printType)
-                        .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(m.Name).Append("\").ToArray()[").Append(methodIndex).Append("],");
-                    sb.NewLineIdentExprs(init.Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
-                }
-                sb.Append(")");
+                sb.NewLineIdent(lineIdent);
+                init.CreateExpressionString(sb, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             }
 
             return sb.Append(")");
@@ -2822,14 +2847,7 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Bind(");
-
-            if (Member is FieldInfo)
-                sb.NewLineIdent(lineIdent).AppendTypeof(Member.DeclaringType, stripNamespace, printType)
-                    .Append(".GetTypeInfo().GetDeclaredField(\"").Append(Member.Name).Append("\"),");
-            else // or the property to assign
-                sb.NewLineIdent(lineIdent).AppendTypeof(Member.DeclaringType, stripNamespace, printType)
-                    .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(Member.Name).Append("\"),");
-
+            sb.NewLineIdent(lineIdent).AppendFieldOrProperty(Member, stripNamespace, printType);
             sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(")");
         }
@@ -2840,11 +2858,9 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class MemberMemberBinding : MemberBinding
     {
         public override MemberBindingType BindingType => MemberBindingType.MemberBinding;
+        public readonly IReadOnlyList<MemberBinding> Bindings;
 
-        public IReadOnlyList<MemberBinding> Bindings { get; }
-
-        internal MemberMemberBinding(MemberInfo member, IReadOnlyList<MemberBinding> bindings)
-            : base(member) =>
+        internal MemberMemberBinding(MemberInfo member, IReadOnlyList<MemberBinding> bindings) : base(member) =>
             Bindings = bindings;
 
         private static System.Linq.Expressions.MemberBinding[] ToMemberBindings(IReadOnlyList<MemberBinding> items, 
@@ -2866,13 +2882,7 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("MemberBind(");
-
-            if (Member is FieldInfo)
-                sb.NewLineIdent(lineIdent).AppendTypeof(Member.DeclaringType, stripNamespace, printType)
-                    .Append(".GetTypeInfo().GetDeclaredField(\"").Append(Member.Name).Append("\"),");
-            else // or the property to assign
-                sb.NewLineIdent(lineIdent).AppendTypeof(Member.DeclaringType, stripNamespace, printType)
-                    .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(Member.Name).Append("\"),");
+            sb.NewLineIdent(lineIdent).AppendFieldOrProperty(Member, stripNamespace, printType);
 
             for (int i = 0; i < Bindings.Count; i++)
             {
@@ -2880,6 +2890,35 @@ namespace FastExpressionCompiler.LightExpression
                 if (i > 0) sb.Append(",");
                 sb.NewLineIdent(lineIdent);
                 b.CreateExpressionString(sb, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            }
+            
+            return sb.Append(")");
+        }
+    }
+
+    public sealed class MemberListBinding : MemberBinding
+    {
+        public override MemberBindingType BindingType => MemberBindingType.ListBinding;
+        public readonly IReadOnlyList<ElementInit> Initializers;
+
+        internal MemberListBinding(MemberInfo member, IReadOnlyList<ElementInit> initializers) : base(member) =>
+            Initializers = initializers;
+
+        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.ListBind(Member, ListInitExpression.ToElementInits(Initializers, ref exprsConverted));
+
+        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            sb.Append("ListBind(");
+            sb.NewLineIdent(lineIdent).AppendFieldOrProperty(Member, stripNamespace, printType);
+
+            for (int i = 0; i < Initializers.Count; i++)
+            {
+                var x = Initializers[i];
+                if (i > 0) sb.Append(",");
+                sb.NewLineIdent(lineIdent);
+                x.CreateExpressionString(sb, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             }
             
             return sb.Append(")");
