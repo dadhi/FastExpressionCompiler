@@ -1472,15 +1472,20 @@ namespace FastExpressionCompiler.LightExpression
                 : sb.Append("typeof(").Append(type.ToCode(stripNamespace, printType)).Append(')');
 
         internal static StringBuilder AppendFieldOrProperty(this StringBuilder sb, MemberInfo member, 
-            bool stripNamespace = false, Func<Type, string, string> printType = null) 
-        {
-            if (member is FieldInfo)
-                return sb.AppendTypeof(member.DeclaringType, stripNamespace, printType)
-                    .Append(".GetTypeInfo().GetDeclaredField(\"").Append(member.Name).Append("\"),");
-            
-            return sb.AppendTypeof(member.DeclaringType, stripNamespace, printType)
-                .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(member.Name).Append("\"),");
-        }
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            member is FieldInfo f 
+                ? sb.AppendField(f, stripNamespace, printType)
+                : sb.AppendProperty((PropertyInfo)member, stripNamespace, printType);
+
+        internal static StringBuilder AppendField(this StringBuilder sb, FieldInfo field, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            sb.AppendTypeof(field.DeclaringType, stripNamespace, printType)
+              .Append(".GetTypeInfo().GetDeclaredField(\"").Append(field.Name).Append("\"),");
+
+        internal static StringBuilder AppendProperty(this StringBuilder sb, PropertyInfo property, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            sb.AppendTypeof(property.DeclaringType, stripNamespace, printType)
+              .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(property.Name).Append("\"),");
 
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
         public static string ToCode(this Type type, bool stripNamespace = false, Func<Type, string, string> printType = null)
@@ -2775,8 +2780,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             sb.Append("Property(");
             sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdent(lineIdent).AppendTypeof(PropertyInfo.DeclaringType, stripNamespace, printType)
-                .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(PropertyInfo.Name).Append("\")");
+            sb.NewLineIdent(lineIdent).AppendProperty(PropertyInfo, stripNamespace, printType);
             return sb.Append(')');
         }
     }
@@ -2804,8 +2808,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             sb.Append("Field(");
             sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdent(lineIdent).AppendTypeof(FieldInfo.DeclaringType, stripNamespace, printType)
-                .Append(".GetTypeInfo().GetDeclaredField(\"").Append(FieldInfo.Name).Append("\")");
+            sb.NewLineIdent(lineIdent).AppendField(FieldInfo, stripNamespace, printType);
             return sb.Append(')');
         }
     }
