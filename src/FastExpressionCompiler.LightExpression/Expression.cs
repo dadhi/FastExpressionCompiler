@@ -1928,11 +1928,18 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
+    // todo: @perf is not used yet
     public interface IArgumentProvider
     {
-        Expression GetArgument(int index);
-
         int ArgumentCount { get; }
+        Expression GetArgument(int index);
+    }
+
+    // todo: @perf is not used yet - apply to LambdaExpression, e.g. LambdaExpression of a single argument
+    internal interface IParameterProvider
+    {
+        int ParameterCount { get; }
+        ParameterExpression GetParameter(int index);
     }
 
     public sealed class ElementInit : IArgumentProvider
