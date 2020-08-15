@@ -360,5 +360,13 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual Expression VisitExtension(Expression node) =>
             node.VisitChildren(this);
+
+        protected internal virtual Expression VisitRuntimeVariables(RuntimeVariablesExpression node)
+        {
+            var newItems = VisitAndConvert(node.Variables);
+            if (newItems == node.Variables)
+                return node;
+            return new RuntimeVariablesExpression(newItems);
+        }
     }
 }

@@ -4033,6 +4033,7 @@ namespace FastExpressionCompiler.LightExpression
             Parameters = parameters;
     }
 
+    // todo: @feature is not supported
     public sealed class DynamicExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Dynamic;
@@ -4053,6 +4054,28 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.MakeDynamic(DelegateType, Binder, ToExpressions(Arguments, ref exprsConverted));
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDynamic(this);
+
+        // todo: @incomplete implement the bare minimum
+        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            return null;
+        }
+    }
+
+    // todo: @feature is not supported
+    public sealed class RuntimeVariablesExpression : Expression
+    {
+        public sealed override ExpressionType NodeType => ExpressionType.RuntimeVariables;
+        public sealed override Type Type => typeof(IRuntimeVariables);
+        public readonly IReadOnlyList<ParameterExpression> Variables;
+        internal RuntimeVariablesExpression(IReadOnlyList<ParameterExpression> variables) =>
+            Variables = variables;
+ 
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitRuntimeVariables(this);
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions) =>
+            SysExpr.RuntimeVariables(ParameterExpression.ToParameterExpressions(Variables, ref convertedExpressions));
 
         // todo: @incomplete implement the bare minimum
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
