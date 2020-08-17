@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#nullable disable
 
 namespace FastExpressionCompiler.LightExpression
 {
@@ -368,5 +369,7 @@ namespace FastExpressionCompiler.LightExpression
                 return node;
             return new RuntimeVariablesExpression(newItems);
         }
+
+        protected internal virtual Expression VisitDebugInfo(DebugInfoExpression node) => node;
     }
 }

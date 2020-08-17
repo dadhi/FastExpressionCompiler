@@ -589,7 +589,8 @@ namespace FastExpressionCompiler.LightExpression
         public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) =>
             parameters == null || parameters.Length == 0
                 ? new LambdaExpression(Tools.GetFuncOrActionType(body.Type), body)
-                : new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters);
+                : new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, 
+                    parameters);
 
         public static LambdaExpression Lambda(Expression body, ParameterExpression[] parameters, Type returnType)
         {
@@ -677,9 +678,11 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression ArrayIndex(Expression array, Expression index) =>
             new ArrayIndexExpression(array, index, array.Type.GetElementType());
 
-        // todo: @incomplete implement this as a MethodCallExpression
-        // public static BinaryExpression ArrayIndex(Expression array, IEnumerable<Expression> indices) =>
-        //     new MultiDimensionalArrayIndexExpression(array,  indices, array.Type.GetElementType());
+        public static MethodCallExpression ArrayIndex(Expression array, IEnumerable<Expression> indexes) =>
+            Call(array, array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance), indexes.AsReadOnlyList());
+
+        public static MethodCallExpression ArrayIndex(Expression array, params Expression[] indexes) =>
+            Call(array, array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance), indexes);
 
         public static MemberAssignment Bind(MemberInfo member, Expression expression) =>
             new MemberAssignment(member, expression);
@@ -945,6 +948,10 @@ namespace FastExpressionCompiler.LightExpression
                 return new TypedBlockExpression(type, exprs);
             return new TypedManyVariablesBlockExpression(type, vars, exprs);
         }
+
+        public static Expression DebugInfo(SymbolDocumentInfo doc, 
+            int startLine, int startColumn, int endLine, int endColumn) =>
+            new DebugInfoExpression(doc, startLine, startColumn, endLine, endColumn);
 
         /// <summary>
         /// Creates a LoopExpression with the given body and (optional) break target.
@@ -1220,6 +1227,9 @@ namespace FastExpressionCompiler.LightExpression
 
             throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
         }
+
+        public static SymbolDocumentInfo SymbolDocument(string fileName) =>
+            new SymbolDocumentInfo(fileName);
     }
 
     internal struct LightAndSysExpr
@@ -1239,6 +1249,24 @@ namespace FastExpressionCompiler.LightExpression
                     if (ReferenceEquals(source[i], item))
                         return i;
             return -1;
+        }
+
+        public static Type[] GetParamTypes(ParameterExpression[] paramExprs)
+        {
+            if (paramExprs == null || paramExprs.Length == 0)
+                return Type.EmptyTypes;
+
+            if (paramExprs.Length == 1)
+                return new[] { paramExprs[0].IsByRef ? paramExprs[0].Type.MakeByRefType() : paramExprs[0].Type };
+
+            var paramTypes = new Type[paramExprs.Length];
+            for (var i = 0; i < paramTypes.Length; i++)
+            {
+                var parameterExpr = paramExprs[i];
+                paramTypes[i] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
+            }
+
+            return paramTypes;
         }
 
         internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
@@ -4082,6 +4110,60 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             return null;
+        }
+    }
+
+    public class SymbolDocumentInfo
+    {
+        internal SymbolDocumentInfo(string fileName) => FileName = fileName;
+
+        public string FileName { get; }
+        public virtual Guid Language => Guid.Empty;
+        public virtual Guid LanguageVendor => Guid.Empty;
+        internal static readonly Guid DocumentType_Text = new Guid(0x5a869d0b, 0x6611, 0x11d3, 0xbd, 0x2a, 0, 0, 0xf8, 8, 0x49, 0xbd);
+
+        public virtual Guid DocumentType => DocumentType_Text;
+    }
+
+    // todo: @feature is not supported
+    /// <summary>
+    /// Emits or clears a sequence point for debug information.
+    ///
+    /// This allows the debugger to highlight the correct source code when
+    /// debugging.
+    /// </summary>
+    public class DebugInfoExpression : Expression
+    {
+        public sealed override ExpressionType NodeType => ExpressionType.DebugInfo;
+        public sealed override Type Type => typeof(void);
+        public readonly SymbolDocumentInfo Document;
+        public virtual int StartLine { get; }
+        public virtual int StartColumn { get; }
+        public virtual int EndLine { get; }
+        public virtual int EndColumn { get; }
+        public virtual bool IsClear => false;
+        
+        internal DebugInfoExpression(SymbolDocumentInfo document,
+            int startLine, int startColumn, int endLine, int endColumn) 
+        {
+             Document = document;
+             StartLine = startLine;
+             StartColumn = startColumn;
+             EndLine = endLine;
+             EndColumn = endColumn;
+        }
+
+        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDebugInfo(this);
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions) =>
+            SysExpr.DebugInfo(SysExpr.SymbolDocument(Document.FileName), 
+                StartLine, StartColumn, EndLine, EndColumn);
+
+        // todo: @incomplete
+        public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs, 
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            throw new NotImplementedException();
         }
     }
 }
