@@ -1,18 +1,14 @@
 <Project>
     <PropertyGroup>
-        <!--Set to true to minimize number of target frameworks, to fasten the build :-) -->
-        <DevMode>true</DevMode>
-
-        <LangVersion>Latest</LangVersion>
-
         <Authors>Maksim Volkau</Authors>
         <Copyright>Copyright © 2016-2020 Maksim Volkau</Copyright>
         <NeutralLanguage>en-US</NeutralLanguage>
-
+    </PropertyGroup>
+    <PropertyGroup>
+        <LangVersion>Latest</LangVersion>
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
         <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     </PropertyGroup>
-
     <ItemGroup>
         <None Remove="**\*.orig" />
         <None Remove="**\*.ncrunchproject" />

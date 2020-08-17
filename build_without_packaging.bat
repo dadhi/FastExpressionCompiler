@@ -4,7 +4,7 @@ echo:
 echo:## Starting: RESTORE and BUILD...
 echo: 
 
-dotnet build -c:Release -v:m -p:DevMode=false
+dotnet build -c:Release -v:m
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:

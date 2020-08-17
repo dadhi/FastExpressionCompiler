@@ -37,6 +37,6 @@ Thanks to the contributors!
 
         <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
             <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
-            <PackageReference Include="System.Dynamic.Runtime" Version="4.0.11"/>
+            <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0"/>
         </ItemGroup>
     </Project>
