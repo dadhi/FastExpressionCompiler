@@ -21,6 +21,7 @@ for:
     build_script:
       - dotnet build -c Release -v:m
       - dotnet run --no-build -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+      - echo Current folder is '%CD%'
       - dotnet run --no-build -c Release -p test/FastExpressionCompiler.TestsRunner.Net472/FastExpressionCompiler.TestsRunner.Net472.csproj
 
     artifacts:
