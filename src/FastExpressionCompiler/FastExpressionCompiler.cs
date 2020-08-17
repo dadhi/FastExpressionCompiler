@@ -35,6 +35,7 @@ THE SOFTWARE.
 #if SUPPORTS_FAST_EXPRESSION_COMPILER
 */
 
+// #define LIGHT_EXPRESSION
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression
@@ -1675,9 +1676,12 @@ namespace FastExpressionCompiler
                                     if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                                         statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                     {
-                                        var p = parent & ~ParentFlags.IgnoreResult; // we are generating the return value and ensuring here that it is not popped-out
-                                        if (!TryEmit(gt.Value, paramExprs, il, ref closure, p))
-                                            return false;
+                                        if (gt.Value != null) // todo: @bug verify with the test
+                                        {
+                                            // we are generating the return value and ensuring here that it is not popped-out
+                                            if (!TryEmit(gt.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                                                return false;
+                                        }
                                         
                                         // todo: @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
                                         // emitting the double `OpCodes.Emit` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
@@ -4667,13 +4671,17 @@ namespace FastExpressionCompiler
 
         public static Type[] GetParamTypes(IReadOnlyList<ParameterExpression> paramExprs)
         {
-            if (paramExprs == null || paramExprs.Count == 0)
+            if (paramExprs == null)
                 return Empty<Type>();
 
-            if (paramExprs.Count == 1)
+            var count = paramExprs.Count;
+            if (count == 0)
+                return Empty<Type>();
+
+            if (count == 1)
                 return new[] { paramExprs[0].IsByRef ? paramExprs[0].Type.MakeByRefType() : paramExprs[0].Type };
 
-            var paramTypes = new Type[paramExprs.Count];
+            var paramTypes = new Type[count];
             for (var i = 0; i < paramTypes.Length; i++)
             {
                 var parameterExpr = paramExprs[i];

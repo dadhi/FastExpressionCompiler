@@ -1251,24 +1251,6 @@ namespace FastExpressionCompiler.LightExpression
             return -1;
         }
 
-        public static Type[] GetParamTypes(ParameterExpression[] paramExprs)
-        {
-            if (paramExprs == null || paramExprs.Length == 0)
-                return Type.EmptyTypes;
-
-            if (paramExprs.Length == 1)
-                return new[] { paramExprs[0].IsByRef ? paramExprs[0].Type.MakeByRefType() : paramExprs[0].Type };
-
-            var paramTypes = new Type[paramExprs.Length];
-            for (var i = 0; i < paramTypes.Length; i++)
-            {
-                var parameterExpr = paramExprs[i];
-                paramTypes[i] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
-            }
-
-            return paramTypes;
-        }
-
         internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
             source.GetTypeInfo().IsValueType &&
             (target == typeof(object) ||
@@ -3245,6 +3227,8 @@ namespace FastExpressionCompiler.LightExpression
                 if (expr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                     exprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                 {
+                    if (gt.Value == null)
+                        return sb.Append("return;");
                     sb.Append("return ");
                     return gt.Value.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(";");
                 }
