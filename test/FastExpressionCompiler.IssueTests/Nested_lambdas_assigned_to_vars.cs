@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Nested_lambdas_assigned_to_vars
+    public class Nested_lambdas_assigned_to_vars : ITest
     {
         public int Run()
         {

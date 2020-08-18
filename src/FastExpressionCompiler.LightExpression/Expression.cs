@@ -411,8 +411,6 @@ namespace FastExpressionCompiler.LightExpression
             Field(instance, instance.Type.FindField(fieldName));
 
         /// <summary>Creates a UnaryExpression that represents a bitwise complement operation.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to Not and the Operand property set to the specified value.</returns>
         public static UnaryExpression Not(Expression expression) =>
             new UnaryExpression(ExpressionType.Not, expression);
 
@@ -420,147 +418,95 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression TypeAs(Expression expression, Type type) =>
             new TypedUnaryExpression(ExpressionType.TypeAs, expression, type);
 
-        public static Expression TypeEqual(Expression operand, Type type) =>
+        public static TypeBinaryExpression TypeEqual(Expression operand, Type type) =>
             new TypeBinaryExpression(ExpressionType.TypeEqual, operand, type);
 
-        public static Expression TypeIs(Expression operand, Type type) =>
+        public static TypeBinaryExpression TypeIs(Expression operand, Type type) =>
             new TypeBinaryExpression(ExpressionType.TypeIs, operand, type);
 
         /// <summary>Creates a UnaryExpression that represents an expression for obtaining the length of a one-dimensional array.</summary>
-        /// <param name="array">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to ArrayLength and the Operand property equal to array.</returns>
         public static UnaryExpression ArrayLength(Expression array) =>
             new TypedUnaryExpression<int>(ExpressionType.ArrayLength, array);
 
         /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <param name="type">A Type to set the Type property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to Convert and the Operand and Type properties set to the specified values.</returns>
         public static UnaryExpression Convert(Expression expression, Type type) =>
             new TypedUnaryExpression(ExpressionType.Convert, expression, type);
 
         /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
-        /// <typeparam name="TTo">A Type to set the Type property equal to.</typeparam>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to Convert and the Operand and Type properties set to the specified values.</returns>
         public static UnaryExpression Convert<TTo>(Expression expression) =>
             new TypedUnaryExpression<TTo>(ExpressionType.Convert, expression);
 
         /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <param name="type">A Type to set the Type property equal to.</param>
-        /// <param name="method">A MethodInfo to set the Method property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to Convert and the Operand, Type, and Method properties set to the specified values.</returns>
         public static UnaryExpression Convert(Expression expression, Type type, MethodInfo method) =>
             new ConvertWithMethodUnaryExpression(ExpressionType.Convert, expression, type, method);
 
         /// <summary>Creates a UnaryExpression that represents a conversion operation that throws an exception if the target type is overflowed.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <param name="type">A Type to set the Type property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to ConvertChecked and the Operand and Type properties set to the specified values.</returns>
         public static UnaryExpression ConvertChecked(Expression expression, Type type) =>
             new TypedUnaryExpression(ExpressionType.ConvertChecked, expression, type);
 
         /// <summary>Creates a UnaryExpression that represents a conversion operation that throws an exception if the target type is overflowed and for which the implementing method is specified.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <param name="type">A Type to set the Type property equal to.</param>
-        /// <param name="method">A MethodInfo to set the Method property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to ConvertChecked and the Operand, Type, and Method properties set to the specified values.</returns>
         public static UnaryExpression ConvertChecked(Expression expression, Type type, MethodInfo method) =>
             new ConvertWithMethodUnaryExpression(ExpressionType.ConvertChecked, expression, type, method);
 
         /// <summary>Creates a UnaryExpression that represents the decrementing of the expression by 1.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that represents the decremented expression.</returns>
         public static UnaryExpression Decrement(Expression expression) =>
             new UnaryExpression(ExpressionType.Decrement, expression);
 
         /// <summary>Creates a UnaryExpression that represents the incrementing of the expression value by 1.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that represents the incremented expression.</returns>
         public static UnaryExpression Increment(Expression expression) =>
             new UnaryExpression(ExpressionType.Increment, expression);
 
         /// <summary>Returns whether the expression evaluates to false.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>An instance of UnaryExpression.</returns>
         public static UnaryExpression IsFalse(Expression expression) =>
             new TypedUnaryExpression<bool>(ExpressionType.IsFalse, expression);
 
         /// <summary>Returns whether the expression evaluates to true.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>An instance of UnaryExpression.</returns>
         public static UnaryExpression IsTrue(Expression expression) =>
             new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
 
         /// <summary>Creates a UnaryExpression, given an operand, by calling the appropriate factory method.</summary>
-        /// <param name="unaryType">The ExpressionType that specifies the type of unary operation.</param>
-        /// <param name="operand">An Expression that represents the operand.</param>
-        /// <param name="type">The Type that specifies the type to be converted to (pass null if not applicable).</param>
-        /// <returns>The UnaryExpression that results from calling the appropriate factory method.</returns>
         public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type) =>
             type == null
                 ? new UnaryExpression(unaryType, operand)
                 : new TypedUnaryExpression(unaryType, operand, type);
 
         /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to Negate and the Operand property set to the specified value.</returns>
         public static UnaryExpression Negate(Expression expression) =>
             new UnaryExpression(ExpressionType.Negate, expression);
 
         /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation that has overflow checking.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to NegateChecked and the Operand property set to the specified value.</returns>
         public static UnaryExpression NegateChecked(Expression expression) =>
             new UnaryExpression(ExpressionType.NegateChecked, expression);
 
         /// <summary>Returns the expression representing the ones complement.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>An instance of UnaryExpression.</returns>
         public static UnaryExpression OnesComplement(Expression expression) =>
             new UnaryExpression(ExpressionType.OnesComplement, expression);
 
         /// <summary>Creates a UnaryExpression that increments the expression by 1 and assigns the result back to the expression.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that represents the resultant expression.</returns>
         public static UnaryExpression PreIncrementAssign(Expression expression) =>
             new UnaryExpression(ExpressionType.PreIncrementAssign, expression);
 
         /// <summary>Creates a UnaryExpression that represents the assignment of the expression followed by a subsequent increment by 1 of the original expression.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that represents the resultant expression.</returns>
         public static UnaryExpression PostIncrementAssign(Expression expression) =>
             new UnaryExpression(ExpressionType.PostIncrementAssign, expression);
 
         /// <summary>Creates a UnaryExpression that decrements the expression by 1 and assigns the result back to the expression.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that represents the resultant expression.</returns>
         public static UnaryExpression PreDecrementAssign(Expression expression) =>
             new UnaryExpression(ExpressionType.PreDecrementAssign, expression);
 
         /// <summary>Creates a UnaryExpression that represents the assignment of the expression followed by a subsequent decrement by 1 of the original expression.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that represents the resultant expression.</returns>
         public static UnaryExpression PostDecrementAssign(Expression expression) =>
             new UnaryExpression(ExpressionType.PostDecrementAssign, expression);
 
         /// <summary>Creates a UnaryExpression that represents an expression that has a constant value of type Expression.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to Quote and the Operand property set to the specified value.</returns>
         public static UnaryExpression Quote(Expression expression) =>
             new UnaryExpression(ExpressionType.Quote, expression);
 
         /// <summary>Creates a UnaryExpression that represents a unary plus operation.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to UnaryPlus and the Operand property set to the specified value.</returns>
         public static UnaryExpression UnaryPlus(Expression expression) =>
             new UnaryExpression(ExpressionType.UnaryPlus, expression);
 
         /// <summary>Creates a UnaryExpression that represents an explicit unboxing.</summary>
-        /// <param name="expression">An Expression to set the Operand property equal to.</param>
-        /// <param name="type">A Type to set the Type property equal to.</param>
-        /// <returns>A UnaryExpression that has the NodeType property equal to unbox and the Operand and Type properties set to the specified values.</returns>
         public static UnaryExpression Unbox(Expression expression, Type type) =>
             new TypedUnaryExpression(ExpressionType.Unbox, expression, type);
 
@@ -1496,6 +1442,16 @@ namespace FastExpressionCompiler.LightExpression
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>
             sb.AppendTypeof(property.DeclaringType, stripNamespace, printType)
               .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(property.Name).Append("\"),");
+        
+        internal static StringBuilder AppendMethod(this StringBuilder sb, MethodInfo method, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
+            var type = method.DeclaringType;
+            var methodIndex = type.GetTypeInfo().GetDeclaredMethods(method.Name).AsArray().GetFirstIndex(method);
+            return sb.AppendTypeof(type, stripNamespace, printType)
+                .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(method.Name)
+                .Append("\").ToArray()[").Append(methodIndex).Append("]");
+        }
 
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
         public static string ToCode(this Type type, bool stripNamespace = false, Func<Type, string, string> printType = null)
@@ -1652,44 +1608,25 @@ namespace FastExpressionCompiler.LightExpression
         {
             switch (NodeType)
             {
-                case ExpressionType.ArrayLength:
-                    return SysExpr.ArrayLength(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.Convert:
-                    return SysExpr.Convert(Operand.ToExpression(ref exprsConverted), Type, Method);
-                case ExpressionType.ConvertChecked:
-                    return SysExpr.ConvertChecked(Operand.ToExpression(ref exprsConverted), Type, Method);
-                case ExpressionType.Decrement:
-                    return SysExpr.Decrement(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.Increment:
-                    return SysExpr.Increment(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.IsFalse:
-                    return SysExpr.IsFalse(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.IsTrue:
-                    return SysExpr.IsTrue(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.Negate:
-                    return SysExpr.Negate(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.NegateChecked:
-                    return SysExpr.NegateChecked(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.OnesComplement:
-                    return SysExpr.OnesComplement(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.PostDecrementAssign:
-                    return SysExpr.PostDecrementAssign(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.PostIncrementAssign:
-                    return SysExpr.PostIncrementAssign(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.PreDecrementAssign:
-                    return SysExpr.PreDecrementAssign(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.PreIncrementAssign:
-                    return SysExpr.PreIncrementAssign(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.Quote:
-                    return SysExpr.Quote(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.UnaryPlus:
-                    return SysExpr.UnaryPlus(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.Unbox:
-                    return SysExpr.Unbox(Operand.ToExpression(ref exprsConverted), Type);
-                case ExpressionType.Throw:
-                    return SysExpr.Throw(Operand.ToExpression(ref exprsConverted), Type);
-                case ExpressionType.TypeAs:
-                    return SysExpr.TypeAs(Operand.ToExpression(ref exprsConverted), Type);
+                case ExpressionType.ArrayLength:    return SysExpr.ArrayLength(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.Convert:        return SysExpr.Convert(Operand.ToExpression(ref exprsConverted), Type, Method);
+                case ExpressionType.ConvertChecked: return SysExpr.ConvertChecked(Operand.ToExpression(ref exprsConverted), Type, Method);
+                case ExpressionType.Decrement:      return SysExpr.Decrement(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.Increment:      return SysExpr.Increment(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.IsFalse:        return SysExpr.IsFalse(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.IsTrue:         return SysExpr.IsTrue(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.Negate:         return SysExpr.Negate(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.NegateChecked:  return SysExpr.NegateChecked(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.OnesComplement: return SysExpr.OnesComplement(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.PostDecrementAssign: return SysExpr.PostDecrementAssign(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.PostIncrementAssign: return SysExpr.PostIncrementAssign(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.PreDecrementAssign:  return SysExpr.PreDecrementAssign(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.PreIncrementAssign:  return SysExpr.PreIncrementAssign(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.Quote:          return SysExpr.Quote(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.UnaryPlus:      return SysExpr.UnaryPlus(Operand.ToExpression(ref exprsConverted));
+                case ExpressionType.Unbox:          return SysExpr.Unbox(Operand.ToExpression(ref exprsConverted), Type);
+                case ExpressionType.Throw:          return SysExpr.Throw(Operand.ToExpression(ref exprsConverted), Type);
+                case ExpressionType.TypeAs:         return SysExpr.TypeAs(Operand.ToExpression(ref exprsConverted), Type);
                 default:
                     throw new NotSupportedException("Cannot convert Expression to Expression of type " + NodeType);
             }
@@ -1708,17 +1645,13 @@ namespace FastExpressionCompiler.LightExpression
                 NodeType == ExpressionType.Throw ||
                 NodeType == ExpressionType.TypeAs)
             {
-                sb.Append(',');
-                sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
+                sb.Append(',').NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
             }
 
             if ((NodeType == ExpressionType.Convert || NodeType == ExpressionType.ConvertChecked)
                 && Method != null)
             {
-                sb.Append(',');
-                var methodIndex = Method.DeclaringType.GetTypeInfo().GetDeclaredMethods(Method.Name).AsArray().GetFirstIndex(Method);
-                sb.NewLineIdent(lineIdent).AppendTypeof(Method.DeclaringType, stripNamespace, printType)
-                    .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(Method.Name).Append("\").ToArray()[").Append(methodIndex).Append("]");
+                sb.Append(',').NewLineIdent(lineIdent).AppendMethod(Method, stripNamespace, printType);
             }
 
             return sb.Append(')');
@@ -1774,21 +1707,16 @@ namespace FastExpressionCompiler.LightExpression
         public TypedUnaryExpression(ExpressionType nodeType, Expression operand) : base(nodeType, operand) { }
     }
 
+    // todo: @perf memory by fixing the nodeType
     public sealed class ConvertWithMethodUnaryExpression : TypedUnaryExpression
     {
         public override MethodInfo Method { get; }
-        public override Type Type => Method.ReturnType;
-
-        public ConvertWithMethodUnaryExpression(ExpressionType nodeType, Expression operand, MethodInfo method)
-            : base(nodeType, operand, method.ReturnType) =>
-            Method = method;
 
         public ConvertWithMethodUnaryExpression(ExpressionType nodeType, Expression operand, Type type, MethodInfo method)
             : base(nodeType, operand, type) =>
             Method = method;
     }
 
-    // todo: @perf minimize the memory consumption - bind Type to bool for boolean expressions
     public abstract class BinaryExpression : Expression
     {
         //todo: @feature - not supported yet
@@ -1997,11 +1925,7 @@ namespace FastExpressionCompiler.LightExpression
             {
                 var a = Arguments[j];
                 if (j > 0) sb.Append(",");
-
-                var m = AddMethod;
-                var methodIndex = m.DeclaringType.GetTypeInfo().GetDeclaredMethods(m.Name).AsArray().GetFirstIndex(m);
-                sb.NewLineIdent(lineIdent).AppendTypeof(m.DeclaringType, stripNamespace, printType)
-                    .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(m.Name).Append("\").ToArray()[").Append(methodIndex).Append("],");
+                sb.NewLineIdent(lineIdent).AppendMethod(AddMethod, stripNamespace, printType);
                 sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             }
             return sb.Append(")");
@@ -2541,11 +2465,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             sb.Append("Call(");
             sb.NewLineIdentExpr(Object, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-
-            var methodIndex = Method.DeclaringType.GetTypeInfo().GetDeclaredMethods(Method.Name).AsArray().GetFirstIndex(Method);
-            sb.NewLineIdent(lineIdent).AppendTypeof(Method.DeclaringType, stripNamespace, printType)
-                .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(Method.Name).Append("\").ToArray()[").Append(methodIndex).Append("],");
-
+            sb.NewLineIdent(lineIdent).AppendMethod(Method, stripNamespace, printType);
             sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
@@ -3842,12 +3762,7 @@ namespace FastExpressionCompiler.LightExpression
             sb.Append("Switch(");
             sb.NewLineIdentExpr(SwitchValue, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
             sb.NewLineIdentExpr(DefaultBody, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-
-            var methodIndex = Comparison.DeclaringType.GetTypeInfo().DeclaredMethods.AsArray().GetFirstIndex(Comparison);
-            sb.NewLineIdent(lineIdent).AppendTypeof(Comparison.DeclaringType, stripNamespace, printType)
-                .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(Comparison.Name).Append("\").ToArray()[")
-                .Append(methodIndex).Append("],");
-
+            sb.NewLineIdent(lineIdent).AppendMethod(Comparison, stripNamespace, printType);
             CreateExpressionCodeString(_cases, sb, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
