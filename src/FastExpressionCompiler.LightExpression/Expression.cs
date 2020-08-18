@@ -788,11 +788,6 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression Modulo(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.Modulo, left, right);
 
-        // note: @note it should be a `LeftTypedBinaryExpression` and not `LogicalBinaryExpression` so that it works both for logical and bitwise context
-        /// <summary>Creates a BinaryExpression that represents a bitwise OR operation.</summary>
-        public static BinaryExpression Or(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.Or, left, right);
-
         /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
         public static BinaryExpression RightShift(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.RightShift, left, right);
@@ -828,6 +823,11 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
         public static BinaryExpression AndAlso(Expression left, Expression right) =>
             new LogicalBinaryExpression(ExpressionType.AndAlso, left, right);
+
+        // note: @note it should be a `LeftTypedBinaryExpression` and not `LogicalBinaryExpression` so that it works both for logical and bitwise context
+        /// <summary>Creates a BinaryExpression that represents a bitwise OR operation.</summary>
+        public static BinaryExpression Or(Expression left, Expression right) =>
+            new LeftTypedBinaryExpression(ExpressionType.Or, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
         public static BinaryExpression OrElse(Expression left, Expression right) =>
@@ -1760,6 +1760,51 @@ namespace FastExpressionCompiler.LightExpression
             sb.NewLineIdentExpr(Right, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
+
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            switch (NodeType) 
+            {
+                case ExpressionType.Equal:
+                {
+                    Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    if (Right is ConstantExpression r && r.Value is bool rb && rb)
+                        return sb;
+                    sb.Append(" == ");
+                    return Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                }
+
+                case ExpressionType.NotEqual: 
+                {
+                    Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    if (Right is ConstantExpression r && r.Value is bool rb)
+                        return rb ? sb.Append(" == false") : sb;
+                    sb.Append(" != ");
+                    return Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                }
+
+                case ExpressionType.And:
+                case ExpressionType.AndAlso:
+                case ExpressionType.Or:
+                case ExpressionType.OrElse:
+                {
+                    Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    if (NodeType == ExpressionType.And)
+                        sb.Append(" & ");
+                    if (NodeType == ExpressionType.AndAlso)
+                        sb.Append(" && ");
+                    if (NodeType == ExpressionType.Or)
+                        sb.Append(" | ");
+                    if (NodeType == ExpressionType.OrElse)
+                        sb.Append(" || ");
+                    return Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                }
+
+                // todo: @incomplete
+                default: return sb.Append(ToString());
+            }
+        }
     }
 
     /*
@@ -1781,42 +1826,6 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => typeof(bool);
         internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
             NodeType = nodeType;
-
-        public override StringBuilder ToCSharpString(StringBuilder sb,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
-        {
-            if (NodeType == ExpressionType.Equal)
-            {
-                Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                if (Right is ConstantExpression r && r.Value is bool rb && rb)
-                    return sb;
-                sb.Append(" == ");
-                Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                return sb;
-            }
-
-            if (NodeType == ExpressionType.NotEqual)
-            {
-                Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                if (Right is ConstantExpression r && r.Value is bool rb)
-                    return rb ? sb.Append(" == false") : sb;
-                sb.Append(" != ");
-                Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                return sb;
-            }
-
-            if (NodeType == ExpressionType.And ||
-                NodeType == ExpressionType.AndAlso)
-            {
-                Left .ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                sb.Append(" && ");
-                Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                return sb;
-            }
-
-            // todo: @incomplete
-            return sb.Append(ToString());
-        }
     }
 
     internal sealed class LeftTypedBinaryExpression : BinaryExpression

@@ -1674,17 +1674,15 @@ namespace FastExpressionCompiler
                                     
                                     // This is basically the return pattern (see #237), so we don't care for the rest of expressions
                                     if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
-                                        statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
+                                        statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target &&
+                                        gt.Value != null)
                                     {
-                                        if (gt.Value != null) // todo: @bug verify with the test
-                                        {
-                                            // we are generating the return value and ensuring here that it is not popped-out
-                                            if (!TryEmit(gt.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
-                                                return false;
-                                        }
-                                        
+                                        // we are generating the return value and ensuring here that it is not popped-out
+                                        if (!TryEmit(gt.Value, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                                            return false;
+
                                         // todo: @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
-                                        // emitting the double `OpCodes.Emit` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
+                                        // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
                                         // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement), 
                                         // so we should avoid it on our side.
                                         if ((parent & ParentFlags.IgnoreResult) != 0)

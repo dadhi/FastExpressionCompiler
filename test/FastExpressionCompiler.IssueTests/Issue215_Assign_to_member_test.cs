@@ -44,17 +44,20 @@ namespace FastExpressionCompiler.IssueTests
 
             nra(typeof(A).GetField(nameof(A.F)));
 
-            // SetFieldInfoReadonly = (Action<FieldInfo>)Expression.Lambda(
-            //     Expression.Block(
-            //         Expression.Assign(Expression.MakeMemberAccess(castedType, fieldInfo_m_Attributes),
-            //             Expression.Convert(Expression.Or(Expression.Convert(Expression.MakeMemberAccess(castedType, fieldInfo_m_Attributes), typeof(int)), Expression.Constant((int)(FieldAttributes.InitOnly)))
-            //                 , typeof(FieldAttributes))
-            //             )
-            //         , Expression.Return(returnLabel),
-            //         Expression.Label(returnLabel)
-            //         )
-            //     , fieldInfoParam
-            //     ).CompileFast();
+            var r = Lambda(
+                Block(
+                    Assign(MakeMemberAccess(castedType, fieldInfo_m_Attributes),
+                        Convert(Or(Convert(MakeMemberAccess(castedType, fieldInfo_m_Attributes), typeof(int)), Constant((int)(FieldAttributes.InitOnly)))
+                            , typeof(FieldAttributes))
+                        )
+                    , Return(returnLabel)
+                    , Label(returnLabel))
+                , fieldInfoParam);
+
+            r.PrintCSharpString();
+            var ra = (Action<FieldInfo>)r.CompileFast(true);
+            Assert.IsNotNull(ra);
+            ra(typeof(A).GetField(nameof(A.F)));
         }
 
         public class A 
