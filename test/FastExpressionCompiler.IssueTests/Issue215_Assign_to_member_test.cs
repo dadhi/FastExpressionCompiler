@@ -35,10 +35,8 @@ namespace FastExpressionCompiler.IssueTests
                             ,typeof(System.Reflection.FieldAttributes))
                         )
                     , Return(returnLabel)
-                    , Label(returnLabel)
-                    )
-                , fieldInfoParam
-                );
+                    , Label(returnLabel))
+                , fieldInfoParam);
 
             nr.PrintCSharpString();
             var nra = (Action<FieldInfo>)nr.CompileFast(true);

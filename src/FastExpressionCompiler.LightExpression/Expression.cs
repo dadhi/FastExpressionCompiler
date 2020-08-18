@@ -1453,6 +1453,10 @@ namespace FastExpressionCompiler.LightExpression
                 .Append("\").ToArray()[").Append(methodIndex).Append("]");
         }
 
+        internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
+            name != null ? sb.Append(name)
+                : sb.Append(type.ToCode(true, null)).Append('_').Append(identity.GetHashCode());
+
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
         public static string ToCode(this Type type, bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
@@ -1668,9 +1672,9 @@ namespace FastExpressionCompiler.LightExpression
                     return sb.Append(')');
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
-                    sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')');
+                    sb.Append("((").Append(Type.ToCode(stripNamespace, printType)).Append(')');
                     Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    return sb;
+                    return sb.Append(')');
                 case ExpressionType.TypeAs:
                     sb.Append('(');
                     Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
@@ -1797,6 +1801,15 @@ namespace FastExpressionCompiler.LightExpression
                 if (Right is ConstantExpression r && r.Value is bool rb)
                     return rb ? sb.Append(" == false") : sb;
                 sb.Append(" != ");
+                Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                return sb;
+            }
+
+            if (NodeType == ExpressionType.And ||
+                NodeType == ExpressionType.AndAlso)
+            {
+                Left .ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                sb.Append(" && ");
                 Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                 return sb;
             }
@@ -2094,7 +2107,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.Parameter;
         public override Type Type { get; }
-        public string Name { get; internal set; } // todo: @hack - made it settable to set from the `BlockExpresssion.ToCSharpString`
+        public string Name { get; }
         public virtual bool IsByRef => false;
         internal ParameterExpression(Type type, string name)
         {
@@ -2123,7 +2136,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
-            sb.Append(Name); // todo: @fix where Name is null
+            sb.AppendName(Name, Type, this);
 
         internal static System.Linq.Expressions.ParameterExpression[] ToParameterExpressions(
             IReadOnlyList<ParameterExpression> ps, ref LiveCountArray<LightAndSysExpr> exprsConverted)
@@ -3129,9 +3142,7 @@ namespace FastExpressionCompiler.LightExpression
                     var v = vars[i];
                     sb.NewLineIdent(lineIdent);
                     sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ');
-                    if (string.IsNullOrEmpty(v.Name))
-                        v.Name = "__" + v.Type.Name + "_" + i;
-                    sb.Append(v.Name).Append(';');
+                    sb.AppendName(v.Name, v.Type, v).Append(';');
                 }
                 sb.AppendLine(); // visually separate the variables from expressions
             }
@@ -3139,8 +3150,6 @@ namespace FastExpressionCompiler.LightExpression
             var exprs = Expressions;
             for (var i = 0; i < exprs.Count - 1; i++)
             {
-                sb.NewLineIdent(lineIdent);
-
                 var expr = exprs[i];
 
                 // this is basically the return pattern (see #237), so we don't care for the rest of expressions if any
@@ -3148,12 +3157,14 @@ namespace FastExpressionCompiler.LightExpression
                     exprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                 {
                     if (gt.Value == null)
-                        return sb.Append("return;");
-                    sb.Append("return ");
+                        return Type == typeof(void) ? sb : sb.Append("return;");
+
+                    sb.NewLineIdent(lineIdent).Append("return ");
                     return gt.Value.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(";");
                 }
 
                 // otherwise proceed normally with the next (and not the last) expression
+                sb.NewLineIdent(lineIdent);
                 expr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
 
                 // preventing the `};` kind of situation and emphasing the conditional block with empty line
@@ -3370,12 +3381,10 @@ namespace FastExpressionCompiler.LightExpression
                     sb.NewLine(lineIdent, identSpaces).Append("catch (");
                     var exTypeName = h.Test.ToCode(stripNamespace, printType);
                     sb.Append(exTypeName);
+
                     if (h.Variable != null)
-                    {
-                        if (string.IsNullOrEmpty(h.Variable.Name))
-                            h.Variable.Name = "ex" + exTypeName; // todo: @hack
-                        sb.Append(' ').Append(h.Variable.Name);
-                    }
+                        sb.AppendName(h.Variable.Name, h.Variable.Type, h.Variable);
+
                     sb.Append(')');
                     if (h.Filter != null)
                     {
@@ -3528,17 +3537,8 @@ namespace FastExpressionCompiler.LightExpression
             return sb;
         }
 
-        public StringBuilder ToCSharpString(StringBuilder sb)
-        {
-            if (Name == null)
-            {
-                if (Type == typeof(void))
-                    return sb.Append("void_").Append(GetHashCode());
-                return sb.Append(Type.ToCode(true, null)).Append('_').Append(GetHashCode());
-            }
-
-            return sb.Append(Name);
-        }
+        public StringBuilder ToCSharpString(StringBuilder sb) =>
+            sb.AppendName(Name, Type, this);
 
         public override string ToString() => Type.ToCode(true, null) + Name?.ToString();
     }
@@ -3592,7 +3592,6 @@ namespace FastExpressionCompiler.LightExpression
             Target.CreateExpressionString(sb, stripNamespace, printType).Append("\",");
 
             sb.NewLineIdentExpr(Value, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-
             sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
 
             return sb.Append(')');
@@ -3862,7 +3861,7 @@ namespace FastExpressionCompiler.LightExpression
                     if (pe.IsByRef)
                         sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
                     sb.Append(pe.Type.ToCode(stripNamespace, printType)).Append(' ');
-                    sb.Append(pe.Name == null ? "@p" + i : pe.Name);
+                    sb.AppendName(pe.Name, pe.Type, pe);
                 }
             }
 
