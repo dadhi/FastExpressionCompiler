@@ -24,9 +24,16 @@ namespace FastExpressionCompiler.IssueTests
         {
             var type = Type.GetType("System.Reflection.RtFieldInfo", false);
             var fieldInfo_m_Attributes = type?.GetField("m_fieldAttributes", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-
             var fieldInfoParam = Parameter(typeof(FieldInfo));
             var castedType = Convert(fieldInfoParam, type);
+
+            var getAttrExpr = Lambda<Func<FieldInfo, int>>(
+                Convert(MakeMemberAccess(castedType, fieldInfo_m_Attributes), typeof(int)),
+                fieldInfoParam);
+
+            getAttrExpr.PrintCSharpString();
+            var getAttr = getAttrExpr.CompileFast(true);
+
             var returnLabel = Label();
             var nr = Lambda(
                 Block(
@@ -42,7 +49,10 @@ namespace FastExpressionCompiler.IssueTests
             var nra = (Action<FieldInfo>)nr.CompileFast(true);
             Assert.IsNotNull(nra);
 
-            nra(typeof(A).GetField(nameof(A.F)));
+            var fieldF = typeof(A).GetField(nameof(A.F));
+            nra(fieldF);
+            var x = getAttr(fieldF);
+            Assert.AreEqual(0, x & (int)FieldAttributes.InitOnly);
 
             var r = Lambda(
                 Block(
@@ -57,7 +67,9 @@ namespace FastExpressionCompiler.IssueTests
             r.PrintCSharpString();
             var ra = (Action<FieldInfo>)r.CompileFast(true);
             Assert.IsNotNull(ra);
-            ra(typeof(A).GetField(nameof(A.F)));
+            ra(fieldF);
+            var y = getAttr(fieldF);
+            Assert.AreNotEqual(0, y & (int)FieldAttributes.InitOnly);
         }
 
         public class A 
