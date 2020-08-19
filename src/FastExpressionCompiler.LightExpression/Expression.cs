@@ -412,7 +412,7 @@ namespace FastExpressionCompiler.LightExpression
 
         /// <summary>Creates a UnaryExpression that represents a bitwise complement operation.</summary>
         public static UnaryExpression Not(Expression expression) =>
-            new UnaryExpression(ExpressionType.Not, expression);
+            new NodeTypedUnaryExpression(ExpressionType.Not, expression);
 
         /// <summary>Creates a UnaryExpression that represents an explicit reference or boxing conversion where null is supplied if the conversion fails.</summary>
         public static UnaryExpression TypeAs(Expression expression, Type type) =>
@@ -430,11 +430,7 @@ namespace FastExpressionCompiler.LightExpression
 
         /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
         public static UnaryExpression Convert(Expression expression, Type type) =>
-            new TypedUnaryExpression(ExpressionType.Convert, expression, type);
-
-        /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
-        public static UnaryExpression Convert<TTo>(Expression expression) =>
-            new TypedUnaryExpression<TTo>(ExpressionType.Convert, expression);
+            new ConvertUnaryExpression(expression, type);
 
         /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
         public static UnaryExpression Convert(Expression expression, Type type, MethodInfo method) =>
@@ -450,11 +446,11 @@ namespace FastExpressionCompiler.LightExpression
 
         /// <summary>Creates a UnaryExpression that represents the decrementing of the expression by 1.</summary>
         public static UnaryExpression Decrement(Expression expression) =>
-            new UnaryExpression(ExpressionType.Decrement, expression);
+            new NodeTypedUnaryExpression(ExpressionType.Decrement, expression);
 
         /// <summary>Creates a UnaryExpression that represents the incrementing of the expression value by 1.</summary>
         public static UnaryExpression Increment(Expression expression) =>
-            new UnaryExpression(ExpressionType.Increment, expression);
+            new NodeTypedUnaryExpression(ExpressionType.Increment, expression);
 
         /// <summary>Returns whether the expression evaluates to false.</summary>
         public static UnaryExpression IsFalse(Expression expression) =>
@@ -465,46 +461,48 @@ namespace FastExpressionCompiler.LightExpression
             new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
 
         /// <summary>Creates a UnaryExpression, given an operand, by calling the appropriate factory method.</summary>
-        public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type) =>
-            type == null
-                ? new UnaryExpression(unaryType, operand)
-                : new TypedUnaryExpression(unaryType, operand, type);
+        public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type)
+        {
+            if (type == null || type == operand.Type)
+                return new NodeTypedUnaryExpression(unaryType, operand);
+            return new TypedUnaryExpression(unaryType, operand, type); 
+        }
 
         /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation.</summary>
         public static UnaryExpression Negate(Expression expression) =>
-            new UnaryExpression(ExpressionType.Negate, expression);
+            new NodeTypedUnaryExpression(ExpressionType.Negate, expression);
 
         /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation that has overflow checking.</summary>
         public static UnaryExpression NegateChecked(Expression expression) =>
-            new UnaryExpression(ExpressionType.NegateChecked, expression);
+            new NodeTypedUnaryExpression(ExpressionType.NegateChecked, expression);
 
         /// <summary>Returns the expression representing the ones complement.</summary>
         public static UnaryExpression OnesComplement(Expression expression) =>
-            new UnaryExpression(ExpressionType.OnesComplement, expression);
+            new NodeTypedUnaryExpression(ExpressionType.OnesComplement, expression);
 
         /// <summary>Creates a UnaryExpression that increments the expression by 1 and assigns the result back to the expression.</summary>
         public static UnaryExpression PreIncrementAssign(Expression expression) =>
-            new UnaryExpression(ExpressionType.PreIncrementAssign, expression);
+            new NodeTypedUnaryExpression(ExpressionType.PreIncrementAssign, expression);
 
         /// <summary>Creates a UnaryExpression that represents the assignment of the expression followed by a subsequent increment by 1 of the original expression.</summary>
         public static UnaryExpression PostIncrementAssign(Expression expression) =>
-            new UnaryExpression(ExpressionType.PostIncrementAssign, expression);
+            new NodeTypedUnaryExpression(ExpressionType.PostIncrementAssign, expression);
 
         /// <summary>Creates a UnaryExpression that decrements the expression by 1 and assigns the result back to the expression.</summary>
         public static UnaryExpression PreDecrementAssign(Expression expression) =>
-            new UnaryExpression(ExpressionType.PreDecrementAssign, expression);
+            new NodeTypedUnaryExpression(ExpressionType.PreDecrementAssign, expression);
 
         /// <summary>Creates a UnaryExpression that represents the assignment of the expression followed by a subsequent decrement by 1 of the original expression.</summary>
         public static UnaryExpression PostDecrementAssign(Expression expression) =>
-            new UnaryExpression(ExpressionType.PostDecrementAssign, expression);
+            new NodeTypedUnaryExpression(ExpressionType.PostDecrementAssign, expression);
 
         /// <summary>Creates a UnaryExpression that represents an expression that has a constant value of type Expression.</summary>
         public static UnaryExpression Quote(Expression expression) =>
-            new UnaryExpression(ExpressionType.Quote, expression);
+            new NodeTypedUnaryExpression(ExpressionType.Quote, expression);
 
         /// <summary>Creates a UnaryExpression that represents a unary plus operation.</summary>
         public static UnaryExpression UnaryPlus(Expression expression) =>
-            new UnaryExpression(ExpressionType.UnaryPlus, expression);
+            new NodeTypedUnaryExpression(ExpressionType.UnaryPlus, expression);
 
         /// <summary>Creates a UnaryExpression that represents an explicit unboxing.</summary>
         public static UnaryExpression Unbox(Expression expression, Type type) =>
@@ -934,15 +932,9 @@ namespace FastExpressionCompiler.LightExpression
             new CatchBlock(null, body, null, test);
 
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception.</summary>
-        /// <param name="value">An Expression to set the Operand property equal to.</param>
-        /// <returns>A UnaryExpression that represents the exception.</returns>
-        public static UnaryExpression Throw(Expression value) =>
-            new VoidUnaryExpression(ExpressionType.Throw, value);
+        public static UnaryExpression Throw(Expression value) => new ThrowUnaryExpression(value);
 
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception with a given type.</summary>
-        /// <param name="value">An Expression to set the Operand property equal to.</param>
-        /// <param name="type">The Type of the expression.</param>
-        /// <returns>A UnaryExpression that represents the exception.</returns>
         public static UnaryExpression Throw(Expression value, Type type) =>
             new TypedUnaryExpression(ExpressionType.Throw, value, type);
 
@@ -1591,20 +1583,13 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public class UnaryExpression : Expression
+    public abstract class UnaryExpression : Expression
     {
-        public override ExpressionType NodeType { get; }
-
         public override Type Type => Operand.Type;
         public readonly Expression Operand;
-
         public virtual MethodInfo Method => null;
 
-        public UnaryExpression(ExpressionType nodeType, Expression operand)
-        {
-            NodeType = nodeType;
-            Operand = operand;
-        }
+        public UnaryExpression(Expression operand) => Operand = operand;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitUnary(this);
 
@@ -1689,29 +1674,47 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class VoidUnaryExpression : UnaryExpression
+    public sealed class NodeTypedUnaryExpression : UnaryExpression
     {
-        public override Type Type => typeof(void);
+        public override ExpressionType NodeType { get; }
+        public NodeTypedUnaryExpression(ExpressionType nodeType, Expression operand) : base(operand) =>
+            NodeType = nodeType;
+    }
 
-        public VoidUnaryExpression(ExpressionType nodeType, Expression operand) : base(nodeType, operand) { }
+    public sealed class ThrowUnaryExpression : UnaryExpression
+    {
+        public override ExpressionType NodeType => ExpressionType.Throw;
+        public override Type Type => typeof(void);
+        public ThrowUnaryExpression(Expression operand) : base(operand) { }
     }
 
     public class TypedUnaryExpression : UnaryExpression
     {
+        public override ExpressionType NodeType { get; }
         public override Type Type { get; }
+        public TypedUnaryExpression(ExpressionType nodeType, Expression operand, Type type) : base(operand)
+        {
+            NodeType = nodeType;
+            Type = type;
+        }
+    }
 
-        public TypedUnaryExpression(ExpressionType nodeType, Expression operand, Type type) : base(nodeType, operand) =>
+    public sealed class ConvertUnaryExpression : UnaryExpression
+    {
+        public override ExpressionType NodeType => ExpressionType.Convert;
+        public override Type Type { get; }
+        public ConvertUnaryExpression(Expression operand, Type type) : base(operand) =>
             Type = type;
     }
 
     public sealed class TypedUnaryExpression<T> : UnaryExpression
     {
+        public override ExpressionType NodeType { get; }
         public override Type Type => typeof(T);
-
-        public TypedUnaryExpression(ExpressionType nodeType, Expression operand) : base(nodeType, operand) { }
+        public TypedUnaryExpression(ExpressionType nodeType, Expression operand) : base(operand) =>
+            NodeType = nodeType; 
     }
 
-    // todo: @perf memory by fixing the nodeType
     public sealed class ConvertWithMethodUnaryExpression : TypedUnaryExpression
     {
         public override MethodInfo Method { get; }

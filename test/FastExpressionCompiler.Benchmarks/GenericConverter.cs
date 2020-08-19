@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.Benchmarks
         public static Func<TFrom, TTo> GetConverter_CompiledFast_LightExpression<TFrom, TTo>()
         {
             var fromParam = L.Parameter(typeof(TFrom));
-            var expr = L.Lambda<Func<TFrom, TTo>>(L.Convert<TTo>(fromParam), fromParam);
+            var expr = L.Lambda<Func<TFrom, TTo>>(L.Convert(fromParam, typeof(TTo)), fromParam);
             return LightExpression.ExpressionCompiler.CompileFast(expr, true);
         }
 
