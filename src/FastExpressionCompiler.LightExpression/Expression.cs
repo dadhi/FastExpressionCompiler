@@ -1412,12 +1412,19 @@ namespace FastExpressionCompiler.LightExpression
     /// <summary>Converts the object of known type into the valid C# code representation</summary>
     public static class CodePrinter
     {
-        /// <summary>Converts the `typeof(<paramref name="type"/>)` into the proper C# representation.</summary>
         public static StringBuilder AppendTypeof(this StringBuilder sb, Type type, 
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>
             type == null
                 ? sb.Append("null")
                 : sb.Append("typeof(").Append(type.ToCode(stripNamespace, printType)).Append(')');
+
+        public static StringBuilder AppendTypeofList(this StringBuilder sb, Type[] types, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
+            for (var i = 0; i < types.Length; i++)
+                (i > 0 ? sb.Append(", ") : sb).AppendTypeof(types[i], stripNamespace, printType);
+            return sb;
+        }
 
         internal static StringBuilder AppendFieldOrProperty(this StringBuilder sb, MemberInfo member, 
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>
@@ -1435,14 +1442,47 @@ namespace FastExpressionCompiler.LightExpression
             sb.AppendTypeof(property.DeclaringType, stripNamespace, printType)
               .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(property.Name).Append("\"),");
         
+        private const string _nonPubStatMethods = ".GetMethods(BindingFlags.NonPublic|BindingFlags.Static)[";
+        private const string _nonPubInstMethods = ".GetMethods(BindingFlags.NonPublic|BindingFlags.Instance)[";
+
         internal static StringBuilder AppendMethod(this StringBuilder sb, MethodInfo method, 
             bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
+            sb.Append("/*").Append(method.Name).Append("*/");
+
             var type = method.DeclaringType;
-            var methodIndex = type.GetTypeInfo().GetDeclaredMethods(method.Name).AsArray().GetFirstIndex(method);
-            return sb.AppendTypeof(type, stripNamespace, printType)
-                .Append(".GetTypeInfo().GetDeclaredMethods(\"").Append(method.Name)
-                .Append("\").ToArray()[").Append(methodIndex).Append("]");
+            sb.AppendTypeof(type, stripNamespace, printType);
+
+            if (method.IsPublic) 
+            {
+                var pubIndex = type.GetMethods().GetFirstIndex(method);
+                if (pubIndex == -1) 
+                {
+                    if (method.IsGenericMethod) 
+                    {
+                        var openGenMethod = method.GetGenericMethodDefinition();
+                        var openGenIndex = type.GetMethods().GetFirstIndex(openGenMethod);
+                        if (openGenIndex != -1) 
+                        {
+                            return sb.Append(".GetMethods()[").Append(openGenIndex)
+                                .Append("].MakeGenericMethod(")
+                                .AppendTypeofList(method.GetGenericArguments())
+                                .Append(')');
+                        }
+                    }
+                }
+                return sb.Append(".GetMethods()[").Append(pubIndex).Append(']');
+            }
+
+            var flags = BindingFlags.NonPublic;
+            flags |= method.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
+            var nonPubIndex = type.GetMethods(flags).GetFirstIndex(method);
+            if (nonPubIndex == -1) 
+            {
+                 // todo: @incomplete to implement it
+            }
+            sb.Append(method.IsStatic ? _nonPubStatMethods : _nonPubInstMethods);
+            return sb.Append(nonPubIndex).Append("]");
         }
 
         internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
@@ -1468,7 +1508,13 @@ namespace FastExpressionCompiler.LightExpression
                 return isArray ? typeString + "[]" : typeString;
             }
 
-            var s = new StringBuilder(typeString.Substring(0, typeString.IndexOf('`')));
+            var s = new StringBuilder();
+            var tickIndex = typeString.IndexOf('`');
+            if (tickIndex == -1) 
+                s.Append(typeString);
+            else 
+                s.Append(typeString.Substring(0, tickIndex));
+            
             s.Append('<');
 
             var genericArgs = typeInfo.GetGenericTypeParametersOrArguments();
@@ -2489,8 +2535,8 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Call(");
-            sb.NewLineIdentExpr(Object, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdent(lineIdent).AppendMethod(Method, stripNamespace, printType);
+            sb.NewLineIdentExpr(Object, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(", ");
+            sb.NewLineIdent(lineIdent).AppendMethod(Method, stripNamespace, printType).Append(", ");
             sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
@@ -3842,6 +3888,8 @@ namespace FastExpressionCompiler.LightExpression
         {
             sb.Append("Lambda(/*$*/"); // bookmark the lambdas - $ means it casts something
             sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType).Append(',');
+
+            // todo: @bug we need to construct the parameters first and store them in the `uniqueExprs` before suing the in the body
             sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
             sb.NewLineIdentExprs(Parameters, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
