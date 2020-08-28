@@ -4739,23 +4739,14 @@ namespace FastExpressionCompiler
                 return items.MoveNext() ? items.Current : default;
         }
 
-        public static T GetFirst<T>(this IList<T> source)
-        {
-            return source.Count == 0 ? default : source[0];
-        }
-
-        public static T GetFirst<T>(this T[] source)
-        {
-            return source.Length == 0 ? default : source[0];
-        }
+        public static T GetFirst<T>(this T[] source) => source.Length == 0 ? default : source[0];
     }
 
-    /// Hey
+    /// <summary>Reflecting the internal methods to access the more performant for defining the local variable</summary>
     public static class ILGeneratorHacks
     {
+        // The original ILGenerator methods we are trying to hack without allocating the `LocalBuilder`
         /*
-        // Original methods from ILGenerator.cs
-        
         public virtual LocalBuilder DeclareLocal(Type localType)
         {
             return this.DeclareLocal(localType, false);
@@ -4779,56 +4770,72 @@ namespace FastExpressionCompiler
         }
         */
 
-        /// Not allocating the LocalBuilder class
-        /// emitting this:
-        /// il.m_localSignature.AddArgument(type);
-        /// return PostInc(ref il.LocalCount);
-        public static Func<ILGenerator, Type, int> CompileGetNextLocalVarIndex()
-        {
-            if (LocalCountField == null || LocalSignatureField == null || AddArgumentMethod == null)
-                return (i, t) => i.DeclareLocal(t).LocalIndex;
-
-            var method = new DynamicMethod(string.Empty,
-                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type) },
-                typeof(ExpressionCompiler.ArrayClosure), skipVisibility: true);
-
-            var il = method.GetILGenerator();
-
-            il.Emit(OpCodes.Ldarg_1); // load `il` argument
-            il.Emit(OpCodes.Ldfld, LocalSignatureField);
-            il.Emit(OpCodes.Ldarg_2); // load `type` argument
-            il.Emit(OpCodes.Ldc_I4_0); // load `pinned: false` argument
-            il.Emit(OpCodes.Call, AddArgumentMethod);
-
-            il.Emit(OpCodes.Ldarg_1); // load `il` argument
-            il.Emit(OpCodes.Ldflda, LocalCountField);
-            il.Emit(OpCodes.Call, PostIncMethod);
-
-            il.Emit(OpCodes.Ret);
-
-            return (Func<ILGenerator, Type, int>)method.CreateDelegate(typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
-        }
+        private static readonly Func<ILGenerator, Type, int> _getNextLocalVarIndex;
 
         internal static int PostInc(ref int i) => i++;
 
-        public static readonly MethodInfo PostIncMethod = typeof(ILGeneratorHacks).GetTypeInfo()
-            .GetDeclaredMethod(nameof(PostInc));
+        static ILGeneratorHacks() 
+        {
+             // the default allocatee method
+            _getNextLocalVarIndex = (i, t) => i.DeclareLocal(t).LocalIndex;
 
-        /// Get via reflection
-        public static readonly FieldInfo LocalSignatureField = typeof(ILGenerator).GetTypeInfo()
-            .GetDeclaredField("m_localSignature");
+            // now let's try to acquire the more efficient less allocating method
+            var ilGenTypeInfo = typeof(ILGenerator).GetTypeInfo();
+            var localSignatureField = ilGenTypeInfo.GetDeclaredField("m_localSignature");
+            if (localSignatureField == null)
+                return;
 
-        /// Get via reflection
-        public static readonly FieldInfo LocalCountField = typeof(ILGenerator).GetTypeInfo()
-            .GetDeclaredField("m_localCount");
+            var localCountField = ilGenTypeInfo.GetDeclaredField("m_localCount");
+            if (localCountField == null)
+                return;
 
-        /// Get via reflection
-        public static readonly MethodInfo AddArgumentMethod = typeof(SignatureHelper).GetTypeInfo()
-            .GetDeclaredMethods(nameof(SignatureHelper.AddArgument)).First(m => m.GetParameters().Length == 2);
+            // looking for the `SignatureHelper.AddArgument(Type argument, bool pinned)`
+            MethodInfo addArgumentMethod = null;
+            foreach (var m in typeof(SignatureHelper).GetTypeInfo().GetDeclaredMethods("AddArgument"))
+            {
+                var ps = m.GetParameters();
+                if (ps.Length == 2 && ps[0].ParameterType == typeof(Type) && ps[1].ParameterType == typeof(bool))
+                {
+                    addArgumentMethod = m;
+                    break;
+                }
+            }
 
-        private static readonly Func<ILGenerator, Type, int> _getNextLocalVarIndex = CompileGetNextLocalVarIndex();
+            if (addArgumentMethod == null)
+                return;
 
-        /// Does the job
+            // our own helper - always available
+            var postIncMethod = typeof(ILGeneratorHacks).GetTypeInfo().GetDeclaredMethod(nameof(PostInc));
+
+            // now let's compile the following method without allocating the LocalBuilder class:
+            /*
+                 il.m_localSignature.AddArgument(type);
+                 return PostInc(ref il.LocalCount);
+            */
+            var efficientMethod = new DynamicMethod(string.Empty,
+                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type) },
+                typeof(ExpressionCompiler.ArrayClosure), skipVisibility: true);
+            var il = efficientMethod.GetILGenerator();
+
+            // emitting `il.m_localSignature.AddArgument(type);`
+            il.Emit(OpCodes.Ldarg_1);  // load `il` argument (arg_0 is the empty closure object)
+            il.Emit(OpCodes.Ldfld, localSignatureField);
+            il.Emit(OpCodes.Ldarg_2);  // load `type` argument
+            il.Emit(OpCodes.Ldc_I4_0); // load `pinned: false` argument
+            il.Emit(OpCodes.Call, addArgumentMethod);
+
+            // emitting `return PostInc(ref il.LocalCount);`
+            il.Emit(OpCodes.Ldarg_1); // load `il` argument
+            il.Emit(OpCodes.Ldflda, localCountField);
+            il.Emit(OpCodes.Call, postIncMethod);
+
+            il.Emit(OpCodes.Ret);
+
+            _getNextLocalVarIndex = (Func<ILGenerator, Type, int>)efficientMethod.CreateDelegate(
+                typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
+        }
+
+        /// <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
         public static int GetNextLocalVarIndex(this ILGenerator il, Type t) => _getNextLocalVarIndex(il, t);
     }
 
