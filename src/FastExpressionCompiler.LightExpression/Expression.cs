@@ -3652,10 +3652,11 @@ namespace FastExpressionCompiler.LightExpression
 
             sb.Append(nameof(GotoExpressionKind)).Append('.').Append(Enum.GetName(typeof(GotoExpressionKind), Kind)).Append(',');
 
-            sb.NewLineIdent(lineIdent).Append('"');
-            Target.CreateExpressionString(sb, stripNamespace, printType).Append("\",");
+            sb.NewLineIdent(lineIdent);
+            Target.CreateExpressionString(sb, stripNamespace, printType).Append(',');
 
             sb.NewLineIdentExpr(Value, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            
             sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
 
             return sb.Append(')');
