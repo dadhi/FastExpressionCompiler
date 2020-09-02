@@ -391,7 +391,9 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public static IndexExpression MakeIndex(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
-            indexer != null ? Property(instance, indexer, arguments) : ArrayAccess(instance, arguments);
+            indexer != null 
+            ? Property(instance, indexer, arguments) 
+            : ArrayAccess(instance, arguments);
 
         public static IndexExpression ArrayAccess(Expression array, params Expression[] indexes) =>
             new IndexExpression(array, null, indexes);
@@ -1455,31 +1457,33 @@ namespace FastExpressionCompiler.LightExpression
 
             if (method.IsPublic) 
             {
+                sb.Append(".GetMethods()[");
                 var pubIndex = type.GetMethods().GetFirstIndex(method);
-                if (pubIndex == -1) 
+                if (pubIndex == -1)
                 {
-                    if (method.IsGenericMethod) 
-                    {
-                        var openGenMethod = method.GetGenericMethodDefinition();
-                        var openGenIndex = type.GetMethods().GetFirstIndex(openGenMethod);
-                        if (openGenIndex != -1) 
-                        {
-                            return sb.Append(".GetMethods()[").Append(openGenIndex)
-                                .Append("].MakeGenericMethod(")
-                                .AppendTypeofList(method.GetGenericArguments())
-                                .Append(')');
-                        }
-                    }
+                    if (method.IsGenericMethod)
+                        return sb.Append(type.GetMethods().GetFirstIndex(method.GetGenericMethodDefinition()))
+                            .Append("].MakeGenericMethod(")
+                            .AppendTypeofList(method.GetGenericArguments())
+                            .Append(')');
+                    throw new InvalidOperationException($"Unable to find the public method '{method.Name}' in the type '{type.ToCode()}'");
                 }
-                return sb.Append(".GetMethods()[").Append(pubIndex).Append(']');
+                return sb.Append(pubIndex).Append(']');
             }
 
-            var flags = BindingFlags.NonPublic;
-            flags |= method.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
+            var flags = BindingFlags.NonPublic |
+                (method.IsStatic ? BindingFlags.Static : BindingFlags.Instance);
+
             var nonPubIndex = type.GetMethods(flags).GetFirstIndex(method);
-            if (nonPubIndex == -1) 
+            if (nonPubIndex == -1)
             {
-                 // todo: @incomplete to implement it
+                if (method.IsGenericMethod) 
+                    return sb.Append(method.IsStatic ? _nonPubStatMethods : _nonPubInstMethods)
+                        .Append(type.GetMethods(flags).GetFirstIndex(method.GetGenericMethodDefinition()))
+                        .Append("].MakeGenericMethod(")
+                        .AppendTypeofList(method.GetGenericArguments())
+                        .Append(')');
+                throw new InvalidOperationException($"Unable to find the non-public method '{method.Name}' in the type '{type.ToCode()}'");
             }
             sb.Append(method.IsStatic ? _nonPubStatMethods : _nonPubInstMethods);
             return sb.Append(nonPubIndex).Append("]");
@@ -3115,6 +3119,7 @@ namespace FastExpressionCompiler.LightExpression
             Type = type;
     }
 
+    // todo: @perf optimize for the absence of the Indexer
     /// <summary>For indexer property or array access.</summary>
     public sealed class IndexExpression : ArgumentsExpression
     {
@@ -3126,6 +3131,13 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitIndex(this);
 
+        internal IndexExpression(Expression @object, PropertyInfo indexer, IReadOnlyList<Expression> arguments)
+            : base(arguments)
+        {
+            Object = @object;
+            Indexer = indexer;
+        }
+
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeIndex(Object.ToExpression(ref exprsConverted), Indexer, ToExpressions(Arguments, ref exprsConverted));
 
@@ -3135,19 +3147,13 @@ namespace FastExpressionCompiler.LightExpression
             sb.Append("MakeIndex(");
             sb.NewLineIdentExpr(Object, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
 
-            var propIndex = Indexer.DeclaringType.GetTypeInfo().DeclaredProperties.AsArray().GetFirstIndex(Indexer);
-            sb.NewLineIdent(lineIdent).AppendTypeof(Indexer.DeclaringType)
-                .Append(".GetTypeInfo().DeclaredProperties.ToArray()[").Append(propIndex).Append("],");
+            if (Indexer == null)
+                sb.Append("null,");
+            else 
+                sb.NewLineIdent(lineIdent).AppendProperty(Indexer, stripNamespace, printType);
 
             sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
-        }
-
-        internal IndexExpression(Expression @object, PropertyInfo indexer, IReadOnlyList<Expression> arguments)
-            : base(arguments)
-        {
-            Object = @object;
-            Indexer = indexer;
         }
     }
 

@@ -10,6 +10,8 @@
         <DebugType>pdbonly</DebugType>
         <DebugSymbols>true</DebugSymbols>
 
+        <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+
     </PropertyGroup>
 
     <ItemGroup>
