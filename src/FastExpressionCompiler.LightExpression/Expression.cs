@@ -3182,7 +3182,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.Block;
         public override Type Type => Result.Type;
-
         public virtual IReadOnlyList<ParameterExpression> Variables => Tools.Empty<ParameterExpression>();
         public readonly IReadOnlyList<Expression> Expressions;
         public Expression Result => Expressions[Expressions.Count - 1];
@@ -3249,10 +3248,19 @@ namespace FastExpressionCompiler.LightExpression
 
                 // otherwise proceed normally with the next (and not the last) expression
                 sb.NewLineIdent(lineIdent);
+
+                var isNestedBlock = expr is BlockExpression;
+                if (isNestedBlock) // the nested scope
+                    sb.Append("{");
+                
                 expr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
 
+                if (isNestedBlock)
+                    sb.NewLineIdent(lineIdent).Append("}");
+
                 // preventing the `};` kind of situation and emphasing the conditional block with empty line
-                if (expr is ConditionalExpression && expr.Type == typeof(void) ||
+                if (isNestedBlock ||
+                    expr is ConditionalExpression && expr.Type == typeof(void) ||
                     expr is TryExpression ||
                     expr is LoopExpression ||
                     expr is SwitchExpression)
@@ -3263,7 +3271,15 @@ namespace FastExpressionCompiler.LightExpression
 
             var lastExpr = exprs[exprs.Count - 1];
             if (Type == typeof(void))
+            {
+                if (lastExpr is BlockExpression) // the nested scope for the `void` block
+                {
+                    sb.NewLineIdent(lineIdent).Append("{");
+                    sb.NewLineIdentCs(lastExpr, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.NewLineIdent(lineIdent).Append("}");
+                }
                 lastExpr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+            }
             else
             {
                 // inline the last nested block - it will care about the `return` and ending `;` by itself
