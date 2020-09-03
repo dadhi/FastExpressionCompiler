@@ -35,7 +35,7 @@ THE SOFTWARE.
 #if SUPPORTS_FAST_EXPRESSION_COMPILER
 */
 
-// #define LIGHT_EXPRESSION
+//#define LIGHT_EXPRESSION
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression
@@ -1671,6 +1671,8 @@ namespace FastExpressionCompiler
                                 for (var i = 0; i < statementCount - 1; i++)
                                 {
                                     var stExpr = statementExprs[i];
+                                    if (stExpr == Empty())
+                                        continue;
                                     
                                     // This is basically the return pattern (see #237), so we don't care for the rest of expressions
                                     if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&

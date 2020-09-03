@@ -3250,30 +3250,33 @@ namespace FastExpressionCompiler.LightExpression
                 // otherwise proceed normally with the next (and not the last) expression
                 sb.NewLineIdent(lineIdent);
 
-                var isNestedBlock = expr is BlockExpression;
-                if (isNestedBlock) // the nested scope
+                var isNestedBlockWithVars = expr is BlockExpression be && be.Variables.Count != 0;
+                if (isNestedBlockWithVars) // the nested scope
                     sb.Append("{");
                 
                 expr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
 
-                if (isNestedBlock)
+                if (isNestedBlockWithVars)
                     sb.NewLineIdent(lineIdent).Append("}");
 
                 // preventing the `};` kind of situation and emphasing the conditional block with empty line
-                if (isNestedBlock ||
+                if (isNestedBlockWithVars ||
                     expr is ConditionalExpression && expr.Type == typeof(void) ||
                     expr is TryExpression ||
                     expr is LoopExpression ||
                     expr is SwitchExpression)
                     sb.AppendLine();
-                else
+                else if (expr != Empty())
                     sb.Append(';');
             }
 
             var lastExpr = exprs[exprs.Count - 1];
+            if (lastExpr == Empty())
+                return sb;
+
             if (Type == typeof(void))
             {
-                if (lastExpr is BlockExpression) // the nested scope for the `void` block
+                if (lastExpr is BlockExpression be && be.Variables.Count != 0) // the nested scope for the `void` block
                 {
                     sb.NewLineIdent(lineIdent).Append("{");
                     sb.NewLineIdentCs(lastExpr, lineIdent, stripNamespace, printType, identSpaces);
