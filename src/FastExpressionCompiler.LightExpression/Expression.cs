@@ -1519,7 +1519,7 @@ namespace FastExpressionCompiler.LightExpression
 
             var typeString = stripNamespace ? type.Name : type.FullName ?? type.Name;
 
-            typeString = typeString.Replace('+', '.');
+            typeString = typeString.Replace('+', '.'); // handling the nested types
 
             var typeInfo = type.GetTypeInfo();
             if (!typeInfo.IsGenericType)
@@ -1536,20 +1536,14 @@ namespace FastExpressionCompiler.LightExpression
             else 
                 s.Append(typeString.Substring(0, tickIndex));
             
-            s.Append('<');
+            s.Append('<'); // todo: handling the generics in the nested type
 
             var genericArgs = typeInfo.GetGenericTypeParametersOrArguments();
             if (typeInfo.IsGenericTypeDefinition)
                 s.Append(',', genericArgs.Length - 1);
             else
-            {
                 for (var i = 0; i < genericArgs.Length; i++)
-                {
-                    if (i > 0)
-                        s.Append(", ");
-                    s.Append(genericArgs[i].ToCode(stripNamespace, printType));
-                }
-            }
+                    (i > 0 ? s.Append(", ") : s).Append(genericArgs[i].ToCode(stripNamespace, printType));
 
             s.Append('>');
 
@@ -2374,19 +2368,13 @@ namespace FastExpressionCompiler.LightExpression
             sb.Append("new ").Append(Type.ToCode(stripNamespace, printType)).Append('(');
             var args = Arguments;
             if (args.Count == 1)
-            {
                 args[0].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-            }
             else if (args.Count > 1)
-            {
                 for (var i = 0; i < args.Count; i++)
                 {
-                    if (i > 0)
-                        sb.Append(',');
-                    sb.NewLineIdent(lineIdent);
+                    (i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent);
                     args[i].ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
                 }
-            }
 
             return sb.Append(')');
         }
@@ -2504,9 +2492,14 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType { get; }
         public override Type Type { get; }
-
-        // I made it a ICollection for now to use Arguments as input, without changing Arguments type
+        // I made it an ICollection for now to use Arguments as input, without changing the Arguments type
         public IReadOnlyList<Expression> Expressions => Arguments;
+
+        internal NewArrayExpression(ExpressionType expressionType, Type arrayType, IReadOnlyList<Expression> elements) : base(elements)
+        {
+            NodeType = expressionType;
+            Type     = arrayType;
+        }
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
 
@@ -2526,10 +2519,22 @@ namespace FastExpressionCompiler.LightExpression
             return sb.Append(')');
         }
 
-        internal NewArrayExpression(ExpressionType expressionType, Type arrayType, IReadOnlyList<Expression> elements) : base(elements)
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            NodeType = expressionType;
-            Type = arrayType;
+            sb.Append("new ").Append(Type.GetElementType().ToCode(stripNamespace, printType));
+            sb.Append(NodeType == ExpressionType.NewArrayInit ? "[] {" : "[");
+
+            var args = Arguments;
+            if (args.Count == 1)
+                args[0].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            else if (args.Count > 1)
+                for (var i = 0; i < args.Count; i++)
+                    args[i].ToCSharpString(
+                        (i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent), 
+                        lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+
+            return sb.Append(NodeType == ExpressionType.NewArrayInit ? "}" : "]");
         }
     }
 
@@ -3917,14 +3922,18 @@ namespace FastExpressionCompiler.LightExpression
             // DeserializerDlg<Word> d = (ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...};
             // 
             sb.Append("/*").Append(Type.ToCode(stripNamespace, printType)).Append("*/(");
+            var count = Parameters.Count;
             if (Parameters.Count > 0)
             {
                 var pars = Type.FindDelegateInvokeMethod().GetParameters();
 
-                for (var i = 0; i < Parameters.Count; i++)
+                for (var i = 0; i < count; i++)
                 {
                     if (i > 0)
                         sb.Append(", ");
+                    if (count > 1)
+                        sb.NewLineIdent(lineIdent);
+
                     var pe = Parameters[i];
                     var p = pars[i];
                     if (pe.IsByRef)
