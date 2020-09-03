@@ -3037,7 +3037,8 @@ namespace FastExpressionCompiler.LightExpression
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
-            sb.Append("default(").Append(Type.ToCode(stripNamespace, printType)).Append(')');
+            Type == typeof(void) ? sb // `default(void)` does not make sense in the plain C#
+                : sb.Append("default(").Append(Type.ToCode(stripNamespace, printType)).Append(')');
     }
 
     // todo: @test Test all conditional + try for the exact op-codes produced, should help with AutoMapper case
