@@ -99,7 +99,7 @@ namespace FastExpressionCompiler.LightExpression
             var i = uniqueExprs.Count - 1;
             while (i != -1 && !ReferenceEquals(uniqueExprs[i], this)) --i;
             if (i != -1)
-                return sb.Append("e[").Append(i).Append(']');
+                return sb.Append("e[").Append(i).Append("]/*").Append(uniqueExprs[i].NodeType).Append("*/");
 
             uniqueExprs.Add(this);
             sb.Append("e[").Append(uniqueExprs.Count - 1).Append("]=");
@@ -910,7 +910,9 @@ namespace FastExpressionCompiler.LightExpression
         /// <param name="break">The break target used by the loop body, if required.</param>
         /// <returns>The created LoopExpression.</returns>
         public static LoopExpression Loop(Expression body, LabelTarget @break = null) =>
-            @break == null ? new LoopExpression(body, null, null) : new LoopExpression(body, @break, null);
+            @break == null 
+            ? new LoopExpression(body, null, null) 
+            : new LoopExpression(body, @break, null);
 
         /// <summary>
         /// Creates a LoopExpression with the given body.
@@ -1373,11 +1375,8 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
             sb.NewLineIdent(lineIdent);
-            if (expr == null)
-                sb.Append("null");
-            else
-                expr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
-            return sb;
+            return expr?.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces)
+                ?? sb.Append("null");
         }
 
         internal static StringBuilder NewLineIdentExprs<T>(this StringBuilder sb, IReadOnlyList<T> exprs, List<Expression> uniqueExprs,
@@ -2202,7 +2201,7 @@ namespace FastExpressionCompiler.LightExpression
                 sb.Append(".MakeByRefType()");
 
             if (Name != null)
-                sb.Append(",\"").Append(Name).Append('"');
+                sb.Append(", \"").Append(Name).Append('"');
 
             return sb.Append(')');
         }
@@ -3206,8 +3205,8 @@ namespace FastExpressionCompiler.LightExpression
                 sb.NewLineIdent(lineIdent).Append("new ParameterExpression[0],");
             else
             {
-                sb.NewLineIdent(lineIdent).Append("new ParameterExpression[]{");
-                sb.NewLineIdentExprs(Variables, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+                sb.NewLineIdent(lineIdent).Append("{");
+                sb.NewLineIdentExprs(Variables, uniqueExprs, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
                 sb.NewLineIdent(lineIdent).Append("},");
             }
 
@@ -3228,7 +3227,7 @@ namespace FastExpressionCompiler.LightExpression
                     sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ');
                     sb.AppendName(v.Name, v.Type, v).Append(';');
                 }
-                sb.AppendLine(); // visually separate the variables from expressions
+                sb.NewLineIdent(lineIdent); // visually separate the variables from expressions
             }
 
             var exprs = Expressions;
@@ -3261,7 +3260,7 @@ namespace FastExpressionCompiler.LightExpression
 
                 // preventing the `};` kind of situation and emphasing the conditional block with empty line
                 if (isNestedBlockWithVars ||
-                    expr is ConditionalExpression && expr.Type == typeof(void) ||
+                    expr is ConditionalExpression ||
                     expr is TryExpression ||
                     expr is LoopExpression ||
                     expr is SwitchExpression)
@@ -3278,9 +3277,9 @@ namespace FastExpressionCompiler.LightExpression
             {
                 if (lastExpr is BlockExpression be && be.Variables.Count != 0) // the nested scope for the `void` block
                 {
-                    sb.NewLineIdent(lineIdent).Append("{");
+                    sb.NewLine(lineIdent, identSpaces).Append("{");
                     sb.NewLineIdentCs(lastExpr, lineIdent, stripNamespace, printType, identSpaces);
-                    return sb.NewLineIdent(lineIdent).Append("}");
+                    return sb.NewLine(lineIdent, identSpaces).Append("}");
                 }
                 lastExpr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
             }
@@ -3291,7 +3290,7 @@ namespace FastExpressionCompiler.LightExpression
                     lastExpr is LabelExpression)
                     return lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
 
-                sb.NewLineIdent(lineIdent).Append("return ");
+                sb.NewLineIdent(lineIdent).Append("return "); // todo: @incomplete we should not always return from the NESTED block!
                 lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             }
 
@@ -3326,12 +3325,11 @@ namespace FastExpressionCompiler.LightExpression
             Type = type;
     }
 
+    // todo: @perf optimize the memory for cases without Break and Continue
     public sealed class LoopExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Loop;
-
         public override Type Type => typeof(void);
-
         public readonly Expression Body;
         public readonly LabelTarget BreakLabel;
         public readonly LabelTarget ContinueLabel;
@@ -3361,23 +3359,32 @@ namespace FastExpressionCompiler.LightExpression
             sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
 
             if (BreakLabel != null)
-            {
-                sb.Append(',');
-                sb.NewLineIdent(lineIdent).Append("Label(\"break\")");
-            }
+                BreakLabel.CreateExpressionString(sb.Append(',').NewLineIdent(lineIdent), stripNamespace, printType);
 
             if (ContinueLabel != null)
-            {
-                sb.Append(',');
-                sb.NewLineIdent(lineIdent).Append("Label(\"continue\")");
-            }
+                ContinueLabel.CreateExpressionString(sb.Append(',').NewLineIdent(lineIdent), stripNamespace, printType);
 
             return sb.Append(')');
         }
 
-        // todo: @incomplete to implement
-        // public override StringBuilder ToCSharpString(StringBuilder sb,
-        //     int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) {}
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) 
+        {
+            sb.NewLine(lineIdent, identSpaces).Append("while (true)");
+            sb.NewLine(lineIdent, identSpaces).Append("{");
+            
+            if (ContinueLabel != null)
+                ContinueLabel.ToCSharpString(sb).Append(": ").AppendLine();
+
+            Body.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+
+            sb.NewLine(lineIdent, identSpaces).Append("}");
+
+            if (BreakLabel != null)
+                BreakLabel.ToCSharpString(sb).Append(": ").AppendLine();
+
+            return sb;
+        }
     }
 
     public class TryExpression : Expression
@@ -3693,7 +3700,7 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
             sb.Append("goto ");
-            return Target.ToCSharpString(sb).Append(';');
+            return Target.ToCSharpString(sb); // usually inside the block it be ended with ';'
         }
     }
 
