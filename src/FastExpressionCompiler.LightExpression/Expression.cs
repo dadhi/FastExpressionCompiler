@@ -2321,13 +2321,6 @@ namespace FastExpressionCompiler.LightExpression
         internal TypedConstantExpression(T value) : base(value) { }
     }
 
-    public abstract class ArgumentsExpression : Expression
-    {
-        public readonly IReadOnlyList<Expression> Arguments;
-
-        protected ArgumentsExpression(IReadOnlyList<Expression> arguments) => Arguments = arguments ?? Tools.Empty<Expression>();
-    }
-
     public class NewExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.New;
@@ -2393,7 +2386,6 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Argument;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument };
         public override int FewArgumentCount => 1;
-
         internal OneArgumentNewExpression(ConstructorInfo constructor, Expression argument) : base(constructor) =>
             Argument = argument;
     }
@@ -2483,34 +2475,36 @@ namespace FastExpressionCompiler.LightExpression
             Arguments = arguments;
     }
 
-    public sealed class NewArrayExpression : ArgumentsExpression
+    public sealed class NewArrayExpression : Expression, IArgumentProvider
     {
         public override ExpressionType NodeType { get; }
         public override Type Type { get; }
-        // I made it an ICollection for now to use Arguments as input, without changing the Arguments type
-        public IReadOnlyList<Expression> Expressions => Arguments;
+        public int ArgumentCount => Expressions.Count;
+        public readonly IReadOnlyList<Expression> Expressions;
 
-        internal NewArrayExpression(ExpressionType expressionType, Type arrayType, IReadOnlyList<Expression> elements) : base(elements)
+        internal NewArrayExpression(ExpressionType expressionType, Type arrayType, IReadOnlyList<Expression> elements)
         {
             NodeType = expressionType;
             Type     = arrayType;
         }
+
+        public Expression GetArgument(int index) => Expressions[index];
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             NodeType == ExpressionType.NewArrayInit
                 // ReSharper disable once AssignNullToNotNullAttribute
-                ? SysExpr.NewArrayInit(Type.GetElementType(), ToExpressions(Arguments, ref exprsConverted))
+                ? SysExpr.NewArrayInit(Type.GetElementType(), ToExpressions(Expressions, ref exprsConverted))
                 // ReSharper disable once AssignNullToNotNullAttribute
-                : SysExpr.NewArrayBounds(Type.GetElementType(), ToExpressions(Arguments, ref exprsConverted));
+                : SysExpr.NewArrayBounds(Type.GetElementType(), ToExpressions(Expressions, ref exprsConverted));
 
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append(NodeType == ExpressionType.NewArrayInit ? "NewArrayInit(" : "NewArrayBounds(");
             sb.NewLineIdent(lineIdent).AppendTypeof(Type.GetElementType(), stripNamespace, printType);
-            sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentExprs(Expressions, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -2520,12 +2514,12 @@ namespace FastExpressionCompiler.LightExpression
             sb.Append("new ").Append(Type.GetElementType().ToCode(stripNamespace, printType));
             sb.Append(NodeType == ExpressionType.NewArrayInit ? "[] {" : "[");
 
-            var args = Arguments;
-            if (args.Count == 1)
-                args[0].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-            else if (args.Count > 1)
-                for (var i = 0; i < args.Count; i++)
-                    args[i].ToCSharpString(
+            var exprs = Expressions;
+            if (exprs.Count == 1)
+                exprs[0].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            else if (exprs.Count > 1)
+                for (var i = 0; i < exprs.Count; i++)
+                    exprs[i].ToCSharpString(
                         (i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent), 
                         lineIdent + identSpaces, stripNamespace, printType, identSpaces);
 
