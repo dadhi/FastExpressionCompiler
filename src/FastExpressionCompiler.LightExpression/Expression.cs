@@ -739,12 +739,12 @@ namespace FastExpressionCompiler.LightExpression
             new InvocationExpression(expression);
 
         public static InvocationExpression Invoke(LambdaExpression expression, Expression arg0) =>
-            new ManyArgumentsInvocationExpression(expression, new[] { arg0 });
+            new OneArgumentInvocationExpression(expression, arg0);
 
         public static InvocationExpression Invoke(Expression expression, Expression arg0) =>
             expression is LambdaExpression
-                ? new ManyArgumentsInvocationExpression(expression, new[] { arg0 })
-                : new TypedManyArgumentsInvocationExpression(expression, new[] { arg0 }, expression.Type.FindDelegateInvokeMethod().ReturnType);
+                ? new OneArgumentInvocationExpression(expression, arg0)
+                : new TypedOneArgumentInvocationExpression(expression, arg0, expression.Type.FindDelegateInvokeMethod().ReturnType);
 
         public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
             expression is LambdaExpression
@@ -1973,26 +1973,10 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    // todo: @perf is not used yet
-    public interface IArgumentProvider
-    {
-        int ArgumentCount { get; }
-        Expression GetArgument(int index);
-    }
-
-    // todo: @perf is not used yet - apply to LambdaExpression, e.g. LambdaExpression of a single argument
-    internal interface IParameterProvider
-    {
-        int ParameterCount { get; }
-        ParameterExpression GetParameter(int index);
-    }
-
-    public sealed class ElementInit : IArgumentProvider
+    public sealed class ElementInit
     {
         public readonly MethodInfo AddMethod;
         public readonly IReadOnlyList<Expression> Arguments;
-        public int ArgumentCount => Arguments.Count;
-        public Expression GetArgument(int index) => Arguments[index];
 
         internal ElementInit(MethodInfo addMethod, IReadOnlyList<Expression> arguments)
         {
@@ -2475,11 +2459,10 @@ namespace FastExpressionCompiler.LightExpression
             Arguments = arguments;
     }
 
-    public sealed class NewArrayExpression : Expression, IArgumentProvider
+    public sealed class NewArrayExpression : Expression
     {
         public override ExpressionType NodeType { get; }
         public override Type Type { get; }
-        public int ArgumentCount => Expressions.Count;
         public readonly IReadOnlyList<Expression> Expressions;
 
         internal NewArrayExpression(ExpressionType expressionType, Type arrayType, IReadOnlyList<Expression> elements)
@@ -2487,8 +2470,6 @@ namespace FastExpressionCompiler.LightExpression
             NodeType = expressionType;
             Type     = arrayType;
         }
-
-        public Expression GetArgument(int index) => Expressions[index];
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
 
@@ -2531,11 +2512,9 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.Call;
         public override Type Type => Method.ReturnType;
-
         public virtual Expression Object => null;
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
         public virtual int FewArgumentCount => 0;
-
         public readonly MethodInfo Method;
 
         internal MethodCallExpression(MethodInfo method) => Method = method;
@@ -2607,7 +2586,6 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class InstanceMethodCallExpression : MethodCallExpression
     {
         public override Expression Object { get; }
-
         internal InstanceMethodCallExpression(Expression instance, MethodInfo method) : base(method) =>
             Object = instance;
     }
@@ -2616,7 +2594,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override IReadOnlyList<Expression> Arguments { get; }
         public override int FewArgumentCount => -1;
-
         internal ManyArgumentsMethodCallExpression(MethodInfo method, IReadOnlyList<Expression> arguments) : base(method) =>
             Arguments = arguments;
     }
@@ -2633,9 +2610,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override IReadOnlyList<Expression> Arguments => new[] { Argument };
         public override int FewArgumentCount => 1;
-
         public readonly Expression Argument;
-
         internal OneArgumentMethodCallExpression(MethodInfo method, Expression argument) : base(method) =>
             Argument = argument;
     }
@@ -2944,15 +2919,11 @@ namespace FastExpressionCompiler.LightExpression
     public class InvocationExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Invoke;
-
         public override Type Type => ((LambdaExpression)Expression).ReturnType;
-
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
-
         public readonly Expression Expression;
 
-        internal InvocationExpression(Expression expression) =>
-            Expression = expression;
+        internal InvocationExpression(Expression expression) => Expression = expression;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
 
@@ -2989,20 +2960,33 @@ namespace FastExpressionCompiler.LightExpression
             Type = type;
     }
 
+    public class OneArgumentInvocationExpression : InvocationExpression
+    {
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument };
+        public readonly Expression Argument;
+        internal OneArgumentInvocationExpression(Expression expression, Expression argument) : base(expression) =>
+            Argument = argument;
+    }
+
+    public sealed class TypedOneArgumentInvocationExpression : OneArgumentInvocationExpression
+    {
+        public override Type Type { get; }
+        internal TypedOneArgumentInvocationExpression(Expression expression, Expression argument, Type type)
+            : base(expression, argument) =>
+            Type = type;
+    }
+
     public class ManyArgumentsInvocationExpression : InvocationExpression
     {
         public override IReadOnlyList<Expression> Arguments { get; }
-
         internal ManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments)
             : base(expression) =>
             Arguments = arguments;
     }
 
-
     public sealed class TypedManyArgumentsInvocationExpression : ManyArgumentsInvocationExpression
     {
         public override Type Type { get; }
-
         internal TypedManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type)
             : base(expression, arguments) =>
             Type = type;
@@ -3129,14 +3113,13 @@ namespace FastExpressionCompiler.LightExpression
     }
 
     /// <summary>For indexer property or array access.</summary>
-    public class IndexExpression : Expression, IArgumentProvider
+    public class IndexExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Index;
         public override Type Type => Indexer?.PropertyType ?? Object.Type.GetElementType();
         public readonly IReadOnlyList<Expression> Arguments;
         public readonly Expression Object;
         public virtual PropertyInfo Indexer => null;
-        public int ArgumentCount => Arguments.Count;
 
         internal IndexExpression(Expression @object, IReadOnlyList<Expression> arguments)
         {
@@ -3145,8 +3128,6 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitIndex(this);
-
-        public Expression GetArgument(int index) => Arguments[index];
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeIndex(Object.ToExpression(ref exprsConverted), Indexer, ToExpressions(Arguments, ref exprsConverted));

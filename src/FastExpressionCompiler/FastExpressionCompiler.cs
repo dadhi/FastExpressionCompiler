@@ -35,7 +35,7 @@ THE SOFTWARE.
 #if SUPPORTS_FAST_EXPRESSION_COMPILER
 */
 
-//#define LIGHT_EXPRESSION
+// #define LIGHT_EXPRESSION
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression
@@ -1121,6 +1121,15 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Invoke:
                         var invokeExpr = (InvocationExpression)expr;
+#if LIGHT_EXPRESSION
+                        if (invokeExpr is OneArgumentInvocationExpression oneArgExpr) 
+                        {
+                            if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
+                                return false;
+                            expr = oneArgExpr.Argument;
+                            continue;
+                        }
+#endif
                         var invokeArgs = invokeExpr.Arguments;
                         if (invokeArgs.Count == 0)
                         {
@@ -1134,8 +1143,8 @@ namespace FastExpressionCompiler
                         var lastArgIndex = invokeArgs.Count - 1;
                         if (lastArgIndex > 0)
                             for (var i = 0; i < lastArgIndex; i++)
-                                    if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-                                        return false;
+                                if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+                                    return false;
                         expr = invokeArgs[lastArgIndex];
                         continue;
 
@@ -3728,10 +3737,20 @@ namespace FastExpressionCompiler
             private static bool TryEmitInvoke(InvocationExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var lambda = expr.Expression;
+                var lambda = expr.Expression; // todo: @perf check if that a Constant or LambdaExpression and call the their emit methods directly
                 if (!TryEmit(lambda, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
+#if LIGHT_EXPRESSION
+                if (expr is OneArgumentInvocationExpression oneArgExpr) 
+                {
+                    if (!TryEmit(oneArgExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess, 
+                        oneArgExpr.Argument.Type.IsByRef ? 0 : -1))
+                        return false;
+                }
+                else 
+                {
+#endif
                 var argExprs = expr.Arguments;
                 if (argExprs.Count != 0) 
                 {
@@ -3740,10 +3759,12 @@ namespace FastExpressionCompiler
                         if (!TryEmit(argExprs[i], paramExprs, il, ref closure, flags, argExprs[i].Type.IsByRef ? i : -1))
                             return false;
                 }
+#if LIGHT_EXPRESSION
+                }
+#endif
 
                 var delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod();
                 il.Emit(OpCodes.Call, delegateInvokeMethod);
-
                 if ((parent & ParentFlags.IgnoreResult) != 0 && delegateInvokeMethod.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);
 
