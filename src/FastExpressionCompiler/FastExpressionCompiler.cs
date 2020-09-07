@@ -3738,32 +3738,33 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var lambda = expr.Expression; // todo: @perf check if that a Constant or LambdaExpression and call the their emit methods directly
-                if (!TryEmit(lambda, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                var delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod();
+             
+                var useResult = parent & ~ParentFlags.IgnoreResult;
+                if (!TryEmit(lambda, paramExprs, il, ref closure, useResult))
                     return false;
 
 #if LIGHT_EXPRESSION
                 if (expr is OneArgumentInvocationExpression oneArgExpr) 
                 {
-                    if (!TryEmit(oneArgExpr, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess, 
+                    if (!TryEmit(oneArgExpr.Argument, paramExprs, il, ref closure, useResult & ~ParentFlags.InstanceAccess, 
                         oneArgExpr.Argument.Type.IsByRef ? 0 : -1))
                         return false;
+
+                    il.Emit(OpCodes.Call, delegateInvokeMethod);
+                    if ((parent & ParentFlags.IgnoreResult) != 0 && delegateInvokeMethod.ReturnType != typeof(void))
+                        il.Emit(OpCodes.Pop);
+
+                    return true;
                 }
-                else 
-                {
 #endif
                 var argExprs = expr.Arguments;
                 if (argExprs.Count != 0) 
-                {
-                    var flags = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
                     for (var i = 0; i < argExprs.Count; i++)
-                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, flags, argExprs[i].Type.IsByRef ? i : -1))
+                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, useResult & ~ParentFlags.InstanceAccess, 
+                            argExprs[i].Type.IsByRef ? i : -1))
                             return false;
-                }
-#if LIGHT_EXPRESSION
-                }
-#endif
 
-                var delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod();
                 il.Emit(OpCodes.Call, delegateInvokeMethod);
                 if ((parent & ParentFlags.IgnoreResult) != 0 && delegateInvokeMethod.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);

@@ -20,10 +20,12 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
+        static string Join(object x, object y) => "" + x + y;
+
         [Test]
         public void InvokeActionConstantIsSupported()
         {
-            Action<object, object> testAction = (o1, o2) => Console.WriteLine($"1: {o1}, 2: {o2}");
+            Action<object, object> testAction = (o1, o2) => Join(o1, o2);
 
             var actionConstant = Constant(testAction, typeof(Action<object, object>));
             var one = Constant(1, typeof(object));
