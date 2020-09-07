@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    public class Issue156_InvokeAction
+    public class Issue156_InvokeAction : ITest
     {
         public int Run() 
         {

@@ -2467,8 +2467,9 @@ namespace FastExpressionCompiler.LightExpression
 
         internal NewArrayExpression(ExpressionType expressionType, Type arrayType, IReadOnlyList<Expression> elements)
         {
-            NodeType = expressionType;
-            Type     = arrayType;
+            NodeType    = expressionType;
+            Type        = arrayType;
+            Expressions = elements;
         }
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
