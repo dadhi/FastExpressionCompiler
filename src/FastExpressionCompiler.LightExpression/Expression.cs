@@ -3205,7 +3205,7 @@ namespace FastExpressionCompiler.LightExpression
                 sb.NewLineIdent(lineIdent).Append("new ParameterExpression[0],");
             else
             {
-                sb.NewLineIdent(lineIdent).Append("{");
+                sb.NewLineIdent(lineIdent).Append("new []{");
                 sb.NewLineIdentExprs(Variables, uniqueExprs, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
                 sb.NewLineIdent(lineIdent).Append("},");
             }
