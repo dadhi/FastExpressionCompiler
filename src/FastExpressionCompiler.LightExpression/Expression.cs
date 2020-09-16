@@ -99,7 +99,9 @@ namespace FastExpressionCompiler.LightExpression
             var i = uniqueExprs.Count - 1;
             while (i != -1 && !ReferenceEquals(uniqueExprs[i], this)) --i;
             if (i != -1)
-                return sb.Append("e[").Append(i).Append("]/*").Append(uniqueExprs[i].NodeType).Append("*/");
+                return sb.Append("e[").Append(i).Append("]/*")
+                    .Append(uniqueExprs[i] is ParameterExpression p ? "Parameter " + p.Name : uniqueExprs[i].NodeType.ToString())
+                    .Append("*/");
 
             uniqueExprs.Add(this);
             sb.Append("e[").Append(uniqueExprs.Count - 1).Append("]=");
