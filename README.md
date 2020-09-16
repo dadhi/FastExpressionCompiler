@@ -1,5 +1,7 @@
 # FastExpressionCompiler
 
+<img src="./logo.png" alt="logo"/>
+
 [DryIoc]: https://github.com/dadhi/DryIoc
 [ExpressionToCodeLib]: https://github.com/EamonNerbonne/ExpressionToCode
 [ExpressionTree]: https://msdn.microsoft.com/en-us/library/mt654263.aspx
@@ -263,3 +265,7 @@ expression at hand and may optimize for delegate with the closure or for "static
 
 Both optimizations are visible in benchmark results: search for `LightExpression` and 
 `FastCompiledLambdaWithPreCreatedClosure` respectively.
+
+
+---
+<a target="_blank" href="https://icons8.com/icons/set/bitten-ice-pop">Bitten Ice Pop icon</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>

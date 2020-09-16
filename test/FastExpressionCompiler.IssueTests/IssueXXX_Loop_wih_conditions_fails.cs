@@ -18,11 +18,87 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test1();
-            return 1;
+#if LIGHT_EXPRESSION
+            Test_nested_generic_type_output();
+            Test_triple_nested_non_generic();
+            Test_triple_nested_open_generic();
+            Test_non_generic_classes();
+#endif
+            // Test1();
+            return 4;
+        }
+
+
+#if LIGHT_EXPRESSION
+        [Test]
+        public void Test_nested_generic_type_output() 
+        {
+            var s = typeof(ReadMethods<Test[], BufferedStream, Settings_1449479367_b6fc048b>.ReadSealed)
+                .ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+
+            Assert.AreEqual("ReadMethods<Test[], BufferedStream, Settings_1449479367_b6fc048b>.ReadSealed", s);
         }
 
         [Test]
+        public void Test_triple_nested_non_generic() 
+        {
+            var s = typeof(A<int>.B<string>.Z).ToCode(true);
+            Assert.AreEqual("IssueXXX_Loop_wih_conditions_fails.A<int>.B<string>.Z", s);
+
+            s = typeof(A<int>.B<string>.Z).ToCode();
+            Assert.AreEqual("FastExpressionCompiler.LightExpression.IssueTests.IssueXXX_Loop_wih_conditions_fails.A<int>.B<string>.Z", s);
+
+            s = typeof(A<int>.B<string>.Z[]).ToCode(true);
+            Assert.AreEqual("IssueXXX_Loop_wih_conditions_fails.A<int>.B<string>.Z[]", s);
+            
+            s = typeof(A<int>.B<string>.Z[]).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+            Assert.AreEqual("A<int>.B<string>.Z[]", s);
+        }
+
+        [Test]
+        public void Test_triple_nested_open_generic() 
+        {
+            var s = typeof(A<>).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+            Assert.AreEqual("A<>", s);
+            
+            s = typeof(A<>).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""), true);
+            Assert.AreEqual("A<X>", s);
+
+            s = typeof(A<>.B<>).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+            Assert.AreEqual("A<>.B<>", s);
+
+            s = typeof(A<>.B<>.Z).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+            Assert.AreEqual("A<>.B<>.Z", s);
+
+            s = typeof(A<>.B<>.Z).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""), true);
+            Assert.AreEqual("A<X>.B<Y>.Z", s);
+        }
+
+        [Test]
+        public void Test_non_generic_classes() 
+        {
+            var s = typeof(A.B.C).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+            Assert.AreEqual("A.B.C", s);
+        }
+
+        class A
+        {
+            public class B
+            {
+                public class C {}
+            }
+        }
+
+        class A<X> 
+        {
+            public class B<Y> 
+            {
+                public class Z {}
+            }
+        }
+
+#endif
+        // [Test]
         public void Test1()
         {
     //         var e = new Expression[63]; // unique expressions
@@ -46,7 +122,7 @@ namespace FastExpressionCompiler.IssueTests
     //               e[8] = MakeBinary(ExpressionType.Assign,
     //                 e[4]/*Parameter*/,
     //                 e[9] = Call(
-    //                   e[6]/*Parameter*/,
+    //                   e[6]/*Parameter*/
     //                   typeof(BufferedStream)/*.Read*/.GetMethods()[10].MakeGenericMethod(typeof(int)))),
     //               e[10] = MakeBinary(ExpressionType.Assign,
     //                 e[1]/*Parameter*/,

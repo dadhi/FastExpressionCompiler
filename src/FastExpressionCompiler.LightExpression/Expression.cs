@@ -1488,69 +1488,155 @@ namespace FastExpressionCompiler.LightExpression
                 : sb.Append(type.ToCode(true, null)).Append('_').Append(identity.GetHashCode());
 
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
-        public static string ToCode(this Type type, bool stripNamespace = false, Func<Type, string, string> printType = null)
+        public static string ToCode(this Type type,
+            bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false)
         {
-            // the default handling of the built-in types
-            if (type == typeof(void))
-                return "void";
-            if (type == typeof(object))
-                return "object";
-            if (type == typeof(bool))
-                return "bool";
-            if (type == typeof(int))
-                return "int";
-            if (type == typeof(short))
-                return "short";
-            if (type == typeof(byte))
-                return "byte";
-            if (type == typeof(double))
-                return "double";
-            if (type == typeof(float))
-                return "float";
-            if (type == typeof(char))
-                return "char";
-            if (type == typeof(string))
-                return "string";
+            if (type.IsGenericParameter)
+                return !printGenericTypeArgs ? string.Empty
+                    : (printType?.Invoke(type, type.Name) ?? type.Name);
 
-            var isArray = type.IsArray;
-            if (isArray)
-                type = type.GetElementType();
-
-            var typeString = stripNamespace ? type.Name : type.FullName ?? type.Name;
-
-            typeString = typeString.Replace('+', '.'); // handling the nested types
-
-            var typeInfo = type.GetTypeInfo();
-            if (!typeInfo.IsGenericType)
+            Type arrayType = null;
+            if (type.IsArray)
             {
-                if (printType != null)
-                    typeString = printType.Invoke(type, typeString);
-                return isArray ? typeString + "[]" : typeString;
+                // store the original type for the later and process its element type further here
+                arrayType = type;
+                type = type.GetElementType();
             }
 
+            // the default handling of the built-in types
+            string buildInTypeString = null;
+            if (type == typeof(void))
+                buildInTypeString = "void";
+            if (type == typeof(object))
+                buildInTypeString = "object";
+            if (type == typeof(bool))
+                buildInTypeString = "bool";
+            if (type == typeof(int))
+                buildInTypeString = "int";
+            if (type == typeof(short))
+                buildInTypeString = "short";
+            if (type == typeof(byte))
+                buildInTypeString = "byte";
+            if (type == typeof(double))
+                buildInTypeString = "double";
+            if (type == typeof(float))
+                buildInTypeString = "float";
+            if (type == typeof(char))
+                buildInTypeString = "char";
+            if (type == typeof(string))
+                buildInTypeString = "string";
+
+            if (buildInTypeString != null)
+                return printType?.Invoke(arrayType ?? type, buildInTypeString) ?? buildInTypeString;
+
+            var parentCount = 0;
+            for (var ti = type.GetTypeInfo(); ti.IsNested; ti = ti.DeclaringType.GetTypeInfo())
+                ++parentCount;
+
+            Type[] parentTypes = null;
+            if (parentCount > 0) 
+            {
+                parentTypes = new Type[parentCount];
+                var pt = type.DeclaringType;
+                for (var i = 0; i < parentTypes.Length; i++, pt = pt.DeclaringType)
+                    parentTypes[i] = pt;
+            }
+
+            var typeInfo = type.GetTypeInfo();
+            Type[] typeArgs = null;
+            var isTypeClosedGeneric = false;
+            if (type.IsGenericType)
+            {
+                isTypeClosedGeneric = !typeInfo.IsGenericTypeDefinition;
+                typeArgs = isTypeClosedGeneric ? typeInfo.GenericTypeArguments : typeInfo.GenericTypeParameters;
+            }
+
+            var typeArgsConsumedByParentsCount = 0;
             var s = new StringBuilder();
-            var tickIndex = typeString.IndexOf('`');
-            if (tickIndex == -1) 
-                s.Append(typeString);
-            else 
-                s.Append(typeString.Substring(0, tickIndex));
-            
-            s.Append('<'); // todo: handling the generics in the nested type
+            if (!stripNamespace) 
+                s.Append(type.Namespace).Append('.');
 
-            var genericArgs = typeInfo.GetGenericTypeParametersOrArguments();
-            if (typeInfo.IsGenericTypeDefinition)
-                s.Append(',', genericArgs.Length - 1);
+            if (parentTypes != null) 
+            {
+                for (var p = parentTypes.Length - 1; p >= 0; --p)
+                {
+                    var parentType = parentTypes[p];
+                    var parentTypeInfo = parentType.GetTypeInfo();
+
+                    if (!parentType.IsGenericType)
+                    {
+                        s.Append(parentType.Name).Append('.');
+                    }
+                    else
+                    {
+                        Type[] parentTypeArgs = null;
+                        if (parentTypeInfo.IsGenericTypeDefinition)
+                        {
+                            parentTypeArgs = parentTypeInfo.GenericTypeParameters;
+
+                            // replace the open parent args with the closed child args,
+                            // and close the parent
+                            if (isTypeClosedGeneric)
+                                for (var t = 0; t < parentTypeArgs.Length; ++t) 
+                                    parentTypeArgs[t] = typeArgs[t];
+
+                            var parentTypeArgCount = parentTypeArgs.Length;
+                            if (typeArgsConsumedByParentsCount > 0)
+                            {
+                                int ownArgCount = parentTypeArgCount - typeArgsConsumedByParentsCount;
+                                if (ownArgCount == 0)
+                                    parentTypeArgs = null;
+                                else
+                                {
+                                    var ownArgs = new Type[ownArgCount];
+                                    for (var a = 0; a < ownArgs.Length; ++a)
+                                        ownArgs[a] = parentTypeArgs[a + typeArgsConsumedByParentsCount];
+                                    parentTypeArgs = ownArgs;
+                                }
+                            }
+                            typeArgsConsumedByParentsCount = parentTypeArgCount;
+                        }
+                        else 
+                        {
+                            parentTypeArgs = parentTypeInfo.GenericTypeArguments;
+                        }
+
+                        var parentTickIndex = parentType.Name.IndexOf('`');
+                        s.Append(parentType.Name.Substring(0, parentTickIndex));
+
+                        // The owned parentTypeArgs maybe empty because all args are defined in the parent's parents
+                        if (parentTypeArgs?.Length > 0)
+                        {
+                            s.Append('<');
+                            for (var t = 0; t < parentTypeArgs.Length; ++t)
+                                (t == 0 ? s : s.Append(", "))
+                                    .Append(parentTypeArgs[t].ToCode(stripNamespace, printType, printGenericTypeArgs));
+                            s.Append('>');
+                        }
+                        s.Append('.');
+                    }
+                }
+            }
+
+            if (typeArgs != null && typeArgsConsumedByParentsCount < typeArgs.Length)
+            {
+                var tickIndex = type.Name.IndexOf('`');
+                s.Append(type.Name.Substring(0, tickIndex)).Append('<');
+                for (var i = 0; i < typeArgs.Length - typeArgsConsumedByParentsCount; ++i) 
+                    (i == 0 ? s : s.Append(", "))
+                        .Append(typeArgs[i + typeArgsConsumedByParentsCount]
+                            .ToCode(stripNamespace, printType, printGenericTypeArgs));
+                s.Append('>');
+            }
             else
-                for (var i = 0; i < genericArgs.Length; i++)
-                    (i > 0 ? s.Append(", ") : s).Append(genericArgs[i].ToCode(stripNamespace, printType));
+            {
+                s.Append(type.Name);
+            }
 
-            s.Append('>');
-
-            if (isArray)
+            if (arrayType != null)
                 s.Append("[]");
 
-            typeString = s.ToString();
-            return printType?.Invoke(type, typeString) ?? typeString;
+            return printType?.Invoke(arrayType ?? type, s.ToString()) ?? s.ToString();
         }
 
         /// Prints valid C# Boolean

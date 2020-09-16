@@ -2623,7 +2623,6 @@ namespace FastExpressionCompiler
                     if (constIndex == -1)
                         return false;
 
-                    // todo: @incomplete - are we still using the usage to decide for the vars?
                     var varIndex = closure.ConstantUsageThenVarIndex.Items[constIndex] - 1;
                     if (varIndex > 0)
                         EmitLoadLocalVariable(il, varIndex);
@@ -3737,12 +3736,16 @@ namespace FastExpressionCompiler
             private static bool TryEmitInvoke(InvocationExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var lambda = expr.Expression; // todo: @perf check if that a Constant or LambdaExpression and call the their emit methods directly
-                var delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod();
-             
+                var lambda = expr.Expression;
                 var useResult = parent & ~ParentFlags.IgnoreResult;
+
+                // if (lambda is ConstantExpression cl) {
+                //     // todo: @perf call directly
+                // }
                 if (!TryEmit(lambda, paramExprs, il, ref closure, useResult))
                     return false;
+
+                var delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod();
 
 #if LIGHT_EXPRESSION
                 if (expr is OneArgumentInvocationExpression oneArgExpr) 
