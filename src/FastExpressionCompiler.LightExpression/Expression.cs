@@ -100,7 +100,9 @@ namespace FastExpressionCompiler.LightExpression
             while (i != -1 && !ReferenceEquals(uniqueExprs[i], this)) --i;
             if (i != -1)
                 return sb.Append("e[").Append(i).Append("]/*")
-                    .Append(uniqueExprs[i] is ParameterExpression p ? "Parameter " + p.Name : uniqueExprs[i].NodeType.ToString())
+                    .Append(uniqueExprs[i] is ParameterExpression p 
+                        ? "(" + p.Type.ToCode(stripNamespace, printType) + " " + (p.Name ?? "_") + ")" 
+                        : uniqueExprs[i].NodeType.ToString())
                     .Append("*/");
 
             uniqueExprs.Add(this);
@@ -1876,7 +1878,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         //todo: @feature - not supported yet
         public virtual MethodInfo Method => null;
-
         public virtual LambdaExpression Conversion => null;
 
         // todo: @feature - not supported yet
@@ -1886,7 +1887,7 @@ namespace FastExpressionCompiler.LightExpression
 
         // todo: @feature - not supported yet
         /// <summary>Gets a value that indicates whether the expression tree node represents a lifted call to an operator whose return type is lifted to a nullable type.</summary>
-        public bool IsLiftedToNull => false;//IsLifted && Type.IsNullable();
+        public bool IsLiftedToNull => false; //todo: @feature IsLifted && Type.IsNullable();
 
         public readonly Expression Left, Right;
 
@@ -2050,10 +2051,24 @@ namespace FastExpressionCompiler.LightExpression
             switch (NodeType)
             {
                 case ExpressionType.Assign:
-                    Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    sb.Append(" = ");
-                    Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                {
+                    if (Right is BlockExpression rightBlock) // it is possible and used to my surprise
+                    {
+                        sb.Append("/* The block result will be assigned to `")
+                          .Append(Left.ToCSharpString(new StringBuilder(), lineIdent, stripNamespace, printType, identSpaces))
+                          .Append("`*/ {");
+                        rightBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, false,
+                            blockResultAssignmentTarget: Left);
+                        sb.NewLineIdent(lineIdent).Append("/* } end of block assignment */");
+                    }
+                    else 
+                    {
+                        Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(" = ");
+                        Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    }
+
                     return sb;
+                }
                 default:
                     // todo: @incomplete
                     return sb.Append(ToString());
@@ -3103,12 +3118,11 @@ namespace FastExpressionCompiler.LightExpression
                 : sb.Append("default(").Append(Type.ToCode(stripNamespace, printType)).Append(')');
     }
 
-    // todo: @test Test all conditional + try for the exact op-codes produced, should help with AutoMapper case
+    // todo: @test Test all conditionals + try for the exact op-codes produced, should help with AutoMapper case
     public class ConditionalExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Conditional;
         public override Type Type => typeof(void);
-
         public readonly Expression Test;
         public readonly Expression IfTrue;
         public virtual Expression IfFalse => VoidDefault;
@@ -3141,6 +3155,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             if (Type == typeof(void))
             {
+                sb.NewLine(lineIdent, identSpaces);
                 sb.Append("if (");
                 Test.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                 sb.Append(')');
@@ -3157,8 +3172,8 @@ namespace FastExpressionCompiler.LightExpression
                     sb.NewLine(lineIdent, identSpaces).Append("else");
                     sb.NewLine(lineIdent, identSpaces).Append('{');
 
-                    if (IfFalse is BlockExpression)
-                        IfFalse.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    if (IfFalse is BlockExpression bl)
+                        bl.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                     else
                         sb.NewLineIdentCs(IfFalse, lineIdent, stripNamespace, printType, identSpaces).Append(';');
                     sb.NewLine(lineIdent, identSpaces).Append('}');
@@ -3285,7 +3300,12 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
+            BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, true);
+
+        public StringBuilder BlockToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
+            bool inTheLastBlock = false, Expression blockResultAssignmentTarget = null)
         {
             var vars = Variables;
             if (vars.Count != 0)
@@ -3297,7 +3317,6 @@ namespace FastExpressionCompiler.LightExpression
                     sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ');
                     sb.AppendName(v.Name, v.Type, v).Append(';');
                 }
-                sb.NewLineIdent(lineIdent); // visually separate the variables from expressions
             }
 
             var exprs = Expressions;
@@ -3305,65 +3324,75 @@ namespace FastExpressionCompiler.LightExpression
             {
                 var expr = exprs[i];
 
-                // this is basically the return pattern (see #237), so we don't care for the rest of expressions if any
+                // this is basically the return pattern (see #237) so we don't care for the rest of the expressions
                 if (expr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                     exprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                 {
+                    sb.NewLineIdent(lineIdent);
                     if (gt.Value == null)
                         return Type == typeof(void) ? sb : sb.Append("return;");
 
-                    sb.NewLineIdent(lineIdent).Append("return ");
-                    return gt.Value.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(";");
+                    sb.Append("return ");
+                    return gt.Value.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces)
+                        .Append(";");
                 }
 
-                // otherwise proceed normally with the next (and not the last) expression
-                sb.NewLineIdent(lineIdent);
+                if (expr is BlockExpression bl)
+                {
+                    // Unrolling the block on the same vertical line
+                    bl.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, inTheLastBlock: false);
+                }
+                else
+                {
+                    sb.NewLineIdent(lineIdent);
 
-                var isNestedBlockWithVars = expr is BlockExpression be && be.Variables.Count != 0;
-                if (isNestedBlockWithVars) // the nested scope
-                    sb.Append("{");
-                
-                expr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+                    if (expr is LabelExpression) // keep the label on the same vertical line
+                        expr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    else
+                        expr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
 
-                if (isNestedBlockWithVars)
-                    sb.NewLineIdent(lineIdent).Append("}");
-
-                // preventing the `};` kind of situation and emphasing the conditional block with empty line
-                if (isNestedBlockWithVars ||
-                    expr is ConditionalExpression ||
-                    expr is TryExpression ||
-                    expr is LoopExpression ||
-                    expr is SwitchExpression)
-                    sb.AppendLine();
-                else if (expr != Empty())
-                    sb.Append(';');
+                    // Preventing the `};` kind of situation and separating the conditional block with empty line
+                    if (expr is BlockExpression ||
+                        expr is ConditionalExpression ||
+                        expr is TryExpression ||
+                        expr is LoopExpression ||
+                        expr is SwitchExpression)
+                        sb.NewLineIdent(lineIdent);
+                    else if (!(
+                        expr is LabelExpression ||
+                        expr is DefaultExpression))
+                        sb.Append(';');
+                }
             }
 
             var lastExpr = exprs[exprs.Count - 1];
             if (lastExpr == Empty())
                 return sb;
 
-            if (Type == typeof(void))
-            {
-                if (lastExpr is BlockExpression be && be.Variables.Count != 0) // the nested scope for the `void` block
-                {
-                    sb.NewLine(lineIdent, identSpaces).Append("{");
-                    sb.NewLineIdentCs(lastExpr, lineIdent, stripNamespace, printType, identSpaces);
-                    return sb.NewLine(lineIdent, identSpaces).Append("}");
-                }
-                lastExpr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
-            }
-            else
-            {
-                // inline the last nested block - it will care about the `return` and ending `;` by itself
-                if (lastExpr is BlockExpression ||
-                    lastExpr is LabelExpression)
-                    return lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            if (lastExpr is BlockExpression lastBlock)
+                return lastBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, inTheLastBlock: true, blockResultAssignmentTarget);
 
-                sb.NewLineIdent(lineIdent).Append("return "); // todo: @incomplete we should not always return from the NESTED block!
-                lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-            }
+            if(lastExpr is LabelExpression) // keep the label on the same vertical line
+                return lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
 
+            sb.NewLineIdent(lineIdent);
+
+            if (blockResultAssignmentTarget != null) 
+            {
+                blockResultAssignmentTarget.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                sb.Append(" = ");
+            }
+            else if (inTheLastBlock && Type != typeof(void))
+                sb.Append("return ");
+
+            if (lastExpr is ConditionalExpression ||
+                lastExpr is TryExpression ||
+                lastExpr is LoopExpression ||
+                lastExpr is SwitchExpression ||
+                lastExpr is DefaultExpression d && d.Type == typeof(void))
+                return lastExpr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+
+            lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(';');
         }
     }
@@ -3444,14 +3473,20 @@ namespace FastExpressionCompiler.LightExpression
             sb.NewLine(lineIdent, identSpaces).Append("{");
             
             if (ContinueLabel != null)
-                ContinueLabel.ToCSharpString(sb).Append(": ").AppendLine();
+            {
+                sb.NewLine(lineIdent, identSpaces);
+                ContinueLabel.ToCSharpString(sb).Append(": ");
+            }
 
-            Body.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            Body.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
 
             sb.NewLine(lineIdent, identSpaces).Append("}");
 
             if (BreakLabel != null)
-                BreakLabel.ToCSharpString(sb).Append(": ").AppendLine();
+            {
+                sb.NewLine(lineIdent, identSpaces);
+                BreakLabel.ToCSharpString(sb).Append(": ");
+            }
 
             return sb;
         }
@@ -3658,15 +3693,11 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
             sb.NewLineIdent(lineIdent);
-            Target.ToCSharpString(sb).Append(':');
+            Target.ToCSharpString(sb).Append(':'); 
+            if (DefaultValue == null)
+                return sb;
 
             sb.NewLineIdent(lineIdent);
-            if (Type == typeof(void))
-                return sb.Append("return;");
-
-            if (DefaultValue == null)
-                sb.Append("return default(").Append(Type.ToCode(stripNamespace, printType)).Append(");");
-
             sb.Append("return ");
             DefaultValue.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(';');
@@ -3740,9 +3771,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.Goto;
         public override Type Type => typeof(void);
-
         public virtual GotoExpressionKind Kind => GotoExpressionKind.Goto;
-
         public virtual Expression Value => null;
         public readonly LabelTarget Target;
 
@@ -3757,7 +3786,7 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("MakeGoto(").AppendEnum(Kind, stripNamespace, printType).Append(',');
-            
+
             sb.NewLineIdent(lineIdent);
             Target.CreateExpressionString(sb, stripNamespace, printType).Append(',');
 
