@@ -169,12 +169,13 @@ namespace FastExpressionCompiler.LightExpression
         public static readonly ConstantExpression FalseConstant = new ConstantExpression(false);
         public static readonly ConstantExpression TrueConstant = new ConstantExpression(true);
         public static readonly ConstantExpression ZeroConstant = new ConstantExpression(0);
+        public static readonly ConstantExpression MinusOneConstant = new ConstantExpression(-1);
 
         public static ConstantExpression Constant(bool value) =>
             value ? TrueConstant : FalseConstant;
 
         public static ConstantExpression Constant(int value) =>
-            value == 0 ? ZeroConstant : new TypedConstantExpression<int>(value);
+            value == 0  ? ZeroConstant : value == -1 ? MinusOneConstant : new TypedConstantExpression<int>(value);
 
         public static ConstantExpression Constant<T>(T value) =>
             new TypedConstantExpression<T>(value);
@@ -188,7 +189,7 @@ namespace FastExpressionCompiler.LightExpression
                 return b ? TrueConstant : FalseConstant;
 
             if (value is int n)
-                return n == 0 ? ZeroConstant : new TypedConstantExpression<int>(n);
+                return n == 0 ? ZeroConstant : n == -1 ? MinusOneConstant : new TypedConstantExpression<int>(n);
 
             return new ConstantExpression(value);
         }
@@ -402,6 +403,10 @@ namespace FastExpressionCompiler.LightExpression
             indexer != null 
                 ? Property(instance, indexer, arguments) 
                 : ArrayAccess(instance, arguments);
+
+        // todo: @perf optimize for the single index
+        public static IndexExpression ArrayAccess(Expression array, Expression index) =>
+            new IndexExpression(array, new[] { index });
 
         public static IndexExpression ArrayAccess(Expression array, params Expression[] indexes) =>
             new IndexExpression(array, indexes);
@@ -667,6 +672,10 @@ namespace FastExpressionCompiler.LightExpression
             new NewArrayExpression(ExpressionType.NewArrayBounds,
                 bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count),
                 bounds);
+
+        // todo: @perf optimize for the single bound
+        public static NewArrayExpression NewArrayBounds(Type type, Expression bound) =>
+            new NewArrayExpression(ExpressionType.NewArrayBounds, type.MakeArrayType(), new[] { bound });
 
         public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
             MakeArrayBounds(type, (IReadOnlyList<Expression>)bounds);
@@ -1383,24 +1392,14 @@ namespace FastExpressionCompiler.LightExpression
                 ?? sb.Append("null");
         }
 
-        internal static StringBuilder NewLineIdentExprs<T>(this StringBuilder sb, IReadOnlyList<T> exprs, List<Expression> uniqueExprs,
+        internal static StringBuilder NewLineIdentParamsExprs<T>(this StringBuilder sb, IReadOnlyList<T> exprs, List<Expression> uniqueExprs,
             int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
             where T : Expression
         {
             if (exprs.Count == 0)
-                return sb.Append("new ").Append(typeof(T).ToCode(true, null)).Append("[0]");
-
+                return sb.Append("new ").Append(typeof(T).ToCode(true)).Append("[0]");
             for (var i = 0; i < exprs.Count; i++)
                 (i > 0 ? sb.Append(',') : sb).NewLineIdentExpr(exprs[i], uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
-            return sb;
-        }
-
-        internal static StringBuilder NewLineIdentCss<T>(this StringBuilder sb, IReadOnlyList<T> exprs,
-            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
-            where T : Expression
-        {
-            for (var i = 0; i < exprs.Count; i++)
-                (i > 0 ? sb.Append(',') : sb).NewLineIdentCs(exprs[i], lineIdent, stripNamespace, printType, identSpaces);
             return sb;
         }
     }
@@ -2096,7 +2095,7 @@ namespace FastExpressionCompiler.LightExpression
                 var a = Arguments[j];
                 if (j > 0) sb.Append(",");
                 sb.NewLineIdent(lineIdent).AppendMethod(AddMethod, stripNamespace, printType);
-                sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+                sb.NewLineIdentParamsExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             }
             return sb.Append(")");
         }
@@ -2433,7 +2432,7 @@ namespace FastExpressionCompiler.LightExpression
             var ctorIndex = Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.ToArray().GetFirstIndex(Constructor);
             sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType)
                 .Append(".GetTypeInfo().DeclaredConstructors.ToArray()[").Append(ctorIndex).Append("],");
-            sb.NewLineIdentExprs(args, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentParamsExprs(args, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -2588,15 +2587,15 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append(NodeType == ExpressionType.NewArrayInit ? "NewArrayInit(" : "NewArrayBounds(");
-            sb.NewLineIdent(lineIdent).AppendTypeof(Type.GetElementType(), stripNamespace, printType);
-            sb.NewLineIdentExprs(Expressions, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdent(lineIdent).AppendTypeof(Type.GetElementType(), stripNamespace, printType).Append(", ");
+            sb.NewLineIdentParamsExprs(Expressions, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            sb.Append("new ").Append(Type.GetElementType().ToCode(stripNamespace, printType));
+            sb.Append("new ").Append(Type.GetElementType().ToCode(stripNamespace, printType)).Append(", ");
             sb.Append(NodeType == ExpressionType.NewArrayInit ? "[] {" : "[");
 
             var exprs = Expressions;
@@ -2636,7 +2635,7 @@ namespace FastExpressionCompiler.LightExpression
             sb.NewLineIdentExpr(Object, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(", ");
             sb.NewLineIdent(lineIdent).AppendMethod(Method, stripNamespace, printType);
             if (Arguments.Count > 0)
-                sb.Append(',').NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+                sb.Append(',').NewLineIdentParamsExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -3039,7 +3038,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             sb.Append("Invoke(");
             sb.NewLineIdentExpr(Expression, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentParamsExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(")");
         }
 
@@ -3049,7 +3048,9 @@ namespace FastExpressionCompiler.LightExpression
             sb.Append("new ").Append(Expression.Type.ToCode(stripNamespace, printType)).Append("(");
             sb.NewLineIdentCs(Expression, lineIdent, stripNamespace, printType, identSpaces);
             sb.Append(").Invoke(");
-            sb.NewLineIdentCss(Arguments, lineIdent, stripNamespace, printType, identSpaces);
+            for (var i = 0; i < Arguments.Count; i++)
+                (i > 0 ? sb.Append(',') : sb)
+                .NewLineIdentCs(Arguments[i], lineIdent, stripNamespace, printType, identSpaces);
             sb.Append(")");
             return sb;
         }
@@ -3142,10 +3143,10 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.Append("Condition(");
-            sb.NewLineIdentExpr(Test, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(IfTrue, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(IfFalse, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
-            sb.Append(',').NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
+            sb.NewLineIdentExpr(Test,    uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(IfTrue,  uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(IfFalse, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
 
             return sb.Append(')');
         }
@@ -3226,8 +3227,8 @@ namespace FastExpressionCompiler.LightExpression
         public virtual PropertyInfo Indexer => null;
 
         internal IndexExpression(Expression @object, IReadOnlyList<Expression> arguments)
-        {
-            Object  = @object;
+        { 
+            Object = @object;
             Arguments = arguments;
         }
 
@@ -3239,18 +3240,17 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder CreateExpressionString(StringBuilder sb, List<Expression> uniqueExprs,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
-            if (Indexer != null)
-                sb.Append("MakeIndex(");
-            else
-                sb.Append("ArrayAccess(");
-
+            sb.Append(Indexer != null ? "MakeIndex(" : "ArrayAccess(");
             sb.NewLineIdentExpr(Object, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(", ");
 
             if (Indexer != null)
                 sb.NewLineIdent(lineIdent).AppendProperty(Indexer, stripNamespace, printType).Append(", ");
-
-            sb.NewLineIdentExprs(Arguments, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
+            
+            sb.Append("new Expression[] {");
+            for (var i = 0; i < Arguments.Count; i++)
+                (i > 0 ? sb.Append(',') : sb)
+                .NewLineIdentExpr(Arguments[i], uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            return sb.Append("})");
         }
     }
 
@@ -3291,11 +3291,17 @@ namespace FastExpressionCompiler.LightExpression
             else
             {
                 sb.NewLineIdent(lineIdent).Append("new []{");
-                sb.NewLineIdentExprs(Variables, uniqueExprs, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+                for (var i = 0; i < Variables.Count; i++) 
+                {
+                    (i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent);
+                    sb.Append("(ParameterExpression)(");
+                    Variables[i].ToExpressionString(sb, uniqueExprs, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+                    sb.Append(")");
+                }
                 sb.NewLineIdent(lineIdent).Append("},");
             }
 
-            sb.NewLineIdentExprs(Expressions, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentParamsExprs(Expressions, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -3900,7 +3906,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             sb.Append("SwitchCase(");
             sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExprs(TestValues, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentParamsExprs(TestValues, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -4031,7 +4037,7 @@ namespace FastExpressionCompiler.LightExpression
 
             // todo: @bug we need to construct the parameters first and store them in the `uniqueExprs` before suing the in the body
             sb.NewLineIdentExpr(Body, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExprs(Parameters, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentParamsExprs(Parameters, uniqueExprs, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
