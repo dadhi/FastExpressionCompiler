@@ -18,13 +18,17 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-#if LIGHT_EXPRESSION
-            Test_nested_generic_type_output();
-            Test_triple_nested_non_generic();
-            Test_triple_nested_open_generic();
-            Test_non_generic_classes();
-#endif
             // Test1();
+
+            // Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
+            // Test_assignment_with_the_block_on_the_right_side();
+
+#if LIGHT_EXPRESSION
+            // Test_nested_generic_type_output();
+            // Test_triple_nested_non_generic();
+            // Test_triple_nested_open_generic();
+            // Test_non_generic_classes();
+#endif
             return 4;
         }
 
@@ -33,7 +37,7 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Test_nested_generic_type_output() 
         {
-            var s = typeof(ReadMethods<Test[], BufferedStream, Settings_1449479367_b6fc048b>.ReadSealed)
+            var s = typeof(ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)
                 .ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
 
             Assert.AreEqual("ReadMethods<Test[], BufferedStream, Settings_1449479367_b6fc048b>.ReadSealed", s);
@@ -99,6 +103,59 @@ namespace FastExpressionCompiler.IssueTests
 
 #endif
 
+        public void Test_assignment_with_the_block_on_the_right_side_with_just_a_constant()
+        {
+            var result = Parameter(typeof(int), "result");
+            var temp = Parameter(typeof(int), "temp");
+            var e = Lambda<Func<int>>(
+                Block(
+                    new ParameterExpression[] { result },
+                    Assign(result, Block(
+                        new ParameterExpression[] { temp },
+                        Assign(temp, Constant(42)),
+                        temp
+                    )),
+                    result
+                )
+            );
+
+            var fSys = e.CompileSys();
+            Assert.AreEqual(42, fSys());
+
+            e.PrintCSharpString();
+
+            var f = e.CompileFast(true);
+            Assert.AreEqual(42, f());
+        }
+
+        public void Test_assignment_with_the_block_on_the_right_side()
+        {
+            var result = Parameter(typeof(int[]), "result");
+            var temp = Parameter(typeof(int), "temp");
+            var e = Lambda<Func<int[]>>(
+                Block(
+                    new ParameterExpression[] { result },
+                    Assign(result, NewArrayBounds(typeof(int), Constant(1))),
+                    Assign(
+                        ArrayAccess(result, Constant(0)), 
+                        Block(
+                            new ParameterExpression[] { temp },
+                            Assign(temp, Constant(42)),
+                            temp
+                    )),
+                    result
+                )
+            );
+
+            var fSys = e.CompileSys();
+            Assert.AreEqual(42, fSys()[0]);
+
+            e.PrintCSharpString();
+
+            var f = e.CompileFast(true);
+            Assert.AreEqual(42, f()[0]);
+        }
+
         // ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_1327966648_10b20e66_f2f0_4dea_9d83_eab8d0041280>.ReadSealed(
         //     ref BufferedStream stream, 
         //     Binary<BufferedStream, Settings_1327966648_10b20e66_f2f0_4dea_9d83_eab8d0041280> io)
@@ -158,161 +215,165 @@ namespace FastExpressionCompiler.IssueTests
         // [Test]
         public void Test1()
         {
-            // var e = new Expression[63]; // unique expressions
-            // var expr = Lambda(/*$*/
-            // typeof(ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117_1ecf55a1_ada6_4355_950f_0803da9ca4ef>.ReadSealed),
-            // e[0]=Block(
-            //     typeof(ConstructorTests.Test[]),
-            //     new []{
-            //     e[1]=Parameter(typeof(ConstructorTests.Test[]), "result")
-            //     },
-            //     e[2]=Empty(),
-            //     e[3]=Block(
-            //     typeof(void),
-            //     new []{
-            //         e[4]=Parameter(typeof(int), "length0")
-            //     },
-            //     e[5]=Call(
-            //         e[6]=Parameter(typeof(BufferedStream).MakeByRefType(), "stream"), 
-            //         typeof(BufferedStream)/*.ReserveSize*/.GetMethods()[0],
-            //         e[7]=Constant(4)),
-            //     e[8]=MakeBinary(ExpressionType.Assign,
-            //         e[4]/*(int length0)*/,
-            //         e[9]=Call(
-            //         e[6]/*(BufferedStream stream)*/, 
-            //         typeof(BufferedStream)/*.Read*/.GetMethods()[10].MakeGenericMethod(typeof(int)))),
-            //     e[10]=MakeBinary(ExpressionType.Assign,
-            //         e[1]/*(ConstructorTests.Test[] result)*/,
-            //         e[11]=NewArrayBounds(
-            //         typeof(ConstructorTests.Test)
-            //         e[4]/*(int length0)*/)),
-            //     e[12]=Call(
-            //         e[13]=Call(
-            //         e[14]=Parameter(typeof(Binary<BufferedStream, Settings_827720117_1ecf55a1_ada6_4355_950f_0803da9ca4ef>), "io"), 
-            //         typeof(Binary<BufferedStream, Settings_827720117_1ecf55a1_ada6_4355_950f_0803da9ca4ef>)/*.get_LoadedObjectRefs*/.GetMethods(BindingFlags.NonPublic|BindingFlags.Instance)[0]), 
-            //         typeof(List<object>)/*.Add*/.GetMethods()[0],
-            //         e[1]/*(ConstructorTests.Test[] result)*/),
-            //     e[15]=Block(
-            //         typeof(void),
-            //         new []{
-            //         e[16]=Parameter(typeof(int), "index0"),
-            //         e[17]=Parameter(typeof(ConstructorTests.Test), "tempResult")
-            //         },
-            //         e[18]=Block(
-            //         typeof(void),
-            //         new ParameterExpression[0],
-            //         e[19]=MakeBinary(ExpressionType.Assign,
-            //             e[16]/*(int index0)*/,
-            //             e[20]=MakeBinary(ExpressionType.Subtract,
-            //             e[4]/*(int length0)*/,
-            //             e[21]=Constant(1))),
-            //         e[22]=Loop(
-            //             e[23]=Condition(
-            //             e[24]=MakeBinary(ExpressionType.LessThan,
-            //                 e[16]/*(int index0)*/,
-            //                 e[25]=Constant(0)),
-            //             e[26]=MakeGoto(GotoExpressionKind.Break,
-            //                 Label(typeof(void)),
-            //                 null,
-            //                 typeof(void)),
-            //             e[27]=Block(
-            //                 typeof(int),
-            //                 new ParameterExpression[0],
-            //                 e[28]=Block(
-            //                 typeof(ConstructorTests.Test),
-            //                 new ParameterExpression[0],
-            //                 e[2]/*Default*/,
-            //                 e[29]=MakeBinary(ExpressionType.Assign,
-            //                     e[30]=ArrayAccess(
-            //                     e[1]/*(ConstructorTests.Test[] result)*/, 
-            //                     e[16]/*(int index0)*/),
-            //                     e[31]=Block(
-            //                     typeof(ConstructorTests.Test),
-            //                     new ParameterExpression[0],
-            //                     e[32]=MakeBinary(ExpressionType.Assign,
-            //                         e[17]/*(ConstructorTests.Test tempResult)*/,
-            //                         e[33]=Default(typeof(ConstructorTests.Test))),
-            //                     e[34]=Call(
-            //                         e[6]/*(BufferedStream stream)*/, 
-            //                         typeof(BufferedStream)/*.ReserveSize*/.GetMethods()[0],
-            //                         e[35]=Constant(5)),
-            //                     e[36]=Condition(
-            //                         e[37]=MakeBinary(ExpressionType.Equal,
-            //                         e[38]=Call(
-            //                             e[6]/*(BufferedStream stream)*/, 
-            //                             typeof(BufferedStream)/*.Read*/.GetMethods()[10].MakeGenericMethod(typeof(byte))),
-            //                         e[39]=Constant(0)),
-            //                         e[40]=MakeGoto(GotoExpressionKind.Goto,
-            //                         Label(typeof(void), "skipRead"),
-            //                         null,
-            //                         typeof(void)),
-            //                         e[2]/*Default*/,
-            //                         typeof(void)),
-            //                     e[41]=Block(
-            //                         typeof(void),
-            //                         new []{
-            //                         e[42]=Parameter(typeof(int), "refIndex")
-            //                         },
-            //                         e[43]=MakeBinary(ExpressionType.Assign,
-            //                         e[42]/*(int refIndex)*/,
-            //                         e[44]=Call(
-            //                             e[6]/*(BufferedStream stream)*/, 
-            //                             typeof(BufferedStream)/*.Read*/.GetMethods()[10].MakeGenericMethod(typeof(int)))),
-            //                         e[45]=Condition(
-            //                         e[46]=MakeBinary(ExpressionType.NotEqual,
-            //                             e[42]/*(int refIndex)*/,
-            //                             e[47]=Constant(-1)),
-            //                         e[48]=Block(
-            //                             typeof(void),
-            //                             new ParameterExpression[0],
-            //                             e[49]=MakeBinary(ExpressionType.Assign,
-            //                             e[17]/*(ConstructorTests.Test tempResult)*/,
-            //                             e[50]=Convert(
-            //                                 e[51]=MakeIndex(
-            //                                 e[52]=Call(
-            //                                     e[14]/*(Binary<BufferedStream, Settings_827720117_1ecf55a1_ada6_4355_950f_0803da9ca4ef> io)*/, 
-            //                                     typeof(Binary<BufferedStream, Settings_827720117_1ecf55a1_ada6_4355_950f_0803da9ca4ef>)/*.get_LoadedObjectRefs*/.GetMethods(BindingFlags.NonPublic|BindingFlags.Instance)[0]), 
-            //                                 typeof(List<object>).GetTypeInfo().GetDeclaredProperty("Item"), 
-            //                                 e[53]=Decrement(
-            //                                     e[42]/*(int refIndex)*/)),
-            //                                 typeof(ConstructorTests.Test))),
-            //                             e[54]=MakeGoto(GotoExpressionKind.Goto,
-            //                             Label(typeof(void), "skipRead"),
-            //                             null,
-            //                             typeof(void))),
-            //                         e[2]/*Default*/,
-            //                         typeof(void))),
-            //                     e[55]=MakeBinary(ExpressionType.Assign,
-            //                         e[17]/*(ConstructorTests.Test tempResult)*/,
-            //                         e[56]=New(/*0 args*/
-            //                         typeof(ConstructorTests.Test).GetTypeInfo().DeclaredConstructors.ToArray()[0],new Expression[0])),
-            //                     e[57]=Call(
-            //                         e[58]=Call(
-            //                         e[14]/*(Binary<BufferedStream, Settings_827720117_1ecf55a1_ada6_4355_950f_0803da9ca4ef> io)*/, 
-            //                         typeof(Binary<BufferedStream, Settings_827720117_1ecf55a1_ada6_4355_950f_0803da9ca4ef>)/*.get_LoadedObjectRefs*/.GetMethods(BindingFlags.NonPublic|BindingFlags.Instance)[0]), 
-            //                         typeof(List<object>)/*.Add*/.GetMethods()[0],
-            //                         e[17]/*(ConstructorTests.Test tempResult)*/),
-            //                     e[59]=Label(Label(typeof(void), "skipRead")),
-            //                     e[17]/*(ConstructorTests.Test tempResult)*/))),
-            //                 e[60]=Label(Label(typeof(void), "continue0")),
-            //                 e[61]=MakeBinary(ExpressionType.Assign,
-            //                 e[16]/*(int index0)*/,
-            //                 e[62]=Decrement(
-            //                     e[16]/*(int index0)*/))),
-            //             typeof(void)),
-            //             Label(typeof(void)))))),
-            //     e[1]/*(ConstructorTests.Test[] result)*/),
-            // e[6]/*(BufferedStream stream)*/,
-            // e[14]/*(Binary<BufferedStream, Settings_827720117_1ecf55a1_ada6_4355_950f_0803da9ca4ef> io)*/);
+var e = new Expression[56]; // other unique expressions
+var p = new ParameterExpression[7]; // parameter expressions
+var expr = Lambda(/*$*/
+  typeof(ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed),
+  e[0]=Block(
+    typeof(ConstructorTests.Test[]),
+    new []{
+    p[0]=Parameter(typeof(ConstructorTests.Test[]), "result")
+    },
+    e[1]=Empty(),
+    e[2]=Block(
+      typeof(void),
+      new []{
+      p[1]=Parameter(typeof(int), "length0")
+      },
+      e[3]=Call(
+        p[2]=Parameter(typeof(BufferedStream).MakeByRefType(), "stream"), 
+        typeof(BufferedStream)/*.ReserveSize*/.GetMethods()[0],
+        e[4]=Constant(4)),
+      e[5]=MakeBinary(ExpressionType.Assign,
+        p[1]/*(int length0)*/,
+        e[6]=Call(
+          p[2]/*(BufferedStream stream)*/, 
+          typeof(BufferedStream)/*.Read*/.GetMethods()[10].MakeGenericMethod(typeof(int)))),
+      e[7]=MakeBinary(ExpressionType.Assign,
+        p[0]/*(ConstructorTests.Test[] result)*/,
+        e[8]=NewArrayBounds(
+          typeof(ConstructorTests.Test), 
+          p[1]/*(int length0)*/)),
+      e[9]=Call(
+        e[10]=Call(
+          p[3]=Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"), 
+          typeof(Binary<BufferedStream, Settings_827720117>)/*.get_LoadedObjectRefs*/.GetMethods(BindingFlags.NonPublic|BindingFlags.Instance)[0]), 
+        typeof(List<object>)/*.Add*/.GetMethods()[0],
+        p[0]/*(ConstructorTests.Test[] result)*/),
+      e[11]=Block(
+        typeof(void),
+        new []{
+        p[4]=Parameter(typeof(int), "index0"),
+        p[5]=Parameter(typeof(ConstructorTests.Test), "tempResult")
+        },
+        e[12]=Block(
+          typeof(void),
+          new ParameterExpression[0],
+          e[13]=MakeBinary(ExpressionType.Assign,
+            p[4]/*(int index0)*/,
+            e[14]=MakeBinary(ExpressionType.Subtract,
+              p[1]/*(int length0)*/,
+              e[15]=Constant(1))),
+          e[16]=Loop(
+            e[17]=Condition(
+              e[18]=MakeBinary(ExpressionType.LessThan,
+                p[4]/*(int index0)*/,
+                e[19]=Constant(0)),
+              e[20]=MakeGoto(GotoExpressionKind.Break,
+                Label(typeof(void)),
+                null,
+                typeof(void)),
+              e[21]=Block(
+                typeof(int),
+                new ParameterExpression[0],
+                e[22]=Block(
+                  typeof(ConstructorTests.Test),
+                  new ParameterExpression[0],
+                  e[1]/*Default*/,
+                  e[23]=MakeBinary(ExpressionType.Assign,
+                    e[24]=ArrayAccess(
+                      p[0]/*(ConstructorTests.Test[] result)*/, new Expression[] {
+                      p[4]/*(int index0)*/}),
+                    e[25]=Block(
+                      typeof(ConstructorTests.Test),
+                      new ParameterExpression[0],
+                      e[26]=MakeBinary(ExpressionType.Assign,
+                        p[5]/*(ConstructorTests.Test tempResult)*/,
+                        e[27]=Default(typeof(ConstructorTests.Test))),
+                      e[28]=Call(
+                        p[2]/*(BufferedStream stream)*/, 
+                        typeof(BufferedStream)/*.ReserveSize*/.GetMethods()[0],
+                        e[29]=Constant(5)),
+                      e[30]=Condition(
+                        e[31]=MakeBinary(ExpressionType.Equal,
+                          e[32]=Call(
+                            p[2]/*(BufferedStream stream)*/, 
+                            typeof(BufferedStream)/*.Read*/.GetMethods()[10].MakeGenericMethod(typeof(byte))),
+                          e[33]=Constant(0)),
+                        e[34]=MakeGoto(GotoExpressionKind.Goto,
+                          Label(typeof(void), "skipRead"),
+                          null,
+                          typeof(void)),
+                        e[1]/*Default*/,
+                        typeof(void)),
+                      e[35]=Block(
+                        typeof(void),
+                        new []{
+                        p[6]=Parameter(typeof(int), "refIndex")
+                        },
+                        e[36]=MakeBinary(ExpressionType.Assign,
+                          p[6]/*(int refIndex)*/,
+                          e[37]=Call(
+                            p[2]/*(BufferedStream stream)*/, 
+                            typeof(BufferedStream)/*.Read*/.GetMethods()[10].MakeGenericMethod(typeof(int)))),
+                        e[38]=Condition(
+                          e[39]=MakeBinary(ExpressionType.NotEqual,
+                            p[6]/*(int refIndex)*/,
+                            e[40]=Constant(-1)),
+                          e[41]=Block(
+                            typeof(void),
+                            new ParameterExpression[0],
+                            e[42]=MakeBinary(ExpressionType.Assign,
+                              p[5]/*(ConstructorTests.Test tempResult)*/,
+                              e[43]=Convert(
+                                e[44]=MakeIndex(
+                                  e[45]=Call(
+                                    p[3]/*(Binary<BufferedStream, Settings_827720117> io)*/, 
+                                    typeof(Binary<BufferedStream, Settings_827720117>)/*.get_LoadedObjectRefs*/.GetMethods(BindingFlags.NonPublic|BindingFlags.Instance)[0]), 
+                                  typeof(List<object>).GetTypeInfo().GetDeclaredProperty("Item"), new Expression[] {
+                                  e[46]=Decrement(
+                                    p[6]/*(int refIndex)*/)}),
+                                typeof(ConstructorTests.Test))),
+                            e[47]=MakeGoto(GotoExpressionKind.Goto,
+                              Label(typeof(void), "skipRead"),
+                              null,
+                              typeof(void))),
+                          e[1]/*Default*/,
+                          typeof(void))),
+                      e[48]=MakeBinary(ExpressionType.Assign,
+                        p[5]/*(ConstructorTests.Test tempResult)*/,
+                        e[49]=New(/*0 args*/
+                          typeof(ConstructorTests.Test).GetTypeInfo().DeclaredConstructors.ToArray()[0],new Expression[0])),
+                      e[50]=Call(
+                        e[51]=Call(
+                          p[3]/*(Binary<BufferedStream, Settings_827720117> io)*/, 
+                          typeof(Binary<BufferedStream, Settings_827720117>)/*.get_LoadedObjectRefs*/.GetMethods(BindingFlags.NonPublic|BindingFlags.Instance)[0]), 
+                        typeof(List<object>)/*.Add*/.GetMethods()[0],
+                        p[5]/*(ConstructorTests.Test tempResult)*/),
+                      e[52]=Label(Label(typeof(void), "skipRead")),
+                      p[5]/*(ConstructorTests.Test tempResult)*/))),
+                e[53]=Label(Label(typeof(void), "continue0")),
+                e[54]=MakeBinary(ExpressionType.Assign,
+                  p[4]/*(int index0)*/,
+                  e[55]=Decrement(
+                    p[4]/*(int index0)*/))),
+              typeof(void)),
+            Label(typeof(void)))))),
+    p[0]/*(ConstructorTests.Test[] result)*/),
+  p[2]/*(BufferedStream stream)*/,
+  p[3]/*(Binary<BufferedStream, Settings_827720117> io)*/);
         }
 
-        public class Test
+        public class ConstructorTests 
         {
-            public Test()
-            { }
+            public class Test
+            {
+                public Test()
+                { }
+            }
         }
 
-        internal class Settings_1449479367_b6fc048b {}
+        internal class Settings_827720117 {}
 
         internal static class ReadMethods<T, TStream, TSettingGen>
             where TStream : struct, IBinaryStream
