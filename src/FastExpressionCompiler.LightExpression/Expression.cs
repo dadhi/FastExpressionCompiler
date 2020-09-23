@@ -122,7 +122,7 @@ namespace FastExpressionCompiler.LightExpression
             uniqueExprs = new List<Expression>();
             sb = CreateExpressionString(sb, paramsExprs, uniqueExprs, 2, stripNamespace, printType).Append(';');
             
-            sb.Insert(0, $"var e = new Expression[{uniqueExprs.Count}];          // unique expressions {NewLine}");
+            sb.Insert(0, $"var e = new Expression[{uniqueExprs.Count}]; // unique expressions {NewLine}");
             sb.Insert(0, $"var p = new ParameterExpression[{paramsExprs.Count}]; // parameter expressions {NewLine}");
             
             return sb.ToString();
@@ -1457,48 +1457,43 @@ namespace FastExpressionCompiler.LightExpression
             sb.Append(typeof(TEnum).ToCode(stripNamespace, printType)).Append('.')
               .Append(Enum.GetName(typeof(TEnum), value));
 
-        private const string _nonPubStatMethods = ".GetMethods(BindingFlags.NonPublic|BindingFlags.Static)[";
-        private const string _nonPubInstMethods = ".GetMethods(BindingFlags.NonPublic|BindingFlags.Instance)[";
+        private const string _nonPubStatMethods = "BindingFlags.NonPublic|BindingFlags.Static";
+        private const string _nonPubInstMethods = "BindingFlags.NonPublic|BindingFlags.Instance";
 
-        internal static StringBuilder AppendMethod(this StringBuilder sb, MethodInfo method, 
+        public static StringBuilder AppendMethod(this StringBuilder sb, MethodInfo method, 
             bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
-            var type = method.DeclaringType;
-            sb.AppendTypeof(type, stripNamespace, printType);
-            sb.Append("/*.").Append(method.Name).Append("*/"); // print the method name in comments
+            sb.AppendTypeof(method.DeclaringType, stripNamespace, printType);
+            sb.Append(".GetMethods(");
 
-            if (method.IsPublic) 
-            {
-                sb.Append(".GetMethods()[");
-                var pubIndex = type.GetMethods().GetFirstIndex(method);
-                if (pubIndex == -1)
-                {
-                    if (method.IsGenericMethod)
-                        return sb.Append(type.GetMethods().GetFirstIndex(method.GetGenericMethodDefinition()))
-                            .Append("].MakeGenericMethod(")
-                            .AppendTypeofList(method.GetGenericArguments())
-                            .Append(')');
-                    throw new InvalidOperationException($"Unable to find the public method '{method.Name}' in the type '{type.ToCode()}'");
-                }
-                return sb.Append(pubIndex).Append(']');
-            }
+            if (!method.IsPublic)
+                sb.Append(method.IsStatic ? _nonPubStatMethods : _nonPubInstMethods);
 
-            var flags = BindingFlags.NonPublic |
-                (method.IsStatic ? BindingFlags.Static : BindingFlags.Instance);
+            sb.Append(").Single(x => x.Name == \"");
+            sb.Append(method.Name);
 
-            var nonPubIndex = type.GetMethods(flags).GetFirstIndex(method);
-            if (nonPubIndex == -1)
-            {
-                if (method.IsGenericMethod) 
-                    return sb.Append(method.IsStatic ? _nonPubStatMethods : _nonPubInstMethods)
-                        .Append(type.GetMethods(flags).GetFirstIndex(method.GetGenericMethodDefinition()))
-                        .Append("].MakeGenericMethod(")
-                        .AppendTypeofList(method.GetGenericArguments())
-                        .Append(')');
-                throw new InvalidOperationException($"Unable to find the non-public method '{method.Name}' in the type '{type.ToCode()}'");
-            }
-            sb.Append(method.IsStatic ? _nonPubStatMethods : _nonPubInstMethods);
-            return sb.Append(nonPubIndex).Append("]");
+            sb.Append("\" && ");
+
+            Type[] typeArgs = null;
+            if (!method.IsGenericMethod) 
+                sb.Append("!x.IsGenericMethod && ");
+            else 
+                sb.Append("x.IsGenericMethod && x.GetGenericArguments().Length == ")
+                  .Append((typeArgs = method.GetGenericArguments()).Length)
+                  .Append(" && ");
+
+            var ps = method.GetParameters();
+            if (ps.Length == 0) 
+                sb.Append("x.GetParameters().Length == 0)");
+            else
+                sb.Append("x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { ")
+                  .AppendTypeofList(ps.Select(x => x.ParameterType).ToArray(), stripNamespace, printType)
+                  .Append(" }))");
+
+            if (method.IsGenericMethod)
+                sb.Append(".MakeGenericMethod(").AppendTypeofList(typeArgs).Append(")");
+
+            return sb;
         }
 
         internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
@@ -1693,10 +1688,12 @@ namespace FastExpressionCompiler.LightExpression
             bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
             var s = new StringBuilder();
-            var count = 0;
+            var first = true;
             foreach (var item in items)
             {
-                if (count++ != 0)
+                if (first)
+                    first = false;
+                else
                     s.Append(", ");
                 s.Append(item.ToCode(notRecognizedToCode, stripNamespace, printType));
             }
@@ -2603,7 +2600,7 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            sb.Append("new ").Append(Type.GetElementType().ToCode(stripNamespace, printType)).Append(", ");
+            sb.Append("new ").Append(Type.GetElementType().ToCode(stripNamespace, printType));
             sb.Append(NodeType == ExpressionType.NewArrayInit ? "[] {" : "[");
 
             var exprs = Expressions;
@@ -3307,7 +3304,7 @@ namespace FastExpressionCompiler.LightExpression
                 sb.NewLineIdent(lineIdent).Append("new ParameterExpression[0],");
             else
             {
-                sb.NewLineIdent(lineIdent).Append("new []{");
+                sb.NewLineIdent(lineIdent).Append("new[] {");
                 for (var i = 0; i < Variables.Count; i++) 
                     Variables[i].ToExpressionString((i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent), 
                         paramsExprs, uniqueExprs, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
