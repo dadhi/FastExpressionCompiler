@@ -1987,6 +1987,34 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => typeof(bool);
         internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
             NodeType = nodeType;
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) 
+        {
+            if (NodeType == ExpressionType.Equal ||
+                NodeType == ExpressionType.NotEqual)
+            {
+                var left  = Left.ToExpression(ref exprsConverted);
+                var right = Right.ToExpression(ref exprsConverted);
+                if (left.Type.GetTypeInfo().IsPrimitive)
+                {
+                    left  = TryConvertSysExprToInt(left);
+                    right = TryConvertSysExprToInt(right);
+                }
+                return SysExpr.MakeBinary(NodeType, left, right);
+            }
+            return base.CreateSysExpression(ref exprsConverted);
+        }
+
+        private static SysExpr TryConvertSysExprToInt(SysExpr e) 
+        {
+            var t = e.Type;
+            if (t == typeof(byte) || 
+                t == typeof(sbyte) || 
+                t == typeof(short) || 
+                t == typeof(ushort))
+                return SysExpr.Convert(e, typeof(int));
+            return e;
+        }
     }
 
     internal sealed class LeftTypedBinaryExpression : BinaryExpression
@@ -2319,7 +2347,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.Constant;
         public override Type Type => Value.GetType();
-
         public readonly object Value;
 
         internal ConstantExpression(object value) => Value = value;
@@ -2349,7 +2376,7 @@ namespace FastExpressionCompiler.LightExpression
             {
                 sb.Append("null");
                 if (Type != typeof(object))
-                    sb.Append(',').AppendTypeof(Type, stripNamespace, printType);
+                    sb.Append(", ").AppendTypeof(Type, stripNamespace, printType);
             }
             else if (Value is Type t) // todo: move this to ValueToCode, we should output `typeof(T)` anyway
             {
@@ -2359,7 +2386,7 @@ namespace FastExpressionCompiler.LightExpression
             {
                 sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
                 if (Value.GetType() != Type)
-                    sb.Append(',').AppendTypeof(Type, stripNamespace, printType);
+                    sb.Append(", ").AppendTypeof(Type, stripNamespace, printType);
             }
 
             return sb.Append(')');

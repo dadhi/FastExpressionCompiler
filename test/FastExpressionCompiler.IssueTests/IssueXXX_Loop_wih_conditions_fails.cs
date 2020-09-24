@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
 using System.Text;
+using SysExpr = System.Linq.Expressions.Expression;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -25,6 +26,8 @@ namespace FastExpressionCompiler.IssueTests
             // Test_assignment_with_the_block_on_the_right_side();
 
 #if LIGHT_EXPRESSION
+            // Can_make_convert_and_compile_binary_equal_expression_of_different_types();
+
             // Test_method_to_expression_code_string();
 
             // Test_nested_generic_type_output();
@@ -298,7 +301,7 @@ namespace FastExpressionCompiler.IssueTests
 
             expr.PrintCSharpString();
 
-//             var fs = (ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)expr.CompileSys();
+            var fs = (ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)expr.CompileSys();
 //             var stream = new BufferedStream();
 //             var binary = new Binary<BufferedStream, Settings_827720117>();
 //             var x = fs(ref stream, binary);
@@ -425,7 +428,30 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
+
         #if LIGHT_EXPRESSION
+        [Test]
+        public void Can_make_convert_and_compile_binary_equal_expression_of_different_types() 
+        {
+            var e = Lambda<Func<bool>>(
+              MakeBinary(ExpressionType.Equal, 
+              Call(GetType().GetMethod(nameof(GetByte))),
+              Constant(0))
+            );
+
+            e.PrintCSharpString();
+
+            var f = e.CompileFast(true);
+            f.PrintIL("FEC IL:");
+            Assert.IsTrue(f());
+
+            var fs = e.CompileSys();
+            fs.PrintIL("System IL:");
+            Assert.IsTrue(fs());
+        }
+
+        public static byte GetByte() => 0;
+
         [Test]
         public void Test_method_to_expression_code_string() 
         {
