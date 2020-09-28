@@ -3338,8 +3338,9 @@ namespace FastExpressionCompiler.LightExpression
             else
                 sb.Append('.').Append(Indexer.Name).Append('(');
 
-           for (var i = 0; i < Arguments.Count; i++)
-                (i > 0 ? sb.Append(", ") : sb).NewLineIdentCs(Arguments[i], lineIdent, stripNamespace, printType, identSpaces);
+            for (var i = 0; i < Arguments.Count; i++)
+                Arguments[i].ToCSharpString(i > 0 ? sb.Append(", ") : sb, 
+                    lineIdent + identSpaces, stripNamespace, printType, identSpaces);
 
             if (isStandardIndexer)
                 sb.Append(']');
