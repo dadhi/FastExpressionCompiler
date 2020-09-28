@@ -3376,9 +3376,9 @@ namespace FastExpressionCompiler
                         if (obj != null && !TryEmit(obj, paramExprs, il, ref closure, flags))
                             return false;
 
-                        var indexArgExprs = indexExpr.Arguments;
+                        var indexArgExprs = indexExpr.Arguments; // todo: @perf optimize for the single argument
                         for (var i = 0; i < indexArgExprs.Count; i++)
-                            if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, flags, i))
+                            if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, flags))
                                 return false;
 
                         if (!TryEmit(right, paramExprs, il, ref closure, flags))

@@ -3331,7 +3331,8 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            sb.NewLineIdentCs(Object, lineIdent, stripNamespace, printType, identSpaces);
+            Object.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+
             var isStandardIndexer = Indexer == null || Indexer.Name == "Item";
             if (isStandardIndexer)
                 sb.Append('[');
