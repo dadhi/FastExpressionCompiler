@@ -1811,23 +1811,57 @@ namespace FastExpressionCompiler.LightExpression
         {
             switch (NodeType)
             {
+                case ExpressionType.ArrayLength:
+                    return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(".Length");
+
                 case ExpressionType.Not:
-                    sb.Append("!(");
-                    Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    return sb.Append(')');
+                    return Operand.ToCSharpString(sb.Append("!("), lineIdent, stripNamespace, printType, identSpaces).Append(')');
+
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
                     sb.Append("((").Append(Type.ToCode(stripNamespace, printType)).Append(')');
-                    Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    return sb.Append(')');
+                    return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(')');
+
+                case ExpressionType.Decrement:
+                    return Operand.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces).Append(" - 1)");
+
+                case ExpressionType.Increment:
+                    return Operand.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces).Append(" + 1)");
+
+                case ExpressionType.Negate:
+                case ExpressionType.NegateChecked:
+                    return Operand.ToCSharpString(sb.Append("(-"), lineIdent, stripNamespace, printType, identSpaces).Append(')');
+
+                case ExpressionType.PostIncrementAssign:
+                    return Operand.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces).Append("++)");
+
+                case ExpressionType.PreIncrementAssign:
+                    return Operand.ToCSharpString(sb.Append("(++"), lineIdent, stripNamespace, printType, identSpaces).Append(')');
+
+                case ExpressionType.PostDecrementAssign:
+                    return Operand.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces).Append("--)");
+
+                case ExpressionType.PreDecrementAssign:
+                    return Operand.ToCSharpString(sb.Append("(--"), lineIdent, stripNamespace, printType, identSpaces).Append(')');
+
+                case ExpressionType.IsTrue:
+                    return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append("==true");
+
+                case ExpressionType.IsFalse:
+                    return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append("==false");
+
                 case ExpressionType.TypeAs:
-                    sb.Append('(');
-                    Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    sb.Append(" as ").Append(Type.ToCode(stripNamespace, printType));
-                    return sb.Append(')');
+                    Operand.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(" as ").Append(Type.ToCode(stripNamespace, printType)).Append(')');
+
+                case ExpressionType.TypeIs:
+                    Operand.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(" is ").Append(Type.ToCode(stripNamespace, printType)).Append(')');
+
                 case ExpressionType.Throw:
                     sb.Append("trow ");
                     return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(';');
+
                 default:
                     return sb.Append(ToString()); // falling back ro ToString as a closest to C# code output 
             }
@@ -3236,7 +3270,6 @@ namespace FastExpressionCompiler.LightExpression
     public class VoidWithFalseBranchConditionalExpression : ConditionalExpression
     {
         public override Expression IfFalse { get; }
-
         internal VoidWithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse)
             : base(test, ifTrue) =>
             IfFalse = ifFalse;
@@ -3245,7 +3278,6 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class WithFalseBranchConditionalExpression : VoidWithFalseBranchConditionalExpression
     {
         public override Type Type => IfTrue.Type;
-
         internal WithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse)
             : base(test, ifTrue, ifFalse) { }
     }
@@ -3253,7 +3285,6 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class TypedWithFalseBranchConditionalExpression : VoidWithFalseBranchConditionalExpression
     {
         public override Type Type { get; }
-
         internal TypedWithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse, Type type)
             : base(test, ifTrue, ifFalse) =>
             Type = type;
@@ -3295,12 +3326,32 @@ namespace FastExpressionCompiler.LightExpression
                 .NewLineIdentExpr(Arguments[i], paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append("})");
         }
+
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            sb.NewLineIdentCs(Object, lineIdent, stripNamespace, printType, identSpaces);
+            var isStandardIndexer = Indexer == null || Indexer.Name == "Item";
+            if (isStandardIndexer)
+                sb.Append('[');
+            else
+                sb.Append('.').Append(Indexer.Name).Append('(');
+
+           for (var i = 0; i < Arguments.Count; i++)
+                (i > 0 ? sb.Append(", ") : sb).NewLineIdentCs(Arguments[i], lineIdent, stripNamespace, printType, identSpaces);
+
+            if (isStandardIndexer)
+                sb.Append(']');
+            else
+                sb.Append(')');
+
+            return sb;
+        }
     }
 
     public sealed class IndexWithIndexerExpression : IndexExpression
     {
         public override PropertyInfo Indexer { get; }
-
         internal IndexWithIndexerExpression(Expression @object, PropertyInfo indexer, IReadOnlyList<Expression> arguments) 
             : base(@object, arguments) => Indexer = indexer;
     }
