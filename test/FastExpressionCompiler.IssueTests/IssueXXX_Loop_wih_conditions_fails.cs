@@ -151,8 +151,9 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Test1()
         {
-          var p = new ParameterExpression[7]; // parameter expressions 
-          var e = new Expression[56]; // unique expressions 
+          var p = new ParameterExpression[7]; // the parameter expressions 
+          var e = new Expression[56]; // the unique expressions 
+          var l = new LabelTarget[3]; // the labels 
           var expr = Lambda(/*$*/
             typeof(ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed),
             e[0]=Block(
@@ -206,7 +207,7 @@ namespace FastExpressionCompiler.IssueTests
                           p[4]/*(int index0)*/,
                           e[19]=Constant(0)),
                         e[20]=MakeGoto(GotoExpressionKind.Break,
-                          Label(typeof(void)),
+                          l[0]=Label(typeof(void)),
                           null,
                           typeof(void)),
                         e[21]=Block(
@@ -237,7 +238,7 @@ namespace FastExpressionCompiler.IssueTests
                                       typeof(BufferedStream).GetMethods().Single(x => x.Name == "Read" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0).MakeGenericMethod(typeof(byte))),
                                     e[33]=Constant(0)),
                                   e[34]=MakeGoto(GotoExpressionKind.Goto,
-                                    Label(typeof(void), "skipRead"),
+                                    l[1]=Label(typeof(void), "skipRead"),
                                     null,
                                     typeof(void)),
                                   e[1]/*Default*/,
@@ -271,7 +272,7 @@ namespace FastExpressionCompiler.IssueTests
                                               p[6]/*(int refIndex)*/)}),
                                           typeof(ConstructorTests.Test))),
                                       e[47]=MakeGoto(GotoExpressionKind.Goto,
-                                        Label(typeof(void), "skipRead"),
+                                        l[1]/* skipRead */,
                                         null,
                                         typeof(void))),
                                     e[1]/*Default*/,
@@ -286,15 +287,15 @@ namespace FastExpressionCompiler.IssueTests
                                     typeof(Binary<BufferedStream, Settings_827720117>).GetMethods(BindingFlags.NonPublic|BindingFlags.Instance).Single(x => x.Name == "get_LoadedObjectRefs" && !x.IsGenericMethod && x.GetParameters().Length == 0)), 
                                   typeof(List<object>).GetMethods().Single(x => x.Name == "Add" && !x.IsGenericMethod && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(object) })),
                                   p[5]/*(ConstructorTests.Test tempResult)*/),
-                                e[52]=Label(Label(typeof(void), "skipRead")),
+                                e[52]=Label(l[1]/* skipRead */),
                                 p[5]/*(ConstructorTests.Test tempResult)*/))),
-                          e[53]=Label(Label(typeof(void), "continue0")),
+                          e[53]=Label(l[2]=Label(typeof(void), "continue0")),
                           e[54]=MakeBinary(ExpressionType.Assign,
                             p[4]/*(int index0)*/,
                             e[55]=Decrement(
                               p[4]/*(int index0)*/))),
                         typeof(void)),
-                      Label(typeof(void)))))),
+                      l[0]/* void_8087743 */)))),
               p[0]/*(ConstructorTests.Test[] result)*/),
             p[2]/*(BufferedStream stream)*/,
             p[3]/*(Binary<BufferedStream, Settings_827720117> io)*/);
@@ -302,9 +303,11 @@ namespace FastExpressionCompiler.IssueTests
             expr.PrintCSharpString();
 
             var fs = (ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)expr.CompileSys();
-//             var stream = new BufferedStream();
-//             var binary = new Binary<BufferedStream, Settings_827720117>();
-//             var x = fs(ref stream, binary);
+
+            var stream = new BufferedStream();
+            var binary = new Binary<BufferedStream, Settings_827720117>();
+            var x = fs(ref stream, binary);
+            Assert.IsNotNull(x);
         }
 
         public class ConstructorTests
@@ -333,7 +336,7 @@ namespace FastExpressionCompiler.IssueTests
         internal sealed partial class Binary<TStream, TSettingGen> : ISerializer, IBinary
             where TStream : struct, IBinaryStream
         {
-            internal List<object> LoadedObjectRefs { get; }
+            internal List<object> LoadedObjectRefs { get; } = new List<object>();
 
             public void Dispose()
             {
@@ -342,7 +345,7 @@ namespace FastExpressionCompiler.IssueTests
 
             public T Read<T>(Stream outputStream)
             {
-                throw new NotImplementedException();
+                return typeof(T) == typeof(int) ? (T)(object)2: default(T); // todo: @mock
             }
 
             public void Write<T>(T value, Stream outputStream)
@@ -389,7 +392,7 @@ namespace FastExpressionCompiler.IssueTests
 
             public T Read<T>() where T : struct
             {
-                throw new NotImplementedException();
+                return typeof(T) == typeof(int) ? (T)(object)2: default(T); // todo: @mock
             }
 
             private static T Read2<T>() where T : struct
@@ -402,9 +405,10 @@ namespace FastExpressionCompiler.IssueTests
                 throw new NotImplementedException();
             }
 
+            private int _reservedSize;
             public void ReserveSize(int sizeNeeded)
             {
-                throw new NotImplementedException();
+                _reservedSize += sizeNeeded;
             }
 
             public void Write(string input)
