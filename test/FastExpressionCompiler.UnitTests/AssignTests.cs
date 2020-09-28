@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class AssignTests
+    public class AssignTests : ITest
     {
         public int Run()
         {
@@ -25,7 +25,16 @@ namespace FastExpressionCompiler.UnitTests
             Member_test_block_result_should_detect_non_block_variable();
             Member_test_block_result();
             Member_test_try_catch_finally_result();
-            return 9;
+
+            Array_index_assign_body_less();
+            Array_index_assign_ref_type_body_less();
+            Array_index_assign_value_type_block();
+            Array_index_assign_ref_type_block();
+            Array_multi_dimensional_index_assign_value_type_block();
+            Array_multi_dimensional_index_assign_ref_type_block();
+            Array_index_assign_custom_indexer();
+            Array_index_assign_custom_indexer_with_get();
+            return 17;
         }
 
         [Test]
@@ -326,6 +335,7 @@ namespace FastExpressionCompiler.UnitTests
                     ArrayAccess(variable, Constant(1), Constant(0)))); // ret o[1,0]
 
             var f = expr.CompileFast(true);
+            f.PrintIL();
 
             Assert.IsNotNull(f);
             Assert.AreEqual(a, f());

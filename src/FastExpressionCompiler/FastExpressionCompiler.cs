@@ -1571,9 +1571,11 @@ namespace FastExpressionCompiler
                         case ExpressionType.New:
                             return TryEmitNew(expr, paramExprs, il, ref closure, parent);
 
-                        case ExpressionType.NewArrayInit:
                         case ExpressionType.NewArrayBounds:
-                            return EmitNewArray((NewArrayExpression)expr, paramExprs, il, ref closure, parent);
+                            return EmitNewArrayBounds((NewArrayExpression)expr, paramExprs, il, ref closure, parent);
+
+                        case ExpressionType.NewArrayInit:
+                            return EmitNewArrayInit((NewArrayExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.MemberInit:
                             return EmitMemberInit((MemberInitExpression)expr, paramExprs, il, ref closure, parent);
@@ -2887,22 +2889,34 @@ namespace FastExpressionCompiler
                 return locVarIndex;
             }
 
-            private static bool EmitNewArray(NewArrayExpression expr,
+            private static bool EmitNewArrayBounds(NewArrayExpression expr,
+                IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+            {
+                var bounds = expr.Expressions; // todo: @perf optimize for the single bound
+                if (bounds.Count == 1)
+                {
+                    if (!TryEmit(bounds[0], paramExprs, il, ref closure, parent))
+                        return false;
+
+                    var elemType = expr.Type.GetElementType();
+                    if (elemType == null)
+                        return false;
+                    il.Emit(OpCodes.Newarr, elemType);
+                }
+                else
+                {
+                    for (var i = 0; i < bounds.Count; i++)
+                        if (!TryEmit(bounds[i], paramExprs, il, ref closure, parent))
+                            return false;
+                    il.Emit(OpCodes.Newobj, expr.Type.GetTypeInfo().DeclaredConstructors.GetFirst());
+                }
+                return true;
+            }
+
+            private static bool EmitNewArrayInit(NewArrayExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var arrayType = expr.Type;
-
-                if (expr.NodeType == ExpressionType.NewArrayBounds) 
-                {
-                    var bounds = expr.Expressions; // todo: @perf optimize for the single bound
-                    for (var i = 0; i < bounds.Count; i++)
-                        if (!TryEmit(bounds[i], paramExprs, il, ref closure, parent, i))
-                            return false;
-
-                    il.Emit(OpCodes.Newobj, arrayType.GetTypeInfo().DeclaredConstructors.GetFirst());
-                    return true;
-                }
-
                 // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
                 if (arrayType.GetArrayRank() > 1) 
                     return false;
@@ -3450,7 +3464,7 @@ namespace FastExpressionCompiler
 
 #if LIGHT_EXPRESSION
                 var fewArgCount = callExpr.FewArgumentCount;
-                if (fewArgCount >= 0) // todo: @perf change to `fewArgCount >= 1` to quickly skip 0 case
+                if (fewArgCount >= 1) // we are skipping the case 0 because it does nothing
                 {
                     if (fewArgCount == 1)
                     {
