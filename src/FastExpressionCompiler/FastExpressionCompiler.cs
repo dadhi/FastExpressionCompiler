@@ -1192,7 +1192,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Index:
                         var indexExpr = (IndexExpression)expr;
-                        var indexArgs = indexExpr.Arguments;
+                        var indexArgs = indexExpr.Arguments; // todo: @perf handle a single argument expr, do continue on it as well
                         for (var i = 0; i < indexArgs.Count; i++)
                             if (!TryCollectBoundConstants(ref closure, indexArgs[i], paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
@@ -1571,8 +1571,8 @@ namespace FastExpressionCompiler
                         case ExpressionType.New:
                             return TryEmitNew(expr, paramExprs, il, ref closure, parent);
 
-                        case ExpressionType.NewArrayBounds:
                         case ExpressionType.NewArrayInit:
+                        case ExpressionType.NewArrayBounds:
                             return EmitNewArray((NewArrayExpression)expr, paramExprs, il, ref closure, parent);
 
                         case ExpressionType.MemberInit:
@@ -2891,26 +2891,28 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var arrayType = expr.Type;
-                var elems = expr.Expressions;
-                var elemType = arrayType.GetElementType();
-                if (elemType == null)
-                    return false;
 
-                var rank = arrayType.GetArrayRank();
-                if (rank == 1) // one dimensional
+                if (expr.NodeType == ExpressionType.NewArrayBounds) 
                 {
-                    EmitLoadConstantInt(il, elems.Count);
-                }
-                else // multi dimensional
-                {
-                    for (var i = 0; i < elems.Count; i++)
-                        if (!TryEmit(elems[i], paramExprs, il, ref closure, parent, i))
+                    var bounds = expr.Expressions; // todo: @perf optimize for the single bound
+                    for (var i = 0; i < bounds.Count; i++)
+                        if (!TryEmit(bounds[i], paramExprs, il, ref closure, parent, i))
                             return false;
 
                     il.Emit(OpCodes.Newobj, arrayType.GetTypeInfo().DeclaredConstructors.GetFirst());
                     return true;
                 }
 
+                // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
+                if (arrayType.GetArrayRank() > 1) 
+                    return false;
+
+                var elemType = arrayType.GetElementType();
+                if (elemType == null)
+                    return false;
+
+                var elems = expr.Expressions;
+                EmitLoadConstantInt(il, elems.Count); // emit the length of the array calculated from the number of initializer elements
                 il.Emit(OpCodes.Newarr, elemType);
 
                 var isElemOfValueType = elemType.IsValueType();
@@ -3448,7 +3450,7 @@ namespace FastExpressionCompiler
 
 #if LIGHT_EXPRESSION
                 var fewArgCount = callExpr.FewArgumentCount;
-                if (fewArgCount >= 0)
+                if (fewArgCount >= 0) // todo: @perf change to `fewArgCount >= 1` to quickly skip 0 case
                 {
                     if (fewArgCount == 1)
                     {

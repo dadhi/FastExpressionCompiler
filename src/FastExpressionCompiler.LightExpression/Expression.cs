@@ -3290,6 +3290,7 @@ namespace FastExpressionCompiler.LightExpression
             Type = type;
     }
 
+    // todo: @perf optimize for the single argument which is majority of the cases
     /// <summary>For indexer property or array access.</summary>
     public class IndexExpression : Expression
     {
@@ -3845,7 +3846,7 @@ namespace FastExpressionCompiler.LightExpression
         public StringBuilder ToCSharpString(StringBuilder sb) =>
             sb.AppendName(Name, Type, this);
 
-        public override string ToString() => Type.ToCode(true, null) + Name?.ToString();
+        public override string ToString() => new StringBuilder().AppendName(Name, Type, this).ToString();
     }
 
     public sealed class TypedLabelTarget : LabelTarget

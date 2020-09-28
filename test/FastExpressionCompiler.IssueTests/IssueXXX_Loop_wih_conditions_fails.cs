@@ -303,11 +303,17 @@ namespace FastExpressionCompiler.IssueTests
             expr.PrintCSharpString();
 
             var fs = (ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)expr.CompileSys();
+            fs.PrintIL();
 
             var stream = new BufferedStream();
             var binary = new Binary<BufferedStream, Settings_827720117>();
             var x = fs(ref stream, binary);
             Assert.IsNotNull(x);
+
+            var f = (ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)expr.CompileFast();
+            f.PrintIL();
+            var y = f(ref stream, binary);
+            Assert.IsNotNull(y);
         }
 
         public class ConstructorTests
