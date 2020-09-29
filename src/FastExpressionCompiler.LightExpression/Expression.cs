@@ -273,32 +273,36 @@ namespace FastExpressionCompiler.LightExpression
 
         public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments)
         {
+            var method = type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.StaticMethods);
             if (arguments == null || arguments.Length == 0)
-                return new MethodCallExpression(type.FindMethod(methodName, typeArguments, arguments, isStatic: true));
-            return new ManyArgumentsMethodCallExpression(type.FindMethod(methodName, typeArguments, arguments, isStatic: true), arguments);
+                return new MethodCallExpression(method);
+            return new ManyArgumentsMethodCallExpression(method, arguments);
         }
 
         public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments)
         {
-            var args = arguments.AsReadOnlyList();
-            if (args == null || args.Count == 0)
-                return new MethodCallExpression(type.FindMethod(methodName, typeArguments, args, isStatic: true));
-            return new ManyArgumentsMethodCallExpression(type.FindMethod(methodName, typeArguments, args, isStatic: true), args);
+            var argExprs = arguments.AsReadOnlyList();
+            var method = type.FindMethodOrThrow(methodName, typeArguments, argExprs, TypeTools.StaticMethods);
+            if (argExprs == null || argExprs.Count == 0)
+                return new MethodCallExpression(method);
+            return new ManyArgumentsMethodCallExpression(method, argExprs);
         }
 
         public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments)
         {
+            var method = instance.Type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.InstanceMethods);
             if (arguments == null || arguments.Length == 0)
-                return new InstanceMethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, arguments));
-            return new InstanceManyArgumentsMethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, arguments), arguments);
+                return new InstanceMethodCallExpression(instance, method);
+            return new InstanceManyArgumentsMethodCallExpression(instance, method, arguments);
         }
 
         public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments)
         {
             var args = arguments.AsReadOnlyList();
+            var method = instance.Type.FindMethodOrThrow(methodName, typeArguments, args, TypeTools.InstanceMethods);
             if (args == null || args.Count == 0)
-                return new InstanceMethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, args));
-            return new InstanceManyArgumentsMethodCallExpression(instance, instance.Type.FindMethod(methodName, typeArguments, args), args);
+                return new InstanceMethodCallExpression(instance, method);
+            return new InstanceManyArgumentsMethodCallExpression(instance, method, args);
         }
 
         public static MethodCallExpression Call(MethodInfo method) =>
@@ -1252,39 +1256,52 @@ namespace FastExpressionCompiler.LightExpression
             return type.GetTypeInfo().BaseType?.FindField(fieldName);
         }
 
-        internal static MethodInfo FindMethod(this Type type,
-            string methodName, Type[] typeArgs, IReadOnlyList<Expression> args, bool isStatic = false)
+        internal const BindingFlags InstanceMethods = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic; 
+        internal const BindingFlags StaticMethods   = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic; 
+
+        internal static MethodInfo FindMethodOrThrow(this Type type,
+            string methodName, Type[] typeArgs, IReadOnlyList<Expression> argExprs, BindingFlags flags)
         {
-            var methods = type.GetTypeInfo().DeclaredMethods.AsArray();
+            typeArgs = typeArgs ?? Type.EmptyTypes;
+            argExprs = argExprs ?? Tools.Empty<Expression>();
+            var typeArgCount = typeArgs.Length;
+            var argExprCount = argExprs.Count;
+            var methods = type.GetMethods(flags);
             for (var i = 0; i < methods.Length; i++)
             {
                 var m = methods[i];
-                if (isStatic == m.IsStatic && methodName == m.Name)
+                if (m.Name == methodName)
                 {
-                    typeArgs = typeArgs ?? Type.EmptyTypes;
-                    var mTypeArgs = m.GetGenericArguments();
-
-                    if (typeArgs.Length == mTypeArgs.Length &&
-                        (typeArgs.Length == 0 || AreTypesTheSame(typeArgs, mTypeArgs)))
+                    if (typeArgCount > 0) 
                     {
-                        args = args ?? Tools.Empty<Expression>();
-                        var pars = m.GetParameters();
-                        if (args.Count == pars.Length &&
-                            (args.Count == 0 || AreArgExpressionsAndParamsOfTheSameType(args, pars)))
-                            return m;
+                        if (m.IsGenericMethod) 
+                        {
+                            var mTypeArgs = m.GetGenericArguments();
+                            if (mTypeArgs.Length == typeArgCount)
+                            {
+                                m = m.MakeGenericMethod(typeArgs);
+                                var mPars = m.GetParameters();
+                                if (mPars.Length == argExprCount &&
+                                    (argExprs.Count == 0 || AreArgExpressionsAndParamsOfTheSameType(argExprs, mPars)))
+                                    return m;
+                            }
+                        }
+                    }
+                    else 
+                    {
+                        if (!m.IsGenericMethod)
+                        {
+                            var mPars = m.GetParameters();
+                            if (mPars.Length == argExprCount &&
+                                (argExprs.Count == 0 || AreArgExpressionsAndParamsOfTheSameType(argExprs, mPars)))
+                                return m;
+                        }
                     }
                 }
             }
 
-            return type.GetTypeInfo().BaseType?.FindMethod(methodName, typeArgs, args, isStatic);
-        }
-
-        private static bool AreTypesTheSame(Type[] source, Type[] target)
-        {
-            for (var i = 0; i < source.Length; i++)
-                if (source[i] != target[i])
-                    return false;
-            return true;
+            return type.BaseType?.FindMethodOrThrow(methodName, typeArgs, argExprs, flags)
+                ?? throw new InvalidOperationException($"The method '{methodName}' is not found in the type '{type.ToCode()}'");
         }
 
         private static bool AreArgExpressionsAndParamsOfTheSameType(IReadOnlyList<Expression> args, ParameterInfo[] pars)
@@ -1476,7 +1493,6 @@ namespace FastExpressionCompiler.LightExpression
 
             sb.Append(").Single(x => x.Name == \"");
             sb.Append(method.Name);
-
             sb.Append("\" && ");
 
             Type[] typeArgs = null;
@@ -2739,7 +2755,8 @@ namespace FastExpressionCompiler.LightExpression
         public virtual int FewArgumentCount => 0;
         public readonly MethodInfo Method;
 
-        internal MethodCallExpression(MethodInfo method) => Method = method;
+        internal MethodCallExpression(MethodInfo method) => 
+            Method = method;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMethodCall(this);
 

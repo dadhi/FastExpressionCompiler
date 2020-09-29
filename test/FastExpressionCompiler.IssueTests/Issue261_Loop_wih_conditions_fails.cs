@@ -144,7 +144,7 @@ namespace FastExpressionCompiler.IssueTests
                   result[index0] = tempResult;
                   //} end of block assignment
                   
-                  continue0:
+                  // continue0: // todo: @incomplete - if label is not reference we may safely remove or better comment it in the output
                   index0 = (index0 - 1);
               }
           }
@@ -304,7 +304,7 @@ namespace FastExpressionCompiler.IssueTests
             p[2]/*(BufferedStream stream)*/,
             p[3]/*(Binary<BufferedStream, Settings_827720117> io)*/);
   
-            string s = null;
+            var s = string.Empty;
             expr.PrintCSharpString(ref s);
             StringAssert.DoesNotContain("return index0", s);
 
