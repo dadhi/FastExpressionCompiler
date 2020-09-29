@@ -1540,7 +1540,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.ArrayIndex:
                             var arrIndexExpr = (BinaryExpression)expr;
-                            return TryEmit(arrIndexExpr.Left, paramExprs, il, ref closure, parent) &&
+                            return TryEmit(arrIndexExpr.Left,  paramExprs, il, ref closure, parent) &&
                                    TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, parent) &&
                                    TryEmitArrayIndex(expr.Type, il);
 

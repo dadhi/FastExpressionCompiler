@@ -16,26 +16,29 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    public class IssueXXX_Loop_wih_conditions_fails : ITest
+    public class Issue261_Loop_wih_conditions_fails : ITest
     {
         public int Run()
         {
-            Test1();
+            Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
 
-            // Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
-            // Test_assignment_with_the_block_on_the_right_side();
+            Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
+            Test_assignment_with_the_block_on_the_right_side();
 
 #if LIGHT_EXPRESSION
-            // Can_make_convert_and_compile_binary_equal_expression_of_different_types();
+            Can_make_convert_and_compile_binary_equal_expression_of_different_types();
 
-            // Test_method_to_expression_code_string();
+            Test_method_to_expression_code_string();
 
-            // Test_nested_generic_type_output();
-            // Test_triple_nested_non_generic();
-            // Test_triple_nested_open_generic();
-            // Test_non_generic_classes();
-#endif
+            Test_nested_generic_type_output();
+            Test_triple_nested_non_generic();
+            Test_triple_nested_open_generic();
+            Test_non_generic_classes();
+            return 9;
+#else            
+            Should_throw_for_the_equal_expression_of_different_types();
             return 4;
+#endif
         }
 
         [Test]
@@ -93,63 +96,64 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(42, f()[0]);
         }
 
-        /*
         ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed F = (
             ref BufferedStream stream, 
             Binary<BufferedStream, Settings_827720117> io) =>
         {
-            ConstructorTests.Test[] result;
-
-            int length0;
-            stream.ReserveSize(4);
-            length0 = stream.Read<int>();
-            result = new ConstructorTests.Test[length0];
-            io.get_LoadedObjectRefs().Add(result);
-            int index0;
-            ConstructorTests.Test tempResult;
-            index0 = (length0 - 1);
-
-            while (true)
-            {
-                if ((index0 < 0))
-                {
-                    goto void_11487847;
-                }
-                else
-                {
-                    tempResult = default(ConstructorTests.Test);
-                    stream.ReserveSize(5);
-
-                    if (stream.Read<byte>() == 0)
-                    {
-                        goto skipRead;
-                    }
-
-                    int refIndex;
-                    refIndex = stream.Read<int>();
-
-                    if (refIndex != -1)
-                    {
-                        tempResult = ((ConstructorTests.Test)io.get_LoadedObjectRefs().Item[Decrement(refIndex)]);
-                        goto skipRead;
-                    }
-                    tempResult = new ConstructorTests.Test();
-                    io.get_LoadedObjectRefs().Add(tempResult);
-
-                    skipRead:
-                    result[index0] = tempResult;
-
-                    continue0:
-                    return index0 = Decrement(index0);
-                }
-            }
-            void_11487847: 
-            return result;
+          ConstructorTests.Test[] result;
+          
+          int length0;
+          stream.ReserveSize((int)4);
+          length0 = stream.Read<int>();
+          result = new ConstructorTests.Test[length0];
+          io.get_LoadedObjectRefs().Add(result);
+          int index0;
+          ConstructorTests.Test tempResult;
+          index0 = (length0 - 1);
+          
+          while (true)
+          {
+              if (index0 < (int)0)
+              {
+                  goto void_954039;
+              }
+              else
+              {
+                  
+                  // The block result will be assigned to `result[index0]`{
+                  tempResult = default(ConstructorTests.Test);
+                  stream.ReserveSize((int)5);
+                  
+                  if (stream.Read<byte>() == (byte)0)
+                  {
+                      goto skipRead;
+                  }
+                  
+                  int refIndex;
+                  refIndex = stream.Read<int>();
+                  
+                  if (refIndex != (int)-1)
+                  {
+                      tempResult = ((ConstructorTests.Test)io.LoadedObjectRefs[(refIndex - 1)]);
+                      goto skipRead;
+                  }
+                  tempResult = new ConstructorTests.Test();
+                  io.LoadedObjectRefs.Add(tempResult);
+                  
+                  skipRead:
+                  result[index0] = tempResult;
+                  //} end of block assignment
+                  
+                  // continue0:
+                  // return index0 = (index0 - 1); // todo: @bug does not work yet - the return is wrong here
+              }
+          }
+          void_954039: 
+          return result;
         };
-        */
 
         [Test]
-        public void Test1()
+        public void Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments()
         {
           var p = new ParameterExpression[7]; // the parameter expressions 
           var e = new Expression[56]; // the unique expressions 
@@ -170,7 +174,7 @@ namespace FastExpressionCompiler.IssueTests
                 e[3]=Call(
                   p[2]=Parameter(typeof(BufferedStream).MakeByRefType(), "stream"), 
                   typeof(BufferedStream).GetMethods().Single(x => x.Name == "ReserveSize" && !x.IsGenericMethod && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
-                  e[4]=Constant(4)),
+                  e[4]=Constant((int)4)),
                 e[5]=MakeBinary(ExpressionType.Assign,
                   p[1]/*(int length0)*/,
                   e[6]=Call(
@@ -200,12 +204,12 @@ namespace FastExpressionCompiler.IssueTests
                       p[4]/*(int index0)*/,
                       e[14]=MakeBinary(ExpressionType.Subtract,
                         p[1]/*(int length0)*/,
-                        e[15]=Constant(1))),
+                        e[15]=Constant((int)1))),
                     e[16]=Loop(
                       e[17]=Condition(
                         e[18]=MakeBinary(ExpressionType.LessThan,
                           p[4]/*(int index0)*/,
-                          e[19]=Constant(0)),
+                          e[19]=Constant((int)0)),
                         e[20]=MakeGoto(GotoExpressionKind.Break,
                           l[0]=Label(typeof(void)),
                           null,
@@ -230,13 +234,13 @@ namespace FastExpressionCompiler.IssueTests
                                 e[28]=Call(
                                   p[2]/*(BufferedStream stream)*/, 
                                   typeof(BufferedStream).GetMethods().Single(x => x.Name == "ReserveSize" && !x.IsGenericMethod && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
-                                  e[29]=Constant(5)),
+                                  e[29]=Constant((int)5)),
                                 e[30]=Condition(
                                   e[31]=MakeBinary(ExpressionType.Equal,
                                     e[32]=Call(
                                       p[2]/*(BufferedStream stream)*/, 
                                       typeof(BufferedStream).GetMethods().Single(x => x.Name == "Read" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0).MakeGenericMethod(typeof(byte))),
-                                    e[33]=Constant(0)),
+                                    e[33]=Constant((byte)0)),
                                   e[34]=MakeGoto(GotoExpressionKind.Goto,
                                     l[1]=Label(typeof(void), "skipRead"),
                                     null,
@@ -256,7 +260,7 @@ namespace FastExpressionCompiler.IssueTests
                                   e[38]=Condition(
                                     e[39]=MakeBinary(ExpressionType.NotEqual,
                                       p[6]/*(int refIndex)*/,
-                                      e[40]=Constant(-1)),
+                                      e[40]=Constant((int)-1)),
                                     e[41]=Block(
                                       typeof(void),
                                       new ParameterExpression[0],
@@ -295,11 +299,11 @@ namespace FastExpressionCompiler.IssueTests
                             e[55]=Decrement(
                               p[4]/*(int index0)*/))),
                         typeof(void)),
-                      l[0]/* void_8087743 */)))),
+                      l[0]/* void_60623824 */)))),
               p[0]/*(ConstructorTests.Test[] result)*/),
             p[2]/*(BufferedStream stream)*/,
             p[3]/*(Binary<BufferedStream, Settings_827720117> io)*/);
-
+  
             expr.PrintCSharpString();
 
             var fs = (ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)expr.CompileSys();
@@ -438,6 +442,22 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
+        public static byte GetByte() => 0;
+
+        #if !LIGHT_EXPRESSION
+        [Test]
+        public void Should_throw_for_the_equal_expression_of_different_types()
+        {
+            var ex = Assert.Throws<InvalidOperationException>(() => 
+              Equal(
+                Constant(0),
+                Call(GetType().GetMethod(nameof(GetByte)))
+              )
+            );
+
+            StringAssert.StartsWith("The binary operator Equal is not defined for the types", ex.Message);
+        }
+        #endif
 
         #if LIGHT_EXPRESSION
         [Test]
@@ -446,8 +466,11 @@ namespace FastExpressionCompiler.IssueTests
             var e = Lambda<Func<bool>>(
               MakeBinary(ExpressionType.Equal, 
               Call(GetType().GetMethod(nameof(GetByte))),
-              Constant(0))
+              Constant((byte)0))
             );
+
+            var s = e.ToExpressionString();
+            StringAssert.Contains("Constant((byte)0)", s);
 
             e.PrintCSharpString();
 
@@ -460,8 +483,6 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsTrue(fs());
         }
 
-        public static byte GetByte() => 0;
-
         [Test]
         public void Test_method_to_expression_code_string() 
         {
@@ -470,71 +491,72 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual("Read", m.Name);
 
             var s = new StringBuilder().AppendMethod(m, true, null).ToString();
-            Assert.AreEqual("typeof(IssueXXX_Loop_wih_conditions_fails.BufferedStream).GetMethods().Single(x => x.Name == \"Read\" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0)", s);
+            Assert.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods().Single(x => x.Name == \"Read\" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0)", s);
 
             m = typeof(BufferedStream).GetMethods().Single(x =>
               x.Name == "Read" && !x.IsGenericMethod && x.GetParameters().Length == 0);
             Assert.AreEqual("Read", m.Name);
 
             s = new StringBuilder().AppendMethod(m, true, null).ToString();
-            Assert.AreEqual("typeof(IssueXXX_Loop_wih_conditions_fails.BufferedStream).GetMethods().Single(x => x.Name == \"Read\" && !x.IsGenericMethod && x.GetParameters().Length == 0)", s);
+            Assert.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods().Single(x => x.Name == \"Read\" && !x.IsGenericMethod && x.GetParameters().Length == 0)", s);
 
             m = typeof(BufferedStream).GetMethods(BindingFlags.NonPublic|BindingFlags.Static).Single(x =>
-              x.Name == "Read2" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0);
+                x.Name == "Read2" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0)
+                .MakeGenericMethod(typeof(int));
             Assert.AreEqual("Read2", m.Name);
 
             s = new StringBuilder().AppendMethod(m, true, null).ToString();
-            Assert.AreEqual("typeof(IssueXXX_Loop_wih_conditions_fails.BufferedStream).GetMethods(BindingFlags.NonPublic|BindingFlags.Static).Single(x => x.Name == \"Read2\" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0)", s);
+            Assert.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods(BindingFlags.NonPublic|BindingFlags.Static).Single(x => x.Name == \"Read2\" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0).MakeGenericMethod(typeof(int))", s);
         }
 
         [Test]
         public void Test_nested_generic_type_output() 
         {
             var s = typeof(ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)
-                .ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+                .ToCode(true, (_, x) => x.Replace("Issue261_Loop_wih_conditions_fails.", ""));
 
-            Assert.AreEqual("ReadMethods<Test[], BufferedStream, Settings_1449479367_b6fc048b>.ReadSealed", s);
+            Assert.AreEqual("ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed", s);
         }
 
         [Test]
         public void Test_triple_nested_non_generic() 
         {
             var s = typeof(A<int>.B<string>.Z).ToCode(true);
-            Assert.AreEqual("IssueXXX_Loop_wih_conditions_fails.A<int>.B<string>.Z", s);
+            Assert.AreEqual("Issue261_Loop_wih_conditions_fails.A<int>.B<string>.Z", s);
 
             s = typeof(A<int>.B<string>.Z).ToCode();
-            Assert.AreEqual("FastExpressionCompiler.LightExpression.IssueTests.IssueXXX_Loop_wih_conditions_fails.A<int>.B<string>.Z", s);
+            Assert.AreEqual("FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails.A<int>.B<string>.Z", s);
 
             s = typeof(A<int>.B<string>.Z[]).ToCode(true);
-            Assert.AreEqual("IssueXXX_Loop_wih_conditions_fails.A<int>.B<string>.Z[]", s);
+            Assert.AreEqual("Issue261_Loop_wih_conditions_fails.A<int>.B<string>.Z[]", s);
             
-            s = typeof(A<int>.B<string>.Z[]).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+            s = typeof(A<int>.B<string>.Z[]).ToCode(true, (_, x) => x.Replace("Issue261_Loop_wih_conditions_fails.", ""));
             Assert.AreEqual("A<int>.B<string>.Z[]", s);
         }
 
         [Test]
         public void Test_triple_nested_open_generic() 
         {
-            var s = typeof(A<>).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+            var s = typeof(A<>).ToCode(true, (_, x) => x.Replace("Issue261_Loop_wih_conditions_fails.", ""));
             Assert.AreEqual("A<>", s);
             
-            s = typeof(A<>).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""), true);
+            s = typeof(A<>).ToCode(true, (_, x) => x.Replace("Issue261_Loop_wih_conditions_fails.", ""), true);
             Assert.AreEqual("A<X>", s);
 
-            s = typeof(A<>.B<>).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+            s = typeof(A<>.B<>).ToCode(true, (_, x) => x.Replace("Issue261_Loop_wih_conditions_fails.", ""));
             Assert.AreEqual("A<>.B<>", s);
 
-            s = typeof(A<>.B<>.Z).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+            s = typeof(A<>.B<>.Z).ToCode(true, (_, x) => x.Replace("Issue261_Loop_wih_conditions_fails.", ""));
             Assert.AreEqual("A<>.B<>.Z", s);
 
-            s = typeof(A<>.B<>.Z).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""), true);
+            s = typeof(A<>.B<>.Z).ToCode(true, (_, x) => x.Replace("Issue261_Loop_wih_conditions_fails.", ""), true);
             Assert.AreEqual("A<X>.B<Y>.Z", s);
         }
 
         [Test]
         public void Test_non_generic_classes() 
         {
-            var s = typeof(A.B.C).ToCode(true, (_, x) => x.Replace("IssueXXX_Loop_wih_conditions_fails.", ""));
+            var s = typeof(A.B.C).ToCode(true, (_, x) => x.Replace("Issue261_Loop_wih_conditions_fails.", ""));
             Assert.AreEqual("A.B.C", s);
         }
 
