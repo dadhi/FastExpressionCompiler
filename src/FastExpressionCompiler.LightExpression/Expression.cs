@@ -2159,11 +2159,11 @@ namespace FastExpressionCompiler.LightExpression
         {
              if (Right is BlockExpression rightBlock) // it is valid to assign the block and it is used to my surprise
             {
-                sb.Append("/* The block result will be assigned to `")
+                sb.Append("//{ The block result will be assigned to `")
                     .Append(Left.ToCSharpString(new StringBuilder(), lineIdent, stripNamespace, printType, identSpaces))
-                    .Append("` {*/");
+                    .Append('`');
                 rightBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, false, blockResultAssignment: this);
-                return sb.NewLineIdent(lineIdent).Append("/*} end of block assignment */");
+                return sb.NewLineIdent(lineIdent).Append("//} end of block assignment");
             }
 
             Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
