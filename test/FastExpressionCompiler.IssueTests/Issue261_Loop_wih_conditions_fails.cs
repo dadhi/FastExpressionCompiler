@@ -100,28 +100,28 @@ namespace FastExpressionCompiler.IssueTests
             ref BufferedStream stream, 
             Binary<BufferedStream, Settings_827720117> io) =>
         {
-          ConstructorTests.Test[] result;
+          Issue261_Loop_wih_conditions_fails.ConstructorTests.Test[] result;
           
           int length0;
           stream.ReserveSize((int)4);
           length0 = stream.Read<int>();
-          result = new ConstructorTests.Test[length0];
-          io.get_LoadedObjectRefs().Add(result);
+          result = new Issue261_Loop_wih_conditions_fails.ConstructorTests.Test[length0];
+          io.LoadedObjectRefs.Add(result);
           int index0;
-          ConstructorTests.Test tempResult;
+          Issue261_Loop_wih_conditions_fails.ConstructorTests.Test tempResult;
           index0 = (length0 - 1);
           
           while (true)
           {
               if (index0 < (int)0)
               {
-                  goto void_954039;
+                  goto void_58225482;
               }
               else
               {
                   
-                  // The block result will be assigned to `result[index0]`{
-                  tempResult = default(ConstructorTests.Test);
+                  // The block result will be assigned to `result[index0]` {
+                  tempResult = default(Issue261_Loop_wih_conditions_fails.ConstructorTests.Test);
                   stream.ReserveSize((int)5);
                   
                   if (stream.Read<byte>() == (byte)0)
@@ -134,21 +134,21 @@ namespace FastExpressionCompiler.IssueTests
                   
                   if (refIndex != (int)-1)
                   {
-                      tempResult = ((ConstructorTests.Test)io.LoadedObjectRefs[(refIndex - 1)]);
+                      tempResult = ((Issue261_Loop_wih_conditions_fails.ConstructorTests.Test)io.LoadedObjectRefs[(refIndex - 1)]);
                       goto skipRead;
                   }
-                  tempResult = new ConstructorTests.Test();
+                  tempResult = new Issue261_Loop_wih_conditions_fails.ConstructorTests.Test();
                   io.LoadedObjectRefs.Add(tempResult);
                   
                   skipRead:
                   result[index0] = tempResult;
                   //} end of block assignment
                   
-                  // continue0:
-                  // return index0 = (index0 - 1); // todo: @bug does not work yet - the return is wrong here
+                  continue0:
+                  index0 = (index0 - 1);
               }
           }
-          void_954039: 
+          void_58225482: 
           return result;
         };
 
@@ -304,7 +304,9 @@ namespace FastExpressionCompiler.IssueTests
             p[2]/*(BufferedStream stream)*/,
             p[3]/*(Binary<BufferedStream, Settings_827720117> io)*/);
   
-            expr.PrintCSharpString();
+            string s = null;
+            expr.PrintCSharpString(ref s);
+            StringAssert.DoesNotContain("return index0", s);
 
             var fs = (ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)expr.CompileSys();
             fs.PrintIL();

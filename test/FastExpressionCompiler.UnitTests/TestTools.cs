@@ -28,6 +28,10 @@ namespace FastExpressionCompiler
             Console.WriteLine(expr.ToCSharpString());
 
         [System.Diagnostics.Conditional("DEBUG")]
+        public static void PrintCSharpString(this Expression expr, ref string result) =>
+            Console.WriteLine(result = expr.ToCSharpString());
+
+        [System.Diagnostics.Conditional("DEBUG")]
         public static void PrintIL(this Delegate @delegate, string tag = null) => @delegate.Method.PrintIL(tag);
 
         [System.Diagnostics.Conditional("DEBUG")]

@@ -3451,7 +3451,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
-            BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, true);
+            BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
 
         public StringBuilder BlockToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
@@ -3520,7 +3520,9 @@ namespace FastExpressionCompiler.LightExpression
                 return sb;
 
             if (lastExpr is BlockExpression lastBlock)
-                return lastBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, inTheLastBlock: true, blockResultAssignment);
+                return lastBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, 
+                inTheLastBlock: inTheLastBlock, // the last block is marked so if only it is itself in the last block
+                blockResultAssignment);
 
             if(lastExpr is LabelExpression) // keep the label on the same vertical line
                 return lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
@@ -4245,8 +4247,8 @@ namespace FastExpressionCompiler.LightExpression
                 sb.NewLine(lineIdent, identSpaces).Append('{');
 
                 // Body handles ident and `;` itself
-                if (Body is BlockExpression)
-                    Body.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                if (Body is BlockExpression blockBody)
+                    blockBody.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, inTheLastBlock: true);
                 else
                     sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType).Append(';');
 
