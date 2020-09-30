@@ -1282,7 +1282,7 @@ namespace FastExpressionCompiler.LightExpression
                                 m = m.MakeGenericMethod(typeArgs);
                                 var mPars = m.GetParameters();
                                 if (mPars.Length == argExprCount &&
-                                    (argExprs.Count == 0 || AreArgExpressionsAndParamsOfTheSameType(argExprs, mPars)))
+                                    (argExprs.Count == 0 || ExpressionsAreAssignableToParams(argExprs, mPars)))
                                     return m;
                             }
                         }
@@ -1293,7 +1293,7 @@ namespace FastExpressionCompiler.LightExpression
                         {
                             var mPars = m.GetParameters();
                             if (mPars.Length == argExprCount &&
-                                (argExprs.Count == 0 || AreArgExpressionsAndParamsOfTheSameType(argExprs, mPars)))
+                                (argExprs.Count == 0 || ExpressionsAreAssignableToParams(argExprs, mPars)))
                                 return m;
                         }
                     }
@@ -1304,11 +1304,17 @@ namespace FastExpressionCompiler.LightExpression
                 ?? throw new InvalidOperationException($"The method '{methodName}' is not found in the type '{type.ToCode()}'");
         }
 
-        private static bool AreArgExpressionsAndParamsOfTheSameType(IReadOnlyList<Expression> args, ParameterInfo[] pars)
+        private static bool ExpressionsAreAssignableToParams(IReadOnlyList<Expression> argExprs, ParameterInfo[] pars)
         {
-            for (var i = 0; i < pars.Length; i++)
-                if (pars[i].ParameterType != args[i].Type)
-                    return false;
+            for (var i = 0; i < pars.Length; i++) 
+            {
+                var pt = pars[i].ParameterType;
+                if (pt == typeof(object) ||
+                    pt == argExprs[i].Type ||
+                    pt.IsAssignableFrom(argExprs[i].Type))
+                    continue;
+                return false;
+            }
             return true;
         }
 
@@ -4404,13 +4410,12 @@ namespace FastExpressionCompiler.LightExpression
 
     public class SymbolDocumentInfo
     {
+        public string FileName { get; }
         internal SymbolDocumentInfo(string fileName) => FileName = fileName;
 
-        public string FileName { get; }
         public virtual Guid Language => Guid.Empty;
         public virtual Guid LanguageVendor => Guid.Empty;
         internal static readonly Guid DocumentType_Text = new Guid(0x5a869d0b, 0x6611, 0x11d3, 0xbd, 0x2a, 0, 0, 0xf8, 8, 0x49, 0xbd);
-
         public virtual Guid DocumentType => DocumentType_Text;
     }
 
@@ -4445,15 +4450,14 @@ namespace FastExpressionCompiler.LightExpression
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDebugInfo(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions) =>
-            SysExpr.DebugInfo(SysExpr.SymbolDocument(Document.FileName), 
-                StartLine, StartColumn, EndLine, EndColumn);
+            SysExpr.DebugInfo(SysExpr.SymbolDocument(Document.FileName), StartLine, StartColumn, EndLine, EndColumn);
 
         // todo: @incomplete
         public override StringBuilder CreateExpressionString(StringBuilder sb, 
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
-            throw new NotImplementedException();
+            return sb.Append("DebugInfo()"); // todo: @incomplete
         }
     }
 }

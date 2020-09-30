@@ -881,12 +881,6 @@ namespace FastExpressionCompiler
 
                         return true;
 
-                    case ExpressionType.Quote:
-                        //var operand = ((UnaryExpression)expr).Operand;
-                        //if (operand != null && IsClosureBoundConstant(operand, expr.Type.GetTypeInfo()))
-                        //    closure.AddConstant(operand);
-                        return false;
-
                     case ExpressionType.Parameter:
                         // if parameter is used BUT is not in passed parameters and not in local variables,
                         // it means parameter is provided by outer lambda and should be put in closure for current lambda
@@ -1249,6 +1243,10 @@ namespace FastExpressionCompiler
                         expr = ((TypeBinaryExpression)expr).Expression;
                         continue;
 
+                    case ExpressionType.Quote:     // todo: @feature - is not supported yet
+                    case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
+                        return false;
+
                     default:
                         if (expr is UnaryExpression unaryExpr)
                         {
@@ -1523,10 +1521,6 @@ namespace FastExpressionCompiler
                         case ExpressionType.Unbox:
                             return TryEmitSimpleUnaryExpression((UnaryExpression)expr, paramExprs, il, ref closure, parent);
 
-                        case ExpressionType.Quote:
-                            //return TryEmitNotNullConstant(true, expr.Type, ((UnaryExpression)expr).Operand, il, ref closure);
-                            return false;
-
                         case ExpressionType.TypeIs:
                         case ExpressionType.TypeEqual:
                             return TryEmitTypeIsOrEqual((TypeBinaryExpression)expr, paramExprs, il, ref closure, parent);
@@ -1752,6 +1746,8 @@ namespace FastExpressionCompiler
                             expr = expr.Reduce();
                             continue;
 
+                        case ExpressionType.Quote:     // todo: @feature - is not supported yet
+                        case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
                         default:
                             return false;
                     }
