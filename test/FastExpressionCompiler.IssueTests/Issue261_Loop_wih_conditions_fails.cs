@@ -20,7 +20,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Test_DictionaryTest_StringDictionary();
+            Test_DictionaryTest_StringDictionary();
 
             // Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
 
@@ -28,11 +28,11 @@ namespace FastExpressionCompiler.IssueTests
             // Test_assignment_with_the_block_on_the_right_side();
 
 #if LIGHT_EXPRESSION
-            Test_find_generic_method_with_the_generic_param();
+            // Test_find_generic_method_with_the_generic_param();
 
             // Can_make_convert_and_compile_binary_equal_expression_of_different_types();
 
-            Test_method_to_expression_code_string();
+            // Test_method_to_expression_code_string();
 
             // Test_nested_generic_type_output();
             // Test_triple_nested_non_generic();
@@ -119,8 +119,9 @@ namespace FastExpressionCompiler.IssueTests
                   e[2] = Constant((int)4)),
                 e[3] = Call(
                   p[0]/*(BufferedStream stream)*/,
-                  typeof(BufferedStream).GetMethods().Single(x =>
-                  x.Name == "Write" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })).MakeGenericMethod(typeof(int)),
+                  typeof(BufferedStream).GetMethods().Where(x =>
+                  x.Name == "Write" && x.IsGenericMethod && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x)
+                .Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
                   e[4] = Field(
                     p[1] = Parameter(typeof(FieldInfoModifier.TestReadonly), "source"),
                     typeof(FieldInfoModifier.TestReadonly).GetTypeInfo().GetDeclaredField("Value"))),
@@ -134,7 +135,7 @@ namespace FastExpressionCompiler.IssueTests
             var fs = (WriteMethods<FieldInfoModifier.TestReadonly, BufferedStream, Settings_827720117>.WriteSealed)expr.CompileSys();
             fs.PrintIL();
 
-            var f = (WriteMethods<FieldInfoModifier.TestReadonly, BufferedStream, Settings_827720117>.WriteSealed)expr.CompileFast();
+            var f = (WriteMethods<FieldInfoModifier.TestReadonly, BufferedStream, Settings_827720117>.WriteSealed)expr.CompileFast(true);
             f.PrintIL();
         }
 
@@ -552,39 +553,43 @@ namespace FastExpressionCompiler.IssueTests
         {
             var m = typeof(BufferedStream).GetMethods()
                 .Where(x  => x.IsGenericMethod && x.Name == "Write" && x.GetGenericArguments().Length == 1)
-                .Select(x => x.ContainsGenericParameters ? x.MakeGenericMethod(typeof(int)) : x)
+                .Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x)
                 .Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) }));
 
             Assert.IsNotNull(m);
+
+            var s = new StringBuilder().AppendMethod(m, true, null).ToString();
+            Assert.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == \"Write\" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) }))", s);
         }
 
         [Test]
         public void Test_method_to_expression_code_string() 
         {
             var m = typeof(BufferedStream).GetMethods()
-                .Where(x  => x.IsGenericMethod && x.Name == "Read" && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0)
-                .Select(x => x.ContainsGenericParameters ? x.MakeGenericMethod(typeof(int)) : x)
+                .Where(x  => x.IsGenericMethod && x.Name == "Read" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 1)
+                .Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x)
                 .Single();
 
             Assert.AreEqual("Read", m.Name);
 
             var s = new StringBuilder().AppendMethod(m, true, null).ToString();
-            Assert.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods().Single(x => x.Name == \"Read\" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0)", s);
+            Assert.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == \"Read\" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x).Single()", s);
 
             m = typeof(BufferedStream).GetMethods()
               .Single(x => !x.IsGenericMethod && x.Name == "Read" && x.GetParameters().Length == 0);
             Assert.AreEqual("Read", m.Name);
 
             s = new StringBuilder().AppendMethod(m, true, null).ToString();
-            Assert.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods().Single(x => x.Name == \"Read\" && !x.IsGenericMethod && x.GetParameters().Length == 0)", s);
+            Assert.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == \"Read\" && x.GetParameters().Length == 0)", s);
 
-            m = typeof(BufferedStream).GetMethods(BindingFlags.NonPublic|BindingFlags.Static).Single(x =>
-                x.Name == "Read2" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0)
-                .MakeGenericMethod(typeof(int));
+            m = typeof(BufferedStream).GetMethods(BindingFlags.NonPublic|BindingFlags.Static)
+                .Where(x  => x.IsGenericMethod && x.Name == "Read2" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 1)
+                .Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x)
+                .Single();
             Assert.AreEqual("Read2", m.Name);
 
             s = new StringBuilder().AppendMethod(m, true, null).ToString();
-            Assert.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods(BindingFlags.NonPublic|BindingFlags.Static).Single(x => x.Name == \"Read2\" && x.IsGenericMethod && x.GetGenericArguments().Length == 1 && x.GetParameters().Length == 0).MakeGenericMethod(typeof(int))", s);
+            Assert.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods(BindingFlags.NonPublic|BindingFlags.Static).Where(x => x.IsGenericMethod && x.Name == \"Read2\" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x).Single()", s);
         }
 
         [Test]

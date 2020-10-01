@@ -1497,30 +1497,31 @@ namespace FastExpressionCompiler.LightExpression
             if (!method.IsPublic)
                 sb.Append(method.IsStatic ? _nonPubStatMethods : _nonPubInstMethods);
 
-            sb.Append(").Single(x => x.Name == \"");
-            sb.Append(method.Name);
-            sb.Append("\" && ");
-
-            Type[] typeArgs = null;
+            var mp = method.GetParameters();
             if (!method.IsGenericMethod) 
-                sb.Append("!x.IsGenericMethod && ");
-            else 
-                sb.Append("x.IsGenericMethod && x.GetGenericArguments().Length == ")
-                  .Append((typeArgs = method.GetGenericArguments()).Length)
-                  .Append(" && ");
+            {
+                sb.Append(").Single(x => !x.IsGenericMethod && x.Name == \"").Append(method.Name).Append("\" && ");
+                return mp.Length == 0
+                    ? sb.Append("x.GetParameters().Length == 0)")
+                    : sb.Append("x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { ")
+                        .AppendTypeofList(mp.Select(x => x.ParameterType).ToArray(), stripNamespace, printType)
+                        .Append(" }))");
+            }
 
-            var ps = method.GetParameters();
-            if (ps.Length == 0) 
-                sb.Append("x.GetParameters().Length == 0)");
-            else
-                sb.Append("x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { ")
-                  .AppendTypeofList(ps.Select(x => x.ParameterType).ToArray(), stripNamespace, printType)
-                  .Append(" }))");
+            var tp = method.GetGenericArguments();
+            sb.Append(").Where(x => x.IsGenericMethod && x.Name == \"").Append(method.Name).Append("\" && ");
+            if (mp.Length == 0) 
+            {
+                sb.Append("x.GetParameters().Length == 0 && x.GetGenericArguments().Length == ").Append(tp.Length);
+                sb.Append(").Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(").AppendTypeofList(tp);
+                return sb.Append(") : x).Single()");
+            }
 
-            if (method.IsGenericMethod && !method.ContainsGenericParameters)
-                sb.Append(".MakeGenericMethod(").AppendTypeofList(typeArgs).Append(")");
-
-            return sb;
+            sb.Append("x.GetGenericArguments().Length == ").Append(tp.Length);
+            sb.Append(").Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(").AppendTypeofList(tp);
+            sb.Append(") : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { ");
+            sb.AppendTypeofList(mp.Select(x => x.ParameterType).ToArray(), stripNamespace, printType);
+            return sb.Append(" }))");
         }
 
         internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
