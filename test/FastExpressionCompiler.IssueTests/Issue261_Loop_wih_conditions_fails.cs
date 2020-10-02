@@ -22,26 +22,26 @@ namespace FastExpressionCompiler.IssueTests
         {
             Test_DictionaryTest_StringDictionary();
 
-            // Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
+            Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
 
-            // Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
-            // Test_assignment_with_the_block_on_the_right_side();
+            Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
+            Test_assignment_with_the_block_on_the_right_side();
 
 #if LIGHT_EXPRESSION
-            // Test_find_generic_method_with_the_generic_param();
+            Test_find_generic_method_with_the_generic_param();
 
-            // Can_make_convert_and_compile_binary_equal_expression_of_different_types();
+            Can_make_convert_and_compile_binary_equal_expression_of_different_types();
 
-            // Test_method_to_expression_code_string();
+            Test_method_to_expression_code_string();
 
-            // Test_nested_generic_type_output();
-            // Test_triple_nested_non_generic();
-            // Test_triple_nested_open_generic();
-            // Test_non_generic_classes();
-            return 9;
+            Test_nested_generic_type_output();
+            Test_triple_nested_non_generic();
+            Test_triple_nested_open_generic();
+            Test_non_generic_classes();
+            return 11;
 #else            
-            // Should_throw_for_the_equal_expression_of_different_types();
-            return 4;
+            Should_throw_for_the_equal_expression_of_different_types();
+            return 5;
 #endif
         }
 
