@@ -1267,55 +1267,135 @@ namespace FastExpressionCompiler.LightExpression
             var typeArgCount = typeArgs.Length;
             var argExprCount = argExprs.Count;
             var methods = type.GetMethods(flags);
-            for (var i = 0; i < methods.Length; i++)
+
+            MethodInfo bestMatch = null;
+            var bestScore = 0;
+            if (typeArgCount > 0)
             {
-                var m = methods[i];
-                if (m.Name == methodName)
+                for (var i = 0; i < methods.Length; i++)
                 {
-                    if (typeArgCount > 0) 
+                    var m = methods[i];
+                    if (!m.IsGenericMethod || m.Name != methodName)
+                        continue;
+
+                    var mTypeArgs = m.GetGenericArguments();
+                    if (mTypeArgs.Length != typeArgCount)
+                        continue;
+
+                    if (m.IsGenericMethodDefinition)
+                        m = m.MakeGenericMethod(typeArgs);
+
+                    var mPars = m.GetParameters();
+                    if (mPars.Length != argExprCount)
+                        continue;
+
+                    if (argExprs.Count == 0)
                     {
-                        if (m.IsGenericMethod) 
-                        {
-                            var mTypeArgs = m.GetGenericArguments();
-                            if (mTypeArgs.Length == typeArgCount)
-                            {
-                                m = m.MakeGenericMethod(typeArgs);
-                                var mPars = m.GetParameters();
-                                if (mPars.Length == argExprCount &&
-                                    (argExprs.Count == 0 || ExpressionsAreAssignableToParams(argExprs, mPars)))
-                                    return m;
-                            }
-                        }
+                        if (m.IsPublic)
+                            return m;
+                        if (bestMatch != null)
+                            return bestMatch;
+                        bestMatch = m; // proceed search
                     }
-                    else 
+                    else
                     {
-                        if (!m.IsGenericMethod)
+                        var score = GetScopeOfExpressionsAssignableToParams(argExprs, mPars);
+                        if (score == 0)
+                            continue;
+                        if (score == bestScore)
                         {
-                            var mPars = m.GetParameters();
-                            if (mPars.Length == argExprCount &&
-                                (argExprs.Count == 0 || ExpressionsAreAssignableToParams(argExprs, mPars)))
-                                return m;
+                            if (m.IsPublic == bestMatch.IsPublic) // prefer public over non-public
+                                throw new InvalidOperationException($"More than one generic method '{m.Name}' with {typeArgCount} type parameter(s) in the type '{type.ToCode()}' is compatible with the supplied arguments.");
+                            if (!m.IsPublic)
+                                continue; // means that `bestMatch` is public so keep it an continue
                         }
+                        bestMatch = m;
+                        bestScore = score;
+                    }
+                }
+            }
+            else 
+            {
+                for (var i = 0; i < methods.Length; i++)
+                {
+                    var m = methods[i];
+                    if (m.IsGenericMethod || m.Name != methodName)
+                        continue;
+
+                    var mPars = m.GetParameters();
+                    if (mPars.Length != argExprCount)
+                        continue;
+
+                    if (argExprs.Count == 0)
+                    {
+                        if (m.IsPublic)
+                            return m;
+                        if (bestMatch != null)
+                            return bestMatch;
+                        bestMatch = m; // proceed search
+                    }
+                    else
+                    {
+                        var score = GetScopeOfExpressionsAssignableToParams(argExprs, mPars);
+                        if (score == 0)
+                            continue;
+                        if (score == bestScore)
+                        {
+                            if (m.IsPublic == bestMatch.IsPublic) // prefer public over non-public 
+                                throw new InvalidOperationException($"More than one non-generic method '{m.Name}' in the type '{type.ToCode()}' is compatible with the supplied arguments.");
+                            if (!m.IsPublic)
+                                continue;
+                        }
+                        bestMatch = m;
+                        bestScore = score;
                     }
                 }
             }
 
-            return type.BaseType?.FindMethodOrThrow(methodName, typeArgs, argExprs, flags)
-                ?? throw new InvalidOperationException($"The method '{methodName}' is not found in the type '{type.ToCode()}'");
+            if (bestMatch == null)
+                throw new InvalidOperationException(typeArgCount == 0
+                    ? $"The non-generic method '{methodName}' is not found in the type '{type.ToCode()}'"
+                    : $"The generic method '{methodName}' with {typeArgCount} type parameter(s) is not found in the type '{type.ToCode()}'");
+
+            return bestMatch;
         }
 
-        private static bool ExpressionsAreAssignableToParams(IReadOnlyList<Expression> argExprs, ParameterInfo[] pars)
+        // 0 - not assignable
+        // 3 per parameter - same type
+        // 2 per parameter - base type
+        // 1 per parameter - object type
+        private static int GetScopeOfExpressionsAssignableToParams(IReadOnlyList<Expression> argExprs, ParameterInfo[] pars)
         {
+            var score = 0;
             for (var i = 0; i < pars.Length; i++) 
             {
                 var pt = pars[i].ParameterType;
-                if (pt == typeof(object) ||
-                    pt == argExprs[i].Type ||
-                    pt.IsAssignableFrom(argExprs[i].Type))
+                if (pt.IsByRef)
+                    pt = pt.GetElementType();
+
+                if (pt == argExprs[i].Type)
+                {
+                    score += 3;
                     continue;
-                return false;
+                }
+
+                if (pt == typeof(object)) 
+                {
+                    score += 1;
+                    continue;
+                }
+
+
+                if (pt.IsAssignableFrom(argExprs[i].Type))
+                {
+                    score += 2;
+                    continue;
+                }
+
+                return 0;
             }
-            return true;
+
+            return score;
         }
 
         public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs)
@@ -2458,7 +2538,6 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType => ExpressionType.Constant;
         public override Type Type => Value.GetType();
         public readonly object Value;
-
         internal ConstantExpression(object value) => Value = value;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
@@ -2534,6 +2613,9 @@ namespace FastExpressionCompiler.LightExpression
 
             return sb;
         }
+
+        /// <summary>I want to see the actual Value not the default one</summary>
+        public override string ToString() => $"Constant({Value}, typeof({Type.ToCode()}))";
     }
 
     public sealed class TypedConstantExpression : ConstantExpression

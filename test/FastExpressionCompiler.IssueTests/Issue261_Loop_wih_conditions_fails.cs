@@ -28,6 +28,8 @@ namespace FastExpressionCompiler.IssueTests
             Test_assignment_with_the_block_on_the_right_side();
 
 #if LIGHT_EXPRESSION
+            FindMethodOrThrow_in_the_class_hierarchy();
+
             Test_find_generic_method_with_the_generic_param();
 
             Can_make_convert_and_compile_binary_equal_expression_of_different_types();
@@ -38,9 +40,11 @@ namespace FastExpressionCompiler.IssueTests
             Test_triple_nested_non_generic();
             Test_triple_nested_open_generic();
             Test_non_generic_classes();
-            return 11;
-#else            
+
+            return 12;
+#else
             Should_throw_for_the_equal_expression_of_different_types();
+
             return 5;
 #endif
         }
@@ -659,6 +663,75 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
+        public interface IFoo
+        {
+            void Nah(int i);
+        }
+
+        public class Foo : IFoo
+        {
+            public int MethodIndex = -1;
+
+            void IFoo.Nah(int i)             { MethodIndex = 0; }
+            public void Nah(int i)           { MethodIndex = 1; }
+            public void Nah(ref int d)       { MethodIndex = 2; }
+            public void Nah<T>(ref int d)    { MethodIndex = 3; }
+            public void Nah(ref object d)    { MethodIndex = 4; }
+        }
+
+        public class Bar : Foo
+        {
+            public void Nah(double d)        { MethodIndex = 5; }
+            public void Nah(ref double d)    { MethodIndex = 6; }
+            public void Nah<T>(ref double d) { MethodIndex = 7; }
+            public void Nah<T>(ref T d)      { MethodIndex = 8; }
+        }
+
+        [Test]
+        public void FindMethodOrThrow_in_the_class_hierarchy()
+        {
+            var bar = new Bar();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+              Lambda<Action>(Call(Constant(bar), "Nah", new Type[] { typeof(int) }, Constant(5))));
+            StringAssert.StartsWith("More than one", ex.Message);
+
+            ex = Assert.Throws<InvalidOperationException>(() =>
+              SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", new Type[] { typeof(int) }, SysExpr.Constant(5))));
+            StringAssert.StartsWith("More than one", ex.Message);
+
+            var e = Lambda<Action>(Call(Constant(bar), "Nah", new Type[] { typeof(string) }, Constant("x")));
+            e.CompileFast(true)();
+            Assert.AreEqual(8, bar.MethodIndex);
+
+            var es = SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", new Type[] { typeof(string) }, SysExpr.Constant("y")));
+            es.Compile()();
+            Assert.AreEqual(8, bar.MethodIndex);
+
+            ex = Assert.Throws<InvalidOperationException>(() =>
+              Lambda<Action>(Call(Constant(bar), "Nah", new Type[] { typeof(double) }, Constant((double)42.3))));
+            StringAssert.StartsWith("More than one", ex.Message);
+
+            ex = Assert.Throws<InvalidOperationException>(() =>
+              SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", new Type[] { typeof(double) }, SysExpr.Constant((double)42.3))));
+            StringAssert.StartsWith("More than one", ex.Message);
+
+            ex = Assert.Throws<InvalidOperationException>(() =>
+              Lambda<Action>(Call(Constant(bar), "Nah", Type.EmptyTypes, Constant((double)42.3))));
+            StringAssert.StartsWith("More than one", ex.Message);
+
+            ex = Assert.Throws<InvalidOperationException>(() =>
+              SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", Type.EmptyTypes, SysExpr.Constant((double)42.3))));
+            StringAssert.StartsWith("More than one", ex.Message);
+
+            e = Lambda<Action>(Call(Constant(bar), "Nah", Type.EmptyTypes, Constant(null)));
+            e.CompileFast(true)();
+            Assert.AreEqual(4, bar.MethodIndex);
+
+            es = SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", Type.EmptyTypes, SysExpr.Constant(null)));
+            es.Compile()();
+            Assert.AreEqual(4, bar.MethodIndex);
+        }
 #endif
     }
 }
