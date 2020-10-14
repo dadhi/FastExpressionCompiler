@@ -1244,8 +1244,10 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Quote:     // todo: @feature - is not supported yet
-                    case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
                         return false;
+
+                    case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
+                        return true;               // todo: @unclear - just ignoring the info for now
 
                     default:
                         if (expr is UnaryExpression unaryExpr)
@@ -1746,10 +1748,13 @@ namespace FastExpressionCompiler
                             expr = expr.Reduce();
                             continue;
 
-                        case ExpressionType.Quote:     // todo: @feature - is not supported yet
                         case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
+                            return true;               // todo: @unclear - just ignoring the info for now
+
+                        case ExpressionType.Quote:     // todo: @feature - is not supported yet
                         default:
                             return false;
+
                     }
                 }
             }

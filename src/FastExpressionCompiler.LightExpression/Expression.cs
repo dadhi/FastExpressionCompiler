@@ -100,7 +100,8 @@ namespace FastExpressionCompiler.LightExpression
             var i = uniqueExprs.Count - 1;
             while (i != -1 && !ReferenceEquals(uniqueExprs[i], this)) --i;
             if (i != -1)
-                return sb.Append("e[").Append(i).Append("]/*").Append(NodeType.ToString()).Append("*/");
+                return sb.Append("e[").Append(i).Append(" // ").Append(NodeType.ToString()).Append("(...)")
+                    .NewLineIdent(lineIdent).Append("]");
 
             uniqueExprs.Add(this);
             sb.Append("e[").Append(uniqueExprs.Count - 1).Append("]=");
@@ -1606,7 +1607,7 @@ namespace FastExpressionCompiler.LightExpression
 
         internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
             name != null ? sb.Append(name)
-                : sb.Append(type.ToCode(true, null)).Append('_').Append(identity.GetHashCode());
+                : sb.Append(type.ToCode(true, null)).Append("__").Append(identity.GetHashCode());
 
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
         public static string ToCode(this Type type,
@@ -1674,7 +1675,7 @@ namespace FastExpressionCompiler.LightExpression
 
             var typeArgsConsumedByParentsCount = 0;
             var s = new StringBuilder();
-            if (!stripNamespace) 
+            if (!stripNamespace && !string.IsNullOrEmpty(type.Namespace)) // for the auto-generated classes Namespace may be empty and in general it may be empty
                 s.Append(type.Namespace).Append('.');
 
             if (parentTypes != null) 
@@ -1759,28 +1760,17 @@ namespace FastExpressionCompiler.LightExpression
             return printType?.Invoke(arrayType ?? type, s.ToString()) ?? s.ToString();
         }
 
-        /// Prints valid C# Boolean
+        /// <summary>Prints valid C# Boolean</summary>
         public static string ToCode(this bool x) => x ? "true" : "false";
 
-        /// Prints valid C# String escaping the things
+        /// <summary>Prints valid C# String escaping the things</summary>
         public static string ToCode(this string x) =>
-            x == null
-                ? "null"
-                : $"\"{x.Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n")}\"";
+            x == null ? "null" : $"\"{x.Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n")}\"";
 
-        /// Prints valid c# Enum literal
-        public static string ToEnumValueCode(this Type enumType, object x)
-        {
-            var enumTypeInfo = enumType.GetTypeInfo();
-            if (enumTypeInfo.IsGenericType && enumTypeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
-            {
-                if (x == null)
-                    return "null";
-                enumType = GetGenericTypeParametersOrArguments(enumTypeInfo)[0];
-            }
-
-            return $"{enumType.ToCode()}.{Enum.GetName(enumType, x)}";
-        }
+        /// <summary>Prints valid C# Enum literal</summary>
+        public static string ToEnumValueCode(this Type enumType, object x,
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            $"{enumType.ToCode(stripNamespace, printType)}.{Enum.GetName(enumType, x)}";
 
         private static Type[] GetGenericTypeParametersOrArguments(this TypeInfo typeInfo) =>
             typeInfo.IsGenericTypeDefinition ? typeInfo.GenericTypeParameters : typeInfo.GenericTypeArguments;
@@ -1828,12 +1818,14 @@ namespace FastExpressionCompiler.LightExpression
             if (x is string s)
                 return s.ToCode();
 
+            if (x is char c)
+                return "'" + c + "'";
+
             if (x is Type t)
                 return t.ToCode(stripNamespace, printType);
 
-            var xTypeInfo = x.GetType().GetTypeInfo();
-            if (xTypeInfo.IsEnum)
-                return x.GetType().ToEnumValueCode(x);
+            var xType = x.GetType();
+            var xTypeInfo = xType.GetTypeInfo();
 
             if (x is IEnumerable e)
             {
@@ -1844,10 +1836,21 @@ namespace FastExpressionCompiler.LightExpression
                     return e.ToArrayInitializerCode(elemType, notRecognizedToCode);
             }
 
-            if (xTypeInfo.IsPrimitive)
+            // unwrap the Nullable struct
+            if (xTypeInfo.IsGenericType && xTypeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                xType = xTypeInfo.GetElementType();
+                xTypeInfo = xType.GetTypeInfo();
+            }
+
+            if (xTypeInfo.IsEnum)
+                return x.GetType().ToEnumValueCode(x, stripNamespace, printType);
+
+            if (xTypeInfo.IsPrimitive) // output the primitive casted to the type
                 return "(" + x.GetType().ToCode(true, null) + ")" + x.ToString();
 
-            return notRecognizedToCode?.ToCode(x, stripNamespace, printType) ?? x.ToString();
+            return notRecognizedToCode?.ToCode(x, stripNamespace, printType) 
+                ?? x.ToString();
         }
     }
 
@@ -2493,10 +2496,11 @@ namespace FastExpressionCompiler.LightExpression
         {
             var i = paramsExprs.Count - 1;
             while (i != -1 && !ReferenceEquals(paramsExprs[i], this)) --i;
-            if (i != -1)
-                return sb.Append("p[").Append(i).Append("]/*(")
-                    .Append(Type.ToCode(stripNamespace, printType)).Append(' ')
-                    .Append(Name ?? "_").Append(")*/");
+            if (i != -1) 
+                return sb.Append("p[").Append(i)
+                    .Append("// (").Append(Type.ToCode(stripNamespace, printType))
+                    .Append(' ').AppendName(Name, Type, this).Append(')')
+                    .NewLineIdent(lineIdent).Append(']');
 
             paramsExprs.Add(this);
             sb.Append("p[").Append(paramsExprs.Count - 1).Append("]=");
@@ -2567,7 +2571,7 @@ namespace FastExpressionCompiler.LightExpression
                 if (Type != typeof(object))
                     sb.Append(", ").AppendTypeof(Type, stripNamespace, printType);
             }
-            else if (Value is Type t) // todo: move this to ValueToCode, we should output `typeof(T)` anyway
+            else if (Value is Type t)
             {
                 sb.AppendTypeof(t, stripNamespace, printType);
             }
@@ -2587,7 +2591,7 @@ namespace FastExpressionCompiler.LightExpression
             if (Value == null)
                 return sb.Append("null");
 
-            if (Value is Type t) // todo: move this to ValueToCode, we should output `typeof(T)` anyway
+            if (Value is Type t)
                 return sb.AppendTypeof(t, stripNamespace, printType);
 
             // value with the cast
@@ -2597,21 +2601,7 @@ namespace FastExpressionCompiler.LightExpression
                 return sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
             }
 
-            sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
-
-            // suffixes for literals
-            if (Type == typeof(float))
-                sb.Append('f');
-            else if (Type == typeof(uint))
-                sb.Append('u');
-            else if (Type == typeof(long))
-                sb.Append('l');
-            else if (Type == typeof(ulong))
-                sb.Append("ul");
-            else if (Type == typeof(decimal))
-                sb.Append('m');
-
-            return sb;
+            return sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
         }
 
         /// <summary>I want to see the actual Value not the default one</summary>
@@ -4022,9 +4012,10 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public StringBuilder ToCSharpString(StringBuilder sb) =>
-            sb.AppendName(Name, Type, this);
+            (Name != null ? sb.Append(Name) : sb.Append(Type.ToCode(true, null)))
+                .Append("__").Append(GetHashCode()); // always append the hash because often label names in the block and sub-blocks are selected to be the same
 
-        public override string ToString() => new StringBuilder().AppendName(Name, Type, this).ToString();
+        public override string ToString() => ToCSharpString(new StringBuilder()).ToString();
     }
 
     public sealed class TypedLabelTarget : LabelTarget
@@ -4303,7 +4294,7 @@ namespace FastExpressionCompiler.LightExpression
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
-            sb.Append("Lambda(/*$*/"); // bookmark the lambdas - $ means it casts something
+            sb.Append("Lambda( // $"); // bookmark for the lambdas - $ means the cost of the lambda, specifically nested lambda
             sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType).Append(',');
             sb.NewLineIdentExpr(Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
             sb.NewLineIdentParamsExprs(Parameters, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
