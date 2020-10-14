@@ -1649,7 +1649,11 @@ namespace FastExpressionCompiler.LightExpression
                 buildInTypeString = "string";
 
             if (buildInTypeString != null)
+            {
+                if (arrayType != null)
+                    buildInTypeString += "[]";
                 return printType?.Invoke(arrayType ?? type, buildInTypeString) ?? buildInTypeString;
+            }
 
             var parentCount = 0;
             for (var ti = type.GetTypeInfo(); ti.IsNested; ti = ti.DeclaringType.GetTypeInfo())
