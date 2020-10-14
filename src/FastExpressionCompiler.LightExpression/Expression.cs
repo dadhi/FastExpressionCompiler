@@ -100,7 +100,9 @@ namespace FastExpressionCompiler.LightExpression
             var i = uniqueExprs.Count - 1;
             while (i != -1 && !ReferenceEquals(uniqueExprs[i], this)) --i;
             if (i != -1)
-                return sb.Append("e[").Append(i).Append(" // ").Append(NodeType.ToString()).Append("(...)")
+                return sb.Append("e[").Append(i)
+                    // output expression type and kind to help to understand what is it
+                    .Append(" // ").Append(NodeType.ToString()).Append(" of ").Append(Type.ToCode(stripNamespace, printType))
                     .NewLineIdent(lineIdent).Append("]");
 
             uniqueExprs.Add(this);
@@ -2269,11 +2271,11 @@ namespace FastExpressionCompiler.LightExpression
         {
              if (Right is BlockExpression rightBlock) // it is valid to assign the block and it is used to my surprise
             {
-                sb.Append("//{ The block result will be assigned to `")
+                sb.Append("// { The block result will be assigned to `")
                     .Append(Left.ToCSharpString(new StringBuilder(), lineIdent, stripNamespace, printType, identSpaces))
                     .Append('`');
                 rightBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, false, blockResultAssignment: this);
-                return sb.NewLineIdent(lineIdent).Append("//} end of block assignment");
+                return sb.NewLineIdent(lineIdent).Append("// } end of block assignment");
             }
 
             Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
@@ -2502,7 +2504,7 @@ namespace FastExpressionCompiler.LightExpression
             while (i != -1 && !ReferenceEquals(paramsExprs[i], this)) --i;
             if (i != -1) 
                 return sb.Append("p[").Append(i)
-                    .Append("// (").Append(Type.ToCode(stripNamespace, printType))
+                    .Append(" // (").Append(Type.ToCode(stripNamespace, printType))
                     .Append(' ').AppendName(Name, Type, this).Append(')')
                     .NewLineIdent(lineIdent).Append(']');
 
