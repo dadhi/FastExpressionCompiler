@@ -3623,11 +3623,16 @@ namespace FastExpressionCompiler.LightExpression
 
             if (lastExpr is BlockExpression lastBlock)
                 return lastBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, 
-                inTheLastBlock: inTheLastBlock, // the last block is marked so if only it is itself in the last block
+                inTheLastBlock, // the last block is marked so if only it is itself in the last block
                 blockResultAssignment);
 
-            if(lastExpr is LabelExpression) // keep the label on the same vertical line
-                return lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            if(lastExpr is LabelExpression) // keep the last label on the same vertical line
+            {
+                lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                if (inTheLastBlock)
+                    sb.Append(';'); // the last label forms the invalid C#, so we need at least ';' at the end
+                return sb;
+            }
 
             sb.NewLineIdent(lineIdent);
 
