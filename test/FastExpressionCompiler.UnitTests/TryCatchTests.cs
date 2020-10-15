@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
@@ -115,7 +116,7 @@ namespace FastExpressionCompiler.UnitTests
             var exPar = Parameter(typeof(Exception), "exc");
             var getExceptionMessage = typeof(Exception)
                 .GetProperty(nameof(Exception.Message), BindingFlags.Public | BindingFlags.Instance).GetMethod;
-            var writeLine = typeof(Console).GetMethod(nameof(Console.WriteLine), new[] { typeof(string) });
+            var writeLine = typeof(Debug).GetMethod(nameof(Debug.WriteLine), new[] { typeof(string) });
 
             var expr = Lambda<Action>(TryCatch(
                 Throw(Constant(new DivideByZeroException())),

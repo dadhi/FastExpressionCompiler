@@ -7,7 +7,7 @@ using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
     [TestFixture]
-    public class NestedLambdasSharedToExpressionCodeStringTest
+    public class NestedLambdasSharedToExpressionCodeStringTest : ITest
     {
         public int Run()
         {
@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         {
             var e = CreateExpression();
             var s = e.ToExpressionString();
-            // Console.WriteLine(s); // used for the output
+            e.PrintCSharpString();
             StringAssert.Contains("new Expression[17];", s);
         }
 

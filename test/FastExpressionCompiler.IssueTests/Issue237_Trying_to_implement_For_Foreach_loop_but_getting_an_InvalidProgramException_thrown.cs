@@ -26,6 +26,7 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Conditional_with_Equal_true_should_shortcircuit_to_Brtrue_or_Brfalse();
+            Conditional_with_Equal_0_should_shortcircuit_to_Brtrue_or_Brfalse();
             Conditional_with_Equal_false_should_shortcircuit_to_Brtrue_or_Brfalse();
             Conditional_with_NotEqual_true_should_shortcircuit_to_Brtrue_or_Brfalse();
             Conditional_with_NotEqual_false_should_shortcircuit_to_Brtrue_or_Brfalse();
@@ -35,7 +36,7 @@ namespace FastExpressionCompiler.IssueTests
             Should_Deserialize_Simple();
             Should_Deserialize_Simple_via_manual_CSharp_code();
 
-            return 7;
+            return 8;
         }
 
         [Test]
@@ -413,6 +414,34 @@ namespace FastExpressionCompiler.IssueTests
 
             Assert.AreEqual("true",  f(true));
             Assert.AreEqual("false", f(false));
+        }
+
+        [Test]
+        public void Conditional_with_Equal_0_should_shortcircuit_to_Brtrue_or_Brfalse()
+        {
+            var returnTarget = Label(typeof(string));
+            var returnLabel = Label(returnTarget, Constant(null, typeof(string)));
+            var returnFalse = Block(Return(returnTarget, Constant("false"), typeof(string)), returnLabel);
+            var returnTrue = Block(Return(returnTarget, Constant("true"), typeof(string)), returnLabel);
+
+            var intParam = Parameter(typeof(int), "n");
+
+            var expr = Lambda<Func<int, string>>(
+                Block(
+                    IfThen(Equal(intParam, Constant(0)),
+                        returnTrue),
+                    returnFalse),
+                intParam);
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("system compiled il");
+            
+            var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
+            f.PrintIL();
+
+            Assert.AreEqual("true",  f(0));
+            Assert.AreEqual("false", f(42));
         }
 
         [Test]

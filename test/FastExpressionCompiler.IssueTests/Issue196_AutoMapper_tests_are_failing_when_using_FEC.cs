@@ -15,7 +15,7 @@ namespace FastExpressionCompiler.IssueTests
     [TestFixture]
     public class Issue196_AutoMapper_tests_are_failing_when_using_FEC
     {
-        public class FastExpressionCompilerBug
+        public class FastExpressionCompilerBug : ITest
         {
             public int Run()
             {

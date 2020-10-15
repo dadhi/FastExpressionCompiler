@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue204_Operation_could_destabilize_the_runtime__AutoMapper
+    public class Issue204_Operation_could_destabilize_the_runtime__AutoMapper : ITest
     {
         public int Run()
         {

@@ -4295,7 +4295,19 @@ namespace FastExpressionCompiler
                 // Detect a simplistic case when we can use `Brtrue` or `Brfalse`.
                 // We are checking the negative result to go into the `IfFalse` branch,
                 // because for `IfTrue` we don't need to jump and just need to proceed emitting the `IfTrue` expression
-                var useBrFalseOrTrue = -1;
+                //
+                // The cases:
+                // `x == true`  => `Brfalse`
+                // `x != true`  => `Brtrue`
+                // `x == false` => `Brtrue`
+                // `x != false` => `Brfalse`
+                // `x == null`  => `Brtrue`
+                // `x != null`  => `Brfalse`
+                // `x == 0`     => `Brtrue`
+                // `x != 0`     => `Brfalse`
+                
+                var useBrFalseOrTrue = -1; // 0 - is comparison with Zero (0, null, false), 1 - is comparison with (true)
+                
                 if (testExpr is BinaryExpression b)
                 {
                     if (b.NodeType == ExpressionType.Equal || b.NodeType == ExpressionType.NotEqual)
@@ -4305,19 +4317,23 @@ namespace FastExpressionCompiler
                             if (rc.Value == null)
                             {
                                 useBrFalseOrTrue = 0;
-                                
-                                // The null comparison for nullable is actually a `nullable.HasValue` check,
+                                // The null comparison for the nullable is actually a `nullable.HasValue` check,
                                 // which implies member access on nullable struct - therefore loading it by address
                                 if (b.Left.Type.IsNullable())
                                     parent |= ParentFlags.MemberAccess;
                             }
                             else if (rc.Value is bool rcb)
-                                useBrFalseOrTrue = rcb ? 1 : 0;
-                            if (useBrFalseOrTrue != -1)
                             {
-                                if (!TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
-                                    return false;
+                                useBrFalseOrTrue = rcb ? 1 : 0;
                             }
+                            else if (rc.Value is int n && n == 0) 
+                            {
+                                useBrFalseOrTrue = 0;
+                            }
+
+                            if (useBrFalseOrTrue != -1 &&
+                                !TryEmit(b.Left, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                                return false;
                         }
                         else if (b.Left is ConstantExpression lc)
                         {
@@ -4328,13 +4344,17 @@ namespace FastExpressionCompiler
                                     parent |= ParentFlags.MemberAccess;
                             }
                             else if (lc.Value is bool lcb)
-                                useBrFalseOrTrue = lcb ? 1 : 0;
-
-                            if (useBrFalseOrTrue != -1)
                             {
-                                if (!TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
-                                    return false;
+                                useBrFalseOrTrue = lcb ? 1 : 0;
                             }
+                            else if (lc.Value is int n && n == 0)
+                            {
+                                useBrFalseOrTrue = 0;
+                            }
+
+                            if (useBrFalseOrTrue != -1 &&
+                                !TryEmit(b.Right, paramExprs, il, ref closure, parent & ~ParentFlags.IgnoreResult))
+                                return false;
                         }
                     }
                 }
@@ -4352,7 +4372,7 @@ namespace FastExpressionCompiler
                 // - `x != false` => `Brfalse`
                 // - `x == null`  => `Brtrue`
                 // - `x != null`  => `Brfalse`
-                //
+
                 var labelIfFalse = il.DefineLabel();
                 if (testExpr.NodeType == ExpressionType.Equal    && useBrFalseOrTrue == 0 ||
                     testExpr.NodeType == ExpressionType.NotEqual && useBrFalseOrTrue == 1)

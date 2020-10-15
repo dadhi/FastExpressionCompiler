@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using System;
+using System.Diagnostics;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,7 +12,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class ConditionalOperatorsTests
+    public class ConditionalOperatorsTests : ITest
     {
         public int Run()
         {
@@ -185,7 +186,7 @@ namespace FastExpressionCompiler.UnitTests
             f();
         }
 
-        public static void WriteLine(string s) => Console.WriteLine(s);
+        public static void WriteLine(string s) => Debug.WriteLine(s);
 
         [Test]
         public void IfThen_with_block()

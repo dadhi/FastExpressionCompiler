@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue243_Pass_Parameter_By_Ref_is_supported
+    public class Issue243_Pass_Parameter_By_Ref_is_supported : ITest
     {
         public int Run()
         {

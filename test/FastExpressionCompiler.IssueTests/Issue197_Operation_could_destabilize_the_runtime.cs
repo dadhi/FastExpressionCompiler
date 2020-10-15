@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue197_Operation_could_destabilize_the_runtime
+    public class Issue197_Operation_could_destabilize_the_runtime  : ITest
     {
         public int Run()
         {

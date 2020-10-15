@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using NUnit.Framework;
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
@@ -13,7 +14,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
-    public class Issue146_bool_par
+    public class Issue146_bool_par : ITest
     {
         public int Run()
         {
@@ -54,7 +55,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             public bool MyMethod<T>(bool i)
             {
-                Console.WriteLine("Got " + i);
+                Debug.WriteLine("Got " + i);
 
                 return Equals(i, false);
             }
