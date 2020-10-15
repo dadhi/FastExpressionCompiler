@@ -503,6 +503,12 @@ namespace FastExpressionCompiler.IssueTests
                 ]);
 
             expr.PrintCSharpString();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var f = expr.CompileFast(true);
+            f.PrintIL();
         }
 
 
