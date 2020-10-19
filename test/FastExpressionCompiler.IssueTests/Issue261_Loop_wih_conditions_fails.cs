@@ -5,8 +5,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
-using SysExpr = System.Linq.Expressions.Expression;
 
 using NUnit.Framework;
 
@@ -26,7 +24,7 @@ namespace FastExpressionCompiler.IssueTests
         {
 
 #if !NET472
-            Test_serialization_of_the_Dictionary();
+            Test_serialization_of_the_Dictionary(); // passes!
 #endif
 
             Test_DictionaryTest_StringDictionary();
