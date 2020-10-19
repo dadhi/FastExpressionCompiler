@@ -1467,7 +1467,8 @@ namespace FastExpressionCompiler
             DupMemberOwner = 1 << 7,
             TryCatch = 1 << 8,
             InstanceCall = Call | InstanceAccess,
-            CtorCall = Call | (1 << 9)
+            CtorCall = Call | (1 << 9),
+            ArrayIndex = 1 << 10
         }
 
         internal static bool IgnoresResult(this ParentFlags parent) => (parent & ParentFlags.IgnoreResult) != 0;
@@ -1537,11 +1538,8 @@ namespace FastExpressionCompiler
                         case ExpressionType.ArrayIndex:
                             var arrIndexExpr = (BinaryExpression)expr;
                             return TryEmit(arrIndexExpr.Left,  paramExprs, il, ref closure, parent) 
-                                && TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, 
-                                    // arrIndexExpr.Right.Type.IsValueType() 
-                                    // ? parent & ~ParentFlags.MemberAccess & ~ParentFlags.InstanceAccess // #261 the index should not be loaded by the address, so strip the flags
-                                    parent)
-                                && TryEmitArrayIndex(expr.Type, il);
+                                && TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, parent | ParentFlags.ArrayIndex) // #265
+                                && TryEmitArrayIndex(expr.Type, il, parent);
 
                         case ExpressionType.ArrayLength:
                             var arrLengthExpr = (UnaryExpression)expr;
@@ -1898,7 +1896,7 @@ namespace FastExpressionCompiler
                     return EmitMethodCall(il, indexerProp.DeclaringType.FindPropertyGetMethod(indexerProp.Name));
 
                 if (indexExpr.Arguments.Count == 1) // one dimensional array
-                    return TryEmitArrayIndex(indexExpr.Type, il);
+                    return TryEmitArrayIndex(indexExpr.Type, il, parent);
 
                 // multi dimensional array
                 return EmitMethodCall(il, indexExpr.Object?.Type.FindMethod("Get"));
@@ -2204,7 +2202,9 @@ namespace FastExpressionCompiler
                 if (varIndex != -1)
                 {
                     if (byRefIndex != -1 ||
-                        paramType.IsValueType() && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
+                        paramType.IsValueType() && 
+                        (parent & ParentFlags.ArrayIndex) == 0 && // #265
+                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
                         EmitLoadLocalVariableAddress(il, varIndex);
                     else
                         EmitLoadLocalVariable(il, varIndex);
@@ -2956,10 +2956,10 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitArrayIndex(Type exprType, ILGenerator il)
+            private static bool TryEmitArrayIndex(Type exprType, ILGenerator il, ParentFlags parent)
             {
                 if (exprType.IsValueType())
-                    il.Emit(OpCodes.Ldelem, exprType); // todo: @unclear @bug why not Ldelema?
+                    il.Emit((parent & (ParentFlags.MemberAccess | ParentFlags.Call)) == 0 ? OpCodes.Ldelem : OpCodes.Ldelema, exprType);
                 else
                     il.Emit(OpCodes.Ldelem_Ref);
                 return true;

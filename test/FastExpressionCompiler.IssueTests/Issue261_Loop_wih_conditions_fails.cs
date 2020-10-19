@@ -24,39 +24,46 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Test_class_items_array_index_via_variable_access_then_the_member_access();
-            // Test_struct_items_array_index_via_variable_access_then_the_member_access();
 
 #if !NET472
-            // Test_serialization_of_the_Dictionary();
+            Test_serialization_of_the_Dictionary();
 #endif
 
-            // Test_DictionaryTest_StringDictionary();
+            Test_DictionaryTest_StringDictionary();
 
-            // Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
+            Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
 
-            // Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
-            // Test_assignment_with_the_block_on_the_right_side();
+            Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
+            Test_assignment_with_the_block_on_the_right_side();
+
+            // #265
+            Test_class_items_array_index_via_variable_access_then_the_member_access();
+            Test_struct_items_array_index_via_variable_access_then_the_member_access();
 
 #if LIGHT_EXPRESSION
-            // FindMethodOrThrow_in_the_class_hierarchy();
+            FindMethodOrThrow_in_the_class_hierarchy();
 
-            // Test_find_generic_method_with_the_generic_param();
+            Test_find_generic_method_with_the_generic_param();
 
-            // Can_make_convert_and_compile_binary_equal_expression_of_different_types();
+            Can_make_convert_and_compile_binary_equal_expression_of_different_types();
 
-            // Test_method_to_expression_code_string();
+            Test_method_to_expression_code_string();
 
-            // Test_nested_generic_type_output();
-            // Test_triple_nested_non_generic();
-            // Test_triple_nested_open_generic();
-            // Test_non_generic_classes();
-
-            return 13;
+            Test_nested_generic_type_output();
+            Test_triple_nested_non_generic();
+            Test_triple_nested_open_generic();
+            Test_non_generic_classes();
 #else
-            // Should_throw_for_the_equal_expression_of_different_types();
+            Should_throw_for_the_equal_expression_of_different_types();
+#endif
 
-            return 6;
+
+#if LIGHT_EXPRESSION && NET472
+            return 15;
+#elif LIGHT_EXPRESSION
+            return 14;
+#else
+            return 8;
 #endif
         }
 
@@ -176,13 +183,7 @@ namespace FastExpressionCompiler.IssueTests
               elArr, index
             );
 
-            e.PrintCSharpString();
-
-            var fs = e.CompileSys();
-            fs.PrintIL();
-
             var f = e.CompileFast(true);
-            f.PrintIL();
 
             f.AssertOpCodes(
                 OpCodes.Ldarg_2,
@@ -193,12 +194,13 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldfld,
                 OpCodes.Ret
             );
+
+            Assert.AreEqual("13", f(new[] { new El() }, 0));
         }
 
         [Test]
         public void Test_struct_items_array_index_via_variable_access_then_the_member_access()
         {
-
             var elArr = Parameter(typeof(ElVal[]), "elArr");
             var index = Parameter(typeof(int), "index");
             var tempIndex = Parameter(typeof(int), "tempIndex");
@@ -214,23 +216,19 @@ namespace FastExpressionCompiler.IssueTests
               elArr, index
             );
 
-            e.PrintCSharpString();
-
-            var fs = e.CompileSys();
-            fs.PrintIL();
-
             var f = e.CompileFast(true);
-            f.PrintIL();
 
             f.AssertOpCodes(
                 OpCodes.Ldarg_2,
                 OpCodes.Stloc_0,
                 OpCodes.Ldarg_1,
                 OpCodes.Ldloc_0,
-                OpCodes.Ldelem_Ref,
+                OpCodes.Ldelema,
                 OpCodes.Ldfld,
                 OpCodes.Ret
             );
+
+            Assert.AreEqual("14", f(new[] { new ElVal("14", 43) }, 0));
         }
 
         public class El
