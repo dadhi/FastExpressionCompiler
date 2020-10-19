@@ -35,6 +35,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastExpressionCompiler.Ligh
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastExpressionCompiler.TestsRunner", "test\FastExpressionCompiler.TestsRunner\FastExpressionCompiler.TestsRunner.csproj", "{41FD55F9-E45E-482C-B7CE-0B412026F62C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastExpressionCompiler.TestsRunner.Net472", "test\FastExpressionCompiler.TestsRunner.Net472\FastExpressionCompiler.TestsRunner.Net472.csproj", "{6E6D7290-824A-485F-BE58-D0F00685E2D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -73,6 +75,10 @@ Global
 		{41FD55F9-E45E-482C-B7CE-0B412026F62C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{41FD55F9-E45E-482C-B7CE-0B412026F62C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{41FD55F9-E45E-482C-B7CE-0B412026F62C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E6D7290-824A-485F-BE58-D0F00685E2D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E6D7290-824A-485F-BE58-D0F00685E2D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E6D7290-824A-485F-BE58-D0F00685E2D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E6D7290-824A-485F-BE58-D0F00685E2D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -86,6 +92,7 @@ Global
 		{B32A8C70-AF61-4766-8F6F-110825E155D4} = {AA457CA0-4D92-4922-9C5C-6F9575957AE7}
 		{E5EF1A1B-D2A4-4FF5-999E-8021FDE2E004} = {AA457CA0-4D92-4922-9C5C-6F9575957AE7}
 		{41FD55F9-E45E-482C-B7CE-0B412026F62C} = {AA457CA0-4D92-4922-9C5C-6F9575957AE7}
+		{6E6D7290-824A-485F-BE58-D0F00685E2D6} = {AA457CA0-4D92-4922-9C5C-6F9575957AE7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E0034036-4006-4AA3-8322-F3F461C3C444}

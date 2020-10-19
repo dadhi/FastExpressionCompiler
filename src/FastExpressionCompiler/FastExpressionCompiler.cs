@@ -1536,9 +1536,12 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.ArrayIndex:
                             var arrIndexExpr = (BinaryExpression)expr;
-                            return TryEmit(arrIndexExpr.Left,  paramExprs, il, ref closure, parent) &&
-                                   TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, parent) &&
-                                   TryEmitArrayIndex(expr.Type, il);
+                            return TryEmit(arrIndexExpr.Left,  paramExprs, il, ref closure, parent) 
+                                && TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, 
+                                    // arrIndexExpr.Right.Type.IsValueType() 
+                                    // ? parent & ~ParentFlags.MemberAccess & ~ParentFlags.InstanceAccess // #261 the index should not be loaded by the address, so strip the flags
+                                    parent)
+                                && TryEmitArrayIndex(expr.Type, il);
 
                         case ExpressionType.ArrayLength:
                             var arrLengthExpr = (UnaryExpression)expr;
@@ -2956,7 +2959,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitArrayIndex(Type exprType, ILGenerator il)
             {
                 if (exprType.IsValueType())
-                    il.Emit(OpCodes.Ldelem, exprType);
+                    il.Emit(OpCodes.Ldelem, exprType); // todo: @unclear @bug why not Ldelema?
                 else
                     il.Emit(OpCodes.Ldelem_Ref);
                 return true;

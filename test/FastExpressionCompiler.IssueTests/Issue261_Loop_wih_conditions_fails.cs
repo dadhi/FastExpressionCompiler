@@ -20,32 +20,34 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+#if !NET472
             Test_serialization_of_the_Dictionary();
+#endif
 
-            // Test_DictionaryTest_StringDictionary();
+            Test_DictionaryTest_StringDictionary();
 
-            // Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
+            Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
 
-            // Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
-            // Test_assignment_with_the_block_on_the_right_side();
+            Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
+            Test_assignment_with_the_block_on_the_right_side();
 
 #if LIGHT_EXPRESSION
-            // FindMethodOrThrow_in_the_class_hierarchy();
+            FindMethodOrThrow_in_the_class_hierarchy();
 
-            // Test_find_generic_method_with_the_generic_param();
+            Test_find_generic_method_with_the_generic_param();
 
-            // Can_make_convert_and_compile_binary_equal_expression_of_different_types();
+            Can_make_convert_and_compile_binary_equal_expression_of_different_types();
 
-            // Test_method_to_expression_code_string();
+            Test_method_to_expression_code_string();
 
-            // Test_nested_generic_type_output();
-            // Test_triple_nested_non_generic();
-            // Test_triple_nested_open_generic();
-            // Test_non_generic_classes();
+            Test_nested_generic_type_output();
+            Test_triple_nested_non_generic();
+            Test_triple_nested_open_generic();
+            Test_non_generic_classes();
 
             return 13;
 #else
-            // Should_throw_for_the_equal_expression_of_different_types();
+            Should_throw_for_the_equal_expression_of_different_types();
 
             return 6;
 #endif
@@ -148,21 +150,27 @@ namespace FastExpressionCompiler.IssueTests
             ; // todo: @bug we need to out put the last `;`
         };
 
+#if !NET472
         [Test]
         public void Test_serialization_of_the_Dictionary()
         {
             var entryType = typeof(System.Collections.Generic.Dictionary<string, string>)
               .GetNestedTypes(BindingFlags.NonPublic).Single(t => t.Name == "Entry")
               .MakeGenericType(typeof(string), typeof(string));
+
             var entryArrType = entryType.MakeArrayType();
 
-            // var _count = typeof(Dictionary<string, string>).GetTypeInfo().GetDeclaredField("_count");
-            // var _freeCount = typeof(Dictionary<string, string>).GetTypeInfo().GetDeclaredField("_freeCount");
-            // var _freeList  = typeof(Dictionary<string, string>).GetTypeInfo().GetDeclaredField("_freeList");
-            // var _version   = typeof(Dictionary<string, string>).GetTypeInfo().GetDeclaredField("_version");
-            // var _buckets   = typeof(Dictionary<string, string>).GetTypeInfo().GetDeclaredField("_buckets");
-            // var _comparer  = typeof(Dictionary<string, string>).GetTypeInfo().GetDeclaredField("_comparer");
-            // var _entries   = typeof(Dictionary<string, string>).GetTypeInfo().GetDeclaredField("_entries");
+            // FieldInfo GetField<T>(string n) =>
+            //   typeof(T).GetTypeInfo().GetDeclaredField(n) ?? throw new InvalidOperationException(n);
+
+            // var _count     = GetField<Dictionary<string, string>>("_count");
+            // var _freeCount = GetField<Dictionary<string, string>>("_freeCount");
+            // var _freeList  = GetField<Dictionary<string, string>>("_freeList");
+            // var _version   = GetField<Dictionary<string, string>>("_version");
+            // var _buckets   = GetField<Dictionary<string, string>>("_buckets");
+            // var _comparer  = GetField<Dictionary<string, string>>("_comparer");
+            // var _entries   = GetField<Dictionary<string, string>>("_entries");
+
             // var getLength  = typeof(Array).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "GetLength" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) }));
             // var writeValuesArray1 = typeof(Binary<BufferedStream, Settings_827720117>).GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).Where(x => x.IsGenericMethod && x.Name == "WriteValuesArray1" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int[]), typeof(int) }));
 
@@ -510,7 +518,7 @@ namespace FastExpressionCompiler.IssueTests
             var f = expr.CompileFast(true);
             f.PrintIL();
         }
-
+#endif
 
         [Test]
         public void Test_assignment_with_the_block_on_the_right_side_with_just_a_constant()
