@@ -24,7 +24,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            //Test_unbox_and_casted_ref_serialize();
+            Test_unbox_and_casted_ref_serialize();
 
 #if !NET472
             Test_serialization_of_the_Dictionary(); // passes!
@@ -996,6 +996,37 @@ namespace FastExpressionCompiler.IssueTests
                 // _lastWriteMethod = method;
 
                 // method(value, ref _stream, this);
+            }
+
+            internal bool WriteTypeRef(Type value, bool writeSerializedVersionId)
+            {
+                // if (_lastRefType == value)
+                // {
+                //     _stream.Write(_lastRefIndex);
+                //     return false;
+                // }
+
+                // _lastRefType = value;
+
+                // ref var index = ref _savedTypeLookup.GetOrAddValueRef(value);
+                // if (index == 0)
+                // {
+                //     index = _savedTypeLookup.Count;
+                //     _stream.Write(-1);
+                //     _stream.WriteTypeId(value);
+                //     if (writeSerializedVersionId)
+                //     {
+                //         _stream.ReserveSize(4);
+                //         var id = GetSerializedVersionUniqueId(value);
+                //         _stream.Write(id);
+                //     }
+                //     _lastRefIndex = index;
+                //     return true;
+                // }
+
+                // _stream.Write(index);
+                // _lastRefIndex = index;
+                return false;
             }
         }
 
