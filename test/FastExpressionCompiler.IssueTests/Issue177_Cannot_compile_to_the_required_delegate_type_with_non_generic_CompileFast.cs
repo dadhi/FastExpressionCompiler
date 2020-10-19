@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast
+    public class Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast : ITest
     {
         public int Run()
         {

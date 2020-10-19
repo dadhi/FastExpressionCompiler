@@ -4315,16 +4315,11 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            // The Type of delegate is put into comment because sometime doing `new` or cast to delegate type
-            // is not valid like in issue #237: 
-            // `new DeserializerDlg<Word>(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...};`
-            // and the cast is invalid too:
-            // `(DeserializerDlg<Word>)(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...};`
+            // The result should be something like this (taken from the #237)
+            //
+            // `(DeserializerDlg<Word>)(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...})`
             // 
-            // The valid thing is:
-            // DeserializerDlg<Word> d = (ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...};
-            // 
-            sb.Append("/*").Append(Type.ToCode(stripNamespace, printType)).Append("*/(");
+            sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(")(");
             var count = Parameters.Count;
             if (Parameters.Count > 0)
             {
@@ -4360,7 +4355,7 @@ namespace FastExpressionCompiler.LightExpression
                 else
                     sb.NewLineIdentCs(Body, lineIdent, stripNamespace, printType).Append(';');
 
-                sb.NewLine(lineIdent, identSpaces).Append('}');
+                sb.NewLine(lineIdent, identSpaces).Append("})");
             }
 
             return sb;

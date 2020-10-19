@@ -35,7 +35,7 @@ namespace FastExpressionCompiler.UnitTests
             var sw = Stopwatch.StartNew();
 
             Console.WriteLine();
-            Console.WriteLine("Running UnitTests and IssueTests in parallel...");
+            Console.WriteLine("NET472: Running UnitTests and IssueTests in parallel...");
             Console.WriteLine();
 
             // todo: @perf try Parallel.ForEach
@@ -139,6 +139,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast().Run);
                 Run(new Issue179_Add_something_like_LambdaExpression_CompileToMethod().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod().Run);
                 Run(new Issue181_TryEmitIncDecAssign_InvalidCastException().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue181_TryEmitIncDecAssign_InvalidCastException().Run);
                 Run(new Issue183_NullableDecimal().Run);

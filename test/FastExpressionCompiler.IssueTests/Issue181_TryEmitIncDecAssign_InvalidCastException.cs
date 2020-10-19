@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 {
     using System.Reflection;
 
-    public class Issue181_TryEmitIncDecAssign_InvalidCastException
+    public class Issue181_TryEmitIncDecAssign_InvalidCastException : ITest
     {
         public int Run()
         {

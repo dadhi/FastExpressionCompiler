@@ -1,15 +1,18 @@
-﻿#if !LIGHT_EXPRESSION
-
-using System;
-using System.Linq.Expressions;
+﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using NUnit.Framework;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.IssueTests
+#else
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
+#endif
 {
     [TestFixture]
-    public class Issue179_Add_something_like_LambdaExpression_CompileToMethod
+    public class Issue179_Add_something_like_LambdaExpression_CompileToMethod : ITest
     {
         public int Run()
         {
@@ -31,12 +34,10 @@ namespace FastExpressionCompiler.IssueTests
                 CallingConventions.Standard,
                 typeof(int), new[] { typeof(int), typeof(int) });
 
-            var paramA = Expression.Parameter(typeof(int));
-            var paramB = Expression.Parameter(typeof(int));
+            var paramA = Parameter(typeof(int));
+            var paramB = Parameter(typeof(int));
 
-            var funcExpr = Expression.Lambda<Func<int, int, int>>(
-                Expression.Add(paramA, paramB), 
-                paramA, paramB);
+            var funcExpr = Lambda<Func<int, int, int>>(Add(paramA, paramB), paramA, paramB);
 
             funcExpr.CompileFastToIL(methodBuilder.GetILGenerator(), true);
 
@@ -48,5 +49,3 @@ namespace FastExpressionCompiler.IssueTests
         }
     }
 }
-
-#endif

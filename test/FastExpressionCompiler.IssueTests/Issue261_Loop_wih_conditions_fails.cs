@@ -4,9 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using NUnit.Framework;
+using System.Reflection.Emit;
 using System.Text;
 using SysExpr = System.Linq.Expressions.Expression;
+
+using NUnit.Framework;
+
+#pragma warning disable CS0164, CS0649
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -20,34 +24,37 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            // Test_class_items_array_index_via_variable_access_then_the_member_access();
+            // Test_struct_items_array_index_via_variable_access_then_the_member_access();
+
 #if !NET472
-            Test_serialization_of_the_Dictionary();
+            // Test_serialization_of_the_Dictionary();
 #endif
 
-            Test_DictionaryTest_StringDictionary();
+            // Test_DictionaryTest_StringDictionary();
 
-            Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
+            // Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
 
-            Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
-            Test_assignment_with_the_block_on_the_right_side();
+            // Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
+            // Test_assignment_with_the_block_on_the_right_side();
 
 #if LIGHT_EXPRESSION
-            FindMethodOrThrow_in_the_class_hierarchy();
+            // FindMethodOrThrow_in_the_class_hierarchy();
 
-            Test_find_generic_method_with_the_generic_param();
+            // Test_find_generic_method_with_the_generic_param();
 
-            Can_make_convert_and_compile_binary_equal_expression_of_different_types();
+            // Can_make_convert_and_compile_binary_equal_expression_of_different_types();
 
-            Test_method_to_expression_code_string();
+            // Test_method_to_expression_code_string();
 
-            Test_nested_generic_type_output();
-            Test_triple_nested_non_generic();
-            Test_triple_nested_open_generic();
-            Test_non_generic_classes();
+            // Test_nested_generic_type_output();
+            // Test_triple_nested_non_generic();
+            // Test_triple_nested_open_generic();
+            // Test_non_generic_classes();
 
             return 13;
 #else
-            Should_throw_for_the_equal_expression_of_different_types();
+            // Should_throw_for_the_equal_expression_of_different_types();
 
             return 6;
 #endif
@@ -149,6 +156,95 @@ namespace FastExpressionCompiler.IssueTests
         finishWrite__5821607:
             ; // todo: @bug we need to out put the last `;`
         };
+
+        [Test]
+        public void Test_class_items_array_index_via_variable_access_then_the_member_access()
+        {
+
+            var elArr = Parameter(typeof(El[]), "elArr");
+            var index = Parameter(typeof(int), "index");
+            var tempIndex = Parameter(typeof(int), "tempIndex");
+
+            var e = Lambda<Func<El[], int, string>>(
+              Block(new[] { tempIndex },
+                Assign(tempIndex, index),
+                MakeMemberAccess(
+                  ArrayIndex(elArr, tempIndex),
+                  typeof(El).GetTypeInfo().GetDeclaredField(nameof(El.Message))
+                )
+              ),
+              elArr, index
+            );
+
+            e.PrintCSharpString();
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            var f = e.CompileFast(true);
+            f.PrintIL();
+
+            f.AssertOpCodes(
+                OpCodes.Ldarg_2,
+                OpCodes.Stloc_0,
+                OpCodes.Ldarg_1,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldelem_Ref,
+                OpCodes.Ldfld,
+                OpCodes.Ret
+            );
+        }
+
+        [Test]
+        public void Test_struct_items_array_index_via_variable_access_then_the_member_access()
+        {
+
+            var elArr = Parameter(typeof(ElVal[]), "elArr");
+            var index = Parameter(typeof(int), "index");
+            var tempIndex = Parameter(typeof(int), "tempIndex");
+
+            var e = Lambda<Func<ElVal[], int, string>>(
+              Block(new[] { tempIndex },
+                Assign(tempIndex, index),
+                MakeMemberAccess(
+                  ArrayIndex(elArr, tempIndex),
+                  typeof(ElVal).GetTypeInfo().GetDeclaredField(nameof(ElVal.Message))
+                )
+              ),
+              elArr, index
+            );
+
+            e.PrintCSharpString();
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            var f = e.CompileFast(true);
+            f.PrintIL();
+
+            f.AssertOpCodes(
+                OpCodes.Ldarg_2,
+                OpCodes.Stloc_0,
+                OpCodes.Ldarg_1,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldelem_Ref,
+                OpCodes.Ldfld,
+                OpCodes.Ret
+            );
+        }
+
+        public class El
+        {
+            public string Message = "13";
+            public int Number = 42;
+        }
+
+        public struct ElVal
+        {
+            public string Message;
+            public int Number;
+            public ElVal(string m, int n) { Message = m; Number = n; }
+        }
 
 #if !NET472
         [Test]
