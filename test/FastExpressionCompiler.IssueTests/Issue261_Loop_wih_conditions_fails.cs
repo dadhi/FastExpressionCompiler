@@ -5,6 +5,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text;
+using SysExpr = System.Linq.Expressions.Expression;
 
 using NUnit.Framework;
 
@@ -22,6 +24,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            //Test_unbox_and_casted_ref_serialize();
 
 #if !NET472
             Test_serialization_of_the_Dictionary(); // passes!
@@ -65,102 +68,56 @@ namespace FastExpressionCompiler.IssueTests
 #endif
         }
 
-        WriteMethods<Dictionary<string, string>, BufferedStream, Settings_827720117>.WriteSealed WriteDict = (
-            Dictionary<string, string> source,
-            ref BufferedStream stream,
-            Binary<BufferedStream, Settings_827720117> io) =>
-        {/*
-            stream.ReserveSize((int)16);
-            stream.Write<int>(source._count);
-            stream.Write<int>(source._freeCount);
-            stream.Write<int>(source._freeList);
-            stream.Write<int>(source._version);
-            int tempResult;
-            tempResult = source._buckets;
-            stream.ReserveSize((int)1);
-            
-            if (tempResult == null)
-            {
-                stream.Write<byte>((byte)0);
-                goto afterWrite__37365956;
-            }
-            else
-            {
-                stream.Write<byte>((byte)1);
-            }
-            
-            int length0;
-            stream.ReserveSize((int)4);
-            length0 = tempResult.GetLength((int)0);
-            stream.Write<int>(length0);
-            
-            if ((int)0 == length0)
-            {
-                goto skipWrite__64730826;
-            }
-            
-            io.WriteValuesArray1<int>(
-                tempResult,
-                (int)4);
-            skipWrite__64730826:
-            afterWrite__37365956:
-            finishWrite__56266328:
-            io.WriteInternal(source._comparer);
-            Dictionary<string, string>.Entry[] tempResult;
-            tempResult = source._entries;
-            stream.ReserveSize((int)1);
-            
-            if (tempResult == null)
-            {
-                stream.Write<byte>((byte)0);
-                goto afterWrite__9693964;
-            }
-            else
-            {
-                stream.Write<byte>((byte)1);
-            }
-            
-            int length0;
-            stream.ReserveSize((int)4);
-            length0 = tempResult.GetLength((int)0);
-            stream.Write<int>(length0);
-            
-            if ((int)0 == length0)
-            {
-                goto skipWrite__54460952;
-            }
-            
-            int i0;
-            i0 = (length0 - 1);
-            
-            while (true)
-            {
-                if (i0 < (int)0)
-                {
-                    goto break0__33783739;
-                }
-                else
-                {
-                    
-                    stream.ReserveSize((int)8);
-                    stream.Write<UInt32>(tempResult[i0].hashCode);
-                    stream.Write<int>(tempResult[i0].next);
-                    stream.Write(tempResult[i0].key);
-                    stream.Write(tempResult[i0].value);
-                    finishWrite__47542209:
-                    
-                    continue0__14393629:
-                    i0 = (i0 - 1);
-                }
-            }
-            break0__33783739: 
-            skipWrite__54460952:
-            afterWrite__9693964:
-            finishWrite__5596162:
-            */
-        finishWrite__5821607:
-            ; // todo: @bug we need to out put the last `;`
-        };
+        [Test]
+        public void Test_unbox_and_casted_ref_serialize()
+        {
+            var p = new ParameterExpression[4]; // the parameter expressions 
+            var e = new Expression[14]; // the unique expressions 
+            var l = new LabelTarget[1]; // the labels 
+            var expr = Lambda( // $
+              typeof(Binary<BufferedStream, Settings_827720117>.WriteObject),
+              e[0] = Block(
+                typeof(void),
+                new[] {
+    p[0]=Parameter(typeof(int), "castedSource")
+                },
+                e[1] = MakeBinary(ExpressionType.Assign,
+                  p[0 // (int castedSource)
+                    ],
+                  e[2] = Unbox(
+                    p[1] = Parameter(typeof(object), "source"),
+                    typeof(int))),
+                e[3] = Call(
+                  p[2] = Parameter(typeof(BufferedStream).MakeByRefType(), "stream"),
+                  typeof(BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ReserveSize" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                  e[4] = Constant((int)8)),
+                e[5] = Condition(
+                  e[6] = Call(
+                    p[3] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"),
+                    typeof(Binary<BufferedStream, Settings_827720117>).GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).Single(x => !x.IsGenericMethod && x.Name == "WriteTypeRef" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Type), typeof(bool) })),
+                    e[7] = Constant(typeof(int)),
+                    e[8] = Constant(true)),
+                  e[9] = Call(
+                    p[2 // (BufferedStream stream)
+                      ],
+                    typeof(BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ReserveSize" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                    e[10] = Constant((int)4)),
+                  e[11] = Empty(),
+                  typeof(void)),
+                e[12] = Call(
+                  p[2 // (BufferedStream stream)
+                    ],
+                  typeof(BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == "Write" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                  p[0 // (int castedSource)
+                    ]),
+                e[13] = Label(l[0] = Label(typeof(void), "finishWrite"))),
+              p[1 // (object source)
+                ],
+              p[2 // (BufferedStream stream)
+                ],
+              p[3 // (Binary<BufferedStream, Settings_827720117> io)
+                ]);
+        }
 
         [Test]
         public void Test_class_items_array_index_via_variable_access_then_the_member_access()
@@ -983,6 +940,9 @@ namespace FastExpressionCompiler.IssueTests
         internal sealed partial class Binary<TStream, TSettingGen> : ISerializer, IBinary
             where TStream : struct, IBinaryStream
         {
+            public delegate void WriteObject(object obj, ref TStream stream, Binary<TStream, TSettingGen> binary);
+            public delegate object ReadObject(ref TStream stream, Binary<TStream, TSettingGen> binary);
+
             internal List<object> LoadedObjectRefs { get; } = new List<object>();
 
             public void Dispose()

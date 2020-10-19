@@ -11,8 +11,10 @@
         <PackageReleaseNotes><![CDATA[
 
         ## v3.0.0
-            
-            Thanks to the contributors
+
+            - TBD
+
+            Thanks to the contributors.
 
         ]]></PackageReleaseNotes>
         <AssemblyName>$(Product)</AssemblyName>
