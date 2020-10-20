@@ -9,6 +9,7 @@ using System.Text;
 using SysExpr = System.Linq.Expressions.Expression;
 
 using NUnit.Framework;
+using System.Runtime.InteropServices;
 
 #pragma warning disable CS0164, CS0649
 
@@ -24,52 +25,54 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_unbox_and_casted_ref_serialize();
+            Test_unbox_struct_with_the_struct_member_with_the_explicit_layout_and_casted_ref_serialize();
+            Test_unbox_struct_with_the_explicit_layout_and_casted_ref_serialize();
+            Test_unbox_type_int_and_casted_ref_serialize();
 
 #if !NET472
-            // Test_serialization_of_the_Dictionary(); // passes!
+            Test_serialization_of_the_Dictionary(); // passes!
 #endif
 
-            // Test_DictionaryTest_StringDictionary();
+            Test_DictionaryTest_StringDictionary();
 
-            // Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
+            Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
 
-            // Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
-            // Test_assignment_with_the_block_on_the_right_side();
+            Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
+            Test_assignment_with_the_block_on_the_right_side();
 
-            // // #265
-            // Test_class_items_array_index_via_variable_access_then_the_member_access();
-            // Test_struct_items_array_index_via_variable_access_then_the_member_access();
+            // #265
+            Test_class_items_array_index_via_variable_access_then_the_member_access();
+            Test_struct_items_array_index_via_variable_access_then_the_member_access();
 
 #if LIGHT_EXPRESSION
-            // FindMethodOrThrow_in_the_class_hierarchy();
+            FindMethodOrThrow_in_the_class_hierarchy();
 
-            // Test_find_generic_method_with_the_generic_param();
+            Test_find_generic_method_with_the_generic_param();
 
-            // Can_make_convert_and_compile_binary_equal_expression_of_different_types();
+            Can_make_convert_and_compile_binary_equal_expression_of_different_types();
 
-            // Test_method_to_expression_code_string();
+            Test_method_to_expression_code_string();
 
-            // Test_nested_generic_type_output();
-            // Test_triple_nested_non_generic();
-            // Test_triple_nested_open_generic();
-            // Test_non_generic_classes();
+            Test_nested_generic_type_output();
+            Test_triple_nested_non_generic();
+            Test_triple_nested_open_generic();
+            Test_non_generic_classes();
 #else
-            // Should_throw_for_the_equal_expression_of_different_types();
+            Should_throw_for_the_equal_expression_of_different_types();
 #endif
 
 
 #if LIGHT_EXPRESSION && NET472
-            return 15;
+            return 18;
 #elif LIGHT_EXPRESSION
-            return 14;
+            return 17;
 #else
-            return 8;
+            return 11;
 #endif
         }
 
         [Test]
-        public void Test_unbox_and_casted_ref_serialize()
+        public void Test_unbox_type_int_and_casted_ref_serialize()
         {
             var p = new ParameterExpression[4]; // the parameter expressions 
             var e = new Expression[14]; // the unique expressions 
@@ -79,7 +82,7 @@ namespace FastExpressionCompiler.IssueTests
               e[0] = Block(
                 typeof(void),
                 new[] {
-    p[0]=Parameter(typeof(int), "castedSource")
+                  p[0]=Parameter(typeof(int), "castedSource")
                 },
                 e[1] = MakeBinary(ExpressionType.Assign,
                   p[0 // (int castedSource)
@@ -120,6 +123,146 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = expr.CompileFast(true);
             Assert.IsNotNull(f);
+        }
+
+        [Test]
+        public void Test_unbox_struct_with_the_explicit_layout_and_casted_ref_serialize()
+        {
+            var p = new ParameterExpression[4]; // the parameter expressions 
+            var e = new Expression[14]; // the unique expressions 
+            var l = new LabelTarget[1]; // the labels 
+            var expr = Lambda( // $
+              typeof(Binary<BufferedStream, Settings_827720117>.WriteObject),
+              e[0] = Block(
+                typeof(void),
+                new[] {
+                  p[0]=Parameter(typeof(PrimitiveValue), "castedSource")
+                },
+                e[1] = MakeBinary(ExpressionType.Assign,
+                  p[0 // (PrimitiveValue castedSource)
+                    ],
+                  e[2] = Unbox(
+                    p[1] = Parameter(typeof(object), "source"),
+                    typeof(PrimitiveValue))),
+                e[3] = Call(
+                  p[2] = Parameter(typeof(BufferedStream).MakeByRefType(), "stream"),
+                  typeof(BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ReserveSize" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                  e[4] = Constant((int)20)),
+                e[5] = Condition(
+                  e[6] = Call(
+                    p[3] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"),
+                    typeof(Binary<BufferedStream, Settings_827720117>).GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).Single(x => !x.IsGenericMethod && x.Name == "WriteTypeRef" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Type), typeof(bool) })),
+                    e[7] = Constant(typeof(PrimitiveValue)),
+                    e[8] = Constant(true)),
+                  e[9] = Call(
+                    p[2 // (BufferedStream stream)
+                      ],
+                    typeof(BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ReserveSize" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                    e[10] = Constant((int)16)),
+                  e[11] = Empty(),
+                  typeof(void)),
+                e[12] = Call(
+                  p[2 // (BufferedStream stream)
+                    ],
+                  typeof(BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == "Write" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(PrimitiveValue)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(PrimitiveValue) })),
+                  p[0 // (PrimitiveValue castedSource)
+                    ]),
+                e[13] = Label(l[0] = Label(typeof(void), "finishWrite"))),
+              p[1 // (object source)
+                ],
+              p[2 // (BufferedStream stream)
+                ],
+              p[3 // (Binary<BufferedStream, Settings_827720117> io)
+                ]);
+
+            var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
+        }
+
+        [Test]
+        public void Test_unbox_struct_with_the_struct_member_with_the_explicit_layout_and_casted_ref_serialize()
+        {
+            var p = new ParameterExpression[4]; // the parameter expressions 
+            var e = new Expression[14]; // the unique expressions 
+            var l = new LabelTarget[1]; // the labels 
+            var expr = Lambda( // $
+              typeof(Binary<BufferedStream, Settings_827720117>.WriteObject),
+              e[0] = Block(
+                typeof(void),
+                new[] {
+                  p[0]=Parameter(typeof(CustomProperty), "castedSource")
+                },
+                e[1] = MakeBinary(ExpressionType.Assign,
+                  p[0 // (CustomProperty castedSource)
+                    ],
+                  e[2] = Unbox(
+                    p[1] = Parameter(typeof(object), "source"),
+                    typeof(CustomProperty))),
+                e[3] = Call(
+                  p[2] = Parameter(typeof(BufferedStream).MakeByRefType(), "stream"),
+                  typeof(BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ReserveSize" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                  e[4] = Constant((int)4)),
+                e[5] = Call(
+                  p[3] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"),
+                  typeof(Binary<BufferedStream, Settings_827720117>).GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).Single(x => !x.IsGenericMethod && x.Name == "WriteTypeRef" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Type), typeof(bool) })),
+                  e[6] = Constant(typeof(CustomProperty)),
+                  e[7] = Constant(true)),
+                e[8] = Call(
+                  p[2 // (BufferedStream stream)
+                    ],
+                  typeof(BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Write" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(string) })),
+                  e[9] = Field(
+                    p[0 // (CustomProperty castedSource)
+                      ],
+                    typeof(CustomProperty).GetTypeInfo().GetDeclaredField("<Key>k__BackingField"))),
+                e[10] = Call(
+                  p[3 // (Binary<BufferedStream, Settings_827720117> io)
+                    ],
+                  typeof(Binary<BufferedStream, Settings_827720117>).GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).Where(x => x.IsGenericMethod && x.Name == "WriteSealedInternal" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(Value)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Value), typeof(bool) })),
+                  e[11] = Field(
+                    p[0 // (CustomProperty castedSource)
+                      ],
+                    typeof(CustomProperty).GetTypeInfo().GetDeclaredField("<Value>k__BackingField")),
+                  e[12] = Constant(false)),
+                e[13] = Label(l[0] = Label(typeof(void), "finishWrite"))),
+              p[1 // (object source)
+                ],
+              p[2 // (BufferedStream stream)
+                ],
+              p[3 // (Binary<BufferedStream, Settings_827720117> io)
+                ]);
+
+            var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        public struct PrimitiveValue
+        {
+            [FieldOffset(0)] public decimal Number;
+            [FieldOffset(0)] public bool Boolean;
+            [FieldOffset(0)] public DateTime DateTime;
+            [FieldOffset(0)] public Guid Guid;
+        }
+
+        public struct CustomProperty
+        {
+            public CustomProperty(string key, Value value)
+            {
+                Key = key;
+                Value = value;
+            }
+
+            public string Key { get; }
+            public Value Value { get; }
+        }
+
+        public sealed class Value
+        {
+            internal PrimitiveValue? _primitive;
+            internal string _string;
+            internal object _collection;
+            internal object _array;
         }
 
         [Test]
@@ -1031,6 +1174,35 @@ namespace FastExpressionCompiler.IssueTests
                 // _lastRefIndex = index;
                 return false;
             }
+
+          internal void WriteSealedInternal<T>(T value, bool useSerializedVersionId)
+          {
+              // _stream.ReserveSize(5);
+              // if (ReferenceEquals(value, null))
+              // {
+              //     _stream.Write((byte)0);
+              //     return;
+              // }
+              // else
+              // {
+              //     _stream.Write((byte)1);
+              // }
+
+              // if(useSerializedVersionId)
+              // {
+              //     var id = GetSerializedVersionUniqueId<T>();
+              //     _stream.Write(id);
+              // }
+              // ref var method = ref WriteMethods<T, TStream, TSettingGen>.Method;
+              // if (method == null)
+              // {
+              //     CheckTypes(value!);
+
+              //     method = DynamicCode<TStream, Binary<TStream, TSettingGen>>.GenerateWriteMethod<WriteMethods<T, TStream, TSettingGen>.WriteSealed>(value!.GetType(), Settings, false, false);
+              // }
+
+              // method(value, ref _stream, this);
+          }
         }
 
         public interface IBinary : IDisposable

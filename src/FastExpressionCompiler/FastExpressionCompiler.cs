@@ -2274,63 +2274,71 @@ namespace FastExpressionCompiler
             {
                 var exprType = expr.Type;
 
-                // todo: @feature support decimal here
-                if (exprType == typeof(decimal))
-                    return false;
-
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, parent))
                     return false;
 
+                if (expr.NodeType == ExpressionType.TypeAs)
+                {
+                    il.Emit(OpCodes.Isinst, exprType);
+                    if (exprType.IsValueType())
+                        il.Emit(OpCodes.Unbox_Any, exprType);
+                }
+                else if (expr.NodeType == ExpressionType.IsFalse)
+                {
+                    var falseLabel    = il.DefineLabel();
+                    var continueLabel = il.DefineLabel();
+                    il.Emit(OpCodes.Brfalse, falseLabel);
+                    il.Emit(OpCodes.Ldc_I4_0);
+                    il.Emit(OpCodes.Br, continueLabel);
+                    il.MarkLabel(falseLabel);
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.MarkLabel(continueLabel);
+                }
+                else if (expr.NodeType == ExpressionType.Increment)
+                {
+                    if (!TryEmitNumberOne(il, exprType))
+                        return false;
+                    il.Emit(OpCodes.Add);
+                }
+                else if (expr.NodeType == ExpressionType.Decrement)
+                {
+                    if (!TryEmitNumberOne(il, exprType))
+                        return false;
+                    il.Emit(OpCodes.Sub);
+                }
+                else if (expr.NodeType == ExpressionType.Negate || expr.NodeType == ExpressionType.NegateChecked)
+                {
+                    var typeInfo = exprType.GetTypeInfo();
+                    if (typeInfo.IsPrimitive)
+                        il.Emit(OpCodes.Neg);
+                    else 
+                    {
+                        var negMethod = typeInfo.GetDeclaredMethod("op_UnaryNegation");
+                        if (negMethod == null)
+                            return false;
+                        il.Emit(OpCodes.Call, negMethod);
+                    }
+                }
+                else if (expr.NodeType == ExpressionType.OnesComplement)
+                {
+                    il.Emit(OpCodes.Not);
+                }
+                else if (expr.NodeType == ExpressionType.Unbox)
+                {
+                    il.Emit(OpCodes.Unbox_Any, exprType);
+                }
+                else if (expr.NodeType == ExpressionType.IsTrue)
+                { }
+                else if (expr.NodeType == ExpressionType.UnaryPlus)
+                { }
+
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     il.Emit(OpCodes.Pop);
-                else
-                {
-                    if (expr.NodeType == ExpressionType.TypeAs)
-                    {
-                        il.Emit(OpCodes.Isinst, exprType);
-                    }
-                    else if (expr.NodeType == ExpressionType.IsFalse)
-                    {
-                        var falseLabel    = il.DefineLabel();
-                        var continueLabel = il.DefineLabel();
-                        il.Emit(OpCodes.Brfalse, falseLabel);
-                        il.Emit(OpCodes.Ldc_I4_0);
-                        il.Emit(OpCodes.Br, continueLabel);
-                        il.MarkLabel(falseLabel);
-                        il.Emit(OpCodes.Ldc_I4_1);
-                        il.MarkLabel(continueLabel);
-                    }
-                    else if (expr.NodeType == ExpressionType.Increment)
-                    {
-                        if (!TryEmitNumberOne(il, exprType))
-                            return false;
-                        il.Emit(OpCodes.Add);
-                    }
-                    else if (expr.NodeType == ExpressionType.Decrement)
-                    {
-                        if (!TryEmitNumberOne(il, exprType))
-                            return false;
-                        il.Emit(OpCodes.Sub);
-                    }
-                    else if (expr.NodeType == ExpressionType.Negate || expr.NodeType == ExpressionType.NegateChecked)
-                    {
-                        il.Emit(OpCodes.Neg);
-                    }
-                    else if (expr.NodeType == ExpressionType.OnesComplement)
-                    {
-                        il.Emit(OpCodes.Not);
-                    }
-                    else if (expr.NodeType == ExpressionType.Unbox)
-                    {
-                        il.Emit(OpCodes.Unbox_Any, exprType);
-                    }
-                    else if (expr.NodeType == ExpressionType.IsTrue)
-                    { }
-                    else if (expr.NodeType == ExpressionType.UnaryPlus)
-                    { }
-                }
+
                 return true;
             }
+
+            
 
             private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure,

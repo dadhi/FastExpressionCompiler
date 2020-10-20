@@ -43,6 +43,10 @@ namespace FastExpressionCompiler.IssueTests
             AddNullTest();
             AddNullTest2();
             Triple_convert_with_decimal_nullables();
+            Unbox_the_decimal();
+            Type_as_nullable_decimal();
+            Type_as_nullable_decimal_passing_the_null();
+            Negate_decimal();
 
 #if !LIGHT_EXPRESSION
             linq2db_Expression();
@@ -67,9 +71,9 @@ namespace FastExpressionCompiler.IssueTests
             TestConverterFailure();
             TestConverterNullable();
             TestLdArg();
-            return 43;
+            return 47;
 #else
-            return 21;
+            return 25;
 #endif
         }
 
@@ -1344,6 +1348,61 @@ namespace FastExpressionCompiler.IssueTests
             var expr = Lambda<Func<object>>(body);
             var compiled = expr.CompileFast(true);
             Assert.AreEqual(2m, compiled());
+        }
+
+
+        [Test]
+        public void Unbox_the_decimal()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal>>(
+                Unbox(decObj, typeof(decimal)),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual(2m, f((object)2m));
+        }
+
+        [Test]
+        public void Type_as_nullable_decimal()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal?>>(
+                TypeAs(decObj, typeof(decimal?)),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            decimal? x = 2m; 
+            Assert.AreEqual(2m, f((object)x));
+        }
+
+        [Test]
+        public void Type_as_nullable_decimal_passing_the_null()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal?>>(
+                TypeAs(decObj, typeof(decimal?)),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            decimal? x = null; 
+            Assert.AreEqual(null, f((object)x));
+        }
+
+        [Test]
+        public void Negate_decimal()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal>>(
+                Negate(Unbox(decObj, typeof(decimal))),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual(-2m, f(2m));
         }
     }
 }
