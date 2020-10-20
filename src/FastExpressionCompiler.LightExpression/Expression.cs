@@ -3587,6 +3587,9 @@ namespace FastExpressionCompiler.LightExpression
             }
 
             var exprs = Expressions;
+
+            // we don't inline as single expression case because it can always go crazy with assignment, e.g. `var a; a = 1 + (a = 2) + a * 2`
+
             for (var i = 0; i < exprs.Count - 1; i++)
             {
                 var expr = exprs[i];
