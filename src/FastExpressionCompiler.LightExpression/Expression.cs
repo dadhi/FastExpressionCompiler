@@ -2870,10 +2870,18 @@ namespace FastExpressionCompiler.LightExpression
         {
             if (Object != null)
                 Object.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-            else // for static method or static extension method we need to qualify with the class
+            else // for the static method or the static extension method we need to qualify with the class
                 sb.Append(Method.DeclaringType.ToCode(stripNamespace, printType));
 
-            sb.Append('.').Append(Method.Name);
+            var name = Method.Name;
+            // check for the special methods, e.g. property access `get_` or `set_` and output them as properties
+            if (Method.IsSpecialName) 
+            {
+                if (name.StartsWith("get_") || name.StartsWith("set_"))
+                    return sb.Append('.').Append(name.Substring(4));
+            }
+
+            sb.Append('.').Append(name);
             if (Method.IsGenericMethod)
             {
                 sb.Append('<');
@@ -3083,7 +3091,7 @@ namespace FastExpressionCompiler.LightExpression
             var name = Member.Name;
             if (Member is FieldInfo fi && Member.DeclaringType.IsValueType())
             {
-                // btw, `IsSpecialName` returns `false` :/
+                // btw, `fi.IsSpecialName` returns `false` :/
                 if (name[0] == '<') // a backing field for the properties in struct, e.g. <Key>k__BackingField
                 {
                     var end = name.IndexOf('>');

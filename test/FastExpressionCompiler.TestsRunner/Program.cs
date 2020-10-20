@@ -9,10 +9,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            RunAllTests();
+            // RunAllTests();
 
             // new Issue261_Loop_wih_conditions_fails().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
+            new FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue83_linq2db().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue156_InvokeAction().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue215_Assign_to_member_test().Run();

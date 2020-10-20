@@ -28,8 +28,8 @@ namespace FastExpressionCompiler.IssueTests
 #if !NET472
             // Test_serialization_of_the_Dictionary(); // passes!
 #endif
-
-            Serialize_the_nullable_struct_array();
+            Serialize_the_nullable_decimal_array();
+            // Serialize_the_nullable_struct_array();
 
             // Test_unbox_struct_with_the_struct_member_with_the_explicit_layout_and_casted_ref_serialize();
             // Test_unbox_struct_with_the_explicit_layout_and_casted_ref_serialize();
@@ -71,6 +71,151 @@ namespace FastExpressionCompiler.IssueTests
 #else
             return 11;
 #endif
+        }
+
+        [Test]
+        public void Serialize_the_nullable_decimal_array()
+        {
+            var p = new ParameterExpression[5]; // the parameter expressions 
+            var e = new Expression[41]; // the unique expressions 
+            var l = new LabelTarget[5]; // the labels 
+            var expr = Lambda( // $
+              typeof(WriteMethods<Nullable<Decimal>[], BufferedStream, Settings_827720117>.WriteSealed),
+              e[0] = Block(
+                typeof(void),
+                new ParameterExpression[0],
+                e[1] = Empty(),
+                e[2] = Block(
+                  typeof(void),
+                  new[] {
+                    p[0]=Parameter(typeof(int), "length0")
+                  },
+                  e[3] = Call(
+                    p[1] = Parameter(typeof(BufferedStream).MakeByRefType(), "stream"),
+                    typeof(BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ReserveSize" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                    e[4] = Constant((int)4)),
+                  e[5] = MakeBinary(ExpressionType.Assign,
+                    p[0 // (int length0)
+                      ],
+                    e[6] = Call(
+                      p[2] = Parameter(typeof(Nullable<Decimal>[]), "source"),
+                      typeof(Array).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "GetLength" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                      e[7] = Constant((int)0))),
+                  e[8] = Call(
+                    p[1 // (BufferedStream stream)
+                      ],
+                    typeof(BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == "Write" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                    p[0 // (int length0)
+                      ]),
+                  e[9] = Condition(
+                    e[10] = MakeBinary(ExpressionType.Equal,
+                      e[7 // Constant of int
+                        ],
+                      p[0 // (int length0)
+                        ]),
+                    e[11] = MakeGoto(GotoExpressionKind.Goto,
+                      l[0] = Label(typeof(void), "skipWrite"),
+                      null,
+                      typeof(void)),
+                    e[1 // Default of void
+                      ],
+                    typeof(void)),
+                  e[12] = Block(
+                    typeof(void),
+                    new[] {
+        p[3]=Parameter(typeof(int), "i0")
+                    },
+                    e[13] = Block(
+                      typeof(void),
+                      new ParameterExpression[0],
+                      e[14] = MakeBinary(ExpressionType.Assign,
+                        p[3 // (int i0)
+                          ],
+                        e[15] = MakeBinary(ExpressionType.Subtract,
+                          p[0 // (int length0)
+                            ],
+                          e[16] = Constant((int)1))),
+                      e[17] = Loop(
+                        e[18] = Condition(
+                          e[19] = MakeBinary(ExpressionType.LessThan,
+                            p[3 // (int i0)
+                              ],
+                            e[7 // Constant of int
+                              ]),
+                          e[20] = MakeGoto(GotoExpressionKind.Break,
+                            l[1] = Label(typeof(void), "break0"),
+                            null,
+                            typeof(void)),
+                          e[21] = Block(
+                            typeof(int),
+                            new ParameterExpression[0],
+                            e[22] = Block(
+                              typeof(void),
+                              new ParameterExpression[0],
+                              e[23] = Call(
+                                p[1 // (BufferedStream stream)
+                                  ],
+                                typeof(BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ReserveSize" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                                e[24] = Constant((int)17)),
+                              e[25] = Condition(
+                                e[26] = Call(
+                                  e[27] = MakeBinary(ExpressionType.ArrayIndex,
+                                    p[2 // (Nullable<Decimal>[] source)
+                                      ],
+                                    p[3 // (int i0)
+                                      ]),
+                                  typeof(Nullable<Decimal>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "get_HasValue" && x.GetParameters().Length == 0)),
+                                e[28] = Block(
+                                  typeof(void),
+                                  new ParameterExpression[0],
+                                  e[1 // Default of void
+                                    ],
+                                  e[29] = Call(
+                                    p[1 // (BufferedStream stream)
+                                      ],
+                                    typeof(BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == "Write" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(byte)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(byte) })),
+                                    e[30] = Constant((byte)1)),
+                                  e[1 // Default of void
+                                    ],
+                                  e[31] = Call(
+                                    p[1 // (BufferedStream stream)
+                                      ],
+                                    typeof(BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == "Write" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(Decimal)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Decimal) })),
+                                    e[32] = Call(
+                                      e[27 // ArrayIndex of Nullable<Decimal>
+                                        ],
+                                      typeof(Nullable<Decimal>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "get_Value" && x.GetParameters().Length == 0))),
+                                  e[33] = Label(l[2] = Label(typeof(void), "finishWrite"))),
+                                e[34] = Call(
+                                  p[1 // (BufferedStream stream)
+                                    ],
+                                  typeof(BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == "Write" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(byte)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(byte) })),
+                                  e[35] = Constant((byte)0)),
+                                typeof(void))),
+                            e[36] = Label(l[3] = Label(typeof(void), "continue0")),
+                            e[37] = MakeBinary(ExpressionType.Assign,
+                              p[3 // (int i0)
+                                ],
+                              e[38] = Decrement(
+                                p[3 // (int i0)
+                                  ]))),
+                          typeof(void)),
+                        l[1]/* break0 */))),
+                  e[39] = Label(l[0]/* skipWrite */)),
+                e[40] = Label(l[4] = Label(typeof(void), "finishWrite"))),
+              p[2 // (Nullable<Decimal>[] source)
+                ],
+              p[1 // (BufferedStream stream)
+                ],
+              p[4] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"));
+
+            expr.PrintCSharpString();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var f = expr.CompileFast();
+            f.PrintIL();
         }
 
         [Test]
@@ -199,11 +344,8 @@ namespace FastExpressionCompiler.IssueTests
                 ],
               p[5] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"));
 
-              expr.PrintCSharpString();
-
-              var f = expr.CompileFast(true);
-              f.PrintIL();
-              Assert.IsNotNull(f);
+            var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
         }
 
         [Test]

@@ -1539,7 +1539,7 @@ namespace FastExpressionCompiler
                             var arrIndexExpr = (BinaryExpression)expr;
                             return TryEmit(arrIndexExpr.Left,  paramExprs, il, ref closure, parent) 
                                 && TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, parent | ParentFlags.ArrayIndex) // #265
-                                && TryEmitArrayIndex(expr.Type, il, parent);
+                                && TryEmitArrayIndex(expr.Type, il, parent, ref closure);
 
                         case ExpressionType.ArrayLength:
                             var arrLengthExpr = (UnaryExpression)expr;
@@ -1896,7 +1896,7 @@ namespace FastExpressionCompiler
                     return EmitMethodCall(il, indexerProp.DeclaringType.FindPropertyGetMethod(indexerProp.Name));
 
                 if (indexExpr.Arguments.Count == 1) // one dimensional array
-                    return TryEmitArrayIndex(indexExpr.Type, il, parent);
+                    return TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure);
 
                 // multi dimensional array
                 return EmitMethodCall(il, indexExpr.Object?.Type.FindMethod("Get"));
@@ -2986,12 +2986,17 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitArrayIndex(Type exprType, ILGenerator il, ParentFlags parent)
+            private static bool TryEmitArrayIndex(Type exprType, ILGenerator il, ParentFlags parent, ref ClosureInfo closure)
             {
-                if (exprType.IsValueType())
-                    il.Emit((parent & (ParentFlags.MemberAccess | ParentFlags.Call)) == 0 ? OpCodes.Ldelem : OpCodes.Ldelema, exprType);
-                else
+                if (!exprType.IsValueType())
                     il.Emit(OpCodes.Ldelem_Ref);
+                else if ((parent & (ParentFlags.MemberAccess | ParentFlags.Call)) == 0)
+                    il.Emit(OpCodes.Ldelem, exprType);
+                else
+                {
+                    il.Emit(OpCodes.Ldelema, exprType);
+                    closure.LastEmitIsAddress = true;
+                }
                 return true;
             }
 
