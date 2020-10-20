@@ -27,35 +27,35 @@ namespace FastExpressionCompiler.IssueTests
             Test_unbox_and_casted_ref_serialize();
 
 #if !NET472
-            Test_serialization_of_the_Dictionary(); // passes!
+            // Test_serialization_of_the_Dictionary(); // passes!
 #endif
 
-            Test_DictionaryTest_StringDictionary();
+            // Test_DictionaryTest_StringDictionary();
 
-            Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
+            // Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
 
-            Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
-            Test_assignment_with_the_block_on_the_right_side();
+            // Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
+            // Test_assignment_with_the_block_on_the_right_side();
 
-            // #265
-            Test_class_items_array_index_via_variable_access_then_the_member_access();
-            Test_struct_items_array_index_via_variable_access_then_the_member_access();
+            // // #265
+            // Test_class_items_array_index_via_variable_access_then_the_member_access();
+            // Test_struct_items_array_index_via_variable_access_then_the_member_access();
 
 #if LIGHT_EXPRESSION
-            FindMethodOrThrow_in_the_class_hierarchy();
+            // FindMethodOrThrow_in_the_class_hierarchy();
 
-            Test_find_generic_method_with_the_generic_param();
+            // Test_find_generic_method_with_the_generic_param();
 
-            Can_make_convert_and_compile_binary_equal_expression_of_different_types();
+            // Can_make_convert_and_compile_binary_equal_expression_of_different_types();
 
-            Test_method_to_expression_code_string();
+            // Test_method_to_expression_code_string();
 
-            Test_nested_generic_type_output();
-            Test_triple_nested_non_generic();
-            Test_triple_nested_open_generic();
-            Test_non_generic_classes();
+            // Test_nested_generic_type_output();
+            // Test_triple_nested_non_generic();
+            // Test_triple_nested_open_generic();
+            // Test_non_generic_classes();
 #else
-            Should_throw_for_the_equal_expression_of_different_types();
+            // Should_throw_for_the_equal_expression_of_different_types();
 #endif
 
 
@@ -117,6 +117,9 @@ namespace FastExpressionCompiler.IssueTests
                 ],
               p[3 // (Binary<BufferedStream, Settings_827720117> io)
                 ]);
+
+            var f = expr.CompileFast(true);
+            Assert.IsNotNull(f);
         }
 
         [Test]

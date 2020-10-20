@@ -2274,7 +2274,7 @@ namespace FastExpressionCompiler
             {
                 var exprType = expr.Type;
 
-                // todo: support decimal here
+                // todo: @feature support decimal here
                 if (exprType == typeof(decimal))
                     return false;
 

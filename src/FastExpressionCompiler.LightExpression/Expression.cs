@@ -1976,6 +1976,10 @@ namespace FastExpressionCompiler.LightExpression
                     sb.Append("trow ");
                     return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(';');
 
+                case ExpressionType.Unbox: // output it as the cast 
+                    sb.Append("((").Append(Type.ToCode(stripNamespace, printType)).Append(')');
+                    return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(')');
+
                 default:
                     return sb.Append(ToString()); // falling back ro ToString as a closest to C# code output 
             }
