@@ -72,6 +72,133 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Serialize_the_nullable_struct()
+        {
+            var p = new ParameterExpression[6]; // the parameter expressions 
+            var e = new Expression[38]; // the unique expressions 
+            var l = new LabelTarget[2]; // the labels 
+            var expr = Lambda( // $
+              typeof(ReadMethods<Nullable<ArrayTests.Test2>[], BufferedStream, Settings_827720117>.ReadSealed),
+              e[0] = Block(
+                typeof(Nullable<ArrayTests.Test2>[]),
+                new[] {
+                  p[0]=Parameter(typeof(Nullable<ArrayTests.Test2>[]), "result")
+                },
+                e[1] = Empty(),
+                e[2] = Block(
+                  typeof(void),
+                  new[] {
+                    p[1]=Parameter(typeof(int), "length0")
+                  },
+                  e[3] = Call(
+                    p[2] = Parameter(typeof(BufferedStream).MakeByRefType(), "stream"),
+                    typeof(BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ReserveSize" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                    e[4] = Constant((int)4)),
+                  e[5] = MakeBinary(ExpressionType.Assign,
+                    p[1 // (int length0)
+                      ],
+                    e[6] = Call(
+                      p[2 // (BufferedStream stream)
+                        ],
+                      typeof(BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == "Read" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x).Single())),
+                  e[7] = MakeBinary(ExpressionType.Assign,
+                    p[0 // (Nullable<ArrayTests.Test2>[] result)
+                      ],
+                    e[8] = NewArrayBounds(
+                      typeof(Nullable<ArrayTests.Test2>),
+                      p[1 // (int length0)
+                        ])),
+                  e[9] = Block(
+                    typeof(void),
+                    new[] {
+        p[3]=Parameter(typeof(int), "index0")
+                    },
+                    e[10] = Block(
+                      typeof(void),
+                      new ParameterExpression[0],
+                      e[11] = MakeBinary(ExpressionType.Assign,
+                        p[3 // (int index0)
+                          ],
+                        e[12] = MakeBinary(ExpressionType.Subtract,
+                          p[1 // (int length0)
+                            ],
+                          e[13] = Constant((int)1))),
+                      e[14] = Loop(
+                        e[15] = Condition(
+                          e[16] = MakeBinary(ExpressionType.LessThan,
+                            p[3 // (int index0)
+                              ],
+                            e[17] = Constant((int)0)),
+                          e[18] = MakeGoto(GotoExpressionKind.Break,
+                            l[0] = Label(typeof(void)),
+                            null,
+                            typeof(void)),
+                          e[19] = Block(
+                            typeof(int),
+                            new ParameterExpression[0],
+                            e[20] = Block(
+                              typeof(Nullable<ArrayTests.Test2>),
+                              new ParameterExpression[0],
+                              e[21] = Call(
+                                p[2 // (BufferedStream stream)
+                                  ],
+                                typeof(BufferedStream).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ReserveSize" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                                e[22] = Constant((int)5)),
+                              e[23] = MakeBinary(ExpressionType.Assign,
+                                e[24] = ArrayAccess(
+                                  p[0 // (Nullable<ArrayTests.Test2>[] result)
+                                    ], new Expression[] {
+                      p[3 // (int index0)
+                        ]}),
+                                e[25] = Block(
+                                  typeof(Nullable<ArrayTests.Test2>),
+                                  new ParameterExpression[0],
+                                  e[1 // Default of void
+                                    ],
+                                  e[26] = Condition(
+                                    e[27] = MakeBinary(ExpressionType.Equal,
+                                      e[28] = Call(
+                                        p[2 // (BufferedStream stream)
+                                          ],
+                                        typeof(BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == "Read" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(byte)) : x).Single()),
+                                      e[29] = Constant((byte)0)),
+                                    e[30] = Default(typeof(Nullable<ArrayTests.Test2>)),
+                                    e[31] = Convert(
+                                      e[32] = Block(
+                                        typeof(ArrayTests.Test2),
+                                        new[] {
+                            p[4]=Parameter(typeof(ArrayTests.Test2), "tempResult")
+                                        },
+                                        e[1 // Default of void
+                                          ],
+                                        e[33] = MakeBinary(ExpressionType.Assign,
+                                          p[4 // (ArrayTests.Test2 tempResult)
+                                            ],
+                                          e[34] = Call(
+                                            p[2 // (BufferedStream stream)
+                                              ],
+                                            typeof(BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == "Read" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(ArrayTests.Test2)) : x).Single())),
+                                        p[4 // (ArrayTests.Test2 tempResult)
+                                          ]),
+                                      typeof(Nullable<ArrayTests.Test2>)),
+                                    typeof(Nullable<ArrayTests.Test2>))))),
+                            e[35] = Label(l[1] = Label(typeof(void), "continue0")),
+                            e[36] = MakeBinary(ExpressionType.Assign,
+                              p[3 // (int index0)
+                                ],
+                              e[37] = Decrement(
+                                p[3 // (int index0)
+                                  ]))),
+                          typeof(void)),
+                        l[0]/* void__17068465 */)))),
+                p[0 // (Nullable<ArrayTests.Test2>[] result)
+                  ]),
+              p[2 // (BufferedStream stream)
+                ],
+              p[5] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"));
+        }
+
+        [Test]
         public void Test_unbox_type_int_and_casted_ref_serialize()
         {
             var p = new ParameterExpression[4]; // the parameter expressions 
@@ -1061,6 +1188,14 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
+        public class ArrayTests
+        {
+            public struct Test2
+            {
+                public int Value;
+            }
+        }
+
         internal class Settings_827720117 { }
 
         internal static class ReadMethods<T, TStream, TSettingGen>
@@ -1175,34 +1310,34 @@ namespace FastExpressionCompiler.IssueTests
                 return false;
             }
 
-          internal void WriteSealedInternal<T>(T value, bool useSerializedVersionId)
-          {
-              // _stream.ReserveSize(5);
-              // if (ReferenceEquals(value, null))
-              // {
-              //     _stream.Write((byte)0);
-              //     return;
-              // }
-              // else
-              // {
-              //     _stream.Write((byte)1);
-              // }
+            internal void WriteSealedInternal<T>(T value, bool useSerializedVersionId)
+            {
+                // _stream.ReserveSize(5);
+                // if (ReferenceEquals(value, null))
+                // {
+                //     _stream.Write((byte)0);
+                //     return;
+                // }
+                // else
+                // {
+                //     _stream.Write((byte)1);
+                // }
 
-              // if(useSerializedVersionId)
-              // {
-              //     var id = GetSerializedVersionUniqueId<T>();
-              //     _stream.Write(id);
-              // }
-              // ref var method = ref WriteMethods<T, TStream, TSettingGen>.Method;
-              // if (method == null)
-              // {
-              //     CheckTypes(value!);
+                // if(useSerializedVersionId)
+                // {
+                //     var id = GetSerializedVersionUniqueId<T>();
+                //     _stream.Write(id);
+                // }
+                // ref var method = ref WriteMethods<T, TStream, TSettingGen>.Method;
+                // if (method == null)
+                // {
+                //     CheckTypes(value!);
 
-              //     method = DynamicCode<TStream, Binary<TStream, TSettingGen>>.GenerateWriteMethod<WriteMethods<T, TStream, TSettingGen>.WriteSealed>(value!.GetType(), Settings, false, false);
-              // }
+                //     method = DynamicCode<TStream, Binary<TStream, TSettingGen>>.GenerateWriteMethod<WriteMethods<T, TStream, TSettingGen>.WriteSealed>(value!.GetType(), Settings, false, false);
+                // }
 
-              // method(value, ref _stream, this);
-          }
+                // method(value, ref _stream, this);
+            }
         }
 
         public interface IBinary : IDisposable
