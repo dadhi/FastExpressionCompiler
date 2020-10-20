@@ -47,6 +47,8 @@ namespace FastExpressionCompiler.IssueTests
             Type_as_nullable_decimal();
             Type_as_nullable_decimal_passing_the_null();
             Negate_decimal();
+            Increment_decimal();
+            Decrement_decimal();
 
 #if !LIGHT_EXPRESSION
             linq2db_Expression();
@@ -71,9 +73,9 @@ namespace FastExpressionCompiler.IssueTests
             TestConverterFailure();
             TestConverterNullable();
             TestLdArg();
-            return 47;
+            return 49;
 #else
-            return 25;
+            return 27;
 #endif
         }
 
@@ -1403,6 +1405,32 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = expr.CompileFast(true);
             Assert.AreEqual(-2m, f(2m));
+        }
+
+        [Test]
+        public void Increment_decimal()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal>>(
+                Increment(Unbox(decObj, typeof(decimal))),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual(3m, f(2m));
+        }
+
+        [Test]
+        public void Decrement_decimal()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal>>(
+                Decrement(Unbox(decObj, typeof(decimal))),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual(1m, f(2m));
         }
     }
 }

@@ -2296,15 +2296,37 @@ namespace FastExpressionCompiler
                 }
                 else if (expr.NodeType == ExpressionType.Increment)
                 {
-                    if (!TryEmitNumberOne(il, exprType))
-                        return false;
-                    il.Emit(OpCodes.Add);
+                    var typeInfo = exprType.GetTypeInfo();
+                    if (typeInfo.IsPrimitive)
+                    {
+                        if (!TryEmitNumberOne(il, exprType))
+                            return false;
+                        il.Emit(OpCodes.Add);
+                    }
+                    else 
+                    {
+                        var method = typeInfo.GetDeclaredMethod("op_Increment");
+                        if (method == null)
+                            return false;
+                        il.Emit(OpCodes.Call, method);
+                    }
                 }
                 else if (expr.NodeType == ExpressionType.Decrement)
                 {
-                    if (!TryEmitNumberOne(il, exprType))
-                        return false;
-                    il.Emit(OpCodes.Sub);
+                    var typeInfo = exprType.GetTypeInfo();
+                    if (typeInfo.IsPrimitive)
+                    {
+                        if (!TryEmitNumberOne(il, exprType))
+                            return false;
+                        il.Emit(OpCodes.Sub);
+                    }
+                    else 
+                    {
+                        var method = typeInfo.GetDeclaredMethod("op_Decrement");
+                        if (method == null)
+                            return false;
+                        il.Emit(OpCodes.Call, method);
+                    }
                 }
                 else if (expr.NodeType == ExpressionType.Negate || expr.NodeType == ExpressionType.NegateChecked)
                 {
@@ -2313,10 +2335,10 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Neg);
                     else 
                     {
-                        var negMethod = typeInfo.GetDeclaredMethod("op_UnaryNegation");
-                        if (negMethod == null)
+                        var method = typeInfo.GetDeclaredMethod("op_UnaryNegation");
+                        if (method == null)
                             return false;
-                        il.Emit(OpCodes.Call, negMethod);
+                        il.Emit(OpCodes.Call, method);
                     }
                 }
                 else if (expr.NodeType == ExpressionType.OnesComplement)
