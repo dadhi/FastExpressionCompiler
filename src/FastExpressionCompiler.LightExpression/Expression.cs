@@ -2266,10 +2266,10 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType { get; }
         public override Type Type => Left.Type;
-
         internal AssignBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
             NodeType = nodeType;
 
+        // todo: @incomplete handle the right part is condition with the blocks for If and/or Else, e.g. see #261 test `Serialize_the_nullable_struct_array` 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
@@ -3397,7 +3397,7 @@ namespace FastExpressionCompiler.LightExpression
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            if (Type == typeof(void))
+            if (Type == typeof(void)) // otherwise output as ternary expression
             {
                 sb.NewLine(lineIdent, identSpaces);
                 sb.Append("if (");

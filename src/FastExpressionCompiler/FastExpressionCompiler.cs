@@ -4044,7 +4044,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                if ((parent & ParentFlags.IgnoreResult) > 0)
+                if ((parent & ParentFlags.IgnoreResult) != 0)
                     il.Emit(OpCodes.Pop);
 
                 return true;
@@ -4323,9 +4323,11 @@ namespace FastExpressionCompiler
                 {
                     if (b.NodeType == ExpressionType.Equal || b.NodeType == ExpressionType.NotEqual)
                     {
+                        object constVal = null;
                         if (b.Right is ConstantExpression rc)
                         {
-                            if (rc.Value == null)
+                            constVal = rc.Value;
+                            if (constVal == null)
                             {
                                 useBrFalseOrTrue = 0;
                                 // The null comparison for the nullable is actually a `nullable.HasValue` check,
@@ -4333,11 +4335,11 @@ namespace FastExpressionCompiler
                                 if (b.Left.Type.IsNullable())
                                     parent |= ParentFlags.MemberAccess;
                             }
-                            else if (rc.Value is bool rcb)
+                            else if (constVal is bool rcb)
                             {
                                 useBrFalseOrTrue = rcb ? 1 : 0;
                             }
-                            else if (rc.Value is int n && n == 0) 
+                            else if (constVal is int n && n == 0 || constVal is byte bn && bn == 0) 
                             {
                                 useBrFalseOrTrue = 0;
                             }
@@ -4348,17 +4350,18 @@ namespace FastExpressionCompiler
                         }
                         else if (b.Left is ConstantExpression lc)
                         {
-                            if (lc.Value == null) 
+                            constVal = lc.Value;
+                            if (constVal == null) 
                             {
                                 useBrFalseOrTrue = 0;
                                 if (b.Right.Type.IsNullable())
                                     parent |= ParentFlags.MemberAccess;
                             }
-                            else if (lc.Value is bool lcb)
+                            else if (constVal is bool lcb)
                             {
                                 useBrFalseOrTrue = lcb ? 1 : 0;
                             }
-                            else if (lc.Value is int n && n == 0)
+                            else if (constVal is int n && n == 0 || constVal is byte bn && bn == 0) 
                             {
                                 useBrFalseOrTrue = 0;
                             }
