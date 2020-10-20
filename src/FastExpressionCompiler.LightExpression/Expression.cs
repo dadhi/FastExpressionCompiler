@@ -1596,12 +1596,12 @@ namespace FastExpressionCompiler.LightExpression
             if (mp.Length == 0) 
             {
                 sb.Append("x.GetParameters().Length == 0 && x.GetGenericArguments().Length == ").Append(tp.Length);
-                sb.Append(").Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(").AppendTypeofList(tp);
+                sb.Append(").Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(").AppendTypeofList(tp, stripNamespace, printType);
                 return sb.Append(") : x).Single()");
             }
 
             sb.Append("x.GetGenericArguments().Length == ").Append(tp.Length);
-            sb.Append(").Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(").AppendTypeofList(tp);
+            sb.Append(").Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(").AppendTypeofList(tp, stripNamespace, printType);
             sb.Append(") : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { ");
             sb.AppendTypeofList(mp.Select(x => x.ParameterType).ToArray(), stripNamespace, printType);
             return sb.Append(" }))");
@@ -3066,7 +3066,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.MemberAccess;
         public readonly MemberInfo Member;
-
         public virtual Expression Expression => null;
 
         protected MemberExpression(MemberInfo member) => Member = member;
@@ -3081,7 +3080,19 @@ namespace FastExpressionCompiler.LightExpression
             else
                 sb.NewLineIdent(lineIdent).Append(Member.DeclaringType.ToCode(stripNamespace, printType));
 
-            return sb.Append('.').Append(Member.Name);
+            var name = Member.Name;
+            if (Member is FieldInfo fi && Member.DeclaringType.IsValueType())
+            {
+                // btw, `IsSpecialName` returns `false` :/
+                if (name[0] == '<') // a backing field for the properties in struct, e.g. <Key>k__BackingField
+                {
+                    var end = name.IndexOf('>');
+                    if (end > 1)
+                        name = name.Substring(1, end - 1);
+                }
+            }
+
+            return sb.Append('.').Append(name);
         }
     }
 
