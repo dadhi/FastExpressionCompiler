@@ -2866,7 +2866,6 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType { get; }
         public override Type Type { get; }
         public readonly IReadOnlyList<Expression> Expressions;
-
         internal NewArrayExpression(ExpressionType expressionType, Type arrayType, IReadOnlyList<Expression> elements)
         {
             NodeType    = expressionType;

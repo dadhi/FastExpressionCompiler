@@ -275,10 +275,62 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual Expression VisitNew(NewExpression node)
         {
-            var arguments = Visit(node.Arguments);
-            if (ReferenceEquals(arguments, node.Arguments))
+            var fewArgCount = node.FewArgumentCount;
+            if (fewArgCount == 0)
                 return node;
-            return Expression.New(node.Constructor, arguments);
+
+            if (fewArgCount == 1)
+            {
+                var arg = ((OneArgumentNewExpression)node).Argument;
+                var newArg = Visit(arg);
+                return newArg == arg ? node : Expression.New(node.Constructor, newArg);
+            }
+
+            if (fewArgCount == 2)
+            {
+                var n = (TwoArgumentsNewExpression)node;
+                var newArg0 = Visit(n.Argument0);
+                var newArg1 = Visit(n.Argument1);
+                return newArg0 == n.Argument0 && newArg1 == n.Argument1 ? node :
+                    Expression.New(node.Constructor, newArg0, newArg1);
+            }
+
+            if (fewArgCount == 3)
+            {
+                var n = (ThreeArgumentsNewExpression)node;
+                var newArg0 = Visit(n.Argument0);
+                var newArg1 = Visit(n.Argument1);
+                var newArg2 = Visit(n.Argument2);
+                return newArg0 == n.Argument0 && newArg1 == n.Argument1 && newArg2 == n.Argument2 ? node :
+                    Expression.New(node.Constructor, newArg0, newArg1, newArg2);
+            }
+
+            if (fewArgCount == 4)
+            {
+                var n = (FourArgumentsNewExpression)node;
+                var newArg0 = Visit(n.Argument0);
+                var newArg1 = Visit(n.Argument1);
+                var newArg2 = Visit(n.Argument2);
+                var newArg3 = Visit(n.Argument3);
+                return newArg0 == n.Argument0 && newArg1 == n.Argument1 && newArg2 == n.Argument2 && newArg3 == n.Argument3 ? node :
+                    Expression.New(node.Constructor, newArg0, newArg1, newArg2, newArg3);
+            }
+
+            if (fewArgCount == 5)
+            {
+                var n = (FiveArgumentsNewExpression)node;
+                var newArg0 = Visit(n.Argument0);
+                var newArg1 = Visit(n.Argument1);
+                var newArg2 = Visit(n.Argument2);
+                var newArg3 = Visit(n.Argument3);
+                var newArg4 = Visit(n.Argument4);
+                return newArg0 == n.Argument0 && newArg1 == n.Argument1 && newArg2 == n.Argument2 && newArg3 == n.Argument3 && newArg4 == n.Argument4 ? node :
+                    Expression.New(node.Constructor, newArg0, newArg1, newArg2, newArg3, newArg4);
+            }
+
+            var arguments = Visit(node.Arguments);
+            return ReferenceEquals(arguments, node.Arguments) ? node :
+                Expression.New(node.Constructor, node.Arguments);
         }
 
         protected internal virtual Expression VisitParameter(ParameterExpression node) => node;
