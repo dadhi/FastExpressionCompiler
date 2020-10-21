@@ -75,7 +75,7 @@ namespace FastExpressionCompiler.LightExpression
         public T VisitAndConvert<T>(T node) where T : Expression
         {
             if (node == null)
-                return default;
+                return null;
             var x = Visit(node);
             if (x is T converted)
                 return converted;
@@ -85,10 +85,11 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitBinary(BinaryExpression node)
         {
             var left = Visit(node.Left); 
+            var conversion = VisitAndConvert(node.Conversion);
             var right = Visit(node.Right);
-            if (node.Left == left && node.Right == right)
+            if (node.Left == left && node.Conversion == conversion && node.Right == right)
                 return node;
-            return Expression.MakeBinary(node.NodeType, left, right);
+            return Expression.MakeBinary(node.NodeType, left, right, conversion);
         }
 
         protected internal virtual Expression VisitBlock(BlockExpression node)

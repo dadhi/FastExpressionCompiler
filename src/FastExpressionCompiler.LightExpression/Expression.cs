@@ -1086,7 +1086,7 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         /// <summary>Creates a <see cref="BinaryExpression" />, given the left and right operands, by calling an appropriate factory method.</summary>
-        public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right)
+        public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, LambdaExpression conversion = null)
         {
             switch (binaryType)
             {
@@ -1112,7 +1112,7 @@ namespace FastExpressionCompiler.LightExpression
                 case ExpressionType.NotEqual: return NotEqual(left, right);
                 
                 case ExpressionType.ExclusiveOr: return ExclusiveOr(left, right);
-                case ExpressionType.Coalesce: return Coalesce(left, right);
+                case ExpressionType.Coalesce: return Coalesce(left, right, conversion);
                 case ExpressionType.ArrayIndex: return ArrayIndex(left, right);
                 case ExpressionType.RightShift: return RightShift(left, right);
                 case ExpressionType.LeftShift: return LeftShift(left, right);
@@ -2280,7 +2280,7 @@ namespace FastExpressionCompiler.LightExpression
     // todo: @perf optimize (split) for the left or right target type
     internal class CoalesceBinaryExpression : BinaryExpression
     {
-        public override ExpressionType NodeType => ExpressionType.Coalesce;
+        public sealed override ExpressionType NodeType => ExpressionType.Coalesce;
         public override Type Type { get; }
         internal CoalesceBinaryExpression(Expression left, Expression right, Type type) : base(left, right) =>
             Type = type;
