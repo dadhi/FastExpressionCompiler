@@ -161,13 +161,10 @@ namespace FastExpressionCompiler.LightExpression
             return result;
         }
 
-        public static ParameterExpression Parameter(Type type, string name = null)
-        {
-            var isByRef = type.IsByRef;
-            return isByRef
+        public static ParameterExpression Parameter(Type type, string name = null) =>
+            type.IsByRef
                 ? new ByRefParameterExpression(type.GetElementType(), name)
                 : new ParameterExpression(type, name);
-        }
 
         public static ParameterExpression Variable(Type type, string name = null) =>
             new ParameterExpression(type, name);
@@ -396,7 +393,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public static MemberExpression PropertyOrField(Expression expression, string memberName) =>
             expression.Type.FindProperty(memberName) != null
-                ? (MemberExpression)Property(expression, expression.Type.FindProperty(memberName)
+                ? Property(expression, expression.Type.FindProperty(memberName)
                     ?? throw new ArgumentException($"Declared property with the name '{memberName}' is not found in '{expression.Type}'", nameof(memberName)))
                 : Field(expression, expression.Type.FindField(memberName)
                     ?? throw new ArgumentException($"Declared field with the name '{memberName}' is not found '{expression.Type}'", nameof(memberName)));
@@ -699,69 +696,68 @@ namespace FastExpressionCompiler.LightExpression
             new NewArrayExpression(ExpressionType.NewArrayBounds, type.MakeArrayType(), new[] { bound });
 
         public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
-            MakeArrayBounds(type, (IReadOnlyList<Expression>)bounds);
+            MakeArrayBounds(type, bounds);
 
         public static NewArrayExpression NewArrayBounds(Type type, IEnumerable<Expression> bounds) =>
             MakeArrayBounds(type, bounds.AsReadOnlyList());
 
         /// <summary>Creates a BinaryExpression that represents an assignment operation.</summary>
-        public static BinaryExpression Assign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.Assign, left, right);
+        public static BinaryExpression Assign(Expression left, Expression right) => new AssignBinaryExpression(left, right);
 
         /// <summary>Creates a BinaryExpression that represents raising an expression to a power and assigning the result back to the expression.</summary>
         public static BinaryExpression PowerAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.PowerAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.PowerAssign, left, right);
 
         /// <summary>Creates a BinaryExpression that represents an addition assignment operation that does not have overflow checking.</summary>
         public static BinaryExpression AddAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.AddAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.AddAssign, left, right);
 
         /// <summary>Creates a BinaryExpression that represents an addition assignment operation that has overflow checking.</summary>
         public static BinaryExpression AddAssignChecked(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.AddAssignChecked, left, right);
+            new OpAssignBinaryExpression(ExpressionType.AddAssignChecked, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a bitwise AND assignment operation.</summary>
         public static BinaryExpression AndAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.AndAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.AndAssign, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a bitwise OR assignment operation.</summary>
         public static BinaryExpression OrAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.OrAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.OrAssign, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a bitwise XOR assignment operation.</summary>
         public static BinaryExpression ExclusiveOrAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.ExclusiveOrAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.ExclusiveOrAssign, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a bitwise right-shift assignment operation.</summary>
         public static BinaryExpression RightShiftAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.RightShiftAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.RightShiftAssign, left, right);
 
         public static BinaryExpression LeftShiftAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.LeftShiftAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.LeftShiftAssign, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a remainder assignment operation.</summary>
         public static BinaryExpression ModuloAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.ModuloAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.ModuloAssign, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a subtraction assignment operation that does not have overflow checking.</summary>
         public static BinaryExpression SubtractAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.SubtractAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.SubtractAssign, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a subtraction assignment operation that has overflow checking.</summary>
         public static BinaryExpression SubtractAssignChecked(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.SubtractAssignChecked, left, right);
+            new OpAssignBinaryExpression(ExpressionType.SubtractAssignChecked, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a multiplication assignment operation that does not have overflow checking.</summary>
         public static BinaryExpression MultiplyAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.MultiplyAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.MultiplyAssign, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a multiplication assignment operation that has overflow checking.</summary>
         public static BinaryExpression MultiplyAssignChecked(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.MultiplyAssignChecked, left, right);
+            new OpAssignBinaryExpression(ExpressionType.MultiplyAssignChecked, left, right);
 
         /// <summary>Creates a BinaryExpression that represents a division assignment operation that does not have overflow checking.</summary>
         public static BinaryExpression DivideAssign(Expression left, Expression right) =>
-            new AssignBinaryExpression(ExpressionType.DivideAssign, left, right);
+            new OpAssignBinaryExpression(ExpressionType.DivideAssign, left, right);
 
         public static ElementInit ElementInit(MethodInfo addMethod, params Expression[] arguments) =>
             new ElementInit(addMethod, arguments);
@@ -937,24 +933,11 @@ namespace FastExpressionCompiler.LightExpression
             int startLine, int startColumn, int endLine, int endColumn) =>
             new DebugInfoExpression(doc, startLine, startColumn, endLine, endColumn);
 
-        /// <summary>
-        /// Creates a LoopExpression with the given body and (optional) break target.
-        /// </summary>
-        /// <param name="body">The body of the loop.</param>
-        /// <param name="break">The break target used by the loop body, if required.</param>
-        /// <returns>The created LoopExpression.</returns>
+        /// <summary>Creates a LoopExpression with the given body and (optional) break target.</summary>
         public static LoopExpression Loop(Expression body, LabelTarget @break = null) =>
-            @break == null 
-            ? new LoopExpression(body, null, null) 
-            : new LoopExpression(body, @break, null);
+            new LoopExpression(body, @break, null);
 
-        /// <summary>
-        /// Creates a LoopExpression with the given body.
-        /// </summary>
-        /// <param name="body">The body of the loop.</param>
-        /// <param name="break">The break target used by the loop body.</param>
-        /// <param name="continue">The continue target used by the loop body.</param>
-        /// <returns>The created LoopExpression.</returns>
+        /// <summary>Creates a LoopExpression with the given body.</summary>
         public static LoopExpression Loop(Expression body, LabelTarget @break, LabelTarget @continue) =>
             new LoopExpression(body, @break, @continue);
 
@@ -2262,24 +2245,23 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class AssignBinaryExpression : BinaryExpression
+    public class AssignBinaryExpression : BinaryExpression
     {
-        public override ExpressionType NodeType { get; }
-        public override Type Type => Left.Type;
-        internal AssignBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
-            NodeType = nodeType;
+        public override ExpressionType NodeType => ExpressionType.Assign;
+        public sealed override Type Type => Left.Type;
+        internal AssignBinaryExpression(Expression left, Expression right) : base(left, right) {}
 
         // todo: @incomplete handle the right part is condition with the blocks for If and/or Else, e.g. see #261 test `Serialize_the_nullable_struct_array` 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-             if (Right is BlockExpression rightBlock) // it is valid to assign the block and it is used to my surprise
+            if (Right is BlockExpression rightBlock) // it is valid to assign the block and it is used to my surprise
             {
-                sb.Append("// { The block result will be assigned to `")
-                    .Append(Left.ToCSharpString(new StringBuilder(), lineIdent, stripNamespace, printType, identSpaces))
-                    .Append('`');
-                rightBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, false, blockResultAssignment: this);
-                return sb.NewLineIdent(lineIdent).Append("// } end of block assignment");
+               sb.Append("// { The block result will be assigned to `")
+                   .Append(Left.ToCSharpString(new StringBuilder(), lineIdent, stripNamespace, printType, identSpaces))
+                   .Append('`');
+               rightBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, false, blockResultAssignment: this);
+               return sb.NewLineIdent(lineIdent).Append("// } end of block assignment");
             }
 
             Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
@@ -2315,6 +2297,12 @@ namespace FastExpressionCompiler.LightExpression
                 default: return null;
             }
         }
+    }
+
+    public sealed class OpAssignBinaryExpression : AssignBinaryExpression
+    {
+        public override ExpressionType NodeType { get; }
+        internal OpAssignBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
     }
 
     public sealed class ElementInit
@@ -2483,6 +2471,7 @@ namespace FastExpressionCompiler.LightExpression
         internal ByRefParameterExpression(Type type, string name) : base(type, name) { }
     }
 
+    // todo: @perf optimize memory for the known primitive type parameter
     public class ParameterExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Parameter;
@@ -2779,11 +2768,11 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override IReadOnlyList<Expression> Arguments { get; }
         public override int FewArgumentCount => -1;
-
         internal ManyArgumentsNewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : base(constructor) =>
             Arguments = arguments;
     }
 
+    // todo: @perf save memory - split for ArrayInit and ArrayBounds classes
     public sealed class NewArrayExpression : Expression
     {
         public override ExpressionType NodeType { get; }
@@ -2844,8 +2833,7 @@ namespace FastExpressionCompiler.LightExpression
         public virtual int FewArgumentCount => 0;
         public readonly MethodInfo Method;
 
-        internal MethodCallExpression(MethodInfo method) => 
-            Method = method;
+        internal MethodCallExpression(MethodInfo method) => Method = method;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMethodCall(this);
 
@@ -3072,10 +3060,9 @@ namespace FastExpressionCompiler.LightExpression
 
     public abstract class MemberExpression : Expression
     {
-        public override ExpressionType NodeType => ExpressionType.MemberAccess;
+        public sealed override ExpressionType NodeType => ExpressionType.MemberAccess;
         public readonly MemberInfo Member;
         public virtual Expression Expression => null;
-
         protected MemberExpression(MemberInfo member) => Member = member;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMember(this);

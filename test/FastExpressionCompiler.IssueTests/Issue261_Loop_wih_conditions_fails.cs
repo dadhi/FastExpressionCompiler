@@ -592,8 +592,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
 #if !NET472
-        [Test]
-        public void Test_serialization_of_the_Dictionary()
+        public static LambdaExpression CreateSerializeDictionaryExpression() 
         {
             var entryType = typeof(System.Collections.Generic.Dictionary<string, string>)
               .GetNestedTypes(BindingFlags.NonPublic).Single(t => t.Name == "Entry")
@@ -950,6 +949,14 @@ namespace FastExpressionCompiler.IssueTests
                 ],
               p[4 // (Binary<BufferedStream, Settings_827720117> io)
                 ]);
+
+            return expr;
+        }
+
+        [Test]
+        public void Test_serialization_of_the_Dictionary()
+        {
+            var expr = CreateSerializeDictionaryExpression();
 
             expr.PrintCSharpString();
 

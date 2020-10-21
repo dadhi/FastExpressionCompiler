@@ -54,7 +54,7 @@ namespace FastExpressionCompiler.Benchmarks
             //public object ExprInfo_CompileFast() => ExprInfo.CompileFast();
         }
 
-        [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true)]
+        [MemoryDiagnoser, DisassemblyDiagnoser()]
         public class Invocation
         {
             private static Func<string, int> _compiled = Expr.Compile();

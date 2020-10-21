@@ -13,7 +13,7 @@ namespace FastExpressionCompiler.Benchmarks
 | ExprCompileFast_WithoutClosure | 1.789 ns | 0.0050 ns | 0.0047 ns |  0.50 |     - |     - |     - |         - |
      */
 
-    [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true, recursiveDepth: 2)]
+    [MemoryDiagnoser, DisassemblyDiagnoser()]
     public class SimpleExpr_ParamPlusParam
     {
         private static Expression<Func<int, int, int>> CreateSumExpr()

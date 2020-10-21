@@ -3793,9 +3793,6 @@ namespace FastExpressionCompiler
                 var lambda = expr.Expression;
                 var useResult = parent & ~ParentFlags.IgnoreResult;
 
-                // if (lambda is ConstantExpression cl) {
-                //     // todo: @perf call directly
-                // }
                 if (!TryEmit(lambda, paramExprs, il, ref closure, useResult))
                     return false;
 

@@ -203,10 +203,66 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitMethodCall(MethodCallExpression node)
         {
             var instance = Visit(node.Object);
+            var instanceUnchanged = instance == node.Object;
+            var fewArgCount = node.FewArgumentCount;
+            if (fewArgCount == 0)
+                return instanceUnchanged ? node : Expression.Call(instance, node.Method);
+
+            if (fewArgCount == 1)
+            {
+                var arg = ((OneArgumentMethodCallExpression)node).Argument;
+                var newArg = Visit(arg);
+                return instanceUnchanged && newArg == arg ? node : 
+                    Expression.Call(instance, node.Method, newArg);
+            }
+
+            if (fewArgCount == 2)
+            {
+                var n = (TwoArgumentsMethodCallExpression)node;
+                var newArg0 = Visit(n.Argument0);
+                var newArg1 = Visit(n.Argument1);
+                return instanceUnchanged && newArg0 == n.Argument0 && newArg1 == n.Argument1 ? node :
+                    Expression.Call(instance, node.Method, newArg0, newArg1);
+            }
+
+            if (fewArgCount == 3)
+            {
+                var n = (ThreeArgumentsMethodCallExpression)node;
+                var newArg0 = Visit(n.Argument0);
+                var newArg1 = Visit(n.Argument1);
+                var newArg2 = Visit(n.Argument2);
+                return instanceUnchanged && newArg0 == n.Argument0 && newArg1 == n.Argument1 && newArg2 == n.Argument2 ? node :
+                    Expression.Call(instance, node.Method, newArg0, newArg1, newArg2);
+            }
+
+            if (fewArgCount == 4)
+            {
+                var n = (FourArgumentsMethodCallExpression)node;
+                var newArg0 = Visit(n.Argument0);
+                var newArg1 = Visit(n.Argument1);
+                var newArg2 = Visit(n.Argument2);
+                var newArg3 = Visit(n.Argument3);
+                return instanceUnchanged && 
+                       newArg0 == n.Argument0 && newArg1 == n.Argument1 && newArg2 == n.Argument2 && newArg3 == n.Argument3 ? node :
+                    Expression.Call(instance, node.Method, newArg0, newArg1, newArg2, newArg3);
+            }
+
+            if (fewArgCount == 5)
+            {
+                var n = (FiveArgumentsMethodCallExpression)node;
+                var newArg0 = Visit(n.Argument0);
+                var newArg1 = Visit(n.Argument1);
+                var newArg2 = Visit(n.Argument2);
+                var newArg3 = Visit(n.Argument3);
+                var newArg4 = Visit(n.Argument4);
+                return instanceUnchanged && 
+                    newArg0 == n.Argument0 && newArg1 == n.Argument1 && newArg2 == n.Argument2 && newArg3 == n.Argument3 && newArg4 == n.Argument4 ? node :
+                    Expression.Call(instance, node.Method, newArg0, newArg1, newArg2, newArg3, newArg4);
+            }
+
             var arguments = Visit(node.Arguments);
-            if (instance == node.Object && ReferenceEquals(arguments, node.Arguments))
-                return node;
-            return Expression.Call(instance, node.Method, node.Arguments);
+            return instance == node.Object && ReferenceEquals(arguments, node.Arguments) ? node :
+                Expression.Call(instance, node.Method, node.Arguments);
         }
 
         protected internal virtual Expression VisitNewArray(NewArrayExpression node)
@@ -327,7 +383,7 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual MemberMemberBinding VisitMemberMemberBinding(MemberMemberBinding node)
         {
             var bindings = VisitAndConvert(node.Bindings, b => VisitMemberBinding(b));
-            if (bindings == node.Bindings)
+            if (ReferenceEquals(bindings, node.Bindings))
                 return node;
             return new MemberMemberBinding(node.Member, bindings);
         }
@@ -335,7 +391,7 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual MemberListBinding VisitMemberListBinding(MemberListBinding node)
         {
             var newItems = VisitAndConvert(node.Initializers, x => VisitElementInit(x));
-            if (newItems == node.Initializers)
+            if (ReferenceEquals(newItems, node.Initializers))
                 return node;
             return new MemberListBinding(node.Member, newItems);
         }
