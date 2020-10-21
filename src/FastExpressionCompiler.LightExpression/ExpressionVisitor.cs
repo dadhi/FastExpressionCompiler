@@ -94,9 +94,9 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual Expression VisitBlock(BlockExpression node)
         {
-            var expressions = Visit(node.Expressions);
             var variables = VisitAndConvert(node.Variables);
-            if (ReferenceEquals(expressions, node.Expressions) && ReferenceEquals(variables, node.Variables))
+            var expressions = Visit(node.Expressions);
+            if (ReferenceEquals(variables, node.Variables) && ReferenceEquals(expressions, node.Expressions))
                 return node;
             return Expression.MakeBlock(node.Type, variables, expressions);
         }
