@@ -165,51 +165,69 @@ namespace FastExpressionCompiler.LightExpression
             type.IsEnum 
                 ? new TypedParameterExpression(type, name)
                 : !type.IsByRef 
-                    ? MakePrimitiveParameter(type, name)
+                    ? TryToMakeKnownTypeParameter(type, name)
                     : new ByRefParameterExpression(type.GetElementType(), name);
 
         /// <summary>Variable is not by-ref yet</summary>
         public static ParameterExpression Variable(Type type, string name = null) =>
             type.IsEnum 
                 ? new TypedParameterExpression(type, name)
-                : MakePrimitiveParameter(type, name);
+                : TryToMakeKnownTypeParameter(type, name);
 
         // Enum is excluded because otherwise TypeCode will return the thing for the underlying 
-        private static ParameterExpression MakePrimitiveParameter(Type type, string name = null) => 
+        private static ParameterExpression TryToMakeKnownTypeParameter(Type type, string name = null) => 
             Type.GetTypeCode(type) switch 
             {
-                TypeCode.Boolean  => new PrimitiveParameterExpression<bool>(name),
-                TypeCode.Byte     => new PrimitiveParameterExpression<byte>(name),
-                TypeCode.Char     => new PrimitiveParameterExpression<char>(name),
-                TypeCode.DateTime => new PrimitiveParameterExpression<DateTime>(name),
-                TypeCode.Decimal  => new PrimitiveParameterExpression<decimal>(name),
-                TypeCode.Double   => new PrimitiveParameterExpression<double>(name),
-                TypeCode.Int16    => new PrimitiveParameterExpression<short>(name),
-                TypeCode.Int32    => new PrimitiveParameterExpression<int>(name),
-                TypeCode.Int64    => new PrimitiveParameterExpression<long>(name),
-                TypeCode.SByte    => new PrimitiveParameterExpression<sbyte>(name),
-                TypeCode.Single   => new PrimitiveParameterExpression<float>(name),
-                TypeCode.String   => new PrimitiveParameterExpression<string>(name),
-                TypeCode.UInt16   => new PrimitiveParameterExpression<ushort>(name),
-                TypeCode.UInt32   => new PrimitiveParameterExpression<uint>(name),
-                TypeCode.UInt64   => new PrimitiveParameterExpression<ulong>(name),
-                _ => type == typeof(object) ? new ParameterExpression(name) : new TypedParameterExpression(type, name)
+                TypeCode.Boolean  => new TypedParameterExpression<bool>(name),
+                TypeCode.Byte     => new TypedParameterExpression<byte>(name),
+                TypeCode.Char     => new TypedParameterExpression<char>(name),
+                TypeCode.DateTime => new TypedParameterExpression<DateTime>(name),
+                TypeCode.Decimal  => new TypedParameterExpression<decimal>(name),
+                TypeCode.Double   => new TypedParameterExpression<double>(name),
+                TypeCode.Int16    => new TypedParameterExpression<short>(name),
+                TypeCode.Int32    => new TypedParameterExpression<int>(name),
+                TypeCode.Int64    => new TypedParameterExpression<long>(name),
+                TypeCode.SByte    => new TypedParameterExpression<sbyte>(name),
+                TypeCode.Single   => new TypedParameterExpression<float>(name),
+                TypeCode.String   => new TypedParameterExpression<string>(name),
+                TypeCode.UInt16   => new TypedParameterExpression<ushort>(name),
+                TypeCode.UInt32   => new TypedParameterExpression<uint>(name),
+                TypeCode.UInt64   => new TypedParameterExpression<ulong>(name),
+                _ => type == typeof(object) 
+                    ? new ParameterExpression(name) 
+                    : new TypedParameterExpression(type, name)
             };
 
-        public static readonly ConstantExpression NullConstant = new TypedConstantExpression(null, typeof(object));
-        public static readonly ConstantExpression FalseConstant = new ConstantExpression(false);
-        public static readonly ConstantExpression TrueConstant = new ConstantExpression(true);
-        public static readonly ConstantExpression ZeroConstant = new ConstantExpression(0);
-        public static readonly ConstantExpression MinusOneConstant = new ConstantExpression(-1);
+        public static readonly ConstantExpression NullConstant = new TypedConstantExpression<object>(null);
+        public static readonly ConstantExpression FalseConstant = new TypedConstantExpression<bool>(false);
+        public static readonly ConstantExpression TrueConstant = new TypedConstantExpression<bool>(true);
+        public static readonly ConstantExpression ZeroConstant = new TypedConstantExpression<int>(0);
+        public static readonly ConstantExpression OneConstant = new TypedConstantExpression<int>(1);
+        public static readonly ConstantExpression MinusOneConstant = new TypedConstantExpression<int>(-1);
 
         public static ConstantExpression Constant(bool value) =>
             value ? TrueConstant : FalseConstant;
 
         public static ConstantExpression Constant(int value) =>
-            value == 0  ? ZeroConstant : value == -1 ? MinusOneConstant : new TypedConstantExpression<int>(value);
+            value == 0  ? ZeroConstant :
+            value == 1  ? OneConstant :
+            value == -1 ? MinusOneConstant : 
+            new TypedConstantExpression<int>(value);
 
-        public static ConstantExpression Constant<T>(T value) =>
-            new TypedConstantExpression<T>(value);
+        public static ConstantExpression Constant<T>(T value) 
+        {
+            if (value is bool b)
+                return b ? TrueConstant : FalseConstant;
+
+            if (value is int n)
+                return 
+                    n == 0  ? ZeroConstant : 
+                    n == 1  ? OneConstant : 
+                    n == -1 ? MinusOneConstant : 
+                    new TypedConstantExpression<int>(n);
+
+            return new TypedConstantExpression<T>(value);
+        }
 
         public static ConstantExpression Constant(object value)
         {
@@ -220,13 +238,48 @@ namespace FastExpressionCompiler.LightExpression
                 return b ? TrueConstant : FalseConstant;
 
             if (value is int n)
-                return n == 0 ? ZeroConstant : n == -1 ? MinusOneConstant : new TypedConstantExpression<int>(n);
+                return 
+                    n == 0  ? ZeroConstant : 
+                    n == 1  ? OneConstant : 
+                    n == -1 ? MinusOneConstant : 
+                    new TypedConstantExpression<int>(n);
 
             return new ConstantExpression(value);
         }
 
         public static ConstantExpression Constant(object value, Type type) =>
-            new TypedConstantExpression(value, type);
+            !type.IsEnum
+                ? TryToMakeKnownTypeConstant(value, type)
+                : new TypedConstantExpression(value, type);
+
+        private static ConstantExpression TryToMakeKnownTypeConstant(object value, Type type) => 
+            Type.GetTypeCode(type) switch 
+            {
+                TypeCode.Boolean  => (bool)value ? TrueConstant : FalseConstant,
+                TypeCode.Byte     => new TypedConstantExpression<byte>(value),
+                TypeCode.Char     => new TypedConstantExpression<char>(value),
+                TypeCode.DateTime => new TypedConstantExpression<DateTime>(value),
+                TypeCode.Decimal  => new TypedConstantExpression<decimal>(value),
+                TypeCode.Double   => new TypedConstantExpression<double>(value),
+                TypeCode.Int16    => new TypedConstantExpression<short>(value),
+                TypeCode.Int32    => (int)value switch 
+                                    {
+                                        0  => ZeroConstant,
+                                        1  => OneConstant,
+                                        -1 => MinusOneConstant,
+                                        _  => new TypedConstantExpression<int>(value),
+                                    },
+                TypeCode.Int64    => new TypedConstantExpression<long>(value),
+                TypeCode.SByte    => new TypedConstantExpression<sbyte>(value),
+                TypeCode.Single   => new TypedConstantExpression<float>(value),
+                TypeCode.String   => new TypedConstantExpression<string>(value),
+                TypeCode.UInt16   => new TypedConstantExpression<ushort>(value),
+                TypeCode.UInt32   => new TypedConstantExpression<uint>(value),
+                TypeCode.UInt64   => new TypedConstantExpression<ulong>(value),
+                _ => type == typeof(object) 
+                    ? new TypedConstantExpression<object>(value) 
+                    : (ConstantExpression)new TypedConstantExpression(value, type)
+            };
 
         public static NewExpression New(Type type)
         {
@@ -2565,15 +2618,15 @@ namespace FastExpressionCompiler.LightExpression
         internal ByRefParameterExpression(Type type, string name) : base(name) => Type = type;
     }
 
-    public sealed class PrimitiveParameterExpression<T> : ParameterExpression
+    public sealed class TypedParameterExpression<T> : ParameterExpression
     {
         public override Type Type => typeof(T);
-        internal PrimitiveParameterExpression(string name) : base(name) {}
+        internal TypedParameterExpression(string name) : base(name) {}
     }
 
     public class ConstantExpression : Expression
     {
-        public override ExpressionType NodeType => ExpressionType.Constant;
+        public sealed override ExpressionType NodeType => ExpressionType.Constant;
         public override Type Type => Value.GetType();
         public readonly object Value;
         internal ConstantExpression(object value) => Value = value;
@@ -2651,7 +2704,7 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class TypedConstantExpression<T> : ConstantExpression
     {
         public override Type Type => typeof(T);
-        internal TypedConstantExpression(T value) : base(value) { }
+        internal TypedConstantExpression(object value) : base(value) { }
     }
 
     public class NewExpression : Expression
