@@ -29,9 +29,9 @@ Originally was developed as a part of [DryIoc], so check it out ;-)
 
 ## The problem
 
-[ExpressionTree] compilation is used by wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
+[ExpressionTree] compilation is used by the wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
 But `Expression.Compile()` is just slow. 
-Moreover, the compiled delegate may be slower than manually created delegate because of the [reasons](https://blogs.msdn.microsoft.com/seteplia/2017/02/01/dissecting-the-new-constraint-in-c-a-perfect-example-of-a-leaky-abstraction/):
+Moreover the compiled delegate may be slower than the manually created delegate because of the [reasons](https://blogs.msdn.microsoft.com/seteplia/2017/02/01/dissecting-the-new-constraint-in-c-a-perfect-example-of-a-leaky-abstraction/):
 
 _TL;DR;_
 > Expression.Compile creates a DynamicMethod and associates it with an anonymous assembly to run it in a sand-boxed environment. This makes it safe for a dynamic method to be emitted and executed by partially trusted code but adds some run-time overhead.
@@ -42,12 +42,12 @@ See also [a deep dive to Delegate internals](https://mattwarren.org/2017/01/25/H
 The compiled delegate may be _in some cases_ 15x times faster than the one produced by `.Compile()`.
 
 __Note:__ The actual performance may vary depending on multiple factors: 
-platform, how complex is expression, does it have a closure over the values, does it contain nested lambdas, etc.
+platform, how complex is expression, does it have a closure, does it contain nested lambdas, etc.
 
 
 ## How to install
 
-Install from [NuGet](https://www.nuget.org/packages/FastExpressionCompiler) or grab a single [FastExpressionCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) file.
+Install from the [NuGet](https://www.nuget.org/packages/FastExpressionCompiler) or grab a single [FastExpressionCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) file.
 
 
 ## Some users
@@ -58,13 +58,13 @@ Considering: [Moq], [LINQ to DB]
 
 ## How to use
 
-Add reference to _FastExpressionCompiler_ and replace call to `.Compile()` with `.CompileFast()` extension method.
+Add the `using FastExpressionCompiler;` and replace the call to the `.Compile()` with the `.CompileFast()` extension method.
 
 __Note:__ `CompileFast` has an optional parameter `bool ifFastFailedReturnNull = false` to disable fallback to `Compile`.
 
 ### Examples
 
-Hoisted lambda expression (created by compiler):
+Hoisted lambda expression (created by the C# Compiler):
 
 ```cs
 var a = new A(); var b = new B();
@@ -88,7 +88,7 @@ var getX = expr.CompileFast();
 var x = getX(new B());
 ```
 
-__Note:__ Simplify your life in C# 6+ with `using static`
+__Note:__ You may simplify Expression usage and enable faster refactoring with the C# `using static` statement:
 
 ```cs
 using static System.Linq.Expressions.Expression;
@@ -117,7 +117,7 @@ Frequency=2156255 Hz, Resolution=463.7670 ns, Timer=TSC
 
 ```
 
-### Hoisted expression with constructor and two arguments in closure
+### Hoisted expression with the constructor and two arguments in closure
 
 ```cs
 var a = new A();
@@ -142,7 +142,7 @@ Invoking compiled delegate (also comparing to the direct constructor call):
 |        CompiledLambda | 12.313 ns | 0.1124 ns | 0.1052 ns |  1.57 |    0.04 |      0.0068 |           - |           - |                32 B |
 
 
-### Hoisted expression with static method and two nested lambdas and two arguments in closure
+### Hoisted expression with the static method and two nested lambdas and two arguments in closure
 
 ```cs
 var a = new A();
