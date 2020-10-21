@@ -162,12 +162,39 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public static ParameterExpression Parameter(Type type, string name = null) =>
-            type.IsByRef
-                ? new ByRefParameterExpression(type.GetElementType(), name)
-                : new ParameterExpression(type, name);
+            type.IsEnum 
+                ? new TypedParameterExpression(type, name)
+                : !type.IsByRef 
+                    ? MakePrimitiveParameter(type, name)
+                    : new ByRefParameterExpression(type.GetElementType(), name);
 
+        /// <summary>Variable is not by-ref yet</summary>
         public static ParameterExpression Variable(Type type, string name = null) =>
-            new ParameterExpression(type, name);
+            type.IsEnum 
+                ? new TypedParameterExpression(type, name)
+                : MakePrimitiveParameter(type, name);
+
+        // Enum is excluded because otherwise TypeCode will return the thing for the underlying 
+        private static ParameterExpression MakePrimitiveParameter(Type type, string name = null) => 
+            Type.GetTypeCode(type) switch 
+            {
+                TypeCode.Boolean  => new PrimitiveParameterExpression<bool>(name),
+                TypeCode.Byte     => new PrimitiveParameterExpression<byte>(name),
+                TypeCode.Char     => new PrimitiveParameterExpression<char>(name),
+                TypeCode.DateTime => new PrimitiveParameterExpression<DateTime>(name),
+                TypeCode.Decimal  => new PrimitiveParameterExpression<decimal>(name),
+                TypeCode.Double   => new PrimitiveParameterExpression<double>(name),
+                TypeCode.Int16    => new PrimitiveParameterExpression<short>(name),
+                TypeCode.Int32    => new PrimitiveParameterExpression<int>(name),
+                TypeCode.Int64    => new PrimitiveParameterExpression<long>(name),
+                TypeCode.SByte    => new PrimitiveParameterExpression<sbyte>(name),
+                TypeCode.Single   => new PrimitiveParameterExpression<float>(name),
+                TypeCode.String   => new PrimitiveParameterExpression<string>(name),
+                TypeCode.UInt16   => new PrimitiveParameterExpression<ushort>(name),
+                TypeCode.UInt32   => new PrimitiveParameterExpression<uint>(name),
+                TypeCode.UInt64   => new PrimitiveParameterExpression<ulong>(name),
+                _ => type == typeof(object) ? new ParameterExpression(name) : new TypedParameterExpression(type, name)
+            };
 
         public static readonly ConstantExpression NullConstant = new TypedConstantExpression(null, typeof(object));
         public static readonly ConstantExpression FalseConstant = new ConstantExpression(false);
@@ -2465,24 +2492,13 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    internal sealed class ByRefParameterExpression : ParameterExpression
-    {
-        public override bool IsByRef => true;
-        internal ByRefParameterExpression(Type type, string name) : base(type, name) { }
-    }
-
-    // todo: @perf optimize memory for the known primitive type parameter
     public class ParameterExpression : Expression
     {
-        public override ExpressionType NodeType => ExpressionType.Parameter;
-        public override Type Type { get; }
-        public string Name { get; }
+        public sealed override ExpressionType NodeType => ExpressionType.Parameter;
+        public override Type Type => typeof(object);
         public virtual bool IsByRef => false;
-        internal ParameterExpression(Type type, string name)
-        {
-            Type = type;
-            Name = name;
-        }
+        public string Name { get; }
+        internal ParameterExpression(string name) => Name = name;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitParameter(this);
 
@@ -2534,6 +2550,25 @@ namespace FastExpressionCompiler.LightExpression
                 result[i] = (System.Linq.Expressions.ParameterExpression)ps[i].ToExpression(ref exprsConverted);
             return result;
         }
+    }
+
+    public sealed class TypedParameterExpression : ParameterExpression
+    {
+        public override Type Type { get; }
+        internal TypedParameterExpression(Type type, string name) : base(name) => Type = type;
+    }
+
+    internal sealed class ByRefParameterExpression : ParameterExpression
+    {
+        public override bool IsByRef => true;
+        public override Type Type { get; }
+        internal ByRefParameterExpression(Type type, string name) : base(name) => Type = type;
+    }
+
+    public sealed class PrimitiveParameterExpression<T> : ParameterExpression
+    {
+        public override Type Type => typeof(T);
+        internal PrimitiveParameterExpression(string name) : base(name) {}
     }
 
     public class ConstantExpression : Expression
