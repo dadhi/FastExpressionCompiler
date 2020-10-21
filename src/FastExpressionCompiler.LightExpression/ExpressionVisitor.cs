@@ -69,7 +69,7 @@ namespace FastExpressionCompiler.LightExpression
                     newNodes[i] = newNode;
                 }
             }
-            return (IReadOnlyList<T>)newNodes ?? nodes;
+            return newNodes ?? nodes;
         }
 
         public T VisitAndConvert<T>(T node) where T : Expression
@@ -88,9 +88,7 @@ namespace FastExpressionCompiler.LightExpression
             var right = Visit(node.Right);
             if (node.Left == left && node.Right == right)
                 return node;
-            return Expression.MakeBinary(node.NodeType, left, right
-                // , node.Type // todo: @bug
-                );
+            return Expression.MakeBinary(node.NodeType, left, right);
         }
 
         protected internal virtual Expression VisitBlock(BlockExpression node)
@@ -206,7 +204,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             var instance = Visit(node.Object);
             var arguments = Visit(node.Arguments);
-            if (instance == node.Object && arguments == null)
+            if (instance == node.Object && ReferenceEquals(arguments, node.Arguments))
                 return node;
             return Expression.Call(instance, node.Method, node.Arguments);
         }
@@ -262,11 +260,13 @@ namespace FastExpressionCompiler.LightExpression
         {
             var body = Visit(node.Body);
             
-            var handlers = node.Handlers == null || node.Handlers.Count == 0
-                ? node.Handlers
-                : VisitAndConvert(node.Handlers, VisitCatchBlock);
+            var handlers = node.Handlers?.Count > 0
+                ? VisitAndConvert(node.Handlers, VisitCatchBlock)
+                : node.Handlers;
             
-            var @finally = node.Finally != null ? Visit(node.Finally) : node.Finally;
+            var @finally = node.Finally != null 
+                ? Visit(node.Finally) 
+                : node.Finally;
 
             if (body == node.Body && ReferenceEquals(handlers, node.Handlers) && @finally == node.Finally)
                 return node;
