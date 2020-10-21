@@ -856,10 +856,21 @@ namespace FastExpressionCompiler.LightExpression
                 ? new OneArgumentInvocationExpression(expression, arg0)
                 : new TypedOneArgumentInvocationExpression(expression, arg0, expression.Type.FindDelegateInvokeMethod().ReturnType);
 
+        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression arg0) =>
+            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+                ? new OneArgumentInvocationExpression(expression, arg0)
+                : new TypedOneArgumentInvocationExpression(expression, arg0, returnType);
+
         public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
             expression is LambdaExpression
                 ? new ManyArgumentsInvocationExpression(expression, args.AsReadOnlyList())
                 : new TypedManyArgumentsInvocationExpression(expression, args.AsReadOnlyList(), expression.Type.FindDelegateInvokeMethod().ReturnType);
+
+        public static InvocationExpression Invoke(Type returnType, Expression expression, IEnumerable<Expression> args) =>
+            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+                ? new ManyArgumentsInvocationExpression(expression, args.AsReadOnlyList())
+                : new TypedManyArgumentsInvocationExpression(expression, args.AsReadOnlyList(), returnType);
+
         public static InvocationExpression Invoke(Expression lambda, params Expression[] args) =>
             Invoke(lambda, (IEnumerable<Expression>)args);
 
@@ -2709,16 +2720,13 @@ namespace FastExpressionCompiler.LightExpression
 
     public class NewExpression : Expression
     {
-        public override ExpressionType NodeType => ExpressionType.New;
+        public sealed override ExpressionType NodeType => ExpressionType.New;
         public override Type Type => Constructor.DeclaringType;
         public readonly ConstructorInfo Constructor;
         public virtual int FewArgumentCount => 0;
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
-
         internal NewExpression(ConstructorInfo constructor) => Constructor = constructor;
-
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNew(this);
-
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.New(Constructor, ToExpressions(Arguments, ref exprsConverted));
 
@@ -2780,7 +2788,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         public readonly Expression Argument0;
         public readonly Expression Argument1;
-
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
         public override int FewArgumentCount => 2;
 
@@ -2797,10 +2804,8 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Argument0;
         public readonly Expression Argument1;
         public readonly Expression Argument2;
-
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
         public override int FewArgumentCount => 3;
-
         internal ThreeArgumentsNewExpression(ConstructorInfo constructor,
             Expression argument0, Expression argument1, Expression argument2) : base(constructor)
         {
@@ -2816,10 +2821,8 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Argument1;
         public readonly Expression Argument2;
         public readonly Expression Argument3;
-
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
         public override int FewArgumentCount => 4;
-
         internal FourArgumentsNewExpression(ConstructorInfo constructor,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3) : base(constructor)
         {
@@ -2837,10 +2840,8 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Argument2;
         public readonly Expression Argument3;
         public readonly Expression Argument4;
-
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
         public override int FewArgumentCount => 5;
-
         internal FiveArgumentsNewExpression(ConstructorInfo constructor,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4) : base(constructor)
         {
@@ -2913,13 +2914,12 @@ namespace FastExpressionCompiler.LightExpression
 
     public class MethodCallExpression : Expression
     {
-        public override ExpressionType NodeType => ExpressionType.Call;
+        public sealed override ExpressionType NodeType => ExpressionType.Call;
         public override Type Type => Method.ReturnType;
         public virtual Expression Object => null;
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
         public virtual int FewArgumentCount => 0;
         public readonly MethodInfo Method;
-
         internal MethodCallExpression(MethodInfo method) => Method = method;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMethodCall(this);
@@ -3038,10 +3038,8 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
         public override int FewArgumentCount => 2;
-
         public readonly Expression Argument0;
         public readonly Expression Argument1;
-
         internal TwoArgumentsMethodCallExpression(MethodInfo method, Expression argument0, Expression argument1) : base(method)
         {
             Argument0 = argument0;
@@ -3061,11 +3059,9 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
         public override int FewArgumentCount => 3;
-
         public readonly Expression Argument0;
         public readonly Expression Argument1;
         public readonly Expression Argument2;
-
         internal ThreeArgumentsMethodCallExpression(MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2) : base(method)
         {
@@ -3088,12 +3084,10 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
         public override int FewArgumentCount => 4;
-
         public readonly Expression Argument0;
         public readonly Expression Argument1;
         public readonly Expression Argument2;
         public readonly Expression Argument3;
-
         internal FourArgumentsMethodCallExpression(MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3) : base(method)
         {
@@ -3117,13 +3111,11 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
         public override int FewArgumentCount => 5;
-
         public readonly Expression Argument0;
         public readonly Expression Argument1;
         public readonly Expression Argument2;
         public readonly Expression Argument3;
         public readonly Expression Argument4;
-
         internal FiveArgumentsMethodCallExpression(MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4)
             : base(method)
@@ -3342,11 +3334,10 @@ namespace FastExpressionCompiler.LightExpression
 
     public class InvocationExpression : Expression
     {
-        public override ExpressionType NodeType => ExpressionType.Invoke;
+        public sealed override ExpressionType NodeType => ExpressionType.Invoke;
         public override Type Type => ((LambdaExpression)Expression).ReturnType;
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
         public readonly Expression Expression;
-
         internal InvocationExpression(Expression expression) => Expression = expression;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
@@ -3381,9 +3372,7 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class TypedInvocationExpression : InvocationExpression
     {
         public override Type Type { get; }
-
-        internal TypedInvocationExpression(Expression expression, Type type)
-            : base(expression) =>
+        internal TypedInvocationExpression(Expression expression, Type type) : base(expression) =>
             Type = type;
     }
 
