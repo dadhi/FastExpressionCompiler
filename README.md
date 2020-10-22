@@ -29,7 +29,7 @@ Originally was developed as a part of [DryIoc], so check it out ;-)
 
 ## The problem
 
-[ExpressionTree] compilation is used by the wide range of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
+[ExpressionTree] compilation is used by the wide variety of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
 But `Expression.Compile()` is just slow. 
 Moreover the compiled delegate may be slower than the manually created delegate because of the [reasons](https://blogs.msdn.microsoft.com/seteplia/2017/02/01/dissecting-the-new-constraint-in-c-a-perfect-example-of-a-leaky-abstraction/):
 
@@ -38,8 +38,10 @@ _TL;DR;_
 
 See also [a deep dive to Delegate internals](https://mattwarren.org/2017/01/25/How-do-.NET-delegates-work/#different-types-of-delegates).
 
-`.CompileFast()` is __10-30x times faster__ than `.Compile()`.  
-The compiled delegate may be _in some cases_ 15x times faster than the one produced by `.Compile()`.
+## The solution
+
+The FastExpressionCompiler `.CompileFast()` extension method is __10-30x times faster__ than `.Compile()`.  
+The compiled delegate may be _in some cases_ a lot faster than the one produced by `.Compile()`.
 
 __Note:__ The actual performance may vary depending on multiple factors: 
 platform, how complex is expression, does it have a closure, does it contain nested lambdas, etc.
