@@ -7,6 +7,7 @@ using System.Linq.Expressions;
 
 namespace FastExpressionCompiler.LightExpression
 {
+    /// <summary>The order of the visiting is important</summary>
     public abstract class ExpressionVisitor
     {
         public virtual Expression Visit(Expression node) => node?.Accept(this);
@@ -94,9 +95,10 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual Expression VisitBlock(BlockExpression node)
         {
-            var variables = VisitAndConvert(node.Variables);
+            // the order of the visiting is important
             var expressions = Visit(node.Expressions);
-            if (ReferenceEquals(variables, node.Variables) && ReferenceEquals(expressions, node.Expressions))
+            var variables = VisitAndConvert(node.Variables);
+            if (ReferenceEquals(expressions, node.Expressions) && ReferenceEquals(variables, node.Variables))
                 return node;
             return Expression.MakeBlock(node.Type, variables, expressions);
         }
@@ -108,6 +110,8 @@ namespace FastExpressionCompiler.LightExpression
             var ifFalse = Visit(node.IfFalse);
             if (test == node.Test && ifTrue == node.IfTrue && ifFalse == node.IfFalse)
                 return node;
+            if (ifFalse == Expression.VoidDefault)
+                return Expression.IfThen(test, ifTrue);
             return Expression.Condition(test, ifTrue, ifFalse, node.Type);
         }
 

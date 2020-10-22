@@ -248,38 +248,35 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public static ConstantExpression Constant(object value, Type type) =>
-            !type.IsEnum
-                ? TryToMakeKnownTypeConstant(value, type)
-                : new TypedConstantExpression(value, type);
-
-        private static ConstantExpression TryToMakeKnownTypeConstant(object value, Type type) => 
-            Type.GetTypeCode(type) switch 
-            {
-                TypeCode.Boolean  => (bool)value ? TrueConstant : FalseConstant,
-                TypeCode.Byte     => new TypedConstantExpression<byte>(value),
-                TypeCode.Char     => new TypedConstantExpression<char>(value),
-                TypeCode.DateTime => new TypedConstantExpression<DateTime>(value),
-                TypeCode.Decimal  => new TypedConstantExpression<decimal>(value),
-                TypeCode.Double   => new TypedConstantExpression<double>(value),
-                TypeCode.Int16    => new TypedConstantExpression<short>(value),
-                TypeCode.Int32    => (int)value switch 
-                                    {
-                                        0  => ZeroConstant,
-                                        1  => OneConstant,
-                                        -1 => MinusOneConstant,
-                                        _  => new TypedConstantExpression<int>(value),
-                                    },
-                TypeCode.Int64    => new TypedConstantExpression<long>(value),
-                TypeCode.SByte    => new TypedConstantExpression<sbyte>(value),
-                TypeCode.Single   => new TypedConstantExpression<float>(value),
-                TypeCode.String   => new TypedConstantExpression<string>(value),
-                TypeCode.UInt16   => new TypedConstantExpression<ushort>(value),
-                TypeCode.UInt32   => new TypedConstantExpression<uint>(value),
-                TypeCode.UInt64   => new TypedConstantExpression<ulong>(value),
-                _ => type == typeof(object) 
-                    ? new TypedConstantExpression<object>(value) 
-                    : (ConstantExpression)new TypedConstantExpression(value, type)
-            };
+            type.IsEnum 
+                ? new TypedConstantExpression(value, type)
+                : Type.GetTypeCode(type) switch 
+                {
+                    TypeCode.Boolean  => (bool)value ? TrueConstant : FalseConstant,
+                    TypeCode.Byte     => new TypedConstantExpression<byte>(value),
+                    TypeCode.Char     => new TypedConstantExpression<char>(value),
+                    TypeCode.DateTime => new TypedConstantExpression<DateTime>(value),
+                    TypeCode.Decimal  => new TypedConstantExpression<decimal>(value),
+                    TypeCode.Double   => new TypedConstantExpression<double>(value),
+                    TypeCode.Int16    => new TypedConstantExpression<short>(value),
+                    TypeCode.Int32    => (int)value switch 
+                                        {
+                                            0  => ZeroConstant,
+                                            1  => OneConstant,
+                                            -1 => MinusOneConstant,
+                                            _  => new TypedConstantExpression<int>(value),
+                                        },
+                    TypeCode.Int64    => new TypedConstantExpression<long>(value),
+                    TypeCode.SByte    => new TypedConstantExpression<sbyte>(value),
+                    TypeCode.Single   => new TypedConstantExpression<float>(value),
+                    TypeCode.String   => new TypedConstantExpression<string>(value),
+                    TypeCode.UInt16   => new TypedConstantExpression<ushort>(value),
+                    TypeCode.UInt32   => new TypedConstantExpression<uint>(value),
+                    TypeCode.UInt64   => new TypedConstantExpression<ulong>(value),
+                    _ => type == typeof(object) 
+                        ? new TypedConstantExpression<object>(value) 
+                        : (ConstantExpression)new TypedConstantExpression(value, type)
+                };
 
         public static NewExpression New(Type type)
         {
@@ -514,8 +511,12 @@ namespace FastExpressionCompiler.LightExpression
             Field(instance, instance.Type.FindField(fieldName));
 
         /// <summary>Creates a UnaryExpression that represents a bitwise complement operation.</summary>
-        public static UnaryExpression Not(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.Not, expression);
+        public static UnaryExpression Not(Expression expression)
+        {
+            if (expression.Type == typeof(bool))
+                return new NotBooleanUnaryExpression(expression);
+            return new NodeTypedUnaryExpression(ExpressionType.Not, expression);
+        } 
 
         /// <summary>Creates a UnaryExpression that represents an explicit reference or boxing conversion where null is supplied if the conversion fails.</summary>
         public static UnaryExpression TypeAs(Expression expression, Type type) =>
@@ -532,8 +533,32 @@ namespace FastExpressionCompiler.LightExpression
             new TypedUnaryExpression<int>(ExpressionType.ArrayLength, array);
 
         /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
-        public static UnaryExpression Convert(Expression expression, Type type) =>
-            new ConvertUnaryExpression(expression, type);
+        public static UnaryExpression Convert(Expression expression, Type type)
+        {
+            if (type.IsEnum) 
+                return new ConvertUnaryExpression(expression, type);
+            return Type.GetTypeCode(type) switch 
+            {
+                TypeCode.Boolean  => new TypedConvertUnaryExpression<bool>(expression),
+                TypeCode.Byte     => new TypedConvertUnaryExpression<byte>(expression),
+                TypeCode.Char     => new TypedConvertUnaryExpression<char>(expression),
+                TypeCode.DateTime => new TypedConvertUnaryExpression<DateTime>(expression),
+                TypeCode.Decimal  => new TypedConvertUnaryExpression<decimal>(expression),
+                TypeCode.Double   => new TypedConvertUnaryExpression<double>(expression),
+                TypeCode.Int16    => new TypedConvertUnaryExpression<short>(expression),
+                TypeCode.Int32    => new TypedConvertUnaryExpression<int>(expression),
+                TypeCode.Int64    => new TypedConvertUnaryExpression<long>(expression),
+                TypeCode.SByte    => new TypedConvertUnaryExpression<sbyte>(expression),
+                TypeCode.Single   => new TypedConvertUnaryExpression<float>(expression),
+                TypeCode.String   => new TypedConvertUnaryExpression<string>(expression),
+                TypeCode.UInt16   => new TypedConvertUnaryExpression<ushort>(expression),
+                TypeCode.UInt32   => new TypedConvertUnaryExpression<uint>(expression),
+                TypeCode.UInt64   => new TypedConvertUnaryExpression<ulong>(expression),
+                _ => type == typeof(object)
+                    ? new TypedConvertUnaryExpression<object>(expression) 
+                    : (UnaryExpression)new ConvertUnaryExpression(expression, type)
+            };
+        }
 
         /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
         public static UnaryExpression Convert(Expression expression, Type type, MethodInfo method) =>
@@ -878,7 +903,9 @@ namespace FastExpressionCompiler.LightExpression
             new WithFalseBranchConditionalExpression(test, ifTrue, ifFalse);
 
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Type type) =>
-            new TypedWithFalseBranchConditionalExpression(test, ifTrue, ifFalse, type);
+            ifTrue.Type == type 
+                ? new WithFalseBranchConditionalExpression(test, ifTrue, ifFalse)
+                : (ConditionalExpression)new TypedWithFalseBranchConditionalExpression(test, ifTrue, ifFalse, type);
 
         public static ConditionalExpression IfThen(Expression test, Expression ifTrue) =>
             new ConditionalExpression(test, ifTrue); // absence of ifFalse automatically mean void type of all expression
@@ -1939,7 +1966,6 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => Operand.Type;
         public readonly Expression Operand;
         public virtual MethodInfo Method => null;
-
         public UnaryExpression(Expression operand) => Operand = operand;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitUnary(this);
@@ -1967,6 +1993,7 @@ namespace FastExpressionCompiler.LightExpression
                 case ExpressionType.Unbox:          return SysExpr.Unbox(Operand.ToExpression(ref exprsConverted), Type);
                 case ExpressionType.Throw:          return SysExpr.Throw(Operand.ToExpression(ref exprsConverted), Type);
                 case ExpressionType.TypeAs:         return SysExpr.TypeAs(Operand.ToExpression(ref exprsConverted), Type);
+                case ExpressionType.Not:            return SysExpr.Not(Operand.ToExpression(ref exprsConverted));
                 default:
                     throw new NotSupportedException("Cannot convert Expression to Expression of type " + NodeType);
             }
@@ -2002,8 +2029,10 @@ namespace FastExpressionCompiler.LightExpression
                 case ExpressionType.ArrayLength:
                     return Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append(".Length");
 
-                case ExpressionType.Not:
-                    return Operand.ToCSharpString(sb.Append("!("), lineIdent, stripNamespace, printType, identSpaces).Append(')');
+                case ExpressionType.Not: // either bool or binary not
+                    return Operand.ToCSharpString(
+                        Type == typeof(bool) ? sb.Append("!(") : sb.Append("~("), 
+                        lineIdent, stripNamespace, printType, identSpaces).Append(')');
 
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
@@ -2067,6 +2096,13 @@ namespace FastExpressionCompiler.LightExpression
             NodeType = nodeType;
     }
 
+    public sealed class NotBooleanUnaryExpression : UnaryExpression
+    {
+        public override ExpressionType NodeType => ExpressionType.Not;
+        public override Type Type => typeof(bool);
+        public NotBooleanUnaryExpression(Expression operand) : base(operand) {}
+    }
+
     public sealed class ThrowUnaryExpression : UnaryExpression
     {
         public override ExpressionType NodeType => ExpressionType.Throw;
@@ -2085,6 +2121,14 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
+    public sealed class TypedUnaryExpression<T> : UnaryExpression
+    {
+        public override ExpressionType NodeType { get; }
+        public override Type Type => typeof(T);
+        public TypedUnaryExpression(ExpressionType nodeType, Expression operand) : base(operand) =>
+            NodeType = nodeType; 
+    }
+
     public sealed class ConvertUnaryExpression : UnaryExpression
     {
         public override ExpressionType NodeType => ExpressionType.Convert;
@@ -2093,12 +2137,11 @@ namespace FastExpressionCompiler.LightExpression
             Type = type;
     }
 
-    public sealed class TypedUnaryExpression<T> : UnaryExpression
+    public sealed class TypedConvertUnaryExpression<T> : UnaryExpression
     {
-        public override ExpressionType NodeType { get; }
+        public override ExpressionType NodeType => ExpressionType.Convert;
         public override Type Type => typeof(T);
-        public TypedUnaryExpression(ExpressionType nodeType, Expression operand) : base(operand) =>
-            NodeType = nodeType; 
+        public TypedConvertUnaryExpression(Expression operand) : base(operand) {}
     }
 
     public sealed class ConvertWithMethodUnaryExpression : TypedUnaryExpression
@@ -3441,7 +3484,6 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Test;
         public readonly Expression IfTrue;
         public virtual Expression IfFalse => VoidDefault;
-
         internal ConditionalExpression(Expression test, Expression ifTrue)
         {
             Test   = test;

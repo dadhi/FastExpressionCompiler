@@ -15,7 +15,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class UnaryExpressionTests
+    public class UnaryExpressionTests : ITest
     {
         public int Run()
         {
@@ -30,7 +30,7 @@ namespace FastExpressionCompiler.UnitTests
             MakeUnary_compiles();
             Negate_compiles();
             NegateChecked_compiles();
-            Not_compiles();
+            Binary_Not_compiles();
             OnesComplement_compiles();
             PostDecrementAssign_compiles();
             PostIncrementAssign_compiles();
@@ -196,7 +196,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Not_compiles()
+        public void Binary_Not_compiles()
         {
             var param = Parameter(typeof(int), "i");
             var expression = Lambda<Func<int, int>>(
