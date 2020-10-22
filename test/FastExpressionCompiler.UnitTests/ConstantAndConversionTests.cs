@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace FastExpressionCompiler.UnitTests
 {
     [TestFixture]
-    public class ConstantAndConversionTests
+    public class ConstantAndConversionTests : ITest
     {
         public int Run()
         {
@@ -30,7 +30,7 @@ namespace FastExpressionCompiler.UnitTests
             return 16;
         }
 
-       [Test]
+        [Test]
         public void Expressions_with_small_long_casts_should_not_crash()
         {
             var x = 65535;

@@ -28,6 +28,9 @@ namespace FastExpressionCompiler.IssueTests
 #if !NET472
             Test_serialization_of_the_Dictionary(); // passes!
 #endif
+            Constant_of_Type_value_should_be_of_RuntimeType_because_the_SystemConstant_works_this_way();
+            Constant_of_Byte_should_stay_the_Byte_and_not_to_be_changed_to_int();
+
             Serialize_hard_coded();
 
             Serialize_the_nullable_decimal_array();
@@ -75,6 +78,19 @@ namespace FastExpressionCompiler.IssueTests
 #else
             return 12;
 #endif
+        }
+
+        [Test]
+        public void Constant_of_Type_value_should_be_of_RuntimeType_because_the_SystemConstant_works_this_way()
+        {
+            var t = GetType();
+            Assert.AreEqual(Constant((object)t).Type.FullName, Constant(t).Type.FullName);
+        }
+
+        [Test]
+        public void Constant_of_Byte_should_stay_the_Byte_and_not_to_be_changed_to_int()
+        {
+            Assert.AreEqual(typeof(byte), Constant((byte)0).Type);
         }
 
         [Test]

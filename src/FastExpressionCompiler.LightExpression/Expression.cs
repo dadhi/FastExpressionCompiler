@@ -205,29 +205,9 @@ namespace FastExpressionCompiler.LightExpression
         public static readonly ConstantExpression OneConstant = new TypedConstantExpression<int>(1);
         public static readonly ConstantExpression MinusOneConstant = new TypedConstantExpression<int>(-1);
 
+        /// <summary>Avoids the boxing for all (two) bool values</summary>
         public static ConstantExpression Constant(bool value) =>
             value ? TrueConstant : FalseConstant;
-
-        public static ConstantExpression Constant(int value) =>
-            value == 0  ? ZeroConstant :
-            value == 1  ? OneConstant :
-            value == -1 ? MinusOneConstant : 
-            new TypedConstantExpression<int>(value);
-
-        public static ConstantExpression Constant<T>(T value) 
-        {
-            if (value is bool b)
-                return b ? TrueConstant : FalseConstant;
-
-            if (value is int n)
-                return 
-                    n == 0  ? ZeroConstant : 
-                    n == 1  ? OneConstant : 
-                    n == -1 ? MinusOneConstant : 
-                    new TypedConstantExpression<int>(n);
-
-            return new TypedConstantExpression<T>(value);
-        }
 
         public static ConstantExpression Constant(object value)
         {
@@ -238,7 +218,7 @@ namespace FastExpressionCompiler.LightExpression
                 return b ? TrueConstant : FalseConstant;
 
             if (value is int n)
-                return 
+                return
                     n == 0  ? ZeroConstant : 
                     n == 1  ? OneConstant : 
                     n == -1 ? MinusOneConstant : 
@@ -273,9 +253,11 @@ namespace FastExpressionCompiler.LightExpression
                     TypeCode.UInt16   => new TypedConstantExpression<ushort>(value),
                     TypeCode.UInt32   => new TypedConstantExpression<uint>(value),
                     TypeCode.UInt64   => new TypedConstantExpression<ulong>(value),
-                    _ => type == typeof(object) 
-                        ? new TypedConstantExpression<object>(value) 
-                        : (ConstantExpression)new TypedConstantExpression(value, type)
+                    _ =>  type == typeof(object) 
+                            ? new TypedConstantExpression<object>(value)
+                        : type == typeof(Type)
+                            ? new TypedConstantExpression<Type>(value)
+                            : (ConstantExpression)new TypedConstantExpression(value, type)
                 };
 
         public static NewExpression New(Type type)
@@ -554,8 +536,10 @@ namespace FastExpressionCompiler.LightExpression
                 TypeCode.UInt16   => new TypedConvertUnaryExpression<ushort>(expression),
                 TypeCode.UInt32   => new TypedConvertUnaryExpression<uint>(expression),
                 TypeCode.UInt64   => new TypedConvertUnaryExpression<ulong>(expression),
-                _ => type == typeof(object)
+                _ =>  type == typeof(object)
                     ? new TypedConvertUnaryExpression<object>(expression) 
+                    : type == typeof(Type)
+                    ? new TypedConvertUnaryExpression<Type>(expression)
                     : (UnaryExpression)new ConvertUnaryExpression(expression, type)
             };
         }
@@ -637,7 +621,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             if (type.IsEnum)
                 return new TypedUnaryExpression(ExpressionType.Unbox, expression, type);
-            return Type.GetTypeCode(type) switch 
+            return Type.GetTypeCode(type) switch
             {
                 TypeCode.Boolean  => new TypedUnaryExpression<bool>(ExpressionType.Unbox, expression),
                 TypeCode.Byte     => new TypedUnaryExpression<byte>(ExpressionType.Unbox, expression),
