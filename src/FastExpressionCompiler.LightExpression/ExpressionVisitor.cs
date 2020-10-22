@@ -162,13 +162,7 @@ namespace FastExpressionCompiler.LightExpression
             var parameters = VisitAndConvert(node.Parameters);
             if (body == node.Body && ReferenceEquals(parameters, node.Parameters))
                 return node;
-            return parameters.Count == 0
-                ? (body.Type == node.ReturnType 
-                    ? new LambdaExpression(node.Type, body)
-                    : new TypedReturnLambdaExpression(node.Type, body, node.ReturnType))
-                : (body.Type == node.ReturnType 
-                    ? new ManyParametersLambdaExpression(node.Type, body, parameters)
-                    : (LambdaExpression)new ManyParametersTypedReturnLambdaExpression(node.Type, body, parameters, node.ReturnType));
+            return Expression.Lambda(node.Type, body, parameters, node.ReturnType); 
         }
 
         protected internal virtual Expression VisitLambda<T>(Expression<T> node) where T : System.Delegate
@@ -177,13 +171,7 @@ namespace FastExpressionCompiler.LightExpression
             var parameters = VisitAndConvert(node.Parameters);
             if (body == node.Body && ReferenceEquals(parameters, node.Parameters))
                 return node;
-            return parameters.Count == 0
-                ? (body.Type == node.ReturnType
-                    ? new Expression<T>(body)
-                    : new TypedReturnExpression<T>(body, node.ReturnType))
-                : (body.Type == node.ReturnType
-                    ? new ManyParametersExpression<T>(body, parameters)
-                    : (Expression<T>)new ManyParametersTypedReturnExpression<T>(body, parameters, node.ReturnType));
+            return Expression.Lambda<T>(body, parameters, node.ReturnType);
         }
 
         protected internal virtual Expression VisitLoop(LoopExpression node)

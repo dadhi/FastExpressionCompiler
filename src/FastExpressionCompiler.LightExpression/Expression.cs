@@ -658,13 +658,16 @@ namespace FastExpressionCompiler.LightExpression
             return new TypedReturnLambdaExpression(delegateType, body, returnType);
         }
 
-        public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) =>
-            parameters == null || parameters.Length == 0
+        public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters) =>
+            parameters == null || parameters.Count == 0
                 ? new LambdaExpression(Tools.GetFuncOrActionType(body.Type), body)
                 : new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, 
                     parameters);
 
-        public static LambdaExpression Lambda(Expression body, ParameterExpression[] parameters, Type returnType)
+        public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) =>
+            Lambda(body, (IReadOnlyList<ParameterExpression>)parameters);
+
+        public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
         {
             if (returnType == body.Type)
                 Lambda(body, parameters);
@@ -672,7 +675,10 @@ namespace FastExpressionCompiler.LightExpression
             return new ManyParametersTypedReturnLambdaExpression(delegateType, body, parameters, returnType);
         }
 
-        public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters)
+        public static LambdaExpression Lambda(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) =>
+            Lambda(body, parameters.AsReadOnlyList(), returnType);
+
+        public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters)
         {
             if (delegateType == null || delegateType == typeof(Delegate))
                 return Lambda(body, parameters);
@@ -682,12 +688,18 @@ namespace FastExpressionCompiler.LightExpression
             return new ManyParametersTypedReturnLambdaExpression(delegateType, body, parameters, returnType);
         }
 
-        public static LambdaExpression Lambda(Type delegateType, Expression body, ParameterExpression[] parameters, Type returnType) =>
+        public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) =>
+            Lambda(delegateType, body, (IReadOnlyList<ParameterExpression>)parameters);
+
+        public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType) =>
             delegateType == null || delegateType == typeof(Delegate)
                 ? Lambda(body, parameters, returnType)
             : returnType == body.Type
                 ? new ManyParametersLambdaExpression(delegateType, body, parameters)
                 : (LambdaExpression)new ManyParametersTypedReturnLambdaExpression(delegateType, body, parameters, returnType);
+
+        public static LambdaExpression Lambda(Type delegateType, Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) =>
+            Lambda(delegateType, body, parameters.AsReadOnlyList(), returnType);
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, Type returnType) where TDelegate : System.Delegate =>
             returnType == body.Type
@@ -697,15 +709,22 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body) where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, GetDelegateReturnType(typeof(TDelegate)));
 
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression[] parameters, Type returnType) where TDelegate : System.Delegate =>
-            parameters == null || parameters.Length == 0
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType) 
+            where TDelegate : System.Delegate =>
+            parameters == null || parameters.Count == 0
                 ? Lambda<TDelegate>(body, returnType)
             : returnType == body.Type
                 ? new ManyParametersExpression<TDelegate>(body, parameters)
                 : (Expression<TDelegate>)new ManyParametersTypedReturnExpression<TDelegate>(body, parameters, returnType);
 
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) 
+            where TDelegate : System.Delegate => Lambda<TDelegate>(body, parameters.AsReadOnlyList(), returnType);
+
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, params ParameterExpression[] parameters) where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters) where TDelegate : System.Delegate =>
+            Lambda<TDelegate>(body, parameters.AsReadOnlyList(), GetDelegateReturnType(typeof(TDelegate)));
 
         /// <summary><paramref name="name"/> is ignored for now, the method is just for compatibility with SysExpression</summary>
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) where TDelegate : System.Delegate =>
@@ -1502,6 +1521,7 @@ namespace FastExpressionCompiler.LightExpression
             return score;
         }
 
+        [MethodImpl((MethodImplOptions)256)]
         public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs)
         {
             if (xs is IReadOnlyList<T> list)
