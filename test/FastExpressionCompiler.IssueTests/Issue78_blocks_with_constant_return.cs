@@ -7,15 +7,30 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    class Issue78_blocks_with_constant_return
+    public class Issue78_blocks_with_constant_return
     {
+        public int Run()
+        {
+            BlockWithConstantReturnIsSupported();
+            MultipleConstantReturnsAreRemoved();
+            ConstantReturnIsSupported();
+            ConstantReturnIsSupported2();
+            Block1();
+#if !LIGHT_EXPRESSION
+            Block2();
+            return 6;
+#else
+            return 5;
+#endif
+        }
+
         [Test]
         public void BlockWithConstantReturnIsSupported()
         {

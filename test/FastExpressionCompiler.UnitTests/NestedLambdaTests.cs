@@ -9,8 +9,32 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class NestedLambdaTests
+    public class NestedLambdaTests : ITest
     {
+        public int Run()
+        {
+            Nested_lambda_using_outer_parameter();
+            Nested_lambda_using_outer_parameter_and_closed_value();
+            Nested_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda();
+            Given_composed_expr_with_closure_over_parameters_in_nested_lambda_should_work();
+            Given_composed_expr_with_closure_over_parameters_used_in_2_levels_of_nested_lambda();
+            Given_composed_expr_with_closure_over_2_parameters_used_in_2_levels_of_nested_lambda();
+            Given_composed_expr_with_closure_over_2_same_parameters_used_in_2_levels_of_nested_lambda();
+            Two_same_nested_lambdas_should_compile_once();
+            Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda();
+
+#if !LIGHT_EXPRESSION
+            Nested_Hoisted_Func_using_outer_parameter();
+            Nested_Hoisted_Func_using_outer_parameter_and_closed_value();
+            Nested_Hoisted_Action_using_outer_parameter_and_closed_value();
+            Nested_Hoisted_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda();
+            Given_hoisted_expr_with_closure_over_parameters_in_nested_lambda_should_work();
+            return 14;
+#else
+            return 9;
+#endif
+        }
+
 #if !LIGHT_EXPRESSION
         [Test]
         public void Nested_Hoisted_Func_using_outer_parameter()

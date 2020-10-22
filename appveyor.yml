@@ -1,13 +1,27 @@
-version: 2.0.0-preview-{build}
-os: Visual Studio 2017
+image:
+  - Visual Studio 2019
+  - Ubuntu
+  - macOS
+
+version: 3.0.0-preview-01-b{build}
 
 test: off
 
-build_script:
-- cmd: build.bat
-
 skip_commits:
-  message: /skip .*/
+  message: /skipci .*/
 
-artifacts:
-- path: ./src/FastExpressionCompiler/dist/*.nupkg
+build_script:
+  - dotnet run  -f netcoreapp3.1 -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+
+for:
+  - matrix:
+      only:
+        - image: Visual Studio 2019
+
+    build_script:
+      # - dotnet build -c Release -v:m
+      - dotnet run -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+      - dotnet run -c Release -p test/FastExpressionCompiler.TestsRunner.Net472/FastExpressionCompiler.TestsRunner.Net472.csproj
+
+    artifacts:
+      - path: .\.dist\*.nupkg

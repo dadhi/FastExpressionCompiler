@@ -21,7 +21,7 @@ using LE = FastExpressionCompiler.LightExpression.Expression;
 //------------------------------------------------ |------------:|-------------:|-------------:|-------:|--------:|------------:|------------:|------------:|--------------------:|
 //             CreateExpression_and_Compile_Invoke | 96,754.5 ns | 1,135.402 ns | 1,062.056 ns | 155.62 |    1.64 |      0.8545 |      0.3662 |           - |              4392 B |
 //     CreateExpression_and_FastCompile_and_Invoke | 80,889.9 ns | 1,234.337 ns | 1,154.599 ns | 129.98 |    1.63 |      0.2441 |      0.1221 |           - |              1648 B |
-// CreateExpressionInfo_and_FastCompile_and_Invoke | 79,597.1 ns | 1,241.430 ns | 1,100.495 ns | 128.13 |    1.86 |      0.2441 |      0.1221 |           - |              1576 B |
+// CreateLightExpression_and_FastCompile_and_Invoke | 79,597.1 ns | 1,241.430 ns | 1,100.495 ns | 128.13 |    1.86 |      0.2441 |      0.1221 |           - |              1576 B |
 //                         ActivatorCreateInstance |    621.2 ns |     1.566 ns |     1.388 ns |   1.00 |    0.00 |      0.1059 |           - |           - |               504 B |
 
 
@@ -102,7 +102,7 @@ namespace FastExpressionCompiler.Benchmarks
         }
 
         //[Benchmark]
-        public X CreateExpressionInfo_and_FastCompile_and_Invoke()
+        public X CreateLightExpression_and_FastCompile_and_Invoke()
         {
             var expr = LE.Lambda<Func<X>>(LE.New(_xCtor, LE.New(_aCtor), LE.New(_bCtor)));
             return LEC.CompileFast(expr, true).Invoke();

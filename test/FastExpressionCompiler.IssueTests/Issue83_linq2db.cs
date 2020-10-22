@@ -10,16 +10,75 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
     public class Issue83_linq2db
     {
+        public int Run()
+        {
+            String_to_number_conversion_using_convert_with_method();
+            linq2db_NullReferenceException();
+            Jit_compiler_internal_limitation();
+            Struct_test();
+            Struct_test2();
+            NullableEnum();
+            NullableEnum2();
+            NewNullableTest();
+            TestToString();
+            Test2ToString();
+            TestDecimal();
+            TestDecimal1();
+            Test3Bool();
+            Test4Bool();
+            ConvertNullableTest();
+            ConvertNullable2Test();
+            ConvertTest();
+            ConvertTest2();
+            AddNullTest();
+            AddNullTest2();
+            Triple_convert_with_decimal_nullables();
+            Unbox_the_decimal();
+            Type_as_nullable_decimal();
+            Type_as_nullable_decimal_passing_the_null();
+            Negate_decimal();
+            Increment_decimal();
+            Decrement_decimal();
+
+#if !LIGHT_EXPRESSION
+            linq2db_Expression();
+            Equal1_Test();
+            Equal2_Test();
+            Equal3_Test();
+            TypeAs_Test();
+            TypeIs_Test();
+            Enum_to_enum_conversion();
+            Enum_to_enumNull_conversion();
+            EnumNull_to_enum_conversion();
+            AccessViolationException_on_nullable_char_convert_to_object();
+            linq2db_InvalidProgramException();
+            linq2db_InvalidProgramException2();
+            linq2db_InvalidProgramException3();
+            linq2db_InvalidProgramException4();
+            TestDoubleConvertSupported();
+            TestLambdaInvokeSupported();
+            TestLambdaInvokeSupported2();
+            TestLambdaInvokeSupported3();
+            TestFirstLambda();
+            TestConverterFailure();
+            TestConverterNullable();
+            TestLdArg();
+            return 49;
+#else
+            return 27;
+#endif
+        }
+
         [Test]
         public void String_to_number_conversion_using_convert_with_method()
         {
@@ -35,7 +94,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var expr = Lambda<Func<string, int>>(body, p);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(10, compiled("10"));
         }
@@ -256,7 +315,7 @@ namespace FastExpressionCompiler.UnitTests
             var lambda = Lambda<Func<IQueryRunner, IDataReader, InheritanceTests.InheritanceA>>(body, p1, p2);
 
 
-            var compiled = lambda.CompileFast();
+            var compiled = lambda.CompileFast(true);
            
             // NRE during execution of nested function
             var res = compiled(new QueryRunner(), new SQLiteDataReader(false));
@@ -411,7 +470,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var expr = Lambda<Func<Enum3, Enum2>>(body, p);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(Enum2.Value2, compiled(Enum3.Value2));
         }
@@ -430,7 +489,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var expr = Lambda<Func<Enum3, Enum3?>>(body, p);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
         }
@@ -449,7 +508,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var expr = Lambda<Func<Enum3?, Enum3>>(body, p);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
             Assert.Throws<InvalidOperationException>(() => compiled(null));
@@ -464,7 +523,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var expr = Lambda<Func<object>>(body);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(' ', compiled());
         }
@@ -543,7 +602,7 @@ namespace FastExpressionCompiler.UnitTests
             var lambda = Lambda<Func<IQueryRunner, IDataReader, object>>(body, p1, p2);
 
 
-            var compiled = lambda.CompileFast();
+            var compiled = lambda.CompileFast(true);
             var c = lambda.Compile();
 
             Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
@@ -608,7 +667,7 @@ namespace FastExpressionCompiler.UnitTests
             var lambda = Lambda<Func<IQueryRunner, IDataReader, object>>(body, p1, p2);
 
 
-            var compiled = lambda.CompileFast();
+            var compiled = lambda.CompileFast(true);
             var c = lambda.Compile();
 
             Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
@@ -653,7 +712,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var mapper = Lambda<Func<IDataReader, int>>(mapperBody, a3);
 
-            var compiled = mapper.CompileFast();
+            var compiled = mapper.CompileFast(true);
             var c = mapper.Compile();
 
             compiled(new SQLiteDataReader(true));
@@ -665,7 +724,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             var mapperBody = Coalesce(Constant(null, typeof(int?)), Constant(7));
             var mapper = Lambda<Func<int>>(mapperBody);
-            var compiled = mapper.CompileFast();
+            var compiled = mapper.CompileFast(true);
             var c = mapper.Compile();
             compiled();
             c();
@@ -868,7 +927,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var expr = Lambda<Action<object, object>>(body, objParam, valueParam);
 
-            var compiled = expr.CompileFast();
+            var compiled = expr.CompileFast(true);
 
             var obj = new TestClass1();
 
@@ -1291,6 +1350,87 @@ namespace FastExpressionCompiler.UnitTests
             var expr = Lambda<Func<object>>(body);
             var compiled = expr.CompileFast(true);
             Assert.AreEqual(2m, compiled());
+        }
+
+
+        [Test]
+        public void Unbox_the_decimal()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal>>(
+                Unbox(decObj, typeof(decimal)),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual(2m, f((object)2m));
+        }
+
+        [Test]
+        public void Type_as_nullable_decimal()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal?>>(
+                TypeAs(decObj, typeof(decimal?)),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            decimal? x = 2m; 
+            Assert.AreEqual(2m, f((object)x));
+        }
+
+        [Test]
+        public void Type_as_nullable_decimal_passing_the_null()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal?>>(
+                TypeAs(decObj, typeof(decimal?)),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            decimal? x = null; 
+            Assert.AreEqual(null, f((object)x));
+        }
+
+        [Test]
+        public void Negate_decimal()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal>>(
+                Negate(Unbox(decObj, typeof(decimal))),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual(-2m, f(2m));
+        }
+
+        [Test]
+        public void Increment_decimal()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal>>(
+                Increment(Unbox(decObj, typeof(decimal))),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual(3m, f(2m));
+        }
+
+        [Test]
+        public void Decrement_decimal()
+        {
+            var decObj = Parameter(typeof(object), "decObj");
+            var expr = Lambda<Func<object, decimal>>(
+                Decrement(Unbox(decObj, typeof(decimal))),
+                decObj
+            );
+
+            var f = expr.CompileFast(true);
+            Assert.AreEqual(1m, f(2m));
         }
     }
 }

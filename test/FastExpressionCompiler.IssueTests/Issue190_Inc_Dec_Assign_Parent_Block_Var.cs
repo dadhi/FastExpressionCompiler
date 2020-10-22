@@ -3,15 +3,20 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     public class Issue190_Inc_Dec_Assign_Parent_Block_Var
     {
+        public int Run()
+        {
+            PreIncOfParentBlockVarIsSupported();
+            return 1;
+        }
+
         [Test]
         public void PreIncOfParentBlockVarIsSupported()
         {

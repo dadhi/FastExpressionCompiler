@@ -13,6 +13,19 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class ValueTypeTests
     {
+        public int Run()
+        {
+            Should_support_struct_params_with_field_access();
+            Should_support_virtual_calls_on_struct_arguments();
+            Should_support_virtual_calls_with_parameters_on_struct_arguments();
+            Can_create_struct();
+            Can_init_struct_member();
+            Can_get_struct_member();
+            Action_using_with_struct_closure_field();
+
+            return 7;
+        }
+
         [Test]
         public void Should_support_struct_params_with_field_access()
         {

@@ -6,11 +6,20 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Internal;
 using NUnit.Framework;
 
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 {
     [TestFixture]
     public class Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor
     {
+        public async Task<int> Run()
+        {
+            ObjectToStructConversionAndBackShouldWork();
+            FastCompiledOK();
+            await AsyncExecutor_CompiledFast_ExecuteAsync_WithAwait();
+            AsyncExecutor_CompiledFast_ExecuteAsync_WithoutAwait();
+            return 4;
+        }
+
         public async Task Foo(int a, int b) => await Task.Delay(1);
         public async Task<int> FooInt(int a, int b) => await Task.FromResult(a + b);
         public async Task<string> FooString(int a, int b) => await Task.FromResult((a + b).ToString());

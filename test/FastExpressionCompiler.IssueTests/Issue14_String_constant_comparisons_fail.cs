@@ -5,16 +5,32 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
     public class Issue14_String_constant_comparisons_fail
     {
+        public int Run()
+        {
+            Guid_equality_should_work();
+            Guid_not_equality_should_work();
+            Enum_equality_should_work();
+            Class_Equals_equality_should_work();
+
+#if !LIGHT_EXPRESSION
+            String_equality_should_work();
+            String_not_equality_should_work();
+            return 6;
+#else            
+            return 4;
+#endif
+        }
+
 #if !LIGHT_EXPRESSION
         [Test]
         public void String_equality_should_work()

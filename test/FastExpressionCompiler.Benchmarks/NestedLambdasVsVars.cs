@@ -20,26 +20,25 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
   [Host]     : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
   DefaultJob : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
 
-### Creation and Compilation:
+## Creation and Compilation
 
-|                                            Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 | Gen 2 | Allocated |
-|-------------------------------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|-------:|------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |   219.3 ns |  0.99 ns |  0.93 ns |  1.00 |    0.00 | 0.1664 | 0.0005 |     - |     784 B |
-|      Expression_with_sub_expressions_CompiledFast | 2,951.4 ns | 15.02 ns | 14.05 ns | 13.46 |    0.09 | 0.2594 |      - |     - |    1224 B |
-
-
-### Creation and Compilation:
-
+### V2
 |                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
 | LightExpression_with_sub_expressions_CompiledFast |  26.36 us | 0.113 us | 0.100 us |  1.00 |    0.00 | 2.0752 | 1.0376 | 0.1831 |   9.66 KB |
 |      Expression_with_sub_expressions_CompiledFast |  30.99 us | 0.156 us | 0.146 us |  1.18 |    0.01 | 2.1973 | 1.0986 | 0.1831 |  10.22 KB |
 |          Expression_with_sub_expressions_Compiled | 563.10 us | 1.141 us | 0.953 us | 21.38 |    0.07 | 5.8594 | 2.9297 |      - |  27.52 KB |
 
+### V3
+|                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |  37.16 us | 0.720 us | 0.829 us |  1.00 |    0.00 | 2.3804 | 1.1597 | 0.1831 |   9.81 KB |
+|          Expression_with_sub_expressions_Compiled | 652.33 us | 7.463 us | 6.616 us | 17.62 |    0.46 | 5.8594 | 2.9297 |      - |  27.51 KB |
 
-### Compilation
 
-#### V2
+## Compilation
+
+### V2
 |                                                                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |----------------------------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
 |                           Expression_with_sub_expressions_CompiledFast |  78.27 us | 0.3404 us | 0.3184 us |  1.00 |    0.00 | 4.3945 | 2.1973 | 0.2441 |  20.42 KB |
@@ -48,17 +47,16 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 864.08 us | 2.0120 us | 1.8820 us | 11.04 |    0.06 | 3.9063 | 1.9531 |      - |  20.96 KB |
 
 
-#### V3
+### V3
+|                                            Method |      Mean |     Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|-------------------------------------------------- |----------:|----------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |  32.37 us |  0.442 us | 0.413 us |  1.00 |    0.00 | 2.1973 | 1.0986 | 0.1831 |   9.03 KB |
+|          Expression_with_sub_expressions_Compiled | 637.97 us | 12.327 us | 9.624 us | 19.71 |    0.37 | 5.8594 | 2.9297 |      - |  26.31 KB |
 
-|                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |  26.42 us | 0.111 us | 0.104 us |  1.00 |    0.00 | 1.8311 | 0.9155 | 0.1526 |   8.52 KB |
-|          Expression_with_sub_expressions_Compiled | 558.79 us | 2.005 us | 1.777 us | 21.14 |    0.10 | 4.8828 | 1.9531 |      - |  26.31 KB |
 
+## Invocation
 
-### Invocation
-
-#### V2
+### V2
 |                                                                 Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 |----------------------------------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
 |                           Expression_with_sub_expressions_CompiledFast |    57.17 ns | 0.1766 ns | 0.1566 ns |  1.00 |    0.00 | 0.0627 |     - |     - |     296 B |
@@ -67,17 +65,11 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,644.84 ns | 5.2784 ns | 4.4077 ns | 28.77 |    0.10 | 0.0782 |     - |     - |     376 B |
 
 
-#### V3
-BenchmarkDotNet=v0.12.0, OS=Windows 10.0.18362
-Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
-.NET Core SDK=3.1.100
-  [Host]     : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
-  DefaultJob : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
-
-|                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |  10.55 ns | 0.064 ns | 0.054 ns |  1.00 |    0.00 | 0.0068 |     - |     - |      32 B |
-|          Expression_with_sub_expressions_Compiled | 846.81 ns | 5.042 ns | 4.210 ns | 80.27 |    0.67 | 0.0467 |     - |     - |     224 B |
+### V3
+|                                            Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|-------------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |    13.40 ns |  0.190 ns |  0.158 ns |  1.00 |    0.00 | 0.0076 |     - |     - |      32 B |
+|          Expression_with_sub_expressions_Compiled | 1,083.09 ns | 21.502 ns | 30.142 ns | 80.91 |    3.16 | 0.0534 |     - |     - |     224 B |
 */
         private Expression<Func<A>> _expr;//, _exprWithVars;
         private LightExpression.Expression<Func<A>> _lightExpr;
@@ -99,9 +91,17 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         public object LightExpression_with_sub_expressions_CompiledFast()
         {
             //return CreateLightExpression();
-            //return LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression(), true);
-            return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
-            //return _lightExprCompiledFast();
+            // return LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression(), true);
+            // return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
+            return _lightExprCompiledFast();
+        }
+
+        [Benchmark]
+        public object Expression_with_sub_expressions_Compiled()
+        {
+            // return CreateExpression().Compile();
+            // return _expr.Compile();
+            return _exprCompiled();
         }
 
         //[Benchmark]
@@ -113,14 +113,6 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
             //return _expr.CompileFast(true);
         //    return _exprCompiledFast();
         //}
-
-        [Benchmark]
-        public object Expression_with_sub_expressions_Compiled()
-        {
-            //return CreateExpression().Compile();
-            return _expr.Compile();
-            //return _exprCompiled();
-        }
 
         ////[Benchmark]
         //public object Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast()

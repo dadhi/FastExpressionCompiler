@@ -8,7 +8,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
     using static Expression;
 
     [TestFixture]
-    public class MemberInitExpressionInfoTests
+    public class MemberInitLightExpressionTests
     {
         [Test]
         public void Can_assign_member_of_existing_object()

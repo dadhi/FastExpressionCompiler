@@ -6,15 +6,23 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
-class Issue91_Issue95_Tests
+    public class Issue91_Issue95_Tests
     {
+        public int Run()
+        {
+            RefAssign();
+            NullComparisonTest();
+            TestAddAssign();
+            return 3;
+        }
+
         delegate void ActionRef<T>(ref T a1);
 
         [Test]

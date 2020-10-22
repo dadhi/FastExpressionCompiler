@@ -40,22 +40,22 @@ namespace FastExpressionCompiler.Benchmarks
 
                              Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
             ----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-                 Expression_Compile | 481.33 us | 0.6025 us | 0.5031 us | 29.47 |    0.09 | 2.4414 | 0.9766 |      - |  11.95 KB |
-             Expression_CompileFast |  16.33 us | 0.0555 us | 0.0492 us |  1.00 |    0.00 | 1.0986 | 0.5493 | 0.0916 |   5.13 KB |
+                 Compile | 481.33 us | 0.6025 us | 0.5031 us | 29.47 |    0.09 | 2.4414 | 0.9766 |      - |  11.95 KB |
+             CompileFast |  16.33 us | 0.0555 us | 0.0492 us |  1.00 |    0.00 | 1.0986 | 0.5493 | 0.0916 |   5.13 KB |
 
             ## v3.0
 
                              Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
             ----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-                 Expression_Compile | 470.00 us | 1.3111 us | 1.1622 us | 29.65 |    0.26 | 2.4414 | 0.9766 |      - |  11.95 KB |
-             Expression_CompileFast |  15.86 us | 0.1507 us | 0.1410 us |  1.00 |    0.00 | 1.0376 | 0.5188 | 0.0305 |   4.77 KB |
+                 Compile | 470.00 us | 1.3111 us | 1.1622 us | 29.65 |    0.26 | 2.4414 | 0.9766 |      - |  11.95 KB |
+             CompileFast |  15.86 us | 0.1507 us | 0.1410 us |  1.00 |    0.00 | 1.0376 | 0.5188 | 0.0305 |   4.77 KB |
 
              */
             [Benchmark]
-            public Func<X> Expression_Compile() => _hoistedExpr.Compile();
+            public Func<X> Compile() => _hoistedExpr.Compile();
 
             [Benchmark(Baseline = true)]
-            public Func<X> Expression_CompileFast() => _hoistedExpr.CompileFast();
+            public Func<X> CompileFast() => _hoistedExpr.CompileFast();
         }
 
         [MemoryDiagnoser]

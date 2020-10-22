@@ -1,32 +1,34 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
-     <!--<TargetFrameworks>netcoreapp3.1</TargetFrameworks>--> 
-    <OutputType>Exe</OutputType>
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <OutputType>Exe</OutputType>
 
-    <IsTestProject>false</IsTestProject>
-    <TieredCompilation>false</TieredCompilation><!--skip tiering jitting for the fare benchmarks -->
-    <DebugType>pdbonly</DebugType>
-    <DebugSymbols>true</DebugSymbols>
+        <IsTestProject>false</IsTestProject>
+        <TieredCompilation>false</TieredCompilation>
+        <!--skip tiering jitting for the fare benchmarks -->
+        <DebugType>pdbonly</DebugType>
+        <DebugSymbols>true</DebugSymbols>
 
-  </PropertyGroup>
+        <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
 
-  <ItemGroup>
-    <None Remove="FastExpressionCompiler.Benchmarks.v3.ncrunchproject" />
-  </ItemGroup>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.12.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Remove="FastExpressionCompiler.Benchmarks.v3.ncrunchproject"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
-    <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj" />
-    <ProjectReference Include="..\FastExpressionCompiler.IssueTests\FastExpressionCompiler.IssueTests.csproj" />
-    <ProjectReference Include="..\FastExpressionCompiler.LightExpression.IssueTests\FastExpressionCompiler.LightExpression.IssueTests.csproj" />
-    <ProjectReference Include="..\FastExpressionCompiler.LightExpression.UnitTests\FastExpressionCompiler.LightExpression.UnitTests.csproj" />
-    <ProjectReference Include="..\FastExpressionCompiler.UnitTests\FastExpressionCompiler.UnitTests.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="BenchmarkDotNet" Version="0.12.1"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj"/>
+        <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj"/>
+        <ProjectReference Include="..\FastExpressionCompiler.IssueTests\FastExpressionCompiler.IssueTests.csproj"/>
+        <ProjectReference Include="..\FastExpressionCompiler.LightExpression.IssueTests\FastExpressionCompiler.LightExpression.IssueTests.csproj"/>
+        <ProjectReference Include="..\FastExpressionCompiler.LightExpression.UnitTests\FastExpressionCompiler.LightExpression.UnitTests.csproj"/>
+        <ProjectReference Include="..\FastExpressionCompiler.UnitTests\FastExpressionCompiler.UnitTests.csproj"/>
+    </ItemGroup>
 
 </Project>

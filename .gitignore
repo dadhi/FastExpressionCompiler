@@ -251,6 +251,7 @@ paket-files/
 .idea/
 *.sln.iml
 
-/test/FastExpressionCompiler.Benchmarks/BenchmarkDotNet.Artifacts/
-/test/FastExpressionCompiler.Benchmarks.FullClr/BenchmarkDotNet.Artifacts/
+BenchmarkDotNet.Artifacts/
 ApiKey.txt
+
+FastExpressionCompiler.Internal/

@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using System;
+using System.Diagnostics;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,8 +12,29 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class ConditionalOperatorsTests
+    public class ConditionalOperatorsTests : ITest
     {
+        public int Run()
+        {
+            Test_IfThenElse();
+            IfThen_with_block();
+            IfThenElse_with_block();
+
+#if !LIGHT_EXPRESSION
+            Logical_and();
+            Logical_or();
+            Logical_and_with_or();
+            Ternarary_operator_with_equality();
+            Ternarary_operator_with_not_equality();
+            Ternarary_operator_with_less_then();
+            Ternarary_operator_with_greater_then();
+            Ternarary_operator_with_logical_op();
+            return 11;
+#else
+            return 3;
+#endif
+        }
+
 #if !LIGHT_EXPRESSION
         [Test]
         public void Logical_and()
@@ -164,7 +186,7 @@ namespace FastExpressionCompiler.UnitTests
             f();
         }
 
-        public static void WriteLine(string s) => Console.WriteLine(s);
+        public static void WriteLine(string s) => Debug.WriteLine(s);
 
         [Test]
         public void IfThen_with_block()

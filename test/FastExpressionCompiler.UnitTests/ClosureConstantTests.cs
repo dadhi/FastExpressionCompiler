@@ -14,6 +14,13 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class ClosureConstantTests
     {
+        public int Run()
+        {
+            Should_load_value_type_constant();
+            Repeating_the_constants_should_load_variables();
+            return 2;
+        }
+
         /*
         Expression.Compiled:
         ```

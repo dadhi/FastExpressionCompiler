@@ -3,16 +3,23 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
     public class Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception
     {
+        public int Run()
+        {
+            When_using_fast_expression_compilation();
+            CanConvert();
+            return 2;
+        }
+
         [Test]
         public void When_using_fast_expression_compilation()
         {

@@ -5,15 +5,22 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    class Issue102_Label_and_Goto_Expression
+    public class Issue102_Label_and_Goto_Expression
     {
+        public int Run()
+        {
+            BlockWithGotoIsSupported();
+            UnknownLabelShouldThrow();
+            return 2;
+        }
+
         [Test]
         public void BlockWithGotoIsSupported()
         {

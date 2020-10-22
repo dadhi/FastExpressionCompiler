@@ -2,15 +2,21 @@
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    class Issue100_ExpressionInfo_wrong_return_type
+    public class Issue100_LightExpression_wrong_return_type
     {
+        public int Run()
+        {
+            RefAssignExpression();
+            return 1;
+        }
+
         delegate void ActionRef<T>(ref T a1);
 
         [Test]

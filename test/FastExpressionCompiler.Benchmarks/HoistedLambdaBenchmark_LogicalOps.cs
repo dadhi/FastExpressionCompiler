@@ -38,7 +38,7 @@ namespace FastExpressionCompiler.Benchmarks
             }
         }
 
-        [MemoryDiagnoser, DisassemblyDiagnoser(printIL: true)]
+        [MemoryDiagnoser, DisassemblyDiagnoser()]
         public class Invoke
         {
             private static readonly Func<bool> _lambda = Get_and_with_or_Lambda();

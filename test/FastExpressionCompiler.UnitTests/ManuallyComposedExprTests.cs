@@ -15,12 +15,19 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class ManuallyComposedExprTests
     {
+        public int Run()
+        {
+            Should_compile_manually_composed_expr();
+            Should_compile_manually_composed_expr_with_parameters();
+            return 2;
+        }
+
         [Test]
         public void Should_compile_manually_composed_expr()
         {
             var manualExpr = ComposeManualExpr();
 
-            var lambda = manualExpr.CompileFast();
+            var lambda = manualExpr.CompileFast(true);
 
             Assert.IsInstanceOf<X>(lambda());
         }

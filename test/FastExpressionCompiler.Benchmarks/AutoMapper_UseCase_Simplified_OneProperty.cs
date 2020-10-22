@@ -157,17 +157,18 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 
         ## V3
 
-                                       Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-        ------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-                             Create_n_Compile | 313.69 us | 1.5498 us | 1.4497 us | 24.31 |    0.21 | 2.9297 | 1.4648 |      - |   13.7 KB |
-                         Create_n_CompileFast |  25.06 us | 0.0842 us | 0.0788 us |  1.94 |    0.01 | 1.2512 | 0.6104 | 0.0305 |   5.77 KB |
-         Create_n_CompileFast_LightExpression |  12.90 us | 0.0798 us | 0.0708 us |  1.00 |    0.00 | 1.0071 | 0.5035 | 0.0458 |   4.64 KB |
+BenchmarkDotNet=v0.12.0, OS=Windows 10.0.19041
+Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+.NET Core SDK=3.1.402
+  [Host]     : .NET Core 3.1.8 (CoreCLR 4.700.20.41105, CoreFX 4.700.20.41903), X64 RyuJIT
+  DefaultJob : .NET Core 3.1.8 (CoreCLR 4.700.20.41105, CoreFX 4.700.20.41903), X64 RyuJIT
+
 
 |                               Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                     Create_n_Compile | 263.63 us | 0.835 us | 0.781 us | 22.21 |    0.10 | 2.4414 | 0.9766 |      - |  13.34 KB |
-|                 Create_n_CompileFast |  18.45 us | 0.168 us | 0.157 us |  1.55 |    0.01 | 1.2207 | 0.6104 | 0.0305 |   5.73 KB |
-| Create_n_CompileFast_LightExpression |  11.88 us | 0.067 us | 0.059 us |  1.00 |    0.00 | 0.9918 | 0.4883 | 0.0458 |   4.62 KB |
+|                     Create_n_Compile | 328.31 us | 7.253 us | 6.057 us | 20.87 |    0.75 | 2.9297 | 1.4648 |      - |  13.34 KB |
+|                 Create_n_CompileFast |  24.57 us | 0.381 us | 0.356 us |  1.56 |    0.06 | 1.4038 | 0.6714 |      - |    5.8 KB |
+| Create_n_CompileFast_LightExpression |  16.06 us | 0.319 us | 0.515 us |  1.00 |    0.00 | 1.0681 | 0.5188 | 0.0305 |   4.38 KB |
 
 
         */

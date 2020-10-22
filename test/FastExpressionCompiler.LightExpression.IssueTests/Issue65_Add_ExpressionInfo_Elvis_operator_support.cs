@@ -5,7 +5,7 @@ using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
     [TestFixture]
-    public class Issue65_Add_ExpressionInfo_Elvis_operator_support
+    public class Issue65_Add_LightExpression_Elvis_operator_support
     {
         [Test]
         public void Test()

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
@@ -8,14 +9,29 @@ using NUnit.Framework.Internal;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class TryCatchTests
+    public class TryCatchTests : ITest
     {
+        public int Run()
+        {
+            Can_catch_exception();
+            Can_execute_finally();
+            Can_handle_the_exception_and_return_result_from_TryCatch_block();
+            Can_use_exception_parameter();
+            Can_return_from_catch_block();
+            Can_throw_an_exception();
+            Can_return_from_try_block_using_label();
+            Can_return_from_catch_block_using_label();
+            Can_return_try_block_result_using_label();
+            Can_return_nested_catch_block_result();
+
+            return 10;
+        }
+
         [Test]
         public void Can_catch_exception()
         {
@@ -100,7 +116,7 @@ namespace FastExpressionCompiler.UnitTests
             var exPar = Parameter(typeof(Exception), "exc");
             var getExceptionMessage = typeof(Exception)
                 .GetProperty(nameof(Exception.Message), BindingFlags.Public | BindingFlags.Instance).GetMethod;
-            var writeLine = typeof(Console).GetMethod(nameof(Console.WriteLine), new[] { typeof(string) });
+            var writeLine = typeof(Debug).GetMethod(nameof(Debug.WriteLine), new[] { typeof(string) });
 
             var expr = Lambda<Action>(TryCatch(
                 Throw(Constant(new DivideByZeroException())),
@@ -179,12 +195,12 @@ namespace FastExpressionCompiler.UnitTests
                 Block(
                     TryCatch(
                         Throw(New(typeof(Exception).GetConstructor(Type.EmptyTypes)), typeof(string)),
-                        Catch(
-                            typeof(Exception),
-                            Return(returnLabel, Constant("From Catch block"), typeof(string)))
+                        Catch(typeof(Exception), Return(returnLabel, Constant("From Catch block"), typeof(string)))
                     ),
                     Label(returnLabel, Default(returnLabel.Type))
                 ));
+
+            expr.PrintCSharpString();
 
             var funcSys = expr.CompileSys();
             Assert.AreEqual("From Catch block", funcSys());

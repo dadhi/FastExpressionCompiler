@@ -12,6 +12,18 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class LoopTests
     {
+        public int Run()
+        {
+            Loop_with_return();
+            Loop_with_break();
+            Loop_with_unused_break();
+            Loop_with_break_and_continue();
+            Loop_with_unused_continue();
+            Loop_with_unused_break_and_continue();
+            Loop_with_return_value();
+            return 7;
+        }
+
         [Test]
         public void Loop_with_return()
         {

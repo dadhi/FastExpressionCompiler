@@ -5,19 +5,27 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    public class Issue156_InvokeAction
+    public class Issue156_InvokeAction : ITest
     {
+        public int Run() 
+        {
+            InvokeActionConstantIsSupported();
+            return 1;
+        }
+
+        static string Join(object x, object y) => "" + x + y;
+
         [Test]
         public void InvokeActionConstantIsSupported()
         {
-            Action<object, object> testAction = (o1, o2) => Console.WriteLine($"1: {o1}, 2: {o2}");
+            Action<object, object> testAction = (o1, o2) => Join(o1, o2);
 
             var actionConstant = Constant(testAction, typeof(Action<object, object>));
             var one = Constant(1, typeof(object));
@@ -25,7 +33,7 @@ namespace FastExpressionCompiler.UnitTests
             var actionInvoke = Invoke(actionConstant, one, two);
 
             var invokeLambda = Lambda<Action>(actionInvoke);
-            var invokeFunc = invokeLambda.CompileFast();
+            var invokeFunc = invokeLambda.CompileFast(true);
 
             invokeFunc.Invoke();
         }

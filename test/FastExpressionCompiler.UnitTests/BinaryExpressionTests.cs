@@ -4,18 +4,66 @@ using NUnit.Framework;
 #if LIGHT_EXPRESSION
 using ExpressionType = System.Linq.Expressions.ExpressionType;
 using static FastExpressionCompiler.LightExpression.Expression;
-
 namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
     public class BinaryExpressionTests
     {
+        public int Run()
+        {
+            Add_compiles();
+            AddAssign_compiles();
+            AddAssignChecked_compiles();
+            AddChecked_compiles();
+            And_compiles();
+            AndAlso_compiles();
+            AndAssign_compiles();
+            ArrayIndex_compiles();
+            Assign_compiles();
+            Coalesce_compiles();
+            Divide_compiles();
+            DivideAssign_compiles();
+            Equal_compiles();
+            ExclusiveOr_compiles();
+            ExclusiveOrAssign_compiles();
+            GreaterThan_compiles();
+            GreaterThanOrEqual_compiles();
+            LeftShift_compiles();
+            LeftShiftAssign_compiles();
+            LessThan_compiles();
+            LessThanOrEqual_compiles();
+            MakeBinary_Add_compiles();
+            MakeBinary_ArrayIndex_compiles();
+            MakeBinary_Assign_compiles();
+            MakeBinary_Coalesce_compiles();
+            Modulo_compiles();
+            ModuloAssign_compiles();
+            Multiply_compiles();
+            MultiplyAssign_compiles();
+            MultiplyAssignChecked_compiles();
+            MultiplyChecked_compiles();
+            NotEqual_compiles();
+            Or_compiles();
+            OrAssign_compiles();
+            OrElse_compiles();
+            Power_compiles();
+            PowerAssign_compiles();
+            ReferenceEqual_compiles();
+            ReferenceNotEqual_compiles();
+            RightShift_compiles();
+            RightShiftAssign_compiles();
+            Subtract_compiles();
+            SubtractAssign_compiles();
+            SubtractAssignChecked_compiles();
+            SubtractChecked_compiles();
+            return 45;
+        }
+
         [Test]
         public void Add_compiles()
         {
@@ -24,7 +72,7 @@ namespace FastExpressionCompiler.UnitTests
                 Add(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(1);
+            int result = expression.CompileFast(true)(1);
 
             Assert.AreEqual(3, result);
         }
@@ -37,7 +85,7 @@ namespace FastExpressionCompiler.UnitTests
                 AddAssign(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(1);
+            int result = expression.CompileFast(true)(1);
 
             Assert.AreEqual(3, result);
         }
@@ -50,7 +98,7 @@ namespace FastExpressionCompiler.UnitTests
                 AddAssignChecked(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(1);
+            int result = expression.CompileFast(true)(1);
 
             Assert.AreEqual(3, result);
         }
@@ -63,7 +111,7 @@ namespace FastExpressionCompiler.UnitTests
                 AddChecked(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(1);
+            int result = expression.CompileFast(true)(1);
 
             Assert.AreEqual(3, result);
         }
@@ -76,7 +124,7 @@ namespace FastExpressionCompiler.UnitTests
                 And(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(5);
+            int result = expression.CompileFast(true)(5);
 
             Assert.AreEqual(1, result);
         }
@@ -89,7 +137,7 @@ namespace FastExpressionCompiler.UnitTests
                 AndAlso(param, Constant(false)),
                 param);
 
-            bool result = expression.CompileFast()(true);
+            bool result = expression.CompileFast(true)(true);
 
             Assert.IsFalse(result);
         }
@@ -102,7 +150,7 @@ namespace FastExpressionCompiler.UnitTests
                 AndAssign(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(5);
+            int result = expression.CompileFast(true)(5);
 
             Assert.AreEqual(1, result);
         }
@@ -115,7 +163,7 @@ namespace FastExpressionCompiler.UnitTests
                 ArrayIndex(param, Constant(1)),
                 param);
 
-            string result = expression.CompileFast()(new[] { "1", "2" });
+            string result = expression.CompileFast(true)(new[] { "1", "2" });
 
             Assert.AreEqual("2", result);
         }
@@ -128,7 +176,7 @@ namespace FastExpressionCompiler.UnitTests
                 Assign(param, Constant("test")),
                 param);
 
-            string result = expression.CompileFast()("original");
+            string result = expression.CompileFast(true)("original");
 
             Assert.AreEqual("test", result);
         }
@@ -141,7 +189,7 @@ namespace FastExpressionCompiler.UnitTests
                 Coalesce(param, Constant("<null>")),
                 param);
 
-            string result = expression.CompileFast()(null);
+            string result = expression.CompileFast(true)(null);
 
             Assert.AreEqual("<null>", result);
         }
@@ -154,7 +202,7 @@ namespace FastExpressionCompiler.UnitTests
                 Divide(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(6);
+            int result = expression.CompileFast(true)(6);
 
             Assert.AreEqual(3, result);
         }
@@ -167,7 +215,7 @@ namespace FastExpressionCompiler.UnitTests
                 DivideAssign(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(6);
+            int result = expression.CompileFast(true)(6);
 
             Assert.AreEqual(3, result);
         }
@@ -180,7 +228,7 @@ namespace FastExpressionCompiler.UnitTests
                 Equal(param, Constant(1)),
                 param);
 
-            bool result = expression.CompileFast()(1);
+            bool result = expression.CompileFast(true)(1);
 
             Assert.IsTrue(result);
         }
@@ -193,7 +241,7 @@ namespace FastExpressionCompiler.UnitTests
                 ExclusiveOr(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(5);
+            int result = expression.CompileFast(true)(5);
 
             Assert.AreEqual(6, result);
         }
@@ -206,7 +254,7 @@ namespace FastExpressionCompiler.UnitTests
                 ExclusiveOrAssign(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(5);
+            int result = expression.CompileFast(true)(5);
 
             Assert.AreEqual(6, result);
         }
@@ -219,7 +267,7 @@ namespace FastExpressionCompiler.UnitTests
                 GreaterThan(param, Constant(2)),
                 param);
 
-            bool result = expression.CompileFast()(3);
+            bool result = expression.CompileFast(true)(3);
 
             Assert.IsTrue(result);
         }
@@ -232,7 +280,7 @@ namespace FastExpressionCompiler.UnitTests
                 GreaterThanOrEqual(param, Constant(2)),
                 param);
 
-            bool result = expression.CompileFast()(2);
+            bool result = expression.CompileFast(true)(2);
 
             Assert.IsTrue(result);
         }
@@ -245,7 +293,7 @@ namespace FastExpressionCompiler.UnitTests
                 LeftShift(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(3);
+            int result = expression.CompileFast(true)(3);
 
             Assert.AreEqual(12, result);
         }
@@ -258,7 +306,7 @@ namespace FastExpressionCompiler.UnitTests
                 LeftShiftAssign(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(3);
+            int result = expression.CompileFast(true)(3);
 
             Assert.AreEqual(12, result);
         }
@@ -271,7 +319,7 @@ namespace FastExpressionCompiler.UnitTests
                 LessThan(param, Constant(2)),
                 param);
 
-            bool result = expression.CompileFast()(1);
+            bool result = expression.CompileFast(true)(1);
 
             Assert.IsTrue(result);
         }
@@ -284,7 +332,7 @@ namespace FastExpressionCompiler.UnitTests
                 LessThanOrEqual(param, Constant(2)),
                 param);
 
-            bool result = expression.CompileFast()(2);
+            bool result = expression.CompileFast(true)(2);
 
             Assert.IsTrue(result);
         }
@@ -297,7 +345,7 @@ namespace FastExpressionCompiler.UnitTests
                 MakeBinary(ExpressionType.Add, param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(1);
+            int result = expression.CompileFast(true)(1);
 
             Assert.AreEqual(3, result);
         }
@@ -310,7 +358,7 @@ namespace FastExpressionCompiler.UnitTests
                 MakeBinary(ExpressionType.ArrayIndex, param, Constant(1)),
                 param);
 
-            string result = expression.CompileFast()(new[] { "1", "2" });
+            string result = expression.CompileFast(true)(new[] { "1", "2" });
 
             Assert.AreEqual("2", result);
         }
@@ -323,7 +371,7 @@ namespace FastExpressionCompiler.UnitTests
                 MakeBinary(ExpressionType.Assign, param, Constant("test")),
                 param);
 
-            string result = expression.CompileFast()("original");
+            string result = expression.CompileFast(true)("original");
 
             Assert.AreEqual("test", result);
         }
@@ -336,7 +384,7 @@ namespace FastExpressionCompiler.UnitTests
                 MakeBinary(ExpressionType.Coalesce, param, Constant("<null>")),
                 param);
 
-            string result = expression.CompileFast()(null);
+            string result = expression.CompileFast(true)(null);
 
             Assert.AreEqual("<null>", result);
         }
@@ -349,7 +397,7 @@ namespace FastExpressionCompiler.UnitTests
                 Modulo(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(5);
+            int result = expression.CompileFast(true)(5);
 
             Assert.AreEqual(2, result);
         }
@@ -362,7 +410,7 @@ namespace FastExpressionCompiler.UnitTests
                 ModuloAssign(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(5);
+            int result = expression.CompileFast(true)(5);
 
             Assert.AreEqual(2, result);
         }
@@ -375,7 +423,7 @@ namespace FastExpressionCompiler.UnitTests
                 Multiply(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(2);
+            int result = expression.CompileFast(true)(2);
 
             Assert.AreEqual(6, result);
         }
@@ -388,7 +436,7 @@ namespace FastExpressionCompiler.UnitTests
                 MultiplyAssign(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(2);
+            int result = expression.CompileFast(true)(2);
 
             Assert.AreEqual(6, result);
         }
@@ -401,7 +449,7 @@ namespace FastExpressionCompiler.UnitTests
                 MultiplyAssignChecked(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(2);
+            int result = expression.CompileFast(true)(2);
 
             Assert.AreEqual(6, result);
         }
@@ -414,7 +462,7 @@ namespace FastExpressionCompiler.UnitTests
                 MultiplyChecked(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(2);
+            int result = expression.CompileFast(true)(2);
 
             Assert.AreEqual(6, result);
         }
@@ -427,7 +475,7 @@ namespace FastExpressionCompiler.UnitTests
                 NotEqual(param, Constant(1)),
                 param);
 
-            bool result = expression.CompileFast()(1);
+            bool result = expression.CompileFast(true)(1);
 
             Assert.IsFalse(result);
         }
@@ -440,7 +488,7 @@ namespace FastExpressionCompiler.UnitTests
                 Or(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(5);
+            int result = expression.CompileFast(true)(5);
 
             Assert.AreEqual(7, result);
         }
@@ -453,7 +501,7 @@ namespace FastExpressionCompiler.UnitTests
                 OrAssign(param, Constant(3)),
                 param);
 
-            int result = expression.CompileFast()(5);
+            int result = expression.CompileFast(true)(5);
 
             Assert.AreEqual(7, result);
         }
@@ -466,7 +514,7 @@ namespace FastExpressionCompiler.UnitTests
                 OrElse(param, Constant(true)),
                 param);
 
-            bool result = expression.CompileFast()(false);
+            bool result = expression.CompileFast(true)(false);
 
             Assert.IsTrue(result);
         }
@@ -479,7 +527,7 @@ namespace FastExpressionCompiler.UnitTests
                 Power(param, Constant(2.0)),
                 param);
 
-            double result = expression.CompileFast()(3.0);
+            double result = expression.CompileFast(true)(3.0);
 
             Assert.AreEqual(9.0, result);
         }
@@ -492,7 +540,7 @@ namespace FastExpressionCompiler.UnitTests
                 PowerAssign(param, Constant(2.0)),
                 param);
 
-            double result = expression.CompileFast()(3.0);
+            double result = expression.CompileFast(true)(3.0);
 
             Assert.AreEqual(9.0, result);
         }
@@ -506,7 +554,7 @@ namespace FastExpressionCompiler.UnitTests
                 ReferenceEqual(param, Constant(Value)),
                 param);
 
-            bool result = expression.CompileFast()(Value);
+            bool result = expression.CompileFast(true)(Value);
 
             Assert.IsTrue(result);
         }
@@ -520,7 +568,7 @@ namespace FastExpressionCompiler.UnitTests
                 ReferenceNotEqual(param, Constant(Value)),
                 param);
 
-            bool result = expression.CompileFast()(Value);
+            bool result = expression.CompileFast(true)(Value);
 
             Assert.IsFalse(result);
         }
@@ -533,7 +581,7 @@ namespace FastExpressionCompiler.UnitTests
                 RightShift(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(12);
+            int result = expression.CompileFast(true)(12);
 
             Assert.AreEqual(3, result);
         }
@@ -546,7 +594,7 @@ namespace FastExpressionCompiler.UnitTests
                 RightShiftAssign(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(12);
+            int result = expression.CompileFast(true)(12);
 
             Assert.AreEqual(3, result);
         }
@@ -559,7 +607,7 @@ namespace FastExpressionCompiler.UnitTests
                 Subtract(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(3);
+            int result = expression.CompileFast(true)(3);
 
             Assert.AreEqual(1, result);
         }
@@ -572,7 +620,7 @@ namespace FastExpressionCompiler.UnitTests
                 SubtractAssign(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(3);
+            int result = expression.CompileFast(true)(3);
 
             Assert.AreEqual(1, result);
         }
@@ -585,7 +633,7 @@ namespace FastExpressionCompiler.UnitTests
                 SubtractAssignChecked(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(3);
+            int result = expression.CompileFast(true)(3);
 
             Assert.AreEqual(1, result);
         }
@@ -598,7 +646,7 @@ namespace FastExpressionCompiler.UnitTests
                 SubtractChecked(param, Constant(2)),
                 param);
 
-            int result = expression.CompileFast()(3);
+            int result = expression.CompileFast(true)(3);
 
             Assert.AreEqual(1, result);
         }

@@ -13,13 +13,28 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class ConvertOperatorsTests
     {
+        public int Run()
+        {
+            Target_type_explicit_operator_in_action();
+            Generic_converter_should_work();
+
+#if !LIGHT_EXPRESSION
+            Target_type_implicit_operator();
+            Source_type_implicit_operator();
+            Target_type_explicit_operator();
+            return 5;
+#else
+            return 2;
+#endif
+        }
+
 #if !LIGHT_EXPRESSION
         [Test]
         public void Target_type_implicit_operator()
         {
             Expression<Func<string, X>> expr = s => s;
             
-            var f = expr.CompileFast();
+            var f = expr.CompileFast(true);
             var x = f("hey");
 
             Assert.AreEqual("X:hey", x.S);
@@ -30,7 +45,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             Expression<Func<Z, X>> expr = z => z;
 
-            var f = expr.CompileFast();
+            var f = expr.CompileFast(true);
             var x = f(new Z("a"));
 
             Assert.AreEqual("a", x.S);
@@ -41,7 +56,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             Expression<Func<string, Y>> expr = s => (Y)s;
 
-            var f = expr.CompileFast();
+            var f = expr.CompileFast(true);
             var y = f("hey");
 
             Assert.AreEqual("X:hey", y.S);
@@ -56,7 +71,7 @@ namespace FastExpressionCompiler.UnitTests
                 Convert(sExpr, typeof(Y)),
                 sExpr);
 
-            var f = expr.CompileFast();
+            var f = expr.CompileFast(true);
             f("hey");
         }
 

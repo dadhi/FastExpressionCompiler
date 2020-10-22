@@ -3,17 +3,34 @@ using NUnit.Framework;
 #pragma warning disable 659
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
     using System.Reflection;
 
-    public class Issue181_TryEmitIncDecAssign_InvalidCastException
+    public class Issue181_TryEmitIncDecAssign_InvalidCastException : ITest
     {
+        public int Run()
+        {
+            TryEmitIncDecAssign_Supports_PreIncrement_Property_Action();
+            TryEmitIncDecAssign_Supports_PreIncrement_Nested_Property_Action();
+            TryEmitIncDecAssign_Supports_PreIncrement_Field_Action();
+            TryEmitIncDecAssign_Supports_PreIncrement_Nested_Field_Action();
+            TryEmitIncDecAssign_Supports_PostIncrement_Property_Action();
+            TryEmitIncDecAssign_Supports_PreDecrement_Nested_Property_Action();
+            TryEmitIncDecAssign_Supports_PostDecrement_Field_Action();
+            TryEmitIncDecAssign_Supports_PreIncrement_Nested_Property_Func();
+            TryEmitIncDecAssign_Supports_PostIncrement_Field_Func();
+            TryEmitIncDecAssign_Supports_PostIncrement_Static_Field_Func();
+            TryEmitIncDecAssign_Supports_PreDecrement_Property_Func();
+            TryEmitIncDecAssign_Supports_PreDecrement_Static_Property_Func();
+            TryEmitIncDecAssign_Supports_PostDecrement_Nested_Field_Func();
+            return 14;
+        }
+
         // originally seen in a Rezolver example, which I've tried to replicate as close as possible
 
         public int CounterProperty { get; set; } = 1;

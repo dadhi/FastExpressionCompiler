@@ -12,8 +12,31 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class AssignTests
+    public class AssignTests : ITest
     {
+        public int Run()
+        {
+            Can_assign_to_parameter();
+            Can_assign_to_parameter_in_nested_lambda();
+            Parameter_test_try_catch_finally_result();
+            Local_Variable_test_try_catch_finally_result();
+            Member_test_prop();
+            Member_test_field();
+            Member_test_block_result_should_detect_non_block_variable();
+            Member_test_block_result();
+            Member_test_try_catch_finally_result();
+
+            Array_index_assign_body_less();
+            Array_index_assign_ref_type_body_less();
+            Array_index_assign_value_type_block();
+            Array_index_assign_ref_type_block();
+            Array_multi_dimensional_index_assign_value_type_block();
+            Array_multi_dimensional_index_assign_ref_type_block();
+            Array_index_assign_custom_indexer();
+            Array_index_assign_custom_indexer_with_get();
+            return 17;
+        }
+
         [Test]
         public void Can_assign_to_parameter()
         {
@@ -214,7 +237,6 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(tryCatch.NestedTest);
             Assert.AreEqual("Value", tryCatch.NestedTest.Nested);
         }
-
         public class Test
         {
             public int Prop { get; set; }
@@ -313,6 +335,7 @@ namespace FastExpressionCompiler.UnitTests
                     ArrayAccess(variable, Constant(1), Constant(0)))); // ret o[1,0]
 
             var f = expr.CompileFast(true);
+            f.PrintIL();
 
             Assert.IsNotNull(f);
             Assert.AreEqual(a, f());

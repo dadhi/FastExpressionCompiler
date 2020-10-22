@@ -12,6 +12,17 @@ namespace FastExpressionCompiler.UnitTests
     [TestFixture]
     public class CoalesceTests
     {
+        public int Run()
+        {
+            Coalesce_bodyless_left_null();
+            Coalesce_bodyless_left_not_null();
+            Coalesce_block_variable_assign_constant();
+            Coalesce_block_variable_assign_constant_right_box();
+            Coalesce_block_variable_assign_constant_right_cast();
+            Coalesce_block_variable_assign_with_param();
+            return 6;
+        }
+
         [Test]
         public void Coalesce_bodyless_left_null()
         {

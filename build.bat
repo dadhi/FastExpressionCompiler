@@ -5,31 +5,31 @@ echo:## Starting: RESTORE and BUILD...
 echo: 
 
 dotnet clean -v:m
-dotnet build -c:Release -v:m -p:DevMode=false
+dotnet build -c:Release -v:m
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
 echo:## Finished: RESTORE and BUILD
+
 echo: 
 echo:## Starting: TESTS...
 echo: 
 
-dotnet test -c:Release -p:GeneratePackageOnBuild=false;DevMode=false
-
+dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 if %ERRORLEVEL% neq 0 goto :error
+
+dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner.Net472/FastExpressionCompiler.TestsRunner.Net472.csproj
+if %ERRORLEVEL% neq 0 goto :error
+echo:
 echo:## Finished: TESTS
 
 echo: 
-echo:## Finished: TESTS
-echo: 
-echo:## Starting: PACKAGING...
-echo: 
-
-dotnet pack ".\src\FastExpressionCompiler" -c:Release -restore:False -p:DevMode=false
-dotnet pack ".\src\FastExpressionCompiler.LightExpression" -c:Release -restore:False -p:DevMode=false
-
-echo: 
-echo:## Finished: PACKAGING
+echo:## Starting: SOURCE PACKAGING...
+echo:
+call BuildScripts\NugetPack.bat
+if %ERRORLEVEL% neq 0 goto :error
+echo:
+echo:## Finished: SOURCE PACKAGING
 echo: 
 echo:## Finished: ALL ##
 echo:

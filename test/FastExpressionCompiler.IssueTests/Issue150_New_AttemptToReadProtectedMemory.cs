@@ -4,10 +4,10 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
  using static System.Linq.Expressions.Expression;
- namespace FastExpressionCompiler.UnitTests
+ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     using System;
@@ -17,6 +17,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
     [TestFixture]
     public class Issue150_New_AttemptToReadProtectedMemory
     {
+        public int Run() 
+        {
+            Nested_Assignments_Should_Work();
+            return 1;
+        }
+
         [Test]
         public void Nested_Assignments_Should_Work()
         {
@@ -97,7 +103,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 structMapping,
                 mappingDataParameter);
 
-            var populationFunc = populationLambda.CompileFast();
+            var populationFunc = populationLambda.CompileFast(true);
             populationFunc.Invoke(new MappingData<Dictionary<string, int>, PublicPropertyStruct<string>>
             {
                 Source = new Dictionary<string, int> { ["Value"] = 123 },

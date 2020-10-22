@@ -3,15 +3,22 @@ using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    class Issue106_Power_support
+    public class Issue106_Power_support
     {
+        public int Run()
+        {
+            PowerIsSupported();
+            TestPowerAssign();
+            return 2;
+        }
+
         delegate void ActionRef<T>(ref T a1);
 
         [Test]

@@ -1,22 +1,28 @@
 ﻿using System;
+using System.Diagnostics;
 using NUnit.Framework;
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
-#pragma warning disable 649 // Unaasigned fields
+#pragma warning disable 649 // Unassigned fields
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.UnitTests
+namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
-    public class Issue146_bool_par_error
+    public class Issue146_bool_par : ITest
     {
-        
+        public int Run()
+        {
+            Test1();
+            Test2();
+            return 2;
+        }
+
         class MyObject
         {
             public bool a<b>(b i)
@@ -25,7 +31,6 @@ namespace FastExpressionCompiler.UnitTests
             }
         }
 
-        
         [Test]
         public void Test1()
         {
@@ -39,19 +44,18 @@ namespace FastExpressionCompiler.UnitTests
                 objParam,
                 boolParam);
 
-            var func = lambda.CompileFast();
+            var func = lambda.CompileFast(true);
 
             var ret = func.Invoke(new MyObject(), false);
 
             Assert.AreEqual(true, ret);
         }
 
-
         private class MyClass
         {
             public bool MyMethod<T>(bool i)
             {
-                Console.WriteLine("Got " + i);
+                Debug.WriteLine("Got " + i);
 
                 return Equals(i, false);
             }
@@ -70,7 +74,7 @@ namespace FastExpressionCompiler.UnitTests
                 objParam,
                 boolParam);
 
-            var func = lambda.CompileFast();
+            var func = lambda.CompileFast(true);
 
             func.Invoke(new MyClass(), false);
         }
