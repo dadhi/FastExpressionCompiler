@@ -535,7 +535,7 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
         public static UnaryExpression Convert(Expression expression, Type type)
         {
-            if (type.IsEnum) 
+            if (type.IsEnum)
                 return new ConvertUnaryExpression(expression, type);
             return Type.GetTypeCode(type) switch 
             {
@@ -633,8 +633,30 @@ namespace FastExpressionCompiler.LightExpression
             new NodeTypedUnaryExpression(ExpressionType.UnaryPlus, expression);
 
         /// <summary>Creates a UnaryExpression that represents an explicit unboxing.</summary>
-        public static UnaryExpression Unbox(Expression expression, Type type) =>
-            new TypedUnaryExpression(ExpressionType.Unbox, expression, type);
+        public static UnaryExpression Unbox(Expression expression, Type type)
+        {
+            if (type.IsEnum)
+                return new TypedUnaryExpression(ExpressionType.Unbox, expression, type);
+            return Type.GetTypeCode(type) switch 
+            {
+                TypeCode.Boolean  => new TypedUnaryExpression<bool>(ExpressionType.Unbox, expression),
+                TypeCode.Byte     => new TypedUnaryExpression<byte>(ExpressionType.Unbox, expression),
+                TypeCode.Char     => new TypedUnaryExpression<char>(ExpressionType.Unbox, expression),
+                TypeCode.DateTime => new TypedUnaryExpression<DateTime>(ExpressionType.Unbox, expression),
+                TypeCode.Decimal  => new TypedUnaryExpression<decimal>(ExpressionType.Unbox, expression),
+                TypeCode.Double   => new TypedUnaryExpression<double>(ExpressionType.Unbox, expression),
+                TypeCode.Int16    => new TypedUnaryExpression<short>(ExpressionType.Unbox, expression),
+                TypeCode.Int32    => new TypedUnaryExpression<int>(ExpressionType.Unbox, expression),
+                TypeCode.Int64    => new TypedUnaryExpression<long>(ExpressionType.Unbox, expression),
+                TypeCode.SByte    => new TypedUnaryExpression<sbyte>(ExpressionType.Unbox, expression),
+                TypeCode.Single   => new TypedUnaryExpression<float>(ExpressionType.Unbox, expression),
+                TypeCode.String   => new TypedUnaryExpression<string>(ExpressionType.Unbox, expression),
+                TypeCode.UInt16   => new TypedUnaryExpression<ushort>(ExpressionType.Unbox, expression),
+                TypeCode.UInt32   => new TypedUnaryExpression<uint>(ExpressionType.Unbox, expression),
+                TypeCode.UInt64   => new TypedUnaryExpression<ulong>(ExpressionType.Unbox, expression),
+                _ => new TypedUnaryExpression(ExpressionType.Unbox, expression, type)
+            };
+        }
 
         public static LambdaExpression Lambda(Expression body) =>
             new LambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
