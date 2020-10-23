@@ -184,12 +184,23 @@ namespace FastExpressionCompiler.LightExpression
             return result;
         }
 
-        public static ParameterExpression Parameter(Type type, string name = null) =>
-            type.IsEnum 
-                ? new TypedParameterExpression(type, name)
-                : !type.IsByRef 
-                    ? TryToMakeKnownTypeParameter(type, name)
-                    : new ByRefParameterExpression(type.GetElementType(), name);
+        public static ParameterExpression Parameter(Type type, string name = null) 
+        {
+            if (type.IsByRef) 
+                return new ByRefParameterExpression(type.GetElementType(), name);
+            if (type == typeof(object)) 
+                return new ParameterExpression(name);
+            if (type == typeof(object[])) 
+                return new TypedParameterExpression<object[]>(name);
+            return new TypedParameterExpression(type, name);
+        }
+
+        // public static ParameterExpression Parameter(Type type, string name = null) =>
+        //     type.IsEnum 
+        //         ? new TypedParameterExpression(type, name)
+        //         : !type.IsByRef 
+        //             ? TryToMakeKnownTypeParameter(type, name)
+        //             : new ByRefParameterExpression(type.GetElementType(), name);
 
         /// <summary>Variable is not by-ref yet</summary>
         public static ParameterExpression Variable(Type type, string name = null) =>

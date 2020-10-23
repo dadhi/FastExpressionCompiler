@@ -79,12 +79,20 @@ namespace FastExpressionCompiler.Benchmarks
         |      CreateExpression | 2,857.4 ns | 28.03 ns | 34.43 ns |  4.89 |    0.04 | 0.3090 |     - |     - |    1304 B |
         | CreateLightExpression |   583.3 ns |  7.29 ns |  6.46 ns |  1.00 |    0.00 | 0.1659 |     - |     - |     696 B |
 
-        # V3 - without TypeCode
+        # V3 - without TypeCode for Convert
 
         |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
         |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
         |      CreateExpression | 2,854.9 ns | 54.10 ns | 50.60 ns |  5.10 |    0.10 | 0.3090 |     - |     - |    1304 B |
         | CreateLightExpression |   560.1 ns |  7.83 ns |  6.94 ns |  1.00 |    0.00 | 0.1678 |     - |     - |     704 B |
+
+
+        # V3 - without TypeCode for Parameter
+
+        |                Method |       Mean |    Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+        |---------------------- |-----------:|---------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+        |      CreateExpression | 4,503.3 ns | 89.56 ns | 218.00 ns |  5.40 |    0.30 | 0.3052 |     - |     - |    1304 B |
+        | CreateLightExpression |   843.9 ns | 16.78 ns |  29.38 ns |  1.00 |    0.00 | 0.1640 |     - |     - |     688 B |
 
         */
         [Benchmark]
