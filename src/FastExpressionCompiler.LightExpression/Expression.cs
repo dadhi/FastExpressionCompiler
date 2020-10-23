@@ -517,31 +517,34 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
         public static UnaryExpression Convert(Expression expression, Type type)
         {
-            if (type.IsEnum)
-                return new ConvertUnaryExpression(expression, type);
-            return Type.GetTypeCode(type) switch 
-            {
-                TypeCode.Boolean  => new TypedConvertUnaryExpression<bool>(expression),
-                TypeCode.Byte     => new TypedConvertUnaryExpression<byte>(expression),
-                TypeCode.Char     => new TypedConvertUnaryExpression<char>(expression),
-                TypeCode.DateTime => new TypedConvertUnaryExpression<DateTime>(expression),
-                TypeCode.Decimal  => new TypedConvertUnaryExpression<decimal>(expression),
-                TypeCode.Double   => new TypedConvertUnaryExpression<double>(expression),
-                TypeCode.Int16    => new TypedConvertUnaryExpression<short>(expression),
-                TypeCode.Int32    => new TypedConvertUnaryExpression<int>(expression),
-                TypeCode.Int64    => new TypedConvertUnaryExpression<long>(expression),
-                TypeCode.SByte    => new TypedConvertUnaryExpression<sbyte>(expression),
-                TypeCode.Single   => new TypedConvertUnaryExpression<float>(expression),
-                TypeCode.String   => new TypedConvertUnaryExpression<string>(expression),
-                TypeCode.UInt16   => new TypedConvertUnaryExpression<ushort>(expression),
-                TypeCode.UInt32   => new TypedConvertUnaryExpression<uint>(expression),
-                TypeCode.UInt64   => new TypedConvertUnaryExpression<ulong>(expression),
-                _ =>  type == typeof(object)
-                    ? new TypedConvertUnaryExpression<object>(expression) 
-                    : type == typeof(Type)
-                    ? new TypedConvertUnaryExpression<Type>(expression)
-                    : (UnaryExpression)new ConvertUnaryExpression(expression, type)
-            };
+            return new ConvertUnaryExpression(expression, type);
+
+            // todo: @incomplete checking the performance
+            // if (type.IsEnum)
+            //     return new ConvertUnaryExpression(expression, type);
+            // return Type.GetTypeCode(type) switch 
+            // {
+            //     TypeCode.Boolean  => new TypedConvertUnaryExpression<bool>(expression),
+            //     TypeCode.Byte     => new TypedConvertUnaryExpression<byte>(expression),
+            //     TypeCode.Char     => new TypedConvertUnaryExpression<char>(expression),
+            //     TypeCode.DateTime => new TypedConvertUnaryExpression<DateTime>(expression),
+            //     TypeCode.Decimal  => new TypedConvertUnaryExpression<decimal>(expression),
+            //     TypeCode.Double   => new TypedConvertUnaryExpression<double>(expression),
+            //     TypeCode.Int16    => new TypedConvertUnaryExpression<short>(expression),
+            //     TypeCode.Int32    => new TypedConvertUnaryExpression<int>(expression),
+            //     TypeCode.Int64    => new TypedConvertUnaryExpression<long>(expression),
+            //     TypeCode.SByte    => new TypedConvertUnaryExpression<sbyte>(expression),
+            //     TypeCode.Single   => new TypedConvertUnaryExpression<float>(expression),
+            //     TypeCode.String   => new TypedConvertUnaryExpression<string>(expression),
+            //     TypeCode.UInt16   => new TypedConvertUnaryExpression<ushort>(expression),
+            //     TypeCode.UInt32   => new TypedConvertUnaryExpression<uint>(expression),
+            //     TypeCode.UInt64   => new TypedConvertUnaryExpression<ulong>(expression),
+            //     _ =>  type == typeof(object)
+            //         ? new TypedConvertUnaryExpression<object>(expression) 
+            //         : type == typeof(Type)
+            //         ? new TypedConvertUnaryExpression<Type>(expression)
+            //         : (UnaryExpression)new ConvertUnaryExpression(expression, type)
+            // };
         }
 
         /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
@@ -800,6 +803,18 @@ namespace FastExpressionCompiler.LightExpression
         public static MemberInitExpression MemberInit(NewExpression newExpr, params MemberBinding[] bindings) =>
             new MemberInitExpression(newExpr, bindings);
 
+        public static MemberInitExpression MemberInit(NewExpression newExpr, IEnumerable<MemberBinding> bindings) =>
+            new MemberInitExpression(newExpr, bindings.AsReadOnlyList());
+
+        // note: LIGHT_EXPRESSION only
+        /// <summary>Does not present in System Expression. Enables member assignment on existing instance expression.</summary>
+        public static MemberInitExpression MemberInit(Expression instanceExpr, params MemberBinding[] assignments) =>
+            new MemberInitExpression(instanceExpr, assignments);
+
+        // note: LIGHT_EXPRESSION only
+        public static MemberInitExpression MemberInit(Expression instanceExpr, IEnumerable<MemberBinding> assignments) =>
+            new MemberInitExpression(instanceExpr, assignments.AsReadOnlyList());
+
         public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) =>
             new ListInitExpression(newExpression, initializers.AsReadOnlyList());
 
@@ -808,10 +823,6 @@ namespace FastExpressionCompiler.LightExpression
 
         public static ListInitExpression ListInit(NewExpression newExpression, IReadOnlyList<ElementInit> initializers) =>
             new ListInitExpression(newExpression, initializers);
-
-        /// <summary>Does not present in System Expression. Enables member assignment on existing instance expression.</summary>
-        public static MemberInitExpression MemberInit(Expression instanceExpr, params MemberBinding[] assignments) =>
-            new MemberInitExpression(instanceExpr, assignments);
 
         public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
             new NewArrayInitExpression(type.MakeArrayType(), initializers);
@@ -2174,7 +2185,6 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class ConvertWithMethodUnaryExpression : TypedUnaryExpression
     {
         public override MethodInfo Method { get; }
-
         public ConvertWithMethodUnaryExpression(ExpressionType nodeType, Expression operand, Type type, MethodInfo method)
             : base(nodeType, operand, type) =>
             Method = method;
@@ -3308,7 +3318,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         public readonly MemberInfo Member;
         public abstract MemberBindingType BindingType { get; }
-
         internal MemberBinding(MemberInfo member) => Member = member;
 
         public string ToExpressionString() => CreateExpressionString(new StringBuilder(128), 
@@ -3319,13 +3328,14 @@ namespace FastExpressionCompiler.LightExpression
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2);
 
         internal abstract System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted);
+
+        // todo: @incomplete implement ToCSharpCode
     }
 
     public sealed class MemberAssignment : MemberBinding
     {
         public readonly Expression Expression;
         public override MemberBindingType BindingType => MemberBindingType.Assignment;
-
         internal MemberAssignment(MemberInfo member, Expression expression) : base(member) => Expression = expression;
 
         internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
@@ -3348,7 +3358,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override MemberBindingType BindingType => MemberBindingType.MemberBinding;
         public readonly IReadOnlyList<MemberBinding> Bindings;
-
         internal MemberMemberBinding(MemberInfo member, IReadOnlyList<MemberBinding> bindings) : base(member) =>
             Bindings = bindings;
 
@@ -3380,13 +3389,14 @@ namespace FastExpressionCompiler.LightExpression
 
             return sb.Append(")");
         }
+
+        // todo: @incomplete implement ToCSharpCode
     }
 
     public sealed class MemberListBinding : MemberBinding
     {
         public override MemberBindingType BindingType => MemberBindingType.ListBinding;
         public readonly IReadOnlyList<ElementInit> Initializers;
-
         internal MemberListBinding(MemberInfo member, IReadOnlyList<ElementInit> initializers) : base(member) =>
             Initializers = initializers;
 
@@ -3406,6 +3416,8 @@ namespace FastExpressionCompiler.LightExpression
             
             return sb.Append(")");
         }
+
+        // todo: @incomplete implement ToCSharpCode
     }
 
     public class InvocationExpression : Expression

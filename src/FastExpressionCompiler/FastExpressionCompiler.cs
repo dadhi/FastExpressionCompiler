@@ -1391,9 +1391,10 @@ namespace FastExpressionCompiler
         private static bool TryCollectMemberInitExprConstants(ref ClosureInfo closure, MemberInitExpression expr,
             IReadOnlyList<ParameterExpression> paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure)
         {
-            var newExpr = expr.NewExpression
 #if LIGHT_EXPRESSION
-                          ?? expr.Expression
+            var newExpr = expr.Expression;
+#else
+            var newExpr = expr.NewExpression;
 #endif
                 ;
             if (!TryCollectBoundConstants(ref closure, newExpr, paramExprs, isNestedLambda, ref rootClosure))

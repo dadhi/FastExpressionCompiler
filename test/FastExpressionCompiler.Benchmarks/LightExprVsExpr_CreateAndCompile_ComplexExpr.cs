@@ -79,6 +79,13 @@ namespace FastExpressionCompiler.Benchmarks
         |      CreateExpression | 2,857.4 ns | 28.03 ns | 34.43 ns |  4.89 |    0.04 | 0.3090 |     - |     - |    1304 B |
         | CreateLightExpression |   583.3 ns |  7.29 ns |  6.46 ns |  1.00 |    0.00 | 0.1659 |     - |     - |     696 B |
 
+        # V3 - without TypeCode
+
+        |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+        |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+        |      CreateExpression | 2,854.9 ns | 54.10 ns | 50.60 ns |  5.10 |    0.10 | 0.3090 |     - |     - |    1304 B |
+        | CreateLightExpression |   560.1 ns |  7.83 ns |  6.94 ns |  1.00 |    0.00 | 0.1678 |     - |     - |     704 B |
+
         */
         [Benchmark]
         public object CreateExpression() =>
