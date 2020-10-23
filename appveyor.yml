@@ -19,7 +19,7 @@ for:
         - image: Visual Studio 2019
 
     build_script:
-      # - dotnet build -c Release -v:m
+      - dotnet build -c Release -v:m
       - dotnet run -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
       - dotnet run -c Release -p test/FastExpressionCompiler.TestsRunner.Net472/FastExpressionCompiler.TestsRunner.Net472.csproj
 
