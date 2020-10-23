@@ -10,11 +10,27 @@
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
 
-        ## v3.0.0
+## v3.0.0 - Major feature release
 
-            - TBD
+The version contains a lot of fixes and improvements and hopefully as-little-as-possible breaking changes.
 
-            Thanks to the contributors.
+### **FastExpressionCompiler** and **FastExpressionCompiler.LightExpression**
+
+- Performance and memory consumption is improved, especially for the expressions with the closure and for expressions with the nested lambdas.
+- Filled the gaps in the expressions support.
+- Many fixes in the IL emit.
+
+### **FastExpressionCompiler.LightExpression**
+
+- Fixes the compatibility (the drop-in replacement) between `FastExpressionCompiler.LightExpression.Expression` and `System.Linq.Expression`.
+- Minimizing memory consumption by the created expressions.
+- Now includes the `ExpressionVisitor`.
+- Adds `ToCSharpString()` to output the C# code described by expression (tries hard).
+- Adds `ToExpressionString()` to output expression construction in the C# code, so given an expression object you'll get e.g. `Expression.Lambda(Expression.New(...))`.
+
+### The full list of fixes
+
+[Milestone v3.0.0](https://github.com/dadhi/FastExpressionCompiler/milestone/19)
 
         ]]></PackageReleaseNotes>
         <AssemblyName>$(Product)</AssemblyName>
