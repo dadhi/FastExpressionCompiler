@@ -1,8 +1,7 @@
 <Project>
     <Import Project="..\Directory.Build.props"/>
 
-    <!--Packages details-->
-    <PropertyGroup>
+    <PropertyGroup Label="Packaging">
         <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
 
         <PackageLicense>https://github.com/dadhi/FastExpressionCompiler/blob/master/LICENSE</PackageLicense>
@@ -12,17 +11,21 @@
         <RepositoryType>git</RepositoryType>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
 
-        <!-- <PackageIcon></PackageIcon> -->
+        <PackageIcon>logo.png</PackageIcon>
+        <PackageIconUrl>https://github.com/dadhi/FastExpressionCompiler/blob/master/logo.png</PackageIconUrl>
+
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     </PropertyGroup>
 
-    <!--Signing all packages, oh boy-->
-    <PropertyGroup>
+    <PropertyGroup Label="Signing all packages, oh boy">
         <SignAssembly>true</SignAssembly>
         <AssemblyOriginatorKeyFile>..\..\FastExpressionCompiler.snk</AssemblyOriginatorKeyFile>
     </PropertyGroup>
 
     <ItemGroup>
         <None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE" Visible="false"/>
+        <None Include="..\..\logo.png" Pack="true" PackagePath="logo.png" Visible="false"/>
         <None Include="..\..\FastExpressionCompiler.snk" Pack="true" PackagePath="FastExpressionCompiler.snk" Visible="false"/>
     </ItemGroup>
 

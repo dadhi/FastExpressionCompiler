@@ -2,12 +2,13 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.Internal.src</id>
-        <version>3.0.0-preview-01</version>
+        <version>3.0.0-preview-02</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2013-2020 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
         <license type="expression">MIT</license>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <icon>logo.png</icon>
         <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <releaseNotes><![CDATA[
@@ -38,22 +39,25 @@ The version contains a lot of fixes and improvements and hopefully as-little-as-
         <contentFiles>
             <files include="cs/**/*.*" buildAction="Compile" />
         </contentFiles>
+        <dependencies>
+            <group targetFramework="net45">
+                <dependency id="System.ValueTuple" version="4.5.0" />
+            </group>
+            <group targetFramework="netstandard2.0">
+                <dependency id="System.Dynamic.Runtime" version="4.3.0" />
+                <dependency id="System.Reflection.Emit.Lightweight" version="4.7.0" />
+            </group>
+        </dependencies>
     </metadata>
     <files>
         <file src="..\LICENSE" />
+        <file src="..\logo.png" />
         <file src="..\FastExpressionCompiler.snk" />
-        
-        <!--net45-->
-        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="content\net45\FastExpressionCompiler" />
 
-        <!-- .netstandard 1.0 -->
-        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard1.0\FastExpressionCompiler" />
+        <file src="_._" target="lib\net45\" />
+        <file src="_._" target="lib\netstandard2.0\" />
 
-        <!-- .netstandard 1.3 -->
-        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard1.3\FastExpressionCompiler" />
-
-        <!-- .netstandard 2.0 -->
+        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\net45\FastExpressionCompiler" />
         <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler" />
-
     </files>
 </package>
