@@ -16,15 +16,13 @@
 [Apex.Serialization]: https://github.com/dbolin/Apex.Serialization
 
 
-[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)
-[![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)  
+[![latest release](https://img.shields.io/badge/latest%20release-v3.0.0-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/untagged-29e08c0419179c684de2)
+[![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 Targets: __.NET Standard 2.0__, __.NET 4.5__  
 NuGet packages:
 
 - FastExpressionCompiler [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)[![fuget.org package api diff](https://www.fuget.org/packages/FastExpressionCompiler/badge.svg?v=2.0.0)](https://www.fuget.org/packages/FastExpressionCompiler/2.0.0/lib/netstandard2.0/diff/1.10.1/)  
 - FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression)[![fuget.org package last version](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/badge.svg?v=2.0.0)](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/2.0.0)
-
-The [Latest Release](https://github.com/dadhi/FastExpressionCompiler/releases/tag/untagged-29e08c0419179c684de2).
 
 Originally was a part of the [DryIoc], so check it out ;-)
 
