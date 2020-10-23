@@ -271,7 +271,9 @@ namespace FastExpressionCompiler.LightExpression
             var expressions = Visit(node.Expressions);
             if (ReferenceEquals(expressions, node.Expressions))
                 return node;
-            return new NewArrayExpression(node.NodeType, node.Type, expressions);
+            if (node.NodeType == ExpressionType.NewArrayInit)
+                return new NewArrayInitExpression(node.Type, expressions);
+            return new NewArrayBoundsExpression(node.Type, expressions);
         }
 
         protected internal virtual Expression VisitNew(NewExpression node)

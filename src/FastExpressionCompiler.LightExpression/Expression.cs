@@ -814,16 +814,17 @@ namespace FastExpressionCompiler.LightExpression
             new MemberInitExpression(instanceExpr, assignments);
 
         public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
-            new NewArrayExpression(ExpressionType.NewArrayInit, type.MakeArrayType(), initializers);
+            new NewArrayInitExpression(type.MakeArrayType(), initializers);
+
+        public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) =>
+            new NewArrayInitExpression(type.MakeArrayType(), initializers.AsReadOnlyList());
 
         public static NewArrayExpression MakeArrayBounds(Type type, IReadOnlyList<Expression> bounds) =>
-            new NewArrayExpression(ExpressionType.NewArrayBounds,
-                bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count),
-                bounds);
+            new NewArrayBoundsExpression(bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count), bounds);
 
         // todo: @perf optimize for the single bound
         public static NewArrayExpression NewArrayBounds(Type type, Expression bound) =>
-            new NewArrayExpression(ExpressionType.NewArrayBounds, type.MakeArrayType(), new[] { bound });
+            new NewArrayBoundsExpression(type.MakeArrayType(), new[] { bound });
 
         public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
             MakeArrayBounds(type, bounds);
@@ -2930,15 +2931,12 @@ namespace FastExpressionCompiler.LightExpression
             Arguments = arguments;
     }
 
-    // todo: @perf save memory - split for ArrayInit and ArrayBounds classes
-    public sealed class NewArrayExpression : Expression
+    public abstract class NewArrayExpression : Expression
     {
-        public override ExpressionType NodeType { get; }
-        public override Type Type { get; }
+        public sealed override Type Type { get; }
         public readonly IReadOnlyList<Expression> Expressions;
-        internal NewArrayExpression(ExpressionType expressionType, Type arrayType, IReadOnlyList<Expression> elements)
+        internal NewArrayExpression(Type arrayType, IReadOnlyList<Expression> elements)
         {
-            NodeType    = expressionType;
             Type        = arrayType;
             Expressions = elements;
         }
@@ -2979,6 +2977,18 @@ namespace FastExpressionCompiler.LightExpression
 
             return sb.Append(NodeType == ExpressionType.NewArrayInit ? "}" : "]");
         }
+    }
+
+    public sealed class NewArrayInitExpression : NewArrayExpression
+    {
+        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+        internal NewArrayInitExpression(Type arrayType, IReadOnlyList<Expression> elements) : base(arrayType, elements) {}
+    }
+
+    public sealed class NewArrayBoundsExpression : NewArrayExpression
+    {
+        public override ExpressionType NodeType => ExpressionType.NewArrayBounds;
+        internal NewArrayBoundsExpression(Type arrayType, IReadOnlyList<Expression> elements) : base(arrayType, elements) {}
     }
 
     public class MethodCallExpression : Expression
