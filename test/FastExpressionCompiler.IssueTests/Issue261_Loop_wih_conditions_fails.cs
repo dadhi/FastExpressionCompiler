@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.IssueTests
         public void Constant_of_Type_value_should_be_of_RuntimeType_because_the_SystemConstant_works_this_way()
         {
             var t = GetType();
-            Assert.AreEqual(Constant((object)t).Type.FullName, Constant(t).Type.FullName);
+            Assert.AreEqual("RuntimeType", Constant(t).Type.Name);
         }
 
         [Test]
