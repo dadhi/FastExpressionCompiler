@@ -65,7 +65,7 @@ namespace FastExpressionCompiler.Benchmarks
          CreateLightExpression |   389.5 ns | 0.9547 ns | 0.7972 ns |  1.00 |    0.00 |      0.1693 |           - |           - |               800 B |
              CreateExpression  | 3,574.7 ns | 8.0032 ns | 7.4862 ns |  9.18 |    0.02 |      0.2823 |           - |           - |              1344 B |
 
-        ## V3 RTM
+        ## V3-preview-01
 
         |                Method |       Mean |    Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
         |---------------------- |-----------:|---------:|----------:|------:|--------:|-------:|------:|------:|----------:|

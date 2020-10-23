@@ -87,6 +87,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests().Run);
                 Run(new ValueTypeTests().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run);
+                Run(new FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests().Run);
             });
 
             var issueTests = Task.Run(() => 

@@ -9,8 +9,21 @@ using SysExpr = System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
     [TestFixture]
-    public class LightExpressionTests
+    public class LightExpressionTests : ITest
     {
+        public int Run() 
+        {
+            Can_compile_lambda_without_converting_to_expression();
+            Can_compile_lambda_with_property();
+            Can_compile_lambda_with_call_and_property();
+            Nested_Func_using_outer_parameter();
+            Nested_Action_using_outer_parameter_and_closed_value();
+            Can_compile_complex_expr_with_Array_Properties_and_Casts();
+            Can_embed_normal_Expression_into_LightExpression_eg_as_Constructor_argument();
+
+            return 7;
+        }
+
         [Test]
         public void Can_compile_lambda_without_converting_to_expression()
         {
