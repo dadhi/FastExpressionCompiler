@@ -49,7 +49,7 @@ The compiled delegate may be _in some cases_ a lot faster than the one produced 
 __Note:__ The actual performance may vary depending on the multiple factors: 
 platform, how complex is expression, does it have a closure, does it contain nested lambdas, etc.
 
-Btw, the memory consumption taken by the compilation will be much smaller (check the `Allocated` column in the [benchmarks](#benchmarks) below).
+In addition, the memory consumption taken by the compilation will be much smaller (check the `Allocated` column in the [benchmarks](#benchmarks) below).
 
 
 ## Difference between FastExpressionCompiler and FastExpressionCompiler.LightExpression
