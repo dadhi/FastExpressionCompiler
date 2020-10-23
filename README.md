@@ -257,27 +257,25 @@ Creating and compiling:
 ## How it works
 
 The idea is to provide fast compilation for supported expression types,
-and fallback to system `Expression.Compile()` for not _yet_ supported types.
+and fallback to system `Expression.Compile()` for not supported types:
 
-__Note__: As of v1.9 most of the types are supported, please open issue if something is not ;-)
+**V3 still does not support** the `Quote` expression and the `DebugInfo` expression is ignored in the emitted code.
 
-Compilation is done by visiting expression nodes and emitting the IL. 
-The code is tuned for performance and minimal memory consumption. 
+The compilation is done by traversing the expression nodes and emitting the IL. 
+The code is tuned for the performance and the minimal memory consumption. 
 
-Expression is visited in two rounds (you can skip the first one with up-front knowledge):
+The expression is traversed twice:
 
-1. To collect constants and nested lambdas into closure objects
-2. To emit the IL and create the delegate from a `DynamicMethod`
+- 1st round is to collect the constants and nested lambdas into the closure objects.
+- 2nd round is to emit the IL code and create the delegate using the `DynamicMethod`.
 
-If visitor finds a not supported expression node, 
-the compilation is aborted, and null is returned enabling the fallback to normal `.Compile()`.
+If visitor finds the not supported expression node or the error condition, 
+the compilation is aborted, and `null` is returned enabling the fallback to System `.Compile()`.
 
 ### Additional optimizations
 
-1. Using `FastExpressionCompiler.LightExpression.Expression` instead of `System.Linq.Expressions.Expression` for the _lightweight_ expression creation.  
-It won't speed-up compilation alone but may speed-up the construction.
-2. Using `expr.TryCompileWithPreCreatedClosure` and `expr.TryCompileWithoutClosure` when you know the 
-expression at hand and may optimize for delegate with the closure or for "static" delegate.
+1. Using `FastExpressionCompiler.LightExpression.Expression` instead of `System.Linq.Expressions.Expression` for the faster expression creation.  
+2. Using `.TryCompileWithPreCreatedClosure` and `.TryCompileWithoutClosure` methods when you know the expression at hand and may skip the first traversing round, e.g. for the "static" expression which does not contain the bound constants. __Note:__ You cannot skip the 1st round if the expression contains the `Block`, `Try`, or `Goto` expressions.
 
 ---
 <a target="_blank" href="https://icons8.com/icons/set/bitten-ice-pop">Bitten Ice Pop icon</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
