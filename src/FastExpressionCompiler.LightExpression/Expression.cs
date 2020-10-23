@@ -61,14 +61,13 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual Expression VisitChildren(ExpressionVisitor visitor) => this;
 
+        /// <summary>Converts the LightExpression to the System Expression to enable fallback to the System Compile</summary>
         public SysExpr ToExpression()
         {
             var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
             return ToExpression(ref exprsConverted);
         }
 
-        /// <summary>Converts back to the respective System Expression
-        /// by first checking if `this` expression is already contained in the `exprsConverted` collection</summary>
         internal SysExpr ToExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
         {
             var i = exprsConverted.Count - 1;
@@ -84,7 +83,31 @@ namespace FastExpressionCompiler.LightExpression
             return sysExpr;
         }
 
+        // /// <summary>Creates the LightExpression from the System Expression 
+        // /// to enable the usage of the ToCSharpString and ToExpressionString for the System Expression</summary>
+        // public static Expression FromExpression(SysExpr sysExpr)
+        // {
+        //     var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
+        //     return FromExpression(ref exprsConverted);
+        // }
+
+        // internal Expression FromExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        // {
+        //     var i = exprsConverted.Count - 1;
+        //     while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, this)) --i;
+        //     if (i != -1)
+        //         return exprsConverted.Items[i].LightExpr
+
+        //     var sysExpr = CreateFromSysExpression(ref exprsConverted);
+
+        //     ref var item = ref exprsConverted.PushSlot();
+        //     item.LightExpr = this;
+        //     item.SysExpr = sysExpr;
+        //     return sysExpr;
+        // }
+
         internal abstract SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions);
+        // internal abstract Expression CreateFromSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions);
 
         /// <summary>Code printer with the provided configuration</summary>
         public abstract StringBuilder CreateExpressionString(StringBuilder sb, 
@@ -174,6 +197,8 @@ namespace FastExpressionCompiler.LightExpression
                 ? new TypedParameterExpression(type, name)
                 : TryToMakeKnownTypeParameter(type, name);
 
+        // todo: @perf benchmark thw switch on the LightExprVsExpr_Create_ComplexExpr
+        // todo: @perf but nevertheless optimize for the `object` and the `object[]` because their often used
         // Enum is excluded because otherwise TypeCode will return the thing for the underlying 
         private static ParameterExpression TryToMakeKnownTypeParameter(Type type, string name = null) => 
             Type.GetTypeCode(type) switch 
@@ -209,6 +234,7 @@ namespace FastExpressionCompiler.LightExpression
         public static ConstantExpression Constant(bool value) =>
             value ? TrueConstant : FalseConstant;
 
+        // todo: @perf consider non-boxing variant of the `Constant<T>(T value) where T : struct` and the special handling for it in the FEC, like implement the `IValueConstant.Emit(ILGenerator il)` or something he-he
         public static ConstantExpression Constant(object value)
         {
             if (value == null)
@@ -227,6 +253,7 @@ namespace FastExpressionCompiler.LightExpression
             return new ConstantExpression(value);
         }
 
+        // todo: @perf benchmark thw switch on the LightExprVsExpr_Create_ComplexExpr
         public static ConstantExpression Constant(object value, Type type) =>
             type.IsEnum 
                 ? new TypedConstantExpression(value, type)
@@ -517,6 +544,7 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
         public static UnaryExpression Convert(Expression expression, Type type)
         {
+            // todo: @perf benchmark thw switch on the LightExprVsExpr_Create_ComplexExpr 
             if (type.IsEnum)
                 return new ConvertUnaryExpression(expression, type);
             return Type.GetTypeCode(type) switch 
@@ -2302,22 +2330,19 @@ namespace FastExpressionCompiler.LightExpression
             return Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
         }
 
-        public string OperatorToCSharpString()
+        public string OperatorToCSharpString() => NodeType switch 
         {
-            switch (NodeType)
-            {
-                case ExpressionType.And:                return " & ";
-                case ExpressionType.AndAlso:            return " && ";
-                case ExpressionType.OrElse:             return " || ";
-                case ExpressionType.GreaterThan:        return " > ";
-                case ExpressionType.GreaterThanOrEqual: return " >= ";
-                case ExpressionType.LessThan:           return " < ";
-                case ExpressionType.LessThanOrEqual:    return " <= ";
-                case ExpressionType.Equal:              return " == ";
-                case ExpressionType.NotEqual:           return " != ";
-                default: return null;
-            }
-        }
+            ExpressionType.And          => " & ",
+            ExpressionType.AndAlso      => " && ",
+            ExpressionType.OrElse       => " || ",
+            ExpressionType.GreaterThan  => " > ",
+            ExpressionType.GreaterThanOrEqual => " >= ",
+            ExpressionType.LessThan           => " < ",
+            ExpressionType.LessThanOrEqual    => " <= ",
+            ExpressionType.Equal        =>  " == ",
+            ExpressionType.NotEqual     => " != ",
+            _ => null
+        };
 
         private static SysExpr TryConvertSysExprToInt(SysExpr e) 
         {
