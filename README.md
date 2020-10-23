@@ -13,6 +13,7 @@
 
 [LINQ to DB]: https://github.com/linq2db/linq2db/pull/1277
 [Moq]: https://github.com/moq/moq4/issues/504#issuecomment-406714210
+[Apex.Serialization]: https://github.com/dbolin/Apex.Serialization
 
 FastExpressionCompiler [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)[![fuget.org package api diff](https://www.fuget.org/packages/FastExpressionCompiler/badge.svg?v=2.0.0)](https://www.fuget.org/packages/FastExpressionCompiler/2.0.0/lib/netstandard2.0/diff/1.10.1/)  
 FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression)[![fuget.org package last version](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/badge.svg?v=2.0.0)](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/2.0.0)
@@ -24,8 +25,8 @@ FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/n
 
 Windows, Linux, MacOS [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)
 
-Targets: __.NET 4.5+__, __.NET Standard 2.0__  
-Originally was developed as a part of [DryIoc], so check it out ;-)
+Targets: __.NET 4.5__, __.NET Standard 2.0__  
+Originally was developed as a part of the [DryIoc], so check it out ;-)
 
 
 ## The problem
@@ -45,28 +46,38 @@ See also [a deep dive to Delegate internals](https://mattwarren.org/2017/01/25/H
 The FastExpressionCompiler `.CompileFast()` extension method is __10-30x times faster__ than `.Compile()`.  
 The compiled delegate may be _in some cases_ a lot faster than the one produced by `.Compile()`.
 
-__Note:__ The actual performance may vary depending on multiple factors: 
+__Note:__ The actual performance may vary depending on the multiple factors: 
 platform, how complex is expression, does it have a closure, does it contain nested lambdas, etc.
 
 Btw, the memory consumption taken by the compilation will be much smaller (check the `Allocated` column in the benchmarks below).
 
 
-## How to install
+## Difference between FastExpressionCompiler and FastExpressionCompiler.LightExpression
 
-Install from the [NuGet](https://www.nuget.org/packages/FastExpressionCompiler) or grab a single [FastExpressionCompiler.cs](https://github.com/dadhi/FastExpressionCompiler/blob/master/src/FastExpressionCompiler/FastExpressionCompiler.cs) file.
+FastExpressionCompiler
 
+- Provides the `CompileFast` extension methods for the `System.Linq.Expressions.LambdaExpression`.
+
+FastExpressionCompiler.LightExpression
+
+- Provides the `CompileFast` extension methods for `FastExpressionCompiler.LightExpression.LambdaExpression`.
+- Provides the drop-in [Expression replacement](#feclightexpressionexpression-vs-expression) with the faster construction and less memory at the cost of less validation.
+- Includes its own `ExpressionVisitor`.
+- `ToExpression` method to convert back to the System Expression.
+- `ToCSharpString()` method to output the compile-able C# code represented by expression.
+- `ToExpressionString()` method to output the expression construction C# code, so given the expression object you'll get e.g. `Expression.Lambda(Expression.New(...))`.
 
 
 ## Some users
 
-[Marten], [Rebus], [StructureMap], [Lamar], [ExpressionToCodeLib], [NServiceBus].
+[Marten], [Rebus], [StructureMap], [Lamar], [ExpressionToCodeLib], [NServiceBus]
 
-Considering: [Moq], [LINQ to DB]
+Considering: [Moq], [LINQ to DB], [Apex.Serialization]
 
 
 ## How to use
 
-Add the `using FastExpressionCompiler;` and replace the call to the `.Compile()` with the `.CompileFast()` extension method.
+Install from the NuGet and add the `using FastExpressionCompiler;` and replace the call to the `.Compile()` with the `.CompileFast()` extension method.
 
 __Note:__ `CompileFast` has an optional parameter `bool ifFastFailedReturnNull = false` to disable fallback to `Compile`.
 
@@ -177,7 +188,7 @@ Invoking compiled delegate comparing to direct method call:
 ### Manually composed expression with parameters and closure
 
 ```cs
-var a = new A();****
+var a = new A();
 var bParamExpr = Expression.Parameter(typeof(B), "b");
 var expr = Expression.Lambda(
     Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
@@ -207,7 +218,7 @@ Invoking the compiled delegate compared to the normal delegate and the direct ca
 ### FEC.LightExpression.Expression vs Expression
 
 `FastExpressionCompiler.LightExpression.Expression` is the lightweight version of `System.Linq.Expressions.Expression`. 
-It is designed to be a __drop-in replacement__ for System Expression - just install __FastExpressionCompiler.LightExpression__ package instead of __FastExpressionCompiler__ and replace the usings
+It is designed to be a __drop-in replacement__ for the System Expression - just install the __FastExpressionCompiler.LightExpression__ package instead of __FastExpressionCompiler__ and replace the usings
 
 ```cs
 using System.Linq.Expressions;
