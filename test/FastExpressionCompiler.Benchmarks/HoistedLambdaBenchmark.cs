@@ -50,10 +50,11 @@ namespace FastExpressionCompiler.Benchmarks
 
             ## v3.0
             
-                  Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-            ------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-                 Compile | 246.296 us | 0.5909 us | 0.5527 us | 52.89 |    0.30 | 0.7324 | 0.2441 |      - |   4.45 KB |
-             CompileFast |   4.657 us | 0.0273 us | 0.0242 us |  1.00 |    0.00 | 0.3357 | 0.1678 | 0.0229 |   1.55 KB |
+            |      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |     Compile | 233.935 us | 1.2937 us | 1.1468 us | 47.06 |    0.97 | 0.9766 | 0.4883 |      - |   4.35 KB |
+            | CompileFast |   4.995 us | 0.0994 us | 0.1184 us |  1.00 |    0.00 | 0.3815 | 0.1907 | 0.0305 |   1.57 KB |
+
              */
 
             [Benchmark]
@@ -92,12 +93,19 @@ namespace FastExpressionCompiler.Benchmarks
                 FastCompiledLambda | 6.131 ns | 0.0348 ns | 0.0308 ns |  1.00 |      0.0068 |           - |           - |                32 B |
 
             ## v3.0
-            
-                            Method |      Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-            ---------------------- |----------:|----------:|----------:|------:|-------:|------:|------:|----------:|
-             DirectConstructorCall |  5.939 ns | 0.0134 ns | 0.0112 ns |  0.77 | 0.0068 |     - |     - |      32 B |
-                    CompiledLambda | 11.880 ns | 0.0291 ns | 0.0243 ns |  1.54 | 0.0068 |     - |     - |      32 B |
-                FastCompiledLambda |  7.723 ns | 0.0255 ns | 0.0239 ns |  1.00 | 0.0068 |     - |     - |      32 B |
+
+            BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.572 (2004/?/20H1)
+            Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+            .NET Core SDK=3.1.403
+            [Host]     : .NET Core 3.1.9 (CoreCLR 4.700.20.47201, CoreFX 4.700.20.47203), X64 RyuJIT
+            DefaultJob : .NET Core 3.1.9 (CoreCLR 4.700.20.47201, CoreFX 4.700.20.47203), X64 RyuJIT
+
+
+            |                Method |      Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+            |---------------------- |----------:|----------:|----------:|------:|-------:|------:|------:|----------:|
+            | DirectConstructorCall |  5.781 ns | 0.1115 ns | 0.1043 ns |  0.51 | 0.0076 |     - |     - |      32 B |
+            |        CompiledLambda | 12.581 ns | 0.1318 ns | 0.1169 ns |  1.11 | 0.0076 |     - |     - |      32 B |
+            |    FastCompiledLambda | 11.338 ns | 0.1075 ns | 0.1005 ns |  1.00 | 0.0076 |     - |     - |      32 B |
 
              */
 

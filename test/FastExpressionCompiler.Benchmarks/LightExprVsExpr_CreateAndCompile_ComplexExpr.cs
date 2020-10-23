@@ -31,13 +31,14 @@ namespace FastExpressionCompiler.Benchmarks
               CreateExpression_and_CompileFast |  17.41 us | 0.2181 us | 0.2040 us |  1.47 |    0.02 |      1.5259 |      0.7629 |      0.0305 |             7.11 KB |
                   CreateExpression_and_Compile | 239.20 us | 1.5860 us | 1.4835 us | 20.24 |    0.15 |      1.4648 |      0.7324 |           - |             7.16 KB |
 
-        ## v3.0
+        ## v3.0 RTM
 
-                                        Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-        -------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
-                  CreateExpression_and_Compile | 213.47 us | 0.590 us | 0.551 us | 19.32 |    0.09 | 1.4648 | 0.7324 |      - |   7.01 KB |
-              CreateExpression_and_CompileFast |  14.96 us | 0.074 us | 0.066 us |  1.35 |    0.01 | 1.5564 | 0.7629 | 0.0305 |    7.2 KB |
-         CreateLightExpression_and_CompileFast |  11.05 us | 0.046 us | 0.039 us |  1.00 |    0.00 | 1.4343 | 0.7172 | 0.0458 |   6.62 KB |
+        |                                Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        |-------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+        |          CreateExpression_and_Compile | 241.97 us | 2.007 us | 1.877 us | 17.77 |    0.20 | 1.7090 | 0.7324 |      - |   7.01 KB |
+        |      CreateExpression_and_CompileFast |  17.30 us | 0.207 us | 0.173 us |  1.27 |    0.02 | 1.7395 | 0.8545 | 0.0305 |   7.19 KB |
+        | CreateLightExpression_and_CompileFast |  13.61 us | 0.158 us | 0.140 us |  1.00 |    0.00 | 1.6174 | 0.7935 | 0.0305 |   6.64 KB |
+
          */
 
         [Benchmark]
@@ -63,7 +64,15 @@ namespace FastExpressionCompiler.Benchmarks
         ---------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
          CreateLightExpression |   389.5 ns | 0.9547 ns | 0.7972 ns |  1.00 |    0.00 |      0.1693 |           - |           - |               800 B |
              CreateExpression  | 3,574.7 ns | 8.0032 ns | 7.4862 ns |  9.18 |    0.02 |      0.2823 |           - |           - |              1344 B |
-         */
+
+        ## V3 RTM
+
+        |                Method |       Mean |    Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+        |---------------------- |-----------:|---------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+        |      CreateExpression | 2,805.2 ns | 55.57 ns | 107.06 ns |  4.76 |    0.32 | 0.3090 |     - |     - |    1304 B |
+        | CreateLightExpression |   578.5 ns |  6.39 ns |   5.98 ns |  1.00 |    0.00 | 0.1678 |     - |     - |     704 B |
+
+        */
         [Benchmark]
         public object CreateExpression() =>
             LightExpressionTests.CreateComplexExpression();

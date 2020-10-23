@@ -70,21 +70,33 @@ namespace FastExpressionCompiler.Benchmarks
                             CompileFastWithPreCreatedClosure |   4.279 us | 0.0168 us | 0.0149 us |  1.10 |    0.01 | 0.2899 | 0.1373 | 0.0305 |   1.34 KB |
              CompileFastWithPreCreatedClosureLightExpression |   3.877 us | 0.0369 us | 0.0327 us |  1.00 |    0.00 | 0.2899 | 0.1450 |      - |   1.34 KB |
 
-             */
+            ## v3.0 RTM
+
+            |                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |---------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |                     Compile | 153.405 us | 3.0500 us | 5.8762 us | 32.77 |    2.25 | 0.9766 | 0.4883 |      - |   4.59 KB |
+            |                 CompileFast |   4.716 us | 0.0925 us | 0.0820 us |  1.02 |    0.03 | 0.3510 | 0.1755 | 0.0305 |   1.46 KB |
+            | CompileFast_LightExpression |   4.611 us | 0.0898 us | 0.0840 us |  1.00 |    0.00 | 0.3433 | 0.1678 | 0.0305 |   1.42 KB |
+            */
+
             [Benchmark]
             public Func<B, X> Compile() => 
                 _expr.Compile();
 
             [Benchmark]
             public Func<B, X> CompileFast() => 
-                _expr.CompileFast();
+                _expr.CompileFast(true);
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
+            public Func<B, X> CompileFast_LightExpression() =>
+                LightExpression.ExpressionCompiler.CompileFast<Func<B, X>>(_leExpr, true);
+
+            // [Benchmark]
             public Func<B, X> CompileFastWithPreCreatedClosure() => 
                 _expr.TryCompileWithPreCreatedClosure<Func<B, X>>(_aConstExpr)
                 ?? _expr.Compile();
 
-            [Benchmark(Baseline = true)]
+            // [Benchmark]
             public Func<B, X> CompileFastWithPreCreatedClosureLightExpression() =>
                 LightExpression.ExpressionCompiler.TryCompileWithPreCreatedClosure<Func<B, X>>(
                     _leExpr, _aConstLEExpr)
@@ -105,7 +117,7 @@ namespace FastExpressionCompiler.Benchmarks
                FastCompiledLambdaWithPreCreatedClosure | 11.10 ns | 0.0369 ns | 0.0345 ns |  1.04 |      0.0068 |           - |           - |                32 B |
                                         CompiledLambda | 11.13 ns | 0.0620 ns | 0.0518 ns |  1.05 |      0.0068 |           - |           - |                32 B |
 
-            ## V3 
+            ## V3
                                                 Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
             ------------------------------------------ |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
                                       DirectLambdaCall | 11.35 ns | 0.0491 ns | 0.0460 ns |  1.01 | 0.0068 |     - |     - |      32 B |
@@ -114,10 +126,19 @@ namespace FastExpressionCompiler.Benchmarks
                FastCompiledLambdaWithPreCreatedClosure | 11.26 ns | 0.0414 ns | 0.0387 ns |  1.00 | 0.0068 |     - |     - |      32 B |
              FastCompiledLambdaWithPreCreatedClosureLE | 11.27 ns | 0.0594 ns | 0.0556 ns |  1.00 | 0.0068 |     - |     - |      32 B |
 
+            ## V3 RTM
+
+            |                             Method |     Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+            |----------------------------------- |---------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+            |                   DirectLambdaCall | 11.07 ns | 0.183 ns | 0.171 ns |  1.02 |    0.02 | 0.0076 |     - |     - |      32 B |
+            |                     CompiledLambda | 12.31 ns | 0.101 ns | 0.090 ns |  1.13 |    0.01 | 0.0076 |     - |     - |      32 B |
+            |                 FastCompiledLambda | 10.80 ns | 0.146 ns | 0.137 ns |  1.00 |    0.01 | 0.0076 |     - |     - |      32 B |
+            | FastCompiledLambda_LightExpression | 10.86 ns | 0.109 ns | 0.096 ns |  1.00 |    0.00 | 0.0076 |     - |     - |      32 B |
 
              */
             private static readonly Func<B, X> _lambdaCompiled = _expr.Compile();
-            private static readonly Func<B, X> _lambdaCompiledFast = _expr.CompileFast();
+            private static readonly Func<B, X> _lambdaCompiledFast = _expr.CompileFast(true);
+            private static readonly Func<B, X> _lambdaCompiledFast_LightExpession = _expr.CompileFast<Func<B, X>>(true);
 
             private static readonly Func<B, X> _lambdaCompiledFastWithClosure =
                 _expr.TryCompileWithPreCreatedClosure<Func<B, X>>(_aConstExpr);
@@ -139,10 +160,13 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark]
             public X FastCompiledLambda() => _lambdaCompiledFast(_bb);
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
+            public X FastCompiledLambda_LightExpression() => _lambdaCompiledFast_LightExpession(_bb);
+
+            // [Benchmark]
             public X FastCompiledLambdaWithPreCreatedClosure() => _lambdaCompiledFastWithClosure(_bb);
 
-            [Benchmark(Baseline = true)]
+            // [Benchmark]
             public X FastCompiledLambdaWithPreCreatedClosureLE() => _lambdaCompiledFastWithClosureLE(_bb);
         }
     }

@@ -155,7 +155,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
                          Create_n_CompileFast |  27.34 us | 0.1675 us | 0.1566 us |  1.00 |    0.00 |      1.3733 |      0.6714 |      0.0305 |             6.38 KB |
          Create_n_CompileFast_LightExpression |  12.53 us | 0.0818 us | 0.0765 us |  0.46 |    0.00 |      1.2512 |      0.6256 |      0.0458 |             5.78 KB |
 
-        ## V3
+## V3
 
 BenchmarkDotNet=v0.12.0, OS=Windows 10.0.19041
 Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
@@ -170,6 +170,20 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 |                 Create_n_CompileFast |  24.57 us | 0.381 us | 0.356 us |  1.56 |    0.06 | 1.4038 | 0.6714 |      - |    5.8 KB |
 | Create_n_CompileFast_LightExpression |  16.06 us | 0.319 us | 0.515 us |  1.00 |    0.00 | 1.0681 | 0.5188 | 0.0305 |   4.38 KB |
 
+## V3 RTM
+
+BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.572 (2004/?/20H1)
+Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+.NET Core SDK=3.1.403
+  [Host]     : .NET Core 3.1.9 (CoreCLR 4.700.20.47201, CoreFX 4.700.20.47203), X64 RyuJIT
+  DefaultJob : .NET Core 3.1.9 (CoreCLR 4.700.20.47201, CoreFX 4.700.20.47203), X64 RyuJIT
+
+
+|                               Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                     Create_n_Compile | 255.75 us | 1.304 us | 1.089 us | 18.81 |    0.22 | 3.1738 | 1.4648 |      - |  13.34 KB |
+|                 Create_n_CompileFast |  21.87 us | 0.093 us | 0.073 us |  1.61 |    0.02 | 1.4038 | 0.7019 | 0.0305 |    5.8 KB |
+| Create_n_CompileFast_LightExpression |  13.60 us | 0.144 us | 0.128 us |  1.00 |    0.00 | 1.0529 | 0.5188 | 0.0458 |   4.35 KB |
 
         */
         [MemoryDiagnoser]

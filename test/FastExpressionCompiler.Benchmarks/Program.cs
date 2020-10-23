@@ -26,7 +26,7 @@ namespace FastExpressionCompiler.Benchmarks
             // BenchmarkRunner.Run<NestedLambdasVsVars>();
 
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
-            BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
+            // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
 
             //BenchmarkRunner.Run<NestedLambdaOverhead>();
@@ -50,23 +50,23 @@ namespace FastExpressionCompiler.Benchmarks
             
             // BenchmarkRunner.Run<Deserialize_Simple>();
 
-            //BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
-            // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
+            BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
+            //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
             //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_NestedLambdaExpr>();
             //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_SimpleExpr>();
 
-            //BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
-            //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
+            // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
+            // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
-            //BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
-            //BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
+            // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
+            // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Invoke>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
 
-            //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
-            //BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
+            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
+            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
         }
     }
 }

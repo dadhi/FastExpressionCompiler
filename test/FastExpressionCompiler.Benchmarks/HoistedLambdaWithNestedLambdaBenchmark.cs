@@ -45,10 +45,16 @@ namespace FastExpressionCompiler.Benchmarks
 
             ## v3.0
 
-                             Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-            ----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-                 Compile | 470.00 us | 1.3111 us | 1.1622 us | 29.65 |    0.26 | 2.4414 | 0.9766 |      - |  11.95 KB |
-             CompileFast |  15.86 us | 0.1507 us | 0.1410 us |  1.00 |    0.00 | 1.0376 | 0.5188 | 0.0305 |   4.77 KB |
+            BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.572 (2004/?/20H1)
+            Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+            .NET Core SDK=3.1.403
+            [Host]     : .NET Core 3.1.9 (CoreCLR 4.700.20.47201, CoreFX 4.700.20.47203), X64 RyuJIT
+            DefaultJob : .NET Core 3.1.9 (CoreCLR 4.700.20.47201, CoreFX 4.700.20.47203), X64 RyuJIT
+
+            |      Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |     Compile | 460.63 us | 5.937 us | 5.263 us | 27.47 |    0.67 | 2.4414 | 0.9766 |      - |  11.65 KB |
+            | CompileFast |  16.77 us | 0.324 us | 0.485 us |  1.00 |    0.00 | 1.1902 | 0.5493 | 0.0916 |   4.86 KB |
 
              */
             [Benchmark]
@@ -88,11 +94,17 @@ namespace FastExpressionCompiler.Benchmarks
 
             ## v3.0
 
+            BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.572 (2004/?/20H1)
+            Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+            .NET Core SDK=3.1.403
+            [Host]     : .NET Core 3.1.9 (CoreCLR 4.700.20.47201, CoreFX 4.700.20.47203), X64 RyuJIT
+            DefaultJob : .NET Core 3.1.9 (CoreCLR 4.700.20.47201, CoreFX 4.700.20.47203), X64 RyuJIT
+
             |              Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
             |-------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-            |    DirectMethodCall |    49.95 ns | 0.0873 ns | 0.0817 ns |  1.06 |    0.00 | 0.0356 |     - |     - |     168 B |
-            |     Invoke_Compiled | 1,355.80 ns | 4.6952 ns | 4.3919 ns | 28.75 |    0.10 | 0.0553 |     - |     - |     264 B |
-            | Invoke_CompiledFast |    47.17 ns | 0.0356 ns | 0.0316 ns |  1.00 |    0.00 | 0.0220 |     - |     - |     104 B |
+            |    DirectMethodCall |    53.90 ns |  0.982 ns |  0.918 ns |  1.06 |    0.02 | 0.0401 |     - |     - |     168 B |
+            |     Invoke_Compiled | 1,452.80 ns | 16.283 ns | 15.232 ns | 28.44 |    0.37 | 0.0629 |     - |     - |     264 B |
+            | Invoke_CompiledFast |    51.11 ns |  0.935 ns |  0.829 ns |  1.00 |    0.00 | 0.0249 |     - |     - |     104 B |
 
             */
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
