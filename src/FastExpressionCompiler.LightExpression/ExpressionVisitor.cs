@@ -409,7 +409,7 @@ namespace FastExpressionCompiler.LightExpression
             var bindings = VisitAndConvert(node.Bindings, VisitMemberBinding);
             if (newExpression == node.NewExpression && ReferenceEquals(bindings, node.Bindings))
                 return node;
-            return new MemberInitExpression(newExpression, bindings.AsArray());
+            return new MemberInitExpression(newExpression, bindings);
         }
 
         protected internal virtual MemberBinding VisitMemberBinding(MemberBinding node)

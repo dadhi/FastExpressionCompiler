@@ -2579,14 +2579,11 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.MemberInit;
         public override Type Type => Expression.Type;
-        public NewExpression NewExpression => Expression as NewExpression;
         public readonly Expression Expression;
+        public NewExpression NewExpression => Expression as NewExpression;
         public readonly IReadOnlyList<MemberBinding> Bindings;
 
-        internal MemberInitExpression(NewExpression newExpression, MemberBinding[] bindings)
-            : this((Expression)newExpression, bindings) { }
-
-        internal MemberInitExpression(Expression expression, MemberBinding[] bindings)
+        internal MemberInitExpression(Expression expression, IReadOnlyList<MemberBinding> bindings)
         {
             Expression = expression;
             Bindings = bindings ?? Tools.Empty<MemberBinding>();
