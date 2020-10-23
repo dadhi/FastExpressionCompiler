@@ -517,34 +517,31 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
         public static UnaryExpression Convert(Expression expression, Type type)
         {
-            return new ConvertUnaryExpression(expression, type);
-
-            // todo: @incomplete checking the performance
-            // if (type.IsEnum)
-            //     return new ConvertUnaryExpression(expression, type);
-            // return Type.GetTypeCode(type) switch 
-            // {
-            //     TypeCode.Boolean  => new TypedConvertUnaryExpression<bool>(expression),
-            //     TypeCode.Byte     => new TypedConvertUnaryExpression<byte>(expression),
-            //     TypeCode.Char     => new TypedConvertUnaryExpression<char>(expression),
-            //     TypeCode.DateTime => new TypedConvertUnaryExpression<DateTime>(expression),
-            //     TypeCode.Decimal  => new TypedConvertUnaryExpression<decimal>(expression),
-            //     TypeCode.Double   => new TypedConvertUnaryExpression<double>(expression),
-            //     TypeCode.Int16    => new TypedConvertUnaryExpression<short>(expression),
-            //     TypeCode.Int32    => new TypedConvertUnaryExpression<int>(expression),
-            //     TypeCode.Int64    => new TypedConvertUnaryExpression<long>(expression),
-            //     TypeCode.SByte    => new TypedConvertUnaryExpression<sbyte>(expression),
-            //     TypeCode.Single   => new TypedConvertUnaryExpression<float>(expression),
-            //     TypeCode.String   => new TypedConvertUnaryExpression<string>(expression),
-            //     TypeCode.UInt16   => new TypedConvertUnaryExpression<ushort>(expression),
-            //     TypeCode.UInt32   => new TypedConvertUnaryExpression<uint>(expression),
-            //     TypeCode.UInt64   => new TypedConvertUnaryExpression<ulong>(expression),
-            //     _ =>  type == typeof(object)
-            //         ? new TypedConvertUnaryExpression<object>(expression) 
-            //         : type == typeof(Type)
-            //         ? new TypedConvertUnaryExpression<Type>(expression)
-            //         : (UnaryExpression)new ConvertUnaryExpression(expression, type)
-            // };
+            if (type.IsEnum)
+                return new ConvertUnaryExpression(expression, type);
+            return Type.GetTypeCode(type) switch 
+            {
+                TypeCode.Boolean  => new TypedConvertUnaryExpression<bool>(expression),
+                TypeCode.Byte     => new TypedConvertUnaryExpression<byte>(expression),
+                TypeCode.Char     => new TypedConvertUnaryExpression<char>(expression),
+                TypeCode.DateTime => new TypedConvertUnaryExpression<DateTime>(expression),
+                TypeCode.Decimal  => new TypedConvertUnaryExpression<decimal>(expression),
+                TypeCode.Double   => new TypedConvertUnaryExpression<double>(expression),
+                TypeCode.Int16    => new TypedConvertUnaryExpression<short>(expression),
+                TypeCode.Int32    => new TypedConvertUnaryExpression<int>(expression),
+                TypeCode.Int64    => new TypedConvertUnaryExpression<long>(expression),
+                TypeCode.SByte    => new TypedConvertUnaryExpression<sbyte>(expression),
+                TypeCode.Single   => new TypedConvertUnaryExpression<float>(expression),
+                TypeCode.String   => new TypedConvertUnaryExpression<string>(expression),
+                TypeCode.UInt16   => new TypedConvertUnaryExpression<ushort>(expression),
+                TypeCode.UInt32   => new TypedConvertUnaryExpression<uint>(expression),
+                TypeCode.UInt64   => new TypedConvertUnaryExpression<ulong>(expression),
+                _ =>  type == typeof(object)
+                    ? new TypedConvertUnaryExpression<object>(expression) 
+                    : type == typeof(Type)
+                    ? new TypedConvertUnaryExpression<Type>(expression)
+                    : (UnaryExpression)new ConvertUnaryExpression(expression, type)
+            };
         }
 
         /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
