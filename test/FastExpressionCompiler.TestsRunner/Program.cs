@@ -165,7 +165,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue243_Pass_Parameter_By_Ref_is_supported().Run);
                 Run(new Nested_lambdas_assigned_to_vars().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Nested_lambdas_assigned_to_vars().Run);
-
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue231_ExpressionNew_does_not_work_with_struct().Run);
                 Run(new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run);
 

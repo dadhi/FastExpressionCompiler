@@ -49,7 +49,7 @@ namespace FastExpressionCompiler.LightExpression
 {
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-    /// <summary>Facade for constructing Expression.</summary>
+    /// <summary>The base class and the Factpry methods provider for the Expression.</summary>
     public abstract class Expression
     {
         /// <summary>Expression node type.</summary>
@@ -195,6 +195,7 @@ namespace FastExpressionCompiler.LightExpression
             return new TypedParameterExpression(type, name);
         }
 
+        // todo: @perf @test
         // public static ParameterExpression Parameter(Type type, string name = null) =>
         //     type.IsEnum 
         //         ? new TypedParameterExpression(type, name)
@@ -244,6 +245,10 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Avoids the boxing for all (two) bool values</summary>
         public static ConstantExpression Constant(bool value) =>
             value ? TrueConstant : FalseConstant;
+
+        // todo: @perf @incomplete
+        // public static ConstantExpression ConstantValue<T>(T value) where T : struct =>
+        //     new ConstantValueExpression<T>(value);
 
         // todo: @perf consider non-boxing variant of the `Constant<T>(T value) where T : struct` and the special handling for it in the FEC, like implement the `IValueConstant.Emit(ILGenerator il)` or something he-he
         public static ConstantExpression Constant(object value)
@@ -2749,7 +2754,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public sealed override ExpressionType NodeType => ExpressionType.Constant;
         public override Type Type => Value.GetType();
-        public readonly object Value;
+        public readonly object Value; // todo: @perf convert to the property so I can delegate it to non bosing-version
         internal ConstantExpression(object value) => Value = value;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
@@ -2815,6 +2820,15 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>I want to see the actual Value not the default one</summary>
         public override string ToString() => $"Constant({Value}, typeof({Type.ToCode()}))";
     }
+
+    // todo: @perf @incomplete
+    // public sealed class ConstantValueExpression<T> : ConstantExpression where T : struct
+    // {
+    //     public override Type Type => typeof(T)
+    //     public readonly T ValueValue;
+
+    //     internal ConstantValueExpression(T value) => ValueValue = value;
+    // }
 
     public sealed class TypedConstantExpression : ConstantExpression
     {

@@ -41,7 +41,7 @@ See also [a deep dive to Delegate internals](https://mattwarren.org/2017/01/25/H
 
 ## The solution
 
-The FastExpressionCompiler `.CompileFast()` extension method is __10-30x times faster__ than `.Compile()`.  
+The FastExpressionCompiler `.CompileFast()` extension method is __10-40x times faster__ than `.Compile()`.  
 The compiled delegate may be _in some cases_ a lot faster than the one produced by `.Compile()`.
 
 __Note:__ The actual performance may vary depending on the multiple factors: 
