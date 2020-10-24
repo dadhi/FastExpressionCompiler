@@ -159,7 +159,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         {
             var stateParamExpr = SysExpr.Parameter(typeof(object[]));
 
-            var funcExpr = SysExpr.Lambda<Func<object[], object>>(
+            var expr = SysExpr.Lambda<Func<object[], object>>(
                 SysExpr.MemberInit(
                     SysExpr.New(_ctorOfA,
                         SysExpr.New(_ctorOfB),
@@ -174,7 +174,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                         SysExpr.New(_ctorOfB))),
                 stateParamExpr);
 
-            return funcExpr;
+            return expr;
         }
 
         public static Expression<Func<object[], object>> CreateComplexLightExpression()
@@ -206,6 +206,18 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         {
             var expr = CreateComplexLightExpression();
             var func = expr.CompileFast(true);
+            func(new object[12]);
+        }
+
+        [Test]
+        public void Can_convert_complex_system_expression_to_the_light_expression()
+        {
+            var e = CreateComplexExpression();
+            var le = e.ToLightExpression();
+
+            le.PrintCSharpString();
+
+            var func = le.CompileFast(true);
             func(new object[12]);
         }
 

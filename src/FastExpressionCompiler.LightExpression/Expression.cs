@@ -4735,6 +4735,37 @@ namespace FastExpressionCompiler.LightExpression
             return sysExpr.ToLightExpression(ref exprsConverted);
         }
 
+        /// <summary>Creates the LightExpression from the System Expression</summary>
+        public static Expression<T> ToLightExpression<T>(this System.Linq.Expressions.Expression<T> sysLambdaExpr) where T : Delegate
+        {
+            var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
+            var body = sysLambdaExpr.Body.ToLightExpression(ref exprsConverted);
+            var ps = sysLambdaExpr.Parameters;
+            if (ps.Count == 0)
+                return Expression.Lambda<T>(body);
+
+            var pl = new ParameterExpression[ps.Count];
+            for (var i = 0; i < pl.Length; i++)
+                pl[i] = (ParameterExpression)ps[i].ToLightExpression(ref exprsConverted);
+
+            return Expression.Lambda<T>(body, pl);
+        }
+
+        public static LambdaExpression ToLightExpression(this System.Linq.Expressions.LambdaExpression sysLambdaExpr)
+        {
+            var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
+            var body = sysLambdaExpr.Body.ToLightExpression(ref exprsConverted);
+            var ps = sysLambdaExpr.Parameters;
+            if (ps.Count == 0)
+                return Expression.Lambda(body);
+
+            var pl = new ParameterExpression[ps.Count];
+            for (var i = 0; i < pl.Length; i++)
+                pl[i] = (ParameterExpression)ps[i].ToLightExpression(ref exprsConverted);
+
+            return Expression.Lambda(body, pl);
+        }
+
         internal static Expression ToLightExpression(this SysExpr expr, ref LiveCountArray<LightAndSysExpr> exprsConverted)
         {
             var i = exprsConverted.Count - 1;
@@ -4750,18 +4781,11 @@ namespace FastExpressionCompiler.LightExpression
                     lightExpr = Expression.Constant(constExpr.Value, constExpr.Type);
                     break;
 
-//                 case ExpressionType.Parameter:
-//                     // if parameter is used BUT is not in passed parameters and not in local variables,
-//                     // it means parameter is provided by outer lambda and should be put in closure for current lambda
-//                     var p = paramExprs.Count - 1;
-//                     while (p != -1 && !ReferenceEquals(paramExprs[p], expr)) --p;
-//                     if (p == -1 && !closure.IsLocalVar(expr))
-//                     {
-//                         if (!isNestedLambda)
-//                             return false;
-//                         closure.AddNonPassedParam((ParameterExpression)expr);
-//                     }
-//                     return true;
+                case ExpressionType.Parameter:
+                    var paramExpr = (System.Linq.Expressions.ParameterExpression)expr;
+                    lightExpr = Expression.Parameter(paramExpr.Type, paramExpr.Name);
+                    break;
+
 
 //                 case ExpressionType.Call:
 //                     var callExpr = (MethodCallExpression)expr;
