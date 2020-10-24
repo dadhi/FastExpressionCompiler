@@ -2,11 +2,17 @@
 using System.Reflection;
 using NUnit.Framework;
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
+namespace FastExpressionCompiler.LightExpression.IssueTests
 {
     [TestFixture]
-    public class Issue65_Add_LightExpression_Elvis_operator_support
+    public class Issue65_Add_LightExpression_Elvis_operator_support : ITest
     {
+        public int Run()
+        {
+            Test();
+            return 1;
+        }
+
         [Test]
         public void Test()
         {
@@ -18,6 +24,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 typeof(A).GetTypeInfo().GetDeclaredMethod(nameof(A.GetTheAnswer)));
 
             var getTheAnswer = Lambda<Func<int, string>>(block, n);
+
+            getTheAnswer.PrintCSharpString();
 
             var f = getTheAnswer.CompileFast(ifFastFailedReturnNull: true);
             Assert.IsNull(f(43));

@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue65_Add_LightExpression_Elvis_operator_support().Run();
             // new Issue261_Loop_wih_conditions_fails().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue83_linq2db().Run();
@@ -100,6 +101,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue44_Conversion_To_Nullable_Throws_Exception().Run);
                 Run(new Issue55_CompileFast_crash_with_ref_parameter().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue65_Add_LightExpression_Elvis_operator_support().Run);
                 Run(new Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke().Run);
                 Run(new Issue71_Cannot_bind_to_the_target_method_because_its_signature().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature().Run);
