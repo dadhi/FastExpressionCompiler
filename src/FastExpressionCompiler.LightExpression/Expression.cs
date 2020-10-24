@@ -83,31 +83,7 @@ namespace FastExpressionCompiler.LightExpression
             return sysExpr;
         }
 
-        // /// <summary>Creates the LightExpression from the System Expression 
-        // /// to enable the usage of the ToCSharpString and ToExpressionString for the System Expression</summary>
-        // public static Expression FromExpression(SysExpr sysExpr)
-        // {
-        //     var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
-        //     return FromExpression(ref exprsConverted);
-        // }
-
-        // internal Expression FromExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
-        // {
-        //     var i = exprsConverted.Count - 1;
-        //     while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, this)) --i;
-        //     if (i != -1)
-        //         return exprsConverted.Items[i].LightExpr
-
-        //     var sysExpr = CreateFromSysExpression(ref exprsConverted);
-
-        //     ref var item = ref exprsConverted.PushSlot();
-        //     item.LightExpr = this;
-        //     item.SysExpr = sysExpr;
-        //     return sysExpr;
-        // }
-
         internal abstract SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions);
-        // internal abstract Expression CreateFromSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions);
 
         /// <summary>Code printer with the provided configuration</summary>
         public abstract StringBuilder CreateExpressionString(StringBuilder sb, 
@@ -270,38 +246,23 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         // todo: @perf benchmark thw switch on the LightExprVsExpr_Create_ComplexExpr
-        public static ConstantExpression Constant(object value, Type type) =>
-            type.IsEnum 
-                ? new TypedConstantExpression(value, type)
-                : Type.GetTypeCode(type) switch 
-                {
-                    TypeCode.Boolean  => (bool)value ? TrueConstant : FalseConstant,
-                    TypeCode.Byte     => new TypedConstantExpression<byte>(value),
-                    TypeCode.Char     => new TypedConstantExpression<char>(value),
-                    TypeCode.DateTime => new TypedConstantExpression<DateTime>(value),
-                    TypeCode.Decimal  => new TypedConstantExpression<decimal>(value),
-                    TypeCode.Double   => new TypedConstantExpression<double>(value),
-                    TypeCode.Int16    => new TypedConstantExpression<short>(value),
-                    TypeCode.Int32    => (int)value switch 
-                                        {
-                                            0  => ZeroConstant,
-                                            1  => OneConstant,
-                                            -1 => MinusOneConstant,
-                                            _  => new TypedConstantExpression<int>(value),
-                                        },
-                    TypeCode.Int64    => new TypedConstantExpression<long>(value),
-                    TypeCode.SByte    => new TypedConstantExpression<sbyte>(value),
-                    TypeCode.Single   => new TypedConstantExpression<float>(value),
-                    TypeCode.String   => new TypedConstantExpression<string>(value),
-                    TypeCode.UInt16   => new TypedConstantExpression<ushort>(value),
-                    TypeCode.UInt32   => new TypedConstantExpression<uint>(value),
-                    TypeCode.UInt64   => new TypedConstantExpression<ulong>(value),
-                    _ =>  type == typeof(object) 
-                            ? new TypedConstantExpression<object>(value)
-                        : type == typeof(Type)
-                            ? new TypedConstantExpression<Type>(value)
-                            : (ConstantExpression)new TypedConstantExpression(value, type)
-                };
+        public static ConstantExpression Constant(object value, Type type) 
+        {
+            if (value == null)
+            {
+                if (type == typeof(object))
+                    return NullConstant;
+                return new TypedConstantExpression(null, type);
+            }
+
+            if (type == typeof(bool))
+                return (bool)value ? TrueConstant : FalseConstant;
+
+            if (type == value.GetType())
+                return new ConstantExpression(value);
+
+            return new TypedConstantExpression(value, type);
+        }
 
         public static NewExpression New(Type type)
         {
@@ -2754,7 +2715,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public sealed override ExpressionType NodeType => ExpressionType.Constant;
         public override Type Type => Value.GetType();
-        public readonly object Value; // todo: @perf convert to the property so I can delegate it to non bosing-version
+        public readonly object Value; // todo: @perf convert to the property so I can delegate it to non-boxing version
         internal ConstantExpression(object value) => Value = value;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
@@ -4762,6 +4723,432 @@ namespace FastExpressionCompiler.LightExpression
         {
             return sb.Append("DebugInfo()"); // todo: @incomplete
         }
+    }
+
+    public static class SystemExpressionExtensions 
+    {
+        /// <summary>Creates the LightExpression from the System Expression 
+        /// to enable the usage of the ToCSharpString and ToExpressionString for the System Expression</summary>
+        public static Expression ToLightExpression(this SysExpr sysExpr)
+        {
+            var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
+            return sysExpr.ToLightExpression(ref exprsConverted);
+        }
+
+        internal static Expression ToLightExpression(this SysExpr expr, ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        {
+            var i = exprsConverted.Count - 1;
+            while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, expr)) --i;
+            if (i != -1)
+                return (Expression)exprsConverted.Items[i].LightExpr;
+
+            Expression lightExpr = null;
+            switch (expr.NodeType)
+            {
+                case ExpressionType.Constant:
+                    var constExpr = (System.Linq.Expressions.ConstantExpression)expr;
+                    lightExpr = Expression.Constant(constExpr.Value, constExpr.Type);
+                    break;
+
+//                 case ExpressionType.Parameter:
+//                     // if parameter is used BUT is not in passed parameters and not in local variables,
+//                     // it means parameter is provided by outer lambda and should be put in closure for current lambda
+//                     var p = paramExprs.Count - 1;
+//                     while (p != -1 && !ReferenceEquals(paramExprs[p], expr)) --p;
+//                     if (p == -1 && !closure.IsLocalVar(expr))
+//                     {
+//                         if (!isNestedLambda)
+//                             return false;
+//                         closure.AddNonPassedParam((ParameterExpression)expr);
+//                     }
+//                     return true;
+
+//                 case ExpressionType.Call:
+//                     var callExpr = (MethodCallExpression)expr;
+//                     var callObjectExpr = callExpr.Object;
+// #if LIGHT_EXPRESSION
+//                     var fewCallArgCount = callExpr.FewArgumentCount;
+//                     if (fewCallArgCount == 0)
+//                     {
+//                         if (callObjectExpr != null)
+//                         {
+//                             expr = callObjectExpr;
+//                             continue;
+//                         }
+
+//                         return true;
+//                     }
+
+//                     if (fewCallArgCount > 0)
+//                     {
+//                         if (callObjectExpr != null && 
+//                             !TryCollectBoundConstants(ref closure, callObjectExpr, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+
+//                         if (fewCallArgCount == 1)
+//                         {
+//                             expr = ((OneArgumentMethodCallExpression)callExpr).Argument;
+//                             continue;
+//                         }
+                        
+//                         if (fewCallArgCount == 2)
+//                         {
+//                             var twoArgsExpr = (TwoArgumentsMethodCallExpression)callExpr;
+//                             if (!TryCollectBoundConstants(ref closure, twoArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                             expr = twoArgsExpr.Argument1;
+//                             continue;
+//                         }
+
+//                         if (fewCallArgCount == 3)
+//                         {
+//                             var threeArgsExpr = (ThreeArgumentsMethodCallExpression)callExpr;
+//                             if (!TryCollectBoundConstants(ref closure, threeArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+//                                 !TryCollectBoundConstants(ref closure, threeArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                             expr = threeArgsExpr.Argument2;
+//                             continue;
+//                         }
+
+//                         if (fewCallArgCount == 4)
+//                         {
+//                             var fourArgsExpr = (FourArgumentsMethodCallExpression)callExpr;
+//                             if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                             expr = fourArgsExpr.Argument3;
+//                             continue;
+//                         }
+
+//                         var fiveArgsExpr = (FiveArgumentsMethodCallExpression)callExpr;
+//                         if (!TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure) ||
+//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument3, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                         expr = fiveArgsExpr.Argument4;
+//                         continue;
+//                     }
+// #endif
+//                     var methodArgs = callExpr.Arguments;
+//                     var methodArgCount = methodArgs.Count;
+//                     if (methodArgCount == 0)
+//                     {
+//                         if (callObjectExpr != null)
+//                         {
+//                             expr = callObjectExpr;
+//                             continue;
+//                         }
+
+//                         return true;
+//                     }
+
+//                     if (callObjectExpr != null && 
+//                         !TryCollectBoundConstants(ref closure, callExpr.Object, paramExprs, isNestedLambda, ref rootClosure)) 
+//                         return false;
+
+//                     for (var i = 0; i < methodArgCount - 1; i++)
+//                         if (!TryCollectBoundConstants(ref closure, methodArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+
+//                     expr = methodArgs[methodArgCount - 1];
+//                     continue;
+
+//                 case ExpressionType.MemberAccess:
+//                     var memberExpr = ((MemberExpression)expr).Expression;
+//                     if (memberExpr == null)
+//                         return true;
+//                     expr = memberExpr;
+//                     continue;
+
+//                 case ExpressionType.New:
+//                     var newExpr = (NewExpression)expr;
+// #if LIGHT_EXPRESSION
+//                     var fewArgCount = newExpr.FewArgumentCount;
+//                     if (fewArgCount == 0)
+//                         return true;
+
+//                     if (fewArgCount > 0)
+//                     {
+//                         if (fewArgCount == 1)
+//                         {
+//                             expr = ((OneArgumentNewExpression)newExpr).Argument;
+//                             continue;
+//                         }
+
+//                         if (fewArgCount == 2)
+//                         {
+//                             var twoArgsExpr = (TwoArgumentsNewExpression)newExpr;
+//                             if (!TryCollectBoundConstants(ref closure, twoArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                             expr = twoArgsExpr.Argument1;
+//                             continue;
+//                         }
+
+//                         if (fewArgCount == 3)
+//                         {
+//                             var threeArgsExpr = (ThreeArgumentsNewExpression)newExpr;
+//                             if (!TryCollectBoundConstants(ref closure, threeArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+//                                 !TryCollectBoundConstants(ref closure, threeArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                             expr = threeArgsExpr.Argument2;
+//                             continue;
+//                         }
+
+//                         if (fewArgCount == 4)
+//                         {
+//                             var fourArgsExpr = (FourArgumentsNewExpression)newExpr;
+//                             if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                             expr = fourArgsExpr.Argument3;
+//                             continue;
+//                         }
+
+//                         var fiveArgsExpr = (FiveArgumentsNewExpression)newExpr;
+//                         if (!TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure) ||
+//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument3, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                         expr = fiveArgsExpr.Argument4;
+//                         continue;
+//                     }
+// #endif
+//                     var ctorArgs = ((NewExpression)expr).Arguments;
+//                     var ctorLastArgIndex = ctorArgs.Count - 1;
+//                     if (ctorLastArgIndex == -1)
+//                         return true;
+
+//                     for (var i = 0; i < ctorLastArgIndex; i++)
+//                         if (!TryCollectBoundConstants(ref closure, ctorArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                     expr = ctorArgs[ctorLastArgIndex];
+//                     continue;
+
+//                 case ExpressionType.NewArrayBounds:
+//                 case ExpressionType.NewArrayInit:
+//                     var elemExprs = ((NewArrayExpression)expr).Expressions;
+//                     var elemExprsCount = elemExprs.Count;
+//                     if (elemExprsCount == 0)
+//                         return true;
+
+//                     for (var i = 0; i < elemExprsCount - 1; i++)
+//                         if (!TryCollectBoundConstants(ref closure, elemExprs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+
+//                     expr = elemExprs[elemExprsCount - 1];
+//                     continue;
+
+//                 case ExpressionType.MemberInit:
+//                     return TryCollectMemberInitExprConstants(
+//                         ref closure, (MemberInitExpression)expr, paramExprs, isNestedLambda, ref rootClosure);
+
+//                 case ExpressionType.Lambda:
+//                     var nestedLambdaExpr = (LambdaExpression)expr;
+
+//                     // Look for the already collected lambdas and if we have the same lambda, start from the root
+//                     var nestedLambdas = rootClosure.NestedLambdas;
+//                     if (nestedLambdas.Length != 0)
+//                     {
+//                         var foundLambdaInfo = FindAlreadyCollectedNestedLambdaInfo(nestedLambdas, nestedLambdaExpr, out var foundInLambdas);
+//                         if (foundLambdaInfo != null)
+//                         {
+//                             // if the lambda is not found on the same level, then add it
+//                             if (foundInLambdas != closure.NestedLambdas)
+//                             {
+//                                 closure.AddNestedLambda(foundLambdaInfo);
+//                                 var foundLambdaNonPassedParams = foundLambdaInfo.ClosureInfo.NonPassedParameters;
+//                                 if (foundLambdaNonPassedParams.Length != 0)
+//                                     PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, foundLambdaNonPassedParams);
+//                             }
+
+//                             return true;
+//                         }
+//                     }
+
+//                     var nestedLambdaInfo = new NestedLambdaInfo(nestedLambdaExpr);
+//                     if (!TryCollectBoundConstants(ref nestedLambdaInfo.ClosureInfo,
+//                         nestedLambdaExpr.Body, nestedLambdaExpr.Parameters, true, ref rootClosure))
+//                         return false;
+
+//                     closure.AddNestedLambda(nestedLambdaInfo);
+//                     var nestedNonPassedParams = nestedLambdaInfo.ClosureInfo.NonPassedParameters; // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
+//                     if (nestedNonPassedParams.Length != 0)
+//                         PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, nestedNonPassedParams);
+
+//                     return true;
+
+//                 case ExpressionType.Invoke:
+//                     var invokeExpr = (InvocationExpression)expr;
+// #if LIGHT_EXPRESSION
+//                     if (invokeExpr is OneArgumentInvocationExpression oneArgExpr) 
+//                     {
+//                         if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                         expr = oneArgExpr.Argument;
+//                         continue;
+//                     }
+// #endif
+//                     var invokeArgs = invokeExpr.Arguments;
+//                     if (invokeArgs.Count == 0)
+//                     {
+//                         expr = invokeExpr.Expression;
+//                         continue;
+//                     }
+
+//                     if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
+//                         return false;
+
+//                     var lastArgIndex = invokeArgs.Count - 1;
+//                     if (lastArgIndex > 0)
+//                         for (var i = 0; i < lastArgIndex; i++)
+//                             if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                     expr = invokeArgs[lastArgIndex];
+//                     continue;
+
+//                 case ExpressionType.Conditional:
+//                     var condExpr = (ConditionalExpression)expr;
+//                     if (!TryCollectBoundConstants(ref closure, condExpr.Test,    paramExprs, isNestedLambda, ref rootClosure) ||
+//                         !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs, isNestedLambda, ref rootClosure))
+//                         return false;
+//                     expr = condExpr.IfTrue;
+//                     continue;
+
+//                 case ExpressionType.Block:
+//                     var blockExpr = (BlockExpression)expr;
+//                     var blockVarExprs = blockExpr.Variables;
+//                     var blockExprs = blockExpr.Expressions;
+
+//                     if (blockVarExprs.Count == 0)
+//                     {
+//                         for (var i = 0; i < blockExprs.Count - 1; i++)
+//                             if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                         expr = blockExprs[blockExprs.Count - 1];
+//                         continue;
+//                     }
+//                     else
+//                     {
+//                         if (blockVarExprs.Count == 1)
+//                             closure.PushBlockWithVars(blockVarExprs[0]);
+//                         else
+//                             closure.PushBlockWithVars(blockVarExprs);
+
+//                         for (var i = 0; i < blockExprs.Count; i++)
+//                             if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                         closure.PopBlock();
+//                     }
+
+//                     return true;
+
+//                 case ExpressionType.Loop:
+//                     var loopExpr = (LoopExpression)expr;
+//                     closure.AddLabel(loopExpr.BreakLabel);
+//                     closure.AddLabel(loopExpr.ContinueLabel);
+//                     expr = loopExpr.Body;
+//                     continue;
+
+//                 case ExpressionType.Index:
+//                     var indexExpr = (IndexExpression)expr;
+//                     var indexArgs = indexExpr.Arguments; // todo: @perf handle a single argument expr, do continue on it as well
+//                     for (var i = 0; i < indexArgs.Count; i++)
+//                         if (!TryCollectBoundConstants(ref closure, indexArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                     if (indexExpr.Object == null)
+//                         return true;
+//                     expr = indexExpr.Object;
+//                     continue;
+
+//                 case ExpressionType.Try:
+//                     return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs, isNestedLambda, ref rootClosure);
+
+//                 case ExpressionType.Label:
+//                     var labelExpr = (LabelExpression)expr;
+//                     var defaultValueExpr = labelExpr.DefaultValue;
+//                     closure.AddLabel(labelExpr.Target);
+//                     if (defaultValueExpr == null)
+//                         return true;
+//                     expr = defaultValueExpr;
+//                     continue;
+
+//                 case ExpressionType.Goto:
+//                     var gotoExpr = (GotoExpression)expr;
+//                     if (gotoExpr.Kind == GotoExpressionKind.Return)
+//                         closure.MarkAsContainsReturnGotoExpression();
+
+//                     if (gotoExpr.Value == null)
+//                         return true;
+
+//                     expr = gotoExpr.Value;
+//                     continue;
+
+//                 case ExpressionType.Switch:
+//                     var switchExpr = ((SwitchExpression)expr);
+//                     if (!TryCollectBoundConstants(ref closure, switchExpr.SwitchValue, paramExprs, isNestedLambda, ref rootClosure) ||
+//                         switchExpr.DefaultBody != null && 
+//                         !TryCollectBoundConstants(ref closure, switchExpr.DefaultBody, paramExprs, isNestedLambda, ref rootClosure))
+//                         return false;
+//                     var switchCases = switchExpr.Cases;
+//                     for (var i = 0; i < switchCases.Count - 1; i++)
+//                         if (!TryCollectBoundConstants(ref closure, switchCases[i].Body, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                     expr = switchCases[switchCases.Count - 1].Body;
+//                     continue;
+
+//                 case ExpressionType.Extension:
+//                     expr = expr.Reduce();
+//                     continue;
+
+//                 case ExpressionType.Default:
+//                     return true;
+
+//                 case ExpressionType.TypeIs:
+//                 case ExpressionType.TypeEqual:
+//                     expr = ((TypeBinaryExpression)expr).Expression;
+//                     continue;
+
+//                 case ExpressionType.Quote:     // todo: @feature - is not supported yet
+//                     return false;
+
+//                 case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
+//                     return true;               // todo: @unclear - just ignoring the info for now
+
+//                 default:
+//                     if (expr is UnaryExpression unaryExpr)
+//                     {
+//                         expr = unaryExpr.Operand;
+//                         continue;
+//                     }
+
+//                     if (expr is BinaryExpression binaryExpr)
+//                     {
+//                         if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                         expr = binaryExpr.Right;
+//                         continue;
+//                     }
+
+//                     if (expr is TypeBinaryExpression typeBinaryExpr)
+//                     {
+//                         expr = typeBinaryExpr.Expression;
+//                         continue;
+//                     }
+
+//                     return false;
+            }
+
+            ref var item = ref exprsConverted.PushSlot();
+            item.SysExpr   = expr;
+            item.LightExpr = lightExpr;
+            return lightExpr;
+        }
+
+
     }
 }
 
