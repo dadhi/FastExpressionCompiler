@@ -521,32 +521,33 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
         public static UnaryExpression Convert(Expression expression, Type type)
         {
+            return new ConvertUnaryExpression(expression, type);
             // todo: @perf benchmark thw switch on the LightExprVsExpr_Create_ComplexExpr 
-            if (type.IsEnum)
-                return new ConvertUnaryExpression(expression, type);
-            return Type.GetTypeCode(type) switch 
-            {
-                TypeCode.Boolean  => new TypedConvertUnaryExpression<bool>(expression),
-                TypeCode.Byte     => new TypedConvertUnaryExpression<byte>(expression),
-                TypeCode.Char     => new TypedConvertUnaryExpression<char>(expression),
-                TypeCode.DateTime => new TypedConvertUnaryExpression<DateTime>(expression),
-                TypeCode.Decimal  => new TypedConvertUnaryExpression<decimal>(expression),
-                TypeCode.Double   => new TypedConvertUnaryExpression<double>(expression),
-                TypeCode.Int16    => new TypedConvertUnaryExpression<short>(expression),
-                TypeCode.Int32    => new TypedConvertUnaryExpression<int>(expression),
-                TypeCode.Int64    => new TypedConvertUnaryExpression<long>(expression),
-                TypeCode.SByte    => new TypedConvertUnaryExpression<sbyte>(expression),
-                TypeCode.Single   => new TypedConvertUnaryExpression<float>(expression),
-                TypeCode.String   => new TypedConvertUnaryExpression<string>(expression),
-                TypeCode.UInt16   => new TypedConvertUnaryExpression<ushort>(expression),
-                TypeCode.UInt32   => new TypedConvertUnaryExpression<uint>(expression),
-                TypeCode.UInt64   => new TypedConvertUnaryExpression<ulong>(expression),
-                _ =>  type == typeof(object)
-                    ? new TypedConvertUnaryExpression<object>(expression) 
-                    : type == typeof(Type)
-                    ? new TypedConvertUnaryExpression<Type>(expression)
-                    : (UnaryExpression)new ConvertUnaryExpression(expression, type)
-            };
+            // if (type.IsEnum)
+            //     return new ConvertUnaryExpression(expression, type);
+            // return Type.GetTypeCode(type) switch 
+            // {
+            //     TypeCode.Boolean  => new TypedConvertUnaryExpression<bool>(expression),
+            //     TypeCode.Byte     => new TypedConvertUnaryExpression<byte>(expression),
+            //     TypeCode.Char     => new TypedConvertUnaryExpression<char>(expression),
+            //     TypeCode.DateTime => new TypedConvertUnaryExpression<DateTime>(expression),
+            //     TypeCode.Decimal  => new TypedConvertUnaryExpression<decimal>(expression),
+            //     TypeCode.Double   => new TypedConvertUnaryExpression<double>(expression),
+            //     TypeCode.Int16    => new TypedConvertUnaryExpression<short>(expression),
+            //     TypeCode.Int32    => new TypedConvertUnaryExpression<int>(expression),
+            //     TypeCode.Int64    => new TypedConvertUnaryExpression<long>(expression),
+            //     TypeCode.SByte    => new TypedConvertUnaryExpression<sbyte>(expression),
+            //     TypeCode.Single   => new TypedConvertUnaryExpression<float>(expression),
+            //     TypeCode.String   => new TypedConvertUnaryExpression<string>(expression),
+            //     TypeCode.UInt16   => new TypedConvertUnaryExpression<ushort>(expression),
+            //     TypeCode.UInt32   => new TypedConvertUnaryExpression<uint>(expression),
+            //     TypeCode.UInt64   => new TypedConvertUnaryExpression<ulong>(expression),
+            //     _ =>  type == typeof(object)
+            //         ? new TypedConvertUnaryExpression<object>(expression) 
+            //         : type == typeof(Type)
+            //         ? new TypedConvertUnaryExpression<Type>(expression)
+            //         : (UnaryExpression)new ConvertUnaryExpression(expression, type)
+            // };
         }
 
         /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
@@ -2803,13 +2804,14 @@ namespace FastExpressionCompiler.LightExpression
         internal TypedConstantExpression(object value) : base(value) { }
     }
 
-    public class NewExpression : Expression
+    public class NewExpression : Expression, IArgumentProvider
     {
         public sealed override ExpressionType NodeType => ExpressionType.New;
         public override Type Type => Constructor.DeclaringType;
         public readonly ConstructorInfo Constructor;
-        public virtual int FewArgumentCount => 0;
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
+        public virtual int ArgumentCount => 0;
+        public virtual Expression GetArgument(int i) => throw new NotImplementedException();
         internal NewExpression(ConstructorInfo constructor) => Constructor = constructor;
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNew(this);
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
@@ -2849,7 +2851,6 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class NewValueTypeExpression : NewExpression
     {
         public override Type Type { get; }
-
         internal NewValueTypeExpression(Type type) : base(null) => Type = type;
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) => SysExpr.New(Type);
@@ -2864,18 +2865,18 @@ namespace FastExpressionCompiler.LightExpression
     {
         public readonly Expression Argument;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument };
-        public override int FewArgumentCount => 1;
+        public override int ArgumentCount => 1;
+        public override Expression GetArgument(int i) => Argument;
         internal OneArgumentNewExpression(ConstructorInfo constructor, Expression argument) : base(constructor) =>
             Argument = argument;
     }
 
     public sealed class TwoArgumentsNewExpression : NewExpression
     {
-        public readonly Expression Argument0;
-        public readonly Expression Argument1;
+        public readonly Expression Argument0, Argument1;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
-        public override int FewArgumentCount => 2;
-
+        public override int ArgumentCount => 2;
+        public override Expression GetArgument(int i) => i == 0 ? Argument0 : Argument1;
         internal TwoArgumentsNewExpression(ConstructorInfo constructor,
             Expression argument0, Expression argument1) : base(constructor)
         {
@@ -2886,11 +2887,11 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class ThreeArgumentsNewExpression : NewExpression
     {
-        public readonly Expression Argument0;
-        public readonly Expression Argument1;
-        public readonly Expression Argument2;
+        public readonly Expression Argument0, Argument1, Argument2;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
-        public override int FewArgumentCount => 3;
+        public override int ArgumentCount => 3;
+        public override Expression GetArgument(int i) => 
+            i == 0 ? Argument0 : i == 1 ? Argument1 : Argument2;
         internal ThreeArgumentsNewExpression(ConstructorInfo constructor,
             Expression argument0, Expression argument1, Expression argument2) : base(constructor)
         {
@@ -2902,12 +2903,11 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class FourArgumentsNewExpression : NewExpression
     {
-        public readonly Expression Argument0;
-        public readonly Expression Argument1;
-        public readonly Expression Argument2;
-        public readonly Expression Argument3;
+        public readonly Expression Argument0, Argument1, Argument2, Argument3;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
-        public override int FewArgumentCount => 4;
+        public override int ArgumentCount => 3;
+        public override Expression GetArgument(int i) => 
+            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : Argument3;
         internal FourArgumentsNewExpression(ConstructorInfo constructor,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3) : base(constructor)
         {
@@ -2920,13 +2920,11 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class FiveArgumentsNewExpression : NewExpression
     {
-        public readonly Expression Argument0;
-        public readonly Expression Argument1;
-        public readonly Expression Argument2;
-        public readonly Expression Argument3;
-        public readonly Expression Argument4;
+        public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
-        public override int FewArgumentCount => 5;
+        public override int ArgumentCount => 5;
+        public override Expression GetArgument(int i) => 
+            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : i == 3 ? Argument3 : Argument4;
         internal FiveArgumentsNewExpression(ConstructorInfo constructor,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4) : base(constructor)
         {
@@ -2941,7 +2939,8 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class ManyArgumentsNewExpression : NewExpression
     {
         public override IReadOnlyList<Expression> Arguments { get; }
-        public override int FewArgumentCount => -1;
+        public override int ArgumentCount => Arguments.Count;
+        public override Expression GetArgument(int i) => Arguments[i];
         internal ManyArgumentsNewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : base(constructor) =>
             Arguments = arguments;
     }
@@ -4723,6 +4722,18 @@ namespace FastExpressionCompiler.LightExpression
         {
             return sb.Append("DebugInfo()"); // todo: @incomplete
         }
+    }
+
+    public interface IArgumentProvider
+    {
+        int ArgumentCount { get; }
+        Expression GetArgument(int i);
+    }
+
+    public interface IParameterProvider
+    {
+        int ParameterCount { get; }
+        ParameterExpression GetParameter(int i);
     }
 
     public static class SystemExpressionExtensions 
