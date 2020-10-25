@@ -46,12 +46,15 @@ namespace FastExpressionCompiler
 #endif
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Linq.Expressions;
     using System.Reflection;
     using System.Reflection.Emit;
     using System.Threading;
+    using System.Text;
+    using static System.Environment;
 
     /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
     /// Partial to extend with your things when used as source file.</summary>
@@ -4893,6 +4896,783 @@ namespace FastExpressionCompiler
             var newItems = new T[count << 1]; // count x 2
             Array.Copy(items, 0, newItems, 0, count);
             return newItems;
+        }
+    }
+
+    public static class ExpressionTools 
+    {
+        /// <summary>
+        /// Prints the expression in its constructing syntax - 
+        /// helpful to get the expression from the debug session and put into it the code for the test.
+        /// </summary>
+        public static string ToExpressionString2(this Expression expr) => expr.ToExpressionString2(out var _, out var _, out var _);
+
+        /// <summary>
+        /// Prints the expression in its constructing syntax - 
+        /// helpful to get the expression from the debug session and put into it the code for the test.
+        /// In addition, returns the gathered expressions, parameters ad labels. 
+        /// </summary>
+        public static string ToExpressionString2(this Expression expr,
+            out List<ParameterExpression> paramsExprs, out List<Expression> uniqueExprs, out List<LabelTarget> lts, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
+            var sb = new StringBuilder(1024);
+            sb.Append("var expr = ");
+            paramsExprs = new List<ParameterExpression>();
+            uniqueExprs = new List<Expression>();
+            lts = new List<LabelTarget>();
+            sb = expr.CreateExpressionString2(sb, paramsExprs, uniqueExprs, lts, 2, stripNamespace, printType).Append(';');
+            
+            sb.Insert(0, $"var l = new LabelTarget[{lts.Count}]; // the labels {NewLine}");
+            sb.Insert(0, $"var e = new Expression[{uniqueExprs.Count}]; // the unique expressions {NewLine}");
+            sb.Insert(0, $"var p = new ParameterExpression[{paramsExprs.Count}]; // the parameter expressions {NewLine}");
+
+            return sb.ToString();
+        }
+
+        // Searches first for the expression reference in `uniqueExprs` and adds the reference to expression by index, 
+        // otherwise delegates to `CreateExpressionCodeString`
+        internal static StringBuilder ToExpressionString2(this Expression expr, StringBuilder sb, 
+            List<ParameterExpression> _, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            var i = uniqueExprs.Count - 1;
+            while (i != -1 && !ReferenceEquals(uniqueExprs[i], expr)) --i;
+            if (i != -1)
+                return sb.Append("e[").Append(i)
+                    // output expression type and kind to help to understand what is it
+                    .Append(" // ").Append(expr.NodeType.ToString()).Append(" of ").Append(expr.Type.ToCode(stripNamespace, printType))
+                    .NewLineIdent(lineIdent).Append("]");
+
+            uniqueExprs.Add(expr);
+            sb.Append("e[").Append(uniqueExprs.Count - 1).Append("]=");
+            return expr.CreateExpressionString2(sb, _, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+        }
+
+        private class ConstantValueToCode : CodePrinter.IObjectToCode
+        {
+            public string ToCode(object x, bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+                $"default({x.GetType().ToCode(stripNamespace, printType)})";
+        }
+
+        public static readonly CodePrinter.IObjectToCode DefaultConstantValueToCode = new ConstantValueToCode();
+
+        internal static StringBuilder CreateExpressionString2(this Expression e, StringBuilder sb, 
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            switch (e.NodeType)
+            {
+                case ExpressionType.Constant:
+                {
+                    var x = (ConstantExpression)e;
+                    sb.Append("Constant(");
+                    if (x.Value == null)
+                    {
+                        sb.Append("null");
+                        if (x.Type != typeof(object))
+                            sb.Append(", ").AppendTypeof(x.Type, stripNamespace, printType);
+                    }
+                    else if (x.Value is Type t)
+                        sb.AppendTypeof(t, stripNamespace, printType);
+                    else
+                    {
+                        sb.Append(x.Value.ToCode(DefaultConstantValueToCode, stripNamespace, printType));
+                        if (x.Value.GetType() != x.Type)
+                            sb.Append(", ").AppendTypeof(x.Type, stripNamespace, printType);
+                    }
+                    return sb.Append(')');
+                }
+                // case ExpressionType.Parameter:
+                // {
+                //     var e = (System.Linq.Expressions.ParameterExpression)expr;
+                //     lightExpr = Expression.Parameter(e.Type, e.Name);
+                //     break;
+                // }
+                // case ExpressionType.New:
+                // {
+                //     var e = (System.Linq.Expressions.NewExpression)expr;
+                //     var a = e.Arguments;
+                //     if (a.Count == 0)
+                //         return Expression.New(e.Constructor);
+                //     var aa = new Expression[a.Count];
+                //     for (var j = 0; j < aa.Length; ++j)
+                //         aa[j] = a[j].ToLightExpression(ref exprsConverted);
+                //     lightExpr = Expression.New(e.Constructor, aa); // todo: @perf support the IArgumentProvider
+                //     break;
+                // }
+
+//                 case ExpressionType.Call:
+//                     var callExpr = (MethodCallExpression)expr;
+//                     var callObjectExpr = callExpr.Object;
+// #if LIGHT_EXPRESSION
+//                     var fewCallArgCount = callExpr.FewArgumentCount;
+//                     if (fewCallArgCount == 0)
+//                     {
+//                         if (callObjectExpr != null)
+//                         {
+//                             expr = callObjectExpr;
+//                             continue;
+//                         }
+
+//                         return true;
+//                     }
+
+//                     if (fewCallArgCount > 0)
+//                     {
+//                         if (callObjectExpr != null && 
+//                             !TryCollectBoundConstants(ref closure, callObjectExpr, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+
+//                         if (fewCallArgCount == 1)
+//                         {
+//                             expr = ((OneArgumentMethodCallExpression)callExpr).Argument;
+//                             continue;
+//                         }
+                        
+//                         if (fewCallArgCount == 2)
+//                         {
+//                             var twoArgsExpr = (TwoArgumentsMethodCallExpression)callExpr;
+//                             if (!TryCollectBoundConstants(ref closure, twoArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                             expr = twoArgsExpr.Argument1;
+//                             continue;
+//                         }
+
+//                         if (fewCallArgCount == 3)
+//                         {
+//                             var threeArgsExpr = (ThreeArgumentsMethodCallExpression)callExpr;
+//                             if (!TryCollectBoundConstants(ref closure, threeArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+//                                 !TryCollectBoundConstants(ref closure, threeArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                             expr = threeArgsExpr.Argument2;
+//                             continue;
+//                         }
+
+//                         if (fewCallArgCount == 4)
+//                         {
+//                             var fourArgsExpr = (FourArgumentsMethodCallExpression)callExpr;
+//                             if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                             expr = fourArgsExpr.Argument3;
+//                             continue;
+//                         }
+
+//                         var fiveArgsExpr = (FiveArgumentsMethodCallExpression)callExpr;
+//                         if (!TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
+//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
+//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure) ||
+//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument3, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                         expr = fiveArgsExpr.Argument4;
+//                         continue;
+//                     }
+// #endif
+//                     var methodArgs = callExpr.Arguments;
+//                     var methodArgCount = methodArgs.Count;
+//                     if (methodArgCount == 0)
+//                     {
+//                         if (callObjectExpr != null)
+//                         {
+//                             expr = callObjectExpr;
+//                             continue;
+//                         }
+
+//                         return true;
+//                     }
+
+//                     if (callObjectExpr != null && 
+//                         !TryCollectBoundConstants(ref closure, callExpr.Object, paramExprs, isNestedLambda, ref rootClosure)) 
+//                         return false;
+
+//                     for (var i = 0; i < methodArgCount - 1; i++)
+//                         if (!TryCollectBoundConstants(ref closure, methodArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+
+//                     expr = methodArgs[methodArgCount - 1];
+//                     continue;
+
+//                 case ExpressionType.MemberAccess:
+//                     var memberExpr = ((MemberExpression)expr).Expression;
+//                     if (memberExpr == null)
+//                         return true;
+//                     expr = memberExpr;
+//                     continue;
+
+//                 case ExpressionType.NewArrayBounds:
+//                 case ExpressionType.NewArrayInit:
+//                     var elemExprs = ((NewArrayExpression)expr).Expressions;
+//                     var elemExprsCount = elemExprs.Count;
+//                     if (elemExprsCount == 0)
+//                         return true;
+
+//                     for (var i = 0; i < elemExprsCount - 1; i++)
+//                         if (!TryCollectBoundConstants(ref closure, elemExprs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+
+//                     expr = elemExprs[elemExprsCount - 1];
+//                     continue;
+
+//                 case ExpressionType.Lambda:
+//                     var nestedLambdaExpr = (LambdaExpression)expr;
+
+//                     // Look for the already collected lambdas and if we have the same lambda, start from the root
+//                     var nestedLambdas = rootClosure.NestedLambdas;
+//                     if (nestedLambdas.Length != 0)
+//                     {
+//                         var foundLambdaInfo = FindAlreadyCollectedNestedLambdaInfo(nestedLambdas, nestedLambdaExpr, out var foundInLambdas);
+//                         if (foundLambdaInfo != null)
+//                         {
+//                             // if the lambda is not found on the same level, then add it
+//                             if (foundInLambdas != closure.NestedLambdas)
+//                             {
+//                                 closure.AddNestedLambda(foundLambdaInfo);
+//                                 var foundLambdaNonPassedParams = foundLambdaInfo.ClosureInfo.NonPassedParameters;
+//                                 if (foundLambdaNonPassedParams.Length != 0)
+//                                     PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, foundLambdaNonPassedParams);
+//                             }
+
+//                             return true;
+//                         }
+//                     }
+
+//                     var nestedLambdaInfo = new NestedLambdaInfo(nestedLambdaExpr);
+//                     if (!TryCollectBoundConstants(ref nestedLambdaInfo.ClosureInfo,
+//                         nestedLambdaExpr.Body, nestedLambdaExpr.Parameters, true, ref rootClosure))
+//                         return false;
+
+//                     closure.AddNestedLambda(nestedLambdaInfo);
+//                     var nestedNonPassedParams = nestedLambdaInfo.ClosureInfo.NonPassedParameters; // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
+//                     if (nestedNonPassedParams.Length != 0)
+//                         PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, nestedNonPassedParams);
+
+//                     return true;
+
+//                 case ExpressionType.Invoke:
+//                     var invokeExpr = (InvocationExpression)expr;
+// #if LIGHT_EXPRESSION
+//                     if (invokeExpr is OneArgumentInvocationExpression oneArgExpr) 
+//                     {
+//                         if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                         expr = oneArgExpr.Argument;
+//                         continue;
+//                     }
+// #endif
+//                     var invokeArgs = invokeExpr.Arguments;
+//                     if (invokeArgs.Count == 0)
+//                     {
+//                         expr = invokeExpr.Expression;
+//                         continue;
+//                     }
+
+//                     if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
+//                         return false;
+
+//                     var lastArgIndex = invokeArgs.Count - 1;
+//                     if (lastArgIndex > 0)
+//                         for (var i = 0; i < lastArgIndex; i++)
+//                             if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                     expr = invokeArgs[lastArgIndex];
+//                     continue;
+
+//                 case ExpressionType.Conditional:
+//                     var condExpr = (ConditionalExpression)expr;
+//                     if (!TryCollectBoundConstants(ref closure, condExpr.Test,    paramExprs, isNestedLambda, ref rootClosure) ||
+//                         !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs, isNestedLambda, ref rootClosure))
+//                         return false;
+//                     expr = condExpr.IfTrue;
+//                     continue;
+
+//                 case ExpressionType.Block:
+//                     var blockExpr = (BlockExpression)expr;
+//                     var blockVarExprs = blockExpr.Variables;
+//                     var blockExprs = blockExpr.Expressions;
+
+//                     if (blockVarExprs.Count == 0)
+//                     {
+//                         for (var i = 0; i < blockExprs.Count - 1; i++)
+//                             if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                         expr = blockExprs[blockExprs.Count - 1];
+//                         continue;
+//                     }
+//                     else
+//                     {
+//                         if (blockVarExprs.Count == 1)
+//                             closure.PushBlockWithVars(blockVarExprs[0]);
+//                         else
+//                             closure.PushBlockWithVars(blockVarExprs);
+
+//                         for (var i = 0; i < blockExprs.Count; i++)
+//                             if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                                 return false;
+//                         closure.PopBlock();
+//                     }
+
+//                     return true;
+
+//                 case ExpressionType.Loop:
+//                     var loopExpr = (LoopExpression)expr;
+//                     closure.AddLabel(loopExpr.BreakLabel);
+//                     closure.AddLabel(loopExpr.ContinueLabel);
+//                     expr = loopExpr.Body;
+//                     continue;
+
+//                 case ExpressionType.Index:
+//                     var indexExpr = (IndexExpression)expr;
+//                     var indexArgs = indexExpr.Arguments; // todo: @perf handle a single argument expr, do continue on it as well
+//                     for (var i = 0; i < indexArgs.Count; i++)
+//                         if (!TryCollectBoundConstants(ref closure, indexArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                     if (indexExpr.Object == null)
+//                         return true;
+//                     expr = indexExpr.Object;
+//                     continue;
+
+//                 case ExpressionType.Try:
+//                     return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs, isNestedLambda, ref rootClosure);
+
+//                 case ExpressionType.Label:
+//                     var labelExpr = (LabelExpression)expr;
+//                     var defaultValueExpr = labelExpr.DefaultValue;
+//                     closure.AddLabel(labelExpr.Target);
+//                     if (defaultValueExpr == null)
+//                         return true;
+//                     expr = defaultValueExpr;
+//                     continue;
+
+//                 case ExpressionType.Goto:
+//                     var gotoExpr = (GotoExpression)expr;
+//                     if (gotoExpr.Kind == GotoExpressionKind.Return)
+//                         closure.MarkAsContainsReturnGotoExpression();
+
+//                     if (gotoExpr.Value == null)
+//                         return true;
+
+//                     expr = gotoExpr.Value;
+//                     continue;
+
+//                 case ExpressionType.Switch:
+//                     var switchExpr = ((SwitchExpression)expr);
+//                     if (!TryCollectBoundConstants(ref closure, switchExpr.SwitchValue, paramExprs, isNestedLambda, ref rootClosure) ||
+//                         switchExpr.DefaultBody != null && 
+//                         !TryCollectBoundConstants(ref closure, switchExpr.DefaultBody, paramExprs, isNestedLambda, ref rootClosure))
+//                         return false;
+//                     var switchCases = switchExpr.Cases;
+//                     for (var i = 0; i < switchCases.Count - 1; i++)
+//                         if (!TryCollectBoundConstants(ref closure, switchCases[i].Body, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                     expr = switchCases[switchCases.Count - 1].Body;
+//                     continue;
+
+//                 case ExpressionType.Extension:
+//                     expr = expr.Reduce();
+//                     continue;
+
+//                 case ExpressionType.Default:
+//                     return true;
+
+//                 case ExpressionType.TypeIs:
+//                 case ExpressionType.TypeEqual:
+//                     expr = ((TypeBinaryExpression)expr).Expression;
+//                     continue;
+
+//                 case ExpressionType.Quote:     // todo: @feature - is not supported yet
+//                     return false;
+
+//                 case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
+//                     return true;               // todo: @unclear - just ignoring the info for now
+
+//                 default:
+//                     if (expr is UnaryExpression unaryExpr)
+//                     {
+//                         expr = unaryExpr.Operand;
+//                         continue;
+//                     }
+
+//                     if (expr is BinaryExpression binaryExpr)
+//                     {
+//                         if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs, isNestedLambda, ref rootClosure))
+//                             return false;
+//                         expr = binaryExpr.Right;
+//                         continue;
+//                     }
+
+//                     if (expr is TypeBinaryExpression typeBinaryExpr)
+//                     {
+//                         expr = typeBinaryExpr.Expression;
+//                         continue;
+//                     }
+
+//                     return false;
+            }
+
+            // ref var item = ref exprsConverted.PushSlot();
+            // item.SysExpr   = expr;
+            // item.LightExpr = lightExpr;
+            return sb;
+        }
+    }
+
+        /// <summary>Converts the object of known type into the valid C# code representation</summary>
+    public static class CodePrinter
+    {
+        public static StringBuilder AppendTypeof(this StringBuilder sb, Type type, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false) =>
+            type == null
+                ? sb.Append("null")
+                : sb.Append("typeof(").Append(type.ToCode(stripNamespace, printType, printGenericTypeArgs)).Append(')');
+
+        public static StringBuilder AppendTypeofList(this StringBuilder sb, Type[] types, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false)
+        {
+            for (var i = 0; i < types.Length; i++)
+                (i > 0 ? sb.Append(", ") : sb).AppendTypeof(types[i], stripNamespace, printType, printGenericTypeArgs);
+            return sb;
+        }
+
+        internal static StringBuilder AppendFieldOrProperty(this StringBuilder sb, MemberInfo member, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            member is FieldInfo f 
+                ? sb.AppendField(f, stripNamespace, printType)
+                : sb.AppendProperty((PropertyInfo)member, stripNamespace, printType);
+
+        internal static StringBuilder AppendField(this StringBuilder sb, FieldInfo field, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            sb.AppendTypeof(field.DeclaringType, stripNamespace, printType)
+              .Append(".GetTypeInfo().GetDeclaredField(\"").Append(field.Name).Append("\")");
+
+        internal static StringBuilder AppendProperty(this StringBuilder sb, PropertyInfo property, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            sb.AppendTypeof(property.DeclaringType, stripNamespace, printType)
+              .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(property.Name).Append("\")");
+        
+        internal static StringBuilder AppendEnum<TEnum>(this StringBuilder sb, TEnum value,
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            sb.Append(typeof(TEnum).ToCode(stripNamespace, printType)).Append('.')
+              .Append(Enum.GetName(typeof(TEnum), value));
+
+        private const string _nonPubStatMethods = "BindingFlags.NonPublic|BindingFlags.Static";
+        private const string _nonPubInstMethods = "BindingFlags.NonPublic|BindingFlags.Instance";
+
+        public static StringBuilder AppendMethod(this StringBuilder sb, MethodInfo method, 
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
+            sb.AppendTypeof(method.DeclaringType, stripNamespace, printType);
+            sb.Append(".GetMethods(");
+
+            if (!method.IsPublic)
+                sb.Append(method.IsStatic ? _nonPubStatMethods : _nonPubInstMethods);
+
+            var mp = method.GetParameters();
+            if (!method.IsGenericMethod) 
+            {
+                sb.Append(").Single(x => !x.IsGenericMethod && x.Name == \"").Append(method.Name).Append("\" && ");
+                return mp.Length == 0
+                    ? sb.Append("x.GetParameters().Length == 0)")
+                    : sb.Append("x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { ")
+                        .AppendTypeofList(mp.Select(x => x.ParameterType).ToArray(), stripNamespace, printType)
+                        .Append(" }))");
+            }
+
+            var tp = method.GetGenericArguments();
+            sb.Append(").Where(x => x.IsGenericMethod && x.Name == \"").Append(method.Name).Append("\" && ");
+            if (mp.Length == 0) 
+            {
+                sb.Append("x.GetParameters().Length == 0 && x.GetGenericArguments().Length == ").Append(tp.Length);
+                sb.Append(").Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(").AppendTypeofList(tp, stripNamespace, printType);
+                return sb.Append(") : x).Single()");
+            }
+
+            sb.Append("x.GetGenericArguments().Length == ").Append(tp.Length);
+            sb.Append(").Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(").AppendTypeofList(tp, stripNamespace, printType);
+            sb.Append(") : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { ");
+            sb.AppendTypeofList(mp.Select(x => x.ParameterType).ToArray(), stripNamespace, printType);
+            return sb.Append(" }))");
+        }
+
+        internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
+            name != null ? sb.Append(name)
+                : sb.Append(type.ToCode(true, null)).Append("__").Append(identity.GetHashCode());
+
+        /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
+        public static string ToCode(this Type type,
+            bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false)
+        {
+            if (type.IsGenericParameter)
+                return !printGenericTypeArgs ? string.Empty
+                    : (printType?.Invoke(type, type.Name) ?? type.Name);
+
+            Type arrayType = null;
+            if (type.IsArray)
+            {
+                // store the original type for the later and process its element type further here
+                arrayType = type;
+                type = type.GetElementType();
+            }
+
+            // the default handling of the built-in types
+            string buildInTypeString = null;
+            if (type == typeof(void))
+                buildInTypeString = "void";
+            if (type == typeof(object))
+                buildInTypeString = "object";
+            if (type == typeof(bool))
+                buildInTypeString = "bool";
+            if (type == typeof(int))
+                buildInTypeString = "int";
+            if (type == typeof(short))
+                buildInTypeString = "short";
+            if (type == typeof(byte))
+                buildInTypeString = "byte";
+            if (type == typeof(double))
+                buildInTypeString = "double";
+            if (type == typeof(float))
+                buildInTypeString = "float";
+            if (type == typeof(char))
+                buildInTypeString = "char";
+            if (type == typeof(string))
+                buildInTypeString = "string";
+
+            if (buildInTypeString != null)
+            {
+                if (arrayType != null)
+                    buildInTypeString += "[]";
+                return printType?.Invoke(arrayType ?? type, buildInTypeString) ?? buildInTypeString;
+            }
+
+            var parentCount = 0;
+            for (var ti = type.GetTypeInfo(); ti.IsNested; ti = ti.DeclaringType.GetTypeInfo())
+                ++parentCount;
+
+            Type[] parentTypes = null;
+            if (parentCount > 0) 
+            {
+                parentTypes = new Type[parentCount];
+                var pt = type.DeclaringType;
+                for (var i = 0; i < parentTypes.Length; i++, pt = pt.DeclaringType)
+                    parentTypes[i] = pt;
+            }
+
+            var typeInfo = type.GetTypeInfo();
+            Type[] typeArgs = null;
+            var isTypeClosedGeneric = false;
+            if (type.IsGenericType)
+            {
+                isTypeClosedGeneric = !typeInfo.IsGenericTypeDefinition;
+                typeArgs = isTypeClosedGeneric ? typeInfo.GenericTypeArguments : typeInfo.GenericTypeParameters;
+            }
+
+            var typeArgsConsumedByParentsCount = 0;
+            var s = new StringBuilder();
+            if (!stripNamespace && !string.IsNullOrEmpty(type.Namespace)) // for the auto-generated classes Namespace may be empty and in general it may be empty
+                s.Append(type.Namespace).Append('.');
+
+            if (parentTypes != null) 
+            {
+                for (var p = parentTypes.Length - 1; p >= 0; --p)
+                {
+                    var parentType = parentTypes[p];
+                    if (!parentType.IsGenericType)
+                    {
+                        s.Append(parentType.Name).Append('.');
+                    }
+                    else
+                    {
+                        var parentTypeInfo = parentType.GetTypeInfo();
+                        Type[] parentTypeArgs = null;
+                        if (parentTypeInfo.IsGenericTypeDefinition)
+                        {
+                            parentTypeArgs = parentTypeInfo.GenericTypeParameters;
+
+                            // replace the open parent args with the closed child args,
+                            // and close the parent
+                            if (isTypeClosedGeneric)
+                                for (var t = 0; t < parentTypeArgs.Length; ++t) 
+                                    parentTypeArgs[t] = typeArgs[t];
+
+                            var parentTypeArgCount = parentTypeArgs.Length;
+                            if (typeArgsConsumedByParentsCount > 0)
+                            {
+                                int ownArgCount = parentTypeArgCount - typeArgsConsumedByParentsCount;
+                                if (ownArgCount == 0)
+                                    parentTypeArgs = null;
+                                else
+                                {
+                                    var ownArgs = new Type[ownArgCount];
+                                    for (var a = 0; a < ownArgs.Length; ++a)
+                                        ownArgs[a] = parentTypeArgs[a + typeArgsConsumedByParentsCount];
+                                    parentTypeArgs = ownArgs;
+                                }
+                            }
+                            typeArgsConsumedByParentsCount = parentTypeArgCount;
+                        }
+                        else 
+                        {
+                            parentTypeArgs = parentTypeInfo.GenericTypeArguments;
+                        }
+
+                        var parentTickIndex = parentType.Name.IndexOf('`');
+                        s.Append(parentType.Name.Substring(0, parentTickIndex));
+
+                        // The owned parentTypeArgs maybe empty because all args are defined in the parent's parents
+                        if (parentTypeArgs?.Length > 0)
+                        {
+                            s.Append('<');
+                            for (var t = 0; t < parentTypeArgs.Length; ++t)
+                                (t == 0 ? s : s.Append(", "))
+                                    .Append(parentTypeArgs[t].ToCode(stripNamespace, printType, printGenericTypeArgs));
+                            s.Append('>');
+                        }
+                        s.Append('.');
+                    }
+                }
+            }
+
+            if (typeArgs != null && typeArgsConsumedByParentsCount < typeArgs.Length)
+            {
+                var tickIndex = type.Name.IndexOf('`');
+                s.Append(type.Name.Substring(0, tickIndex)).Append('<');
+                for (var i = 0; i < typeArgs.Length - typeArgsConsumedByParentsCount; ++i) 
+                    (i == 0 ? s : s.Append(", "))
+                        .Append(typeArgs[i + typeArgsConsumedByParentsCount]
+                            .ToCode(stripNamespace, printType, printGenericTypeArgs));
+                s.Append('>');
+            }
+            else
+            {
+                s.Append(type.Name);
+            }
+
+            if (arrayType != null)
+                s.Append("[]");
+
+            return printType?.Invoke(arrayType ?? type, s.ToString()) ?? s.ToString();
+        }
+
+        /// <summary>Prints valid C# Boolean</summary>
+        public static string ToCode(this bool x) => x ? "true" : "false";
+
+        /// <summary>Prints valid C# String escaping the things</summary>
+        public static string ToCode(this string x) =>
+            x == null ? "null" : $"\"{x.Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n")}\"";
+
+        /// <summary>Prints valid C# Enum literal</summary>
+        public static string ToEnumValueCode(this Type enumType, object x,
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            $"{enumType.ToCode(stripNamespace, printType)}.{Enum.GetName(enumType, x)}";
+
+        private static Type[] GetGenericTypeParametersOrArguments(this TypeInfo typeInfo) =>
+            typeInfo.IsGenericTypeDefinition ? typeInfo.GenericTypeParameters : typeInfo.GenericTypeArguments;
+
+        public interface IObjectToCode
+        {
+            string ToCode(object x, bool stripNamespace = false, Func<Type, string, string> printType = null);
+        }
+
+        /// Prints many code items as array initializer.
+        public static string ToCommaSeparatedCode(this IEnumerable items, IObjectToCode notRecognizedToCode,
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
+            var s = new StringBuilder();
+            var first = true;
+            foreach (var item in items)
+            {
+                if (first)
+                    first = false;
+                else
+                    s.Append(", ");
+                s.Append(item.ToCode(notRecognizedToCode, stripNamespace, printType));
+            }
+            return s.ToString();
+        }
+
+        /// <summary>Prints many code items as array initializer.</summary>
+        public static string ToArrayInitializerCode(this IEnumerable items, Type itemType, IObjectToCode notRecognizedToCode,
+            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            $"new {itemType.ToCode(stripNamespace, printType)}[]{{{items.ToCommaSeparatedCode(notRecognizedToCode, stripNamespace, printType)}}}";
+
+        /// <summary>
+        /// Prints a valid C# for known <paramref name="x"/>,
+        /// otherwise uses passed <paramref name="notRecognizedToCode"/> or falls back to `ToString()`.
+        /// </summary>
+        public static string ToCode(this object x, IObjectToCode notRecognizedToCode,
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
+            if (x == null)
+                return "null";
+
+            if (x is bool b)
+                return b.ToCode();
+
+            if (x is string s)
+                return s.ToCode();
+
+            if (x is char c)
+                return "'" + c + "'";
+
+            if (x is Type t)
+                return t.ToCode(stripNamespace, printType);
+
+            var xType = x.GetType();
+            var xTypeInfo = xType.GetTypeInfo();
+
+            if (x is IEnumerable e)
+            {
+                var elemType = xTypeInfo.IsArray
+                    ? xTypeInfo.GetElementType()
+                    : xTypeInfo.GetGenericTypeParametersOrArguments().GetFirst();
+                if (elemType != null)
+                    return e.ToArrayInitializerCode(elemType, notRecognizedToCode);
+            }
+
+            // unwrap the Nullable struct
+            if (xTypeInfo.IsGenericType && xTypeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                xType = xTypeInfo.GetElementType();
+                xTypeInfo = xType.GetTypeInfo();
+            }
+
+            if (xTypeInfo.IsEnum)
+                return x.GetType().ToEnumValueCode(x, stripNamespace, printType);
+
+            if (xTypeInfo.IsPrimitive) // output the primitive casted to the type
+                return "(" + x.GetType().ToCode(true, null) + ")" + x.ToString();
+
+            return notRecognizedToCode?.ToCode(x, stripNamespace, printType) ?? x.ToString();
+        }
+
+        internal static StringBuilder NewLineIdent(this StringBuilder sb, int lineIdent) =>
+            sb.AppendLine().Append(' ', lineIdent);
+
+        internal static StringBuilder NewLine(this StringBuilder sb, int lineIdent, int identSpaces) =>
+            sb.AppendLine().Append(' ', Math.Max(lineIdent - identSpaces, 0));
+
+        internal static StringBuilder NewLineIdentExpr(this StringBuilder sb, 
+            Expression expr, List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            sb.NewLineIdent(lineIdent);
+            return expr?.ToExpressionString2(sb, paramsExprs, uniqueExprs, lts, 
+                lineIdent + identSpaces, stripNamespace, printType, identSpaces)
+                ?? sb.Append("null");
+        }
+
+        internal static StringBuilder NewLineIdentParamsExprs<T>(this StringBuilder sb, IReadOnlyList<T> exprs, 
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+            where T : Expression
+        {
+            if (exprs.Count == 0)
+                return sb.Append("new ").Append(typeof(T).ToCode(true)).Append("[0]");
+            for (var i = 0; i < exprs.Count; i++)
+                (i > 0 ? sb.Append(',') : sb).NewLineIdentExpr(exprs[i], 
+                    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+            return sb;
         }
     }
 }

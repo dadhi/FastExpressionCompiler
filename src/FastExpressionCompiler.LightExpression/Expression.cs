@@ -1631,377 +1631,6 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    /// <summary>Converts the object of known type into the valid C# code representation</summary>
-    public static class ExpressionCodePrinter
-    {
-        internal static StringBuilder NewLineIdent(this StringBuilder sb, int lineIdent) =>
-            sb.AppendLine().Append(' ', lineIdent);
-
-        internal static StringBuilder NewLine(this StringBuilder sb, int lineIdent, int identSpaces) =>
-            sb.AppendLine().Append(' ', Math.Max(lineIdent - identSpaces, 0));
-
-        internal static StringBuilder NewLineIdentExpr(this StringBuilder sb, 
-            Expression expr, List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.NewLineIdent(lineIdent);
-            return expr?.ToExpressionString(sb, paramsExprs, uniqueExprs, lts, 
-                lineIdent + identSpaces, stripNamespace, printType, identSpaces)
-                ?? sb.Append("null");
-        }
-
-        internal static StringBuilder NewLineIdentCs(this StringBuilder sb, Expression expr,
-            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
-        {
-            sb.NewLineIdent(lineIdent);
-            return expr?.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces)
-                ?? sb.Append("null");
-        }
-
-        internal static StringBuilder NewLineIdentParamsExprs<T>(this StringBuilder sb, IReadOnlyList<T> exprs, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-            where T : Expression
-        {
-            if (exprs.Count == 0)
-                return sb.Append("new ").Append(typeof(T).ToCode(true)).Append("[0]");
-            for (var i = 0; i < exprs.Count; i++)
-                (i > 0 ? sb.Append(',') : sb).NewLineIdentExpr(exprs[i], 
-                    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb;
-        }
-    }
-
-    /// <summary>Converts the object of known type into the valid C# code representation</summary>
-    public static class CodePrinter
-    {
-        public static StringBuilder AppendTypeof(this StringBuilder sb, Type type, 
-            bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false) =>
-            type == null
-                ? sb.Append("null")
-                : sb.Append("typeof(").Append(type.ToCode(stripNamespace, printType, printGenericTypeArgs)).Append(')');
-
-        public static StringBuilder AppendTypeofList(this StringBuilder sb, Type[] types, 
-            bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false)
-        {
-            for (var i = 0; i < types.Length; i++)
-                (i > 0 ? sb.Append(", ") : sb).AppendTypeof(types[i], stripNamespace, printType, printGenericTypeArgs);
-            return sb;
-        }
-
-        internal static StringBuilder AppendFieldOrProperty(this StringBuilder sb, MemberInfo member, 
-            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-            member is FieldInfo f 
-                ? sb.AppendField(f, stripNamespace, printType)
-                : sb.AppendProperty((PropertyInfo)member, stripNamespace, printType);
-
-        internal static StringBuilder AppendField(this StringBuilder sb, FieldInfo field, 
-            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-            sb.AppendTypeof(field.DeclaringType, stripNamespace, printType)
-              .Append(".GetTypeInfo().GetDeclaredField(\"").Append(field.Name).Append("\")");
-
-        internal static StringBuilder AppendProperty(this StringBuilder sb, PropertyInfo property, 
-            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-            sb.AppendTypeof(property.DeclaringType, stripNamespace, printType)
-              .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(property.Name).Append("\")");
-        
-        internal static StringBuilder AppendEnum<TEnum>(this StringBuilder sb, TEnum value,
-            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-            sb.Append(typeof(TEnum).ToCode(stripNamespace, printType)).Append('.')
-              .Append(Enum.GetName(typeof(TEnum), value));
-
-        private const string _nonPubStatMethods = "BindingFlags.NonPublic|BindingFlags.Static";
-        private const string _nonPubInstMethods = "BindingFlags.NonPublic|BindingFlags.Instance";
-
-        public static StringBuilder AppendMethod(this StringBuilder sb, MethodInfo method, 
-            bool stripNamespace = false, Func<Type, string, string> printType = null)
-        {
-            sb.AppendTypeof(method.DeclaringType, stripNamespace, printType);
-            sb.Append(".GetMethods(");
-
-            if (!method.IsPublic)
-                sb.Append(method.IsStatic ? _nonPubStatMethods : _nonPubInstMethods);
-
-            var mp = method.GetParameters();
-            if (!method.IsGenericMethod) 
-            {
-                sb.Append(").Single(x => !x.IsGenericMethod && x.Name == \"").Append(method.Name).Append("\" && ");
-                return mp.Length == 0
-                    ? sb.Append("x.GetParameters().Length == 0)")
-                    : sb.Append("x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { ")
-                        .AppendTypeofList(mp.Select(x => x.ParameterType).ToArray(), stripNamespace, printType)
-                        .Append(" }))");
-            }
-
-            var tp = method.GetGenericArguments();
-            sb.Append(").Where(x => x.IsGenericMethod && x.Name == \"").Append(method.Name).Append("\" && ");
-            if (mp.Length == 0) 
-            {
-                sb.Append("x.GetParameters().Length == 0 && x.GetGenericArguments().Length == ").Append(tp.Length);
-                sb.Append(").Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(").AppendTypeofList(tp, stripNamespace, printType);
-                return sb.Append(") : x).Single()");
-            }
-
-            sb.Append("x.GetGenericArguments().Length == ").Append(tp.Length);
-            sb.Append(").Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(").AppendTypeofList(tp, stripNamespace, printType);
-            sb.Append(") : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { ");
-            sb.AppendTypeofList(mp.Select(x => x.ParameterType).ToArray(), stripNamespace, printType);
-            return sb.Append(" }))");
-        }
-
-        internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
-            name != null ? sb.Append(name)
-                : sb.Append(type.ToCode(true, null)).Append("__").Append(identity.GetHashCode());
-
-        /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
-        public static string ToCode(this Type type,
-            bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false)
-        {
-            if (type.IsGenericParameter)
-                return !printGenericTypeArgs ? string.Empty
-                    : (printType?.Invoke(type, type.Name) ?? type.Name);
-
-            Type arrayType = null;
-            if (type.IsArray)
-            {
-                // store the original type for the later and process its element type further here
-                arrayType = type;
-                type = type.GetElementType();
-            }
-
-            // the default handling of the built-in types
-            string buildInTypeString = null;
-            if (type == typeof(void))
-                buildInTypeString = "void";
-            if (type == typeof(object))
-                buildInTypeString = "object";
-            if (type == typeof(bool))
-                buildInTypeString = "bool";
-            if (type == typeof(int))
-                buildInTypeString = "int";
-            if (type == typeof(short))
-                buildInTypeString = "short";
-            if (type == typeof(byte))
-                buildInTypeString = "byte";
-            if (type == typeof(double))
-                buildInTypeString = "double";
-            if (type == typeof(float))
-                buildInTypeString = "float";
-            if (type == typeof(char))
-                buildInTypeString = "char";
-            if (type == typeof(string))
-                buildInTypeString = "string";
-
-            if (buildInTypeString != null)
-            {
-                if (arrayType != null)
-                    buildInTypeString += "[]";
-                return printType?.Invoke(arrayType ?? type, buildInTypeString) ?? buildInTypeString;
-            }
-
-            var parentCount = 0;
-            for (var ti = type.GetTypeInfo(); ti.IsNested; ti = ti.DeclaringType.GetTypeInfo())
-                ++parentCount;
-
-            Type[] parentTypes = null;
-            if (parentCount > 0) 
-            {
-                parentTypes = new Type[parentCount];
-                var pt = type.DeclaringType;
-                for (var i = 0; i < parentTypes.Length; i++, pt = pt.DeclaringType)
-                    parentTypes[i] = pt;
-            }
-
-            var typeInfo = type.GetTypeInfo();
-            Type[] typeArgs = null;
-            var isTypeClosedGeneric = false;
-            if (type.IsGenericType)
-            {
-                isTypeClosedGeneric = !typeInfo.IsGenericTypeDefinition;
-                typeArgs = isTypeClosedGeneric ? typeInfo.GenericTypeArguments : typeInfo.GenericTypeParameters;
-            }
-
-            var typeArgsConsumedByParentsCount = 0;
-            var s = new StringBuilder();
-            if (!stripNamespace && !string.IsNullOrEmpty(type.Namespace)) // for the auto-generated classes Namespace may be empty and in general it may be empty
-                s.Append(type.Namespace).Append('.');
-
-            if (parentTypes != null) 
-            {
-                for (var p = parentTypes.Length - 1; p >= 0; --p)
-                {
-                    var parentType = parentTypes[p];
-                    if (!parentType.IsGenericType)
-                    {
-                        s.Append(parentType.Name).Append('.');
-                    }
-                    else
-                    {
-                        var parentTypeInfo = parentType.GetTypeInfo();
-                        Type[] parentTypeArgs = null;
-                        if (parentTypeInfo.IsGenericTypeDefinition)
-                        {
-                            parentTypeArgs = parentTypeInfo.GenericTypeParameters;
-
-                            // replace the open parent args with the closed child args,
-                            // and close the parent
-                            if (isTypeClosedGeneric)
-                                for (var t = 0; t < parentTypeArgs.Length; ++t) 
-                                    parentTypeArgs[t] = typeArgs[t];
-
-                            var parentTypeArgCount = parentTypeArgs.Length;
-                            if (typeArgsConsumedByParentsCount > 0)
-                            {
-                                int ownArgCount = parentTypeArgCount - typeArgsConsumedByParentsCount;
-                                if (ownArgCount == 0)
-                                    parentTypeArgs = null;
-                                else
-                                {
-                                    var ownArgs = new Type[ownArgCount];
-                                    for (var a = 0; a < ownArgs.Length; ++a)
-                                        ownArgs[a] = parentTypeArgs[a + typeArgsConsumedByParentsCount];
-                                    parentTypeArgs = ownArgs;
-                                }
-                            }
-                            typeArgsConsumedByParentsCount = parentTypeArgCount;
-                        }
-                        else 
-                        {
-                            parentTypeArgs = parentTypeInfo.GenericTypeArguments;
-                        }
-
-                        var parentTickIndex = parentType.Name.IndexOf('`');
-                        s.Append(parentType.Name.Substring(0, parentTickIndex));
-
-                        // The owned parentTypeArgs maybe empty because all args are defined in the parent's parents
-                        if (parentTypeArgs?.Length > 0)
-                        {
-                            s.Append('<');
-                            for (var t = 0; t < parentTypeArgs.Length; ++t)
-                                (t == 0 ? s : s.Append(", "))
-                                    .Append(parentTypeArgs[t].ToCode(stripNamespace, printType, printGenericTypeArgs));
-                            s.Append('>');
-                        }
-                        s.Append('.');
-                    }
-                }
-            }
-
-            if (typeArgs != null && typeArgsConsumedByParentsCount < typeArgs.Length)
-            {
-                var tickIndex = type.Name.IndexOf('`');
-                s.Append(type.Name.Substring(0, tickIndex)).Append('<');
-                for (var i = 0; i < typeArgs.Length - typeArgsConsumedByParentsCount; ++i) 
-                    (i == 0 ? s : s.Append(", "))
-                        .Append(typeArgs[i + typeArgsConsumedByParentsCount]
-                            .ToCode(stripNamespace, printType, printGenericTypeArgs));
-                s.Append('>');
-            }
-            else
-            {
-                s.Append(type.Name);
-            }
-
-            if (arrayType != null)
-                s.Append("[]");
-
-            return printType?.Invoke(arrayType ?? type, s.ToString()) ?? s.ToString();
-        }
-
-        /// <summary>Prints valid C# Boolean</summary>
-        public static string ToCode(this bool x) => x ? "true" : "false";
-
-        /// <summary>Prints valid C# String escaping the things</summary>
-        public static string ToCode(this string x) =>
-            x == null ? "null" : $"\"{x.Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n")}\"";
-
-        /// <summary>Prints valid C# Enum literal</summary>
-        public static string ToEnumValueCode(this Type enumType, object x,
-            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-            $"{enumType.ToCode(stripNamespace, printType)}.{Enum.GetName(enumType, x)}";
-
-        private static Type[] GetGenericTypeParametersOrArguments(this TypeInfo typeInfo) =>
-            typeInfo.IsGenericTypeDefinition ? typeInfo.GenericTypeParameters : typeInfo.GenericTypeArguments;
-
-        public interface IObjectToCode
-        {
-            string ToCode(object x, bool stripNamespace = false, Func<Type, string, string> printType = null);
-        }
-
-        /// Prints many code items as array initializer.
-        public static string ToCommaSeparatedCode(this IEnumerable items, IObjectToCode notRecognizedToCode,
-            bool stripNamespace = false, Func<Type, string, string> printType = null)
-        {
-            var s = new StringBuilder();
-            var first = true;
-            foreach (var item in items)
-            {
-                if (first)
-                    first = false;
-                else
-                    s.Append(", ");
-                s.Append(item.ToCode(notRecognizedToCode, stripNamespace, printType));
-            }
-            return s.ToString();
-        }
-
-        /// <summary>Prints many code items as array initializer.</summary>
-        public static string ToArrayInitializerCode(this IEnumerable items, Type itemType, IObjectToCode notRecognizedToCode,
-            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-            $"new {itemType.ToCode(stripNamespace, printType)}[]{{{items.ToCommaSeparatedCode(notRecognizedToCode, stripNamespace, printType)}}}";
-
-        /// <summary>
-        /// Prints a valid C# for known <paramref name="x"/>,
-        /// otherwise uses passed <paramref name="notRecognizedToCode"/> or falls back to `ToString()`.
-        /// </summary>
-        public static string ToCode(this object x, IObjectToCode notRecognizedToCode,
-            bool stripNamespace = false, Func<Type, string, string> printType = null)
-        {
-            if (x == null)
-                return "null";
-
-            if (x is bool b)
-                return b.ToCode();
-
-            if (x is string s)
-                return s.ToCode();
-
-            if (x is char c)
-                return "'" + c + "'";
-
-            if (x is Type t)
-                return t.ToCode(stripNamespace, printType);
-
-            var xType = x.GetType();
-            var xTypeInfo = xType.GetTypeInfo();
-
-            if (x is IEnumerable e)
-            {
-                var elemType = xTypeInfo.IsArray
-                    ? xTypeInfo.GetElementType()
-                    : xTypeInfo.GetGenericTypeParametersOrArguments().GetFirst();
-                if (elemType != null)
-                    return e.ToArrayInitializerCode(elemType, notRecognizedToCode);
-            }
-
-            // unwrap the Nullable struct
-            if (xTypeInfo.IsGenericType && xTypeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
-            {
-                xType = xTypeInfo.GetElementType();
-                xTypeInfo = xType.GetTypeInfo();
-            }
-
-            if (xTypeInfo.IsEnum)
-                return x.GetType().ToEnumValueCode(x, stripNamespace, printType);
-
-            if (xTypeInfo.IsPrimitive) // output the primitive casted to the type
-                return "(" + x.GetType().ToCode(true, null) + ")" + x.ToString();
-
-            return notRecognizedToCode?.ToCode(x, stripNamespace, printType) 
-                ?? x.ToString();
-        }
-    }
-
     public abstract class UnaryExpression : Expression
     {
         public override Type Type => Operand.Type;
@@ -2728,18 +2357,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> _) => SysExpr.Constant(Value, Type);
 
-        /// <summary>
-        /// Change the method to convert the <see cref="Value"/> to code as you want it globally.
-        /// You may try to use `ObjectToCode` from `https://www.nuget.org/packages/ExpressionToCodeLib`
-        /// </summary>
-        public static CodePrinter.IObjectToCode ValueToCode = new ValueToDefault();
-
-        private class ValueToDefault : CodePrinter.IObjectToCode
-        {
-            public string ToCode(object x, bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-                $"default({x.GetType().ToCode(stripNamespace, printType)})";
-        }
-
         public override StringBuilder CreateExpressionString(StringBuilder sb, 
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
@@ -2757,7 +2374,7 @@ namespace FastExpressionCompiler.LightExpression
             }
             else
             {
-                sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
+                sb.Append(Value.ToCode(ExpressionTools.DefaultConstantValueToCode, stripNamespace, printType));
                 if (Value.GetType() != Type)
                     sb.Append(", ").AppendTypeof(Type, stripNamespace, printType);
             }
@@ -2778,10 +2395,10 @@ namespace FastExpressionCompiler.LightExpression
             if (Value.GetType() != Type)
             {
                 sb.Append('(').Append(Type.ToCode(stripNamespace, printType)).Append(')');
-                return sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
+                return sb.Append(Value.ToCode(ExpressionTools.DefaultConstantValueToCode, stripNamespace, printType));
             }
 
-            return sb.Append(Value.ToCode(ValueToCode, stripNamespace, printType));
+            return sb.Append(Value.ToCode(ExpressionTools.DefaultConstantValueToCode, stripNamespace, printType));
         }
 
         /// <summary>I want to see the actual Value not the default one</summary>
@@ -3466,6 +3083,17 @@ namespace FastExpressionCompiler.LightExpression
                 .NewLineIdentCs(Arguments[i], lineIdent, stripNamespace, printType, identSpaces);
             sb.Append(")");
             return sb;
+        }
+    }
+
+    internal static class ExprTools 
+    {
+        internal static StringBuilder NewLineIdentCs(this StringBuilder sb, Expression expr,
+            int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            sb.NewLineIdent(lineIdent);
+            return expr?.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces)
+                ?? sb.Append("null");
         }
     }
 
