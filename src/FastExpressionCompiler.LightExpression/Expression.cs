@@ -2592,7 +2592,6 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Expression;
         public NewExpression NewExpression => Expression as NewExpression;
         public readonly IReadOnlyList<MemberBinding> Bindings;
-
         internal MemberInitExpression(Expression expression, IReadOnlyList<MemberBinding> bindings)
         {
             Expression = expression;
@@ -2630,6 +2629,12 @@ namespace FastExpressionCompiler.LightExpression
                 Bindings[i].CreateExpressionString(sb.Append(", ").NewLineIdent(lineIdent), 
                     paramsExprs, uniqueExprs, lts, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
             return sb.Append(')');
+        }
+
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            return sb; // todo: @incomplete
         }
     }
 
@@ -4788,15 +4793,29 @@ namespace FastExpressionCompiler.LightExpression
             switch (expr.NodeType)
             {
                 case ExpressionType.Constant:
-                    var constExpr = (System.Linq.Expressions.ConstantExpression)expr;
-                    lightExpr = Expression.Constant(constExpr.Value, constExpr.Type);
+                {
+                    var e = (System.Linq.Expressions.ConstantExpression)expr;
+                    lightExpr = Expression.Constant(e.Value, e.Type);
                     break;
-
+                }
                 case ExpressionType.Parameter:
-                    var paramExpr = (System.Linq.Expressions.ParameterExpression)expr;
-                    lightExpr = Expression.Parameter(paramExpr.Type, paramExpr.Name);
+                {
+                    var e = (System.Linq.Expressions.ParameterExpression)expr;
+                    lightExpr = Expression.Parameter(e.Type, e.Name);
                     break;
-
+                }
+                case ExpressionType.New:
+                {
+                    var e = (System.Linq.Expressions.NewExpression)expr;
+                    var a = e.Arguments;
+                    if (a.Count == 0)
+                        return Expression.New(e.Constructor);
+                    var aa = new Expression[a.Count];
+                    for (var j = 0; j < aa.Length; ++j)
+                        aa[j] = a[j].ToLightExpression(ref exprsConverted);
+                    lightExpr = Expression.New(e.Constructor, aa); // todo: @perf support the IArgumentProvider
+                    break;
+                }
 
 //                 case ExpressionType.Call:
 //                     var callExpr = (MethodCallExpression)expr;
@@ -4897,72 +4916,6 @@ namespace FastExpressionCompiler.LightExpression
 //                     expr = memberExpr;
 //                     continue;
 
-//                 case ExpressionType.New:
-//                     var newExpr = (NewExpression)expr;
-// #if LIGHT_EXPRESSION
-//                     var fewArgCount = newExpr.FewArgumentCount;
-//                     if (fewArgCount == 0)
-//                         return true;
-
-//                     if (fewArgCount > 0)
-//                     {
-//                         if (fewArgCount == 1)
-//                         {
-//                             expr = ((OneArgumentNewExpression)newExpr).Argument;
-//                             continue;
-//                         }
-
-//                         if (fewArgCount == 2)
-//                         {
-//                             var twoArgsExpr = (TwoArgumentsNewExpression)newExpr;
-//                             if (!TryCollectBoundConstants(ref closure, twoArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                             expr = twoArgsExpr.Argument1;
-//                             continue;
-//                         }
-
-//                         if (fewArgCount == 3)
-//                         {
-//                             var threeArgsExpr = (ThreeArgumentsNewExpression)newExpr;
-//                             if (!TryCollectBoundConstants(ref closure, threeArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
-//                                 !TryCollectBoundConstants(ref closure, threeArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                             expr = threeArgsExpr.Argument2;
-//                             continue;
-//                         }
-
-//                         if (fewArgCount == 4)
-//                         {
-//                             var fourArgsExpr = (FourArgumentsNewExpression)newExpr;
-//                             if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
-//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
-//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                             expr = fourArgsExpr.Argument3;
-//                             continue;
-//                         }
-
-//                         var fiveArgsExpr = (FiveArgumentsNewExpression)newExpr;
-//                         if (!TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
-//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
-//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure) ||
-//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument3, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                         expr = fiveArgsExpr.Argument4;
-//                         continue;
-//                     }
-// #endif
-//                     var ctorArgs = ((NewExpression)expr).Arguments;
-//                     var ctorLastArgIndex = ctorArgs.Count - 1;
-//                     if (ctorLastArgIndex == -1)
-//                         return true;
-
-//                     for (var i = 0; i < ctorLastArgIndex; i++)
-//                         if (!TryCollectBoundConstants(ref closure, ctorArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                     expr = ctorArgs[ctorLastArgIndex];
-//                     continue;
-
 //                 case ExpressionType.NewArrayBounds:
 //                 case ExpressionType.NewArrayInit:
 //                     var elemExprs = ((NewArrayExpression)expr).Expressions;
@@ -4976,10 +4929,6 @@ namespace FastExpressionCompiler.LightExpression
 
 //                     expr = elemExprs[elemExprsCount - 1];
 //                     continue;
-
-//                 case ExpressionType.MemberInit:
-//                     return TryCollectMemberInitExprConstants(
-//                         ref closure, (MemberInitExpression)expr, paramExprs, isNestedLambda, ref rootClosure);
 
 //                 case ExpressionType.Lambda:
 //                     var nestedLambdaExpr = (LambdaExpression)expr;
@@ -5182,8 +5131,6 @@ namespace FastExpressionCompiler.LightExpression
             item.LightExpr = lightExpr;
             return lightExpr;
         }
-
-
     }
 }
 
