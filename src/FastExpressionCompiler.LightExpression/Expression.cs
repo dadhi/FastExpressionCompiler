@@ -85,55 +85,8 @@ namespace FastExpressionCompiler.LightExpression
 
         internal abstract SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions);
 
-        /// <summary>Code printer with the provided configuration</summary>
-        public abstract StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2);
-
-        // Searches first for the expression reference in `uniqueExprs` and adds the reference to expression by index, 
-        // otherwise delegates to `CreateExpressionCodeString`
-        internal virtual StringBuilder ToExpressionString(StringBuilder sb, 
-            List<ParameterExpression> _, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            var i = uniqueExprs.Count - 1;
-            while (i != -1 && !ReferenceEquals(uniqueExprs[i], this)) --i;
-            if (i != -1)
-                return sb.Append("e[").Append(i)
-                    // output expression type and kind to help to understand what is it
-                    .Append(" // ").Append(NodeType.ToString()).Append(" of ").Append(Type.ToCode(stripNamespace, printType))
-                    .NewLineIdent(lineIdent).Append("]");
-
-            uniqueExprs.Add(this);
-            sb.Append("e[").Append(uniqueExprs.Count - 1).Append("]=");
-            return CreateExpressionString(sb, _, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-        }
-
-        /// <summary>Prints the expression in its constructing syntax - helpful to get it from the debug session and put into the code for the test</summary>
-        public string ToExpressionString() => ToExpressionString(out var p, out var e, out var l);
-
-        /// <summary>Prints the expression in its constructing syntax - helpful to get it from the debug session and put into the code for the test</summary>
-        public string ToExpressionString(
-            out List<ParameterExpression> paramsExprs, out List<Expression> uniqueExprs, out List<LabelTarget> lts, 
-            bool stripNamespace = false, Func<Type, string, string> printType = null)
-        {
-            var sb = new StringBuilder(1024);
-            sb.Append("var expr = ");
-            paramsExprs = new List<ParameterExpression>();
-            uniqueExprs = new List<Expression>();
-            lts = new List<LabelTarget>();
-            sb = CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, 2, stripNamespace, printType).Append(';');
-            
-            sb.Insert(0, $"var l = new LabelTarget[{lts.Count}]; // the labels {NewLine}");
-            sb.Insert(0, $"var e = new Expression[{uniqueExprs.Count}]; // the unique expressions {NewLine}");
-            sb.Insert(0, $"var p = new ParameterExpression[{paramsExprs.Count}]; // the parameter expressions {NewLine}");
-            
-            return sb.ToString();
-        }
-
         /// <summary>Tries to convert to the correct C# code which expression is representing.</summary>
-        public string ToCSharpString() =>
-            ToCSharpString(new StringBuilder(1024), 4, true).Append(';').ToString();
+        public string ToCSharpString() => ToCSharpString(new StringBuilder(1024), 4, true).Append(';').ToString();
 
         /// <summary>Code printer with the provided configuration</summary>
         public virtual StringBuilder ToCSharpString(StringBuilder sb,
@@ -1365,15 +1318,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         internal static Type GetNonRefType(this Type type) => type.IsByRef ? type.GetElementType() : type;
 
-        internal static int GetFirstIndex<T>(this IReadOnlyList<T> source, T item)
-        {
-            if (source.Count != 0)
-                for (var i = 0; i < source.Count; ++i)
-                    if (ReferenceEquals(source[i], item))
-                        return i;
-            return -1;
-        }
-
         internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
             source.GetTypeInfo().IsValueType &&
             (target == typeof(object) ||
@@ -1669,28 +1613,6 @@ namespace FastExpressionCompiler.LightExpression
             }
         }
 
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            var name = Enum.GetName(typeof(ExpressionType), NodeType);
-            sb.Append(name).Append('(');
-            sb.NewLineIdentExpr(Operand, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-
-            if (NodeType == ExpressionType.Convert ||
-                NodeType == ExpressionType.ConvertChecked ||
-                NodeType == ExpressionType.Unbox ||
-                NodeType == ExpressionType.Throw ||
-                NodeType == ExpressionType.TypeAs)
-                sb.Append(',').NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
-
-            if ((NodeType == ExpressionType.Convert || NodeType == ExpressionType.ConvertChecked)
-                && Method != null)
-                sb.Append(',').NewLineIdent(lineIdent).AppendMethod(Method, stripNamespace, printType);
-
-            return sb.Append(')');
-        }
-
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
@@ -1824,8 +1746,7 @@ namespace FastExpressionCompiler.LightExpression
 
     public abstract class BinaryExpression : Expression
     {
-        //todo: @feature - not supported yet
-        public virtual MethodInfo Method => null;
+        public virtual MethodInfo Method => null; //todo: @feature - not supported yet
         public virtual LambdaExpression Conversion => null;
 
         // todo: @feature - not supported yet
@@ -1836,9 +1757,7 @@ namespace FastExpressionCompiler.LightExpression
         // todo: @feature - not supported yet
         /// <summary>Gets a value that indicates whether the expression tree node represents a lifted call to an operator whose return type is lifted to a nullable type.</summary>
         public bool IsLiftedToNull => false; //todo: @feature IsLifted && Type.IsNullable();
-
         public readonly Expression Left, Right;
-
         protected BinaryExpression(Expression left, Expression right)
         {
             Left = left;
@@ -1851,26 +1770,12 @@ namespace FastExpressionCompiler.LightExpression
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
 
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            var name = Enum.GetName(typeof(ExpressionType), NodeType);
-            sb.Append("MakeBinary(").Append(typeof(ExpressionType).Name).Append('.').Append(name).Append(',');
-            sb.NewLineIdentExpr(Left,  paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(Right, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
-
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
             switch (NodeType) 
             {
-                case ExpressionType.Equal:
-
-                // todo: @incomplete
-                default: return sb.Append(ToString());
+                default: return sb.Append(ToString()); // todo: @incomplete
             }
         }
     }
@@ -2017,17 +1922,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Coalesce(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), Conversion.ToLambdaExpression());
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Coalesce(");
-            sb.NewLineIdentExpr(Left,       paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(Right,      paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(Conversion, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
     }
 
     public sealed class ArrayIndexExpression : BinaryExpression
@@ -2114,16 +2008,6 @@ namespace FastExpressionCompiler.LightExpression
             AddMethod = addMethod;
             Arguments = arguments;
         }
-
-        internal StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("ElementInit(");
-            sb.NewLineIdent(lineIdent).AppendMethod(AddMethod, stripNamespace, printType).Append(", ");
-            sb.NewLineIdentParamsExprs(Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
     }
 
     // todo: @feature is not supported yet
@@ -2133,7 +2017,6 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => NewExpression.Type;
         public readonly NewExpression NewExpression;
         public readonly IReadOnlyList<ElementInit> Initializers;
-
         internal ListInitExpression(NewExpression newExpression, IReadOnlyList<ElementInit> initializers)
         {
             NewExpression = newExpression;
@@ -2160,18 +2043,6 @@ namespace FastExpressionCompiler.LightExpression
                     ToExpressions(elemInits[i].Arguments, ref exprsConverted));
             return result;
         }
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("ListInit(");
-            sb.NewLineIdentExpr(NewExpression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            for (int i = 0; i < Initializers.Count; i++)
-                Initializers[i].CreateExpressionString(sb.Append(", ").NewLineIdent(lineIdent), 
-                    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(")");
-        }
     }
 
     public sealed class TypeBinaryExpression : Expression
@@ -2180,7 +2051,6 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => typeof(bool);
         public Type TypeOperand { get; }
         public readonly Expression Expression;
-
         internal TypeBinaryExpression(ExpressionType nodeType, Expression expression, Type typeOperand)
         {
             NodeType = nodeType;
@@ -2192,16 +2062,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.TypeIs(Expression.ToExpression(ref exprsConverted), TypeOperand);
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append(NodeType == ExpressionType.TypeIs ? "TypeIs(" : "TypeEqual(");
-            sb.NewLineIdentExpr(Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdent(lineIdent).AppendTypeof(TypeOperand, stripNamespace, printType);
-            return sb.Append(')');
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -2248,22 +2108,60 @@ namespace FastExpressionCompiler.LightExpression
             return result;
         }
 
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("MemberInit(");
-            sb.NewLineIdentExpr(Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            for (var i = 0; i < Bindings.Count; i++)
-                Bindings[i].CreateExpressionString(sb.Append(", ").NewLineIdent(lineIdent), 
-                    paramsExprs, uniqueExprs, lts, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
-
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
-            return sb; // todo: @incomplete
+            NewExpression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdent(lineIdent).Append(" { ");
+            ToCSharpString(Bindings, sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+            return sb.NewLineIdent(lineIdent).Append('}');
+        }
+
+        private static StringBuilder ToCSharpString(IReadOnlyList<MemberBinding> bindings, StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) 
+        {
+            foreach (var b in bindings) 
+            {
+                sb.NewLineIdent(lineIdent);
+                sb.AppendMember(b.Member, stripNamespace, printType);
+                sb.Append(" = ");
+                sb.NewLineIdent(lineIdent);
+
+                if (b is MemberAssignment ma) 
+                {
+                    ma.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                }
+                else if (b is MemberMemberBinding mmb)
+                {
+                    sb.Append("{");
+                    ToCSharpString(mmb.Bindings, sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+                    sb.NewLineIdent(lineIdent + identSpaces).Append("}");
+                }
+                else if (b is MemberListBinding mlb)
+                {
+                    sb.Append("{");
+                    foreach (var i in mlb.Initializers) 
+                    {
+                        sb.NewLineIdent(lineIdent + identSpaces);
+                        if (i.Arguments.Count > 1)
+                            sb.Append("(");
+                        
+                        var n = 0;
+                        foreach (var a in i.Arguments) 
+                            a.ToCSharpString((++n > 1 ? sb.Append(", ") : sb), lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+
+                       if (i.Arguments.Count > 1)
+                            sb.Append(")");
+
+                        sb.Append(",");
+                    }
+                    sb.NewLineIdent(lineIdent + identSpaces).Append("}");
+                }
+
+                sb.Append(",");
+            }
+
+            return sb;
         }
     }
 
@@ -2279,35 +2177,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Parameter(IsByRef ? Type.MakeByRefType() : Type, Name);
-
-        internal override StringBuilder ToExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            var i = paramsExprs.Count - 1;
-            while (i != -1 && !ReferenceEquals(paramsExprs[i], this)) --i;
-            if (i != -1) 
-                return sb.Append("p[").Append(i)
-                    .Append(" // (").Append(Type.ToCode(stripNamespace, printType))
-                    .Append(' ').AppendName(Name, Type, this).Append(')')
-                    .NewLineIdent(lineIdent).Append(']');
-
-            paramsExprs.Add(this);
-            sb.Append("p[").Append(paramsExprs.Count - 1).Append("]=");
-            return CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-        }
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Parameter(").AppendTypeof(Type, stripNamespace, printType);
-            if (IsByRef)
-                sb.Append(".MakeByRefType()");
-            if (Name != null)
-                sb.Append(", \"").Append(Name).Append('"');
-            return sb.Append(')');
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
@@ -2356,31 +2225,6 @@ namespace FastExpressionCompiler.LightExpression
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> _) => SysExpr.Constant(Value, Type);
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Constant(");
-            if (Value == null)
-            {
-                sb.Append("null");
-                if (Type != typeof(object))
-                    sb.Append(", ").AppendTypeof(Type, stripNamespace, printType);
-            }
-            else if (Value is Type t)
-            {
-                sb.AppendTypeof(t, stripNamespace, printType);
-            }
-            else
-            {
-                sb.Append(Value.ToCode(ExpressionTools.DefaultConstantValueToCode, stripNamespace, printType));
-                if (Value.GetType() != Type)
-                    sb.Append(", ").AppendTypeof(Type, stripNamespace, printType);
-            }
-
-            return sb.Append(')');
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -2435,22 +2279,10 @@ namespace FastExpressionCompiler.LightExpression
         public virtual int ArgumentCount => 0;
         public virtual Expression GetArgument(int i) => throw new NotImplementedException();
         internal NewExpression(ConstructorInfo constructor) => Constructor = constructor;
+
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNew(this);
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.New(Constructor, ToExpressions(Arguments, ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            var args = Arguments;
-            sb.Append("New(/*").Append(args.Count).Append(" args*/");
-            var ctorIndex = Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.ToArray().GetFirstIndex(Constructor);
-            sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType)
-                .Append(".GetTypeInfo().DeclaredConstructors.ToArray()[").Append(ctorIndex).Append("],");
-            sb.NewLineIdentParamsExprs(args, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -2476,11 +2308,6 @@ namespace FastExpressionCompiler.LightExpression
         internal NewValueTypeExpression(Type type) : base(null) => Type = type;
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) => SysExpr.New(Type);
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2) =>
-            sb.Append("New(").AppendTypeof(Type, stripNamespace, printType).Append(')');
     }
 
     public sealed class OneArgumentNewExpression : NewExpression
@@ -2586,16 +2413,6 @@ namespace FastExpressionCompiler.LightExpression
                 // ReSharper disable once AssignNullToNotNullAttribute
                 : SysExpr.NewArrayBounds(Type.GetElementType(), ToExpressions(Expressions, ref exprsConverted));
 
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append(NodeType == ExpressionType.NewArrayInit ? "NewArrayInit(" : "NewArrayBounds(");
-            sb.NewLineIdent(lineIdent).AppendTypeof(Type.GetElementType(), stripNamespace, printType).Append(", ");
-            sb.NewLineIdentParamsExprs(Expressions, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
-
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
         {
@@ -2642,18 +2459,6 @@ namespace FastExpressionCompiler.LightExpression
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Call(Object?.ToExpression(ref exprsConverted), Method,
                 ToExpressions(Arguments, ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Call(");
-            sb.NewLineIdentExpr(Object, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(", ");
-            sb.NewLineIdent(lineIdent).AppendMethod(Method, stripNamespace, printType);
-            if (Arguments.Count > 0)
-                sb.Append(',').NewLineIdentParamsExprs(Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -2846,7 +2651,6 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class InstanceFiveArgumentsMethodCallExpression : FiveArgumentsMethodCallExpression
     {
         public override Expression Object { get; }
-
         internal InstanceFiveArgumentsMethodCallExpression(Expression instance, MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4)
             : base(method, argument0, argument1, argument2, argument3, argument4) => Object = instance;
@@ -2889,27 +2693,15 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override Type Type => PropertyInfo.PropertyType;
         public PropertyInfo PropertyInfo => (PropertyInfo)Member;
-
         internal PropertyExpression(PropertyInfo property) : base(property) { }
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Property(Expression?.ToExpression(ref exprsConverted), PropertyInfo);
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Property(");
-            sb.NewLineIdentExpr(Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdent(lineIdent).AppendProperty(PropertyInfo, stripNamespace, printType);
-            return sb.Append(')');
-        }
     }
 
     public sealed class InstancePropertyExpression : PropertyExpression
     {
         public override Expression Expression { get; }
-
         internal InstancePropertyExpression(Expression instance, PropertyInfo property) : base(property) =>
             Expression = instance;
     }
@@ -2918,21 +2710,10 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override Type Type => FieldInfo.FieldType;
         public FieldInfo FieldInfo => (FieldInfo)Member;
-
         internal FieldExpression(FieldInfo field) : base(field) { }
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Field(Expression?.ToExpression(ref exprsConverted), FieldInfo);
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Field(");
-            sb.NewLineIdentExpr(Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdent(lineIdent).AppendField(FieldInfo, stripNamespace, printType);
-            return sb.Append(')');
-        }
     }
 
     public sealed class InstanceFieldExpression : FieldExpression
@@ -2949,16 +2730,7 @@ namespace FastExpressionCompiler.LightExpression
         public abstract MemberBindingType BindingType { get; }
         internal MemberBinding(MemberInfo member) => Member = member;
 
-        public string ToExpressionString() => CreateExpressionString(new StringBuilder(128), 
-            new List<ParameterExpression>(), new List<Expression>(), new List<LabelTarget>(), 2).ToString();
-
-        public abstract StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2);
-
         internal abstract System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted);
-
-        // todo: @incomplete implement ToCSharpCode
     }
 
     public sealed class MemberAssignment : MemberBinding
@@ -2969,18 +2741,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Bind(Member, Expression.ToExpression(ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Bind(");
-            sb.NewLineIdent(lineIdent).AppendFieldOrProperty(Member, stripNamespace, printType).Append(", ");
-            sb.NewLineIdentExpr(Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(")");
-        }
-
-        // todo: @incomplete implement ToCSharpCode
     }
 
     public sealed class MemberMemberBinding : MemberBinding
@@ -3004,22 +2764,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.MemberBind(Member, ToMemberBindings(Bindings, ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("MemberBind(");
-            sb.NewLineIdent(lineIdent).AppendFieldOrProperty(Member, stripNamespace, printType);
-
-            for (int i = 0; i < Bindings.Count; i++)
-                Bindings[i].CreateExpressionString(sb.Append(", ").NewLineIdent(lineIdent), 
-                    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-
-            return sb.Append(")");
-        }
-
-        // todo: @incomplete implement ToCSharpCode
     }
 
     public sealed class MemberListBinding : MemberBinding
@@ -3031,22 +2775,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.ListBind(Member, ListInitExpression.ToElementInits(Initializers, ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb,
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("ListBind(");
-            sb.NewLineIdent(lineIdent).AppendFieldOrProperty(Member, stripNamespace, printType);
-
-            for (int i = 0; i < Initializers.Count; i++)
-                Initializers[i].CreateExpressionString(sb.Append(", ").NewLineIdent(lineIdent), 
-                    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            
-            return sb.Append(")");
-        }
-
-        // todo: @incomplete implement ToCSharpCode
     }
 
     public class InvocationExpression : Expression
@@ -3061,16 +2789,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Invoke(Expression.ToExpression(ref exprsConverted), ToExpressions(Arguments, ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Invoke(");
-            sb.NewLineIdentExpr(Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentParamsExprs(Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(")");
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -3140,7 +2858,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override ExpressionType NodeType => ExpressionType.Default;
         public override Type Type { get; }
-
         internal DefaultExpression(Type type) => Type = type;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDefault(this);
@@ -3148,20 +2865,13 @@ namespace FastExpressionCompiler.LightExpression
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             Type == typeof(void) ? SysExpr.Empty() : SysExpr.Default(Type);
 
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2) =>
-            Type == typeof(void) 
-                ? sb.Append("Empty()") 
-                : sb.Append("Default(").AppendTypeof(Type, stripNamespace, printType).Append(')');
-
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
             Type == typeof(void) ? sb // `default(void)` does not make sense in the plain C#
                 : sb.Append("default(").Append(Type.ToCode(stripNamespace, printType)).Append(')');
     }
 
-    // todo: @test Test all conditionals + try for the exact op-codes produced, should help with AutoMapper case
+    // todo: @test Test all the conditionals + try for the exact op-codes produced, should help with AutoMapper case
     public class ConditionalExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Conditional;
@@ -3179,18 +2889,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Condition(Test.ToExpression(ref exprsConverted), IfTrue.ToExpression(ref exprsConverted), IfFalse.ToExpression(ref exprsConverted), Type);
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Condition(");
-            sb.NewLineIdentExpr(Test,    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(IfTrue,  paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(IfFalse, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
-            return sb.Append(')');
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -3264,7 +2962,6 @@ namespace FastExpressionCompiler.LightExpression
         public readonly IReadOnlyList<Expression> Arguments;
         public readonly Expression Object;
         public virtual PropertyInfo Indexer => null;
-
         internal IndexExpression(Expression @object, IReadOnlyList<Expression> arguments)
         { 
             Object = @object;
@@ -3275,23 +2972,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeIndex(Object.ToExpression(ref exprsConverted), Indexer, ToExpressions(Arguments, ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append(Indexer != null ? "MakeIndex(" : "ArrayAccess(");
-            sb.NewLineIdentExpr(Object, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(", ");
-
-            if (Indexer != null)
-                sb.NewLineIdent(lineIdent).AppendProperty(Indexer, stripNamespace, printType).Append(", ");
-            
-            sb.Append("new Expression[] {");
-            for (var i = 0; i < Arguments.Count; i++)
-                (i > 0 ? sb.Append(',') : sb)
-                .NewLineIdentExpr(Arguments[i], paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append("})");
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -3341,28 +3021,6 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.Block(Type,
                 ParameterExpression.ToParameterExpressions(Variables, ref exprsConverted),
                 ToExpressions(Expressions, ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Block(");
-            sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType).Append(',');
-
-            if (Variables.Count == 0)
-                sb.NewLineIdent(lineIdent).Append("new ParameterExpression[0],");
-            else
-            {
-                sb.NewLineIdent(lineIdent).Append("new[] {");
-                for (var i = 0; i < Variables.Count; i++) 
-                    Variables[i].ToExpressionString((i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent), 
-                        paramsExprs, uniqueExprs, lts, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
-                sb.NewLineIdent(lineIdent).Append("},");
-            }
-
-            sb.NewLineIdentParamsExprs(Expressions, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
@@ -3517,7 +3175,7 @@ namespace FastExpressionCompiler.LightExpression
             Type = type;
     }
 
-    // todo: @perf optimize the memory for cases without Break and Continue
+    // todo: @perf optimize the memory for the cases without Break and Continue
     public sealed class LoopExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Loop;
@@ -3525,11 +3183,10 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Body;
         public readonly LabelTarget BreakLabel;
         public readonly LabelTarget ContinueLabel;
-
         internal LoopExpression(Expression body, LabelTarget breakLabel, LabelTarget continueLabel)
         {
-            Body = body;
-            BreakLabel = breakLabel;
+            Body          = body;
+            BreakLabel    = breakLabel;
             ContinueLabel = continueLabel;
         }
 
@@ -3543,22 +3200,6 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.Loop(Body.ToExpression(ref exprsConverted),
                 BreakLabel.ToSystemLabelTarget(ref exprsConverted),
                 ContinueLabel.ToSystemLabelTarget(ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Loop(");
-            sb.NewLineIdentExpr(Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-
-            if (BreakLabel != null)
-                BreakLabel.CreateExpressionString(sb.Append(',').NewLineIdent(lineIdent), lts, stripNamespace, printType);
-
-            if (ContinueLabel != null)
-                ContinueLabel.CreateExpressionString(sb.Append(',').NewLineIdent(lineIdent), lts, stripNamespace, printType);
-
-            return sb.Append(')');
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) 
@@ -3594,7 +3235,6 @@ namespace FastExpressionCompiler.LightExpression
         public IReadOnlyList<CatchBlock> Handlers => _handlers;
         private readonly CatchBlock[] _handlers;
         public virtual Expression Finally => null;
-
         internal TryExpression(Expression body, CatchBlock[] handlers)
         {
             Body = body;
@@ -3629,45 +3269,6 @@ namespace FastExpressionCompiler.LightExpression
             for (var i = 0; i < hs.Length; ++i)
                 catchBlocks[i] = ToCatchBlock(ref hs[i], ref exprsConverted);
             return catchBlocks;
-        }
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb,
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            if (Finally == null)
-            {
-                sb.Append("TryCatch(");
-                sb.NewLineIdentExpr(Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-                ToCatchBlocksCode(Handlers, sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            }
-            else if (Handlers == null)
-            {
-                sb.Append("TryFinally(");
-                sb.NewLineIdentExpr(Body,    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-                sb.NewLineIdentExpr(Finally, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            }
-            else
-            {
-                sb.Append("TryCatchFinally(");
-                sb.NewLineIdentExpr(Body,       paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-                ToCatchBlocksCode(Handlers, sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-                sb.NewLineIdentExpr(Finally,    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            }
-
-            return sb.Append(')');
-        }
-
-        private static StringBuilder ToCatchBlocksCode(IReadOnlyList<CatchBlock> hs, StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces)
-        {
-            if (hs.Count == 0)
-                return sb.Append("new CatchBlock[0]");
-            for (var i = 0; i < hs.Count; i++)
-                hs[i].CreateExpressionCodeString((i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent), 
-                    paramsExprs, uniqueExprs, lts, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
-            return sb;
         }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
@@ -3731,25 +3332,12 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Body;
         public readonly Expression Filter;
         public readonly Type Test;
-
         internal CatchBlock(ParameterExpression variable, Expression body, Expression filter, Type test)
         {
             Variable = variable;
             Body = body;
             Filter = filter;
             Test = test;
-        }
-
-        internal StringBuilder CreateExpressionCodeString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces)
-        {
-            sb.Append("MakeCatchBlock(");
-            sb.NewLineIdent(lineIdent).AppendTypeof(Test, stripNamespace, printType).Append(',');
-            sb.NewLineIdentExpr(Variable, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(Body,     paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(Filter,   paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
         }
     }
 
@@ -3759,7 +3347,6 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => Target.Type;
         public readonly LabelTarget Target;
         public virtual Expression DefaultValue => null;
-
         internal LabelExpression(LabelTarget target) => Target = target;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLabel(this);
@@ -3768,17 +3355,6 @@ namespace FastExpressionCompiler.LightExpression
             DefaultValue == null
                 ? SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted))
                 : SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted), DefaultValue.ToExpression(ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Label(");
-            Target.CreateExpressionString(sb, lts, stripNamespace, printType);
-            if (DefaultValue != null)
-                sb.Append(',').NewLineIdentExpr(DefaultValue, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -3824,20 +3400,6 @@ namespace FastExpressionCompiler.LightExpression
             return sysItem;
         }
 
-        public StringBuilder CreateExpressionString(StringBuilder sb, List<LabelTarget> labelTargets,
-            bool stripNamespace = false, Func<Type, string, string> printType = null)
-        {
-            var i = labelTargets.Count - 1;
-            while (i != -1 && !ReferenceEquals(labelTargets[i], this)) --i;
-            if (i != -1)
-                return sb.Append("l[").Append(i).Append("]/* ").AppendName(Name, Type, this).Append(" */");
-
-            labelTargets.Add(this);
-            sb.Append("l[").Append(labelTargets.Count - 1).Append("]=Label(");
-            sb.AppendTypeof(Type, stripNamespace, printType);
-            return (Name != null ? sb.Append(", \"").Append(Name).Append("\"") : sb).Append(")");
-        }
-
         public StringBuilder ToCSharpString(StringBuilder sb) =>
             (Name != null ? sb.Append(Name) : sb.Append(Type.ToCode(true, null)))
                 .Append("__").Append(GetHashCode()); // always append the hash because often label names in the block and sub-blocks are selected to be the same
@@ -3870,7 +3432,6 @@ namespace FastExpressionCompiler.LightExpression
         public virtual GotoExpressionKind Kind => GotoExpressionKind.Goto;
         public virtual Expression Value => null;
         public readonly LabelTarget Target;
-
         internal GotoExpression(LabelTarget target) => Target = target;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitGoto(this);
@@ -3878,26 +3439,9 @@ namespace FastExpressionCompiler.LightExpression
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeGoto(Kind, Target.ToSystemLabelTarget(ref exprsConverted), Value?.ToExpression(ref exprsConverted), Type);
 
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("MakeGoto(").AppendEnum(Kind, stripNamespace, printType).Append(',');
-
-            sb.NewLineIdent(lineIdent);
-            Target.CreateExpressionString(sb, lts, stripNamespace, printType).Append(',');
-
-            sb.NewLineIdentExpr(Value, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType);
-            return sb.Append(')');
-        }
-
         public override StringBuilder ToCSharpString(StringBuilder sb,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
-        {
-            sb.Append("goto ");
-            return Target.ToCSharpString(sb);
-        }
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) =>
+            Target.ToCSharpString(sb.Append("goto "));
     }
 
     public class ValueGotoExpression : GotoExpression
@@ -3985,21 +3529,10 @@ namespace FastExpressionCompiler.LightExpression
     {
         public readonly IReadOnlyList<Expression> TestValues;
         public readonly Expression Body;
-
         public SwitchCase(Expression body, IEnumerable<Expression> testValues)
         {
             Body = body;
             TestValues = testValues.AsReadOnlyList();
-        }
-
-        internal StringBuilder CreateExpressionCodeString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces)
-        {
-            sb.Append("SwitchCase(");
-            sb.NewLineIdentExpr(Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentParamsExprs(TestValues, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
         }
 
         public override bool Equals(object obj) =>
@@ -4023,20 +3556,17 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public class SwitchExpression : Expression
+    public sealed class SwitchExpression : Expression
     {
-        public override ExpressionType NodeType { get; }
+        public override ExpressionType NodeType => ExpressionType.Switch;
         public override Type Type { get; }
-
         public readonly Expression SwitchValue;
         public IReadOnlyList<SwitchCase> Cases => _cases;
         private readonly SwitchCase[] _cases;
         public readonly Expression DefaultBody;
         public readonly MethodInfo Comparison;
-
         public SwitchExpression(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, SwitchCase[] cases)
         {
-            NodeType = ExpressionType.Switch;
             Type = type;
             SwitchValue = switchValue;
             DefaultBody = defaultBody;
@@ -4050,30 +3580,6 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.Switch(SwitchValue.ToExpression(ref exprsConverted),
                 DefaultBody.ToExpression(ref exprsConverted), Comparison,
                 ToSwitchCaseExpressions(_cases, ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Switch(");
-            sb.NewLineIdentExpr(SwitchValue, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentExpr(DefaultBody, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdent(lineIdent).AppendMethod(Comparison, stripNamespace, printType);
-            CreateExpressionCodeString(_cases, sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
-
-        internal static StringBuilder CreateExpressionCodeString(IReadOnlyList<SwitchCase> items, StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces)
-        {
-            if (items.Count == 0)
-                return sb.Append("new SwitchCase[0]");
-            for (var i = 0; i < items.Count; i++)
-                items[i].CreateExpressionCodeString((i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent), 
-                    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb;
-        }
 
         internal static System.Linq.Expressions.SwitchCase ToSwitchCase(ref SwitchCase sw, ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.SwitchCase(sw.Body.ToExpression(ref exprsConverted), ToExpressions(sw.TestValues, ref exprsConverted));
@@ -4090,9 +3596,37 @@ namespace FastExpressionCompiler.LightExpression
             return result;
         }
 
-        // todo: @incomplete impelement
-        // public override StringBuilder ToCSharpString(StringBuilder sb,
-        //     int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        public override StringBuilder ToCSharpString(StringBuilder sb,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
+        {
+            sb.Append("switch (");
+            SwitchValue.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            sb.Append(") {");
+
+            foreach (var cs in Cases)
+            {
+                sb.NewLineIdent(lineIdent);
+                foreach (var tv in cs.TestValues)
+                {
+                    sb.Append("case ");
+                    tv.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.Append(':');
+                    sb.NewLineIdent(lineIdent);
+                }
+                
+                cs.Body.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            }
+
+            if (DefaultBody != null) 
+            {
+                sb.NewLineIdent(lineIdent);
+                sb.Append("default:");
+                DefaultBody?.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+            }
+
+            sb.NewLineIdent(lineIdent);
+            return sb.Append("}");
+        }
     }
 
     public class LambdaExpression : Expression
@@ -4116,17 +3650,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.Lambda(Type, Body.ToExpression(ref exprsConverted), ParameterExpression.ToParameterExpressions(Parameters, ref exprsConverted));
-
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            sb.Append("Lambda( // $"); // bookmark for the lambdas - $ means the cost of the lambda, specifically nested lambda
-            sb.NewLineIdent(lineIdent).AppendTypeof(Type, stripNamespace, printType).Append(',');
-            sb.NewLineIdentExpr(Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentParamsExprs(Parameters, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-            return sb.Append(')');
-        }
 
         public override StringBuilder ToCSharpString(StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4)
@@ -4271,14 +3794,6 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.MakeDynamic(DelegateType, Binder, ToExpressions(Arguments, ref exprsConverted));
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDynamic(this);
-
-        // todo: @incomplete implement the bare minimum
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            return null;
-        }
     }
 
     // todo: @feature is not supported
@@ -4294,14 +3809,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions) =>
             SysExpr.RuntimeVariables(ParameterExpression.ToParameterExpressions(Variables, ref convertedExpressions));
-
-        // todo: @incomplete implement the bare minimum
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            return null;
-        }
     }
 
     public class SymbolDocumentInfo
@@ -4332,7 +3839,6 @@ namespace FastExpressionCompiler.LightExpression
         public virtual int EndLine { get; }
         public virtual int EndColumn { get; }
         public virtual bool IsClear => false;
-        
         internal DebugInfoExpression(SymbolDocumentInfo document,
             int startLine, int startColumn, int endLine, int endColumn) 
         {
@@ -4347,14 +3853,6 @@ namespace FastExpressionCompiler.LightExpression
 
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions) =>
             SysExpr.DebugInfo(SysExpr.SymbolDocument(Document.FileName), StartLine, StartColumn, EndLine, EndColumn);
-
-        // todo: @incomplete
-        public override StringBuilder CreateExpressionString(StringBuilder sb, 
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
-        {
-            return sb.Append("DebugInfo()"); // todo: @incomplete
-        }
     }
 
     public interface IArgumentProvider
@@ -4367,398 +3865,6 @@ namespace FastExpressionCompiler.LightExpression
     {
         int ParameterCount { get; }
         ParameterExpression GetParameter(int i);
-    }
-
-    public static class SystemExpressionExtensions 
-    {
-        /// <summary>Creates the LightExpression from the System Expression 
-        /// to enable the usage of the ToCSharpString and ToExpressionString for the System Expression</summary>
-        public static Expression ToLightExpression(this SysExpr sysExpr)
-        {
-            var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
-            return sysExpr.ToLightExpression(ref exprsConverted);
-        }
-
-        /// <summary>Creates the LightExpression from the System Expression</summary>
-        public static Expression<T> ToLightExpression<T>(this System.Linq.Expressions.Expression<T> sysLambdaExpr) where T : Delegate
-        {
-            var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
-            var body = sysLambdaExpr.Body.ToLightExpression(ref exprsConverted);
-            var ps = sysLambdaExpr.Parameters;
-            if (ps.Count == 0)
-                return Expression.Lambda<T>(body);
-
-            var pl = new ParameterExpression[ps.Count];
-            for (var i = 0; i < pl.Length; i++)
-                pl[i] = (ParameterExpression)ps[i].ToLightExpression(ref exprsConverted);
-
-            return Expression.Lambda<T>(body, pl);
-        }
-
-        public static LambdaExpression ToLightExpression(this System.Linq.Expressions.LambdaExpression sysLambdaExpr)
-        {
-            var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
-            var body = sysLambdaExpr.Body.ToLightExpression(ref exprsConverted);
-            var ps = sysLambdaExpr.Parameters;
-            if (ps.Count == 0)
-                return Expression.Lambda(body);
-
-            var pl = new ParameterExpression[ps.Count];
-            for (var i = 0; i < pl.Length; i++)
-                pl[i] = (ParameterExpression)ps[i].ToLightExpression(ref exprsConverted);
-
-            return Expression.Lambda(body, pl);
-        }
-
-        internal static Expression ToLightExpression(this SysExpr expr, ref LiveCountArray<LightAndSysExpr> exprsConverted)
-        {
-            var i = exprsConverted.Count - 1;
-            while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, expr)) --i;
-            if (i != -1)
-                return (Expression)exprsConverted.Items[i].LightExpr;
-
-            Expression lightExpr = null;
-            switch (expr.NodeType)
-            {
-                case ExpressionType.Constant:
-                {
-                    var e = (System.Linq.Expressions.ConstantExpression)expr;
-                    lightExpr = Expression.Constant(e.Value, e.Type);
-                    break;
-                }
-                case ExpressionType.Parameter:
-                {
-                    var e = (System.Linq.Expressions.ParameterExpression)expr;
-                    lightExpr = Expression.Parameter(e.Type, e.Name);
-                    break;
-                }
-                case ExpressionType.New:
-                {
-                    var e = (System.Linq.Expressions.NewExpression)expr;
-                    var a = e.Arguments;
-                    if (a.Count == 0)
-                        return Expression.New(e.Constructor);
-                    var aa = new Expression[a.Count];
-                    for (var j = 0; j < aa.Length; ++j)
-                        aa[j] = a[j].ToLightExpression(ref exprsConverted);
-                    lightExpr = Expression.New(e.Constructor, aa); // todo: @perf support the IArgumentProvider
-                    break;
-                }
-
-//                 case ExpressionType.Call:
-//                     var callExpr = (MethodCallExpression)expr;
-//                     var callObjectExpr = callExpr.Object;
-// #if LIGHT_EXPRESSION
-//                     var fewCallArgCount = callExpr.FewArgumentCount;
-//                     if (fewCallArgCount == 0)
-//                     {
-//                         if (callObjectExpr != null)
-//                         {
-//                             expr = callObjectExpr;
-//                             continue;
-//                         }
-
-//                         return true;
-//                     }
-
-//                     if (fewCallArgCount > 0)
-//                     {
-//                         if (callObjectExpr != null && 
-//                             !TryCollectBoundConstants(ref closure, callObjectExpr, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-
-//                         if (fewCallArgCount == 1)
-//                         {
-//                             expr = ((OneArgumentMethodCallExpression)callExpr).Argument;
-//                             continue;
-//                         }
-                        
-//                         if (fewCallArgCount == 2)
-//                         {
-//                             var twoArgsExpr = (TwoArgumentsMethodCallExpression)callExpr;
-//                             if (!TryCollectBoundConstants(ref closure, twoArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                             expr = twoArgsExpr.Argument1;
-//                             continue;
-//                         }
-
-//                         if (fewCallArgCount == 3)
-//                         {
-//                             var threeArgsExpr = (ThreeArgumentsMethodCallExpression)callExpr;
-//                             if (!TryCollectBoundConstants(ref closure, threeArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
-//                                 !TryCollectBoundConstants(ref closure, threeArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                             expr = threeArgsExpr.Argument2;
-//                             continue;
-//                         }
-
-//                         if (fewCallArgCount == 4)
-//                         {
-//                             var fourArgsExpr = (FourArgumentsMethodCallExpression)callExpr;
-//                             if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
-//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
-//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                             expr = fourArgsExpr.Argument3;
-//                             continue;
-//                         }
-
-//                         var fiveArgsExpr = (FiveArgumentsMethodCallExpression)callExpr;
-//                         if (!TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
-//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
-//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure) ||
-//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument3, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                         expr = fiveArgsExpr.Argument4;
-//                         continue;
-//                     }
-// #endif
-//                     var methodArgs = callExpr.Arguments;
-//                     var methodArgCount = methodArgs.Count;
-//                     if (methodArgCount == 0)
-//                     {
-//                         if (callObjectExpr != null)
-//                         {
-//                             expr = callObjectExpr;
-//                             continue;
-//                         }
-
-//                         return true;
-//                     }
-
-//                     if (callObjectExpr != null && 
-//                         !TryCollectBoundConstants(ref closure, callExpr.Object, paramExprs, isNestedLambda, ref rootClosure)) 
-//                         return false;
-
-//                     for (var i = 0; i < methodArgCount - 1; i++)
-//                         if (!TryCollectBoundConstants(ref closure, methodArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-
-//                     expr = methodArgs[methodArgCount - 1];
-//                     continue;
-
-//                 case ExpressionType.MemberAccess:
-//                     var memberExpr = ((MemberExpression)expr).Expression;
-//                     if (memberExpr == null)
-//                         return true;
-//                     expr = memberExpr;
-//                     continue;
-
-//                 case ExpressionType.NewArrayBounds:
-//                 case ExpressionType.NewArrayInit:
-//                     var elemExprs = ((NewArrayExpression)expr).Expressions;
-//                     var elemExprsCount = elemExprs.Count;
-//                     if (elemExprsCount == 0)
-//                         return true;
-
-//                     for (var i = 0; i < elemExprsCount - 1; i++)
-//                         if (!TryCollectBoundConstants(ref closure, elemExprs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-
-//                     expr = elemExprs[elemExprsCount - 1];
-//                     continue;
-
-//                 case ExpressionType.Lambda:
-//                     var nestedLambdaExpr = (LambdaExpression)expr;
-
-//                     // Look for the already collected lambdas and if we have the same lambda, start from the root
-//                     var nestedLambdas = rootClosure.NestedLambdas;
-//                     if (nestedLambdas.Length != 0)
-//                     {
-//                         var foundLambdaInfo = FindAlreadyCollectedNestedLambdaInfo(nestedLambdas, nestedLambdaExpr, out var foundInLambdas);
-//                         if (foundLambdaInfo != null)
-//                         {
-//                             // if the lambda is not found on the same level, then add it
-//                             if (foundInLambdas != closure.NestedLambdas)
-//                             {
-//                                 closure.AddNestedLambda(foundLambdaInfo);
-//                                 var foundLambdaNonPassedParams = foundLambdaInfo.ClosureInfo.NonPassedParameters;
-//                                 if (foundLambdaNonPassedParams.Length != 0)
-//                                     PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, foundLambdaNonPassedParams);
-//                             }
-
-//                             return true;
-//                         }
-//                     }
-
-//                     var nestedLambdaInfo = new NestedLambdaInfo(nestedLambdaExpr);
-//                     if (!TryCollectBoundConstants(ref nestedLambdaInfo.ClosureInfo,
-//                         nestedLambdaExpr.Body, nestedLambdaExpr.Parameters, true, ref rootClosure))
-//                         return false;
-
-//                     closure.AddNestedLambda(nestedLambdaInfo);
-//                     var nestedNonPassedParams = nestedLambdaInfo.ClosureInfo.NonPassedParameters; // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
-//                     if (nestedNonPassedParams.Length != 0)
-//                         PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, nestedNonPassedParams);
-
-//                     return true;
-
-//                 case ExpressionType.Invoke:
-//                     var invokeExpr = (InvocationExpression)expr;
-// #if LIGHT_EXPRESSION
-//                     if (invokeExpr is OneArgumentInvocationExpression oneArgExpr) 
-//                     {
-//                         if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                         expr = oneArgExpr.Argument;
-//                         continue;
-//                     }
-// #endif
-//                     var invokeArgs = invokeExpr.Arguments;
-//                     if (invokeArgs.Count == 0)
-//                     {
-//                         expr = invokeExpr.Expression;
-//                         continue;
-//                     }
-
-//                     if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
-//                         return false;
-
-//                     var lastArgIndex = invokeArgs.Count - 1;
-//                     if (lastArgIndex > 0)
-//                         for (var i = 0; i < lastArgIndex; i++)
-//                             if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                     expr = invokeArgs[lastArgIndex];
-//                     continue;
-
-//                 case ExpressionType.Conditional:
-//                     var condExpr = (ConditionalExpression)expr;
-//                     if (!TryCollectBoundConstants(ref closure, condExpr.Test,    paramExprs, isNestedLambda, ref rootClosure) ||
-//                         !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs, isNestedLambda, ref rootClosure))
-//                         return false;
-//                     expr = condExpr.IfTrue;
-//                     continue;
-
-//                 case ExpressionType.Block:
-//                     var blockExpr = (BlockExpression)expr;
-//                     var blockVarExprs = blockExpr.Variables;
-//                     var blockExprs = blockExpr.Expressions;
-
-//                     if (blockVarExprs.Count == 0)
-//                     {
-//                         for (var i = 0; i < blockExprs.Count - 1; i++)
-//                             if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                         expr = blockExprs[blockExprs.Count - 1];
-//                         continue;
-//                     }
-//                     else
-//                     {
-//                         if (blockVarExprs.Count == 1)
-//                             closure.PushBlockWithVars(blockVarExprs[0]);
-//                         else
-//                             closure.PushBlockWithVars(blockVarExprs);
-
-//                         for (var i = 0; i < blockExprs.Count; i++)
-//                             if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                         closure.PopBlock();
-//                     }
-
-//                     return true;
-
-//                 case ExpressionType.Loop:
-//                     var loopExpr = (LoopExpression)expr;
-//                     closure.AddLabel(loopExpr.BreakLabel);
-//                     closure.AddLabel(loopExpr.ContinueLabel);
-//                     expr = loopExpr.Body;
-//                     continue;
-
-//                 case ExpressionType.Index:
-//                     var indexExpr = (IndexExpression)expr;
-//                     var indexArgs = indexExpr.Arguments; // todo: @perf handle a single argument expr, do continue on it as well
-//                     for (var i = 0; i < indexArgs.Count; i++)
-//                         if (!TryCollectBoundConstants(ref closure, indexArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                     if (indexExpr.Object == null)
-//                         return true;
-//                     expr = indexExpr.Object;
-//                     continue;
-
-//                 case ExpressionType.Try:
-//                     return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs, isNestedLambda, ref rootClosure);
-
-//                 case ExpressionType.Label:
-//                     var labelExpr = (LabelExpression)expr;
-//                     var defaultValueExpr = labelExpr.DefaultValue;
-//                     closure.AddLabel(labelExpr.Target);
-//                     if (defaultValueExpr == null)
-//                         return true;
-//                     expr = defaultValueExpr;
-//                     continue;
-
-//                 case ExpressionType.Goto:
-//                     var gotoExpr = (GotoExpression)expr;
-//                     if (gotoExpr.Kind == GotoExpressionKind.Return)
-//                         closure.MarkAsContainsReturnGotoExpression();
-
-//                     if (gotoExpr.Value == null)
-//                         return true;
-
-//                     expr = gotoExpr.Value;
-//                     continue;
-
-//                 case ExpressionType.Switch:
-//                     var switchExpr = ((SwitchExpression)expr);
-//                     if (!TryCollectBoundConstants(ref closure, switchExpr.SwitchValue, paramExprs, isNestedLambda, ref rootClosure) ||
-//                         switchExpr.DefaultBody != null && 
-//                         !TryCollectBoundConstants(ref closure, switchExpr.DefaultBody, paramExprs, isNestedLambda, ref rootClosure))
-//                         return false;
-//                     var switchCases = switchExpr.Cases;
-//                     for (var i = 0; i < switchCases.Count - 1; i++)
-//                         if (!TryCollectBoundConstants(ref closure, switchCases[i].Body, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                     expr = switchCases[switchCases.Count - 1].Body;
-//                     continue;
-
-//                 case ExpressionType.Extension:
-//                     expr = expr.Reduce();
-//                     continue;
-
-//                 case ExpressionType.Default:
-//                     return true;
-
-//                 case ExpressionType.TypeIs:
-//                 case ExpressionType.TypeEqual:
-//                     expr = ((TypeBinaryExpression)expr).Expression;
-//                     continue;
-
-//                 case ExpressionType.Quote:     // todo: @feature - is not supported yet
-//                     return false;
-
-//                 case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
-//                     return true;               // todo: @unclear - just ignoring the info for now
-
-//                 default:
-//                     if (expr is UnaryExpression unaryExpr)
-//                     {
-//                         expr = unaryExpr.Operand;
-//                         continue;
-//                     }
-
-//                     if (expr is BinaryExpression binaryExpr)
-//                     {
-//                         if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                         expr = binaryExpr.Right;
-//                         continue;
-//                     }
-
-//                     if (expr is TypeBinaryExpression typeBinaryExpr)
-//                     {
-//                         expr = typeBinaryExpr.Expression;
-//                         continue;
-//                     }
-
-//                     return false;
-            }
-
-            ref var item = ref exprsConverted.PushSlot();
-            item.SysExpr   = expr;
-            item.LightExpr = lightExpr;
-            return lightExpr;
-        }
     }
 }
 

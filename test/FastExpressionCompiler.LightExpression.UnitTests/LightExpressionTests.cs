@@ -20,8 +20,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Nested_Action_using_outer_parameter_and_closed_value();
             Can_compile_complex_expr_with_Array_Properties_and_Casts();
             Can_embed_normal_Expression_into_LightExpression_eg_as_Constructor_argument();
-
-            return 7;
+            Should_output_the_System_and_LightExpression_to_the_identical_construction_syntax();
+            return 8;
         }
 
         [Test]
@@ -205,20 +205,23 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         public void Can_compile_complex_expr_with_Array_Properties_and_Casts()
         {
             var expr = CreateComplexLightExpression();
+
             var func = expr.CompileFast(true);
             func(new object[12]);
         }
 
+
         [Test]
-        public void Can_convert_complex_system_expression_to_the_light_expression()
+        public void Should_output_the_System_and_LightExpression_to_the_identical_construction_syntax()
         {
-            var e = CreateComplexExpression();
-            var le = e.ToLightExpression();
+            var se = CreateComplexExpression();
+            var le = CreateComplexLightExpression();
 
-            le.PrintCSharpString();
+            var ses = se.ToExpressionString();
+            var les = le.ToExpressionString();
 
-            var func = le.CompileFast(true);
-            func(new object[12]);
+            StringAssert.Contains("MemberInit", ses);
+            Assert.AreEqual(ses, les);
         }
 
         public class A

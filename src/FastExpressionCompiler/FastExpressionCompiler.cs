@@ -1207,7 +1207,9 @@ namespace FastExpressionCompiler
                         expr = ((TypeBinaryExpression)expr).Expression;
                         continue;
 
-                    case ExpressionType.Quote:     // todo: @feature - is not supported yet
+                    case ExpressionType.Quote:            // todo: @feature - is not supported yet
+                    case ExpressionType.Dynamic:          // todo: @feature - is not supported yet
+                    case ExpressionType.RuntimeVariables: // todo: @feature - is not supported yet
                         return false;
 
                     case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
@@ -1225,12 +1227,6 @@ namespace FastExpressionCompiler
                             if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
                             expr = binaryExpr.Right;
-                            continue;
-                        }
-
-                        if (expr is TypeBinaryExpression typeBinaryExpr)
-                        {
-                            expr = typeBinaryExpr.Expression;
                             continue;
                         }
 
@@ -1371,7 +1367,7 @@ namespace FastExpressionCompiler
                 if (memberBinding.BindingType == MemberBindingType.Assignment &&
                     !TryCollectBoundConstants(
                         ref closure, ((MemberAssignment)memberBinding).Expression, paramExprs, isNestedLambda, ref rootClosure))
-                    return false;
+                    return false; // todo: @feature MemberMemberBinding and the MemberListBinding is not supported yet.
             }
 
             return true;
@@ -4905,14 +4901,15 @@ namespace FastExpressionCompiler
         /// Prints the expression in its constructing syntax - 
         /// helpful to get the expression from the debug session and put into it the code for the test.
         /// </summary>
-        public static string ToExpressionString2(this Expression expr) => expr.ToExpressionString2(out var _, out var _, out var _);
+        public static string ToExpressionString(this Expression expr) => 
+            expr.ToExpressionString(out var _, out var _, out var _);
 
         /// <summary>
         /// Prints the expression in its constructing syntax - 
         /// helpful to get the expression from the debug session and put into it the code for the test.
         /// In addition, returns the gathered expressions, parameters ad labels. 
         /// </summary>
-        public static string ToExpressionString2(this Expression expr,
+        public static string ToExpressionString(this Expression expr,
             out List<ParameterExpression> paramsExprs, out List<Expression> uniqueExprs, out List<LabelTarget> lts, 
             bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
@@ -4921,7 +4918,7 @@ namespace FastExpressionCompiler
             paramsExprs = new List<ParameterExpression>();
             uniqueExprs = new List<Expression>();
             lts = new List<LabelTarget>();
-            sb = expr.CreateExpressionString2(sb, paramsExprs, uniqueExprs, lts, 2, stripNamespace, printType).Append(';');
+            sb = expr.CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, 2, stripNamespace, printType).Append(';');
             
             sb.Insert(0, $"var l = new LabelTarget[{lts.Count}]; // the labels {NewLine}");
             sb.Insert(0, $"var e = new Expression[{uniqueExprs.Count}]; // the unique expressions {NewLine}");
@@ -4930,9 +4927,9 @@ namespace FastExpressionCompiler
             return sb.ToString();
         }
 
-        // Searches first for the expression reference in `uniqueExprs` and adds the reference to expression by index, 
+        // Searches first for the expression reference in the `uniqueExprs` and adds the reference to expression by index, 
         // otherwise delegates to `CreateExpressionCodeString`
-        internal static StringBuilder ToExpressionString2(this Expression expr, StringBuilder sb, 
+        internal static StringBuilder ToExpressionString(this Expression expr, StringBuilder sb, 
             List<ParameterExpression> _, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
@@ -4941,12 +4938,45 @@ namespace FastExpressionCompiler
             if (i != -1)
                 return sb.Append("e[").Append(i)
                     // output expression type and kind to help to understand what is it
-                    .Append(" // ").Append(expr.NodeType.ToString()).Append(" of ").Append(expr.Type.ToCode(stripNamespace, printType))
+                    .Append(" // ").Append(expr.NodeType.ToString()).Append(" of ")
+                    .Append(expr.Type.ToCode(stripNamespace, printType))
                     .NewLineIdent(lineIdent).Append("]");
 
             uniqueExprs.Add(expr);
             sb.Append("e[").Append(uniqueExprs.Count - 1).Append("]=");
-            return expr.CreateExpressionString2(sb, _, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+            return expr.CreateExpressionString(sb, _, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+        }
+
+        internal static StringBuilder ToExpressionString(this ParameterExpression pe, StringBuilder sb, 
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            var i = paramsExprs.Count - 1;
+            while (i != -1 && !ReferenceEquals(paramsExprs[i], pe)) --i;
+            if (i != -1) 
+                return sb.Append("p[").Append(i)
+                    .Append(" // (").Append(pe.Type.ToCode(stripNamespace, printType))
+                    .Append(' ').AppendName(pe.Name, pe.Type, pe).Append(')')
+                    .NewLineIdent(lineIdent).Append(']');
+
+            paramsExprs.Add(pe);
+            sb.Append("p[").Append(paramsExprs.Count - 1).Append("]=");
+            return pe.CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+        }
+
+        internal static StringBuilder ToExpressionString(this LabelTarget lt, StringBuilder sb, List<LabelTarget> labelTargets,
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
+            var i = labelTargets.Count - 1;
+            while (i != -1 && !ReferenceEquals(labelTargets[i], lt)) --i;
+            if (i != -1)
+                return sb.Append("l[").Append(i).Append("]/* ").AppendName(lt.Name, lt.Type, lt).Append(" */");
+
+            labelTargets.Add(lt);
+            sb.Append("l[").Append(labelTargets.Count - 1).Append("]=Label(");
+            sb.AppendTypeof(lt.Type, stripNamespace, printType);
+
+            return (lt.Name != null ? sb.Append(", \"").Append(lt.Name).Append("\"") : sb).Append(")");
         }
 
         private class ConstantValueToCode : CodePrinter.IObjectToCode
@@ -4957,7 +4987,101 @@ namespace FastExpressionCompiler
 
         public static readonly CodePrinter.IObjectToCode DefaultConstantValueToCode = new ConstantValueToCode();
 
-        internal static StringBuilder CreateExpressionString2(this Expression e, StringBuilder sb, 
+        private static StringBuilder ToExpressionString(this IReadOnlyList<CatchBlock> bs, StringBuilder sb, 
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces)
+        {
+            if (bs.Count == 0)
+                return sb.Append("new CatchBlock[0]");
+            for (var i = 0; i < bs.Count; i++)
+                bs[i].ToExpressionString((i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent), 
+                    paramsExprs, uniqueExprs, lts, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+            return sb;
+        }
+
+        private static StringBuilder ToExpressionString(this CatchBlock b, StringBuilder sb, 
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces)
+        {
+            sb.Append("MakeCatchBlock(");
+            sb.NewLineIdent(lineIdent).AppendTypeof(b.Test, stripNamespace, printType).Append(',');
+            sb.NewLineIdentExpr(b.Variable, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(b.Body,     paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentExpr(b.Filter,   paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+            return sb.Append(')');
+        }
+
+        private static StringBuilder ToExpressionString(this IReadOnlyList<SwitchCase> items, StringBuilder sb, 
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces)
+        {
+            if (items.Count == 0)
+                return sb.Append("new SwitchCase[0]");
+            for (var i = 0; i < items.Count; i++)
+                items[i].ToExpressionString((i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent), 
+                    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+            return sb;
+        }
+
+        private static StringBuilder ToExpressionString(this SwitchCase s, StringBuilder sb, 
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces)
+        {
+            sb.Append("SwitchCase(");
+            sb.NewLineIdentExpr(s.Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+            sb.NewLineIdentParamsExprs(s.TestValues, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+            return sb.Append(')');
+        }
+
+        private static StringBuilder ToExpressionString(this MemberBinding mb, StringBuilder sb, 
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            if (mb is MemberAssignment ma) 
+            {
+                sb.Append("Bind(");
+                sb.NewLineIdent(lineIdent).AppendMember(mb.Member, stripNamespace, printType).Append(", ");
+                sb.NewLineIdentExpr(ma.Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                return sb.Append(")");
+            }
+
+            if (mb is MemberMemberBinding mmb)
+            {
+                sb.Append("MemberBind(");
+                sb.NewLineIdent(lineIdent).AppendMember(mb.Member, stripNamespace, printType);
+
+                for (int i = 0; i < mmb.Bindings.Count; i++)
+                    mmb.Bindings[i].ToExpressionString(sb.Append(", ").NewLineIdent(lineIdent),
+                        paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                return sb.Append(")");
+            }
+
+            if (mb is MemberListBinding mlb) 
+            {
+                sb.Append("ListBind(");
+                sb.NewLineIdent(lineIdent).AppendMember(mb.Member, stripNamespace, printType);
+
+                for (int i = 0; i < mlb.Initializers.Count; i++)
+                    mlb.Initializers[i].ToExpressionString(sb.Append(", ").NewLineIdent(lineIdent), 
+                        paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+
+                return sb.Append(")");
+            }
+
+            return sb;
+        }
+
+        private static StringBuilder ToExpressionString(this ElementInit ei, StringBuilder sb, 
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
+        {
+            sb.Append("ElementInit(");
+            sb.NewLineIdent(lineIdent).AppendMethod(ei.AddMethod, stripNamespace, printType).Append(", ");
+            sb.NewLineIdentParamsExprs(ei.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+            return sb.Append(")");
+        }
+
+        internal static StringBuilder CreateExpressionString(this Expression e, StringBuilder sb, 
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
@@ -4983,343 +5107,288 @@ namespace FastExpressionCompiler
                     }
                     return sb.Append(')');
                 }
-                // case ExpressionType.Parameter:
-                // {
-                //     var e = (System.Linq.Expressions.ParameterExpression)expr;
-                //     lightExpr = Expression.Parameter(e.Type, e.Name);
-                //     break;
-                // }
-                // case ExpressionType.New:
-                // {
-                //     var e = (System.Linq.Expressions.NewExpression)expr;
-                //     var a = e.Arguments;
-                //     if (a.Count == 0)
-                //         return Expression.New(e.Constructor);
-                //     var aa = new Expression[a.Count];
-                //     for (var j = 0; j < aa.Length; ++j)
-                //         aa[j] = a[j].ToLightExpression(ref exprsConverted);
-                //     lightExpr = Expression.New(e.Constructor, aa); // todo: @perf support the IArgumentProvider
-                //     break;
-                // }
+                case ExpressionType.Parameter:
+                {
+                    var x = (ParameterExpression)e;
+                    sb.Append("Parameter(").AppendTypeof(x.Type, stripNamespace, printType);
+                    if (x.IsByRef)
+                        sb.Append(".MakeByRefType()");
+                    if (x.Name != null)
+                        sb.Append(", \"").Append(x.Name).Append('"');
+                    return sb.Append(')');
+                }
+                case ExpressionType.New:
+                {
+                    var x = (NewExpression)e;
+                    var args = x.Arguments;
 
-//                 case ExpressionType.Call:
-//                     var callExpr = (MethodCallExpression)expr;
-//                     var callObjectExpr = callExpr.Object;
-// #if LIGHT_EXPRESSION
-//                     var fewCallArgCount = callExpr.FewArgumentCount;
-//                     if (fewCallArgCount == 0)
-//                     {
-//                         if (callObjectExpr != null)
-//                         {
-//                             expr = callObjectExpr;
-//                             continue;
-//                         }
+                    if (args.Count == 0 && e.Type.IsValueType())
+                        return sb.Append("New(").AppendTypeof(e.Type, stripNamespace, printType).Append(')');
 
-//                         return true;
-//                     }
+                    sb.Append("New(/*").Append(args.Count).Append(" args*/");
+                    var ctorIndex = x.Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.ToArray().GetFirstIndex(x.Constructor);
+                    sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType)
+                        .Append(".GetTypeInfo().DeclaredConstructors.ToArray()[").Append(ctorIndex).Append("],");
+                    sb.NewLineIdentParamsExprs(args, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(')');
+                }
+                case ExpressionType.Call:
+                {
+                    var x = (MethodCallExpression)e;
+                    sb.Append("Call(");
+                    sb.NewLineIdentExpr(x.Object, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(", ");
+                    sb.NewLineIdent(lineIdent).AppendMethod(x.Method, stripNamespace, printType);
+                    if (x.Arguments.Count > 0)
+                        sb.Append(',').NewLineIdentParamsExprs(x.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(')');
+                }
+                case ExpressionType.MemberAccess:
+                {
+                    var x = (MemberExpression)e;
+                    if (x.Member is PropertyInfo p)
+                    {
+                        sb.Append("Property(");
+                        sb.NewLineIdentExpr(x.Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                        sb.NewLineIdent(lineIdent).AppendProperty(p, stripNamespace, printType);
+                    }
+                    else 
+                    {
+                        sb.Append("Field(");
+                        sb.NewLineIdentExpr(x.Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                        sb.NewLineIdent(lineIdent).AppendField((FieldInfo)x.Member, stripNamespace, printType);
+                    }
+                    return sb.Append(')');
+                }
 
-//                     if (fewCallArgCount > 0)
-//                     {
-//                         if (callObjectExpr != null && 
-//                             !TryCollectBoundConstants(ref closure, callObjectExpr, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
+                case ExpressionType.NewArrayBounds:
+                case ExpressionType.NewArrayInit:
+                {
+                    var x = (NewArrayExpression)e;
+                    sb.Append(e.NodeType == ExpressionType.NewArrayInit ? "NewArrayInit(" : "NewArrayBounds(");
+                    sb.NewLineIdent(lineIdent).AppendTypeof(x.Type.GetElementType(), stripNamespace, printType).Append(", ");
+                    sb.NewLineIdentParamsExprs(x.Expressions, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(')');
+                }
+                case ExpressionType.MemberInit: 
+                {
+                    var x = (MemberInitExpression)e;
+                    sb.Append("MemberInit(");
+                    sb.NewLineIdentExpr(x.NewExpression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    for (var i = 0; i < x.Bindings.Count; i++)
+                        x.Bindings[i].ToExpressionString(sb.Append(", ").NewLineIdent(lineIdent), 
+                            paramsExprs, uniqueExprs, lts, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+                    return sb.Append(')');
+                }
+                case ExpressionType.Lambda:
+                {
+                    var x = (LambdaExpression)e;
+                    sb.Append("Lambda( // $"); // bookmark for the lambdas - $ means the cost of the lambda, specifically nested lambda
+                    sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType).Append(',');
+                    sb.NewLineIdentExpr(x.Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    sb.NewLineIdentParamsExprs(x.Parameters, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(')');
+                }
+                case ExpressionType.Invoke:
+                {
+                    var x = (InvocationExpression)e;
+                    sb.Append("Invoke(");
+                    sb.NewLineIdentExpr(x.Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    sb.NewLineIdentParamsExprs(x.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(")");
+                }
+                case ExpressionType.Conditional:
+                {
+                    var x = (ConditionalExpression)e;
+                    sb.Append("Condition(");
+                    sb.NewLineIdentExpr(x.Test,    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    sb.NewLineIdentExpr(x.IfTrue,  paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    sb.NewLineIdentExpr(x.IfFalse, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType);
+                    return sb.Append(')');
+                }
+                case ExpressionType.Block:
+                {
+                    var x = (BlockExpression)e;
+                    sb.Append("Block(");
+                    sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType).Append(',');
 
-//                         if (fewCallArgCount == 1)
-//                         {
-//                             expr = ((OneArgumentMethodCallExpression)callExpr).Argument;
-//                             continue;
-//                         }
-                        
-//                         if (fewCallArgCount == 2)
-//                         {
-//                             var twoArgsExpr = (TwoArgumentsMethodCallExpression)callExpr;
-//                             if (!TryCollectBoundConstants(ref closure, twoArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                             expr = twoArgsExpr.Argument1;
-//                             continue;
-//                         }
+                    if (x.Variables.Count == 0)
+                        sb.NewLineIdent(lineIdent).Append("new ParameterExpression[0],");
+                    else
+                    {
+                        sb.NewLineIdent(lineIdent).Append("new[] {");
+                        for (var i = 0; i < x.Variables.Count; i++) 
+                            x.Variables[i].ToExpressionString((i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent), 
+                                paramsExprs, uniqueExprs, lts, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+                        sb.NewLineIdent(lineIdent).Append("},");
+                    }
 
-//                         if (fewCallArgCount == 3)
-//                         {
-//                             var threeArgsExpr = (ThreeArgumentsMethodCallExpression)callExpr;
-//                             if (!TryCollectBoundConstants(ref closure, threeArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
-//                                 !TryCollectBoundConstants(ref closure, threeArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                             expr = threeArgsExpr.Argument2;
-//                             continue;
-//                         }
+                    sb.NewLineIdentParamsExprs(x.Expressions, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(')');
+                }
+                case ExpressionType.Loop:
+                {
+                    var x = (LoopExpression)e;
+                    sb.Append("Loop(");
+                    sb.NewLineIdentExpr(x.Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
 
-//                         if (fewCallArgCount == 4)
-//                         {
-//                             var fourArgsExpr = (FourArgumentsMethodCallExpression)callExpr;
-//                             if (!TryCollectBoundConstants(ref closure, fourArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
-//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
-//                                 !TryCollectBoundConstants(ref closure, fourArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                             expr = fourArgsExpr.Argument3;
-//                             continue;
-//                         }
+                    if (x.BreakLabel != null)
+                        x.BreakLabel.ToExpressionString(sb.Append(',').NewLineIdent(lineIdent), lts, stripNamespace, printType);
 
-//                         var fiveArgsExpr = (FiveArgumentsMethodCallExpression)callExpr;
-//                         if (!TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument0, paramExprs, isNestedLambda, ref rootClosure) ||
-//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument1, paramExprs, isNestedLambda, ref rootClosure) ||
-//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument2, paramExprs, isNestedLambda, ref rootClosure) ||
-//                             !TryCollectBoundConstants(ref closure, fiveArgsExpr.Argument3, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                         expr = fiveArgsExpr.Argument4;
-//                         continue;
-//                     }
-// #endif
-//                     var methodArgs = callExpr.Arguments;
-//                     var methodArgCount = methodArgs.Count;
-//                     if (methodArgCount == 0)
-//                     {
-//                         if (callObjectExpr != null)
-//                         {
-//                             expr = callObjectExpr;
-//                             continue;
-//                         }
+                    if (x.ContinueLabel != null)
+                        x.ContinueLabel.ToExpressionString(sb.Append(',').NewLineIdent(lineIdent), lts, stripNamespace, printType);
 
-//                         return true;
-//                     }
+                    return sb.Append(')');
+                }
+                case ExpressionType.Index:
+                {
+                    var x = (IndexExpression)e;
+                    sb.Append(x.Indexer != null ? "MakeIndex(" : "ArrayAccess(");
+                    sb.NewLineIdentExpr(x.Object, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(", ");
 
-//                     if (callObjectExpr != null && 
-//                         !TryCollectBoundConstants(ref closure, callExpr.Object, paramExprs, isNestedLambda, ref rootClosure)) 
-//                         return false;
+                    if (x.Indexer != null)
+                        sb.NewLineIdent(lineIdent).AppendProperty(x.Indexer, stripNamespace, printType).Append(", ");
+                    
+                    sb.Append("new Expression[] {");
+                    for (var i = 0; i < x.Arguments.Count; i++)
+                        (i > 0 ? sb.Append(',') : sb)
+                        .NewLineIdentExpr(x.Arguments[i], paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append("})");
+                }
+                case ExpressionType.Try:
+                {
+                    var x = (TryExpression)e;
+                    if (x.Finally == null)
+                    {
+                        sb.Append("TryCatch(");
+                        sb.NewLineIdentExpr(x.Body,       paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                        x.Handlers.ToExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    }
+                    else if (x.Handlers == null)
+                    {
+                        sb.Append("TryFinally(");
+                        sb.NewLineIdentExpr(x.Body,    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                        sb.NewLineIdentExpr(x.Finally, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    }
+                    else
+                    {
+                        sb.Append("TryCatchFinally(");
+                        sb.NewLineIdentExpr(x.Body,       paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                        x.Handlers.ToExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                        sb.NewLineIdentExpr(x.Finally,    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    }
 
-//                     for (var i = 0; i < methodArgCount - 1; i++)
-//                         if (!TryCollectBoundConstants(ref closure, methodArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
+                    return sb.Append(')');
+                }
+                case ExpressionType.Label:
+                {
+                    var x = (LabelExpression)e;
+                    sb.Append("Label(");
+                    x.Target.ToExpressionString(sb, lts, stripNamespace, printType);
+                    if (x.DefaultValue != null)
+                        sb.Append(',').NewLineIdentExpr(x.DefaultValue, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(')');
+                }
+                case ExpressionType.Goto:
+                {
+                    var x = (GotoExpression)e;
+                    sb.Append("MakeGoto(").AppendEnum(x.Kind, stripNamespace, printType).Append(',');
 
-//                     expr = methodArgs[methodArgCount - 1];
-//                     continue;
+                    sb.NewLineIdent(lineIdent);
+                    x.Target.ToExpressionString(sb, lts, stripNamespace, printType).Append(',');
 
-//                 case ExpressionType.MemberAccess:
-//                     var memberExpr = ((MemberExpression)expr).Expression;
-//                     if (memberExpr == null)
-//                         return true;
-//                     expr = memberExpr;
-//                     continue;
+                    sb.NewLineIdentExpr(x.Value, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType);
+                    return sb.Append(')');
+                }
+                case ExpressionType.Switch:
+                {
+                    var x = (SwitchExpression)e;
+                    sb.Append("Switch(");
+                    sb.NewLineIdentExpr(x.SwitchValue, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    sb.NewLineIdentExpr(x.DefaultBody, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    sb.NewLineIdent(lineIdent).AppendMethod(x.Comparison, stripNamespace, printType);
+                    ToExpressionString(x.Cases, sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(')');
+                }
+                case ExpressionType.Default:
+                {
+                    return e.Type == typeof(void) ? sb.Append("Empty()") 
+                        : sb.Append("Default(").AppendTypeof(e.Type, stripNamespace, printType).Append(')');
+                }
+                case ExpressionType.TypeIs:
+                case ExpressionType.TypeEqual:
+                {
+                    var x = (TypeBinaryExpression)e;
+                    sb.Append(e.NodeType == ExpressionType.TypeIs ? "TypeIs(" : "TypeEqual(");
+                    sb.NewLineIdentExpr(x.Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    sb.NewLineIdent(lineIdent).AppendTypeof(x.TypeOperand, stripNamespace, printType);
+                    return sb.Append(')');
+                }
+                case ExpressionType.Coalesce:
+                {
+                    var x = (BinaryExpression)e;
+                    sb.Append("Coalesce(");
+                    sb.NewLineIdentExpr(x.Left,  paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    sb.NewLineIdentExpr(x.Right, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                    if (x.Conversion != null)
+                        sb.NewLineIdentExpr(x.Conversion, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(')');
+                }
+                case ExpressionType.ListInit:
+                {
+                    var x = (ListInitExpression)e;
+                    sb.Append("ListInit(");
+                    sb.NewLineIdentExpr(x.NewExpression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    for (int i = 0; i < x.Initializers.Count; i++) 
+                        x.Initializers[i].ToExpressionString(sb, 
+                            paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    return sb.Append(")");
+                }
+                case ExpressionType.Dynamic:
+                case ExpressionType.RuntimeVariables:
+                case ExpressionType.Extension:
+                case ExpressionType.DebugInfo:
+                case ExpressionType.Quote:
+                {
+                    return sb.NewLineIdent(lineIdent)
+                        .Append("// NOT_SUPPORTED_EXPRESSION_TYPE: ").Append(e.NodeType)
+                        .NewLineIdent(lineIdent);
+                }
+                default: 
+                {
+                    var name = Enum.GetName(typeof(ExpressionType), e.NodeType);
+                    if (e is UnaryExpression u)
+                    {
+                        sb.Append(name).Append('(');
+                        sb.NewLineIdentExpr(u.Operand, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
 
-//                 case ExpressionType.NewArrayBounds:
-//                 case ExpressionType.NewArrayInit:
-//                     var elemExprs = ((NewArrayExpression)expr).Expressions;
-//                     var elemExprsCount = elemExprs.Count;
-//                     if (elemExprsCount == 0)
-//                         return true;
+                        if (e.NodeType == ExpressionType.Convert ||
+                            e.NodeType == ExpressionType.ConvertChecked ||
+                            e.NodeType == ExpressionType.Unbox ||
+                            e.NodeType == ExpressionType.Throw ||
+                            e.NodeType == ExpressionType.TypeAs)
+                            sb.Append(',').NewLineIdent(lineIdent).AppendTypeof(e.Type, stripNamespace, printType);
 
-//                     for (var i = 0; i < elemExprsCount - 1; i++)
-//                         if (!TryCollectBoundConstants(ref closure, elemExprs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
+                        if ((e.NodeType == ExpressionType.Convert || e.NodeType == ExpressionType.ConvertChecked)
+                            && u.Method != null)
+                            sb.Append(',').NewLineIdent(lineIdent).AppendMethod(u.Method, stripNamespace, printType);
+                    }
 
-//                     expr = elemExprs[elemExprsCount - 1];
-//                     continue;
-
-//                 case ExpressionType.Lambda:
-//                     var nestedLambdaExpr = (LambdaExpression)expr;
-
-//                     // Look for the already collected lambdas and if we have the same lambda, start from the root
-//                     var nestedLambdas = rootClosure.NestedLambdas;
-//                     if (nestedLambdas.Length != 0)
-//                     {
-//                         var foundLambdaInfo = FindAlreadyCollectedNestedLambdaInfo(nestedLambdas, nestedLambdaExpr, out var foundInLambdas);
-//                         if (foundLambdaInfo != null)
-//                         {
-//                             // if the lambda is not found on the same level, then add it
-//                             if (foundInLambdas != closure.NestedLambdas)
-//                             {
-//                                 closure.AddNestedLambda(foundLambdaInfo);
-//                                 var foundLambdaNonPassedParams = foundLambdaInfo.ClosureInfo.NonPassedParameters;
-//                                 if (foundLambdaNonPassedParams.Length != 0)
-//                                     PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, foundLambdaNonPassedParams);
-//                             }
-
-//                             return true;
-//                         }
-//                     }
-
-//                     var nestedLambdaInfo = new NestedLambdaInfo(nestedLambdaExpr);
-//                     if (!TryCollectBoundConstants(ref nestedLambdaInfo.ClosureInfo,
-//                         nestedLambdaExpr.Body, nestedLambdaExpr.Parameters, true, ref rootClosure))
-//                         return false;
-
-//                     closure.AddNestedLambda(nestedLambdaInfo);
-//                     var nestedNonPassedParams = nestedLambdaInfo.ClosureInfo.NonPassedParameters; // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
-//                     if (nestedNonPassedParams.Length != 0)
-//                         PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, nestedNonPassedParams);
-
-//                     return true;
-
-//                 case ExpressionType.Invoke:
-//                     var invokeExpr = (InvocationExpression)expr;
-// #if LIGHT_EXPRESSION
-//                     if (invokeExpr is OneArgumentInvocationExpression oneArgExpr) 
-//                     {
-//                         if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                         expr = oneArgExpr.Argument;
-//                         continue;
-//                     }
-// #endif
-//                     var invokeArgs = invokeExpr.Arguments;
-//                     if (invokeArgs.Count == 0)
-//                     {
-//                         expr = invokeExpr.Expression;
-//                         continue;
-//                     }
-
-//                     if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
-//                         return false;
-
-//                     var lastArgIndex = invokeArgs.Count - 1;
-//                     if (lastArgIndex > 0)
-//                         for (var i = 0; i < lastArgIndex; i++)
-//                             if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                     expr = invokeArgs[lastArgIndex];
-//                     continue;
-
-//                 case ExpressionType.Conditional:
-//                     var condExpr = (ConditionalExpression)expr;
-//                     if (!TryCollectBoundConstants(ref closure, condExpr.Test,    paramExprs, isNestedLambda, ref rootClosure) ||
-//                         !TryCollectBoundConstants(ref closure, condExpr.IfFalse, paramExprs, isNestedLambda, ref rootClosure))
-//                         return false;
-//                     expr = condExpr.IfTrue;
-//                     continue;
-
-//                 case ExpressionType.Block:
-//                     var blockExpr = (BlockExpression)expr;
-//                     var blockVarExprs = blockExpr.Variables;
-//                     var blockExprs = blockExpr.Expressions;
-
-//                     if (blockVarExprs.Count == 0)
-//                     {
-//                         for (var i = 0; i < blockExprs.Count - 1; i++)
-//                             if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                         expr = blockExprs[blockExprs.Count - 1];
-//                         continue;
-//                     }
-//                     else
-//                     {
-//                         if (blockVarExprs.Count == 1)
-//                             closure.PushBlockWithVars(blockVarExprs[0]);
-//                         else
-//                             closure.PushBlockWithVars(blockVarExprs);
-
-//                         for (var i = 0; i < blockExprs.Count; i++)
-//                             if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                                 return false;
-//                         closure.PopBlock();
-//                     }
-
-//                     return true;
-
-//                 case ExpressionType.Loop:
-//                     var loopExpr = (LoopExpression)expr;
-//                     closure.AddLabel(loopExpr.BreakLabel);
-//                     closure.AddLabel(loopExpr.ContinueLabel);
-//                     expr = loopExpr.Body;
-//                     continue;
-
-//                 case ExpressionType.Index:
-//                     var indexExpr = (IndexExpression)expr;
-//                     var indexArgs = indexExpr.Arguments; // todo: @perf handle a single argument expr, do continue on it as well
-//                     for (var i = 0; i < indexArgs.Count; i++)
-//                         if (!TryCollectBoundConstants(ref closure, indexArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                     if (indexExpr.Object == null)
-//                         return true;
-//                     expr = indexExpr.Object;
-//                     continue;
-
-//                 case ExpressionType.Try:
-//                     return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs, isNestedLambda, ref rootClosure);
-
-//                 case ExpressionType.Label:
-//                     var labelExpr = (LabelExpression)expr;
-//                     var defaultValueExpr = labelExpr.DefaultValue;
-//                     closure.AddLabel(labelExpr.Target);
-//                     if (defaultValueExpr == null)
-//                         return true;
-//                     expr = defaultValueExpr;
-//                     continue;
-
-//                 case ExpressionType.Goto:
-//                     var gotoExpr = (GotoExpression)expr;
-//                     if (gotoExpr.Kind == GotoExpressionKind.Return)
-//                         closure.MarkAsContainsReturnGotoExpression();
-
-//                     if (gotoExpr.Value == null)
-//                         return true;
-
-//                     expr = gotoExpr.Value;
-//                     continue;
-
-//                 case ExpressionType.Switch:
-//                     var switchExpr = ((SwitchExpression)expr);
-//                     if (!TryCollectBoundConstants(ref closure, switchExpr.SwitchValue, paramExprs, isNestedLambda, ref rootClosure) ||
-//                         switchExpr.DefaultBody != null && 
-//                         !TryCollectBoundConstants(ref closure, switchExpr.DefaultBody, paramExprs, isNestedLambda, ref rootClosure))
-//                         return false;
-//                     var switchCases = switchExpr.Cases;
-//                     for (var i = 0; i < switchCases.Count - 1; i++)
-//                         if (!TryCollectBoundConstants(ref closure, switchCases[i].Body, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                     expr = switchCases[switchCases.Count - 1].Body;
-//                     continue;
-
-//                 case ExpressionType.Extension:
-//                     expr = expr.Reduce();
-//                     continue;
-
-//                 case ExpressionType.Default:
-//                     return true;
-
-//                 case ExpressionType.TypeIs:
-//                 case ExpressionType.TypeEqual:
-//                     expr = ((TypeBinaryExpression)expr).Expression;
-//                     continue;
-
-//                 case ExpressionType.Quote:     // todo: @feature - is not supported yet
-//                     return false;
-
-//                 case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
-//                     return true;               // todo: @unclear - just ignoring the info for now
-
-//                 default:
-//                     if (expr is UnaryExpression unaryExpr)
-//                     {
-//                         expr = unaryExpr.Operand;
-//                         continue;
-//                     }
-
-//                     if (expr is BinaryExpression binaryExpr)
-//                     {
-//                         if (!TryCollectBoundConstants(ref closure, binaryExpr.Left, paramExprs, isNestedLambda, ref rootClosure))
-//                             return false;
-//                         expr = binaryExpr.Right;
-//                         continue;
-//                     }
-
-//                     if (expr is TypeBinaryExpression typeBinaryExpr)
-//                     {
-//                         expr = typeBinaryExpr.Expression;
-//                         continue;
-//                     }
-
-//                     return false;
+                    if (e is BinaryExpression b)
+                    {
+                        sb.Append("MakeBinary(").Append(typeof(ExpressionType).Name).Append('.').Append(name).Append(',');
+                        sb.NewLineIdentExpr(b.Left,  paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                        sb.NewLineIdentExpr(b.Right, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    }
+                    return sb.Append(')');
+                }
             }
-
-            // ref var item = ref exprsConverted.PushSlot();
-            // item.SysExpr   = expr;
-            // item.LightExpr = lightExpr;
-            return sb;
         }
     }
 
-        /// <summary>Converts the object of known type into the valid C# code representation</summary>
-    public static class CodePrinter
+    /// <summary>Converts the object of known type into the valid C# code representation</summary>
+    public static class CodePrinter // todo: @incomplete make it internal to minimize the conflicts
     {
         public static StringBuilder AppendTypeof(this StringBuilder sb, Type type, 
             bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false) =>
@@ -5335,7 +5404,7 @@ namespace FastExpressionCompiler
             return sb;
         }
 
-        internal static StringBuilder AppendFieldOrProperty(this StringBuilder sb, MemberInfo member, 
+        internal static StringBuilder AppendMember(this StringBuilder sb, MemberInfo member, 
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>
             member is FieldInfo f 
                 ? sb.AppendField(f, stripNamespace, printType)
@@ -5657,7 +5726,7 @@ namespace FastExpressionCompiler
             int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
             sb.NewLineIdent(lineIdent);
-            return expr?.ToExpressionString2(sb, paramsExprs, uniqueExprs, lts, 
+            return expr?.ToExpressionString(sb, paramsExprs, uniqueExprs, lts, 
                 lineIdent + identSpaces, stripNamespace, printType, identSpaces)
                 ?? sb.Append("null");
         }
@@ -5673,6 +5742,18 @@ namespace FastExpressionCompiler
                 (i > 0 ? sb.Append(',') : sb).NewLineIdentExpr(exprs[i], 
                     paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
             return sb;
+        }
+    }
+
+    internal static class FecHelpers
+    {
+        public static int GetFirstIndex<T>(this IReadOnlyList<T> source, T item)
+        {
+            if (source.Count != 0)
+                for (var i = 0; i < source.Count; ++i)
+                    if (ReferenceEquals(source[i], item))
+                        return i;
+            return -1;
         }
     }
 }
