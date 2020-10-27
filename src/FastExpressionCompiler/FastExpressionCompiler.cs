@@ -5032,7 +5032,7 @@ namespace FastExpressionCompiler
         {
             sb.Append("SwitchCase(");
             sb.NewLineIdentExpr(s.Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-            sb.NewLineIdentParamsExprs(s.TestValues, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentArgumentExprs(s.TestValues, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(')');
         }
 
@@ -5080,7 +5080,7 @@ namespace FastExpressionCompiler
         {
             sb.Append("ElementInit(");
             sb.NewLineIdent(lineIdent).AppendMethod(ei.AddMethod, stripNamespace, printType).Append(", ");
-            sb.NewLineIdentParamsExprs(ei.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+            sb.NewLineIdentArgumentExprs(ei.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(")");
         }
 
@@ -5132,7 +5132,7 @@ namespace FastExpressionCompiler
                     var ctorIndex = x.Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.ToArray().GetFirstIndex(x.Constructor);
                     sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType)
                         .Append(".GetTypeInfo().DeclaredConstructors.ToArray()[").Append(ctorIndex).Append("],");
-                    sb.NewLineIdentParamsExprs(args, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.NewLineIdentArgumentExprs(args, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(')');
                 }
                 case ExpressionType.Call:
@@ -5142,7 +5142,7 @@ namespace FastExpressionCompiler
                     sb.NewLineIdentExpr(x.Object, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(", ");
                     sb.NewLineIdent(lineIdent).AppendMethod(x.Method, stripNamespace, printType);
                     if (x.Arguments.Count > 0)
-                        sb.Append(',').NewLineIdentParamsExprs(x.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                        sb.Append(',').NewLineIdentArgumentExprs(x.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(')');
                 }
                 case ExpressionType.MemberAccess:
@@ -5169,7 +5169,7 @@ namespace FastExpressionCompiler
                     var x = (NewArrayExpression)e;
                     sb.Append(e.NodeType == ExpressionType.NewArrayInit ? "NewArrayInit(" : "NewArrayBounds(");
                     sb.NewLineIdent(lineIdent).AppendTypeof(x.Type.GetElementType(), stripNamespace, printType).Append(", ");
-                    sb.NewLineIdentParamsExprs(x.Expressions, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.NewLineIdentArgumentExprs(x.Expressions, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(')');
                 }
                 case ExpressionType.MemberInit: 
@@ -5188,7 +5188,7 @@ namespace FastExpressionCompiler
                     sb.Append("Lambda( // $"); // bookmark for the lambdas - $ means the cost of the lambda, specifically nested lambda
                     sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType).Append(',');
                     sb.NewLineIdentExpr(x.Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-                    sb.NewLineIdentParamsExprs(x.Parameters, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.NewLineIdentArgumentExprs(x.Parameters, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(')');
                 }
                 case ExpressionType.Invoke:
@@ -5196,7 +5196,7 @@ namespace FastExpressionCompiler
                     var x = (InvocationExpression)e;
                     sb.Append("Invoke(");
                     sb.NewLineIdentExpr(x.Expression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-                    sb.NewLineIdentParamsExprs(x.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.NewLineIdentArgumentExprs(x.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(")");
                 }
                 case ExpressionType.Conditional:
@@ -5226,7 +5226,7 @@ namespace FastExpressionCompiler
                         sb.NewLineIdent(lineIdent).Append("},");
                     }
 
-                    sb.NewLineIdentParamsExprs(x.Expressions, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.NewLineIdentArgumentExprs(x.Expressions, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(')');
                 }
                 case ExpressionType.Loop:
@@ -5467,9 +5467,15 @@ namespace FastExpressionCompiler
             return sb.Append(" }))");
         }
 
+        private static string PruneNoNameSymbols(Type t, string s) =>
+            t.IsArray ? s.Replace("[]", "_arr") : 
+            t.IsGenericType ? s.Replace('<', '_').Replace('>', '_') : 
+            s;
+
         internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
             name != null ? sb.Append(name)
-                : sb.Append(type.ToCode(true, null)).Append("__").Append(identity.GetHashCode());
+                : sb.Append(type.ToCode(true, (t, s) => PruneNoNameSymbols(t, s)))
+                .Append("__").Append(identity.GetHashCode());
 
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
         public static string ToCode(this Type type,
@@ -5734,7 +5740,7 @@ namespace FastExpressionCompiler
                 ?? sb.Append("null");
         }
 
-        internal static StringBuilder NewLineIdentParamsExprs<T>(this StringBuilder sb, IReadOnlyList<T> exprs, 
+        internal static StringBuilder NewLineIdentArgumentExprs<T>(this StringBuilder sb, IReadOnlyList<T> exprs, 
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIdent, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
             where T : Expression
