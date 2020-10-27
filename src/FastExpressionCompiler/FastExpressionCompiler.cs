@@ -5086,7 +5086,7 @@ namespace FastExpressionCompiler
             return sb.Append(")");
         }
 
-        private const string NotSupportedExpressionType = "// NOT_SUPPORTED_EXPRESSION: ";
+        private const string NotSupportedExpression = "// NOT_SUPPORTED_EXPRESSION: ";
 
         internal static StringBuilder CreateExpressionString(this Expression e, StringBuilder sb, 
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
