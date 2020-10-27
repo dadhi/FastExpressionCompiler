@@ -1636,7 +1636,7 @@ namespace FastExpressionCompiler
                                 for (var i = 0; i < statementCount - 1; i++)
                                 {
                                     var stExpr = statementExprs[i];
-                                    if (stExpr == Empty())
+                                    if (stExpr.NodeType == ExpressionType.Default && stExpr.Type == typeof(void))
                                         continue;
                                     
                                     // This is basically the return pattern (see #237), so we don't care for the rest of expressions
@@ -5605,7 +5605,7 @@ namespace FastExpressionCompiler
                             sb.NewLineIdentCs(x.IfTrue, lineIdent, stripNamespace, printType, identSpaces).Append(';');
 
                         sb.NewLine(lineIdent, identSpaces).Append('}');
-                        if (x.IfFalse != Empty())
+                        if (x.IfFalse.NodeType != ExpressionType.Default || x.IfFalse.Type != typeof(void))
                         {
                             sb.NewLine(lineIdent, identSpaces).Append("else");
                             sb.NewLine(lineIdent, identSpaces).Append('{');
@@ -6050,7 +6050,7 @@ namespace FastExpressionCompiler
             }
 
             var lastExpr = exprs[exprs.Count - 1];
-            if (lastExpr == Empty())
+            if (lastExpr.NodeType == ExpressionType.Default && lastExpr.Type == typeof(void))
                 return sb;
 
             if (lastExpr is BlockExpression lastBlock)
