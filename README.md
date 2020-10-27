@@ -254,10 +254,10 @@ Creating and compiling:
 
 ## How it works
 
-The idea is to provide fast compilation for supported expression types,
-and fallback to system `Expression.Compile()` for not supported types:
+The idea is to provide the fast compilation for the supported expression types,
+and fallback to the system `Expression.Compile()` for the not supported types:
 
-**V3 still does not support yet:** 
+**V3 does not support yet:** 
 
 - `Quote`
 - `Dynamic`
