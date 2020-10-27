@@ -5050,6 +5050,7 @@ namespace FastExpressionCompiler
 
             if (mb is MemberMemberBinding mmb)
             {
+                sb.NewLineIdent(lineIdent).Append(NotSupportedExpression).Append(nameof(MemberMemberBinding)).NewLineIdent(lineIdent);
                 sb.Append("MemberBind(");
                 sb.NewLineIdent(lineIdent).AppendMember(mb.Member, stripNamespace, printType);
 
@@ -5061,6 +5062,7 @@ namespace FastExpressionCompiler
 
             if (mb is MemberListBinding mlb) 
             {
+                sb.NewLineIdent(lineIdent).Append(NotSupportedExpression).Append(nameof(MemberListBinding)).NewLineIdent(lineIdent);
                 sb.Append("ListBind(");
                 sb.NewLineIdent(lineIdent).AppendMember(mb.Member, stripNamespace, printType);
 
@@ -5083,6 +5085,8 @@ namespace FastExpressionCompiler
             sb.NewLineIdentArgumentExprs(ei.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
             return sb.Append(")");
         }
+
+        private const string NotSupportedExpressionType = "// NOT_SUPPORTED_EXPRESSION: ";
 
         internal static StringBuilder CreateExpressionString(this Expression e, StringBuilder sb, 
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
@@ -5354,9 +5358,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.DebugInfo:
                 case ExpressionType.Quote:
                 {
-                    return sb.NewLineIdent(lineIdent)
-                        .Append("// NOT_SUPPORTED_EXPRESSION_TYPE: ").Append(e.NodeType)
-                        .NewLineIdent(lineIdent);
+                    return sb.NewLineIdent(lineIdent).Append(NotSupportedExpression).Append(e.NodeType).NewLineIdent(lineIdent);
                 }
                 default: 
                 {

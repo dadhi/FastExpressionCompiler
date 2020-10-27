@@ -257,7 +257,14 @@ Creating and compiling:
 The idea is to provide fast compilation for supported expression types,
 and fallback to system `Expression.Compile()` for not supported types:
 
-**V3 still does not support** the `Quote` expression and the `DebugInfo` expression is ignored in the emitted code.
+**V3 still does not support yet:** 
+
+- `Quote`
+- `Dynamic`
+- `RuntimeVariables`
+- `DebugInfo`
+- The `MemberMemberBinding` and the `ListMemberBinding` binding types from the `MemberInit` expression
+
 
 The compilation is done by traversing the expression nodes and emitting the IL. 
 The code is tuned for the performance and the minimal memory consumption. 
