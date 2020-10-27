@@ -4930,9 +4930,12 @@ namespace FastExpressionCompiler
         // Searches first for the expression reference in the `uniqueExprs` and adds the reference to expression by index, 
         // otherwise delegates to `CreateExpressionCodeString`
         internal static StringBuilder ToExpressionString(this Expression expr, StringBuilder sb, 
-            List<ParameterExpression> _, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 2)
         {
+            if (expr is ParameterExpression p) 
+                return p.ToExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+
             var i = uniqueExprs.Count - 1;
             while (i != -1 && !ReferenceEquals(uniqueExprs[i], expr)) --i;
             if (i != -1)
@@ -4944,7 +4947,7 @@ namespace FastExpressionCompiler
 
             uniqueExprs.Add(expr);
             sb.Append("e[").Append(uniqueExprs.Count - 1).Append("]=");
-            return expr.CreateExpressionString(sb, _, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+            return expr.CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
         }
 
         internal static StringBuilder ToExpressionString(this ParameterExpression pe, StringBuilder sb, 
