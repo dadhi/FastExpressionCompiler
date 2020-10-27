@@ -23,7 +23,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_embed_normal_Expression_into_LightExpression_eg_as_Constructor_argument();
             Should_output_the_System_and_LightExpression_to_the_identical_construction_syntax();
             Expression_produced_by_ToExpressionString_should_compile();
-            return 9;
+            Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
+            return 10;
         }
 
         [Test]
@@ -266,6 +267,19 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var f = (System.Func<object[], object>)expr.CompileFast();
             f(new object[22]);
         }
+
+        [Test]
+        public void Multiple_methods_in_block_should_be_aligned_when_output_to_csharp()
+        {
+            var sayHi = GetType().GetMethod(nameof(SayHi));
+            var p = Parameter(typeof(int), "i");
+            var e = Lambda<Action<int>>(Block(Call(sayHi, p, p), Call(sayHi, p, p), Call(sayHi, p, p)), p);
+
+            var s = e.ToCSharpString();
+            StringAssert.Contains("SayHi", s);
+        }
+
+        public static void SayHi(int i, int j) {}
 
         public class A
         {

@@ -263,7 +263,8 @@ and fallback to the system `Expression.Compile()` for the not supported types:
 - `Dynamic`
 - `RuntimeVariables`
 - `DebugInfo`
-- The `MemberMemberBinding` and the `ListMemberBinding` binding types from the `MemberInit` expression
+- `ListInit`
+- `MemberInit` with the `MemberMemberBinding` and the `ListMemberBinding` binding types
 
 
 The compilation is done by traversing the expression nodes and emitting the IL. 
