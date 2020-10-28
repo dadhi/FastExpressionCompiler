@@ -72,27 +72,19 @@ namespace FastExpressionCompiler.Benchmarks
         |      CreateExpression | 2,805.2 ns | 55.57 ns | 107.06 ns |  4.76 |    0.32 | 0.3090 |     - |     - |    1304 B |
         | CreateLightExpression |   578.5 ns |  6.39 ns |   5.98 ns |  1.00 |    0.00 | 0.1678 |     - |     - |     704 B |
 
-        ## V3
-
-        |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-        |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-        |      CreateExpression | 2,857.4 ns | 28.03 ns | 34.43 ns |  4.89 |    0.04 | 0.3090 |     - |     - |    1304 B |
-        | CreateLightExpression |   583.3 ns |  7.29 ns |  6.46 ns |  1.00 |    0.00 | 0.1659 |     - |     - |     696 B |
-
-        # V3 - without TypeCode for Convert
-
-        |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-        |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-        |      CreateExpression | 2,854.9 ns | 54.10 ns | 50.60 ns |  5.10 |    0.10 | 0.3090 |     - |     - |    1304 B |
-        | CreateLightExpression |   560.1 ns |  7.83 ns |  6.94 ns |  1.00 |    0.00 | 0.1678 |     - |     - |     704 B |
-
-
-        # V3 - without TypeCode for Parameter
+        # V3-preview-02
 
         |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
         |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
         |      CreateExpression | 3,126.9 ns | 62.14 ns | 80.80 ns |  5.46 |    0.13 | 0.3052 |     - |     - |    1304 B |
         | CreateLightExpression |   578.4 ns |  8.07 ns |  7.54 ns |  1.00 |    0.00 | 0.1640 |     - |     - |     688 B |
+
+        # V3-preview-03
+
+        |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+        |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+        |      CreateExpression | 2,937.6 ns | 56.13 ns | 46.87 ns |  6.30 |    0.13 | 0.3052 |     - |     - |    1304 B |
+        | CreateLightExpression |   466.3 ns |  7.19 ns |  6.37 ns |  1.00 |    0.00 | 0.1564 |     - |     - |     656 B |
 
         */
         [Benchmark]

@@ -77,6 +77,47 @@ namespace FastExpressionCompiler.LightExpression
             return newNodes ?? nodes;
         }
 
+        internal IReadOnlyList<T> VisitAndConvertArguments<T>(IReadOnlyList<T> nodes, Func<T, T> visit)
+        {
+            T[] newNodes = null;
+            var count = nodes.Count;
+            for (var i = 0; i < count; ++i)
+            {
+                var newNode = visit(nodes[i]);
+                if (newNodes != null)
+                    newNodes[i] = newNode;
+                else if (!Equals(newNode, nodes[i]))
+                {
+                    newNodes = new T[count];
+                    for (var j = 0; j < i; ++j)
+                        newNodes[j] = nodes[j];
+                    newNodes[i] = newNode;
+                }
+            }
+            return newNodes;
+        }
+
+        internal IReadOnlyList<T> VisitAndConvertArguments<T>(IArgumentProvider<T> nodes, Func<T, T> visit)
+        {
+            T[] newNodes = null;
+            var count = nodes.ArgumentCount;
+            for (var i = 0; i < count; ++i)
+            {
+                var node = nodes.GetArgument(i);
+                var newNode = visit(node);
+                if (newNodes != null)
+                    newNodes[i] = newNode;
+                else if (!Equals(newNode, node))
+                {
+                    newNodes = new T[count];
+                    for (var j = 0; j < i; ++j)
+                        newNodes[j] = nodes.GetArgument(j);
+                    newNodes[i] = newNode;
+                }
+            }
+            return newNodes;
+        }
+
         /// <summary>Returns null if the visited nodes are no different</summary>
         internal Expression[] VisitArguments(IReadOnlyList<Expression> nodes)
         {
@@ -351,10 +392,14 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitMemberInit(MemberInitExpression node)
         {
             var newExpression = VisitAndConvert(node.NewExpression);
-            var bindings = VisitAndConvert(node.Bindings, VisitMemberBinding);
-            if (newExpression == node.NewExpression && ReferenceEquals(bindings, node.Bindings))
+#if LIGHT_EXPRESSION
+            var bindings = VisitAndConvertArguments((IArgumentProvider<MemberBinding>)node, VisitMemberBinding);
+#else
+            var bindings = VisitAndConvertArguments(node.Bindings, VisitMemberBinding);
+#endif
+            if (newExpression == node.NewExpression && bindings == null)
                 return node;
-            return new MemberInitExpression(newExpression, bindings);
+            return Expression.MemberInit(newExpression, bindings);
         }
 
         protected internal virtual MemberBinding VisitMemberBinding(MemberBinding node)

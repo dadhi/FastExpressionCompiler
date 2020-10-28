@@ -67,12 +67,28 @@ namespace FastExpressionCompiler.Benchmarks
         //[Benchmark(Baseline = true)]
         public Func<X> FastCompile() => _expr.CompileFast(true);
 
-        /*
+/*
              Method |     Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
 ------------------- |---------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
      InvokeCompiled | 15.68 ns | 0.0835 ns | 0.0741 ns |  1.23 |    0.02 |      0.0169 |           - |           - |                80 B |
  InvokeFastCompiled | 12.75 ns | 0.1291 ns | 0.1208 ns |  1.00 |    0.00 |      0.0169 |           - |           - |                80 B |
-         */
+
+
+#V3-preview-03
+
+BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.572 (2004/?/20H1)
+Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+.NET Core SDK=3.1.403
+  [Host]     : .NET Core 3.1.9 (CoreCLR 4.700.20.47201, CoreFX 4.700.20.47203), X64 RyuJIT
+  DefaultJob : .NET Core 3.1.9 (CoreCLR 4.700.20.47201, CoreFX 4.700.20.47203), X64 RyuJIT
+
+
+|             Method |     Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|------------------- |---------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+|     InvokeCompiled | 18.64 ns | 0.266 ns | 0.236 ns |  1.30 |    0.03 | 0.0191 |     - |     - |      80 B |
+| InvokeFastCompiled | 14.30 ns | 0.317 ns | 0.281 ns |  1.00 |    0.00 | 0.0191 |     - |     - |      80 B |
+
+*/
 
         private static readonly Func<X> _compiledFunc = _expr.Compile();
         private static Func<X> _fastCompiledFunc = _expr.CompileFast(true);
