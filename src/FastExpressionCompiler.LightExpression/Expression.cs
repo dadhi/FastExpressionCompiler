@@ -354,6 +354,16 @@ namespace FastExpressionCompiler.LightExpression
             ? new FiveArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4)
             : new InstanceFiveArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4);
 
+        public static MethodCallExpression Call(MethodInfo method,
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5) =>
+            new SixArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4, arg5);
+
+        public static MethodCallExpression Call(Expression instance, MethodInfo method,
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5) =>
+            instance == null
+            ? new SixArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4, arg5)
+            : new InstanceSixArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4, arg5);
+
         public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
             CallIfNotNull(instance, method, Tools.Empty<Expression>());
 
@@ -2064,20 +2074,21 @@ namespace FastExpressionCompiler.LightExpression
         internal NewArrayInitExpression(Type arrayType, IReadOnlyList<Expression> elements) : base(arrayType, elements) {}
     }
 
-    public sealed class NewArrayBoundsExpression : NewArrayExpression
+    public sealed class NewArrayBoundsExpression : NewArrayExpression // todo: @incomplete IArgumentProvider
     {
         public override ExpressionType NodeType => ExpressionType.NewArrayBounds;
         internal NewArrayBoundsExpression(Type arrayType, IReadOnlyList<Expression> elements) : base(arrayType, elements) {}
     }
 
-    public class MethodCallExpression : Expression // todo: @incomplete IArgumentProvider
+    public class MethodCallExpression : Expression, IArgumentProvider
     {
         public sealed override ExpressionType NodeType => ExpressionType.Call;
         public override Type Type => Method.ReturnType;
+        public readonly MethodInfo Method;
         public virtual Expression Object => null;
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
-        public virtual int FewArgumentCount => 0;
-        public readonly MethodInfo Method;
+        public virtual int ArgumentCount => 0;
+        public virtual Expression GetArgument(int i) => throw new NotImplementedException();
         internal MethodCallExpression(MethodInfo method) => Method = method;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMethodCall(this);
@@ -2097,7 +2108,8 @@ namespace FastExpressionCompiler.LightExpression
     public class ManyArgumentsMethodCallExpression : MethodCallExpression
     {
         public override IReadOnlyList<Expression> Arguments { get; }
-        public override int FewArgumentCount => -1;
+        public override int ArgumentCount => Arguments.Count;
+        public override Expression GetArgument(int i) => Arguments[i];
         internal ManyArgumentsMethodCallExpression(MethodInfo method, IReadOnlyList<Expression> arguments) : base(method) =>
             Arguments = arguments;
     }
@@ -2113,8 +2125,9 @@ namespace FastExpressionCompiler.LightExpression
     public class OneArgumentMethodCallExpression : MethodCallExpression
     {
         public override IReadOnlyList<Expression> Arguments => new[] { Argument };
-        public override int FewArgumentCount => 1;
         public readonly Expression Argument;
+        public override int ArgumentCount => 1;
+        public override Expression GetArgument(int i) => Argument;
         internal OneArgumentMethodCallExpression(MethodInfo method, Expression argument) : base(method) =>
             Argument = argument;
     }
@@ -2130,9 +2143,10 @@ namespace FastExpressionCompiler.LightExpression
     public class TwoArgumentsMethodCallExpression : MethodCallExpression
     {
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
-        public override int FewArgumentCount => 2;
         public readonly Expression Argument0;
         public readonly Expression Argument1;
+        public override int ArgumentCount => 2;
+        public override Expression GetArgument(int i) => i == 0 ? Argument0 : Argument1;
         internal TwoArgumentsMethodCallExpression(MethodInfo method, Expression argument0, Expression argument1) : base(method)
         {
             Argument0 = argument0;
@@ -2151,10 +2165,11 @@ namespace FastExpressionCompiler.LightExpression
     public class ThreeArgumentsMethodCallExpression : MethodCallExpression
     {
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
-        public override int FewArgumentCount => 3;
         public readonly Expression Argument0;
         public readonly Expression Argument1;
         public readonly Expression Argument2;
+        public override int ArgumentCount => 3;
+        public override Expression GetArgument(int i) => i == 0 ? Argument0 : i == 1 ? Argument1 : Argument2;
         internal ThreeArgumentsMethodCallExpression(MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2) : base(method)
         {
@@ -2176,11 +2191,13 @@ namespace FastExpressionCompiler.LightExpression
     public class FourArgumentsMethodCallExpression : MethodCallExpression
     {
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
-        public override int FewArgumentCount => 4;
         public readonly Expression Argument0;
         public readonly Expression Argument1;
         public readonly Expression Argument2;
         public readonly Expression Argument3;
+        public override int ArgumentCount => 4;
+        public override Expression GetArgument(int i) => 
+            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : Argument3;
         internal FourArgumentsMethodCallExpression(MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3) : base(method)
         {
@@ -2203,12 +2220,14 @@ namespace FastExpressionCompiler.LightExpression
     public class FiveArgumentsMethodCallExpression : MethodCallExpression
     {
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
-        public override int FewArgumentCount => 5;
         public readonly Expression Argument0;
         public readonly Expression Argument1;
         public readonly Expression Argument2;
         public readonly Expression Argument3;
         public readonly Expression Argument4;
+        public override int ArgumentCount => 5;
+        public override Expression GetArgument(int i) => 
+            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : i == 3 ? Argument3 : Argument4;
         internal FiveArgumentsMethodCallExpression(MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4)
             : base(method)
@@ -2227,6 +2246,39 @@ namespace FastExpressionCompiler.LightExpression
         internal InstanceFiveArgumentsMethodCallExpression(Expression instance, MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4)
             : base(method, argument0, argument1, argument2, argument3, argument4) => Object = instance;
+    }
+
+    public class SixArgumentsMethodCallExpression : MethodCallExpression
+    {
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
+        public readonly Expression Argument0;
+        public readonly Expression Argument1;
+        public readonly Expression Argument2;
+        public readonly Expression Argument3;
+        public readonly Expression Argument4;
+        public readonly Expression Argument5;
+        public override int ArgumentCount => 6;
+        public override Expression GetArgument(int i) => 
+            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : i == 3 ? Argument3 : i == 4 ? Argument4 : Argument5;
+        internal SixArgumentsMethodCallExpression(MethodInfo method,
+            Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4, Expression argument5)
+            : base(method)
+        {
+            Argument0 = argument0;
+            Argument1 = argument1;
+            Argument2 = argument2;
+            Argument3 = argument3;
+            Argument4 = argument4;
+            Argument5 = argument5;
+        }
+    }
+
+    public sealed class InstanceSixArgumentsMethodCallExpression : SixArgumentsMethodCallExpression
+    {
+        public override Expression Object { get; }
+        internal InstanceSixArgumentsMethodCallExpression(Expression instance, MethodInfo method,
+            Expression argument0, Expression argument1, Expression argument2, Expression argument3, Expression argument4, Expression argument5)
+            : base(method, argument0, argument1, argument2, argument3, argument4, argument5) => Object = instance;
     }
 
     public abstract class MemberExpression : Expression
