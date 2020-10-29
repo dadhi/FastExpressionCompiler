@@ -1306,7 +1306,7 @@ namespace FastExpressionCompiler
 #else
             var newExpr = expr.NewExpression;
 #endif
-                ;
+
             if (!TryCollectBoundConstants(ref closure, newExpr, paramExprs, isNestedLambda, ref rootClosure))
                 return false;
 

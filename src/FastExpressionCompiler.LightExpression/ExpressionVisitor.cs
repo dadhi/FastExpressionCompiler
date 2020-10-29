@@ -280,8 +280,12 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitIndex(IndexExpression node)
         {
             var instance = Visit(node.Object);
-            var arguments = Visit(node.Arguments);
-            if (instance == node.Object && ReferenceEquals(arguments, node.Arguments))
+#if SUPPORTS_ARGUMENT_PROVIDER
+            var arguments = VisitArguments((IArgumentProvider)node);
+#else            
+            var arguments = VisitArguments(node.Arguments);
+#endif
+            if (instance == node.Object && arguments == null)
                 return node;
             return Expression.MakeIndex(instance, node.Indexer, arguments);
         }

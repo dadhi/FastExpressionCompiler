@@ -237,12 +237,10 @@ namespace FastExpressionCompiler.LightExpression
             Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
             new FiveArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4);
 
-        public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments)
-        {
-            if (arguments == null || arguments.Length == 0)
-                return new MethodCallExpression(method);
-            return new ManyArgumentsMethodCallExpression(method, arguments);
-        }
+        public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
+            arguments == null || arguments.Length == 0
+                ? new MethodCallExpression(method)
+                : new ManyArgumentsMethodCallExpression(method, arguments);
 
         public static MethodCallExpression Call(MethodInfo method, IEnumerable<Expression> arguments)
         {
@@ -391,11 +389,14 @@ namespace FastExpressionCompiler.LightExpression
             Property(expression, expression.Type.FindProperty(propertyName)
                 ?? throw new ArgumentException($"Declared property with the name '{propertyName}' is not found in '{expression.Type}'", nameof(propertyName)));
 
+        public static IndexExpression Property(Expression instance, PropertyInfo indexer, Expression argument) =>
+            new HasIndexerOneArgumentIndexExpression(instance, indexer, argument);
+
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, params Expression[] arguments) =>
-            new IndexWithIndexerExpression(instance, indexer, arguments);
+            new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments);
 
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
-            new IndexWithIndexerExpression(instance, indexer, arguments.AsReadOnlyList());
+            new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments.AsReadOnlyList());
 
         public static MemberExpression PropertyOrField(Expression expression, string memberName) =>
             expression.Type.FindProperty(memberName) != null
@@ -418,15 +419,14 @@ namespace FastExpressionCompiler.LightExpression
                 ? Property(instance, indexer, arguments) 
                 : ArrayAccess(instance, arguments);
 
-        // todo: @perf optimize for the single index
         public static IndexExpression ArrayAccess(Expression array, Expression index) =>
-            new IndexExpression(array, new[] { index });
+            new OneArgumentIndexExpression(array, index);
 
         public static IndexExpression ArrayAccess(Expression array, params Expression[] indexes) =>
-            new IndexExpression(array, indexes);
+            new ManyArgumentsIndexExpression(array, indexes);
 
         public static IndexExpression ArrayAccess(Expression array, IEnumerable<Expression> indexes) =>
-            new IndexExpression(array, indexes.AsReadOnlyList());
+            new ManyArgumentsIndexExpression(array, indexes.AsReadOnlyList());
 
         public static MemberExpression Field(FieldInfo field) =>
             new FieldExpression(field);
@@ -2531,20 +2531,19 @@ namespace FastExpressionCompiler.LightExpression
             Type = type;
     }
 
-    // todo: @perf optimize for the single argument which is majority of the cases
     /// <summary>For indexer property or array access.</summary>
-    public class IndexExpression : Expression // todo: @incomplete IArgumentProvider
+    public abstract class IndexExpression : Expression, IArgumentProvider
     {
-        public override ExpressionType NodeType => ExpressionType.Index;
-        public override Type Type => Indexer?.PropertyType ?? Object.Type.GetElementType();
-        public readonly IReadOnlyList<Expression> Arguments;
+        public sealed override ExpressionType NodeType => ExpressionType.Index;
+        public sealed override Type Type => Indexer?.PropertyType ?? Object.Type.GetElementType();
+        public abstract IReadOnlyList<Expression> Arguments { get; }
         public readonly Expression Object;
         public virtual PropertyInfo Indexer => null;
-        internal IndexExpression(Expression @object, IReadOnlyList<Expression> arguments)
-        { 
-            Object = @object;
-            Arguments = arguments;
-        }
+
+        public virtual int ArgumentCount => Arguments.Count;
+        public virtual Expression GetArgument(int index) => Arguments[index];
+
+        internal IndexExpression(Expression @object) => Object = @object;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitIndex(this);
 
@@ -2552,10 +2551,34 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.MakeIndex(Object.ToExpression(ref exprsConverted), Indexer, ToExpressions(Arguments, ref exprsConverted));
     }
 
-    public sealed class IndexWithIndexerExpression : IndexExpression
+    public class OneArgumentIndexExpression : IndexExpression
+    {
+        public readonly Expression Argument;
+        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument };
+        public override int ArgumentCount => 1;
+        public override Expression GetArgument(int index) => Argument;
+        internal OneArgumentIndexExpression(Expression @object, Expression argument) : base(@object) =>
+            Argument = argument;
+    }
+
+    public class ManyArgumentsIndexExpression : IndexExpression
+    {
+        public sealed override IReadOnlyList<Expression> Arguments { get; }
+        internal ManyArgumentsIndexExpression(Expression @object, IReadOnlyList<Expression> arguments) : base(@object) =>
+            Arguments = arguments;
+    }
+
+    public sealed class HasIndexerOneArgumentIndexExpression : OneArgumentIndexExpression
     {
         public override PropertyInfo Indexer { get; }
-        internal IndexWithIndexerExpression(Expression @object, PropertyInfo indexer, IReadOnlyList<Expression> arguments) 
+        internal HasIndexerOneArgumentIndexExpression(Expression @object, PropertyInfo indexer, Expression argument) 
+            : base(@object, argument) => Indexer = indexer;
+    }
+
+    public sealed class HasIndexerManyArgumentsIndexExpression : ManyArgumentsIndexExpression
+    {
+        public override PropertyInfo Indexer { get; }
+        internal HasIndexerManyArgumentsIndexExpression(Expression @object, PropertyInfo indexer, IReadOnlyList<Expression> arguments) 
             : base(@object, arguments) => Indexer = indexer;
     }
 
