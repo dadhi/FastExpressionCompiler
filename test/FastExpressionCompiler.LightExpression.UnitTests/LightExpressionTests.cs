@@ -22,6 +22,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_compile_complex_expr_with_Array_Properties_and_Casts();
             Can_embed_normal_Expression_into_LightExpression_eg_as_Constructor_argument();
             Should_output_the_System_and_LightExpression_to_the_identical_construction_syntax();
+            Should_output_the_System_and_LightExpression_to_the_identical_CSharp_syntax();
             Expression_produced_by_ToExpressionString_should_compile();
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
             return 10;
@@ -226,6 +227,18 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Assert.AreEqual(ses, les);
         }
 
+        [Test]
+        public void Should_output_the_System_and_LightExpression_to_the_identical_CSharp_syntax()
+        {
+            var se = CreateComplexExpression("p");
+            var le = CreateComplexLightExpression("p");
+
+            var ses = se.ToCSharpString();
+            var les = le.ToCSharpString();
+
+            StringAssert.Contains("Prop = new LightExpressionTests.P(new LightExpressionTests.B())", ses);
+            Assert.AreEqual(ses, les);
+        }
 
         [Test]
         public void Expression_produced_by_ToExpressionString_should_compile()

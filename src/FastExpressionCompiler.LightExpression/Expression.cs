@@ -633,6 +633,15 @@ namespace FastExpressionCompiler.LightExpression
                 ? new Expression<TDelegate>(body)
                 : new TypedReturnExpression<TDelegate>(body, returnType);
 
+        [MethodImpl((MethodImplOptions)256)]
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, 
+            ParameterExpression param0, Type returnType) where TDelegate : System.Delegate 
+        {
+            if (returnType == body.Type)
+                return new OneParameterExpression<TDelegate>(body, param0);
+            return new TypedReturnOneParameterExpression<TDelegate>(body, param0, returnType);
+        }
+
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body) where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, GetDelegateReturnType(typeof(TDelegate)));
 
@@ -647,8 +656,14 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) 
             where TDelegate : System.Delegate => Lambda<TDelegate>(body, parameters.AsReadOnlyList(), returnType);
 
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, params ParameterExpression[] parameters) where TDelegate : System.Delegate =>
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, params ParameterExpression[] parameters) 
+            where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression param0) 
+            where TDelegate : System.Delegate =>
+            Lambda<TDelegate>(body, param0, GetDelegateReturnType(typeof(TDelegate)));
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters) where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, parameters.AsReadOnlyList(), GetDelegateReturnType(typeof(TDelegate)));
@@ -657,37 +672,8 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
 
-        private static Type GetDelegateReturnType(Type delegateType)
-        {
-            var typeInfo = delegateType.GetTypeInfo();
-            if (typeInfo.IsGenericType)
-            {
-                var typeArguments = typeInfo.GenericTypeArguments;
-                var index = typeArguments.Length - 1;
-                var typeDef = typeInfo.GetGenericTypeDefinition();
-                if (typeDef == FuncTypes[index])
-                    return typeArguments[index];
-
-                if (typeDef == ActionTypes[index])
-                    return typeof(void);
-            }
-            else if (delegateType == typeof(Action))
-                return typeof(void);
-
-            return delegateType.FindDelegateInvokeMethod().ReturnType;
-        }
-
-        internal static readonly Type[] FuncTypes =
-        {
-            typeof(Func<>), typeof(Func<,>), typeof(Func<,,>), typeof(Func<,,,>), typeof(Func<,,,,>),
-            typeof(Func<,,,,,>), typeof(Func<,,,,,,>), typeof(Func<,,,,,,,>)
-        };
-
-        internal static readonly Type[] ActionTypes =
-        {
-            typeof(Action<>), typeof(Action<,>), typeof(Action<,,>), typeof(Action<,,,>),
-            typeof(Action<,,,,>), typeof(Action<,,,,,>), typeof(Action<,,,,,,>)
-        };
+        [MethodImpl((MethodImplOptions)256)]
+        private static Type GetDelegateReturnType(Type delegateType) => delegateType.GetMethod("Invoke").ReturnType;
 
         /// <summary>Creates a BinaryExpression that represents applying an array index operator to an array of rank one.</summary>
         /// <param name="array">A Expression to set the Left property equal to.</param>
@@ -2943,13 +2929,17 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public class LambdaExpression : Expression // todo: @incomplete IParameterProvider
+    public class LambdaExpression : Expression, IParameterProvider
     {
         public override ExpressionType NodeType => ExpressionType.Lambda;
         public override Type Type { get; }
         public readonly Expression Body;
         public virtual Type ReturnType => Body.Type;
         public virtual IReadOnlyList<ParameterExpression> Parameters => Tools.Empty<ParameterExpression>();
+
+        public virtual int ParameterCount => 0;
+        public virtual ParameterExpression GetParameter(int index) => throw new NotImplementedException();
+
         internal LambdaExpression(Type delegateType, Expression body)
         {
             Type = delegateType;
@@ -2968,8 +2958,26 @@ namespace FastExpressionCompiler.LightExpression
     public class TypedReturnLambdaExpression : LambdaExpression
     {
         public override Type ReturnType { get; }
-
         internal TypedReturnLambdaExpression(Type delegateType, Expression body, Type returnType) : base(delegateType, body) =>
+            ReturnType = returnType;
+    }
+
+    public class OneParameterLambdaExpression : LambdaExpression
+    {
+        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0 };
+        public readonly ParameterExpression Parameter0;
+        public override int ParameterCount => 1;
+        public override ParameterExpression GetParameter(int index) => Parameter0;
+        internal OneParameterLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression parameter) : base(delegateType, body) => 
+            Parameter0 = parameter;
+    }
+
+    public sealed class TypedReturnOneParameterLambdaExpression : OneParameterLambdaExpression
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnOneParameterLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression parameter, Type returnType) : base(delegateType, body, parameter) =>
             ReturnType = returnType;
     }
 
@@ -3010,15 +3018,24 @@ namespace FastExpressionCompiler.LightExpression
         public override Type ReturnType { get; }
         internal TypedReturnExpression(Expression body, Type returnType) : base(body) =>
             ReturnType = returnType;
+    }
 
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
+    public class OneParameterExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+    {
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0 };
+        public readonly ParameterExpression Parameter0;
+        public sealed override int ParameterCount => 1;
+        public sealed override ParameterExpression GetParameter(int index) => Parameter0;
+        internal OneParameterExpression(Expression body, ParameterExpression parameter0) : base(body) =>
+            Parameter0 = parameter0;
+    }
 
-        public new System.Linq.Expressions.Expression<TDelegate> ToLambdaExpression()
-        {
-            var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
-            return SysExpr.Lambda<TDelegate>(Body.ToExpression(ref exprsConverted),
-                ParameterExpression.ToParameterExpressions(Parameters, ref exprsConverted));
-        }
+    public sealed class TypedReturnOneParameterExpression<TDelegate> : OneParameterExpression<TDelegate> where TDelegate : System.Delegate
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnOneParameterExpression(Expression body, 
+            ParameterExpression parameter0, Type returnType) : base(body, parameter0) => 
+            ReturnType = returnType;
     }
 
     public sealed class ManyParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
@@ -3122,19 +3139,19 @@ namespace FastExpressionCompiler.LightExpression
     public interface IArgumentProvider
     {
         int ArgumentCount { get; }
-        Expression GetArgument(int i);
+        Expression GetArgument(int index);
     }
 
     public interface IArgumentProvider<T> 
     {
         public int ArgumentCount { get; }
-        public T GetArgument(int i);
+        public T GetArgument(int index);
     }
 
     public interface IParameterProvider
     {
         int ParameterCount { get; }
-        ParameterExpression GetParameter(int i);
+        ParameterExpression GetParameter(int index);
     }
 }
 

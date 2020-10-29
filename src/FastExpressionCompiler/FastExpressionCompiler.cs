@@ -5384,21 +5384,8 @@ namespace FastExpressionCompiler
                         x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                     else
                         sb.NewLineIdent(lineIdent).Append(x.Member.DeclaringType.ToCode(stripNamespace, printType));
-
-                    var name = x.Member.Name;
-                    if (x.Member is FieldInfo fi && x.Member.DeclaringType.IsValueType())
-                    {
-                        // btw, `fi.IsSpecialName` returns `false` :/
-                        if (name[0] == '<') // a backing field for the properties in struct, e.g. <Key>k__BackingField
-                        {
-                            var end = name.IndexOf('>');
-                            if (end > 1)
-                                name = name.Substring(1, end - 1);
-                        }
-                    }
-                    return sb.Append('.').Append(name);
+                    return sb.Append('.').Append(x.Member.GetCSharpName());
                 }
-
                 case ExpressionType.NewArrayBounds:
                 case ExpressionType.NewArrayInit:
                 {
@@ -5828,6 +5815,22 @@ namespace FastExpressionCompiler
             }
         }
 
+        private static string GetCSharpName(this MemberInfo m)
+        {
+            var name = m.Name;
+            if (m is FieldInfo fi && m.DeclaringType.IsValueType())
+            {
+                // btw, `fi.IsSpecialName` returns `false` :/
+                if (name[0] == '<') // a backing field for the properties in struct, e.g. <Key>k__BackingField
+                {
+                    var end = name.IndexOf('>');
+                    if (end > 1)
+                        name = name.Substring(1, end - 1);
+                }
+            }
+            return name;
+        }
+
         private const string NotSupportedExpression = "// NOT_SUPPORTED_EXPRESSION: ";
 
         internal static  StringBuilder ToCSharpString(this LabelTarget lt, StringBuilder sb) =>
@@ -5840,9 +5843,7 @@ namespace FastExpressionCompiler
             foreach (var b in bindings) 
             {
                 sb.NewLineIdent(lineIdent);
-                sb.AppendMember(b.Member, stripNamespace, printType);
-                sb.Append(" = ");
-                sb.NewLineIdent(lineIdent);
+                sb.Append(b.Member.Name).Append(" = ");
 
                 if (b is MemberAssignment ma) 
                 {

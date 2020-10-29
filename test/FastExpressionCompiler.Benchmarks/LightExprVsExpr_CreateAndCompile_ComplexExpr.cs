@@ -81,10 +81,10 @@ namespace FastExpressionCompiler.Benchmarks
 
         # V3-preview-03
 
-        |                Method |       Mean |    Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-        |---------------------- |-----------:|---------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-        |      CreateExpression | 4,498.0 ns | 89.35 ns | 182.53 ns |  6.64 |    0.45 | 0.3052 |     - |     - |    1304 B |
-        | CreateLightExpression |   677.4 ns | 13.41 ns |  32.14 ns |  1.00 |    0.00 | 0.1488 |     - |     - |     624 B |
+        |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+        |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+        |      CreateExpression | 3,351.7 ns | 59.81 ns | 55.94 ns | 10.03 |    0.23 | 0.3090 |     - |     - |    1304 B |
+        | CreateLightExpression |   334.3 ns |  4.85 ns |  4.53 ns |  1.00 |    0.00 | 0.1316 |     - |     - |     552 B |
 
         */
         [Benchmark]
