@@ -58,12 +58,12 @@ namespace FastExpressionCompiler.Benchmarks
     public class LightExprVsExpr_Create_ComplexExpr
     {
         /*
-        ## 25.01.2019
+        ## V2 baseline, 25.01.2019
 
                        Method  |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
         ---------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-         CreateLightExpression |   389.5 ns | 0.9547 ns | 0.7972 ns |  1.00 |    0.00 |      0.1693 |           - |           - |               800 B |
              CreateExpression  | 3,574.7 ns | 8.0032 ns | 7.4862 ns |  9.18 |    0.02 |      0.2823 |           - |           - |              1344 B |
+         CreateLightExpression |   389.5 ns | 0.9547 ns | 0.7972 ns |  1.00 |    0.00 |      0.1693 |           - |           - |               800 B |
 
         ## V3-preview-01
 
@@ -81,10 +81,10 @@ namespace FastExpressionCompiler.Benchmarks
 
         # V3-preview-03
 
-        |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-        |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-        |      CreateExpression | 2,937.6 ns | 56.13 ns | 46.87 ns |  6.30 |    0.13 | 0.3052 |     - |     - |    1304 B |
-        | CreateLightExpression |   466.3 ns |  7.19 ns |  6.37 ns |  1.00 |    0.00 | 0.1564 |     - |     - |     656 B |
+        |                Method |       Mean |    Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+        |---------------------- |-----------:|---------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+        |      CreateExpression | 4,498.0 ns | 89.35 ns | 182.53 ns |  6.64 |    0.45 | 0.3052 |     - |     - |    1304 B |
+        | CreateLightExpression |   677.4 ns | 13.41 ns |  32.14 ns |  1.00 |    0.00 | 0.1488 |     - |     - |     624 B |
 
         */
         [Benchmark]
