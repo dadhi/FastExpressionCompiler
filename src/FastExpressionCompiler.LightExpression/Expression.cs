@@ -2418,12 +2418,14 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.ListBind(Member, ListInitExpression.ToElementInits(Initializers, ref exprsConverted));
     }
 
-    public class InvocationExpression : Expression // todo: @incomplete IArgumentProvider
+    public class InvocationExpression : Expression, IArgumentProvider
     {
         public sealed override ExpressionType NodeType => ExpressionType.Invoke;
         public override Type Type => ((LambdaExpression)Expression).ReturnType;
-        public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
         public readonly Expression Expression;
+        public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
+        public virtual int ArgumentCount => 0;
+        public virtual Expression GetArgument(int index) => throw new NotImplementedException();
         internal InvocationExpression(Expression expression) => Expression = expression;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
@@ -2441,8 +2443,10 @@ namespace FastExpressionCompiler.LightExpression
 
     public class OneArgumentInvocationExpression : InvocationExpression
     {
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument };
         public readonly Expression Argument;
+        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument };
+        public sealed override int ArgumentCount => 1;
+        public sealed override Expression GetArgument(int index) => Argument;
         internal OneArgumentInvocationExpression(Expression expression, Expression argument) : base(expression) =>
             Argument = argument;
     }
@@ -2457,9 +2461,10 @@ namespace FastExpressionCompiler.LightExpression
 
     public class ManyArgumentsInvocationExpression : InvocationExpression
     {
-        public override IReadOnlyList<Expression> Arguments { get; }
-        internal ManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments)
-            : base(expression) =>
+        public sealed override IReadOnlyList<Expression> Arguments { get; }
+        public sealed override int ArgumentCount => Arguments.Count;
+        public sealed override Expression GetArgument(int index) => Arguments[index];
+        internal ManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments) : base(expression) =>
             Arguments = arguments;
     }
 

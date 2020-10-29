@@ -1025,17 +1025,14 @@ namespace FastExpressionCompiler
                     case ExpressionType.Invoke:
                     {
                         var invokeExpr = (InvocationExpression)expr;
-#if LIGHT_EXPRESSION
-                        if (invokeExpr is OneArgumentInvocationExpression oneArgExpr) 
-                        {
-                            if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
-                                return false;
-                            expr = oneArgExpr.Argument;
-                            continue;
-                        }
-#endif
+#if SUPPORTS_ARGUMENT_PROVIDER
+                        var invokeArgs = (IArgumentProvider)invokeExpr;
+                        var argCount = invokeArgs.ArgumentCount;
+#else
                         var invokeArgs = invokeExpr.Arguments;
-                        if (invokeArgs.Count == 0)
+                        var argCount = invokeArgs.Count;
+#endif
+                        if (argCount == 0)
                         {
                             expr = invokeExpr.Expression;
                             continue;
@@ -1044,12 +1041,18 @@ namespace FastExpressionCompiler
                         if (!TryCollectBoundConstants(ref closure, invokeExpr.Expression, paramExprs, isNestedLambda, ref rootClosure))
                             return false;
 
-                        var lastArgIndex = invokeArgs.Count - 1;
-                        if (lastArgIndex > 0)
-                            for (var i = 0; i < lastArgIndex; i++)
-                                if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-                                    return false;
+                        var lastArgIndex = argCount - 1;
+#if SUPPORTS_ARGUMENT_PROVIDER
+                        for (var i = 0; i < lastArgIndex; i++)
+                            if (!TryCollectBoundConstants(ref closure, invokeArgs.GetArgument(i), paramExprs, isNestedLambda, ref rootClosure))
+                                return false;
+                        expr = invokeArgs.GetArgument(lastArgIndex);
+#else
+                        for (var i = 0; i < lastArgIndex; i++)
+                            if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+                                return false;
                         expr = invokeArgs[lastArgIndex];
+#endif
                         continue;
                     }
                     case ExpressionType.Conditional:
@@ -3606,26 +3609,26 @@ namespace FastExpressionCompiler
 
                 var delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod();
 
-#if LIGHT_EXPRESSION
-                if (expr is OneArgumentInvocationExpression oneArgExpr) 
-                {
-                    if (!TryEmit(oneArgExpr.Argument, paramExprs, il, ref closure, useResult & ~ParentFlags.InstanceAccess, 
-                        oneArgExpr.Argument.Type.IsByRef ? 0 : -1))
-                        return false;
-
-                    il.Emit(OpCodes.Call, delegateInvokeMethod);
-                    if ((parent & ParentFlags.IgnoreResult) != 0 && delegateInvokeMethod.ReturnType != typeof(void))
-                        il.Emit(OpCodes.Pop);
-
-                    return true;
-                }
-#endif
+#if SUPPORTS_ARGUMENT_PROVIDER
+                var argExprs = (IArgumentProvider)expr;
+                var argCount = argExprs.ArgumentCount;
+#else
                 var argExprs = expr.Arguments;
-                if (argExprs.Count != 0) 
-                    for (var i = 0; i < argExprs.Count; i++)
-                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, useResult & ~ParentFlags.InstanceAccess, 
-                            argExprs[i].Type.IsByRef ? i : -1))
+                var argCount = argExprs.Count;
+#endif
+                if (argCount != 0) 
+                {
+                    for (var i = 0; i < argCount; i++) 
+                    {
+#if SUPPORTS_ARGUMENT_PROVIDER
+                        var argExpr = argExprs.GetArgument(i);
+#else
+                        var argExpr = argExprs[i];
+#endif
+                        if (!TryEmit(argExpr, paramExprs, il, ref closure, useResult & ~ParentFlags.InstanceAccess, argExpr.Type.IsByRef ? i : -1))
                             return false;
+                    }
+                }
 
                 il.Emit(OpCodes.Call, delegateInvokeMethod);
                 if ((parent & ParentFlags.IgnoreResult) != 0 && delegateInvokeMethod.ReturnType != typeof(void))

@@ -222,16 +222,12 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitInvocation(InvocationExpression node)
         {
             var expression = Visit(node.Expression);
-            if (node is OneArgumentInvocationExpression oneArgExpr)
-            {
-                var newArg = Visit(oneArgExpr.Argument);
-                if (expression == node.Expression && newArg == oneArgExpr.Argument)
-                    return node;
-                return Expression.Invoke(node.Type, expression, newArg);
-            }
-         
-            var arguments = Visit(node.Arguments);
-            if (expression == node.Expression && ReferenceEquals(arguments, node.Arguments))
+#if SUPPORTS_ARGUMENT_PROVIDER
+            var arguments = VisitArguments((IArgumentProvider)node);
+#else            
+            var arguments = VisitArguments(node.Arguments);
+#endif
+            if (expression == node.Expression && arguments == null)
                 return node;
             return Expression.Invoke(node.Type, expression, arguments);
         }
