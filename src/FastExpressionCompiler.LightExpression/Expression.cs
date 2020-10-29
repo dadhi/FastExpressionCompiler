@@ -754,17 +754,22 @@ namespace FastExpressionCompiler.LightExpression
             new ListInitExpression(newExpression, initializers);
 
         public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
-            new NewArrayInitExpression(type.MakeArrayType(), initializers);
+            new ManyElementsNewArrayInitExpression(type.MakeArrayType(), initializers);
 
         public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) =>
-            new NewArrayInitExpression(type.MakeArrayType(), initializers.AsReadOnlyList());
+            new ManyElementsNewArrayInitExpression(type.MakeArrayType(), initializers.AsReadOnlyList());
+
+        public static NewArrayExpression NewArrayInit(Type type, Expression element) =>
+            new OneElementNewArrayInitExpression(type.MakeArrayType(), element);
+
+        public static NewArrayExpression NewArrayInit(Type type, Expression element0, Expression element1) =>
+            new TwoElementNewArrayInitExpression(type.MakeArrayType(), element0, element1);
 
         public static NewArrayExpression MakeArrayBounds(Type type, IReadOnlyList<Expression> bounds) =>
-            new NewArrayBoundsExpression(bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count), bounds);
+            new ManyBoundsNewArrayBoundsExpression(bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count), bounds);
 
-        // todo: @perf optimize for the single bound
         public static NewArrayExpression NewArrayBounds(Type type, Expression bound) =>
-            new NewArrayBoundsExpression(type.MakeArrayType(), new[] { bound });
+            new OneBoundNewArrayBoundsExpression(type.MakeArrayType(), bound);
 
         public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
             MakeArrayBounds(type, bounds);
@@ -2088,15 +2093,13 @@ namespace FastExpressionCompiler.LightExpression
             Arguments = arguments;
     }
 
-    public abstract class NewArrayExpression : Expression
+    public abstract class NewArrayExpression : Expression, IArgumentProvider
     {
         public sealed override Type Type { get; }
-        public readonly IReadOnlyList<Expression> Expressions;
-        internal NewArrayExpression(Type arrayType, IReadOnlyList<Expression> elements)
-        {
-            Type        = arrayType;
-            Expressions = elements;
-        }
+        public abstract IReadOnlyList<Expression> Expressions { get; }
+        public virtual int ArgumentCount => Expressions.Count;
+        public virtual Expression GetArgument(int i) => Expressions[i];
+        internal NewArrayExpression(Type arrayType) => Type = arrayType;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
 
@@ -2108,16 +2111,55 @@ namespace FastExpressionCompiler.LightExpression
                 : SysExpr.NewArrayBounds(Type.GetElementType(), ToExpressions(Expressions, ref exprsConverted));
     }
 
-    public sealed class NewArrayInitExpression : NewArrayExpression
+    public sealed class ManyElementsNewArrayInitExpression : NewArrayExpression
     {
         public override ExpressionType NodeType => ExpressionType.NewArrayInit;
-        internal NewArrayInitExpression(Type arrayType, IReadOnlyList<Expression> elements) : base(arrayType, elements) {}
+        public override IReadOnlyList<Expression> Expressions { get; }
+        internal ManyElementsNewArrayInitExpression(Type arrayType, IReadOnlyList<Expression> elements) : base(arrayType) =>
+            Expressions = elements;
     }
 
-    public sealed class NewArrayBoundsExpression : NewArrayExpression // todo: @incomplete IArgumentProvider
+    public sealed class OneElementNewArrayInitExpression : NewArrayExpression
+    {
+        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+        public readonly Expression Element;
+        public override IReadOnlyList<Expression> Expressions => new[] { Element };
+        public override int ArgumentCount => 1;
+        public override Expression GetArgument(int i) => Element;
+        internal OneElementNewArrayInitExpression(Type arrayType, Expression element) : base(arrayType) =>
+            Element = element;
+    }
+
+    public sealed class TwoElementNewArrayInitExpression : NewArrayExpression
+    {
+        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+        public readonly Expression Element0, Element1;
+        public override IReadOnlyList<Expression> Expressions => new[] { Element0, Element1 };
+        public override int ArgumentCount => 2;
+        public override Expression GetArgument(int i) => i == 0 ? Element0 : Element1;
+        internal TwoElementNewArrayInitExpression(Type arrayType, Expression element0, Expression element1) : base(arrayType)
+        { 
+            Element0 = element0; Element1 = element1;
+        }
+    }
+
+    public sealed class ManyBoundsNewArrayBoundsExpression : NewArrayExpression
     {
         public override ExpressionType NodeType => ExpressionType.NewArrayBounds;
-        internal NewArrayBoundsExpression(Type arrayType, IReadOnlyList<Expression> elements) : base(arrayType, elements) {}
+        public override IReadOnlyList<Expression> Expressions { get; }
+        internal ManyBoundsNewArrayBoundsExpression(Type arrayType, IReadOnlyList<Expression> bounds) : base(arrayType) =>
+            Expressions = bounds;
+    }
+
+    public sealed class OneBoundNewArrayBoundsExpression : NewArrayExpression
+    {
+        public override ExpressionType NodeType => ExpressionType.NewArrayBounds;
+        public readonly Expression Bound;
+        public override IReadOnlyList<Expression> Expressions => new[] { Bound };
+        public override int ArgumentCount => 1;
+        public override Expression GetArgument(int i) => Bound;
+        internal OneBoundNewArrayBoundsExpression(Type arrayType, Expression bound) : base(arrayType) =>
+            Bound = bound;
     }
 
     public class MethodCallExpression : Expression, IArgumentProvider

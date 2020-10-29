@@ -304,12 +304,17 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual Expression VisitNewArray(NewArrayExpression node)
         {
-            var expressions = Visit(node.Expressions);
-            if (ReferenceEquals(expressions, node.Expressions))
+#if LIGHT_EXPRESSION
+            var expressions = VisitArguments((IArgumentProvider)node);
+#else
+            var expressions = VisitArguments(node.Expressions);
+#endif
+            if (expressions == null)
                 return node;
+
             if (node.NodeType == ExpressionType.NewArrayInit)
-                return new NewArrayInitExpression(node.Type, expressions);
-            return new NewArrayBoundsExpression(node.Type, expressions);
+                return new ManyElementsNewArrayInitExpression(node.Type, expressions);
+            return new ManyBoundsNewArrayBoundsExpression(node.Type, expressions);
         }
 
         protected internal virtual Expression VisitNew(NewExpression node)
