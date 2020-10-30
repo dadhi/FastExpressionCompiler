@@ -958,6 +958,12 @@ namespace FastExpressionCompiler
                     }
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
+                        if (expr.NodeType == ExpressionType.NewArrayInit)
+                        {
+                            // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
+                            if (expr.Type.GetArrayRank() > 1) 
+                                return false;
+                        }
 #if LIGHT_EXPRESSION
                         var arrElems = (IArgumentProvider)expr;
                         var elemCount = arrElems.ArgumentCount;
@@ -5062,7 +5068,17 @@ namespace FastExpressionCompiler
                 case ExpressionType.NewArrayInit:
                 {
                     var x = (NewArrayExpression)e;
-                    sb.Append(e.NodeType == ExpressionType.NewArrayInit ? "NewArrayInit(" : "NewArrayBounds(");
+                    if (e.NodeType == ExpressionType.NewArrayInit)
+                    {
+                        // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
+                        if (e.Type.GetArrayRank() > 1) 
+                            sb.NewLineIdent(lineIdent).Append(NotSupportedExpression).Append(e.NodeType).NewLineIdent(lineIdent);
+                        sb.Append("NewArrayInit(");
+                    }
+                    else
+                    {
+                        sb.Append("NewArrayBounds(");
+                    }
                     sb.NewLineIdent(lineIdent).AppendTypeof(x.Type.GetElementType(), stripNamespace, printType).Append(", ");
                     sb.NewLineIdentArgumentExprs(x.Expressions, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(')');
