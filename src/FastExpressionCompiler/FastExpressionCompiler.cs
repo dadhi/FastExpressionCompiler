@@ -1756,7 +1756,7 @@ namespace FastExpressionCompiler
                 if (indexerProp != null)
                     indexerPropGetter = indexerProp.DeclaringType.FindPropertyGetMethod(indexerProp.Name);
 
-                if (indexArgCont > 0)
+                if (indexArgCount > 0)
                 {
                     if (indexerPropGetter == null) 
                     {
