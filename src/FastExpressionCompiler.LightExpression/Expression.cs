@@ -583,11 +583,16 @@ namespace FastExpressionCompiler.LightExpression
         public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters) =>
             parameters == null || parameters.Count == 0
                 ? new LambdaExpression(Tools.GetFuncOrActionType(body.Type), body)
-                : new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, 
-                    parameters);
+                : new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters);
 
         public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) =>
             Lambda(body, (IReadOnlyList<ParameterExpression>)parameters);
+
+        public static LambdaExpression Lambda(Expression body, ParameterExpression parameter) =>
+            new OneParameterLambdaExpression(Tools.GetFuncOrActionType(parameter.Type, body.Type), body, parameter);
+
+        public static LambdaExpression Lambda(Expression body, ParameterExpression parameter0, ParameterExpression parameter1) =>
+            new TwoParametersLambdaExpression(Tools.GetFuncOrActionType(parameter0.Type, parameter1.Type, body.Type), body, parameter0, parameter1);
 
         public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
         {
@@ -2959,10 +2964,8 @@ namespace FastExpressionCompiler.LightExpression
         public readonly Expression Body;
         public virtual Type ReturnType => Body.Type;
         public virtual IReadOnlyList<ParameterExpression> Parameters => Tools.Empty<ParameterExpression>();
-
-        public virtual int ParameterCount => 0;
-        public virtual ParameterExpression GetParameter(int index) => throw new NotImplementedException();
-
+        public virtual int ParameterCount => Parameters.Count;//0; // todo: @incomplete
+        public virtual ParameterExpression GetParameter(int index) => Parameters[index]; // throw new NotImplementedException("Requested the parameter from the no-parameter lambda");
         internal LambdaExpression(Type delegateType, Expression body)
         {
             Type = delegateType;
@@ -2991,9 +2994,21 @@ namespace FastExpressionCompiler.LightExpression
         public readonly ParameterExpression Parameter0;
         public override int ParameterCount => 1;
         public override ParameterExpression GetParameter(int index) => Parameter0;
-        internal OneParameterLambdaExpression(Type delegateType, Expression body, 
-            ParameterExpression parameter) : base(delegateType, body) => 
+        internal OneParameterLambdaExpression(Type delegateType, Expression body, ParameterExpression parameter) : base(delegateType, body) => 
             Parameter0 = parameter;
+    }
+
+    public class TwoParametersLambdaExpression : LambdaExpression
+    {
+        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1 };
+        public readonly ParameterExpression Parameter0, Parameter1;
+        public override int ParameterCount => 2;
+        public override ParameterExpression GetParameter(int index) => index == 0 ? Parameter0 : Parameter1;
+        internal TwoParametersLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression parameter0, ParameterExpression parameter1) : base(delegateType, body)
+        {
+            Parameter0 = parameter0; Parameter1 = parameter1;
+        }
     }
 
     public sealed class TypedReturnOneParameterLambdaExpression : OneParameterLambdaExpression
@@ -3004,13 +3019,23 @@ namespace FastExpressionCompiler.LightExpression
             ReturnType = returnType;
     }
 
+    public sealed class TypedReturnTwoParametersLambdaExpression : TwoParametersLambdaExpression
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnTwoParametersLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression parameter0, ParameterExpression parameter1,
+            Type returnType) : base(delegateType, body, parameter0, parameter1) =>
+            ReturnType = returnType;
+    }
+
     public sealed class ManyParametersLambdaExpression : LambdaExpression
     {
-        public override IReadOnlyList<ParameterExpression> Parameters { get; }
-
+        private readonly IReadOnlyList<ParameterExpression> _parameters;
+        public override IReadOnlyList<ParameterExpression> Parameters => _parameters;
+        public override int ParameterCount => _parameters.Count;
+        public override ParameterExpression GetParameter(int index) => _parameters[index];
         internal ManyParametersLambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters)
-            : base(delegateType, body) =>
-            Parameters = parameters;
+            : base(delegateType, body) => _parameters = parameters;
     }
 
     public sealed class ManyParametersTypedReturnLambdaExpression : TypedReturnLambdaExpression

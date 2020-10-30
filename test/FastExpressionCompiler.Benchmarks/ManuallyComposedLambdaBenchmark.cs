@@ -49,6 +49,32 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly FastExpressionCompiler.LightExpression.Expression<Func<B, X>> _leExpr = ComposeManualExprWithParams(_aConstLEExpr);
 
         [MemoryDiagnoser]
+        public class Create_and_Compile
+        {
+/*
+            ## v3-preview-03
+
+|                 Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|----------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|     SystemExpr_Compile | 171.098 us | 1.9611 us | 1.8344 us | 30.22 |    0.85 | 1.2207 | 0.4883 |      - |   5.11 KB |
+| SystemExpr_CompileFast |   7.314 us | 0.1273 us | 0.1191 us |  1.29 |    0.05 | 0.4883 | 0.2441 | 0.0305 |   2.03 KB |
+|  LightExpr_CompileFast |   5.647 us | 0.0813 us | 0.1217 us |  1.00 |    0.00 | 0.3815 | 0.1907 | 0.0305 |   1.59 KB |
+*/
+
+            [Benchmark]
+            public Func<B, X> SystemExpr_Compile() => 
+                ComposeManualExprWithParams(Expression.Constant(_a, typeof(A))).Compile();
+
+            [Benchmark]
+            public Func<B, X> SystemExpr_CompileFast() => 
+                ComposeManualExprWithParams(Expression.Constant(_a, typeof(A))).CompileFast(true);
+
+            [Benchmark(Baseline = true)]
+            public Func<B, X> LightExpr_CompileFast() =>
+                LightExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ComposeManualExprWithParams(LightExpression.Expression.Constant(_a, typeof(A))), true);
+        }
+
+        [MemoryDiagnoser]
         public class Compilation
         {
             /*
@@ -71,12 +97,11 @@ namespace FastExpressionCompiler.Benchmarks
 
             ## v3-preview-03
 
-            |                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-            |---------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-            |                     Compile | 157.942 us | 3.0835 us | 3.0285 us | 31.31 |    1.07 | 0.9766 | 0.4883 |      - |   4.59 KB |
-            |                 CompileFast |   4.989 us | 0.0976 us | 0.1335 us |  0.99 |    0.04 | 0.3510 | 0.1678 | 0.0305 |   1.46 KB |
-            | CompileFast_LightExpression |   5.060 us | 0.1006 us | 0.1343 us |  1.00 |    0.00 | 0.3586 | 0.1755 | 0.0305 |   1.48 KB |
-
+            |                      Method |       Mean |     Error |    StdDev |     Median | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |---------------------------- |-----------:|----------:|----------:|-----------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |                     Compile | 154.112 us | 1.7660 us | 1.4747 us | 154.045 us | 32.73 |    1.11 | 0.9766 | 0.4883 |      - |   4.59 KB |
+            |                 CompileFast |   4.828 us | 0.0950 us | 0.1984 us |   4.750 us |  1.04 |    0.05 | 0.3510 | 0.1755 | 0.0305 |   1.46 KB |
+            | CompileFast_LightExpression |   4.704 us | 0.0940 us | 0.1188 us |   4.708 us |  1.00 |    0.00 | 0.3433 | 0.1678 | 0.0305 |   1.42 KB |
 */
 
             [Benchmark]

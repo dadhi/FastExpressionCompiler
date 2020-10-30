@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue14_String_constant_comparisons_fail().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue65_Add_LightExpression_Elvis_operator_support().Run();
             // new Issue261_Loop_wih_conditions_fails().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();

@@ -13,7 +13,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
-    public class Issue14_String_constant_comparisons_fail
+    public class Issue14_String_constant_comparisons_fail : ITest
     {
         public int Run()
         {
