@@ -1089,9 +1089,15 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Index:
                         var indexExpr = (IndexExpression)expr;
-                        var indexArgs = indexExpr.Arguments; // todo: @perf handle a single argument expr, do continue on it as well
-                        for (var i = 0; i < indexArgs.Count; i++)
-                            if (!TryCollectBoundConstants(ref closure, indexArgs[i], paramExprs, isNestedLambda, ref rootClosure))
+#if SUPPORTS_ARGUMENT_PROVIDER
+                        var indexArgs = (IArgumentProvider)indexExpr;
+                        var indexArgCount = indexArgs.ArgumentCount;
+#else
+                        var indexArgs = indexExpr.Arguments;
+                        var indexArgCount = indexArgs.Count;
+#endif
+                        for (var i = 0; i < indexArgCount; i++)
+                            if (!TryCollectBoundConstants(ref closure, indexArgs.GetArgument(i), paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
                         if (indexExpr.Object == null)
                             return true;
@@ -1738,17 +1744,39 @@ namespace FastExpressionCompiler
                     !TryEmit(indexExpr.Object, paramExprs, il, ref closure, parent))
                     return false;
 
-                var indexArgExprs = indexExpr.Arguments;
-                for (var i = 0; i < indexArgExprs.Count; i++)
-                    if (!TryEmit(indexArgExprs[i], paramExprs, il, ref closure, parent,
-                        indexArgExprs[i].Type.IsByRef ? i : -1))
-                        return false;
-
+#if SUPPORTS_ARGUMENT_PROVIDER
+                var indexArgs = (IArgumentProvider)indexExpr;
+                var indexArgCount = indexArgs.ArgumentCount;
+#else
+                var indexArgs = indexExpr.Arguments;
+                var indexArgCount = indexArgs.Count;
+#endif
                 var indexerProp = indexExpr.Indexer;
+                MethodInfo indexerPropGetter = null;
                 if (indexerProp != null)
-                    return EmitMethodCall(il, indexerProp.DeclaringType.FindPropertyGetMethod(indexerProp.Name));
+                    indexerPropGetter = indexerProp.DeclaringType.FindPropertyGetMethod(indexerProp.Name);
 
-                if (indexExpr.Arguments.Count == 1) // one dimensional array
+                if (indexArgCont > 0)
+                {
+                    if (indexerPropGetter == null) 
+                    {
+                        for (var i = 0; i < indexArgCount; i++)
+                            if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, parent, -1))
+                                return false;
+                    }
+                    else
+                    {
+                        var types = indexerPropGetter.GetParameters();
+                        for (var i = 0; i < indexArgCount; i++)
+                            if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, parent, types[i].ParameterType.IsByRef ? i : -1))
+                                return false;
+                    }
+                }
+
+                if (indexerPropGetter != null)
+                    return EmitMethodCall(il, indexerPropGetter);
+
+                if (indexArgCount == 1) // one dimensional array
                     return TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure);
 
                 // multi dimensional array
