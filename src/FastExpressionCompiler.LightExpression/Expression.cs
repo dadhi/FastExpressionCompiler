@@ -591,8 +591,24 @@ namespace FastExpressionCompiler.LightExpression
         public static LambdaExpression Lambda(Expression body, ParameterExpression parameter) =>
             new OneParameterLambdaExpression(Tools.GetFuncOrActionType(parameter.Type, body.Type), body, parameter);
 
-        public static LambdaExpression Lambda(Expression body, ParameterExpression parameter0, ParameterExpression parameter1) =>
-            new TwoParametersLambdaExpression(Tools.GetFuncOrActionType(parameter0.Type, parameter1.Type, body.Type), body, parameter0, parameter1);
+        public static LambdaExpression Lambda(Expression body, ParameterExpression p0, ParameterExpression p1) =>
+            new TwoParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, body.Type), body, p0, p1);
+
+        public static LambdaExpression Lambda(Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) =>
+            new ThreeParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, body.Type), body, p0, p1, p2);
+
+        public static LambdaExpression Lambda(Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3) =>
+            new FourParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, p3.Type, body.Type), body, p0, p1, p2, p3);
+
+        public static LambdaExpression Lambda(Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4) =>
+            new FiveParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, p3.Type, p4.Type, body.Type), body, p0, p1, p2, p3, p4);
+
+        public static LambdaExpression Lambda(Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5) =>
+            new SixParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, p3.Type, p4.Type, p5.Type, body.Type), body, p0, p1, p2, p3, p4, p5);
 
         public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
         {
@@ -3008,6 +3024,64 @@ namespace FastExpressionCompiler.LightExpression
             ParameterExpression parameter0, ParameterExpression parameter1) : base(delegateType, body)
         {
             Parameter0 = parameter0; Parameter1 = parameter1;
+        }
+    }
+
+    public class ThreeParametersLambdaExpression : LambdaExpression
+    {
+        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2 };
+        public readonly ParameterExpression Parameter0, Parameter1, Parameter2;
+        public override int ParameterCount => 3;
+        public override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : Parameter2;
+        internal ThreeParametersLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression parameter0, ParameterExpression parameter1, ParameterExpression parameter2) : base(delegateType, body)
+        {
+            Parameter0 = parameter0; Parameter1 = parameter1; Parameter2 = parameter2;
+        }
+    }
+
+    public class FourParametersLambdaExpression : LambdaExpression
+    {
+        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3 };
+        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3;
+        public override int ParameterCount => 4;
+        public override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : Parameter3;
+        internal FourParametersLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression parameter0, ParameterExpression parameter1, ParameterExpression parameter2, ParameterExpression parameter3) 
+            : base(delegateType, body)
+        {
+            Parameter0 = parameter0; Parameter1 = parameter1; Parameter2 = parameter2; Parameter3 = parameter3;
+        }
+    }
+
+    public class FiveParametersLambdaExpression : LambdaExpression
+    {
+        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4 };
+        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4;
+        public override int ParameterCount => 5;
+        public override ParameterExpression GetParameter(int i) => 
+            i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : Parameter4;
+        internal FiveParametersLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression parameter0, ParameterExpression parameter1, ParameterExpression parameter2, ParameterExpression parameter3,
+            ParameterExpression parameter4) : base(delegateType, body)
+        {
+            Parameter0 = parameter0; Parameter1 = parameter1; Parameter2 = parameter2; Parameter3 = parameter3; Parameter4 = parameter4;
+        }
+    }
+
+    public class SixParametersLambdaExpression : LambdaExpression
+    {
+        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5 };
+        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5;
+        public override int ParameterCount => 6;
+        public override ParameterExpression GetParameter(int i) => 
+            i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : i == 5 ? Parameter4 : Parameter5;
+        internal SixParametersLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression parameter0, ParameterExpression parameter1, ParameterExpression parameter2, ParameterExpression parameter3,
+            ParameterExpression parameter4, ParameterExpression parameter5) : base(delegateType, body)
+        {
+            Parameter0 = parameter0; Parameter1 = parameter1; Parameter2 = parameter2; Parameter3 = parameter3; Parameter4 = parameter4; 
+            Parameter5 = parameter5;
         }
     }
 
