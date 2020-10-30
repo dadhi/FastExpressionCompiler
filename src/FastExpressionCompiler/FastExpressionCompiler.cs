@@ -2773,12 +2773,18 @@ namespace FastExpressionCompiler
             private static bool EmitNewArrayBounds(NewArrayExpression expr,
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
-                var bounds = expr.Expressions; // todo: @perf optimize for the single bound
-                if (bounds.Count == 1)
-                {
-                    if (!TryEmit(bounds[0], paramExprs, il, ref closure, parent))
-                        return false;
+#if LIGHT_EXPRESSION
 
+                var bounds = (IArgumentProvider)expr;
+                var boundCount = bounds.ArgumentCount;
+#else
+                var bounds = expr.Expressions;
+                var boundCount = bounds.Count;
+#endif
+                if (boundCount == 1)
+                {
+                    if (!TryEmit(bounds.GetArgument(0), paramExprs, il, ref closure, parent))
+                        return false;
                     var elemType = expr.Type.GetElementType();
                     if (elemType == null)
                         return false;
@@ -2786,8 +2792,8 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
-                    for (var i = 0; i < bounds.Count; i++)
-                        if (!TryEmit(bounds[i], paramExprs, il, ref closure, parent))
+                    for (var i = 0; i < boundCount; i++)
+                        if (!TryEmit(bounds.GetArgument(i), paramExprs, il, ref closure, parent))
                             return false;
                     il.Emit(OpCodes.Newobj, expr.Type.GetTypeInfo().DeclaredConstructors.GetFirst());
                 }
