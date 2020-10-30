@@ -2901,7 +2901,6 @@ namespace FastExpressionCompiler
                 var bindings  = expr.Bindings;
                 var bindCount = bindings.Count;
 #endif
-
                 for (var i = 0; i < bindCount; i++)
                 {
                     var binding = bindings.GetArgument(i);
@@ -3614,16 +3613,14 @@ namespace FastExpressionCompiler
                 var argExprs = expr.Arguments;
                 var argCount = argExprs.Count;
 #endif
-                if (argCount != 0) 
+                if (argCount > 0) 
                 {
+                    var args = delegateInvokeMethod.GetParameters();
                     for (var i = 0; i < argCount; i++) 
                     {
-#if SUPPORTS_ARGUMENT_PROVIDER
                         var argExpr = argExprs.GetArgument(i);
-#else
-                        var argExpr = argExprs[i];
-#endif
-                        if (!TryEmit(argExpr, paramExprs, il, ref closure, useResult & ~ParentFlags.InstanceAccess, argExpr.Type.IsByRef ? i : -1))
+                        if (!TryEmit(argExpr, paramExprs, il, ref closure, useResult & ~ParentFlags.InstanceAccess, 
+                            args[i].ParameterType.IsByRef ? i : -1))
                             return false;
                     }
                 }
