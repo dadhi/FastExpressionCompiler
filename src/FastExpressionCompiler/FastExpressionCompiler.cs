@@ -54,6 +54,7 @@ namespace FastExpressionCompiler
     using System.Reflection.Emit;
     using System.Threading;
     using System.Text;
+    using System.Runtime.CompilerServices;
     using static System.Environment;
 
     /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
@@ -923,17 +924,10 @@ namespace FastExpressionCompiler
                             return false;
 
                         var lastArgIndex = argCount - 1;
-#if SUPPORTS_ARGUMENT_PROVIDER
                         for (var i = 0; i < lastArgIndex; i++)
                             if (!TryCollectBoundConstants(ref closure, callArgs.GetArgument(i), paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
                         expr = callArgs.GetArgument(lastArgIndex);
-#else
-                        for (var i = 0; i < lastArgIndex; i++)
-                            if (!TryCollectBoundConstants(ref closure, callArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-                                return false;
-                        expr = callArgs[lastArgIndex];
-#endif
                         continue;
                     }
                     case ExpressionType.MemberAccess:
@@ -956,31 +950,27 @@ namespace FastExpressionCompiler
                         if (argCount == 0)
                             return true;
                         var lastArgIndex = argCount - 1;
-#if SUPPORTS_ARGUMENT_PROVIDER
                         for (var i = 0; i < lastArgIndex; i++)
                             if (!TryCollectBoundConstants(ref closure, ctorArgs.GetArgument(i), paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
                         expr = ctorArgs.GetArgument(lastArgIndex);
-#else
-                        for (var i = 0; i < lastArgIndex; i++)
-                            if (!TryCollectBoundConstants(ref closure, ctorArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-                                return false;
-                        expr = ctorArgs[lastArgIndex];
-#endif
                         continue;
                     }
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
-                        var elemExprs = ((NewArrayExpression)expr).Expressions;
-                        var elemExprsCount = elemExprs.Count;
-                        if (elemExprsCount == 0)
+#if LIGHT_EXPRESSION
+                        var arrElems = (IArgumentProvider)expr;
+                        var elemCount = arrElems.ArgumentCount;
+#else
+                        var arrElems = ((NewArrayExpression)expr).Expressions;
+                        var elemCount = arrElems.Count;
+#endif
+                        if (elemCount == 0)
                             return true;
-
-                        for (var i = 0; i < elemExprsCount - 1; i++)
-                            if (!TryCollectBoundConstants(ref closure, elemExprs[i], paramExprs, isNestedLambda, ref rootClosure))
+                        for (var i = 0; i < elemCount - 1; i++)
+                            if (!TryCollectBoundConstants(ref closure, arrElems.GetArgument(i), paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
-
-                        expr = elemExprs[elemExprsCount - 1];
+                        expr = arrElems.GetArgument(elemCount - 1);
                         continue;
 
                     case ExpressionType.MemberInit:
@@ -1042,17 +1032,10 @@ namespace FastExpressionCompiler
                             return false;
 
                         var lastArgIndex = argCount - 1;
-#if SUPPORTS_ARGUMENT_PROVIDER
                         for (var i = 0; i < lastArgIndex; i++)
                             if (!TryCollectBoundConstants(ref closure, invokeArgs.GetArgument(i), paramExprs, isNestedLambda, ref rootClosure))
                                 return false;
                         expr = invokeArgs.GetArgument(lastArgIndex);
-#else
-                        for (var i = 0; i < lastArgIndex; i++)
-                            if (!TryCollectBoundConstants(ref closure, invokeArgs[i], paramExprs, isNestedLambda, ref rootClosure))
-                                return false;
-                        expr = invokeArgs[lastArgIndex];
-#endif
                         continue;
                     }
                     case ExpressionType.Conditional:
@@ -1303,23 +1286,25 @@ namespace FastExpressionCompiler
         {
 #if LIGHT_EXPRESSION
             var newExpr = expr.Expression;
+            var binds   = (IArgumentProvider<MemberBinding>)expr;
+            var count   = binds.ArgumentCount;
 #else
             var newExpr = expr.NewExpression;
+            var binds   = expr.Bindings;
+            var count   = binds.Count;
 #endif
-
             if (!TryCollectBoundConstants(ref closure, newExpr, paramExprs, isNestedLambda, ref rootClosure))
                 return false;
 
-            var memberBindings = expr.Bindings;
-            for (var i = 0; i < memberBindings.Count; ++i)
+            for (var i = 0; i < count; ++i)
             {
-                var memberBinding = memberBindings[i];
-                if (memberBinding.BindingType == MemberBindingType.Assignment &&
-                    !TryCollectBoundConstants(
-                        ref closure, ((MemberAssignment)memberBinding).Expression, paramExprs, isNestedLambda, ref rootClosure))
+                var b = binds.GetArgument(i);
+                if (b.BindingType != MemberBindingType.Assignment)
                     return false; // todo: @feature MemberMemberBinding and the MemberListBinding is not supported yet.
-            }
 
+                if (!TryCollectBoundConstants(ref closure, ((MemberAssignment)b).Expression, paramExprs, isNestedLambda, ref rootClosure))
+                    return false;
+            }
             return true;
         }
 
@@ -6437,6 +6422,9 @@ namespace FastExpressionCompiler
                         return i;
             return -1;
         }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static T GetArgument<T>(this IReadOnlyList<T> source, int index) => source[index];
     }
 }
 //#endif

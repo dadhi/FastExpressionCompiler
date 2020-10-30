@@ -156,11 +156,6 @@ namespace FastExpressionCompiler.LightExpression
         public static ConstantExpression Constant(bool value) =>
             value ? TrueConstant : FalseConstant;
 
-        // todo: @perf
-        // public static ConstantExpression ConstantValue<T>(T value) where T : struct =>
-        //     new ConstantValueExpression<T>(value);
-
-        // todo: @perf consider non-boxing variant of the `Constant<T>(T value) where T : struct` and the special handling for it in the FEC, like implement the `IValueConstant.Emit(ILGenerator il)` or something he-he
         public static ConstantExpression Constant(object value)
         {
             if (value == null)
