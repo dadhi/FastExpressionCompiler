@@ -2774,7 +2774,6 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
 #if LIGHT_EXPRESSION
-
                 var bounds = (IArgumentProvider)expr;
                 var boundCount = bounds.ArgumentCount;
 #else
@@ -2804,38 +2803,42 @@ namespace FastExpressionCompiler
                 IReadOnlyList<ParameterExpression> paramExprs, ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
             {
                 var arrayType = expr.Type;
-                // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
                 if (arrayType.GetArrayRank() > 1) 
-                    return false;
+                    return false; // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
 
                 var elemType = arrayType.GetElementType();
                 if (elemType == null)
                     return false;
 
+#if LIGHT_EXPRESSION
+                var elems = (IArgumentProvider)expr;
+                var elemCount = elems.ArgumentCount;
+#else
                 var elems = expr.Expressions;
-                EmitLoadConstantInt(il, elems.Count); // emit the length of the array calculated from the number of initializer elements
+                var elemCount = elems.Count;
+#endif
+                EmitLoadConstantInt(il, elemCount); // emit the length of the array calculated from the number of initializer elements
                 il.Emit(OpCodes.Newarr, elemType);
 
                 var isElemOfValueType = elemType.IsValueType();
-
-                for (int i = 0, n = elems.Count; i < n; i++)
+                for (var i = 0; i < elemCount; i++)
                 {
                     il.Emit(OpCodes.Dup);
                     EmitLoadConstantInt(il, i);
-
-                    // loading element address for later copying of value into it.
-                    if (isElemOfValueType)
+                    if (isElemOfValueType) // loading element address for later copying of value into it.
+                    {
                         il.Emit(OpCodes.Ldelema, elemType);
-
-                    if (!TryEmit(elems[i], paramExprs, il, ref closure, parent))
-                        return false;
-
-                    if (isElemOfValueType)
+                        if (!TryEmit(elems.GetArgument(i), paramExprs, il, ref closure, parent))
+                            return false;
                         il.Emit(OpCodes.Stobj, elemType); // store element of value type by array element address
+                    }
                     else
+                    {
+                        if (!TryEmit(elems.GetArgument(i), paramExprs, il, ref closure, parent))
+                            return false;
                         il.Emit(OpCodes.Stelem_Ref);
+                    }
                 }
-
                 return true;
             }
 
