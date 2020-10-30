@@ -26,13 +26,6 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 |  CompileSys | 464.62 us | 4.434 us | 4.147 us | 13.14 |    0.16 | 7.3242 | 3.4180 |      - |   29.9 KB |
 | CompileFast |  35.38 us | 0.531 us | 0.470 us |  1.00 |    0.00 | 1.8311 | 0.9155 | 0.0610 |   7.66 KB |
 
-## V3-preview-03
-
-|      Method |        Mean |     Error |     StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 | Gen 2 | Allocated |
-|------------ |------------:|----------:|-----------:|------:|--------:|-------:|-------:|------:|----------:|
-|  CompileSys | 1,355.31 us | 62.880 us | 177.355 us | 22.03 |    3.22 |      - |      - |     - |  30.17 KB |
-| CompileFast |    61.72 us |  1.360 us |   3.813 us |  1.00 |    0.00 | 1.8311 | 0.8545 |     - |   7.66 KB |
-
 */
         [MemoryDiagnoser]
         public class Compile

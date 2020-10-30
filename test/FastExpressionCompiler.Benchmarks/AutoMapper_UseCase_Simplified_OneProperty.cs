@@ -170,7 +170,7 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 |                 Create_n_CompileFast |  24.57 us | 0.381 us | 0.356 us |  1.56 |    0.06 | 1.4038 | 0.6714 |      - |    5.8 KB |
 | Create_n_CompileFast_LightExpression |  16.06 us | 0.319 us | 0.515 us |  1.00 |    0.00 | 1.0681 | 0.5188 | 0.0305 |   4.38 KB |
 
-## V3 RTM
+## V3-preview-02
 
 BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.572 (2004/?/20H1)
 Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
@@ -185,7 +185,15 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 |                 Create_n_CompileFast |  21.87 us | 0.093 us | 0.073 us |  1.61 |    0.02 | 1.4038 | 0.7019 | 0.0305 |    5.8 KB |
 | Create_n_CompileFast_LightExpression |  13.60 us | 0.144 us | 0.128 us |  1.00 |    0.00 | 1.0529 | 0.5188 | 0.0458 |   4.35 KB |
 
-        */
+## V3-preview-03
+
+|                               Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                     Create_n_Compile | 265.80 us | 5.310 us | 7.443 us | 18.85 |    0.61 | 2.9297 | 1.4648 |      - |  13.34 KB |
+|                 Create_n_CompileFast |  22.19 us | 0.382 us | 0.357 us |  1.59 |    0.05 | 1.4038 | 0.7019 | 0.0305 |   5.73 KB |
+| Create_n_CompileFast_LightExpression |  13.97 us | 0.276 us | 0.258 us |  1.00 |    0.00 | 1.0376 | 0.5188 | 0.0305 |    4.3 KB |
+
+*/
         [MemoryDiagnoser]
         public class Create_and_Compile
         {

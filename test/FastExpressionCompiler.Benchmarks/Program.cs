@@ -6,7 +6,7 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
+            // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
             
             // BenchmarkRunner.Run<ReflectionInvoke_vs_CallWithObjectArgsAndNestedLambda>();
             
@@ -26,8 +26,8 @@ namespace FastExpressionCompiler.Benchmarks
             // BenchmarkRunner.Run<NestedLambdasVsVars>();
 
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
-            // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
-            //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
+            //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
+            // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
 
             //BenchmarkRunner.Run<NestedLambdaOverhead>();
 
@@ -66,7 +66,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
 
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
+            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
             // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
         }
     }

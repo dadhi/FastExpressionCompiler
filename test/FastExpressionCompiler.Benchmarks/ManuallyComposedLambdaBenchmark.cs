@@ -61,23 +61,23 @@ namespace FastExpressionCompiler.Benchmarks
                             CompileFastWithPreCreatedClosure |   5.186 us | 0.0896 us | 0.0795 us |  1.06 |    0.02 |      0.3281 |      0.1602 |      0.0305 |              1.5 KB |
              CompileFastWithPreCreatedClosureLightExpression |   4.892 us | 0.0965 us | 0.0948 us |  1.00 |    0.00 |      0.3281 |      0.1602 |      0.0305 |              1.5 KB |
 
-            ## v3.0
-
-                                                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-            ------------------------------------------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-                                                     Compile | 179.369 us | 0.7382 us | 0.6905 us | 46.26 |    0.35 | 0.9766 | 0.4883 |      - |    4.7 KB |
-                                                 CompileFast |   4.273 us | 0.0268 us | 0.0250 us |  1.10 |    0.01 | 0.2975 | 0.1450 | 0.0229 |   1.38 KB |
-                            CompileFastWithPreCreatedClosure |   4.279 us | 0.0168 us | 0.0149 us |  1.10 |    0.01 | 0.2899 | 0.1373 | 0.0305 |   1.34 KB |
-             CompileFastWithPreCreatedClosureLightExpression |   3.877 us | 0.0369 us | 0.0327 us |  1.00 |    0.00 | 0.2899 | 0.1450 |      - |   1.34 KB |
-
-            ## v3.0 RTM
+            ## v3-preview-02
 
             |                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
             |---------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
             |                     Compile | 153.405 us | 3.0500 us | 5.8762 us | 32.77 |    2.25 | 0.9766 | 0.4883 |      - |   4.59 KB |
             |                 CompileFast |   4.716 us | 0.0925 us | 0.0820 us |  1.02 |    0.03 | 0.3510 | 0.1755 | 0.0305 |   1.46 KB |
             | CompileFast_LightExpression |   4.611 us | 0.0898 us | 0.0840 us |  1.00 |    0.00 | 0.3433 | 0.1678 | 0.0305 |   1.42 KB |
-            */
+
+            ## v3-preview-03
+
+            |                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |---------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |                     Compile | 157.942 us | 3.0835 us | 3.0285 us | 31.31 |    1.07 | 0.9766 | 0.4883 |      - |   4.59 KB |
+            |                 CompileFast |   4.989 us | 0.0976 us | 0.1335 us |  0.99 |    0.04 | 0.3510 | 0.1678 | 0.0305 |   1.46 KB |
+            | CompileFast_LightExpression |   5.060 us | 0.1006 us | 0.1343 us |  1.00 |    0.00 | 0.3586 | 0.1755 | 0.0305 |   1.48 KB |
+
+*/
 
             [Benchmark]
             public Func<B, X> Compile() => 
