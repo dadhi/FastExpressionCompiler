@@ -1664,23 +1664,19 @@ namespace FastExpressionCompiler
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var argExprs = (IArgumentProvider)newExpr;
                 var argCount = argExprs.ArgumentCount;
+#else
+                var argExprs = newExpr.Arguments;
+                var argCount = argExprs.Count;
+#endif
                 if (argCount > 0)
                 {
                     var args = newExpr.Constructor.GetParameters();
                     for (var i = 0; i < args.Length; ++i)
-                        if (!TryEmit(argExprs.GetArgument(i), paramExprs, il, ref closure, parent, args[i].ParameterType.IsByRef ? i : -1))
+                        if (!TryEmit(argExprs.GetArgument(i), 
+                            paramExprs, il, ref closure, parent, args[i].ParameterType.IsByRef ? i : -1))
                             return false;
                 }
-#else
-                var argExprs = newExpr.Arguments;
-                if (argExprs.Count > 0)
-                {
-                    var args = newExpr.Constructor.GetParameters();
-                    for (var i = 0; i < args.Length; ++i)
-                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, args[i].ParameterType.IsByRef ? i : -1))
-                            return false;
-                }
-#endif
+
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (newExpr.Constructor != null)
                     il.Emit(OpCodes.Newobj, newExpr.Constructor);
@@ -2868,15 +2864,25 @@ namespace FastExpressionCompiler
                 else
 #endif
                 {
+#if SUPPORTS_ARGUMENT_PROVIDER
+                    var argExprs = (IArgumentProvider)newExpr;
+                    var argCount = argExprs.ArgumentCount;
+#else
                     var argExprs = newExpr.Arguments;
-                    for (var i = 0; i < argExprs.Count; i++)
-                        if (!TryEmit(argExprs[i], paramExprs, il, ref closure, parent, i))
-                            return false;
+                    var argCount = argExprs.Count;
+#endif
+                    if (argCount > 0)
+                    {
+                        var args = newExpr.Constructor.GetParameters();
+                        for (var i = 0; i < argCount; i++)
+                            if (!TryEmit(argExprs.GetArgument(i), paramExprs, il, ref closure, parent, 
+                                args[i].ParameterType.IsByRef ? i : -1))
+                                return false;
+                    }
 
-                    var ctor = newExpr.Constructor;
                     // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                    if (ctor != null)
-                        il.Emit(OpCodes.Newobj, ctor);
+                    if (newExpr.Constructor != null)
+                        il.Emit(OpCodes.Newobj, newExpr.Constructor);
                     else if (newExpr.Type.IsValueType())
                     {
                         if (valueVarIndex == -1)
@@ -2888,10 +2894,17 @@ namespace FastExpressionCompiler
                         return false; // null constructor and not a value type, better to fallback
                 }
 
-                var bindings = expr.Bindings;
-                for (var i = 0; i < bindings.Count; i++)
+#if LIGHT_EXPRESSION
+                var bindings = (IArgumentProvider<MemberBinding>)expr;
+                var bindCount = bindings.ArgumentCount;
+#else
+                var bindings  = expr.Bindings;
+                var bindCount = bindings.Count;
+#endif
+
+                for (var i = 0; i < bindCount; i++)
                 {
-                    var binding = bindings[i];
+                    var binding = bindings.GetArgument(i);
                     if (binding.BindingType != MemberBindingType.Assignment)
                         return false;
 
