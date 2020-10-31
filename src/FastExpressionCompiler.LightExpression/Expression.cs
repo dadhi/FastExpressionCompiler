@@ -3021,9 +3021,9 @@ namespace FastExpressionCompiler.LightExpression
         public override int ParameterCount => 2;
         public override ParameterExpression GetParameter(int index) => index == 0 ? Parameter0 : Parameter1;
         internal TwoParametersLambdaExpression(Type delegateType, Expression body, 
-            ParameterExpression parameter0, ParameterExpression parameter1) : base(delegateType, body)
+            ParameterExpression p0, ParameterExpression p1) : base(delegateType, body)
         {
-            Parameter0 = parameter0; Parameter1 = parameter1;
+            Parameter0 = p0; Parameter1 = p1;
         }
     }
 
@@ -3034,9 +3034,9 @@ namespace FastExpressionCompiler.LightExpression
         public override int ParameterCount => 3;
         public override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : Parameter2;
         internal ThreeParametersLambdaExpression(Type delegateType, Expression body, 
-            ParameterExpression parameter0, ParameterExpression parameter1, ParameterExpression parameter2) : base(delegateType, body)
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) : base(delegateType, body)
         {
-            Parameter0 = parameter0; Parameter1 = parameter1; Parameter2 = parameter2;
+            Parameter0 = p0; Parameter1 = p1; Parameter2 = p2;
         }
     }
 
@@ -3047,10 +3047,10 @@ namespace FastExpressionCompiler.LightExpression
         public override int ParameterCount => 4;
         public override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : Parameter3;
         internal FourParametersLambdaExpression(Type delegateType, Expression body, 
-            ParameterExpression parameter0, ParameterExpression parameter1, ParameterExpression parameter2, ParameterExpression parameter3) 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3) 
             : base(delegateType, body)
         {
-            Parameter0 = parameter0; Parameter1 = parameter1; Parameter2 = parameter2; Parameter3 = parameter3;
+            Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3;
         }
     }
 
@@ -3062,10 +3062,10 @@ namespace FastExpressionCompiler.LightExpression
         public override ParameterExpression GetParameter(int i) => 
             i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : Parameter4;
         internal FiveParametersLambdaExpression(Type delegateType, Expression body, 
-            ParameterExpression parameter0, ParameterExpression parameter1, ParameterExpression parameter2, ParameterExpression parameter3,
-            ParameterExpression parameter4) : base(delegateType, body)
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4) 
+            : base(delegateType, body)
         {
-            Parameter0 = parameter0; Parameter1 = parameter1; Parameter2 = parameter2; Parameter3 = parameter3; Parameter4 = parameter4;
+            Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4;
         }
     }
 
@@ -3077,11 +3077,10 @@ namespace FastExpressionCompiler.LightExpression
         public override ParameterExpression GetParameter(int i) => 
             i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : i == 5 ? Parameter4 : Parameter5;
         internal SixParametersLambdaExpression(Type delegateType, Expression body, 
-            ParameterExpression parameter0, ParameterExpression parameter1, ParameterExpression parameter2, ParameterExpression parameter3,
-            ParameterExpression parameter4, ParameterExpression parameter5) : base(delegateType, body)
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3,
+            ParameterExpression p4, ParameterExpression p5) : base(delegateType, body)
         {
-            Parameter0 = parameter0; Parameter1 = parameter1; Parameter2 = parameter2; Parameter3 = parameter3; Parameter4 = parameter4; 
-            Parameter5 = parameter5;
+            Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4; Parameter5 = p5;
         }
     }
 
@@ -3097,9 +3096,42 @@ namespace FastExpressionCompiler.LightExpression
     {
         public override Type ReturnType { get; }
         internal TypedReturnTwoParametersLambdaExpression(Type delegateType, Expression body, 
-            ParameterExpression parameter0, ParameterExpression parameter1,
-            Type returnType) : base(delegateType, body, parameter0, parameter1) =>
-            ReturnType = returnType;
+            ParameterExpression p0, ParameterExpression p1, Type returnType) 
+            : base(delegateType, body, p0, p1) => ReturnType = returnType;
+    }
+
+    public sealed class TypedReturnThreeParametersLambdaExpression : ThreeParametersLambdaExpression
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnThreeParametersLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, Type returnType) 
+            : base(delegateType, body, p0, p1, p2) => ReturnType = returnType;
+    }
+
+    public sealed class TypedReturnFourParametersLambdaExpression : FourParametersLambdaExpression
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnFourParametersLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, Type returnType) 
+            : base(delegateType, body, p0, p1, p2, p3) => ReturnType = returnType;
+    }
+
+    public sealed class TypedReturnFiveParametersLambdaExpression : FiveParametersLambdaExpression
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnFiveParametersLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, 
+            ParameterExpression p4, Type returnType) 
+            : base(delegateType, body, p0, p1, p2, p3, p4) => ReturnType = returnType;
+    }
+
+    public sealed class TypedReturnSixParametersLambdaExpression : SixParametersLambdaExpression
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnSixParametersLambdaExpression(Type delegateType, Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, 
+            ParameterExpression p4, ParameterExpression p5, Type returnType) 
+            : base(delegateType, body, p0, p1, p2, p3, p4, p5) => ReturnType = returnType;
     }
 
     public sealed class ManyParametersLambdaExpression : LambdaExpression
@@ -3148,15 +3180,14 @@ namespace FastExpressionCompiler.LightExpression
         public readonly ParameterExpression Parameter0;
         public sealed override int ParameterCount => 1;
         public sealed override ParameterExpression GetParameter(int index) => Parameter0;
-        internal OneParameterExpression(Expression body, ParameterExpression parameter0) : base(body) =>
-            Parameter0 = parameter0;
+        internal OneParameterExpression(Expression body, ParameterExpression p0) : base(body) =>
+            Parameter0 = p0;
     }
 
     public sealed class TypedReturnOneParameterExpression<TDelegate> : OneParameterExpression<TDelegate> where TDelegate : System.Delegate
     {
         public override Type ReturnType { get; }
-        internal TypedReturnOneParameterExpression(Expression body, 
-            ParameterExpression parameter0, Type returnType) : base(body, parameter0) => 
+        internal TypedReturnOneParameterExpression(Expression body, ParameterExpression p0, Type returnType) : base(body, p0) => 
             ReturnType = returnType;
     }
 
@@ -3177,7 +3208,7 @@ namespace FastExpressionCompiler.LightExpression
             Parameters = parameters;
     }
 
-    // todo: @feature is not supported
+    // todo: @feature is not supported yet
     public sealed class DynamicExpression : Expression
     {
         public override ExpressionType NodeType => ExpressionType.Dynamic;

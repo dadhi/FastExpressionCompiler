@@ -97,6 +97,27 @@ namespace FastExpressionCompiler.LightExpression
             return newNodes;
         }
 
+        internal IReadOnlyList<ParameterExpression> VisitAndConvertParameters(IParameterProvider nodes)
+        {
+            ParameterExpression[] newNodes = null;
+            var count = nodes.ParameterCount;
+            for (var i = 0; i < count; ++i)
+            {
+                var node = nodes.GetParameter(i);
+                var newNode = VisitAndConvert(node);
+                if (newNodes != null)
+                    newNodes[i] = newNode;
+                else if (!Equals(newNode, node))
+                {
+                    newNodes = new ParameterExpression[count];
+                    for (var j = 0; j < i; ++j)
+                        newNodes[j] = nodes.GetParameter(j);
+                    newNodes[i] = newNode;
+                }
+            }
+            return newNodes;
+        }
+
         internal IReadOnlyList<T> VisitAndConvertArguments<T>(IArgumentProvider<T> nodes, Func<T, T> visit)
         {
             T[] newNodes = null;
@@ -244,8 +265,12 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitLambda(LambdaExpression node)
         {
             var body = Visit(node.Body);
-            var parameters = VisitAndConvert(node.Parameters);
-            if (body == node.Body && ReferenceEquals(parameters, node.Parameters))
+#if LIGHT_EXPRESSION
+            var parameters = VisitAndConvertParameters((IParameterProvider)node);
+#else
+            var parameters = VisitAndConvertArguments(node.Bindings, VisitAndConvert);
+#endif
+            if (body == node.Body && parameters == null)
                 return node;
             return Expression.Lambda(node.Type, body, parameters, node.ReturnType); 
         }
