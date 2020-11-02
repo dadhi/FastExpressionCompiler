@@ -26,7 +26,7 @@ namespace FastExpressionCompiler.Benchmarks
             // BenchmarkRunner.Run<NestedLambdasVsVars>();
 
             //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
-            //BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
+            BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
             // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
 
             //BenchmarkRunner.Run<NestedLambdaOverhead>();
@@ -66,7 +66,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
 
-            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>();
+            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>();
             // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
             // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
         }

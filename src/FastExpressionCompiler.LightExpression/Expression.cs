@@ -564,7 +564,8 @@ namespace FastExpressionCompiler.LightExpression
         public static LambdaExpression Lambda(Type delegateType, Expression body)
         {
             if (delegateType == null || delegateType == typeof(Delegate))
-                return new LambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
+                return Lambda(body);
+
             var returnType = GetDelegateReturnType(delegateType);
             if (returnType == body.Type)
                 return new LambdaExpression(delegateType, body);
@@ -581,9 +582,9 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters) =>
-            parameters == null || parameters.Count == 0
-                ? new LambdaExpression(Tools.GetFuncOrActionType(body.Type), body)
-                : new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters);
+            parameters?.Count > 0
+            ? new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters)
+            : new LambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
 
         public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) =>
             Lambda(body, (IReadOnlyList<ParameterExpression>)parameters);
@@ -615,7 +616,9 @@ namespace FastExpressionCompiler.LightExpression
             if (returnType == body.Type)
                 Lambda(body, parameters);
             var delegateType = Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), returnType);
-            return new ManyParametersTypedReturnLambdaExpression(delegateType, body, parameters, returnType);
+            if (parameters?.Count > 0)
+                return new TypedReturnManyParametersLambdaExpression(delegateType, body, parameters, returnType);
+            return new TypedReturnLambdaExpression(delegateType, body, returnType);
         }
 
         public static LambdaExpression Lambda(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) =>
@@ -626,48 +629,177 @@ namespace FastExpressionCompiler.LightExpression
             if (delegateType == null || delegateType == typeof(Delegate))
                 return Lambda(body, parameters);
             var returnType = GetDelegateReturnType(delegateType);
-            if (returnType == body.Type)
-                return new ManyParametersLambdaExpression(delegateType, body, parameters);
-            return new ManyParametersTypedReturnLambdaExpression(delegateType, body, parameters, returnType);
+            return Lambda(delegateType, body, parameters, returnType);
         }
 
         public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) =>
             Lambda(delegateType, body, (IReadOnlyList<ParameterExpression>)parameters);
 
-        public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType) =>
-            delegateType == null || delegateType == typeof(Delegate)
-                ? Lambda(body, parameters, returnType)
-            : returnType == body.Type
-                ? new ManyParametersLambdaExpression(delegateType, body, parameters)
-                : (LambdaExpression)new ManyParametersTypedReturnLambdaExpression(delegateType, body, parameters, returnType);
+        public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
+        {
+            if (delegateType == null || delegateType == typeof(Delegate))
+                return Lambda(body, parameters, returnType);
+            if (parameters?.Count > 0) 
+            {
+                if (returnType == body.Type)
+                    return new ManyParametersLambdaExpression(delegateType, body, parameters);
+                return new TypedReturnManyParametersLambdaExpression(delegateType, body, parameters, returnType);
+            }
+            if (returnType == body.Type)
+                return new LambdaExpression(delegateType, body);
+            return new TypedReturnLambdaExpression(delegateType, body, returnType);
+        }
 
         public static LambdaExpression Lambda(Type delegateType, Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) =>
             Lambda(delegateType, body, parameters.AsReadOnlyList(), returnType);
+
+        public static LambdaExpression Lambda(Type delegateType, Expression body, 
+            ParameterExpression p0, Type returnType)
+        {
+            if (returnType == body.Type)
+                return new OneParameterLambdaExpression(delegateType, body, p0);
+            return new TypedReturnOneParameterLambdaExpression(delegateType, body, p0, returnType);
+        }
+
+        public static LambdaExpression Lambda(Type delegateType, Expression body, 
+            ParameterExpression p0, ParameterExpression p1, Type returnType)
+        {
+            if (returnType == body.Type)
+                return new TwoParametersLambdaExpression(delegateType, body, p0, p1);
+            return new TypedReturnTwoParametersLambdaExpression(delegateType, body, p0, p1, returnType);
+        }
+
+        public static LambdaExpression Lambda(Type delegateType, Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, Type returnType)
+        {
+            if (returnType == body.Type)
+                return new ThreeParametersLambdaExpression(delegateType, body, p0, p1, p2);
+            return new TypedReturnThreeParametersLambdaExpression(delegateType, body, p0, p1, p2, returnType);
+        }
+
+        public static LambdaExpression Lambda(Type delegateType, Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, Type returnType)
+        {
+            if (returnType == body.Type)
+                return new FourParametersLambdaExpression(delegateType, body, p0, p1, p2, p3);
+            return new TypedReturnFourParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, returnType);
+        }
+
+        public static LambdaExpression Lambda(Type delegateType, Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, 
+            ParameterExpression p4, Type returnType)
+        {
+            if (returnType == body.Type)
+                return new FiveParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4);
+            return new TypedReturnFiveParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, returnType);
+        }
+
+        public static LambdaExpression Lambda(Type delegateType, Expression body, 
+            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, 
+            ParameterExpression p4, ParameterExpression p5, Type returnType)
+        {
+            if (returnType == body.Type)
+                return new SixParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, p5);
+            return new TypedReturnSixParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, p5, returnType);
+        }
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body) where TDelegate : System.Delegate =>
+            Lambda<TDelegate>(body, GetDelegateReturnType(typeof(TDelegate)));
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, Type returnType) where TDelegate : System.Delegate =>
             returnType == body.Type
                 ? new Expression<TDelegate>(body)
                 : new TypedReturnExpression<TDelegate>(body, returnType);
 
-        [MethodImpl((MethodImplOptions)256)]
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, 
-            ParameterExpression param0, Type returnType) where TDelegate : System.Delegate 
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, Type returnType) 
+            where TDelegate : System.Delegate 
         {
             if (returnType == body.Type)
-                return new OneParameterExpression<TDelegate>(body, param0);
-            return new TypedReturnOneParameterExpression<TDelegate>(body, param0, returnType);
+                return new OneParameterExpression<TDelegate>(body, p0);
+            return new TypedReturnOneParameterExpression<TDelegate>(body, p0, returnType);
         }
 
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body) where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, GetDelegateReturnType(typeof(TDelegate)));
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0) where TDelegate : System.Delegate =>
+            Lambda<TDelegate>(body, p0, GetDelegateReturnType(typeof(TDelegate)));
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, Type returnType) 
+            where TDelegate : System.Delegate 
+        {
+            if (returnType == body.Type)
+                return new TwoParametersExpression<TDelegate>(body, p0, p1);
+            return new TypedReturnTwoParametersExpression<TDelegate>(body, p0, p1, returnType);
+        }
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1) 
+            where TDelegate : System.Delegate =>
+            Lambda<TDelegate>(body, p0, p1, GetDelegateReturnType(typeof(TDelegate)));
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, 
+            ParameterExpression p2, Type returnType) 
+            where TDelegate : System.Delegate 
+        {
+            if (returnType == body.Type)
+                return new ThreeParametersExpression<TDelegate>(body, p0, p1, p2);
+            return new TypedReturnThreeParametersExpression<TDelegate>(body, p0, p1, p2, returnType);
+        }
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) 
+            where TDelegate : System.Delegate =>
+            Lambda<TDelegate>(body, p0, p1, p2, GetDelegateReturnType(typeof(TDelegate)));
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, 
+            ParameterExpression p2, ParameterExpression p3, Type returnType) 
+            where TDelegate : System.Delegate 
+        {
+            if (returnType == body.Type)
+                return new FourParametersExpression<TDelegate>(body, p0, p1, p2, p3);
+            return new TypedReturnFourParametersExpression<TDelegate>(body, p0, p1, p2, p3, returnType);
+        }
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+            ParameterExpression p3) 
+            where TDelegate : System.Delegate =>
+            Lambda<TDelegate>(body, p0, p1, p2, p3, GetDelegateReturnType(typeof(TDelegate)));
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, 
+            ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, Type returnType) 
+            where TDelegate : System.Delegate 
+        {
+            if (returnType == body.Type)
+                return new FiveParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4);
+            return new TypedReturnFiveParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, returnType);
+        }
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+            ParameterExpression p3, ParameterExpression p4) 
+            where TDelegate : System.Delegate =>
+            Lambda<TDelegate>(body, p0, p1, p2, p3, p4, GetDelegateReturnType(typeof(TDelegate)));
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, 
+            ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5, Type returnType) 
+            where TDelegate : System.Delegate 
+        {
+            if (returnType == body.Type)
+                return new SixParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, p5);
+            return new TypedReturnSixParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, p5, returnType);
+        }
+
+        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+            ParameterExpression p3, ParameterExpression p4, ParameterExpression p5) 
+            where TDelegate : System.Delegate =>
+            Lambda<TDelegate>(body, p0, p1, p2, p3, p4, p5, GetDelegateReturnType(typeof(TDelegate)));
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType) 
-            where TDelegate : System.Delegate =>
-            parameters == null || parameters.Count == 0
-                ? Lambda<TDelegate>(body, returnType)
-            : returnType == body.Type
-                ? new ManyParametersExpression<TDelegate>(body, parameters)
-                : (Expression<TDelegate>)new ManyParametersTypedReturnExpression<TDelegate>(body, parameters, returnType);
+            where TDelegate : System.Delegate
+        {
+            if (parameters?.Count > 0)
+            {
+                if (returnType == body.Type)
+                    return new ManyParametersExpression<TDelegate>(body, parameters);
+                return new TypedReturnManyParametersExpression<TDelegate>(body, parameters, returnType);
+            }
+            return Lambda<TDelegate>(body, returnType);
+        }
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) 
             where TDelegate : System.Delegate => Lambda<TDelegate>(body, parameters.AsReadOnlyList(), returnType);
@@ -675,11 +807,6 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, params ParameterExpression[] parameters) 
             where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
-
-        [MethodImpl((MethodImplOptions)256)]
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression param0) 
-            where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, param0, GetDelegateReturnType(typeof(TDelegate)));
 
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters) where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, parameters.AsReadOnlyList(), GetDelegateReturnType(typeof(TDelegate)));
@@ -2975,13 +3102,13 @@ namespace FastExpressionCompiler.LightExpression
 
     public class LambdaExpression : Expression, IParameterProvider
     {
-        public override ExpressionType NodeType => ExpressionType.Lambda;
+        public sealed override ExpressionType NodeType => ExpressionType.Lambda;
         public override Type Type { get; }
         public readonly Expression Body;
         public virtual Type ReturnType => Body.Type;
         public virtual IReadOnlyList<ParameterExpression> Parameters => Tools.Empty<ParameterExpression>();
-        public virtual int ParameterCount => Parameters.Count;//0; // todo: @incomplete
-        public virtual ParameterExpression GetParameter(int index) => Parameters[index]; // throw new NotImplementedException("Requested the parameter from the no-parameter lambda");
+        public virtual int ParameterCount => 0;
+        public virtual ParameterExpression GetParameter(int index) => throw new NotImplementedException("Requested the parameter from the no-parameter lambda");
         internal LambdaExpression(Type delegateType, Expression body)
         {
             Type = delegateType;
@@ -2997,29 +3124,22 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.Lambda(Type, Body.ToExpression(ref exprsConverted), ParameterExpression.ToParameterExpressions(Parameters, ref exprsConverted));
     }
 
-    public class TypedReturnLambdaExpression : LambdaExpression
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnLambdaExpression(Type delegateType, Expression body, Type returnType) : base(delegateType, body) =>
-            ReturnType = returnType;
-    }
-
     public class OneParameterLambdaExpression : LambdaExpression
     {
-        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0 };
         public readonly ParameterExpression Parameter0;
-        public override int ParameterCount => 1;
-        public override ParameterExpression GetParameter(int index) => Parameter0;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0 };
+        public sealed override int ParameterCount => 1;
+        public sealed override ParameterExpression GetParameter(int index) => Parameter0;
         internal OneParameterLambdaExpression(Type delegateType, Expression body, ParameterExpression parameter) : base(delegateType, body) => 
             Parameter0 = parameter;
     }
 
     public class TwoParametersLambdaExpression : LambdaExpression
     {
-        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1 };
         public readonly ParameterExpression Parameter0, Parameter1;
-        public override int ParameterCount => 2;
-        public override ParameterExpression GetParameter(int index) => index == 0 ? Parameter0 : Parameter1;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1 };
+        public sealed override int ParameterCount => 2;
+        public sealed override ParameterExpression GetParameter(int index) => index == 0 ? Parameter0 : Parameter1;
         internal TwoParametersLambdaExpression(Type delegateType, Expression body, 
             ParameterExpression p0, ParameterExpression p1) : base(delegateType, body)
         {
@@ -3029,10 +3149,10 @@ namespace FastExpressionCompiler.LightExpression
 
     public class ThreeParametersLambdaExpression : LambdaExpression
     {
-        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2 };
         public readonly ParameterExpression Parameter0, Parameter1, Parameter2;
-        public override int ParameterCount => 3;
-        public override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : Parameter2;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2 };
+        public sealed override int ParameterCount => 3;
+        public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : Parameter2;
         internal ThreeParametersLambdaExpression(Type delegateType, Expression body, 
             ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) : base(delegateType, body)
         {
@@ -3042,10 +3162,10 @@ namespace FastExpressionCompiler.LightExpression
 
     public class FourParametersLambdaExpression : LambdaExpression
     {
-        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3 };
         public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3;
-        public override int ParameterCount => 4;
-        public override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : Parameter3;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3 };
+        public sealed override int ParameterCount => 4;
+        public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : Parameter3;
         internal FourParametersLambdaExpression(Type delegateType, Expression body, 
             ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3) 
             : base(delegateType, body)
@@ -3056,10 +3176,10 @@ namespace FastExpressionCompiler.LightExpression
 
     public class FiveParametersLambdaExpression : LambdaExpression
     {
-        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4 };
         public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4;
-        public override int ParameterCount => 5;
-        public override ParameterExpression GetParameter(int i) => 
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4 };
+        public sealed override int ParameterCount => 5;
+        public sealed override ParameterExpression GetParameter(int i) => 
             i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : Parameter4;
         internal FiveParametersLambdaExpression(Type delegateType, Expression body, 
             ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4) 
@@ -3071,10 +3191,10 @@ namespace FastExpressionCompiler.LightExpression
 
     public class SixParametersLambdaExpression : LambdaExpression
     {
-        public override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5 };
         public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5;
-        public override int ParameterCount => 6;
-        public override ParameterExpression GetParameter(int i) => 
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5 };
+        public sealed override int ParameterCount => 6;
+        public sealed override ParameterExpression GetParameter(int i) => 
             i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : i == 5 ? Parameter4 : Parameter5;
         internal SixParametersLambdaExpression(Type delegateType, Expression body, 
             ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3,
@@ -3084,12 +3204,28 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
+    public class ManyParametersLambdaExpression : LambdaExpression
+    {
+        private readonly IReadOnlyList<ParameterExpression> _parameters;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => _parameters;
+        public sealed override int ParameterCount => _parameters.Count;
+        public sealed override ParameterExpression GetParameter(int index) => _parameters[index];
+        internal ManyParametersLambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters)
+            : base(delegateType, body) => _parameters = parameters;
+    }
+
+    public sealed class TypedReturnLambdaExpression : LambdaExpression
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnLambdaExpression(Type delegateType, Expression body, Type returnType) : base(delegateType, body) =>
+            ReturnType = returnType;
+    }
+
     public sealed class TypedReturnOneParameterLambdaExpression : OneParameterLambdaExpression
     {
         public override Type ReturnType { get; }
         internal TypedReturnOneParameterLambdaExpression(Type delegateType, Expression body, 
-            ParameterExpression parameter, Type returnType) : base(delegateType, body, parameter) =>
-            ReturnType = returnType;
+            ParameterExpression parameter, Type returnType) : base(delegateType, body, parameter) => ReturnType = returnType;
     }
 
     public sealed class TypedReturnTwoParametersLambdaExpression : TwoParametersLambdaExpression
@@ -3134,31 +3270,17 @@ namespace FastExpressionCompiler.LightExpression
             : base(delegateType, body, p0, p1, p2, p3, p4, p5) => ReturnType = returnType;
     }
 
-    public sealed class ManyParametersLambdaExpression : LambdaExpression
+    public sealed class TypedReturnManyParametersLambdaExpression : ManyParametersLambdaExpression
     {
-        private readonly IReadOnlyList<ParameterExpression> _parameters;
-        public override IReadOnlyList<ParameterExpression> Parameters => _parameters;
-        public override int ParameterCount => _parameters.Count;
-        public override ParameterExpression GetParameter(int index) => _parameters[index];
-        internal ManyParametersLambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters)
-            : base(delegateType, body) => _parameters = parameters;
-    }
-
-    public sealed class ManyParametersTypedReturnLambdaExpression : TypedReturnLambdaExpression
-    {
-        public override IReadOnlyList<ParameterExpression> Parameters { get; }
-
-        internal ManyParametersTypedReturnLambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
-            : base(delegateType, body, returnType) =>
-            Parameters = parameters;
+        public override Type ReturnType { get; }
+        internal TypedReturnManyParametersLambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
+            : base(delegateType, body, parameters) => ReturnType = returnType;
     }
 
     public class Expression<TDelegate> : LambdaExpression where TDelegate : System.Delegate
     {
         internal Expression(Expression body) : base(typeof(TDelegate), body) { }
-
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
-
         public new System.Linq.Expressions.Expression<TDelegate> ToLambdaExpression()
         {
             var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
@@ -3167,21 +3289,87 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public class TypedReturnExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnExpression(Expression body, Type returnType) : base(body) =>
-            ReturnType = returnType;
-    }
-
     public class OneParameterExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
     {
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0 };
         public readonly ParameterExpression Parameter0;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0 };
         public sealed override int ParameterCount => 1;
         public sealed override ParameterExpression GetParameter(int index) => Parameter0;
         internal OneParameterExpression(Expression body, ParameterExpression p0) : base(body) =>
             Parameter0 = p0;
+    }
+
+    public class TwoParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+    {
+        public readonly ParameterExpression Parameter0, Parameter1;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1 };
+        public sealed override int ParameterCount => 2;
+        public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : Parameter1;
+        internal TwoParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1) : base(body)
+        { Parameter0 = p0; Parameter1 = p1; }
+    }
+
+    public class ThreeParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+    {
+        public readonly ParameterExpression Parameter0, Parameter1, Parameter2;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2 };
+        public sealed override int ParameterCount => 3;
+        public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : Parameter2;
+        internal ThreeParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) : base(body)
+        { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; }
+    }
+
+    public class FourParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+    {
+        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3 };
+        public sealed override int ParameterCount => 4;
+        public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : Parameter3;
+        internal FourParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+            ParameterExpression p3) : base(body)
+        { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; }
+    }
+
+    public class FiveParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+    {
+        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4 };
+        public sealed override int ParameterCount => 5;
+        public sealed override ParameterExpression GetParameter(int i) => 
+            i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : Parameter4;
+        internal FiveParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+            ParameterExpression p3, ParameterExpression p4) : base(body)
+        { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4; }
+    }
+
+
+    public class SixParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+    {
+        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => 
+            new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5 };
+        public sealed override int ParameterCount => 6;
+        public sealed override ParameterExpression GetParameter(int i) => 
+            i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : i == 4 ? Parameter4 : Parameter5;
+        internal SixParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+            ParameterExpression p3, ParameterExpression p4, ParameterExpression p5) : base(body)
+        { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4; Parameter5 = p5; }
+    }
+
+    public class ManyParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+    {
+        private readonly IReadOnlyList<ParameterExpression> _parameters;
+        public sealed override IReadOnlyList<ParameterExpression> Parameters => _parameters;
+        public sealed override int ParameterCount => _parameters.Count;
+        public sealed override ParameterExpression GetParameter(int index) => _parameters[index];
+        internal ManyParametersExpression(Expression body, IReadOnlyList<ParameterExpression> parameters) : base(body) =>
+            _parameters = parameters;
+    }
+
+    public sealed class TypedReturnExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnExpression(Expression body, Type returnType) : base(body) => ReturnType = returnType;
     }
 
     public sealed class TypedReturnOneParameterExpression<TDelegate> : OneParameterExpression<TDelegate> where TDelegate : System.Delegate
@@ -3191,21 +3379,50 @@ namespace FastExpressionCompiler.LightExpression
             ReturnType = returnType;
     }
 
-    public sealed class ManyParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+    public sealed class TypedReturnTwoParametersExpression<TDelegate> : TwoParametersExpression<TDelegate> where TDelegate : System.Delegate
     {
-        public override IReadOnlyList<ParameterExpression> Parameters { get; }
-
-        internal ManyParametersExpression(Expression body, IReadOnlyList<ParameterExpression> parameters) : base(body) =>
-            Parameters = parameters;
+        public override Type ReturnType { get; }
+        internal TypedReturnTwoParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, Type returnType) 
+            : base(body, p0, p1) => ReturnType = returnType;
     }
 
-    public sealed class ManyParametersTypedReturnExpression<TDelegate> : TypedReturnExpression<TDelegate> where TDelegate : System.Delegate
+    public sealed class TypedReturnThreeParametersExpression<TDelegate> : ThreeParametersExpression<TDelegate> where TDelegate : System.Delegate
     {
-        public override IReadOnlyList<ParameterExpression> Parameters { get; }
+        public override Type ReturnType { get; }
+        internal TypedReturnThreeParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, 
+            ParameterExpression p2, Type returnType) 
+            : base(body, p0, p1, p2) => ReturnType = returnType;
+    }
 
-        internal ManyParametersTypedReturnExpression(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
-            : base(body, returnType) =>
-            Parameters = parameters;
+    public sealed class TypedReturnFourParametersExpression<TDelegate> : FourParametersExpression<TDelegate> where TDelegate : System.Delegate
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnFourParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, 
+            ParameterExpression p2, ParameterExpression p3, Type returnType) 
+            : base(body, p0, p1, p2, p3) => ReturnType = returnType;
+    }
+
+    public sealed class TypedReturnFiveParametersExpression<TDelegate> : FiveParametersExpression<TDelegate> where TDelegate : System.Delegate
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnFiveParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, 
+            ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, Type returnType) 
+            : base(body, p0, p1, p2, p3, p4) => ReturnType = returnType;
+    }
+
+    public sealed class TypedReturnSixParametersExpression<TDelegate> : SixParametersExpression<TDelegate> where TDelegate : System.Delegate
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnSixParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, 
+            ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5, Type returnType) 
+            : base(body, p0, p1, p2, p3, p4, p5) => ReturnType = returnType;
+    }
+
+    public sealed class TypedReturnManyParametersExpression<TDelegate> : ManyParametersExpression<TDelegate> where TDelegate : System.Delegate
+    {
+        public override Type ReturnType { get; }
+        internal TypedReturnManyParametersExpression(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
+            : base(body, parameters) => ReturnType = returnType;
     }
 
     // todo: @feature is not supported yet
