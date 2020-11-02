@@ -851,8 +851,24 @@ namespace FastExpressionCompiler.LightExpression
         public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding binding) => 
             new OneBindingMemberInitExpression(newExpr, binding);
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding binding0, MemberBinding binding1) => 
-            new TwoBindingsMemberInitExpression(newExpr, binding0, binding1);
+        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1) => 
+            new TwoBindingsMemberInitExpression(newExpr, b0, b1);
+
+        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
+            MemberBinding b2) => 
+            new ThreeBindingsMemberInitExpression(newExpr, b0, b1, b2);
+
+        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
+            MemberBinding b2, MemberBinding b3) => 
+            new FourBindingsMemberInitExpression(newExpr, b0, b1, b2, b3);
+
+        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
+            MemberBinding b2, MemberBinding b3, MemberBinding b4) => 
+            new FiveBindingsMemberInitExpression(newExpr, b0, b1, b2, b3, b4);
+
+        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
+            MemberBinding b2, MemberBinding b3, MemberBinding b4, MemberBinding b5) => 
+            new SixBindingsMemberInitExpression(newExpr, b0, b1, b2, b3, b4, b5);
 
         public static MemberInitExpression MemberInit(NewExpression newExpr, params MemberBinding[] bindings) =>
             bindings == null || bindings.Length == 0 
@@ -2013,8 +2029,8 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class OneBindingMemberInitExpression : MemberInitExpression
     {
-        public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding };
         public readonly MemberBinding Binding;
+        public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding };
         public override int ArgumentCount => 1;
         public override MemberBinding GetArgument(int i) => Binding;
         internal OneBindingMemberInitExpression(Expression expression, MemberBinding b1) : base(expression) =>
@@ -2023,14 +2039,61 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class TwoBindingsMemberInitExpression : MemberInitExpression
     {
-        public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding0, Binding1 };
         public readonly MemberBinding Binding0, Binding1;
+        public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding0, Binding1 };
         public override int ArgumentCount => 2;
         public override MemberBinding GetArgument(int i) => i == 0 ? Binding0 : Binding1;
         internal TwoBindingsMemberInitExpression(Expression expression,  MemberBinding b0, MemberBinding b1) : base(expression)
-        {
-            Binding0 = b0; Binding1 = b1; 
-        }
+        { Binding0 = b0; Binding1 = b1; }
+    }
+
+    public sealed class ThreeBindingsMemberInitExpression : MemberInitExpression
+    {
+        public readonly MemberBinding Binding0, Binding1, Binding2;
+        public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding0, Binding1, Binding2 };
+        public override int ArgumentCount => 3;
+        public override MemberBinding GetArgument(int i) => i == 0 ? Binding0 : i == 1 ? Binding1 : Binding2;
+        internal ThreeBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
+             MemberBinding b2) : base(expression)
+        { Binding0 = b0; Binding1 = b1; Binding2 = b2; }
+    }
+
+    public sealed class FourBindingsMemberInitExpression : MemberInitExpression
+    {
+        public readonly MemberBinding Binding0, Binding1, Binding2, Binding3;
+        public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding0, Binding1, Binding2, Binding3 };
+        public override int ArgumentCount => 4;
+        public override MemberBinding GetArgument(int i) => 
+            i == 0 ? Binding0 : i == 1 ? Binding1 : i == 2 ? Binding2 : Binding3;
+        internal FourBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
+             MemberBinding b2, MemberBinding b3) : base(expression)
+        { Binding0 = b0; Binding1 = b1; Binding2 = b2; Binding3 = b3; }
+    }
+
+    public sealed class FiveBindingsMemberInitExpression : MemberInitExpression
+    {
+        public readonly MemberBinding Binding0, Binding1, Binding2, Binding3, Binding4;
+        public override IReadOnlyList<MemberBinding> Bindings => 
+            new[] { Binding0, Binding1, Binding2, Binding3, Binding4 };
+        public override int ArgumentCount => 5;
+        public override MemberBinding GetArgument(int i) => 
+            i == 0 ? Binding0 : i == 1 ? Binding1 : i == 2 ? Binding2 : i == 3 ? Binding3 : Binding4;
+        internal FiveBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
+             MemberBinding b2, MemberBinding b3, MemberBinding b4) : base(expression)
+        { Binding0 = b0; Binding1 = b1; Binding2 = b2; Binding3 = b3; Binding4 = b4; }
+    }
+
+    public sealed class SixBindingsMemberInitExpression : MemberInitExpression
+    {
+        public readonly MemberBinding Binding0, Binding1, Binding2, Binding3, Binding4, Binding5;
+        public override IReadOnlyList<MemberBinding> Bindings => 
+            new[] { Binding0, Binding1, Binding2, Binding3, Binding4, Binding5 };
+        public override int ArgumentCount => 6;
+        public override MemberBinding GetArgument(int i) =>
+            i == 0 ? Binding0 : i == 1 ? Binding1 : i == 2 ? Binding2 : i == 3 ? Binding3 : i == 4 ? Binding4 : Binding5;
+        internal SixBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
+             MemberBinding b2, MemberBinding b3, MemberBinding b4, MemberBinding b5) : base(expression)
+        { Binding0 = b0; Binding1 = b1; Binding2 = b2; Binding3 = b3; Binding4 = b4; Binding5 = b5; }
     }
 
     public class ParameterExpression : Expression
