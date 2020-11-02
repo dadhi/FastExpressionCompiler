@@ -911,8 +911,23 @@ namespace FastExpressionCompiler.LightExpression
         public static NewArrayExpression NewArrayInit(Type type, Expression element) =>
             new OneElementNewArrayInitExpression(type.MakeArrayType(), element);
 
-        public static NewArrayExpression NewArrayInit(Type type, Expression element0, Expression element1) =>
-            new TwoElementNewArrayInitExpression(type.MakeArrayType(), element0, element1);
+        public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1) =>
+            new TwoElementNewArrayInitExpression(type.MakeArrayType(), el0, el1);
+
+        public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2) =>
+            new ThreeElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2);
+
+        public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2,
+            Expression el3) =>
+            new FourElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2, el3);
+
+        public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2,
+            Expression el3, Expression el4) =>
+            new FiveElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2, el3, el4);
+
+        public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2,
+            Expression el3, Expression el4, Expression el5) =>
+            new SixElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2, el3, el4, el5);
 
         public static NewArrayExpression MakeArrayBounds(Type type, IReadOnlyList<Expression> bounds) =>
             new ManyBoundsNewArrayBoundsExpression(bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count), bounds);
@@ -2322,8 +2337,8 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class OneElementNewArrayInitExpression : NewArrayExpression
     {
-        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
         public readonly Expression Element;
+        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
         public override IReadOnlyList<Expression> Expressions => new[] { Element };
         public override int ArgumentCount => 1;
         public override Expression GetArgument(int i) => Element;
@@ -2333,14 +2348,73 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class TwoElementNewArrayInitExpression : NewArrayExpression
     {
-        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
         public readonly Expression Element0, Element1;
+        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
         public override IReadOnlyList<Expression> Expressions => new[] { Element0, Element1 };
         public override int ArgumentCount => 2;
         public override Expression GetArgument(int i) => i == 0 ? Element0 : Element1;
-        internal TwoElementNewArrayInitExpression(Type arrayType, Expression element0, Expression element1) : base(arrayType)
+        internal TwoElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1) : base(arrayType)
         { 
-            Element0 = element0; Element1 = element1;
+            Element0 = el0; Element1 = el1;
+        }
+    }
+
+    public sealed class ThreeElementNewArrayInitExpression : NewArrayExpression
+    {
+        public readonly Expression Element0, Element1, Element2;
+        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+        public override IReadOnlyList<Expression> Expressions => new[] { Element0, Element1, Element2 };
+        public override int ArgumentCount => 3;
+        public override Expression GetArgument(int i) => i == 0 ? Element0 : i == 1 ? Element1 : Element2;
+        internal ThreeElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2) : base(arrayType)
+        { 
+            Element0 = el0; Element1 = el1; Element2 = el2;
+        }
+    }
+
+    public sealed class FourElementNewArrayInitExpression : NewArrayExpression
+    {
+        public readonly Expression Element0, Element1, Element2, Element3;
+        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+        public override IReadOnlyList<Expression> Expressions => new[] { Element0, Element1, Element2, Element3 };
+        public override int ArgumentCount => 4;
+        public override Expression GetArgument(int i) => i == 0 ? Element0 : i == 1 ? Element1 : i == 2 ? Element2 : Element3;
+        internal FourElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2,
+            Expression el3) : base(arrayType)
+        { 
+            Element0 = el0; Element1 = el1; Element2 = el2; Element3 = el3;
+        }
+    }
+
+    public sealed class FiveElementNewArrayInitExpression : NewArrayExpression
+    {
+        public readonly Expression Element0, Element1, Element2, Element3, Element4;
+        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+        public override IReadOnlyList<Expression> Expressions => 
+            new[] { Element0, Element1, Element2, Element3, Element4 };
+        public override int ArgumentCount => 5;
+        public override Expression GetArgument(int i) => 
+            i == 0 ? Element0 : i == 1 ? Element1 : i == 2 ? Element2 : i == 3 ? Element3 : Element4;
+        internal FiveElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2,
+            Expression el3, Expression el4) : base(arrayType)
+        { 
+            Element0 = el0; Element1 = el1; Element2 = el2; Element3 = el3; Element4 = el4;
+        }
+    }
+
+    public sealed class SixElementNewArrayInitExpression : NewArrayExpression
+    {
+        public readonly Expression Element0, Element1, Element2, Element3, Element4, Element5;
+        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+        public override IReadOnlyList<Expression> Expressions => 
+            new[] { Element0, Element1, Element2, Element3, Element4, Element5 };
+        public override int ArgumentCount => 6;
+        public override Expression GetArgument(int i) => 
+            i == 0 ? Element0 : i == 1 ? Element1 : i == 2 ? Element2 : i == 3 ? Element3 : i == 4 ? Element4 : Element5;
+        internal SixElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2,
+            Expression el3, Expression el4, Expression el5) : base(arrayType)
+        { 
+            Element0 = el0; Element1 = el1; Element2 = el2; Element3 = el3; Element4 = el4; Element5 = el5;
         }
     }
 
