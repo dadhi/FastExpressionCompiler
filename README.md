@@ -198,9 +198,9 @@ Compiling expression:
 
 |                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |---------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                     Compile | 153.405 us | 3.0500 us | 5.8762 us | 32.77 |    2.25 | 0.9766 | 0.4883 |      - |   4.59 KB |
-|                 CompileFast |   4.716 us | 0.0925 us | 0.0820 us |  1.02 |    0.03 | 0.3510 | 0.1755 | 0.0305 |   1.46 KB |
-| CompileFast_LightExpression |   4.611 us | 0.0898 us | 0.0840 us |  1.00 |    0.00 | 0.3433 | 0.1678 | 0.0305 |   1.42 KB |
+|                     Compile | 174.546 us | 3.3113 us | 3.8133 us | 33.86 |    0.99 | 0.9766 | 0.4883 |      - |   4.59 KB |
+|                 CompileFast |   5.542 us | 0.1056 us | 0.1037 us |  1.07 |    0.03 | 0.3510 | 0.1755 | 0.0305 |   1.46 KB |
+| CompileFast_LightExpression |   5.166 us | 0.0953 us | 0.0892 us |  1.00 |    0.00 | 0.3433 | 0.1678 | 0.0305 |   1.42 KB |
 
 
 Invoking the compiled delegate compared to the normal delegate and the direct call:
@@ -238,18 +238,18 @@ Hopefully you are checking the expression arguments yourself and not waiting for
 
 Creating the expression:
 
-|                Method |       Mean |    Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|---------------------- |-----------:|---------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-|      CreateExpression | 2,805.2 ns | 55.57 ns | 107.06 ns |  4.76 |    0.32 | 0.3090 |     - |     - |    1304 B |
-| CreateLightExpression |   578.5 ns |  6.39 ns |   5.98 ns |  1.00 |    0.00 | 0.1678 |     - |     - |     704 B |
+|                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+|      CreateExpression | 3,351.7 ns | 59.81 ns | 55.94 ns | 10.03 |    0.23 | 0.3090 |     - |     - |    1304 B |
+| CreateLightExpression |   334.3 ns |  4.85 ns |  4.53 ns |  1.00 |    0.00 | 0.1316 |     - |     - |     552 B |
 
 Creating and compiling:
 
 |                                Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |-------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
-|          CreateExpression_and_Compile | 241.97 us | 2.007 us | 1.877 us | 17.77 |    0.20 | 1.7090 | 0.7324 |      - |   7.01 KB |
-|      CreateExpression_and_CompileFast |  17.30 us | 0.207 us | 0.173 us |  1.27 |    0.02 | 1.7395 | 0.8545 | 0.0305 |   7.19 KB |
-| CreateLightExpression_and_CompileFast |  13.61 us | 0.158 us | 0.140 us |  1.00 |    0.00 | 1.6174 | 0.7935 | 0.0305 |   6.64 KB |
+|          CreateExpression_and_Compile | 276.65 us | 5.396 us | 7.565 us | 17.73 |    0.73 | 1.4648 | 0.4883 |      - |   7.01 KB |
+|      CreateExpression_and_CompileFast |  21.10 us | 0.418 us | 0.497 us |  1.35 |    0.04 | 1.7700 | 0.8850 | 0.0610 |   7.24 KB |
+| CreateLightExpression_and_CompileFast |  15.70 us | 0.306 us | 0.239 us |  1.00 |    0.00 | 1.5564 | 0.7629 | 0.0305 |   6.46 KB |
 
 
 ## How it works
