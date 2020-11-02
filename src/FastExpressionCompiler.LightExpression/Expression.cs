@@ -367,7 +367,7 @@ namespace FastExpressionCompiler.LightExpression
         {
             var instanceVar = Parameter(instance.Type, "x");
             return Block(
-                instanceVar,
+                new[] { instanceVar },
                 Assign(instanceVar, instance),
                 Condition(
                     Equal(instanceVar, Constant(null, instance.Type)),
@@ -1150,8 +1150,27 @@ namespace FastExpressionCompiler.LightExpression
         public static BlockExpression Block(params Expression[] expressions) =>
             new BlockExpression(expressions);
 
+        public static BlockExpression Block(Expression expr0) =>
+            new BlockExpression(new[] { expr0 });
+
+        public static BlockExpression Block(Expression expr0, Expression expr1) =>
+            new BlockExpression(new[] { expr0, expr1 });
+
+        public static BlockExpression Block(Expression expr0, Expression expr1, Expression expr2) =>
+            new BlockExpression(new[] { expr0, expr1, expr2 });
+
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
             new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions);
+
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0) =>
+            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), new[] { expr0 });
+
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1) =>
+            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), new[] { expr0, expr1 });
+
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, 
+            Expression expr0, Expression expr1, Expression expr2) =>
+            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), new[] { expr0, expr1, expr2 });
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
             new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions.AsReadOnlyList());
@@ -1159,11 +1178,19 @@ namespace FastExpressionCompiler.LightExpression
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
             new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions);
 
+        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0) =>
+            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), new[] { expr0 });
+
+        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, 
+            Expression expr0, Expression expr1) =>
+            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), new[] { expr0, expr1 });
+
+        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, 
+            Expression expr0, Expression expr1, Expression expr2) =>
+            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), new[] { expr0, expr1, expr2 });
+
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
             new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
-
-        public static Expression Block(ParameterExpression variable, Expression expression1, Expression expression2) =>
-            new ManyVariablesBlockExpression(new[] { variable }, new[] { expression1, expression2 });
 
         public static BlockExpression MakeBlock(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions)
         {
@@ -2873,14 +2900,15 @@ namespace FastExpressionCompiler.LightExpression
     }
 
     /// <summary>Base Block expression with no variables and with Type of its last (Result) exporession</summary>
-    public class BlockExpression : Expression
+    public class BlockExpression : Expression, IArgumentProvider
     {
         public override ExpressionType NodeType => ExpressionType.Block;
         public override Type Type => Result.Type;
         public virtual IReadOnlyList<ParameterExpression> Variables => Tools.Empty<ParameterExpression>();
         public readonly IReadOnlyList<Expression> Expressions;
         public Expression Result => Expressions[Expressions.Count - 1];
-
+        public virtual int ArgumentCount => 0;
+        public virtual Expression GetArgument(int index) => throw new NotImplementedException();
         internal BlockExpression(IReadOnlyList<Expression> expressions) => Expressions = expressions;
 
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock(this);
@@ -2895,7 +2923,6 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class TypedBlockExpression : BlockExpression
     {
         public override Type Type { get; }
-
         internal TypedBlockExpression(Type type, IReadOnlyList<Expression> expressions) : base(expressions) =>
             Type = type;
     }
@@ -2903,8 +2930,9 @@ namespace FastExpressionCompiler.LightExpression
 
     public class ManyVariablesBlockExpression : BlockExpression
     {
-        public override IReadOnlyList<ParameterExpression> Variables { get; }
-
+        public sealed override IReadOnlyList<ParameterExpression> Variables { get; }
+        public sealed override int ArgumentCount => Expressions.Count;
+        public sealed override Expression GetArgument(int index) => Expressions[index];
         internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) : base(expressions) =>
             Variables = variables;
     }
@@ -2912,10 +2940,8 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class TypedManyVariablesBlockExpression : ManyVariablesBlockExpression
     {
         public override Type Type { get; }
-
         internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
-            : base(variables, expressions) =>
-            Type = type;
+            : base(variables, expressions) => Type = type;
     }
 
     // todo: @perf optimize the memory for the cases without Break and Continue

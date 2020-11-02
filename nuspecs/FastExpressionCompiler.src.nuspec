@@ -22,7 +22,7 @@ The version contains a lot of fixes and improvements and hopefully as-little-as-
 - Performance and memory consumption is improved, especially for the expressions with the closure and for expressions with the nested lambdas.
 - Filled the gaps in the expressions support.
 - Many fixes in the IL emit.
-- Adds `ToCSharpString()` to output the compile-able C# code described by expression (tries hard).
+- Adds `ToCSharpString()` to output the compile-able C# code described by the expression (tries hard).
 - Adds `ToExpressionString()` to output the valid expression construction syntax, so given an expression object you'll get e.g. `Expression.Lambda(Expression.New(...))`.
 
 ### **FastExpressionCompiler.LightExpression**
