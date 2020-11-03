@@ -384,6 +384,9 @@ namespace FastExpressionCompiler
             return @delegate;
         }
 
+        /// <summary>Adds the Expression to the delegate closure for the debugging purposes</summary>
+        public static bool EnableDelegateDebugInfo;
+
 #if LIGHT_EXPRESSION
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs, Type[] closurePlusParamTypes, Type returnType)
 #else
@@ -400,9 +403,29 @@ namespace FastExpressionCompiler
                     if (!TryCompileNestedLambda(ref closureInfo, i))
                         return null;
 
-            var closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                ? EmptyArrayClosure
-                : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
+            // todo: @incomplete debug info output
+            ArrayClosure closure;
+            if ((closureInfo.Status & ClosureStatus.HasClosure) == 0)
+            {
+                if (!EnableDelegateDebugInfo)
+                    closure = EmptyArrayClosure;
+                else
+                    closure = new DebugArrayClosure(null) 
+                    { 
+                        Expression = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>()) 
+                    };
+            }
+            else
+            {
+                var items = closureInfo.GetArrayOfConstantsAndNestedLambdas();
+                if (!EnableDelegateDebugInfo)
+                   closure = new ArrayClosure(items);
+                else
+                    closure = new DebugArrayClosure(items) 
+                    { 
+                        Expression = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>()) 
+                    };
+            }
 
             var method = new DynamicMethod(string.Empty,
                 returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
@@ -813,7 +836,7 @@ namespace FastExpressionCompiler
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
         public static readonly ArrayClosure EmptyArrayClosure = new ArrayClosure(null);
-
+ 
         public static FieldInfo ArrayClosureArrayField =
             typeof(ArrayClosure).GetTypeInfo().GetDeclaredField(nameof(ArrayClosure.ConstantsAndNestedLambdas));
 
@@ -825,10 +848,33 @@ namespace FastExpressionCompiler
         public static ConstructorInfo ArrayClosureWithNonPassedParamsConstructor = _nonPassedParamsArrayClosureCtors[0];
 
         public static ConstructorInfo ArrayClosureWithNonPassedParamsConstructorWithoutConstants = _nonPassedParamsArrayClosureCtors[1];
+
         public class ArrayClosure
         {
-            public readonly object[] ConstantsAndNestedLambdas; // todo: @feature split into two to reduce copying - it mostly need to set up nested lamdbas and constants externally without closure collecting phase
+            public readonly object[] ConstantsAndNestedLambdas; // todo: @feature split into two to reduce copying - it mostly need to set up nested lambdas and constants externally without closure collecting phase
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
+        }
+
+        public interface IDelegateDebugInfo
+        {
+            LambdaExpression Expression { get; }
+        }
+
+        public sealed class DebugArrayClosure : ArrayClosure, IDelegateDebugInfo
+        {
+            public LambdaExpression Expression { get; internal set; }
+            
+            private readonly Lazy<string> _expressionString;
+            public string ExpressionString => _expressionString.Value;
+
+            private readonly Lazy<string> _csharpString;
+            public string CSharpString => _csharpString.Value;
+
+            public DebugArrayClosure(object[] constantsAndNestedLambdas) : base(constantsAndNestedLambdas) 
+            {
+                _expressionString = new Lazy<string>(() => Expression?.ToExpressionString() ?? "<expression is not available>");
+                _csharpString     = new Lazy<string>(() => Expression?.ToCSharpString()     ?? "<expression is not available>");
+            }
         }
 
         // todo: @perf better to move the case with no constants to another class OR we can reuse ArrayClosure but now ConstantsAndNestedLambdas will hold NonPassedParams
@@ -6726,6 +6772,19 @@ namespace FastExpressionCompiler
 
         [MethodImpl((MethodImplOptions)256)]
         public static ParameterExpression GetParameter(this IReadOnlyList<PE> source, int index) => source[index];
+
+#if LIGHT_EXPRESSION
+        public static IReadOnlyList<PE> ToReadOnlyList(this IParameterProvider source) 
+        {
+            var count = source.ParameterCount;
+            var ps = new ParameterExpression[count];
+            for (var i = 0; i < count; ++i)
+                ps[i] = source.GetParameter(i);
+            return ps;
+        }
+#else
+        public static IReadOnlyList<PE> ToReadOnlyList(this IReadOnlyList<PE> source) => source;
+#endif
     }
 }
 //#endif

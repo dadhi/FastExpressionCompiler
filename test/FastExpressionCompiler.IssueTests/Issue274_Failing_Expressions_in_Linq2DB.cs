@@ -31,6 +31,12 @@ namespace FastExpressionCompiler.IssueTests
 
             var ec = e.ToCSharpString();
             StringAssert.DoesNotContain("<>", ec);
+
+            ExpressionCompiler.EnableDelegateDebugInfo = true;
+            var f = e.CompileFast(true);
+
+            var de = (f.Target as ExpressionCompiler.IDelegateDebugInfo)?.Expression;
+            Assert.IsNotNull(de);
         }
     }
 }
