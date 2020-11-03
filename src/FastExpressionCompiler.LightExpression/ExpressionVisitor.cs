@@ -370,7 +370,7 @@ namespace FastExpressionCompiler.LightExpression
             var defaultBody = Visit(node.DefaultBody);
             if (switchValue == node.SwitchValue && ReferenceEquals(cases, node.Cases) && defaultBody == node.DefaultBody)
                 return node;
-            return new SwitchExpression(node.Type, switchValue, defaultBody, node.Comparison, cases.AsArray());
+            return Expression.Switch(node.Type, switchValue, defaultBody, node.Comparison, cases.AsArray());
         }
 
         protected internal virtual CatchBlock VisitCatchBlock(CatchBlock node)

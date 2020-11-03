@@ -6367,6 +6367,9 @@ namespace FastExpressionCompiler
         public static StringBuilder AppendMethod(this StringBuilder sb, MethodInfo method, 
             bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
+            if (method == null)
+                return sb.Append("null");
+
             sb.AppendTypeof(method.DeclaringType, stripNamespace, printType);
             sb.Append(".GetMethods(");
 

@@ -1409,19 +1409,25 @@ namespace FastExpressionCompiler.LightExpression
             MakeGoto(GotoExpressionKind.Return, target, value, type);
 
         public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, params SwitchCase[] cases) =>
-            new SwitchExpression(defaultBody.Type, switchValue, defaultBody, null, cases);
+            new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases);
 
         public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
-            new SwitchExpression(defaultBody.Type, switchValue, defaultBody, comparison, cases);
+            comparison == null 
+            ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases)
+            : new WithComparisonSwitchExpression(defaultBody.Type, switchValue, defaultBody, cases, comparison);
 
         public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
-            new SwitchExpression(type, switchValue, defaultBody, comparison, cases);
+            comparison == null 
+            ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases)
+            : new WithComparisonSwitchExpression(type, switchValue, defaultBody, cases, comparison);
 
         public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
-            new SwitchExpression(type, switchValue, defaultBody, comparison, cases.AsArray());
+            comparison == null 
+            ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray())
+            : new WithComparisonSwitchExpression(type, switchValue, defaultBody, cases.AsArray(), comparison);
 
         public static SwitchExpression Switch(Expression switchValue, params SwitchCase[] cases) =>
-            new SwitchExpression(null, switchValue, null, null, cases);
+            new SwitchExpression(null, switchValue, null, cases);
 
         public static SwitchCase SwitchCase(Expression body, IEnumerable<Expression> testValues) =>
             new SwitchCase(body, testValues);
@@ -3232,21 +3238,20 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class SwitchExpression : Expression
+    public class SwitchExpression : Expression // todo: @perf implement IArgumentProvider<SwitchCase>
     {
-        public override ExpressionType NodeType => ExpressionType.Switch;
-        public override Type Type { get; }
+        public sealed override ExpressionType NodeType => ExpressionType.Switch;
+        public sealed override Type Type { get; }
         public readonly Expression SwitchValue;
         public IReadOnlyList<SwitchCase> Cases => _cases;
         private readonly SwitchCase[] _cases;
         public readonly Expression DefaultBody;
-        public readonly MethodInfo Comparison;
-        public SwitchExpression(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, SwitchCase[] cases)
+        public virtual MethodInfo Comparison => null;
+        public SwitchExpression(Type type, Expression switchValue, Expression defaultBody, SwitchCase[] cases)
         {
             Type = type;
             SwitchValue = switchValue;
             DefaultBody = defaultBody;
-            Comparison = comparison;
             _cases = cases;
         }
 
@@ -3271,6 +3276,13 @@ namespace FastExpressionCompiler.LightExpression
                 result[i] = ToSwitchCase(ref switchCases[i], ref exprsConverted);
             return result;
         }
+    }
+
+    public sealed class WithComparisonSwitchExpression : SwitchExpression
+    {
+        public override MethodInfo Comparison { get; }
+        public WithComparisonSwitchExpression(Type type, Expression switchValue, Expression defaultBody, SwitchCase[] cases, MethodInfo comparison)
+            : base(type, switchValue, defaultBody, cases) => Comparison = comparison;
     }
 
     public class LambdaExpression : Expression, IParameterProvider
