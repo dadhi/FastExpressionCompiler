@@ -5120,7 +5120,9 @@ namespace FastExpressionCompiler
             while (i != -1 && !ReferenceEquals(paramsExprs[i], pe)) --i;
             if (i != -1) 
                 return sb.Append("p[").Append(i)
-                    .Append(" // (").Append(pe.Type.ToCode(stripNamespace, printType))
+                    .Append(" // (")
+                    .Append(!pe.Type.IsPrimitive && pe.Type.IsValueType() ? "[struct] " : string.Empty)
+                    .Append(pe.Type.ToCode(stripNamespace, printType))
                     .Append(' ').AppendName(pe.Name, pe.Type, pe).Append(')')
                     .NewLineIdent(lineIdent).Append(']');
 
@@ -5384,7 +5386,7 @@ namespace FastExpressionCompiler
                     sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType).Append(',');
 
                     if (x.Variables.Count == 0)
-                        sb.NewLineIdent(lineIdent).Append("new ParameterExpression[0],");
+                        sb.NewLineIdent(lineIdent).Append("new ParameterExpression[0], ");
                     else
                     {
                         sb.NewLineIdent(lineIdent).Append("new[] {");
@@ -5579,12 +5581,8 @@ namespace FastExpressionCompiler
                     if (x.Value is Type t)
                         return sb.AppendTypeof(t, stripNamespace, printType);
 
-                    // value with the cast
-                    if (x.Value.GetType() != x.Type)
-                    {
+                    if (x.Value.GetType() != x.Type) // add the cast
                         sb.Append('(').Append(x.Type.ToCode(stripNamespace, printType)).Append(')');
-                        return sb.Append(x.Value.ToCode(CodePrinter.DefaultConstantValueToCode, stripNamespace, printType));
-                    }
 
                     return sb.Append(x.Value.ToCode(CodePrinter.DefaultConstantValueToCode, stripNamespace, printType));
                 }
@@ -6547,10 +6545,14 @@ namespace FastExpressionCompiler
                 }
             }
 
+            var name = type.Name;
+            if (name.StartsWith("<>"))
+                name = name.Substring(2); // strip the "<>" from the `AnonymousType`
+
             if (typeArgs != null && typeArgsConsumedByParentsCount < typeArgs.Length)
             {
-                var tickIndex = type.Name.IndexOf('`');
-                s.Append(type.Name.Substring(0, tickIndex)).Append('<');
+                var tickIndex = name.IndexOf('`');
+                s.Append(name.Substring(0, tickIndex)).Append('<');
                 for (var i = 0; i < typeArgs.Length - typeArgsConsumedByParentsCount; ++i) 
                     (i == 0 ? s : s.Append(", "))
                         .Append(typeArgs[i + typeArgsConsumedByParentsCount]
@@ -6559,7 +6561,7 @@ namespace FastExpressionCompiler
             }
             else
             {
-                s.Append(type.Name);
+                s.Append(name);
             }
 
             if (arrayType != null)
@@ -6591,13 +6593,14 @@ namespace FastExpressionCompiler
         private class ConstantValueToCode : CodePrinter.IObjectToCode
         {
             public string ToCode(object x, bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-                $"default({x.GetType().ToCode(stripNamespace, printType)})";
+                "default(" +
+                // "// todo: @incomplete - the value should be provided by user " + Environment.NewLine + 
+                x.GetType().ToCode(stripNamespace, printType) + ")";
         }
 
         internal static readonly CodePrinter.IObjectToCode DefaultConstantValueToCode = new ConstantValueToCode();
 
-
-        /// Prints many code items as array initializer.
+        /// <summary>Prints many code items as the array initializer.</summary>
         public static string ToCommaSeparatedCode(this IEnumerable items, IObjectToCode notRecognizedToCode,
             bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
@@ -6691,9 +6694,9 @@ namespace FastExpressionCompiler
             where T : Expression
         {
             if (exprs.Count == 0)
-                return sb.Append("new ").Append(typeof(T).ToCode(true)).Append("[0]");
+                return sb.Append(" new ").Append(typeof(T).ToCode(true)).Append("[0]");
             for (var i = 0; i < exprs.Count; i++)
-                (i > 0 ? sb.Append(',') : sb).NewLineIdentExpr(exprs[i], 
+                (i > 0 ? sb.Append(", ") : sb).NewLineIdentExpr(exprs[i], 
                     paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
             return sb;
         }
