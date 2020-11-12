@@ -403,28 +403,16 @@ namespace FastExpressionCompiler
                     if (!TryCompileNestedLambda(ref closureInfo, i))
                         return null;
 
-            // todo: @incomplete debug info output
             ArrayClosure closure;
-            if ((closureInfo.Status & ClosureStatus.HasClosure) == 0)
+            if (!EnableDelegateDebugInfo)
+                closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0 ? EmptyArrayClosure 
+                    : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
+            else 
             {
-                if (!EnableDelegateDebugInfo)
-                    closure = EmptyArrayClosure;
-                else
-                    closure = new DebugArrayClosure(null) 
-                    { 
-                        Expression = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>()) 
-                    };
-            }
-            else
-            {
-                var items = closureInfo.GetArrayOfConstantsAndNestedLambdas();
-                if (!EnableDelegateDebugInfo)
-                   closure = new ArrayClosure(items);
-                else
-                    closure = new DebugArrayClosure(items) 
-                    { 
-                        Expression = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>()) 
-                    };
+                var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
+                closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0 
+                    ? new DebugArrayClosure(null, debugExpr)
+                    : new DebugArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas(), debugExpr);
             }
 
             var method = new DynamicMethod(string.Empty,
@@ -863,15 +851,16 @@ namespace FastExpressionCompiler
         public sealed class DebugArrayClosure : ArrayClosure, IDelegateDebugInfo
         {
             public LambdaExpression Expression { get; internal set; }
-            
+
             private readonly Lazy<string> _expressionString;
             public string ExpressionString => _expressionString.Value;
 
             private readonly Lazy<string> _csharpString;
             public string CSharpString => _csharpString.Value;
 
-            public DebugArrayClosure(object[] constantsAndNestedLambdas) : base(constantsAndNestedLambdas) 
+            public DebugArrayClosure(object[] constantsAndNestedLambdas, LambdaExpression expr) : base(constantsAndNestedLambdas) 
             {
+                Expression        = expr;
                 _expressionString = new Lazy<string>(() => Expression?.ToExpressionString() ?? "<expression is not available>");
                 _csharpString     = new Lazy<string>(() => Expression?.ToCSharpString()     ?? "<expression is not available>");
             }
