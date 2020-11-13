@@ -66,7 +66,7 @@ namespace FastExpressionCompiler
         /// <summary>The default options: Invocation lambda is inlined, no debug info</summary>
         Default = 0, 
         /// <summary>Prevents the inlining of the lambda in the Invocation expression to optimize for the multiple same lambda compiled once</summary>
-        NoLambdaInvocationInlining = 1,
+        NoInvocationLambdaInlining = 1,
         /// <summary>Adds the Expression, ExpressionString, and CSharpString to the delegate closure for the debugging inspection</summary>
         EnableDelegateDebugInfo = 1 << 1,
     }
@@ -1192,7 +1192,7 @@ namespace FastExpressionCompiler
                         var argCount = invokeArgs.Count;
 #endif
                         var invocatedExpr = invokeExpr.Expression;
-                        if ((flags & CompilerFlags.NoLambdaInvocationInlining) == 0 && invocatedExpr is LambdaExpression la)
+                        if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invocatedExpr is LambdaExpression la)
                         {
                             if (argCount == 0)
                             {
@@ -3970,7 +3970,7 @@ namespace FastExpressionCompiler
                 var argCount = argExprs.Count;
 #endif
                 var lambda = expr.Expression;
-                if ((setup & CompilerFlags.NoLambdaInvocationInlining) == 0 && lambda is LambdaExpression la)
+                if ((setup & CompilerFlags.NoInvocationLambdaInlining) == 0 && lambda is LambdaExpression la)
                 {
                     if (argCount == 0)
                         return TryEmit(la.Body, paramExprs, il, ref closure, setup, parent);
