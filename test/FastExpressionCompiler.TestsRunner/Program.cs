@@ -12,7 +12,9 @@ namespace FastExpressionCompiler.UnitTests
             RunAllTests();
 
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
+            // new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run();
         }
+
         public static void RunAllTests()
         {
             var failed = false;

@@ -35,7 +35,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
 
-            var de = f.Target as ExpressionCompiler.IDelegateDebugInfo;
+            var de = f.Target as IDelegateDebugInfo;
             Assert.IsNotNull(de.Expression);
 
             Assert.IsNotNull(de.ExpressionString);

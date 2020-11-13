@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
-    public class Issue83_linq2db
+    public class Issue83_linq2db : ITest
     {
         public int Run()
         {

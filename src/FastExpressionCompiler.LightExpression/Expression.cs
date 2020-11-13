@@ -2741,6 +2741,7 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.ListBind(Member, ListInitExpression.ToElementInits(Initializers, ref exprsConverted));
     }
 
+    // todo: @perf add up to 6 arguments classes
     public class InvocationExpression : Expression, IArgumentProvider
     {
         public sealed override ExpressionType NodeType => ExpressionType.Invoke;
