@@ -772,7 +772,6 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual("aa", compiled2());
         }
 
-
         [Test]
         public void TestLambdaInvokeSupported3()
         {

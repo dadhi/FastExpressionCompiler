@@ -1192,9 +1192,31 @@ namespace FastExpressionCompiler
                         var argCount = invokeArgs.Count;
 #endif
                         var invocatedExpr = invokeExpr.Expression;
+                        if ((flags & CompilerFlags.NoLambdaInvocationInlining) == 0 && invocatedExpr is LambdaExpression la)
+                        {
+                            if (argCount == 0)
+                            {
+                                expr = la.Body;
+                                continue;
+                            }
+
+                            // To inline the lambda we will wrap its body into a block, paramaters into the block variables, 
+                            // and the invocation arguments into the variable assignments.
+                            // see #278
+
+                            // We don't optimize the memory with IParameterProvider because anyway we materialize the parameters into the block below
+                            var pars = la.Parameters;
+                            var exprs = new Expression[argCount + 1];
+                            for (var i = 0; i < argCount; i++)
+                                exprs[i] = Assign(pars[i], invokeArgs.GetArgument(i));
+                            exprs[argCount] = la.Body;
+                            expr = Block(pars, exprs);
+                            continue;
+                        }
+
                         if (argCount == 0)
                         {
-                            expr = (flags & CompilerFlags.NoLambdaInvocationInlining) == 0 && invocatedExpr is LambdaExpression la ? la.Body : invocatedExpr;
+                            expr = invocatedExpr;
                             continue;
                         }
 
@@ -3948,9 +3970,18 @@ namespace FastExpressionCompiler
                 var argCount = argExprs.Count;
 #endif
                 var lambda = expr.Expression;
-                if (argCount == 0 && // todo: @feature - Today we are inlining the parameterless lambda only 
-                    (setup & CompilerFlags.NoLambdaInvocationInlining) == 0 && lambda is LambdaExpression la)
-                    return TryEmit(la.Body, paramExprs, il, ref closure, setup, parent);
+                if ((setup & CompilerFlags.NoLambdaInvocationInlining) == 0 && lambda is LambdaExpression la)
+                {
+                    if (argCount == 0)
+                        return TryEmit(la.Body, paramExprs, il, ref closure, setup, parent);
+
+                    var pars = la.Parameters;
+                    var exprs = new Expression[argCount + 1];
+                    for (var i = 0; i < argCount; i++)
+                        exprs[i] = Assign(pars[i], argExprs.GetArgument(i));
+                    exprs[argCount] = la.Body;
+                    return TryEmit(Block(pars, exprs), paramExprs, il, ref closure, setup, parent);
+                }
 
                 if (!TryEmit(lambda, paramExprs, il, ref closure, setup, 
                     parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method

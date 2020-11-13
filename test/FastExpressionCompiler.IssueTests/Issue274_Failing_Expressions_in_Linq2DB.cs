@@ -19,11 +19,11 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // The_expression_with_anonymous_class_should_output_without_special_symbols();
-
             Test_case_1_Access_ViolationException();
 
-            return 1;
+            // The_expression_with_anonymous_class_should_output_without_special_symbols();
+
+            return 2;
         }
 
         [Test]
