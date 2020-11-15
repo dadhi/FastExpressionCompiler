@@ -10,13 +10,13 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue127_Switch_is_supported
+    public class Issue127_Switch_is_supported : ITest
     {
         public int Run()
         {
             SwitchIsSupported1();
             SwitchIsSupportedEnum();
-            SwitchIsSupportedEnum2();
+            SwitchIsSupported_TestNullableEnumIsNull();
             SwitchIsSupported11();
             SwitchIsSupported12();
             SwitchIsSupported2();
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void SwitchIsSupportedEnum2()
+        public void SwitchIsSupported_TestNullableEnumIsNull()
         {
             var eVar = Parameter(typeof(MyEnum));
             var blockExpr =
@@ -82,11 +82,17 @@ namespace FastExpressionCompiler.IssueTests
                     SwitchCase(Constant(2L, typeof(long?)), Constant(MyEnum.b))
                 );
 
-            var lambda = Lambda<Func<MyEnum, long?>>(blockExpr, eVar);
-            var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
-            Assert.AreEqual(2L, fastCompiled(MyEnum.b));
-            Assert.AreEqual(null, fastCompiled(MyEnum.c));
+            var e = Lambda<Func<MyEnum, long?>>(blockExpr, eVar);
+            
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            
+            var f = e.CompileFast(true);
+            f.PrintIL();
+
+            Assert.NotNull(f);
+            Assert.AreEqual(2L, f(MyEnum.b));
+            Assert.AreEqual(null, f(MyEnum.c));
         }
 
         [Test]
@@ -103,9 +109,10 @@ namespace FastExpressionCompiler.IssueTests
                 );
 
             var lambda = Lambda<Func<int, string>>(blockExpr, eVar);
-            var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
-            Assert.AreEqual("B", fastCompiled(2));
+            var f = lambda.CompileFast(true);
+
+            Assert.NotNull(f);
+            Assert.AreEqual("B", f(2));
         }
 
         [Test]
