@@ -1008,18 +1008,83 @@ namespace FastExpressionCompiler.LightExpression
         public static InvocationExpression Invoke(LambdaExpression expression) =>
             new InvocationExpression(expression);
 
-        public static InvocationExpression Invoke(LambdaExpression expression, Expression arg0) =>
-            new OneArgumentInvocationExpression(expression, arg0);
+        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0) =>
+            new OneArgumentInvocationExpression(expression, a0);
 
-        public static InvocationExpression Invoke(Expression expression, Expression arg0) =>
+        public static InvocationExpression Invoke(Expression expression, Expression a0) =>
             expression is LambdaExpression
-                ? new OneArgumentInvocationExpression(expression, arg0)
-                : new TypedOneArgumentInvocationExpression(expression, arg0, expression.Type.FindDelegateInvokeMethod().ReturnType);
+                ? new OneArgumentInvocationExpression(expression, a0)
+                : new TypedOneArgumentInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0);
 
-        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression arg0) =>
+        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0) =>
             expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
-                ? new OneArgumentInvocationExpression(expression, arg0)
-                : new TypedOneArgumentInvocationExpression(expression, arg0, returnType);
+                ? new OneArgumentInvocationExpression(expression, a0)
+                : new TypedOneArgumentInvocationExpression(expression, returnType, a0);
+
+        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1) =>
+            new TwoArgumentsInvocationExpression(expression, a0, a1);
+
+        public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1) =>
+            expression is LambdaExpression
+                ? new TwoArgumentsInvocationExpression(expression, a0, a1)
+                : new TypedTwoArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1);
+
+        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1) =>
+            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+                ? new TwoArgumentsInvocationExpression(expression, a0, a1)
+                : new TypedTwoArgumentsInvocationExpression(expression, returnType, a0, a1);
+
+        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2) =>
+            new ThreeArgumentsInvocationExpression(expression, a0, a1, a2);
+
+        public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2) =>
+            expression is LambdaExpression
+                ? new ThreeArgumentsInvocationExpression(expression, a0, a1, a2)
+                : new TypedThreeArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2);
+
+        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2) =>
+            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+                ? new ThreeArgumentsInvocationExpression(expression, a0, a1, a2)
+                : new TypedThreeArgumentsInvocationExpression(expression, returnType, a0, a1, a2);
+
+        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
+            new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3);
+
+        public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
+            expression is LambdaExpression
+                ? new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3)
+                : new TypedFourArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3);
+
+        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
+            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+                ? new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3)
+                : new TypedFourArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3);
+
+        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
+            new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4);
+
+        public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
+            expression is LambdaExpression
+                ? new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4)
+                : new TypedFiveArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4);
+
+        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
+            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+                ? new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4)
+                : new TypedFiveArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3, a4);
+
+        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
+            new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5);
+
+        public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
+            expression is LambdaExpression
+                ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
+                : new TypedSixArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4, a5);
+
+        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
+            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+                ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
+                : new TypedSixArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3, a4, a5);
 
         public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
             expression is LambdaExpression
@@ -2741,7 +2806,6 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.ListBind(Member, ListInitExpression.ToElementInits(Initializers, ref exprsConverted));
     }
 
-    // todo: @perf add up to 6 arguments classes
     public class InvocationExpression : Expression, IArgumentProvider
     {
         public sealed override ExpressionType NodeType => ExpressionType.Invoke;
@@ -2778,9 +2842,104 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class TypedOneArgumentInvocationExpression : OneArgumentInvocationExpression
     {
         public override Type Type { get; }
-        internal TypedOneArgumentInvocationExpression(Expression expression, Expression argument, Type type)
-            : base(expression, argument) =>
-            Type = type;
+        internal TypedOneArgumentInvocationExpression(Expression expression, Type type, Expression argument)
+            : base(expression, argument) => Type = type;
+    }
+
+    public class TwoArgumentsInvocationExpression : InvocationExpression
+    {
+        public readonly Expression Argument0, Argument1;
+        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
+        public sealed override int ArgumentCount => 2;
+        public sealed override Expression GetArgument(int i) => i == 0 ? Argument0 : Argument1;
+        internal TwoArgumentsInvocationExpression(Expression expression, 
+            Expression a0, Expression a1) : base(expression)
+        { Argument0 = a0; Argument1 = a1; }
+    }
+
+    public sealed class TypedTwoArgumentsInvocationExpression : TwoArgumentsInvocationExpression
+    {
+        public override Type Type { get; }
+        internal TypedTwoArgumentsInvocationExpression(Expression expression, Type type, Expression a0, Expression a1)
+            : base(expression, a0, a1) => Type = type;
+    }
+
+    public class ThreeArgumentsInvocationExpression : InvocationExpression
+    {
+        public readonly Expression Argument0, Argument1, Argument2;
+        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
+        public sealed override int ArgumentCount => 3;
+        public sealed override Expression GetArgument(int i) => i == 0 ? Argument0 : i == 1 ? Argument1 : Argument2;
+        internal ThreeArgumentsInvocationExpression(Expression expression, 
+            Expression a0, Expression a1, Expression a2) : base(expression)
+        { Argument0 = a0; Argument1 = a1; Argument2 = a2; }
+    }
+
+    public sealed class TypedThreeArgumentsInvocationExpression : ThreeArgumentsInvocationExpression
+    {
+        public override Type Type { get; }
+        internal TypedThreeArgumentsInvocationExpression(Expression expression, Type type, Expression a0, Expression a1, Expression a2)
+            : base(expression, a0, a1, a2) => Type = type;
+    }
+
+    public class FourArgumentsInvocationExpression : InvocationExpression
+    {
+        public readonly Expression Argument0, Argument1, Argument2, Argument3;
+        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
+        public sealed override int ArgumentCount => 4;
+        public sealed override Expression GetArgument(int i) => 
+            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : Argument3;
+        internal FourArgumentsInvocationExpression(Expression expression, 
+            Expression a0, Expression a1, Expression a2, Expression a3) : base(expression)
+        { Argument0 = a0; Argument1 = a1; Argument2 = a2; Argument3 = a3; }
+    }
+
+    public sealed class TypedFourArgumentsInvocationExpression : FourArgumentsInvocationExpression
+    {
+        public override Type Type { get; }
+        internal TypedFourArgumentsInvocationExpression(Expression expression, Type type, 
+            Expression a0, Expression a1, Expression a2, Expression a3)
+            : base(expression, a0, a1, a2, a3) => Type = type;
+    }
+
+    public class FiveArgumentsInvocationExpression : InvocationExpression
+    {
+        public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4;
+        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
+        public sealed override int ArgumentCount => 5;
+        public sealed override Expression GetArgument(int i) => 
+            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : i == 3 ? Argument3 : Argument4;
+        internal FiveArgumentsInvocationExpression(Expression expression, 
+            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) : base(expression)
+        { Argument0 = a0; Argument1 = a1; Argument2 = a2; Argument3 = a3; Argument4 = a4; }
+    }
+
+    public sealed class TypedFiveArgumentsInvocationExpression : FiveArgumentsInvocationExpression
+    {
+        public override Type Type { get; }
+        internal TypedFiveArgumentsInvocationExpression(Expression expression, Type type, 
+            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4)
+            : base(expression, a0, a1, a2, a3, a4) => Type = type;
+    }
+
+    public class SixArgumentsInvocationExpression : InvocationExpression
+    {
+        public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4, Argument5;
+        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5 };
+        public sealed override int ArgumentCount => 6;
+        public sealed override Expression GetArgument(int i) => 
+            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : i == 3 ? Argument3 : i == 4 ? Argument4 : Argument5;
+        internal SixArgumentsInvocationExpression(Expression expression, 
+            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) : base(expression)
+        { Argument0 = a0; Argument1 = a1; Argument2 = a2; Argument3 = a3; Argument4 = a4; Argument5 = a5; }
+    }
+
+    public sealed class TypedSixArgumentsInvocationExpression : SixArgumentsInvocationExpression
+    {
+        public override Type Type { get; }
+        internal TypedSixArgumentsInvocationExpression(Expression expression, Type type, 
+            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5)
+            : base(expression, a0, a1, a2, a3, a4, a5) => Type = type;
     }
 
     public class ManyArgumentsInvocationExpression : InvocationExpression
