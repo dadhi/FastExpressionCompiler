@@ -390,26 +390,23 @@ namespace FastExpressionCompiler.UnitTests
         public void Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda()
         {
             var nParam = Parameter(typeof(int), "n");
-            var add = Lambda<Func<int, int>>(
-                Add(nParam, Constant(1)), 
-                nParam);
 
-            var sub = Lambda<Func<int, int>>(
-                Subtract(nParam, Invoke(add, nParam)),
-                nParam);
+            var add = Lambda<Func<int, int>>(Add(nParam, Constant(1)), nParam);
 
             var e = Lambda<Func<int>>(
-                Add(Invoke(sub, Constant(42)),
-                    Invoke(add, Constant(13))));
+                Add(
+                    Invoke(Lambda<Func<int, int>>(Subtract(nParam, Invoke(add, nParam)), nParam), Constant(42)),
+                    Invoke(add, Constant(13))
+                ));
 
             var fs =  e.CompileSys();
             Assert.AreEqual(13, fs());
 
+            var fi = e.CompileFast(true);
+            Assert.AreEqual(13, fi());
+
             var f = e.CompileFast(true, CompilerFlags.NoInvocationLambdaInlining);
             Assert.AreEqual(13, f());
-
-            // var fi = e.CompileFast(true); // todo: @bug should work without the flag
-            // Assert.AreEqual(13, fi());
         }
     }
 }

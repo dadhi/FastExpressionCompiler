@@ -777,14 +777,14 @@ namespace FastExpressionCompiler
             /// LocalVar maybe a `null` in a collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
             public void PushBlockWithVars(ParameterExpression blockVarExpr)
             {
-                ref var block    = ref _blockStack.PushSlot();
-                block.VarExprs   = blockVarExpr;
+                ref var block  = ref _blockStack.PushSlot();
+                block.VarExprs = blockVarExpr;
             }
 
             public void PushBlockWithVars(ParameterExpression blockVarExpr, int varIndex)
             {
-                ref var block = ref _blockStack.PushSlot();
-                block.VarExprs = blockVarExpr;
+                ref var block    = ref _blockStack.PushSlot();
+                block.VarExprs   = blockVarExpr;
                 block.VarIndexes = new[] { varIndex };
             }
 
@@ -1036,6 +1036,7 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.Parameter:
+                    {
                         // if parameter is used BUT is not in passed parameters and not in local variables,
                         // it means parameter is provided by outer lambda and should be put in closure for current lambda
                         var p = paramCount - 1;
@@ -1047,7 +1048,7 @@ namespace FastExpressionCompiler
                             closure.AddNonPassedParam((ParameterExpression)expr);
                         }
                         return true;
-
+                    }
                     case ExpressionType.Call:
                     {
                         var callExpr = (MethodCallExpression)expr;
@@ -1204,13 +1205,39 @@ namespace FastExpressionCompiler
                             // and the invocation arguments into the variable assignments.
                             // see #278
 
-                            // We don't optimize the memory with IParameterProvider because anyway we materialize the parameters into the block below
+                            // - We don't optimize the memory with IParameterProvider because anyway we materialize the parameters into the block below
+#if LIGHT_EXPRESSION
+                            var pars = (IParameterProvider)la;
+#else
                             var pars = la.Parameters;
+#endif
                             var exprs = new Expression[argCount + 1];
+                            List<ParameterExpression> vars = null;
                             for (var i = 0; i < argCount; i++)
-                                exprs[i] = Assign(pars[i], invokeArgs.GetArgument(i));
+                            {
+                                var p = pars.GetParameter(i);
+                                // Check for the case of reusing the parameters in the different lambdas, 
+                                // see test `Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
+                                var j = paramCount - 1;
+                                while (j != -1 && !ReferenceEquals(p, paramExprs.GetParameter(j))) --j;
+                                if (j != -1 || 
+                                    closure.IsLocalVar(p)) // don't forget to check the variable in case of upper inlined lambda already moved the parameters into the block variables
+                                {
+                                    // if we found the same parameter let's move the non-found (new) parameters into the separate `vars` list
+                                    if (vars == null)
+                                    {
+                                        vars = new List<ParameterExpression>();
+                                        for (var k = 0; k < i; k++)
+                                            vars.Add(pars.GetParameter(k));
+                                    }
+                                }
+                                else if (vars != null)
+                                    vars.Add(p);
+
+                                exprs[i] = Assign(p, invokeArgs.GetArgument(i));
+                            }
                             exprs[argCount] = la.Body;
-                            expr = Block(pars, exprs);
+                            expr = Block(vars ?? pars.ToReadOnlyList(), exprs);
                             continue;
                         }
 
@@ -3957,11 +3984,14 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
             private static bool TryEmitInvoke(InvocationExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure, 
                 CompilerFlags setup, ParentFlags parent)
+            {
+                var paramCount = paramExprs.ParameterCount;
 #else
             private static bool TryEmitInvoke(InvocationExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure, 
                 CompilerFlags setup, ParentFlags parent)
-#endif
             {
+                var paramCount = paramExprs.Count;
+#endif
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var argExprs = (IArgumentProvider)expr;
                 var argCount = argExprs.ArgumentCount;
@@ -3974,13 +4004,36 @@ namespace FastExpressionCompiler
                 {
                     if (argCount == 0)
                         return TryEmit(la.Body, paramExprs, il, ref closure, setup, parent);
-
+#if LIGHT_EXPRESSION
+                    var pars = (IParameterProvider)la;
+#else
                     var pars = la.Parameters;
+#endif
                     var exprs = new Expression[argCount + 1];
+                    List<ParameterExpression> vars = null;
                     for (var i = 0; i < argCount; i++)
-                        exprs[i] = Assign(pars[i], argExprs.GetArgument(i));
+                    {
+                        var p = pars.GetParameter(i);
+                        // Check for the case of reusing the parameters in the different lambdas, 
+                        // see test `Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
+                        var j = paramCount - 1;
+                        while (j != -1 && !ReferenceEquals(p, paramExprs.GetParameter(j))) --j;
+                        if (j != -1 || closure.IsLocalVar(p)) 
+                        {
+                            // if we found the same parameter let's move the non-found (new) parameters into the separate `vars` list
+                            if (vars == null)
+                            {
+                                vars = new List<ParameterExpression>();
+                                for (var k = 0; k < i; k++)
+                                    vars.Add(pars.GetParameter(k));
+                            }
+                        }
+                        else if (vars != null) // but vars maybe empty in the result - it is fine
+                            vars.Add(p);
+                        exprs[i] = Assign(p, argExprs.GetArgument(i));
+                    }
                     exprs[argCount] = la.Body;
-                    return TryEmit(Block(pars, exprs), paramExprs, il, ref closure, setup, parent);
+                    return TryEmit(Block(vars ?? pars.ToReadOnlyList(), exprs), paramExprs, il, ref closure, setup, parent);
                 }
 
                 if (!TryEmit(lambda, paramExprs, il, ref closure, setup, 
