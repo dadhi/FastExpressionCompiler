@@ -19,8 +19,8 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Test_case_1_Minimal_compare_nullable_with_null_conditional();
-            Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
+            Test_case_1_Minimal_compare_nullable_with_null_conditional();
+            // Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
 
             //Test_case_1_Access_ViolationException();
 
