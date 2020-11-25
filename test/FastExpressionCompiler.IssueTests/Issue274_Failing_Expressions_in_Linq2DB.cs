@@ -20,13 +20,14 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Test_case_1_Minimal_compare_nullable_with_null_conditional();
-            // Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
+            Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
+            Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
 
-            //Test_case_1_Access_ViolationException();
+            Test_case_1_OriginalLinq2DB_Access_ViolationException();
 
-            // The_expression_with_anonymous_class_should_output_without_special_symbols();
+            The_expression_with_anonymous_class_should_output_without_special_symbols();
 
-            return 2;
+            return 5;
         }
 
         [Test]
@@ -64,7 +65,27 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(100, f(42));
         }
 
-        [Test, Ignore("fixme")] // todo: @bug 
+        [Test] // todo: @bug 
+        public void Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional()
+        {
+            var p = Parameter(typeof(int?), "i");
+            var e = Lambda<Func<int?, int?>>(
+                Condition(
+                  Equal(Call(GetType().GetMethod(nameof(CheckNullable)), p), 
+                  Constant(null, typeof(int?))), 
+                  Constant(null, typeof(int?)), 
+                  Convert(Constant(100), typeof(int?))), p);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            var f = e.CompileFast(true);
+            f.PrintIL();
+
+            Assert.AreEqual(100, f(42));
+        }
+
+        [Test]//, Ignore("fixme")] // todo: @bug 
         public void Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional()
         {
             var i = Parameter(typeof(int?), "i");
@@ -90,7 +111,7 @@ namespace FastExpressionCompiler.IssueTests
         public static int? CheckNullable(int? i) => 5;
 
         [Test]
-        public void Test_case_1_Access_ViolationException()
+        public void Test_case_1_OriginalLinq2DB_Access_ViolationException()
         {
             var p = new ParameterExpression[10]; // the paramiter expressions i
             var e = new Expression[30]; // the unique expressions 

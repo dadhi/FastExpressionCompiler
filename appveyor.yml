@@ -19,7 +19,7 @@ for:
         - image: Visual Studio 2019
 
     build_script:
-      - build.bat
+      - build_with_packaging.bat
 
     artifacts:
       - path: .\.dist\*.nupkg

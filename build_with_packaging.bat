@@ -4,6 +4,7 @@ echo:
 echo:## Starting: RESTORE and BUILD...
 echo: 
 
+dotnet clean -v:m
 dotnet build -c:Release -v:m
 if %ERRORLEVEL% neq 0 goto :error
 
@@ -19,10 +20,17 @@ if %ERRORLEVEL% neq 0 goto :error
 
 dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner.Net472/FastExpressionCompiler.TestsRunner.Net472.csproj
 if %ERRORLEVEL% neq 0 goto :error
-
 echo:
 echo:## Finished: TESTS
 
+echo: 
+echo:## Starting: SOURCE PACKAGING...
+echo:
+call BuildScripts\NugetPack.bat
+if %ERRORLEVEL% neq 0 goto :error
+echo:
+echo:## Finished: SOURCE PACKAGING
+echo: 
 echo:## Finished: ALL ##
 echo:
 exit /b 0

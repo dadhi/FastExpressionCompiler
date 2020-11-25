@@ -1708,11 +1708,12 @@ namespace FastExpressionCompiler
 
                             if (constExpr.Value == null)
                             {
+                                // todo: @bug? should we use `EmitLoadLocalVariable(il, InitValueTypeVariable(il, type))` to emit the `default(Nullable<X>)` instead of `ldnull` - the System.Compile does that, but the `ldnull` seems to work too (#274)
                                 il.Emit(OpCodes.Ldnull);
                                 return true;
                             }
 
-                            return TryEmitNotNullConstant(closure.ContainsConstantsOrNestedLambdas(),
+                            return TryEmitConstantOfNotNullValue(closure.ContainsConstantsOrNestedLambdas(),
                                 constExpr.Type, constExpr.Value, il, ref closure);
 
                         case ExpressionType.Call:
@@ -2817,7 +2818,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitNotNullConstant(
+            private static bool TryEmitConstantOfNotNullValue(
                 bool considerClosure, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure)
             {
                 var constValueType = constantValue.GetType();
@@ -3840,7 +3841,7 @@ namespace FastExpressionCompiler
                     {
                         var fieldValue = field.GetValue(null);
                         if (fieldValue != null)
-                            return TryEmitNotNullConstant(false, field.FieldType, fieldValue, il, ref closure);
+                            return TryEmitConstantOfNotNullValue(false, field.FieldType, fieldValue, il, ref closure);
 
                         il.Emit(OpCodes.Ldnull);
                     }
@@ -4600,7 +4601,7 @@ namespace FastExpressionCompiler
                 // `x != 0`     => `Brfalse`
                 
                 var useBrFalseOrTrue = -1; // 0 - is comparison with Zero (0, null, false), 1 - is comparison with (true)
-                
+                Type nullOfValueType = null;
                 if (testExpr is BinaryExpression b)
                 {
                     if (b.NodeType == ExpressionType.Equal || b.NodeType == ExpressionType.NotEqual)
@@ -4615,7 +4616,10 @@ namespace FastExpressionCompiler
                                 // The null comparison for the nullable is actually a `nullable.HasValue` check,
                                 // which implies member access on nullable struct - therefore loading it by address
                                 if (b.Left.Type.IsNullable())
+                                {
+                                    nullOfValueType = b.Left.Type;
                                     parent |= ParentFlags.MemberAccess;
+                                }
                             }
                             else if (constVal is bool rcb)
                             {
@@ -4637,7 +4641,10 @@ namespace FastExpressionCompiler
                             {
                                 useBrFalseOrTrue = 0;
                                 if (b.Right.Type.IsNullable())
+                                {
+                                    nullOfValueType = b.Right.Type;
                                     parent |= ParentFlags.MemberAccess;
+                                }
                             }
                             else if (constVal is bool lcb)
                             {
@@ -4661,18 +4668,17 @@ namespace FastExpressionCompiler
                         return false;
                 }
 
-                // The cases to branch to the `IfFalse` expression:
-                // - `x == true`  => `Brfalse`
-                // - `x != true`  => `Brtrue`
-                // - `x == false` => `Brtrue`
-                // - `x != false` => `Brfalse`
-                // - `x == null`  => `Brtrue`
-                // - `x != null`  => `Brfalse`
+                if (nullOfValueType != null)
+                {
+                    if (!closure.LastEmitIsAddress)
+                        EmitStoreLocalVariableAndLoadItsAddress(il, nullOfValueType);
+                    il.Emit(OpCodes.Call, nullOfValueType.FindNullableHasValueGetterMethod());
+                }
 
                 var labelIfFalse = il.DefineLabel();
                 if (testExpr.NodeType == ExpressionType.Equal    && useBrFalseOrTrue == 0 ||
                     testExpr.NodeType == ExpressionType.NotEqual && useBrFalseOrTrue == 1)
-                    il.Emit(OpCodes.Brtrue,  labelIfFalse);
+                    il.Emit(OpCodes.Brtrue, labelIfFalse);
                 else
                     il.Emit(OpCodes.Brfalse, labelIfFalse);
 
@@ -6599,15 +6605,19 @@ namespace FastExpressionCompiler
             return sb.Append(" }))");
         }
 
-        private static string PruneNoNameSymbols(Type t, string s) =>
-            t.IsArray ? s.Replace("[]", "_arr") : 
-            t.IsGenericType ? s.Replace('<', '_').Replace('>', '_') : 
-            s;
+        private static string GetParameterOrVariableNameFromTheType(Type t, string s)
+        {
+            var dotIndex = s.LastIndexOf('.');
+            if (dotIndex != -1)
+                s = s.Substring(dotIndex + 1);
+            return t.IsArray ? s.Replace("[]", "_arr") : 
+                t.IsGenericType ? s.Replace('<', '_').Replace('>', '_') : 
+                s;
+        }
 
         internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
             name != null ? sb.Append(name)
-                : sb.Append(type.ToCode(true, (t, s) => PruneNoNameSymbols(t, s)))
-                .Append("__").Append(identity.GetHashCode());
+                : sb.Append(type.ToCode(true, (t, s) => GetParameterOrVariableNameFromTheType(t, s))).Append("__").Append(identity.GetHashCode());
 
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
         public static string ToCode(this Type type,

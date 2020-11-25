@@ -11,8 +11,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
-            // new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run();
+            new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
+            new Issue274_Failing_Expressions_in_Linq2DB().Run();
         }
 
         public static void RunAllTests()
@@ -179,8 +179,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue261_Loop_wih_conditions_fails().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run);
 
-                Run(new Issue274_Failing_Expressions_in_Linq2DB().Run);
-                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run);
+                // Run(new Issue274_Failing_Expressions_in_Linq2DB().Run);
+                // Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run);
             });
 
             Task.WaitAll(unitTests, issueTests);

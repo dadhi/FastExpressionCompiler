@@ -33,24 +33,13 @@ namespace FastExpressionCompiler.IssueTests
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
 
             expr.PrintCSharpString();
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
             var f = expr.CompileFast(true);
-            f.Method.PrintIL();
+            f.PrintIL();
             f(2);
             f(null);
-            /*
-                Expected IL - sharplab.io:
-
-                IL_0000: ldarga.s param
-                IL_0002: call instance bool valuetype [System.Private.CoreLib]System.Nullable`1<int32>::get_HasValue()
-                IL_0007: brfalse.s IL_0017
-
-                IL_0009: ldarga.s param
-                IL_000b: constrained. valuetype [System.Private.CoreLib]System.Nullable`1<int32>
-                IL_0011: callvirt instance string [System.Private.CoreLib]System.Object::ToString()
-                IL_0016: pop
-
-                IL_0017: ret
-            */
         }
 
         [Test]
@@ -66,25 +55,13 @@ namespace FastExpressionCompiler.IssueTests
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
 
             expr.PrintCSharpString();
+            var fs = expr.CompileSys();
+            fs.PrintIL();
 
             var f = expr.CompileFast(true);
-            f.Method.PrintIL();
+            f.PrintIL();
             f(2);
             f(null);
-            /*
-                Expected IL - sharplab.io:
-
-                IL_0000: ldarga.s param
-                IL_0002: call instance bool valuetype [System.Private.CoreLib]System.Nullable`1<int32>::get_HasValue()
-                IL_0007: brtrue.s IL_001e
-
-                IL_0009: ldloca.s 0
-                IL_000b: dup
-                IL_000c: initobj valuetype [System.Private.CoreLib]System.Nullable`1<int32>
-                IL_0012: constrained. valuetype [System.Private.CoreLib]System.Nullable`1<int32>
-                IL_0018: callvirt instance string [System.Private.CoreLib]System.Object::ToString()
-                IL_001d: pop
-            */
         }
     }
 }
