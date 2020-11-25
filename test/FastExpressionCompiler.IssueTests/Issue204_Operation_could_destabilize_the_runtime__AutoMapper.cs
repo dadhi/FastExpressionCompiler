@@ -21,8 +21,8 @@ namespace FastExpressionCompiler.IssueTests
 
         public enum Status
         {
-            InProgress = 1,
-            Complete = 2
+            InProgress = 0,
+            Complete = 1
         }
 
         public class OrderWithNullableStatus
