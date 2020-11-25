@@ -1708,8 +1708,10 @@ namespace FastExpressionCompiler
 
                             if (constExpr.Value == null)
                             {
-                                // todo: @bug? should we use `EmitLoadLocalVariable(il, InitValueTypeVariable(il, type))` to emit the `default(Nullable<X>)` instead of `ldnull` - the System.Compile does that, but the `ldnull` seems to work too (#274)
-                                il.Emit(OpCodes.Ldnull);
+                                if (constExpr.Type.IsValueType())
+                                    EmitLoadLocalVariable(il, InitValueTypeVariable(il, constExpr.Type)); // yep, this is a proper way to emit the Nullable null
+                                else
+                                    il.Emit(OpCodes.Ldnull);
                                 return true;
                             }
 

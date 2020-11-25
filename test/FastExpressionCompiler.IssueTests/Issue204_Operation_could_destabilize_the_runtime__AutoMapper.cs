@@ -64,7 +64,7 @@ namespace FastExpressionCompiler.IssueTests
             var resolvedValueParam = Parameter(typeof(Status?), "resolvedValue");
             var propertyValueParam = Parameter(typeof(Status?), "propertyValue");
 
-            var expression = Lambda<Func<OrderWithNullableStatus, OrderDtoWithNullableStatus>>(
+            var e = Lambda<Func<OrderWithNullableStatus, OrderDtoWithNullableStatus>>(
                 Block(typeof(OrderDtoWithNullableStatus), new[] { destParam, resolvedValueParam, propertyValueParam },
                     Assign(destParam, New(typeof(OrderDtoWithNullableStatus).GetConstructors()[0])),
                     Assign(resolvedValueParam, Property(srcParam, "Status")),
@@ -79,17 +79,21 @@ namespace FastExpressionCompiler.IssueTests
                 srcParam
             );
 
-            var src = new OrderWithNullableStatus
+            e.PrintCSharpString();
+
+            var input = new OrderWithNullableStatus
             {
                 Status = Status.InProgress
             };
 
-            var compiled = expression.CompileSys();
-            var dest = compiled(src);
+            var fs = e.CompileSys();
+            var dest = fs(input);
+            fs.PrintIL();
             Assert.AreEqual(Status.InProgress, dest.Status);
 
-            var fastCompiled = expression.CompileFast(true);
-            dest = fastCompiled(src);
+            var f = e.CompileFast(true);
+            dest = f(input);
+            f.PrintIL();
             Assert.AreEqual(Status.InProgress, dest.Status);
         }
     }
