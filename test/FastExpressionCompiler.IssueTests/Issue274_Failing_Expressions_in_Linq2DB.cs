@@ -19,15 +19,16 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_case_2_OriginalLinq2DB_ExecutionEngineException();
+
             Test_case_1_Minimal_compare_nullable_with_null_conditional();
             Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
             Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
-
-            Test_case_1_OriginalLinq2DB_Access_ViolationException();
+            Test_case_1_OriginalLinq2DB_AccessViolationException();
 
             The_expression_with_anonymous_class_should_output_without_special_symbols();
 
-            return 5;
+            return 6;
         }
 
         [Test]
@@ -65,15 +66,15 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(100, f(42));
         }
 
-        [Test] // todo: @bug 
+        [Test]
         public void Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional()
         {
             var p = Parameter(typeof(int?), "i");
             var e = Lambda<Func<int?, int?>>(
                 Condition(
-                  Equal(Call(GetType().GetMethod(nameof(CheckNullable)), p), 
-                  Constant(null, typeof(int?))), 
-                  Constant(null, typeof(int?)), 
+                  Equal(Call(GetType().GetMethod(nameof(CheckNullable)), p),
+                  Constant(null, typeof(int?))),
+                  Constant(null, typeof(int?)),
                   Convert(Constant(100), typeof(int?))), p);
 
             var fs = e.CompileSys();
@@ -85,14 +86,14 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(100, f(42));
         }
 
-        [Test]//, Ignore("fixme")] // todo: @bug 
+        [Test]
         public void Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional()
         {
             var i = Parameter(typeof(int?), "i");
             var e = Lambda<Func<int?, int?>>(
                 Condition(
-                    Equal(i, Constant(null, typeof(int?))), 
-                    Constant(null, typeof(int?)), 
+                    Equal(i, Constant(null, typeof(int?))),
+                    Constant(null, typeof(int?)),
                     Condition(
                         Equal(Call(GetType().GetMethod(nameof(CheckNullable)), i), Constant(null, typeof(int?))),
                         Constant(null, typeof(int?)),
@@ -111,7 +112,7 @@ namespace FastExpressionCompiler.IssueTests
         public static int? CheckNullable(int? i) => 5;
 
         [Test]
-        public void Test_case_1_OriginalLinq2DB_Access_ViolationException()
+        public void Test_case_1_OriginalLinq2DB_AccessViolationException()
         {
             var p = new ParameterExpression[10]; // the paramiter expressions i
             var e = new Expression[30]; // the unique expressions 
@@ -207,29 +208,92 @@ namespace FastExpressionCompiler.IssueTests
               p[2 // (System.Data.IDataReader dr)
                 ]);
 
-              expr.PrintCSharpString();
+            expr.PrintCSharpString();
 
-              var fs = expr.CompileSys();
-              fs.PrintIL();
+            var fs = expr.CompileSys();
+            fs.PrintIL();
 
-              var f = expr.CompileFast(true, CompilerFlags.Default);
-              f.PrintIL();
+            var f = expr.CompileFast(true, CompilerFlags.Default);
+            f.PrintIL();
+        }
+
+        [Test]
+        public void Test_case_2_OriginalLinq2DB_ExecutionEngineException()
+        {
+            var p = new ParameterExpression[1]; // the parameter expressions 
+            var e = new Expression[13]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda<Func<System.Nullable<Enum15>, System.Nullable<int>>>( // $
+              e[0] = Condition(
+                e[1] = Property(
+                  p[0] = Parameter(typeof(System.Nullable<Enum15>), "p"),
+                  typeof(System.Nullable<Enum15>).GetTypeInfo().GetDeclaredProperty("HasValue")),
+                e[2] = Switch(
+                  e[3] = Convert(
+                    p[0 // (System.Nullable<Enum15> p)
+                      ],
+                    typeof(Enum15)),
+                  e[4] = Convert(
+                    e[5] = Call(
+                      null,
+                      typeof(ConvertBuilder).GetMethods(BindingFlags.NonPublic | BindingFlags.Static).Single(x => !x.IsGenericMethod && x.Name == "ConvertDefault" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(object), typeof(System.Type) })),
+                      e[6] = Convert(
+                        e[3 // Convert of Enum15
+                          ],
+                        typeof(object)),
+                      e[7] = Constant(typeof(System.Nullable<int>))),
+                    typeof(System.Nullable<int>)),
+                  SwitchCase(
+                  e[8] = Constant((int)10, typeof(System.Nullable<int>)),
+                  e[9] = Constant(Enum15.AA)),
+                  SwitchCase(
+                  e[10] = Constant((int)20, typeof(System.Nullable<int>)),
+                  e[11] = Constant(Enum15.BB))),
+                e[12] = Constant(null, typeof(System.Nullable<int>)),
+                typeof(System.Nullable<int>)),
+              p[0 // (System.Nullable<Enum15> p)
+                ]);
+
+            expr.PrintCSharpString();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual(10,  fs(Enum15.AA));
+            Assert.AreEqual(20,  fs(Enum15.BB));
+            Assert.AreEqual(42, fs((Enum15)3));
+
+            var f = expr.CompileFast(true);
+            f.PrintIL();
+            Assert.AreEqual(10,  f(Enum15.AA));
+            Assert.AreEqual(20,  f(Enum15.BB));
+            Assert.AreEqual(42, f((Enum15)3));
+          }
+
+        enum Enum15
+        {
+            AA,
+            BB,
+        }
+
+        static class ConvertBuilder
+        {
+            internal static object ConvertDefault(object value, Type conversionType) => 42;
         }
 
         interface IDataContext { }
 
-        interface IQueryRunner 
-        { 
-          public IDataContext DataContext { get; set; }
-          public System.Linq.Expressions.Expression Expression { get; set; }
-          public object[] Parameters { get; set; }
-          public object[] Preambles { get; set; }
+        interface IQueryRunner
+        {
+            public IDataContext DataContext { get; set; }
+            public System.Linq.Expressions.Expression Expression { get; set; }
+            public object[] Parameters { get; set; }
+            public object[] Preambles { get; set; }
         }
 
-        class f__AnonymousType142<T> 
-        { 
-          public T Value; 
-          public f__AnonymousType142(T value) => Value = value;
+        class f__AnonymousType142<T>
+        {
+            public T Value;
+            public f__AnonymousType142(T value) => Value = value;
         }
 
         class SQLiteDataReader : IDataReader
