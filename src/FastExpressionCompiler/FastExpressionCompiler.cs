@@ -2359,7 +2359,10 @@ namespace FastExpressionCompiler
                         paramType.IsValueType() && 
                         (parent & ParentFlags.ArrayIndex) == 0 && // #265
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
-                        EmitLoadLocalVariableAddress(il, varIndex);
+                        {
+                            EmitLoadLocalVariableAddress(il, varIndex);
+                            closure.LastEmitIsAddress = true;
+                        }
                     else
                         EmitLoadLocalVariable(il, varIndex);
                     return true;
@@ -2368,6 +2371,7 @@ namespace FastExpressionCompiler
                 if (isParamByRef)
                 {
                     EmitLoadLocalVariableAddress(il, byRefIndex);
+                    //todo: @bug? `closure.LastEmitIsAddress = true;` should we do it too as in above code with the variable 
                     return true;
                 }
 

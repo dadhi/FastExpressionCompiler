@@ -81,20 +81,23 @@ namespace FastExpressionCompiler.IssueTests
 
             e.PrintCSharpString();
 
-            var input = new OrderWithNullableStatus
-            {
-                Status = Status.InProgress
-            };
+            var inProgress = new OrderWithNullableStatus { Status = Status.InProgress };
+            var complete = new OrderWithNullableStatus { Status = Status.Complete };
 
             var fs = e.CompileSys();
-            var dest = fs(input);
             fs.PrintIL();
+            
+            var dest = fs(inProgress);
             Assert.AreEqual(Status.InProgress, dest.Status);
+            dest = fs(complete);
+            Assert.AreEqual(Status.Complete, dest.Status);
 
             var f = e.CompileFast(true);
-            dest = f(input);
             f.PrintIL();
+            dest = f(inProgress);
             Assert.AreEqual(Status.InProgress, dest.Status);
+            dest = f(complete);
+            Assert.AreEqual(Status.Complete, dest.Status);
         }
     }
 }
