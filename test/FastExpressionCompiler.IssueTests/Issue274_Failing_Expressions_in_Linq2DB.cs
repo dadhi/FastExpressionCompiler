@@ -434,6 +434,9 @@ namespace FastExpressionCompiler.IssueTests
 
            var f = expr.CompileFast(true);
            f.PrintIL();
+
+          Assert.DoesNotThrow(() =>
+            f(new NullQueryRunner(), new SQLiteDataReader()));
         }
 
      		public class Customer
@@ -558,12 +561,24 @@ namespace FastExpressionCompiler.IssueTests
 
         static class ConvertBuilder
         {
-            internal static object ConvertDefault(object value, Type conversionType) => 42;
+            internal static object ConvertDefault(object value, Type conversionType) => 
+              conversionType == typeof(int) ? (int)42 :
+              conversionType == typeof(long) ? (long)42 :
+              conversionType == typeof(bool) ? (long)value != 0 :
+              value;
         }
 
         interface IDataContext { }
 
         interface IQueryRunner
+        {
+            IDataContext DataContext { get; set; }
+            System.Linq.Expressions.Expression Expression { get; set; }
+            object[] Parameters { get; set; }
+            object[] Preambles { get; set; }
+        }
+
+        class NullQueryRunner : IQueryRunner 
         {
             public IDataContext DataContext { get; set; }
             public System.Linq.Expressions.Expression Expression { get; set; }
@@ -678,7 +693,7 @@ namespace FastExpressionCompiler.IssueTests
 
             public long GetInt64(int i)
             {
-                throw new NotImplementedException();
+                return (long)i;
             }
 
             public string GetName(int i)
@@ -713,7 +728,7 @@ namespace FastExpressionCompiler.IssueTests
 
             public bool IsDBNull(int i)
             {
-                throw new NotImplementedException();
+                return false;
             }
 
             public bool NextResult()

@@ -965,6 +965,14 @@ namespace FastExpressionCompiler
             public static Func<T1, T2, T3, T4, T5, T6, R>
                 Curry<C, T1, T2, T3, T4, T5, T6, R>(Func<C, T1, T2, T3, T4, T5, T6, R> f, C c) =>
                 (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6);
+
+            public static Func<T1, T2, T3, T4, T5, T6, T7, R>
+                Curry<C, T1, T2, T3, T4, T5, T6, T7, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, R> f, C c) =>
+                (t1, t2, t3, t4, t5, t6, t7) => f(c, t1, t2, t3, t4, t5, t6, t7);
+
+            public static Func<T1, T2, T3, T4, T5, T6, T7, T8, R>
+                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, T8, R> f, C c) =>
+                (t1, t2, t3, t4, t5, t6, t7, t8) => f(c, t1, t2, t3, t4, t5, t6, t7, t8);
         }
 
         internal static class CurryClosureActions
