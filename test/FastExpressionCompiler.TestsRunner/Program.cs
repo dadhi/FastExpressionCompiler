@@ -13,8 +13,6 @@ namespace FastExpressionCompiler.UnitTests
 
             new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
             new Issue274_Failing_Expressions_in_Linq2DB().Run();
-
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue204_Operation_could_destabilize_the_runtime__AutoMapper().Run();
         }
 
         public static void RunAllTests()

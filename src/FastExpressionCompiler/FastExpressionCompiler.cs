@@ -999,7 +999,7 @@ namespace FastExpressionCompiler
 
         /// Helps to identify constants as the one to be put into the Closure
         public static bool IsClosureBoundConstant(object value, TypeInfo type) =>
-            value is Delegate || 
+            value is Delegate || type.IsArray || 
             !type.IsPrimitive && !type.IsEnum && value is string == false && value is Type == false && value is decimal == false;
 
         // @paramExprs is required for nested lambda compilation

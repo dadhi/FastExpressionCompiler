@@ -20,13 +20,13 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Test_case_4_Full_InvalidCastException();
-            
-            // Test_case_2_Full_ExecutionEngineException();
-            // Test_case_1_Minimal_compare_nullable_with_null_conditional();
-            // Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
-            // Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
-            // Test_case_1_Full_AccessViolationException();
-            // The_expression_with_anonymous_class_should_output_without_special_symbols();
+
+            Test_case_2_Full_ExecutionEngineException();
+            Test_case_1_Minimal_compare_nullable_with_null_conditional();
+            Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
+            Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
+            Test_case_1_Full_AccessViolationException();
+            The_expression_with_anonymous_class_should_output_without_special_symbols();
 
             return 7;
         }
@@ -334,10 +334,10 @@ namespace FastExpressionCompiler.IssueTests
 
         class SampleClass 
         {
-            public object X;
-            public SampleClass(object x, object y) 
+            public object Instance;
+            public SampleClass(object instance, Delegate[] delegates) 
             {
-                X = x;
+                Instance = instance;
             }
         }
         class OtherClass {}
