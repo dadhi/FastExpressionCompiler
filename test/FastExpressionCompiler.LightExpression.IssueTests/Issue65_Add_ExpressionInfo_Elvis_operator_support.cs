@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var getTheAnswer = Lambda<Func<int, string>>(block, n);
 
-            getTheAnswer.PrintCSharpString();
+            getTheAnswer.PrintCSharp();
 
             var f = getTheAnswer.CompileFast(ifFastFailedReturnNull: true);
             Assert.IsNull(f(43));

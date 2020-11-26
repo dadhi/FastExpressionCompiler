@@ -24,11 +24,11 @@ namespace FastExpressionCompiler
             CollectionAssert.AreEqual(expectedCodes, method.GetOpCodes(), "Unexpected IL OpCodes...");
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintCSharpString(this Expression expr) =>
+        public static void PrintCSharp(this Expression expr) =>
             Console.WriteLine(expr.ToCSharpString());
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintCSharpString(this Expression expr, ref string result) =>
+        public static void PrintCSharp(this Expression expr, ref string result) =>
             Console.WriteLine(result = expr.ToCSharpString());
 
         [System.Diagnostics.Conditional("DEBUG")]

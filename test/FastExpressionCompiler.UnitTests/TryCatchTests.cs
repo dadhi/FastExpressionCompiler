@@ -200,7 +200,7 @@ namespace FastExpressionCompiler.UnitTests
                     Label(returnLabel, Default(returnLabel.Type))
                 ));
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
 
             var funcSys = expr.CompileSys();
             Assert.AreEqual("From Catch block", funcSys());

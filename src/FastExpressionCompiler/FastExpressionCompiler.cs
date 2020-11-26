@@ -388,7 +388,7 @@ namespace FastExpressionCompiler
 
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
         public static TDelegate TryCompileWithoutClosure<TDelegate>(this LambdaExpression lambdaExpr, 
-            CompilerFlags flags = CompilerFlags.Default) where TDelegate : class // todo: @wip use the flags
+            CompilerFlags flags = CompilerFlags.Default) where TDelegate : class
         {
             var closureInfo = new ClosureInfo(ClosureStatus.UserProvided);
 #if LIGHT_EXPRESSION
@@ -1027,7 +1027,6 @@ namespace FastExpressionCompiler
                         if (value != null)
                         {
                             // todo: @perf find the way to speed-up this
-
                             var valueType = value.GetType();
                             if (IsClosureBoundConstant(value, valueType.GetTypeInfo()))
                                 closure.AddConstantOrIncrementUsageCount(value, valueType);
@@ -3007,7 +3006,7 @@ namespace FastExpressionCompiler
                 int varIndex;
                 for (var i = 0; i < constCount; i++)
                 {
-                    if (constUsage[i] > 1) // todo: @incomplete should we proceed to do this or simplify an remove the usages for the closure info?
+                    if (constUsage[i] > 1) // todo: @incomplete should we proceed to do this or simplify and remove the usages for the closure info?
                     {
                         il.Emit(OpCodes.Ldloc_0);// SHOULD BE always at 0 locaton; load array field variable on the stack
                         EmitLoadConstantInt(il, i);
@@ -5474,9 +5473,21 @@ namespace FastExpressionCompiler
                         sb.AppendTypeof(t, stripNamespace, printType);
                     else
                     {
-                        sb.Append(x.Value.ToCode(CodePrinter.DefaultConstantValueToCode, stripNamespace, printType));
-                        if (x.Value.GetType() != x.Type)
-                            sb.Append(", ").AppendTypeof(x.Type, stripNamespace, printType);
+                        // For the closure bound constant let's output `null` or default value with the comment for user to provide the actual value
+                        if (ExpressionCompiler.IsClosureBoundConstant(x.Value, x.Type.GetTypeInfo())) 
+                        {
+                            if (x.Type.IsValueType())
+                                sb.Append("default(").Append(x.Type.ToCode(stripNamespace, printType)).Append(')');
+                            else // specifying the type for the Constant, otherwise we will lost it with the `Constant(default(MyClass))` which is equivalent to `Constant(null)`
+                                sb.Append("null, ").AppendTypeof(x.Type, stripNamespace, printType);
+                            sb.NewLineIdent(lineIdent).Append("// !!! Please provide the non-default value").NewLineIdent(lineIdent);
+                        }
+                        else 
+                        {
+                            sb.Append(x.Value.ToCode(CodePrinter.DefaultConstantValueToCode, stripNamespace, printType));
+                            if (x.Value.GetType() != x.Type)
+                                sb.Append(", ").AppendTypeof(x.Type, stripNamespace, printType);
+                        }
                     }
                     return sb.Append(')');
                 }
@@ -6807,9 +6818,7 @@ namespace FastExpressionCompiler
         private class ConstantValueToCode : CodePrinter.IObjectToCode
         {
             public string ToCode(object x, bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-                "default(" +
-                // "// todo: @incomplete - the value should be provided by user " + Environment.NewLine + 
-                x.GetType().ToCode(stripNamespace, printType) + ")";
+                "default(" + x.GetType().ToCode(stripNamespace, printType) + ")";
         }
 
         internal static readonly CodePrinter.IObjectToCode DefaultConstantValueToCode = new ConstantValueToCode();
@@ -6836,6 +6845,9 @@ namespace FastExpressionCompiler
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>
             $"new {itemType.ToCode(stripNamespace, printType)}[]{{{items.ToCommaSeparatedCode(notRecognizedToCode, stripNamespace, printType)}}}";
 
+        private static readonly Type[] TypesImplementedByArray =
+            typeof(object[]).GetInterfaces().Where(t => t.GetTypeInfo().IsGenericType).Select(t => t.GetGenericTypeDefinition()).ToArray();
+
         /// <summary>
         /// Prints a valid C# for known <paramref name="x"/>,
         /// otherwise uses passed <paramref name="notRecognizedToCode"/> or falls back to `ToString()`.
@@ -6861,13 +6873,16 @@ namespace FastExpressionCompiler
             var xType = x.GetType();
             var xTypeInfo = xType.GetTypeInfo();
 
-            if (x is IEnumerable e)
+            // check if item is implemented by array and then use the array initializer only for these types, 
+            // otherwise we may produce the array initializer but it will be incompatible with e.g. `List<T>`
+            if (xTypeInfo.IsArray ||
+                xTypeInfo.IsGenericType && TypesImplementedByArray.Contains(xType.GetGenericTypeDefinition()))
             {
                 var elemType = xTypeInfo.IsArray
                     ? xTypeInfo.GetElementType()
                     : xTypeInfo.GetGenericTypeParametersOrArguments().GetFirst();
                 if (elemType != null)
-                    return e.ToArrayInitializerCode(elemType, notRecognizedToCode);
+                    return ((IEnumerable)x).ToArrayInitializerCode(elemType, notRecognizedToCode);
             }
 
             // unwrap the Nullable struct

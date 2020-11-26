@@ -32,7 +32,7 @@ namespace FastExpressionCompiler.IssueTests
                 
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
             var fs = expr.CompileSys();
             fs.PrintIL();
 
@@ -54,7 +54,7 @@ namespace FastExpressionCompiler.IssueTests
             
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
             var fs = expr.CompileSys();
             fs.PrintIL();
 

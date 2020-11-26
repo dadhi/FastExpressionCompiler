@@ -311,7 +311,7 @@ namespace FastExpressionCompiler.IssueTests
                     returnTrue),
                 input, valueWord, bytesRead);
 
-            expr0.PrintCSharpString();
+            expr0.PrintCSharp();
 
             // sanity check
             var f0sys = expr0.CompileSys();
@@ -344,7 +344,7 @@ namespace FastExpressionCompiler.IssueTests
                     returnTrue),
                 input, valueSimple, bytesRead);
 
-            expr1.PrintCSharpString();
+            expr1.PrintCSharp();
 
             var f1sys = expr1.CompileSys();
             f1sys.PrintIL("system compiled il");

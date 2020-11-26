@@ -79,7 +79,7 @@ namespace FastExpressionCompiler.IssueTests
                 srcParam
             );
 
-            e.PrintCSharpString();
+            e.PrintCSharp();
 
             var inProgress = new OrderWithNullableStatus { Status = Status.InProgress };
             var complete = new OrderWithNullableStatus { Status = Status.Complete };

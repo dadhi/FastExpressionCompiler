@@ -229,7 +229,7 @@ namespace FastExpressionCompiler.IssueTests
                 ],
               p[4] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"));
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
 
             var fs = expr.CompileSys();
             fs.PrintIL();
@@ -974,7 +974,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var expr = CreateSerializeDictionaryExpression();
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
 
             var fs = expr.CompileSys();
             fs.PrintIL();
@@ -1001,7 +1001,7 @@ namespace FastExpressionCompiler.IssueTests
                 )
             );
 
-            e.PrintCSharpString();
+            e.PrintCSharp();
 
             var fSys = e.CompileSys();
             Assert.AreEqual(42, fSys());
@@ -1030,7 +1030,7 @@ namespace FastExpressionCompiler.IssueTests
                 )
             );
 
-            e.PrintCSharpString();
+            e.PrintCSharp();
 
             var fSys = e.CompileSys();
             Assert.AreEqual(42, fSys()[0]);
@@ -1069,7 +1069,7 @@ namespace FastExpressionCompiler.IssueTests
               p[0]/*(BufferedStream stream)*/,
               p[2] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"));
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
 
             var fs = (WriteMethods<FieldInfoModifier.TestReadonly, BufferedStream, Settings_827720117>.WriteSealed)expr.CompileSys();
             fs.PrintIL();
@@ -1231,7 +1231,7 @@ namespace FastExpressionCompiler.IssueTests
               p[3]/*(Binary<BufferedStream, Settings_827720117> io)*/);
 
             var s = string.Empty;
-            expr.PrintCSharpString(ref s);
+            expr.PrintCSharp(ref s);
             StringAssert.DoesNotContain("return index0", s);
 
             var fs = (ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)expr.CompileSys();
@@ -1585,7 +1585,7 @@ namespace FastExpressionCompiler.IssueTests
             var s = e.ToExpressionString();
             StringAssert.Contains("Constant((byte)0)", s);
 
-            e.PrintCSharpString();
+            e.PrintCSharp();
 
             var f = e.CompileFast(true);
             f.PrintIL("FEC IL:");

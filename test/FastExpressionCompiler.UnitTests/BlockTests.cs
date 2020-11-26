@@ -85,7 +85,7 @@ namespace FastExpressionCompiler.UnitTests
             var lambda = Lambda<Func<int>>(block);
 
 #if LIGHT_EXPRESSION
-            lambda.PrintCSharpString();
+            lambda.PrintCSharp();
 #endif
 
             var s = lambda.CompileSys();
@@ -113,7 +113,7 @@ namespace FastExpressionCompiler.UnitTests
                 p);
 
 #if LIGHT_EXPRESSION
-            lambda.PrintCSharpString();
+            lambda.PrintCSharp();
 #endif
             var s = lambda.CompileSys();
             s.PrintIL("system il");
@@ -138,7 +138,7 @@ namespace FastExpressionCompiler.UnitTests
                 p);
 
 #if LIGHT_EXPRESSION
-            lambda.PrintCSharpString();
+            lambda.PrintCSharp();
 #endif
             var s = lambda.CompileSys();
             s.PrintIL("system il");
@@ -166,7 +166,7 @@ namespace FastExpressionCompiler.UnitTests
             );
 
 #if LIGHT_EXPRESSION
-            lambda.PrintCSharpString();
+            lambda.PrintCSharp();
 #endif
 
             var s = lambda.CompileSys();

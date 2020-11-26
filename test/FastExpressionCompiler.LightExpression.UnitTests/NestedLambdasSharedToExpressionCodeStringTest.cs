@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         {
             var e = CreateExpression();
             var s = e.ToExpressionString();
-            e.PrintCSharpString();
+            e.PrintCSharp();
             StringAssert.Contains("new Expression[17];", s);
         }
 

@@ -31,7 +31,7 @@ namespace FastExpressionCompiler.IssueTests
                 Convert(MakeMemberAccess(castedType, fieldInfo_m_Attributes), typeof(int)),
                 fieldInfoParam);
 
-            getAttrExpr.PrintCSharpString();
+            getAttrExpr.PrintCSharp();
             var getAttr = getAttrExpr.CompileFast(true);
 
             var returnLabel = Label();
@@ -45,7 +45,7 @@ namespace FastExpressionCompiler.IssueTests
                     , Label(returnLabel))
                 , fieldInfoParam);
 
-            nr.PrintCSharpString();
+            nr.PrintCSharp();
             var nra = (Action<FieldInfo>)nr.CompileFast(true);
             Assert.IsNotNull(nra);
 
@@ -64,7 +64,7 @@ namespace FastExpressionCompiler.IssueTests
                     , Label(returnLabel))
                 , fieldInfoParam);
 
-            r.PrintCSharpString();
+            r.PrintCSharp();
             var ra = (Action<FieldInfo>)r.CompileFast(true);
             Assert.IsNotNull(ra);
             ra(fieldF);

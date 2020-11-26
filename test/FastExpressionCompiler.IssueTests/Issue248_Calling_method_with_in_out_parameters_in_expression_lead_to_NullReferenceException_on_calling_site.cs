@@ -31,7 +31,7 @@ namespace FastExpressionCompiler.IssueTests
                     Field(data, typeof(Test).GetField(nameof(Test.Field1)))), 
                 serializer, data);
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
 
             var serialize = expr.CompileFast(true);
             Assert.IsNotNull(serialize);
@@ -62,7 +62,7 @@ namespace FastExpressionCompiler.IssueTests
                         typeof(NestedTest).GetField(nameof(NestedTest.Field1)))),
                 serializer, data);
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
 
             var serialize = expr.CompileFast(true);
             Assert.IsNotNull(serialize);
@@ -92,7 +92,7 @@ namespace FastExpressionCompiler.IssueTests
                     Field(data, typeof(Test).GetField(nameof(Test.Field1)))),
                 serializer, data);
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
 
             var serialize = expr.CompileFast(true);
             Assert.IsNotNull(serialize);
@@ -123,7 +123,7 @@ namespace FastExpressionCompiler.IssueTests
                         typeof(Klaz).GetField(nameof(Klaz.KlazField)))
                 ), serializer, data);
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
 
             var serialize = expr.CompileFast(true);
             Assert.IsNotNull(serialize);

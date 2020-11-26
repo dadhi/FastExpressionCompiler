@@ -27,7 +27,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var expr = Lambda<EqualsHandler>(callExpr, leftParameterExpr, rightParameterExpr);
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
 
             var f = expr.CompileFast(true);
             Assert.IsNotNull(f);

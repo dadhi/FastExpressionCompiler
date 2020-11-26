@@ -53,7 +53,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var expr = Lambda<Func<int?>>(Convert(Constant(null), typeof(int?)));
 
-            expr.PrintCSharpString();
+            expr.PrintCSharp();
 
             int? answer = expr.CompileFast(true).Invoke();
 
