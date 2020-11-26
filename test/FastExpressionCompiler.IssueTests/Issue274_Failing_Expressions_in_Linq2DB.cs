@@ -22,14 +22,13 @@ namespace FastExpressionCompiler.IssueTests
         {
             Test_case_3_Full_NullReferenceException();
 
-            Test_case_4_Full_InvalidCastException();
-
-            Test_case_2_Full_ExecutionEngineException();
-            Test_case_1_Minimal_compare_nullable_with_null_conditional();
-            Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
-            Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
-            Test_case_1_Full_AccessViolationException();
-            The_expression_with_anonymous_class_should_output_without_special_symbols();
+            // Test_case_4_Full_InvalidCastException();
+            // Test_case_2_Full_ExecutionEngineException();
+            // Test_case_1_Minimal_compare_nullable_with_null_conditional();
+            // Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
+            // Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
+            // Test_case_1_Full_AccessViolationException();
+            // The_expression_with_anonymous_class_should_output_without_special_symbols();
 
             return 8;
         }
@@ -386,6 +385,8 @@ namespace FastExpressionCompiler.IssueTests
               ]);
 
               expr.PrintCSharp();
+              var reExpr = expr.ToExpressionString();
+              StringAssert.Contains("!!!", reExpr);
 /*
 (Func<Issue274_Failing_Expressions_in_Linq2DB.IQueryRunner, IDataReader, IGrouping<bool, Issue274_Failing_Expressions_in_Linq2DB.Customer>>)(
     Issue274_Failing_Expressions_in_Linq2DB.IQueryRunner qr, 
