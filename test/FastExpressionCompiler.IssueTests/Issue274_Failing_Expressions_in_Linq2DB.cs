@@ -19,16 +19,16 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_case_2_OriginalLinq2DB_ExecutionEngineException();
+            Test_case_4_Full_InvalidCastException();
+            
+            // Test_case_2_Full_ExecutionEngineException();
+            // Test_case_1_Minimal_compare_nullable_with_null_conditional();
+            // Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
+            // Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
+            // Test_case_1_Full_AccessViolationException();
+            // The_expression_with_anonymous_class_should_output_without_special_symbols();
 
-            Test_case_1_Minimal_compare_nullable_with_null_conditional();
-            Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
-            Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
-            Test_case_1_OriginalLinq2DB_AccessViolationException();
-
-            The_expression_with_anonymous_class_should_output_without_special_symbols();
-
-            return 6;
+            return 7;
         }
 
         [Test]
@@ -112,7 +112,7 @@ namespace FastExpressionCompiler.IssueTests
         public static int? CheckNullable(int? i) => 5;
 
         [Test]
-        public void Test_case_1_OriginalLinq2DB_AccessViolationException()
+        public void Test_case_1_Full_AccessViolationException()
         {
             var p = new ParameterExpression[10]; // the paramiter expressions i
             var e = new Expression[30]; // the unique expressions 
@@ -218,7 +218,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Test_case_2_OriginalLinq2DB_ExecutionEngineException()
+        public void Test_case_2_Full_ExecutionEngineException()
         {
             var p = new ParameterExpression[1]; // the parameter expressions 
             var e = new Expression[13]; // the unique expressions 
@@ -267,7 +267,85 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(10,  f(Enum15.AA));
             Assert.AreEqual(20,  f(Enum15.BB));
             Assert.AreEqual(42, f((Enum15)3));
-          }
+        }
+
+        [Test]
+        public void Test_case_4_Full_InvalidCastException()
+        {
+          var p = new ParameterExpression[2]; // the parameter expressions 
+          var e = new Expression[6]; // the unique expressions 
+          var l = new LabelTarget[0]; // the labels 
+          var expr = Lambda<Func<object, object>>( // $
+              e[0]=Block(
+                  typeof(SampleClass),
+                  new[] {
+                      p[0]=Parameter(typeof(SampleClass))
+                  },
+                  e[1]=MakeBinary(ExpressionType.Assign,
+                      p[0 // (SampleClass SampleClass__14492072)
+                  ],
+                  e[2]=New(/*2 args*/
+                      typeof(SampleClass).GetTypeInfo().DeclaredConstructors.ToArray()[0],
+                      p[1]=Parameter(typeof(object)),
+                      e[3]=Constant(new System.Delegate[]
+                      {
+                          default(System.Func<SampleClass, int>), 
+                          default(System.Func<SampleClass, int>), 
+                          default(System.Func<SampleClass, int, OtherClass>), 
+                          default(System.Action<SampleClass>), 
+                          default(System.Func<SampleClass, int, RegularEnum1>), 
+                          default(System.Func<SampleClass, int, FlagsEnum>), 
+                          default(System.Func<SampleClass, RegularEnum1, int>), 
+                          default(System.Func<SampleClass, FlagsEnum, int>), 
+                          default(System.Func<SampleClass, RegularEnum1>), 
+                          default(System.Func<SampleClass, FlagsEnum>), 
+                          default(System.Action<SampleClass, bool>), 
+                          default(System.Action<SampleClass, RegularEnum1>), 
+                          default(System.Action<SampleClass, FlagsEnum>), 
+                          default(System.Func<SampleClass, int, RegularEnum2>), 
+                          default(System.Func<SampleClass, RegularEnum2, int>), 
+                          default(System.Func<SampleClass, RegularEnum2>), 
+                          default(System.Action<SampleClass, RegularEnum2>), 
+                          default(System.Func<SampleClass, string, string>), 
+                          null, 
+                          default(System.Func<SampleClass, string, int>)})
+                      )
+                  ),
+                  e[4]=Invoke(
+                      e[5]=Constant((System.Action<SampleClass>)((SampleClass s) => {})),
+                      p[0 // (SampleClass SampleClass__14492072)
+                        ]),
+                      p[0 // (SampleClass SampleClass__14492072)
+                        ]),
+                      p[1 // (object object__42147750)
+                        ]);
+
+              expr.PrintCSharpString();
+
+              var fs = expr.CompileSys();
+              fs.PrintIL();
+
+              var f = expr.CompileFast(true);
+              f.PrintIL();
+              var obj = new object();
+              var s = f(obj);
+              Assert.IsInstanceOf<SampleClass>(s);
+        }
+
+        class SampleClass 
+        {
+            public object X;
+            public SampleClass(object x, object y) 
+            {
+                X = x;
+            }
+        }
+        class OtherClass {}
+
+        enum RegularEnum1 {}
+        enum RegularEnum2 {}
+        [Flags]
+        enum FlagsEnum {}
 
         enum Enum15
         {
