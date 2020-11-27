@@ -51,13 +51,28 @@ namespace FastExpressionCompiler.Benchmarks
         public class Create_and_Compile
         {
 /*
-            ## v3-preview-03
+## v3-preview-03
 
 |                 Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |----------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
 |     SystemExpr_Compile | 171.098 us | 1.9611 us | 1.8344 us | 30.22 |    0.85 | 1.2207 | 0.4883 |      - |   5.11 KB |
 | SystemExpr_CompileFast |   7.314 us | 0.1273 us | 0.1191 us |  1.29 |    0.05 | 0.4883 | 0.2441 | 0.0305 |   2.03 KB |
 |  LightExpr_CompileFast |   5.647 us | 0.0813 us | 0.1217 us |  1.00 |    0.00 | 0.3815 | 0.1907 | 0.0305 |   1.59 KB |
+
+## v3-preview-05
+
+BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.630 (2004/?/20H1)
+Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+.NET Core SDK=5.0.100
+  [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+  DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+
+
+|                 Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|----------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|     SystemExpr_Compile | 165.654 us | 1.7359 us | 1.4496 us | 26.72 |    0.80 | 1.2207 | 0.4883 |      - |   5.31 KB |
+| SystemExpr_CompileFast |   6.680 us | 0.1275 us | 0.1192 us |  1.07 |    0.04 | 0.4959 | 0.2441 | 0.0305 |   2.04 KB |
+|  LightExpr_CompileFast |   6.160 us | 0.1209 us | 0.1773 us |  1.00 |    0.00 | 0.3815 | 0.1907 | 0.0305 |   1.59 KB |
 */
 
             [Benchmark]
@@ -101,6 +116,21 @@ namespace FastExpressionCompiler.Benchmarks
             |                     Compile | 154.112 us | 1.7660 us | 1.4747 us | 154.045 us | 32.73 |    1.11 | 0.9766 | 0.4883 |      - |   4.59 KB |
             |                 CompileFast |   4.828 us | 0.0950 us | 0.1984 us |   4.750 us |  1.04 |    0.05 | 0.3510 | 0.1755 | 0.0305 |   1.46 KB |
             | CompileFast_LightExpression |   4.704 us | 0.0940 us | 0.1188 us |   4.708 us |  1.00 |    0.00 | 0.3433 | 0.1678 | 0.0305 |   1.42 KB |
+
+            ## v3-preview-05
+
+            BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.630 (2004/?/20H1)
+            Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+            .NET Core SDK=5.0.100
+            [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+            DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+
+
+            |                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |---------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |                     Compile | 148.633 us | 1.4863 us | 1.2411 us | 33.20 |    1.05 | 0.9766 | 0.4883 |      - |   4.78 KB |
+            |                 CompileFast |   4.498 us | 0.0887 us | 0.1022 us |  1.02 |    0.04 | 0.3510 | 0.1755 | 0.0305 |   1.46 KB |
+            | CompileFast_LightExpression |   4.365 us | 0.0860 us | 0.1364 us |  1.00 |    0.00 | 0.3433 | 0.1678 | 0.0305 |   1.42 KB |
 */
 
             [Benchmark]
@@ -141,7 +171,7 @@ namespace FastExpressionCompiler.Benchmarks
                FastCompiledLambdaWithPreCreatedClosure | 11.10 ns | 0.0369 ns | 0.0345 ns |  1.04 |      0.0068 |           - |           - |                32 B |
                                         CompiledLambda | 11.13 ns | 0.0620 ns | 0.0518 ns |  1.05 |      0.0068 |           - |           - |                32 B |
 
-            ## V3
+            ## V3 baseline
                                                 Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
             ------------------------------------------ |---------:|----------:|----------:|------:|-------:|------:|------:|----------:|
                                       DirectLambdaCall | 11.35 ns | 0.0491 ns | 0.0460 ns |  1.01 | 0.0068 |     - |     - |      32 B |
@@ -150,7 +180,7 @@ namespace FastExpressionCompiler.Benchmarks
                FastCompiledLambdaWithPreCreatedClosure | 11.26 ns | 0.0414 ns | 0.0387 ns |  1.00 | 0.0068 |     - |     - |      32 B |
              FastCompiledLambdaWithPreCreatedClosureLE | 11.27 ns | 0.0594 ns | 0.0556 ns |  1.00 | 0.0068 |     - |     - |      32 B |
 
-            ## V3 RTM
+            ## V3-preview-02
 
             |                             Method |     Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
             |----------------------------------- |---------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
@@ -159,7 +189,23 @@ namespace FastExpressionCompiler.Benchmarks
             |                 FastCompiledLambda | 10.80 ns | 0.146 ns | 0.137 ns |  1.00 |    0.01 | 0.0076 |     - |     - |      32 B |
             | FastCompiledLambda_LightExpression | 10.86 ns | 0.109 ns | 0.096 ns |  1.00 |    0.00 | 0.0076 |     - |     - |      32 B |
 
-             */
+            ## V3-preview-05
+
+            BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.630 (2004/?/20H1)
+            Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+            .NET Core SDK=5.0.100
+            [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+            DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+
+
+            |                             Method |     Mean |    Error |   StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+            |----------------------------------- |---------:|---------:|---------:|------:|-------:|------:|------:|----------:|
+            |                   DirectLambdaCall | 11.86 ns | 0.140 ns | 0.131 ns |  1.00 | 0.0076 |     - |     - |      32 B |
+            |                     CompiledLambda | 13.44 ns | 0.115 ns | 0.096 ns |  1.13 | 0.0076 |     - |     - |      32 B |
+            |                 FastCompiledLambda | 12.43 ns | 0.173 ns | 0.154 ns |  1.05 | 0.0076 |     - |     - |      32 B |
+            | FastCompiledLambda_LightExpression | 11.87 ns | 0.121 ns | 0.101 ns |  1.00 | 0.0076 |     - |     - |      32 B |
+
+            */
             private static readonly Func<B, X> _lambdaCompiled = _expr.Compile();
             private static readonly Func<B, X> _lambdaCompiledFast = _expr.CompileFast(true);
             private static readonly Func<B, X> _lambdaCompiledFast_LightExpession = _expr.CompileFast<Func<B, X>>(true);

@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.Benchmarks
                  Compile | 481.33 us | 0.6025 us | 0.5031 us | 29.47 |    0.09 | 2.4414 | 0.9766 |      - |  11.95 KB |
              CompileFast |  16.33 us | 0.0555 us | 0.0492 us |  1.00 |    0.00 | 1.0986 | 0.5493 | 0.0916 |   5.13 KB |
 
-            ## v3.0
+            ## v3.0-preview-02
 
             BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.572 (2004/?/20H1)
             Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
@@ -56,7 +56,20 @@ namespace FastExpressionCompiler.Benchmarks
             |     Compile | 460.63 us | 5.937 us | 5.263 us | 27.47 |    0.67 | 2.4414 | 0.9766 |      - |  11.65 KB |
             | CompileFast |  16.77 us | 0.324 us | 0.485 us |  1.00 |    0.00 | 1.1902 | 0.5493 | 0.0916 |   4.86 KB |
 
-             */
+            ## v3.0-preview-05
+
+            BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.630 (2004/?/20H1)
+            Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+            .NET Core SDK=5.0.100
+            [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+            DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+
+            |      Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |     Compile | 479.87 us | 5.039 us | 4.208 us | 31.98 |    0.59 | 2.9297 | 1.4648 |      - |  12.17 KB |
+            | CompileFast |  15.00 us | 0.291 us | 0.298 us |  1.00 |    0.00 | 1.1902 | 0.5493 | 0.0916 |   4.86 KB |
+
+            */
             [Benchmark]
             public Func<X> Compile() => _hoistedExpr.Compile();
 
@@ -92,7 +105,7 @@ namespace FastExpressionCompiler.Benchmarks
             |     Invoke_Compiled | 1,385.24 ns | 2.8196 ns | 2.6375 ns | 25.10 |    0.33 | 0.0553 |     - |     - |     264 B |
             | Invoke_CompiledFast |    55.20 ns | 0.8883 ns | 0.7875 ns |  1.00 |    0.00 | 0.0220 |     - |     - |     104 B |
 
-            ## v3.0
+            ## v3.0-preview-02
 
             BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.572 (2004/?/20H1)
             Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
@@ -105,6 +118,21 @@ namespace FastExpressionCompiler.Benchmarks
             |    DirectMethodCall |    53.90 ns |  0.982 ns |  0.918 ns |  1.06 |    0.02 | 0.0401 |     - |     - |     168 B |
             |     Invoke_Compiled | 1,452.80 ns | 16.283 ns | 15.232 ns | 28.44 |    0.37 | 0.0629 |     - |     - |     264 B |
             | Invoke_CompiledFast |    51.11 ns |  0.935 ns |  0.829 ns |  1.00 |    0.00 | 0.0249 |     - |     - |     104 B |
+
+            ## v3.0-preview-05
+
+            BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.630 (2004/?/20H1)
+            Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+            .NET Core SDK=5.0.100
+            [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+            DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+
+
+            |              Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+            |-------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+            |    DirectMethodCall |    53.24 ns |  0.721 ns |  0.674 ns |  1.06 |    0.02 | 0.0401 |     - |     - |     168 B |
+            |     Invoke_Compiled | 1,486.71 ns | 13.620 ns | 12.741 ns | 29.64 |    0.25 | 0.0629 |     - |     - |     264 B |
+            | Invoke_CompiledFast |    50.20 ns |  0.484 ns |  0.404 ns |  1.00 |    0.00 | 0.0248 |     - |     - |     104 B |
 
             */
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
