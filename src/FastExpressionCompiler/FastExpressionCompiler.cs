@@ -4911,9 +4911,9 @@ namespace FastExpressionCompiler
     // in order to prevent conflicts with YOUR helpers with standard names
     internal static class Tools
     {
-        internal static bool IsValueType(this Type type) => type.GetTypeInfo().IsValueType;
-        internal static bool IsPrimitive(this Type type) => type.GetTypeInfo().IsPrimitive;
-        internal static bool IsClass(this Type type) => type.GetTypeInfo().IsClass;
+        internal static bool IsValueType(this Type type) => type.IsValueType;
+        internal static bool IsPrimitive(this Type type) => type.IsPrimitive;
+        internal static bool IsClass(this Type type) => type.IsClass;
 
         internal static bool IsUnsigned(this Type type) =>
             type == typeof(byte) || type == typeof(ushort) || type == typeof(uint) || type == typeof(ulong);
