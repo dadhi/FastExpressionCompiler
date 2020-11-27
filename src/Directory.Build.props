@@ -5,6 +5,7 @@
         <PackageProjectUrl>https://github.com/dadhi/FastExpressionCompiler</PackageProjectUrl>
 
         <PackageLicense>https://github.com/dadhi/FastExpressionCompiler/blob/master/LICENSE</PackageLicense>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
         <RepositoryUrl>https://github.com/dadhi/FastExpressionCompiler</RepositoryUrl>
