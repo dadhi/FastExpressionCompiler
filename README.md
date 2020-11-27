@@ -16,7 +16,7 @@
 [Apex.Serialization]: https://github.com/dbolin/Apex.Serialization
 
 
-[![latest release](https://img.shields.io/badge/latest%20release-v3.0.0-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/edit/untagged-e67dc3054471d280cc74)
+[![latest release](https://img.shields.io/badge/latest%20release-v3.0.0-blue)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression/3.0.0-preview-05)
 [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 Targets .NET Standard 2.0 and .NET 4.5  
 NuGet packages:
