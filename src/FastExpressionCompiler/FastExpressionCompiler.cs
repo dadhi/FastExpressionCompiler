@@ -1642,7 +1642,7 @@ namespace FastExpressionCompiler
             TryCatch = 1 << 8,
             InstanceCall = Call | InstanceAccess,
             CtorCall = Call | (1 << 9),
-            ArrayIndex = 1 << 10
+            IndexAccess = 1 << 10
         }
 
         internal static bool IgnoresResult(this ParentFlags parent) => (parent & ParentFlags.IgnoreResult) != 0;
@@ -1718,7 +1718,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.ArrayIndex:
                             var arrIndexExpr = (BinaryExpression)expr;
                             return TryEmit(arrIndexExpr.Left,  paramExprs, il, ref closure, setup, parent) 
-                                && TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, setup, parent | ParentFlags.ArrayIndex) // #265
+                                && TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess) // #265
                                 && TryEmitArrayIndex(expr.Type, il, parent, ref closure);
 
                         case ExpressionType.ArrayLength:
@@ -2034,22 +2034,19 @@ namespace FastExpressionCompiler
                 if (indexerProp != null)
                     indexerPropGetter = indexerProp.DeclaringType.FindPropertyGetMethod(indexerProp.Name);
 
-                if (indexArgCount > 0)
+                var p = parent | ParentFlags.IndexAccess;
+                if (indexerPropGetter == null)
                 {
-                    if (indexerPropGetter == null) 
-                    {
-                        for (var i = 0; i < indexArgCount; i++)
-                            if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, parent, -1))
-                                return false;
-                    }
-                    else
-                    {
-                        var types = indexerPropGetter.GetParameters();
-                        for (var i = 0; i < indexArgCount; i++)
-                            if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, parent,
-                                types[i].ParameterType.IsByRef ? i : -1))
-                                return false;
-                    }
+                    for (var i = 0; i < indexArgCount; i++)
+                        if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, p, -1))
+                            return false;
+                }
+                else
+                {
+                    var types = indexerPropGetter.GetParameters();
+                    for (var i = 0; i < indexArgCount; i++)
+                        if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, p, types[i].ParameterType.IsByRef ? i : -1))
+                            return false;
                 }
 
                 if (indexerPropGetter != null)
@@ -2333,8 +2330,8 @@ namespace FastExpressionCompiler
                     closure.LastEmitIsAddress = 
                         !isParamByRef && isArgByRef ||
                         !isParamByRef && paramType.IsValueType() &&
-                        ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall || 
-                         (parent & ParentFlags.MemberAccess) != 0);
+                         (parent & ParentFlags.IndexAccess) == 0 && // #281
+                        ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall || (parent & ParentFlags.MemberAccess) != 0);
 
                     if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
@@ -2387,7 +2384,7 @@ namespace FastExpressionCompiler
                 {
                     if (byRefIndex != -1 ||
                         paramType.IsValueType() && 
-                        (parent & ParentFlags.ArrayIndex) == 0 && // #265
+                        (parent & ParentFlags.IndexAccess) == 0 && // #265, #281
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
                         {
                             EmitLoadLocalVariableAddress(il, varIndex);
@@ -6658,9 +6655,9 @@ namespace FastExpressionCompiler
             var dotIndex = s.LastIndexOf('.');
             if (dotIndex != -1)
                 s = s.Substring(dotIndex + 1);
-            return t.IsArray ? s.Replace("[]", "_arr") : 
+            return (t.IsArray ? s.Replace("[]", "_arr") : 
                 t.IsGenericType ? s.Replace('<', '_').Replace('>', '_') : 
-                s;
+                s).ToLowerInvariant();
         }
 
         internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
