@@ -195,10 +195,10 @@ namespace FastExpressionCompiler.LightExpression
 
         public static NewExpression New(Type type)
         {
-            if (type.IsValueType())
+            if (type.IsValueType)
                 return new NewValueTypeExpression(type);
 
-            foreach (var x in type.GetTypeInfo().DeclaredConstructors)
+            foreach (var x in type.GetConstructors())
                 if (x.GetParameters().Length == 0)
                     return new NewExpression(x);
 
@@ -1559,7 +1559,7 @@ namespace FastExpressionCompiler.LightExpression
         internal static Type GetNonRefType(this Type type) => type.IsByRef ? type.GetElementType() : type;
 
         internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
-            source.GetTypeInfo().IsValueType &&
+            source.IsValueType &&
             (target == typeof(object) ||
              target == typeof(ValueType)) ||
              source.GetTypeInfo().IsEnum && target == typeof(Enum);

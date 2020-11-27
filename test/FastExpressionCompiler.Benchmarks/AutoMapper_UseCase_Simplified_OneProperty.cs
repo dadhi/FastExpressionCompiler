@@ -193,6 +193,20 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 |                 Create_n_CompileFast |  22.19 us | 0.382 us | 0.357 us |  1.59 |    0.05 | 1.4038 | 0.7019 | 0.0305 |   5.73 KB |
 | Create_n_CompileFast_LightExpression |  13.97 us | 0.276 us | 0.258 us |  1.00 |    0.00 | 1.0376 | 0.5188 | 0.0305 |   4.27 KB |
 
+## V3-preview-05
+
+BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.630 (2004/?/20H1)
+Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+.NET Core SDK=5.0.100
+  [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+  DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+
+|                               Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                     Create_n_Compile | 259.40 us | 2.480 us | 2.320 us | 19.58 |    0.25 | 3.1738 | 1.4648 |      - |  13.64 KB |
+|                 Create_n_CompileFast |  21.11 us | 0.365 us | 0.341 us |  1.59 |    0.03 | 1.4038 | 0.7019 | 0.0305 |   5.81 KB |
+| Create_n_CompileFast_LightExpression |  13.26 us | 0.185 us | 0.164 us |  1.00 |    0.00 | 1.0529 | 0.5188 | 0.0458 |   4.34 KB |
+
 */
         [MemoryDiagnoser]
         public class Create_and_Compile
