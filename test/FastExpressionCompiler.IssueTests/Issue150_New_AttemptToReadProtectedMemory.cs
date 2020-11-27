@@ -15,7 +15,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     using System.Reflection;
 
     [TestFixture]
-    public class Issue150_New_AttemptToReadProtectedMemory
+    public class Issue150_New_AttemptToReadProtectedMemory : ITest
     {
         public int Run() 
         {

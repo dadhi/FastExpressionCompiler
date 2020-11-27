@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace FastExpressionCompiler.IssueTests
 {
     [TestFixture]
-    public class Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke
+    public class Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke : ITest
     {
         public int Run()
         {

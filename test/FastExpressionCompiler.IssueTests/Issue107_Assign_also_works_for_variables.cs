@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue107_Assign_also_works_for_variables
+    public class Issue107_Assign_also_works_for_variables : ITest
     {
         public int Run()
         {

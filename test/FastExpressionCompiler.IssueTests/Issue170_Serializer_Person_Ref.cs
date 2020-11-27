@@ -13,7 +13,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue170_Serializer_Person_Ref
+    public class Issue170_Serializer_Person_Ref : ITest
     {
         public int Run()
         {

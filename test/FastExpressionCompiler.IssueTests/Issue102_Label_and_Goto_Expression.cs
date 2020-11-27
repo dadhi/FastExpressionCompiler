@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    public class Issue102_Label_and_Goto_Expression
+    public class Issue102_Label_and_Goto_Expression : ITest
     {
         public int Run()
         {

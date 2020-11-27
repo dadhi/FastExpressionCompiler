@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    public class Issue183_NullableDecimal
+    public class Issue183_NullableDecimal : ITest
     {
         public int Run()
         {

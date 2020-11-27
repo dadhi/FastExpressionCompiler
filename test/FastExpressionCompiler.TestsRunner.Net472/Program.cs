@@ -97,8 +97,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke().Run);
                 Run(new Issue71_Cannot_bind_to_the_target_method_because_its_signature().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature().Run);
-                Run(() => new Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor().Run().GetAwaiter().GetResult(),
-                    nameof(Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor));
+                Run(new Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor().Run);
                 Run(new Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception().Run);
                 Run(new Issue78_blocks_with_constant_return().Run);
@@ -174,6 +173,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue274_Failing_Expressions_in_Linq2DB().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run);
+
+                Run(new Issue281_Index_Out_of_Range().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue281_Index_Out_of_Range().Run);
             });
 
             Task.WaitAll(unitTests, issueTests);

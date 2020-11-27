@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    public class Issue100_LightExpression_wrong_return_type
+    public class Issue100_LightExpression_wrong_return_type : ITest
     {
         public int Run()
         {

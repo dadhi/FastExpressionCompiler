@@ -14,7 +14,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    public class Issue78_blocks_with_constant_return
+    public class Issue78_blocks_with_constant_return : ITest
     {
         public int Run()
         {

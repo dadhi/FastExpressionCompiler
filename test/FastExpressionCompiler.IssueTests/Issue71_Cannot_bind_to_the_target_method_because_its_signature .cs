@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue71_Cannot_bind_to_the_target_method_because_its_signature
+    public class Issue71_Cannot_bind_to_the_target_method_because_its_signature : ITest
     {
         public int Run()
         {

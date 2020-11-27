@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    public class Issue190_Inc_Dec_Assign_Parent_Block_Var
+    public class Issue190_Inc_Dec_Assign_Parent_Block_Var : ITest
     {
         public int Run()
         {

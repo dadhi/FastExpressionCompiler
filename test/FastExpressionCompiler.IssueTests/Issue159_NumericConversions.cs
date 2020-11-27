@@ -11,9 +11,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    public class Issue159_NumericConversions
+    public class Issue159_NumericConversions : ITest
     {
-        public int Run() 
+        public int Run()
         {
             UnsignedLongComparisonsWithConversionsShouldWork();
             IntToNullableUlong();

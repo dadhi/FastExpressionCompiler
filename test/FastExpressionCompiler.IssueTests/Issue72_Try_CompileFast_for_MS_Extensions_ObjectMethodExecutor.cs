@@ -9,13 +9,13 @@ using NUnit.Framework;
 namespace FastExpressionCompiler.IssueTests
 {
     [TestFixture]
-    public class Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor
+    public class Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor : ITest
     {
-        public async Task<int> Run()
+        public int Run()
         {
             ObjectToStructConversionAndBackShouldWork();
             FastCompiledOK();
-            await AsyncExecutor_CompiledFast_ExecuteAsync_WithAwait();
+            AsyncExecutor_CompiledFast_ExecuteAsync_WithAwait().GetAwaiter().GetResult();
             AsyncExecutor_CompiledFast_ExecuteAsync_WithoutAwait();
             return 4;
         }

@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue101_Not_supported_Assign_Modes
+    public class Issue101_Not_supported_Assign_Modes : ITest
     {
         public int Run()
         {

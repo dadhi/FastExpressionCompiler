@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    public class Issue106_Power_support
+    public class Issue106_Power_support : ITest
     {
         public int Run()
         {

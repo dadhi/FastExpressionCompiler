@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue44_Conversion_To_Nullable_Throws_Exception
+    public class Issue44_Conversion_To_Nullable_Throws_Exception : ITest
     {
         public int Run()
         {

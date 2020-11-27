@@ -13,7 +13,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 [TestFixture]
-    public class Issue19_Nested_CallExpression_causes_AccessViolationException
+    public class Issue19_Nested_CallExpression_causes_AccessViolationException : ITest
     {
         public int Run()
         {
