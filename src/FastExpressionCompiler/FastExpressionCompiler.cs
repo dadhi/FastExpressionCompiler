@@ -858,13 +858,13 @@ namespace FastExpressionCompiler
         public static readonly ArrayClosure EmptyArrayClosure = new ArrayClosure(null);
  
         public static FieldInfo ArrayClosureArrayField =
-            typeof(ArrayClosure).GetTypeInfo().GetDeclaredField(nameof(ArrayClosure.ConstantsAndNestedLambdas));
+            typeof(ArrayClosure).GetField(nameof(ArrayClosure.ConstantsAndNestedLambdas));
 
         public static FieldInfo ArrayClosureWithNonPassedParamsField =
-            typeof(ArrayClosureWithNonPassedParams).GetTypeInfo().GetDeclaredField(nameof(ArrayClosureWithNonPassedParams.NonPassedParams));
+            typeof(ArrayClosureWithNonPassedParams).GetField(nameof(ArrayClosureWithNonPassedParams.NonPassedParams));
 
-        private static ConstructorInfo[] _nonPassedParamsArrayClosureCtors =
-            typeof(ArrayClosureWithNonPassedParams).GetTypeInfo().DeclaredConstructors.AsArray();
+        private static ConstructorInfo[] _nonPassedParamsArrayClosureCtors = typeof(ArrayClosureWithNonPassedParams).GetConstructors();
+
         public static ConstructorInfo ArrayClosureWithNonPassedParamsConstructor = _nonPassedParamsArrayClosureCtors[0];
 
         public static ConstructorInfo ArrayClosureWithNonPassedParamsConstructorWithoutConstants = _nonPassedParamsArrayClosureCtors[1];
@@ -941,8 +941,7 @@ namespace FastExpressionCompiler
 
         internal static class CurryClosureFuncs
         {
-            public static readonly MethodInfo[] Methods =
-                typeof(CurryClosureFuncs).GetTypeInfo().DeclaredMethods.AsArray();
+            public static readonly MethodInfo[] Methods = typeof(CurryClosureFuncs).GetMethods();
 
             public static Func<R> Curry<C, R>(Func<C, R> f, C c) =>
                 () => f(c);
@@ -973,6 +972,14 @@ namespace FastExpressionCompiler
             public static Func<T1, T2, T3, T4, T5, T6, T7, T8, R>
                 Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, T8, R> f, C c) =>
                 (t1, t2, t3, t4, t5, t6, t7, t8) => f(c, t1, t2, t3, t4, t5, t6, t7, t8);
+
+            public static Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>
+                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, R> f, C c) =>
+                (t1, t2, t3, t4, t5, t6, t7, t8, t9) => f(c, t1, t2, t3, t4, t5, t6, t7, t8, t9);
+
+            public static Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>
+                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> f, C c) =>
+                (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) => f(c, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
         }
 
         internal static class CurryClosureActions
@@ -1001,6 +1008,22 @@ namespace FastExpressionCompiler
             public static Action<T1, T2, T3, T4, T5, T6>
                 Curry<C, T1, T2, T3, T4, T5, T6>(Action<C, T1, T2, T3, T4, T5, T6> f, C c) =>
                 (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6);
+
+            public static Action<T1, T2, T3, T4, T5, T6, T7>
+                Curry<C, T1, T2, T3, T4, T5, T6, T7>(Action<C, T1, T2, T3, T4, T5, T6, T7> f, C c) =>
+                (t1, t2, t3, t4, t5, t6, t7) => f(c, t1, t2, t3, t4, t5, t6, t7);
+
+            public static Action<T1, T2, T3, T4, T5, T6, T7, T8>
+                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8>(Action<C, T1, T2, T3, T4, T5, T6, T7, T8> f, C c) =>
+                (t1, t2, t3, t4, t5, t6, t7, t8) => f(c, t1, t2, t3, t4, t5, t6, t7, t8);
+
+            public static Action<T1, T2, T3, T4, T5, T6, T7, T8, T9>
+                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Action<C, T1, T2, T3, T4, T5, T6, T7, T8, T9> f, C c) =>
+                (t1, t2, t3, t4, t5, t6, t7, t8, t9) => f(c, t1, t2, t3, t4, t5, t6, t7, t8, t9);
+
+            public static Action<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
+                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Action<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> f, C c) =>
+                (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) => f(c, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
         }
 
 #region Collect Bound Constants
