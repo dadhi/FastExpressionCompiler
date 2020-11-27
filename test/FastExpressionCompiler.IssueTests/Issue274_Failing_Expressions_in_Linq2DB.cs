@@ -20,15 +20,14 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_case_4_Full_InvalidCastException();
             Test_case_3_Full_NullReferenceException();
-
-            // Test_case_4_Full_InvalidCastException();
-            // Test_case_2_Full_ExecutionEngineException();
-            // Test_case_1_Minimal_compare_nullable_with_null_conditional();
-            // Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
-            // Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
-            // Test_case_1_Full_AccessViolationException();
-            // The_expression_with_anonymous_class_should_output_without_special_symbols();
+            Test_case_2_Full_ExecutionEngineException();
+            Test_case_1_Minimal_compare_nullable_with_null_conditional();
+            Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
+            Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
+            Test_case_1_Full_AccessViolationException();
+            The_expression_with_anonymous_class_should_output_without_special_symbols();
 
             return 8;
         }
@@ -262,13 +261,15 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
             Assert.AreEqual(10,  fs(Enum15.AA));
             Assert.AreEqual(20,  fs(Enum15.BB));
-            Assert.AreEqual(42, fs((Enum15)3));
+            Assert.Throws<InvalidOperationException>(() =>
+              fs((Enum15)3));
 
             var f = expr.CompileFast(true);
             f.PrintIL();
             Assert.AreEqual(10,  f(Enum15.AA));
             Assert.AreEqual(20,  f(Enum15.BB));
-            Assert.AreEqual(42, f((Enum15)3));
+            Assert.Throws<InvalidOperationException>(() =>
+              f((Enum15)3));
         }
 
         [Test]
@@ -561,11 +562,17 @@ namespace FastExpressionCompiler.IssueTests
 
         static class ConvertBuilder
         {
-            internal static object ConvertDefault(object value, Type conversionType) => 
-              conversionType == typeof(int) ? (int)42 :
-              conversionType == typeof(long) ? (long)42 :
-              conversionType == typeof(bool) ? (long)value != 0 :
-              value;
+            internal static object ConvertDefault(object value, Type conversionType)
+            {
+              try
+              {
+                return System.Convert.ChangeType(value, conversionType, System.Threading.Thread.CurrentThread.CurrentCulture);
+              }
+              catch (Exception ex)
+              {
+                throw new InvalidOperationException($"Cannot convert value '{value}' to type '{conversionType.FullName}'", ex);
+              }
+            }
         }
 
         interface IDataContext { }
