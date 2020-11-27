@@ -82,7 +82,6 @@ namespace FastExpressionCompiler
         string CSharpString { get; }
     }
 
-
     /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
     /// Partial to extend with your things when used as source file.</summary>
     // ReSharper disable once PartialTypeWithSinglePart

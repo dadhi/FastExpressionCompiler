@@ -16,15 +16,32 @@
 [Apex.Serialization]: https://github.com/dbolin/Apex.Serialization
 
 
-[![latest release](https://img.shields.io/badge/latest%20release-v3.0.0-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/edit/untagged-059915d86897b6258eac)
+[![latest release](https://img.shields.io/badge/latest%20release-v3.0.0-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/edit/untagged-e67dc3054471d280cc74)
 [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 Targets .NET Standard 2.0 and .NET 4.5  
 NuGet packages:
 
-- FastExpressionCompiler [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler/3.0.0-preview-02)[![fuget.org package api diff](https://www.fuget.org/packages/FastExpressionCompiler/badge.svg?v=3.0.0-preview-02)](https://www.fuget.org/packages/FastExpressionCompiler/3.0.0-preview-02)  
-- FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression/3.0.0-preview-02)[![fuget.org package last version](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/badge.svg?v=3.0.0-preview-02)](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/3.0.0-preview-02)
+- FastExpressionCompiler [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler/3.0.0-preview-05)[![fuget.org package api diff](https://www.fuget.org/packages/FastExpressionCompiler/badge.svg?v=3.0.0-preview-05)](https://www.fuget.org/packages/FastExpressionCompiler/3.0.0-preview-05)  
+- FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression/3.0.0-preview-05)[![fuget.org package last version](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/badge.svg?v=3.0.0-preview-05)](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/3.0.0-preview-05)
 
 Originally is a part of the [DryIoc], so check it out ;-)
+
+- [FastExpressionCompiler](#fastexpressioncompiler)
+  - [The problem](#the-problem)
+  - [The solution](#the-solution)
+  - [Difference between FastExpressionCompiler and FastExpressionCompiler.LightExpression](#difference-between-fastexpressioncompiler-and-fastexpressioncompilerlightexpression)
+  - [Who's using it](#whos-using-it)
+  - [How to use](#how-to-use)
+    - [Examples](#examples)
+  - [Benchmarks](#benchmarks)
+    - [Hoisted expression with the constructor and two arguments in closure](#hoisted-expression-with-the-constructor-and-two-arguments-in-closure)
+    - [Hoisted expression with the static method and two nested lambdas and two arguments in closure](#hoisted-expression-with-the-static-method-and-two-nested-lambdas-and-two-arguments-in-closure)
+    - [Manually composed expression with parameters and closure](#manually-composed-expression-with-parameters-and-closure)
+    - [FastExpressionCompiler.LightExpression.Expression vs System.Linq.Expressions.Expression](#fastexpressioncompilerlightexpressionexpression-vs-systemlinqexpressionsexpression)
+  - [How it works](#how-it-works)
+    - [What's not supported yet](#whats-not-supported-yet)
+  - [Diagnostics](#diagnostics)
+  - [Additional optimizations](#additional-optimizations)
 
 
 ## The problem
@@ -61,12 +78,15 @@ FastExpressionCompiler.LightExpression
 - Provides the `CompileFast` extension methods for `FastExpressionCompiler.LightExpression.LambdaExpression`.
 - Provides the drop-in [Expression replacement](#feclightexpressionexpression-vs-expression) with the faster construction and less memory at the cost of less validation.
 - Includes its own `ExpressionVisitor`.
-- `ToExpression` method to convert back to the System Expression.
-- `ToCSharpString()` method to output the compile-able C# code represented by expression.
-- `ToExpressionString()` method to output the expression construction C# code, so given the expression object you'll get e.g. `Expression.Lambda(Expression.New(...))`.
+
+Both FastExpressionCompiler and FastExpressionCompiler.LightExpression
+
+- Support `ToExpression` method to convert back to the System Expression.
+- Support `ToCSharpString()` method to output the compile-able C# code represented by expression.
+- Support `ToExpressionString()` method to output the expression construction C# code, so given the expression object you'll get e.g. `Expression.Lambda(Expression.New(...))`.
 
 
-## Some users
+## Who's using it
 
 [Marten], [Rebus], [StructureMap], [Lamar], [ExpressionToCodeLib], [NServiceBus]
 
@@ -213,7 +233,7 @@ Invoking the compiled delegate compared to the normal delegate and the direct ca
 | FastCompiledLambda_LightExpression | 10.86 ns | 0.109 ns | 0.096 ns |  1.00 |    0.00 | 0.0076 |     - |     - |      32 B |
 
 
-### FEC.LightExpression.Expression vs Expression
+### FastExpressionCompiler.LightExpression.Expression vs System.Linq.Expressions.Expression
 
 `FastExpressionCompiler.LightExpression.Expression` is the lightweight version of `System.Linq.Expressions.Expression`. 
 It is designed to be a __drop-in replacement__ for the System Expression - just install the __FastExpressionCompiler.LightExpression__ package instead of __FastExpressionCompiler__ and replace the usings
@@ -254,10 +274,12 @@ Creating and compiling:
 
 ## How it works
 
-The idea is to provide the fast compilation for the supported expression types,
+The idea is to provide the fast compilation for the supported expression types
 and fallback to the system `Expression.Compile()` for the not supported types:
 
-**V3 does not support yet:** 
+### What's not supported yet
+
+**FEC V3 does not support yet:** 
 
 - `Quote`
 - `Dynamic`
@@ -278,7 +300,24 @@ The expression is traversed twice:
 If visitor finds the not supported expression node or the error condition, 
 the compilation is aborted, and `null` is returned enabling the fallback to System `.Compile()`.
 
-### Additional optimizations
+## Diagnostics
+
+FEC V3 adds powerful diagnostics tools.
+
+You may pass the optional `CompilerFlags.EnableDelegateDebugInfo`  into the `CompileFast` methods.
+
+`EnableDelegateDebugInfo` adds the diagnostic info into the compiled delegate including its source Expression and C# code. 
+Can be used as following:
+
+```cs
+var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+var di = f.Target as IDelegateDebugInfo;
+Assert.IsNotNull(di.Expression);
+Assert.IsNotNull(di.ExpressionString);
+Assert.IsNotNull(di.CSharpString);
+```
+
+## Additional optimizations
 
 1. Using `FastExpressionCompiler.LightExpression.Expression` instead of `System.Linq.Expressions.Expression` for the faster expression creation.  
 2. Using `.TryCompileWithPreCreatedClosure` and `.TryCompileWithoutClosure` methods when you know the expression at hand and may skip the first traversing round, e.g. for the "static" expression which does not contain the bound constants. __Note:__ You cannot skip the 1st round if the expression contains the `Block`, `Try`, or `Goto` expressions.
