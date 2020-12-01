@@ -21,13 +21,13 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Test_case_4_Full_InvalidCastException();
-            Test_case_3_Full_NullReferenceException();
-            Test_case_2_Full_ExecutionEngineException();
-            Test_case_1_Minimal_compare_nullable_with_null_conditional();
-            Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
-            Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
-            Test_case_1_Full_AccessViolationException();
-            The_expression_with_anonymous_class_should_output_without_special_symbols();
+            // Test_case_3_Full_NullReferenceException();
+            // Test_case_2_Full_ExecutionEngineException();
+            // Test_case_1_Minimal_compare_nullable_with_null_conditional();
+            // Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
+            // Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
+            // Test_case_1_Full_AccessViolationException();
+            // The_expression_with_anonymous_class_should_output_without_special_symbols();
 
             return 8;
         }
@@ -388,48 +388,7 @@ namespace FastExpressionCompiler.IssueTests
               expr.PrintCSharp();
               var reExpr = expr.ToExpressionString();
               StringAssert.Contains("!!!", reExpr);
-/*
-(Func<Issue274_Failing_Expressions_in_Linq2DB.IQueryRunner, IDataReader, IGrouping<bool, Issue274_Failing_Expressions_in_Linq2DB.Customer>>)(
-    Issue274_Failing_Expressions_in_Linq2DB.IQueryRunner qr, 
-    IDataReader dr) => 
-    new Func<Issue274_Failing_Expressions_in_Linq2DB.IQueryRunner, Issue274_Failing_Expressions_in_Linq2DB.IDataContext, IDataReader, Expression, object[], object[], IGrouping<bool, Issue274_Failing_Expressions_in_Linq2DB.Customer>>(
-        (Func<Issue274_Failing_Expressions_in_Linq2DB.IQueryRunner, Issue274_Failing_Expressions_in_Linq2DB.IDataContext, IDataReader, Expression, object[], object[], IGrouping<bool, Issue274_Failing_Expressions_in_Linq2DB.Customer>>)(
-            Issue274_Failing_Expressions_in_Linq2DB.IQueryRunner qr, 
-            Issue274_Failing_Expressions_in_Linq2DB.IDataContext dctx, 
-            IDataReader rd, 
-            Expression expr, 
-            object[] ps, 
-            object[] preamble) => 
-        {
-            Issue274_Failing_Expressions_in_Linq2DB.SQLiteDataReader ldr;
-            ldr = ((Issue274_Failing_Expressions_in_Linq2DB.SQLiteDataReader)dr);
-            return Issue274_Failing_Expressions_in_Linq2DB.GroupByBuilder.GroupByContext.GroupByHelper<bool, Issue274_Failing_Expressions_in_Linq2DB.Customer, Issue274_Failing_Expressions_in_Linq2DB.ExpressionBuilder.GroupSubQuery<bool, Issue274_Failing_Expressions_in_Linq2DB.Customer>>.GetGrouping(
-                qr,
-                dctx,
-                rd,
-                new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB.ParameterAccessor[]{},
-                expr,
-                ps,
-                (Func<Issue274_Failing_Expressions_in_Linq2DB.IQueryRunner, Issue274_Failing_Expressions_in_Linq2DB.IDataContext, IDataReader, Expression, object[], bool>)(
-                    Issue274_Failing_Expressions_in_Linq2DB.IQueryRunner qr, 
-                    Issue274_Failing_Expressions_in_Linq2DB.IDataContext dctx, 
-                    IDataReader rd, 
-                    Expression expr, 
-                    object[] ps) => 
-                    ldr.IsDBNull((int)0) ?
-                        false :
-                        ((bool)Issue274_Failing_Expressions_in_Linq2DB.ConvertBuilder.ConvertDefault(
-                            ((object)ldr.GetInt64((int)0)),
-                            typeof(bool))),
-                null);
-        })).Invoke(
-        qr,
-        qr.DataContext,
-        dr,
-        qr.Expression,
-        qr.Parameters,
-        qr.Preambles);
-*/       
+
            var fs = expr.CompileSys();
            fs.PrintIL();
 
@@ -489,37 +448,39 @@ namespace FastExpressionCompiler.IssueTests
                       p[0]=Parameter(typeof(SampleClass))
                   },
                   e[1]=MakeBinary(ExpressionType.Assign,
-                      p[0 // (SampleClass SampleClass__14492072)
+                      p[0 // (SampleClass sampleclass__14492072)
                   ],
                   e[2]=New(/*2 args*/
                       typeof(SampleClass).GetTypeInfo().DeclaredConstructors.ToArray()[0],
                       p[1]=Parameter(typeof(object)),
                       e[3]=Constant(new Delegate[]
                       {
-                          default(Func<SampleClass, int>), 
-                          default(Func<SampleClass, int>), 
-                          default(Func<SampleClass, int, OtherClass>), 
-                          default(Action<SampleClass>), 
-                          default(Func<SampleClass, int, RegularEnum1>), 
-                          default(Func<SampleClass, int, FlagsEnum>), 
-                          default(Func<SampleClass, RegularEnum1, int>), 
-                          default(Func<SampleClass, FlagsEnum, int>), 
-                          default(Func<SampleClass, RegularEnum1>), 
-                          default(Func<SampleClass, FlagsEnum>), 
-                          default(Action<SampleClass, bool>), 
-                          default(Action<SampleClass, RegularEnum1>), 
-                          default(Action<SampleClass, FlagsEnum>), 
-                          default(Func<SampleClass, int, RegularEnum2>), 
-                          default(Func<SampleClass, RegularEnum2, int>), 
-                          default(Func<SampleClass, RegularEnum2>), 
-                          default(Action<SampleClass, RegularEnum2>), 
-                          default(Func<SampleClass, string, string>), 
-                          null, 
-                          default(Func<SampleClass, string, int>)})
+                          (Func<SampleClass, int>)(x => 42), 
+                          (Func<SampleClass, int, OtherClass>)((x, i) => new OtherClass()), 
+                          (Action<SampleClass>)(x => {}), 
+                          // default(Func<SampleClass, int, RegularEnum1>), 
+                          // default(Func<SampleClass, int, FlagsEnum>), 
+                          // default(Func<SampleClass, RegularEnum1, int>), 
+                          // default(Func<SampleClass, FlagsEnum, int>), 
+                          // default(Func<SampleClass, RegularEnum1>), 
+                          // default(Func<SampleClass, FlagsEnum>), 
+                          // default(Action<SampleClass, bool>), 
+                          // default(Action<SampleClass, RegularEnum1>), 
+                          // default(Action<SampleClass, FlagsEnum>), 
+                          // default(Func<SampleClass, int, RegularEnum2>), 
+                          // default(Func<SampleClass, RegularEnum2, int>), 
+                          // default(Func<SampleClass, RegularEnum2>), 
+                          // default(Action<SampleClass, RegularEnum2>), 
+                          // default(Func<SampleClass, string, string>), 
+                          (SimpleDelegate)HandleString, 
+                          (Func<SampleClass, string, int>)((x, s) => 43)
+                        })
                       )
                   ),
                   e[4]=Invoke(
-                      e[5]=Constant((Action<SampleClass>)((SampleClass s) => {})),
+                      e[5]=Constant((Action<SampleClass>)((SampleClass s) => {
+                          ((SimpleDelegate)s.Delegates[3]).Invoke("Hey!");
+                      })),
                       p[0 // (SampleClass SampleClass__14492072)
                         ]),
                       p[0 // (SampleClass SampleClass__14492072)
@@ -531,20 +492,33 @@ namespace FastExpressionCompiler.IssueTests
 
               var fs = expr.CompileSys();
               fs.PrintIL();
+              var obj1 = new object();
+              var s1 = fs(obj1);
+              Assert.IsInstanceOf<SampleClass>(s1);
 
               var f = expr.CompileFast(true);
               f.PrintIL();
-              var obj = new object();
-              var s = f(obj);
-              Assert.IsInstanceOf<SampleClass>(s);
+              var obj2 = new object();
+              var s2 = f(obj2);
+              Assert.IsInstanceOf<SampleClass>(s2);
+        }
+
+        public delegate void SimpleDelegate(string input);
+
+        public static void HandleString(string s) 
+        {
+
         }
 
         class SampleClass 
         {
             public object Instance;
+            public Delegate[] Delegates;
+
             public SampleClass(object instance, Delegate[] delegates) 
             {
                 Instance = instance;
+                Delegates = delegates;
             }
         }
         class OtherClass {}
