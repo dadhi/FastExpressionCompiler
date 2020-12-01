@@ -1382,7 +1382,7 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Extension:
-                        expr = expr.Reduce();
+                        expr = expr.Reduce(); // todo: @incomplete decide how to handle it
                         continue;
 
                     case ExpressionType.Default:
@@ -2181,7 +2181,7 @@ namespace FastExpressionCompiler
                 else
                 {
                     il.Emit(OpCodes.Br, labelDone);
-                    il.MarkLabel(labelFalse);
+                    il.MarkLabel(labelFalse); // todo: @bug? should we insert the boxing for the value type before the Castclass, e.g. for the Nullable
                     il.Emit(OpCodes.Castclass, exprObj.Type);
                     il.MarkLabel(labelDone);
                 }
@@ -2798,7 +2798,11 @@ namespace FastExpressionCompiler
 
                     // cast as the last resort and let's it fail if unlucky
                     if (!TryEmitValueConvert(targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
+                    {
+                        if (sourceType.IsValueType)
+                            il.Emit(OpCodes.Box, sourceType);
                         il.Emit(OpCodes.Castclass, targetType);
+                    }
                 }
 
                 if ((parent & ParentFlags.IgnoreResult) != 0)

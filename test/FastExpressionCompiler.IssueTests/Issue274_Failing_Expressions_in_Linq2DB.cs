@@ -20,16 +20,19 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_case_4_Full_InvalidCastException();
-            // Test_case_3_Full_NullReferenceException();
-            // Test_case_2_Full_ExecutionEngineException();
-            // Test_case_1_Minimal_compare_nullable_with_null_conditional();
-            // Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
-            // Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
-            // Test_case_1_Full_AccessViolationException();
-            // The_expression_with_anonymous_class_should_output_without_special_symbols();
+            Test_283_Case2_NullRefException();
+            Test_283_Case2_Minimal_NullRefException();
 
-            return 8;
+            Test_case_4_Full_InvalidCastException();
+            Test_case_3_Full_NullReferenceException();
+            Test_case_2_Full_ExecutionEngineException();
+            Test_case_1_Minimal_compare_nullable_with_null_conditional();
+            Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional();
+            Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional();
+            Test_case_1_Full_AccessViolationException();
+            The_expression_with_anonymous_class_should_output_without_special_symbols();
+
+            return 10;
         }
 
         [Test]
@@ -259,15 +262,15 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(10,  fs(Enum15.AA));
-            Assert.AreEqual(20,  fs(Enum15.BB));
+            Assert.AreEqual(10, fs(Enum15.AA));
+            Assert.AreEqual(20, fs(Enum15.BB));
             Assert.Throws<InvalidOperationException>(() =>
               fs((Enum15)3));
 
             var f = expr.CompileFast(true);
             f.PrintIL();
-            Assert.AreEqual(10,  f(Enum15.AA));
-            Assert.AreEqual(20,  f(Enum15.BB));
+            Assert.AreEqual(10, f(Enum15.AA));
+            Assert.AreEqual(20, f(Enum15.BB));
             Assert.Throws<InvalidOperationException>(() =>
               f((Enum15)3));
         }
@@ -279,64 +282,64 @@ namespace FastExpressionCompiler.IssueTests
             var e = new Expression[23]; // the unique expressions 
             var l = new LabelTarget[0]; // the labels 
             var expr = Lambda<Func<IQueryRunner, IDataReader, IGrouping<bool, Customer>>>(
-              e[0]=Invoke(
-              e[1]=Lambda( // $
+              e[0] = Invoke(
+              e[1] = Lambda( // $
                 typeof(Func<IQueryRunner, IDataContext, IDataReader, System.Linq.Expressions.Expression, object[], object[], IGrouping<bool, Customer>>),
-                e[2]=Block(
+                e[2] = Block(
                     typeof(IGrouping<bool, Customer>),
                     new[] {
                     p[0]=Parameter(typeof(SQLiteDataReader), "ldr")
                     },
-                  e[3]=MakeBinary(ExpressionType.Assign,
+                  e[3] = MakeBinary(ExpressionType.Assign,
                     p[0 // (SQLiteDataReader ldr)
                     ],
-                    e[4]=Convert(
-                    p[1]=Parameter(typeof(IDataReader), "dr"),
+                    e[4] = Convert(
+                    p[1] = Parameter(typeof(IDataReader), "dr"),
                     typeof(SQLiteDataReader))),
-                  e[5]=Call(
-                    null, 
-                    typeof(GroupByBuilder.GroupByContext.GroupByHelper<bool, Customer, ExpressionBuilder.GroupSubQuery<bool, Customer>>).GetMethods(BindingFlags.NonPublic|BindingFlags.Static)
-                      .Single(x => !x.IsGenericMethod && x.Name == "GetGrouping" && 
+                  e[5] = Call(
+                    null,
+                    typeof(GroupByBuilder.GroupByContext.GroupByHelper<bool, Customer, ExpressionBuilder.GroupSubQuery<bool, Customer>>).GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+                      .Single(x => !x.IsGenericMethod && x.Name == "GetGrouping" &&
                         x.GetParameters().Select(y => y.ParameterType)
-                        .SequenceEqual(new[] { 
-                            typeof(IQueryRunner), 
-                            typeof(IDataContext), 
-                            typeof(IDataReader), 
+                        .SequenceEqual(new[] {
+                            typeof(IQueryRunner),
+                            typeof(IDataContext),
+                            typeof(IDataReader),
                             typeof(List<ParameterAccessor>),
-                            typeof(System.Linq.Expressions.Expression), 
-                            typeof(object[]), 
-                            typeof(Func<IQueryRunner, IDataContext, IDataReader, System.Linq.Expressions.Expression, object[], bool>), 
+                            typeof(System.Linq.Expressions.Expression),
+                            typeof(object[]),
+                            typeof(Func<IQueryRunner, IDataContext, IDataReader, System.Linq.Expressions.Expression, object[], bool>),
                             typeof(Func<IDataContext, bool, object[], IQueryable<Customer>>) })),
-                    p[2]=Parameter(typeof(IQueryRunner), "qr"),
-                    p[3]=Parameter(typeof(IDataContext), "dctx"),
-                    p[4]=Parameter(typeof(IDataReader), "rd"),
-                    e[6]=Constant(new List<ParameterAccessor>()),
-                    p[5]=Parameter(typeof(System.Linq.Expressions.Expression), "expr"),
-                    p[6]=Parameter(typeof(object[]), "ps"),
-                    e[7]=Lambda( // $
+                    p[2] = Parameter(typeof(IQueryRunner), "qr"),
+                    p[3] = Parameter(typeof(IDataContext), "dctx"),
+                    p[4] = Parameter(typeof(IDataReader), "rd"),
+                    e[6] = Constant(new List<ParameterAccessor>()),
+                    p[5] = Parameter(typeof(System.Linq.Expressions.Expression), "expr"),
+                    p[6] = Parameter(typeof(object[]), "ps"),
+                    e[7] = Lambda( // $
                       typeof(Func<IQueryRunner, IDataContext, IDataReader, System.Linq.Expressions.Expression, object[], bool>),
-                      e[8]=Condition(
-                        e[9]=Call(
+                      e[8] = Condition(
+                        e[9] = Call(
                         p[0 // (SQLiteDataReader ldr)
-                          ], 
-                        typeof(IDataRecord).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "IsDBNull" && 
+                          ],
+                        typeof(IDataRecord).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "IsDBNull" &&
                           x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
-                        e[10]=Constant((int)0)),
-                        e[11]=Constant(false),
-                        e[12]=Convert(
-                        e[13]=Call(
-                          null, 
-                          typeof(ConvertBuilder).GetMethods(BindingFlags.NonPublic|BindingFlags.Static).Single(x => !x.IsGenericMethod && x.Name == "ConvertDefault" && 
-                            x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(object), typeof(Type) })),
-                          e[14]=Convert(
-                          e[15]=Call(
+                        e[10] = Constant((int)0)),
+                        e[11] = Constant(false),
+                        e[12] = Convert(
+                        e[13] = Call(
+                          null,
+                          typeof(ConvertBuilder).GetMethods(BindingFlags.NonPublic | BindingFlags.Static).Single(x => !x.IsGenericMethod && x.Name == "ConvertDefault" &&
+                              x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(object), typeof(Type) })),
+                          e[14] = Convert(
+                          e[15] = Call(
                             p[0 // (SQLiteDataReader ldr)
-                            ], 
-                            typeof(IDataRecord).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "GetInt64" && 
+                            ],
+                            typeof(IDataRecord).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "GetInt64" &&
                               x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
-                            e[16]=Constant((int)0)),
+                            e[16] = Constant((int)0)),
                           typeof(object)),
-                          e[17]=Constant(typeof(bool))),
+                          e[17] = Constant(typeof(bool))),
                         typeof(bool)),
                       typeof(bool)),
                       p[2 // (IQueryRunner qr)
@@ -349,7 +352,7 @@ namespace FastExpressionCompiler.IssueTests
                         ],
                       p[6 // (object[] ps)
                         ]),
-                    e[18]=Constant(null, typeof(Func<IDataContext, bool, object[], IQueryable<Customer>>)))),
+                    e[18] = Constant(null, typeof(Func<IDataContext, bool, object[], IQueryable<Customer>>)))),
                 p[2 // (IQueryRunner qr)
                 ],
                 p[3 // (IDataContext dctx)
@@ -360,23 +363,23 @@ namespace FastExpressionCompiler.IssueTests
                 ],
                 p[6 // (object[] ps)
                 ],
-                p[7]=Parameter(typeof(object[]), "preamble")),
-              p[8]=Parameter(typeof(IQueryRunner), "qr"),
-              e[19]=Property(
+                p[7] = Parameter(typeof(object[]), "preamble")),
+              p[8] = Parameter(typeof(IQueryRunner), "qr"),
+              e[19] = Property(
                 p[8 // (IQueryRunner qr)
                 ],
                 typeof(IQueryRunner).GetTypeInfo().GetDeclaredProperty("DataContext")),
               p[1 // (IDataReader dr)
                 ],
-              e[20]=Property(
+              e[20] = Property(
                 p[8 // (IQueryRunner qr)
                 ],
                 typeof(IQueryRunner).GetTypeInfo().GetDeclaredProperty("Expression")),
-              e[21]=Property(
+              e[21] = Property(
                 p[8 // (IQueryRunner qr)
                 ],
                 typeof(IQueryRunner).GetTypeInfo().GetDeclaredProperty("Parameters")),
-              e[22]=Property(
+              e[22] = Property(
                 p[8 // (IQueryRunner qr)
                 ],
                 typeof(IQueryRunner).GetTypeInfo().GetDeclaredProperty("Preambles"))),
@@ -385,52 +388,52 @@ namespace FastExpressionCompiler.IssueTests
               p[1 // (IDataReader dr)
               ]);
 
-              expr.PrintCSharp();
-              var reExpr = expr.ToExpressionString();
-              StringAssert.Contains("!!!", reExpr);
+            expr.PrintCSharp();
+            var reExpr = expr.ToExpressionString();
+            StringAssert.Contains("!!!", reExpr);
 
-           var fs = expr.CompileSys();
-           fs.PrintIL();
+            var fs = expr.CompileSys();
+            fs.PrintIL();
 
-           var f = expr.CompileFast(true);
-           f.PrintIL();
+            var f = expr.CompileFast(true);
+            f.PrintIL();
 
-          Assert.DoesNotThrow(() =>
-            f(new NullQueryRunner(), new SQLiteDataReader()));
+            Assert.DoesNotThrow(() =>
+              f(new NullQueryRunner(), new SQLiteDataReader()));
         }
 
-     		public class Customer
+        public class Customer
         {
         }
 
         class ParameterAccessor
-	      {
+        {
         }
 
-	      class ExpressionBuilder
+        class ExpressionBuilder
         {
-            public class GroupSubQuery<TKey,TElement> {}
+            public class GroupSubQuery<TKey, TElement> { }
         }
 
-	      class GroupByBuilder
+        class GroupByBuilder
         {
-            internal class GroupByContext 
+            internal class GroupByContext
             {
-                internal class GroupByHelper<TKey,TElement,TSource> 
+                internal class GroupByHelper<TKey, TElement, TSource>
                 {
-                    internal static IGrouping<TKey,TElement> GetGrouping(
-                        IQueryRunner                                                           runner,
-                        IDataContext                                                           dataContext,
-                        IDataReader                                                            dataReader,
-                        List<ParameterAccessor>                                                parameterAccessor,
-                        System.Linq.Expressions.Expression                                     expr,
-                        object[]                                                               ps,
-                        Func<IQueryRunner,IDataContext,IDataReader,System.Linq.Expressions.Expression,object[],TKey>   keyReader,
-                        Func<IDataContext,TKey,object[],IQueryable<TElement>>                  itemReader)
-                  {
-                    var key = keyReader(runner, dataContext, dataReader, expr, ps);
-                    return null;
-                  }
+                    internal static IGrouping<TKey, TElement> GetGrouping(
+                        IQueryRunner runner,
+                        IDataContext dataContext,
+                        IDataReader dataReader,
+                        List<ParameterAccessor> parameterAccessor,
+                        System.Linq.Expressions.Expression expr,
+                        object[] ps,
+                        Func<IQueryRunner, IDataContext, IDataReader, System.Linq.Expressions.Expression, object[], TKey> keyReader,
+                        Func<IDataContext, TKey, object[], IQueryable<TElement>> itemReader)
+                    {
+                        var key = keyReader(runner, dataContext, dataReader, expr, ps);
+                        return null;
+                    }
                 }
             }
         }
@@ -438,25 +441,25 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Test_case_4_Full_InvalidCastException()
         {
-          var p = new ParameterExpression[2]; // the parameter expressions 
-          var e = new Expression[6]; // the unique expressions 
-          var l = new LabelTarget[0]; // the labels 
-          var expr = Lambda<Func<object, object>>( // $
-              e[0]=Block(
-                  typeof(SampleClass),
-                  new[] {
+            var p = new ParameterExpression[2]; // the parameter expressions 
+            var e = new Expression[6]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda<Func<object, object>>( // $
+                e[0] = Block(
+                    typeof(SampleClass),
+                    new[] {
                       p[0]=Parameter(typeof(SampleClass))
-                  },
-                  e[1]=MakeBinary(ExpressionType.Assign,
-                      p[0 // (SampleClass sampleclass__14492072)
-                  ],
-                  e[2]=New(/*2 args*/
-                      typeof(SampleClass).GetTypeInfo().DeclaredConstructors.ToArray()[0],
-                      p[1]=Parameter(typeof(object)),
-                      e[3]=Constant(new Delegate[]
-                      {
-                          (Func<SampleClass, int>)(x => 42), 
-                          (Func<SampleClass, int, OtherClass>)((x, i) => new OtherClass()), 
+                    },
+                    e[1] = MakeBinary(ExpressionType.Assign,
+                        p[0 // (SampleClass sampleclass__14492072)
+                    ],
+                    e[2] = New(/*2 args*/
+                        typeof(SampleClass).GetTypeInfo().DeclaredConstructors.ToArray()[0],
+                        p[1] = Parameter(typeof(object)),
+                        e[3] = Constant(new Delegate[]
+                        {
+                          (Func<SampleClass, int>)(x => 42),
+                          (Func<SampleClass, int, OtherClass>)((x, i) => new OtherClass()),
                           (Action<SampleClass>)(x => {}), 
                           // default(Func<SampleClass, int, RegularEnum1>), 
                           // default(Func<SampleClass, int, FlagsEnum>), 
@@ -472,61 +475,178 @@ namespace FastExpressionCompiler.IssueTests
                           // default(Func<SampleClass, RegularEnum2>), 
                           // default(Action<SampleClass, RegularEnum2>), 
                           // default(Func<SampleClass, string, string>), 
-                          (SimpleDelegate)HandleString, 
+                          (SimpleDelegate)HandleString,
                           (Func<SampleClass, string, int>)((x, s) => 43)
-                        })
-                      )
-                  ),
-                  e[4]=Invoke(
-                      e[5]=Constant((Action<SampleClass>)((SampleClass s) => {
-                          ((SimpleDelegate)s.Delegates[3]).Invoke("Hey!");
-                      })),
-                      p[0 // (SampleClass SampleClass__14492072)
-                        ]),
-                      p[0 // (SampleClass SampleClass__14492072)
-                        ]),
-                      p[1 // (object object__42147750)
-                        ]);
+                          })
+                        )
+                    ),
+                    e[4] = Invoke(
+                        e[5] = Constant((Action<SampleClass>)((SampleClass s) =>
+                        {
+                            ((SimpleDelegate)s.Delegates[3]).Invoke("Hey!");
+                        })),
+                        p[0 // (SampleClass SampleClass__14492072)
+                          ]),
+                        p[0 // (SampleClass SampleClass__14492072)
+                          ]),
+                        p[1 // (object object__42147750)
+                          ]);
 
-              expr.PrintCSharp();
+            expr.PrintCSharp();
 
-              var fs = expr.CompileSys();
-              fs.PrintIL();
-              var obj1 = new object();
-              var s1 = fs(obj1);
-              Assert.IsInstanceOf<SampleClass>(s1);
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            var obj1 = new object();
+            var s1 = fs(obj1);
+            Assert.IsInstanceOf<SampleClass>(s1);
 
-              var f = expr.CompileFast(true);
-              f.PrintIL();
-              var obj2 = new object();
-              var s2 = f(obj2);
-              Assert.IsInstanceOf<SampleClass>(s2);
+            var f = expr.CompileFast(true);
+            f.PrintIL();
+            var obj2 = new object();
+            var s2 = f(obj2);
+            Assert.IsInstanceOf<SampleClass>(s2);
+        }
+
+        [Test]
+        public void Test_283_Case2_NullRefException()
+        {
+            var p = new ParameterExpression[3]; // the parameter expressions 
+            var e = new Expression[23]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda<Func<System.Linq.Expressions.Expression, IDataContext, object[], object>>( // $
+              e[0] = Convert(
+                e[1] = Call(
+                  null,
+                  typeof(ConvertTo<int>).GetMethods().Where(x => x.IsGenericMethod && x.Name == "From" && x.GetGenericArguments().Length == 1)
+                    .Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(System.Enum)) : x)
+                    .Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(System.Enum) })),
+                  e[2] = Convert(
+                    e[3] = Field(
+                      e[4] = Convert(
+                        e[5] = Property(
+                          e[6] = Convert(
+                            e[7] = Property(
+                              e[8] = Convert(
+                                e[9] = Property(
+                                  e[10] = Convert(
+                                    e[11] = Call(
+                                      e[12] = Property(
+                                        e[13] = Convert(
+                                          e[14] = Property(
+                                            e[15] = Convert(
+                                              e[16] = Property(
+                                                e[17] = Convert(
+                                                  e[18] = Call(
+                                                    e[19] = Property(
+                                                      e[20] = Convert(
+                                                        p[0] = Parameter(typeof(System.Linq.Expressions.Expression), "expr"),
+                                                        typeof(System.Linq.Expressions.MethodCallExpression)),
+                                                      typeof(System.Linq.Expressions.MethodCallExpression).GetTypeInfo().GetDeclaredProperty("Arguments")),
+                                                    typeof(System.Collections.ObjectModel.ReadOnlyCollection<System.Linq.Expressions.Expression>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "get_Item" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                                                    e[21] = Constant((int)1)),
+                                                  typeof(System.Linq.Expressions.UnaryExpression)),
+                                                typeof(System.Linq.Expressions.UnaryExpression).GetTypeInfo().GetDeclaredProperty("Operand")),
+                                              typeof(System.Linq.Expressions.LambdaExpression)),
+                                            typeof(System.Linq.Expressions.LambdaExpression).GetTypeInfo().GetDeclaredProperty("Body")),
+                                          typeof(System.Linq.Expressions.MethodCallExpression)),
+                                        typeof(System.Linq.Expressions.MethodCallExpression).GetTypeInfo().GetDeclaredProperty("Arguments")),
+                                      typeof(System.Collections.ObjectModel.ReadOnlyCollection<System.Linq.Expressions.Expression>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "get_Item" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                                      e[22] = Constant((int)0)),
+                                    typeof(System.Linq.Expressions.UnaryExpression)),
+                                  typeof(System.Linq.Expressions.UnaryExpression).GetTypeInfo().GetDeclaredProperty("Operand")),
+                                typeof(System.Linq.Expressions.MemberExpression)),
+                              typeof(System.Linq.Expressions.MemberExpression).GetTypeInfo().GetDeclaredProperty("Expression")),
+                            typeof(System.Linq.Expressions.ConstantExpression)),
+                          typeof(System.Linq.Expressions.ConstantExpression).GetTypeInfo().GetDeclaredProperty("Value")),
+                        typeof(c__DisplayClass6_0)),
+                      typeof(c__DisplayClass6_0).GetTypeInfo().GetDeclaredField("flag")),
+                    typeof(System.Enum))),
+                typeof(object)),
+              p[0 // (System.Linq.Expressions.Expression expr)
+                ],
+              p[1] = Parameter(typeof(IDataContext), "dctx"),
+              p[2] = Parameter(typeof(object[]), "ps"));
+
+            expr.PrintCSharp();
+            /*
+            (Func<Expression, Issue274_Failing_Expressions_in_Linq2DB.IDataContext, object[], object>)(
+                Expression expr, 
+                Issue274_Failing_Expressions_in_Linq2DB.IDataContext dctx, 
+                object[] ps) => 
+                ((object)Issue274_Failing_Expressions_in_Linq2DB.ConvertTo<int>.From<Enum>(((Enum)((Issue274_Failing_Expressions_in_Linq2DB.c__DisplayClass6_0)((ConstantExpression)((MemberExpression)((UnaryExpression)((MethodCallExpression)((LambdaExpression)((UnaryExpression)((MethodCallExpression)expr).Arguments.Item).Operand).Body).Arguments.Item).Operand).Expression).Value).flag)));
+            */
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var f = expr.CompileFast(true);
+            f.PrintIL();
+        }
+
+        [Test]
+        public void Test_283_Case2_Minimal_NullRefException()
+        {
+            var p = Parameter(typeof(object), "o");
+            var expr = Lambda<Func<object, object>>(
+                Convert(
+                  Convert(
+                    Field(
+                      Convert(p, typeof(c__DisplayClass6_0)), 
+                      typeof(c__DisplayClass6_0).GetField(nameof(c__DisplayClass6_0.flag))),
+                      typeof(System.Enum)),
+                    typeof(object)),
+                p);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var f = expr.CompileFast(true);
+            f.PrintIL();
+            var flags = f(new c__DisplayClass6_0());
+            Assert.AreEqual(FlagsEnum.All, (FlagsEnum)flags);
+        }
+
+        [Flags]
+        public enum FlagsEnum
+        {
+          None = 0,
+
+          Flag1 = 0x1,
+          Flag2 = 0x2,
+          Flag3 = 0x4,
+
+          All = Flag1 | Flag2 | Flag3
+        }
+
+        class c__DisplayClass6_0 
+        {
+            public FlagsEnum flag = FlagsEnum.All;
         }
 
         public delegate void SimpleDelegate(string input);
 
-        public static void HandleString(string s) 
+        public static void HandleString(string s)
         {
 
         }
 
-        class SampleClass 
+        class SampleClass
         {
             public object Instance;
             public Delegate[] Delegates;
 
-            public SampleClass(object instance, Delegate[] delegates) 
+            public SampleClass(object instance, Delegate[] delegates)
             {
                 Instance = instance;
                 Delegates = delegates;
             }
         }
-        class OtherClass {}
+        class OtherClass { }
 
-        enum RegularEnum1 {}
-        enum RegularEnum2 {}
-        [Flags]
-        enum FlagsEnum {}
+        enum RegularEnum1 { }
+        enum RegularEnum2 { }
 
         enum Enum15
         {
@@ -538,15 +658,28 @@ namespace FastExpressionCompiler.IssueTests
         {
             internal static object ConvertDefault(object value, Type conversionType)
             {
-              try
-              {
-                return System.Convert.ChangeType(value, conversionType, System.Threading.Thread.CurrentThread.CurrentCulture);
-              }
-              catch (Exception ex)
-              {
-                throw new InvalidOperationException($"Cannot convert value '{value}' to type '{conversionType.FullName}'", ex);
-              }
+                try
+                {
+                    return System.Convert.ChangeType(value, conversionType, System.Threading.Thread.CurrentThread.CurrentCulture);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Cannot convert value '{value}' to type '{conversionType.FullName}'", ex);
+                }
             }
+        }
+
+        public static class ConvertTo<TTo>
+        {
+            public static TTo From<TFrom>(TFrom obj)
+            {
+                return (TTo)System.Convert.ChangeType(obj, typeof(TTo), System.Threading.Thread.CurrentThread.CurrentCulture);
+            }
+        }
+
+        public static class Convert<TFrom, TTo>
+        {
+
         }
 
         interface IDataContext { }
@@ -559,7 +692,7 @@ namespace FastExpressionCompiler.IssueTests
             object[] Preambles { get; set; }
         }
 
-        class NullQueryRunner : IQueryRunner 
+        class NullQueryRunner : IQueryRunner
         {
             public IDataContext DataContext { get; set; }
             public System.Linq.Expressions.Expression Expression { get; set; }
