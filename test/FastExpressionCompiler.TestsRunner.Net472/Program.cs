@@ -176,6 +176,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue281_Index_Out_of_Range().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue281_Index_Out_of_Range().Run);
+
+                Run(new Issue284_Invalid_Program_after_Coalesce().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue284_Invalid_Program_after_Coalesce().Run);
             });
 
             Task.WaitAll(unitTests, issueTests);
