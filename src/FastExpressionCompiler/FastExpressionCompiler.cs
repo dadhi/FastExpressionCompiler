@@ -1382,7 +1382,7 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Extension:
-                        expr = expr.Reduce(); // todo: @incomplete decide how to handle it
+                        expr = expr.Reduce();
                         continue;
 
                     case ExpressionType.Default:
@@ -5749,9 +5749,13 @@ namespace FastExpressionCompiler
                             paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(")");
                 }
+                case ExpressionType.Extension:
+                {
+                    var reduced = e.Reduce(); // proceed with the reduced expression
+                    return reduced.CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                }
                 case ExpressionType.Dynamic:
                 case ExpressionType.RuntimeVariables:
-                case ExpressionType.Extension:
                 case ExpressionType.DebugInfo:
                 case ExpressionType.Quote:
                 {
@@ -6168,9 +6172,13 @@ namespace FastExpressionCompiler
                     sb.Append(" ?? ").NewLineIdent(lineIdent);
                     return x.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                 }
+                case ExpressionType.Extension:
+                {
+                    var reduced = e.Reduce(); // proceed with the reduced expression
+                    return reduced.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                }
                 case ExpressionType.Dynamic:
                 case ExpressionType.RuntimeVariables:
-                case ExpressionType.Extension:
                 case ExpressionType.DebugInfo:
                 case ExpressionType.Quote:
                 case ExpressionType.ListInit:
