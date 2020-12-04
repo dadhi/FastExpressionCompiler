@@ -5742,10 +5742,10 @@ namespace FastExpressionCompiler
                 {
                     var x = (ListInitExpression)e;
                     sb.NewLineIdent(lineIdent).Append(NotSupportedExpression).Append(e.NodeType).NewLineIdent(lineIdent);
-                    sb.Append("ListInit(");
-                    sb.NewLineIdentExpr(x.NewExpression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
-                    for (int i = 0; i < x.Initializers.Count; i++) 
-                        x.Initializers[i].ToExpressionString(sb, 
+                    sb.Append("ListInit((NewExpression)(");
+                    sb.NewLineIdentExpr(x.NewExpression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append("),");
+                    for (var i = 0; i < x.Initializers.Count; i++)
+                        x.Initializers[i].ToExpressionString(sb.NewLineIdent(lineIdent), 
                             paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(")");
                 }
