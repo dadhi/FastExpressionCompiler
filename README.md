@@ -287,7 +287,6 @@ and fallback to the system `Expression.Compile()` for the not supported types:
 - `Dynamic`
 - `RuntimeVariables`
 - `DebugInfo`
-- `ListInit`
 - `MemberInit` with the `MemberMemberBinding` and the `ListMemberBinding` binding types
 - `NewArrayInit` multi-dimensional array initializer is not supported yet
 
