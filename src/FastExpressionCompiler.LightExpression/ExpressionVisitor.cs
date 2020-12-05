@@ -474,7 +474,7 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitListInit(ListInitExpression node)
         {
             var newExpression = VisitAndConvert(node.NewExpression);
-            var initializers = VisitAndConvert(node.Initializers, VisitElementInit);
+            var initializers  = VisitAndConvert(node.Initializers, VisitElementInit);
             if (newExpression == node.NewExpression && ReferenceEquals(initializers, node.Initializers))
                 return node;
             return new ListInitExpression(newExpression, initializers.AsReadOnlyList());
@@ -482,10 +482,14 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual ElementInit VisitElementInit(ElementInit node) 
         {
-            var arguments = VisitAndConvert(node.Arguments);
-            if (arguments == node.Arguments)
+#if SUPPORTS_ARGUMENT_PROVIDER
+            var arguments = VisitArguments((IArgumentProvider)node);
+#else
+            var arguments = VisitArguments(node.Arguments);
+#endif
+            if (arguments == null)
                 return node;
-            return new ElementInit(node.AddMethod, arguments);
+            return Expression.ElementInit(node.AddMethod, arguments);
         }
 
         protected internal virtual Expression VisitDynamic(DynamicExpression node) => node;

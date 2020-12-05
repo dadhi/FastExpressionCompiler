@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class LoopTests
+    public class LoopTests : ITest
     {
         public int Run()
         {

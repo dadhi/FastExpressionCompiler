@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
             
+            // new ListInitTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
         }
 
@@ -69,6 +70,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new HoistedLambdaExprTests().Run);
                 Run(new LoopTests().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.LoopTests().Run);
+                Run(new ListInitTests().Run);
+                Run(new FastExpressionCompiler.LightExpression.UnitTests.ListInitTests().Run);
                 Run(new ManuallyComposedExprTests().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.ManuallyComposedExprTests().Run);
                 Run(new NestedLambdaTests().Run);

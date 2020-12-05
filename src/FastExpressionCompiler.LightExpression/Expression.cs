@@ -899,9 +899,6 @@ namespace FastExpressionCompiler.LightExpression
         public static ListInitExpression ListInit(NewExpression newExpression, params ElementInit[] initializers) =>
             new ListInitExpression(newExpression, initializers);
 
-        public static ListInitExpression ListInit(NewExpression newExpression, IReadOnlyList<ElementInit> initializers) =>
-            new ListInitExpression(newExpression, initializers);
-
         public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
             new ManyElementsNewArrayInitExpression(type.MakeArrayType(), initializers);
 
@@ -999,11 +996,14 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression DivideAssign(Expression left, Expression right) =>
             new OpAssignBinaryExpression(ExpressionType.DivideAssign, left, right);
 
+        public static ElementInit ElementInit(MethodInfo addMethod, Expression arg) =>
+            new OneArgumentElementInit(addMethod, arg);
+
         public static ElementInit ElementInit(MethodInfo addMethod, params Expression[] arguments) =>
-            new ElementInit(addMethod, arguments);
+            new ManyArgumentsElementInit(addMethod, arguments);
 
         public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) =>
-            new ElementInit(addMethod, arguments.AsReadOnlyList());
+            new ManyArgumentsElementInit(addMethod, arguments.AsReadOnlyList());
 
         public static InvocationExpression Invoke(LambdaExpression expression) =>
             new InvocationExpression(expression);
@@ -2038,15 +2038,30 @@ namespace FastExpressionCompiler.LightExpression
         internal OpAssignBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
     }
 
-    public sealed class ElementInit
+    public class ElementInit : IArgumentProvider
     {
         public readonly MethodInfo AddMethod;
-        public readonly IReadOnlyList<Expression> Arguments;
-        internal ElementInit(MethodInfo addMethod, IReadOnlyList<Expression> arguments)
-        {
-            AddMethod = addMethod;
-            Arguments = arguments;
-        }
+        public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
+        public virtual int ArgumentCount => 0;
+        public virtual Expression GetArgument(int i) => throw new NotImplementedException();
+        internal ElementInit(MethodInfo addMethod) => AddMethod = addMethod;
+    }
+
+    public sealed class OneArgumentElementInit : ElementInit
+    {
+        public readonly Expression Argument;
+        public override IReadOnlyList<Expression> Arguments => new[] { Argument };
+        public override int ArgumentCount => 1;
+        public override Expression GetArgument(int i) => Argument;
+        internal OneArgumentElementInit(MethodInfo addMethod, Expression a) : base(addMethod) => Argument = a;
+    }
+
+    public sealed class ManyArgumentsElementInit : ElementInit
+    {
+        public override IReadOnlyList<Expression> Arguments { get; }
+        public override int ArgumentCount => Arguments.Count;
+        public override Expression GetArgument(int i) => Arguments[i];
+        internal ManyArgumentsElementInit(MethodInfo addMethod, IReadOnlyList<Expression> args) : base(addMethod) => Arguments = args;
     }
 
     // todo: @feature is not supported yet

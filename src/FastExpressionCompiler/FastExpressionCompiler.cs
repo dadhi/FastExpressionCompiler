@@ -1163,6 +1163,10 @@ namespace FastExpressionCompiler
                         return TryCollectMemberInitExprConstants(
                             ref closure, (MemberInitExpression)expr, paramExprs, isNestedLambda, ref rootClosure, flags);
 
+                    case ExpressionType.ListInit:
+                        return TryCollectListInitExprConstants(
+                            ref closure, (ListInitExpression)expr, paramExprs, isNestedLambda, ref rootClosure, flags);
+
                     case ExpressionType.Lambda:
                         var nestedLambdaExpr = (LambdaExpression)expr;
 
@@ -1579,6 +1583,33 @@ namespace FastExpressionCompiler
         }
 
 #if LIGHT_EXPRESSION
+        private static bool TryCollectListInitExprConstants(ref ClosureInfo closure, ListInitExpression expr,
+            IParameterProvider paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure, CompilerFlags flags)
+#else
+        private static bool TryCollectListInitExprConstants(ref ClosureInfo closure, ListInitExpression expr,
+            IReadOnlyList<PE> paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure, CompilerFlags flags)
+#endif
+        {
+            var newExpr = expr.NewExpression;
+            var inits   = expr.Initializers;
+            var count   = inits.Count;
+
+            if (!TryCollectBoundConstants(ref closure, newExpr, paramExprs, isNestedLambda, ref rootClosure, flags))
+                return false;
+
+            for (var i = 0; i < count; ++i)
+            {
+                var elemInit = inits.GetArgument(i);
+                var args     = elemInit.Arguments;
+                var argCount = args.Count;
+                for (var a = 0; a < argCount; ++a) 
+                    if (!TryCollectBoundConstants(ref closure, args.GetArgument(a), paramExprs, isNestedLambda, ref rootClosure, flags))
+                        return false;
+            }
+            return true;
+        }
+
+#if LIGHT_EXPRESSION
         private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr,
             IParameterProvider paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure, CompilerFlags flags)
         {
@@ -1748,6 +1779,9 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.MemberInit:
                             return EmitMemberInit((MemberInitExpression)expr, paramExprs, il, ref closure, setup, parent);
+
+                        case ExpressionType.ListInit:
+                            return EmitListInit((ListInitExpression)expr, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Lambda:
                             return TryEmitNestedLambda((LambdaExpression)expr, paramExprs, il, ref closure);
@@ -3273,7 +3307,7 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < bindCount; i++)
                 {
                     var binding = bindings.GetArgument(i);
-                    if (binding.BindingType != MemberBindingType.Assignment)
+                    if (binding.BindingType != MemberBindingType.Assignment) // todo: @feature is not supported yet
                         return false;
 
                     if (valueVarIndex != -1) // load local value address, to set its members
@@ -3302,7 +3336,6 @@ namespace FastExpressionCompiler
                     il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
                     return true;
                 }
-
                 if (member is FieldInfo field)
                 {
                     il.Emit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
@@ -3310,6 +3343,93 @@ namespace FastExpressionCompiler
                 }
 
                 return false;
+            }
+
+#if LIGHT_EXPRESSION
+            private static bool EmitListInit(ListInitExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure, 
+                CompilerFlags setup, ParentFlags parent)
+#else
+            private static bool EmitListInit(ListInitExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure, 
+                CompilerFlags setup, ParentFlags parent)
+#endif
+            {
+                var valueVarIndex = -1;
+                if (expr.Type.IsValueType)
+                    valueVarIndex = il.GetNextLocalVarIndex(expr.Type);
+
+                var newExpr = expr.NewExpression;
+                var exprType = newExpr.Type;
+#if SUPPORTS_ARGUMENT_PROVIDER
+                var argExprs = (IArgumentProvider)newExpr;
+                var argCount = argExprs.ArgumentCount;
+#else
+                var argExprs = newExpr.Arguments;
+                var argCount = argExprs.Count;
+#endif
+                if (argCount > 0)
+                {
+                    var args = newExpr.Constructor.GetParameters();
+                    for (var i = 0; i < argCount; i++)
+                        if (!TryEmit(argExprs.GetArgument(i), paramExprs, il, ref closure, setup, parent, 
+                            args[i].ParameterType.IsByRef ? i : -1))
+                            return false;
+                }
+
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                if (newExpr.Constructor != null)
+                    il.Emit(OpCodes.Newobj, newExpr.Constructor);
+                else if (exprType.IsValueType)
+                {
+                    if (valueVarIndex == -1)
+                        valueVarIndex = il.GetNextLocalVarIndex(expr.Type);
+                    EmitLoadLocalVariableAddress(il, valueVarIndex);
+                    il.Emit(OpCodes.Initobj, exprType);
+                }
+                else
+                    return false; // null constructor and not a value type, better to fallback
+
+                var inits     = expr.Initializers;
+                var initCount = inits.Count;
+                var callFlags = parent & ~ParentFlags.IgnoreResult | ParentFlags.Call;
+                for (var i = 0; i < initCount; ++i)
+                {
+                    var elemInit = inits.GetArgument(i);
+                    var method       = elemInit.AddMethod;
+                    var methodParams = method.GetParameters();
+
+    #if LIGHT_EXPRESSION
+                    var addArgs     = (IArgumentProvider)elemInit;
+                    var addArgCount = elemInit.ArgumentCount;
+    #else
+                    var addArgs     = elemInit.Arguments;
+                    var addArgCount = addArgs.Count;
+    #endif
+                    for (var a = 0; a < addArgCount; ++a)
+                    {
+                        if (valueVarIndex != -1) // load local value address, to set its members
+                            EmitLoadLocalVariableAddress(il, valueVarIndex);
+                        else
+                            il.Emit(OpCodes.Dup); // duplicate member owner on stack
+
+                        var arg = addArgs.GetArgument(a);
+                        if (!TryEmit(addArgs.GetArgument(a), paramExprs, il, ref closure, setup, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1))
+                            return false;
+
+                        if (!exprType.IsValueType)
+                            il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                        else if (!method.IsVirtual) // #251 - no need for constrain or virtual call because it is already by-ref
+                            il.Emit(OpCodes.Call, method);
+                        else if (method.IsVirtual)
+                        {
+                            il.Emit(OpCodes.Constrained, exprType); // todo: @check it is a value type so... can we de-virtualize the call?
+                            il.Emit(OpCodes.Callvirt,    method);
+                        }
+                    }
+                }
+
+                if (valueVarIndex != -1)
+                    EmitLoadLocalVariable(il, valueVarIndex);
+                return true;
             }
 
 #if LIGHT_EXPRESSION
@@ -3763,8 +3883,7 @@ namespace FastExpressionCompiler
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var callArgs = (IArgumentProvider)callExpr;
                 for (var i = 0; i < methodParams.Length; i++)
-                    if (!TryEmit(callArgs.GetArgument(i), paramExprs, il, ref closure, setup, flags, 
-                        methodParams[i].ParameterType.IsByRef ? i : -1))
+                    if (!TryEmit(callArgs.GetArgument(i), paramExprs, il, ref closure, setup, flags, methodParams[i].ParameterType.IsByRef ? i : -1))
                         return false;
 #else
                 var callArgs = callExpr.Arguments;
@@ -5575,8 +5694,9 @@ namespace FastExpressionCompiler
                 case ExpressionType.MemberInit: 
                 {
                     var x = (MemberInitExpression)e;
-                    sb.Append("MemberInit(");
-                    sb.NewLineIdentExpr(x.NewExpression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.Append("MemberInit((NewExpression)(");
+                    sb.NewLineIdentExpr(x.NewExpression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces)
+                      .Append(')');
                     for (var i = 0; i < x.Bindings.Count; i++)
                         x.Bindings[i].ToExpressionString(sb.Append(", ").NewLineIdent(lineIdent), 
                             paramsExprs, uniqueExprs, lts, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
@@ -5741,11 +5861,11 @@ namespace FastExpressionCompiler
                 case ExpressionType.ListInit:
                 {
                     var x = (ListInitExpression)e;
-                    sb.NewLineIdent(lineIdent).Append(NotSupportedExpression).Append(e.NodeType).NewLineIdent(lineIdent);
                     sb.Append("ListInit((NewExpression)(");
-                    sb.NewLineIdentExpr(x.NewExpression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append("),");
+                    sb.NewLineIdentExpr(x.NewExpression, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces)
+                      .Append(')');
                     for (var i = 0; i < x.Initializers.Count; i++)
-                        x.Initializers[i].ToExpressionString(sb.NewLineIdent(lineIdent), 
+                        x.Initializers[i].ToExpressionString(sb.Append(", ").NewLineIdent(lineIdent), 
                             paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(")");
                 }
