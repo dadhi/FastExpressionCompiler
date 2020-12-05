@@ -78,10 +78,10 @@ FastExpressionCompiler.LightExpression
 - Provides the `CompileFast` extension methods for `FastExpressionCompiler.LightExpression.LambdaExpression`.
 - Provides the drop-in [Expression replacement](#feclightexpressionexpression-vs-expression) with the faster construction and less memory at the cost of less validation.
 - Includes its own `ExpressionVisitor`.
+- Supports `ToExpression` method to convert back to the `System.Linq.Expressions.Expression`.
 
 Both FastExpressionCompiler and FastExpressionCompiler.LightExpression
 
-- Support `ToExpression` method to convert back to the System Expression.
 - Support `ToCSharpString()` method to output the compile-able C# code represented by expression.
 - Support `ToExpressionString()` method to output the expression construction C# code, so given the expression object you'll get e.g. `Expression.Lambda(Expression.New(...))`.
 
