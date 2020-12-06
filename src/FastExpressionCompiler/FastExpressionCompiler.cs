@@ -6044,6 +6044,33 @@ namespace FastExpressionCompiler
                     x.Bindings.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
                     return sb.NewLineIdent(lineIdent).Append('}');
                 }
+                case ExpressionType.ListInit:
+                {
+                    var x = (ListInitExpression)e;
+                    x.NewExpression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.NewLine(lineIdent, identSpaces).Append(" { ");
+
+                    var inits = x.Initializers;
+                    for (var i = 0; i < inits.Count; ++i)
+                    {
+                        (i == 0 ? sb : sb.Append(", ")).NewLineIdent(lineIdent);
+                        var elemInit = inits[i];
+                        var args = elemInit.Arguments;
+                        if (args.Count == 1)
+                        {
+                            args.GetArgument(0).ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+                        }
+                        else
+                        {
+                            sb.Append('(');
+                            for (var j = 0; j < args.Count; ++j)
+                                args.GetArgument(j).ToCSharpString(j == 0 ? sb : sb.Append(", "), 
+                                    lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+                            sb.Append(')');
+                        }
+                    }
+                    return sb.NewLine(lineIdent, identSpaces).Append('}');
+                }
                 case ExpressionType.Lambda:
                 {
                     var x = (LambdaExpression)e;
@@ -6301,7 +6328,6 @@ namespace FastExpressionCompiler
                 case ExpressionType.RuntimeVariables:
                 case ExpressionType.DebugInfo:
                 case ExpressionType.Quote:
-                case ExpressionType.ListInit:
                 {
                     return sb.NewLineIdent(lineIdent).Append(NotSupportedExpression).Append(e.NodeType).NewLineIdent(lineIdent);
                 }

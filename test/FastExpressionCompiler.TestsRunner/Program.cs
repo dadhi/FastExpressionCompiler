@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             RunAllTests();
-            
+
             // new ListInitTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
         }

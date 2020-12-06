@@ -71,6 +71,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual("id42"  , ps[0].Value);
             Assert.AreEqual("prop42", ps[1].Value);
 
+            expr.PrintCSharp();
             var f = expr.CompileFast(true);
             f.PrintIL();
             ps = f(lt).ToArray();
