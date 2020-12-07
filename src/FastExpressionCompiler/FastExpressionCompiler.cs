@@ -2197,11 +2197,9 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
-                    il.Emit(OpCodes.Dup);    // duplicate left, if it's not null, after the branch this value will be on the top of the stack
-                    il.Emit(OpCodes.Ldnull); // todo: @perf replace with the Brtrue :)
-                    il.Emit(OpCodes.Ceq);
-                    il.Emit(OpCodes.Brfalse, labelFalse);
-                    il.Emit(OpCodes.Pop); // left is null, pop its value from the stack
+                    il.Emit(OpCodes.Dup);                // duplicate left, if it's not null, after the branch this value will be on the top of the stack
+                    il.Emit(OpCodes.Brtrue, labelFalse); // automates the chain of the Ldnull, Ceq, Brfalse
+                    il.Emit(OpCodes.Pop);                // left is null, pop its value from the stack
 
                     if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                         return false;
@@ -2217,7 +2215,7 @@ namespace FastExpressionCompiler
                     else
                     {
                         il.Emit(OpCodes.Br, labelDone);
-                        il.MarkLabel(labelFalse); // todo: @bug? should we insert the boxing for the value type before the Castclass, e.g. for the Nullable
+                        il.MarkLabel(labelFalse); // todo: @bug? should we insert the boxing for the Nullable value type before the Castclass
                         il.Emit(OpCodes.Castclass, exprObj.Type);
                         il.MarkLabel(labelDone);
                     }
@@ -2236,12 +2234,12 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldnull);
                 }
                 else if (
-                    type == typeof(bool) ||
-                    type == typeof(byte) ||
-                    type == typeof(char) ||
+                    type == typeof(bool)  ||
+                    type == typeof(byte)  ||
+                    type == typeof(char)  ||
                     type == typeof(sbyte) ||
-                    type == typeof(int) ||
-                    type == typeof(uint) ||
+                    type == typeof(int)   ||
+                    type == typeof(uint)  ||
                     type == typeof(short) ||
                     type == typeof(ushort))
                 {
