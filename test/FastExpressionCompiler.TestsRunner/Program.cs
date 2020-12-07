@@ -11,6 +11,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue284_Invalid_Program_after_Coalesce().Run();
+
             // new ListInitTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
         }

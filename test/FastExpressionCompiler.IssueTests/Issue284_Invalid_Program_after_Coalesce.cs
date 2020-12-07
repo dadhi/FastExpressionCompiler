@@ -17,8 +17,37 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Invalid_expresion_with_Coalesce_when_invoked_should_throw_NullRef_the_same_as_system_compiled();
             Invalid_Program_after_Coalesce();
-            return 1;
+            return 2;
+        }
+
+        [Test]
+        public void Invalid_expresion_with_Coalesce_when_invoked_should_throw_NullRef_the_same_as_system_compiled()
+        {
+            var input = Parameter(typeof(Variable));
+            var text  = Parameter(typeof(string));
+            var ctor  = typeof(Variable).GetConstructor(new Type[] { typeof(string) });
+            var prop  = typeof(Variable).GetProperty(nameof(Variable.Name));
+
+            var lambda = Lambda<Func<Variable, string, Variable>>(
+                Block(
+                    Coalesce(input, New(ctor, Constant("default"))),
+                    Assign(Property(input, prop), text),
+                    input), 
+                input, text);
+
+            // var t = lambda.ToExpressionString();
+
+            var fs = lambda.CompileSys();
+            fs.PrintIL();
+            Assert.Throws(typeof(NullReferenceException), () =>
+                fs(null, "a"));
+
+            var fx = lambda.CompileFast(true);
+            fx.PrintIL();
+            Assert.Throws(typeof(NullReferenceException), () =>
+                fx(null, "a"));
         }
 
         [Test]
@@ -50,7 +79,6 @@ namespace FastExpressionCompiler.IssueTests
 
         public class Variable
         {
-
             public string Name { get; set; }
             public Variable(string name)
             {

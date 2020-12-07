@@ -502,7 +502,7 @@ namespace FastExpressionCompiler
                 var parameterExpr = paramExprs.GetParameter(i);
                 closureAndParamTypes[i + 1] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
             }
-            return closureAndParamTypes;;
+            return closureAndParamTypes;
         }
 
         private static void ReturnClosureTypeToParamTypesToPool(Type[] closurePlusParamTypes)
@@ -2172,7 +2172,10 @@ namespace FastExpressionCompiler
                 var left = exprObj.Left;
                 var right = exprObj.Right;
 
-                if (!TryEmit(left, paramExprs, il, ref closure, setup, parent | ParentFlags.Coalesce))
+                // we won't OpCodes.Pop inside the Coalesce as it may leave the Il in invalid state - instead we will pop at the end here (#284)
+                var flags = (parent & ~ParentFlags.IgnoreResult) | ParentFlags.Coalesce;
+
+                if (!TryEmit(left, paramExprs, il, ref closure, setup, flags))
                     return false;
 
                 var leftType = left.Type;
@@ -2187,38 +2190,41 @@ namespace FastExpressionCompiler
 
                     il.Emit(OpCodes.Br, labelDone);
                     il.MarkLabel(labelFalse);
-                    if (!TryEmit(right, paramExprs, il, ref closure, setup, parent | ParentFlags.Coalesce))
+                    if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                         return false;
 
                     il.MarkLabel(labelDone);
-                    return true;
                 }
-
-                il.Emit(OpCodes.Dup); // duplicate left, if it's not null, after the branch this value will be on the top of the stack
-                il.Emit(OpCodes.Ldnull);
-                il.Emit(OpCodes.Ceq);
-                il.Emit(OpCodes.Brfalse, labelFalse);
-
-                il.Emit(OpCodes.Pop); // left is null, pop its value from the stack
-
-                if (!TryEmit(right, paramExprs, il, ref closure, setup, parent | ParentFlags.Coalesce))
-                    return false;
-
-                if (right.Type != exprObj.Type)
-                {
-                    if (right.Type.IsValueType)
-                        il.Emit(OpCodes.Box, right.Type);
-                }
-
-                if (left.Type == exprObj.Type)
-                    il.MarkLabel(labelFalse);
                 else
                 {
-                    il.Emit(OpCodes.Br, labelDone);
-                    il.MarkLabel(labelFalse); // todo: @bug? should we insert the boxing for the value type before the Castclass, e.g. for the Nullable
-                    il.Emit(OpCodes.Castclass, exprObj.Type);
-                    il.MarkLabel(labelDone);
+                    il.Emit(OpCodes.Dup);    // duplicate left, if it's not null, after the branch this value will be on the top of the stack
+                    il.Emit(OpCodes.Ldnull); // todo: @perf replace with the Brtrue :)
+                    il.Emit(OpCodes.Ceq);
+                    il.Emit(OpCodes.Brfalse, labelFalse);
+                    il.Emit(OpCodes.Pop); // left is null, pop its value from the stack
+
+                    if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
+                        return false;
+
+                    if (right.Type != exprObj.Type)
+                    {
+                        if (right.Type.IsValueType)
+                            il.Emit(OpCodes.Box, right.Type);
+                    }
+
+                    if (left.Type == exprObj.Type)
+                        il.MarkLabel(labelFalse);
+                    else
+                    {
+                        il.Emit(OpCodes.Br, labelDone);
+                        il.MarkLabel(labelFalse); // todo: @bug? should we insert the boxing for the value type before the Castclass, e.g. for the Nullable
+                        il.Emit(OpCodes.Castclass, exprObj.Type);
+                        il.MarkLabel(labelDone);
+                    }
                 }
+
+                if ((parent & ParentFlags.IgnoreResult) != 0)
+                    il.Emit(OpCodes.Pop);
 
                 return true;
             }
@@ -4300,7 +4306,7 @@ namespace FastExpressionCompiler
                         else if (expressionType == ExpressionType.NotEqual)
                         {
                             il.Emit(OpCodes.Ceq);
-                            il.Emit(OpCodes.Ldc_I4_0);
+                            il.Emit(OpCodes.Ldc_I4_0); // todo: @perf may there is optimization for comparison with IL, like the `Bne_Un`
                             il.Emit(OpCodes.Ceq);
                         }
                         else
@@ -6040,9 +6046,9 @@ namespace FastExpressionCompiler
                 {
                     var x = (MemberInitExpression)e;
                     x.NewExpression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    sb.NewLineIdent(lineIdent).Append(" { ");
+                    sb.NewLine(lineIdent, identSpaces).Append(" { ");
                     x.Bindings.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
-                    return sb.NewLineIdent(lineIdent).Append('}');
+                    return sb.NewLine(lineIdent, identSpaces).Append('}');
                 }
                 case ExpressionType.ListInit:
                 {
