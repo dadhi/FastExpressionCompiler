@@ -1301,13 +1301,16 @@ namespace FastExpressionCompiler
                         var blockExpr = (BlockExpression)expr;
                         var blockVarExprs = blockExpr.Variables;
                         var blockExprs = blockExpr.Expressions;
+                        var blockExprCount = blockExprs.Count;
+                        if (blockExprCount == 0)
+                            return true; // yeah, this is the real case
 
-                        if (blockVarExprs.Count == 0)
+                        if (blockExprCount == 0)
                         {
-                            for (var i = 0; i < blockExprs.Count - 1; i++)
+                            for (var i = 0; i < blockExprCount - 1; i++)
                                 if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure, flags))
                                     return false;
-                            expr = blockExprs[blockExprs.Count - 1];
+                            expr = blockExprs[blockExprCount - 1];
                             continue;
                         }
                         else
@@ -1317,7 +1320,7 @@ namespace FastExpressionCompiler
                             else
                                 closure.PushBlockWithVars(blockVarExprs);
 
-                            for (var i = 0; i < blockExprs.Count; i++)
+                            for (var i = 0; i < blockExprCount; i++)
                                 if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure, flags))
                                     return false;
                             closure.PopBlock();
@@ -1861,6 +1864,9 @@ namespace FastExpressionCompiler
 
                             var statementExprs = blockExpr.Expressions; // Trim the expressions after the Throw - #196
                             var statementCount = statementExprs.Count;
+                            if (statementCount == 0)
+                                return true; // yeah, it is a valid thing
+
                             expr = statementExprs[statementCount - 1]; // The last (result) statement in block will provide the result
 
                             // Try to trim the statements up to the Throw (if any)
