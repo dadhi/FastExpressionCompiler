@@ -23,6 +23,8 @@ namespace FastExpressionCompiler.IssueTests
             Test_283_Case2_NullRefException();
             Test_283_Case2_Minimal_NullRefException();
 
+            Test_case_4_simplified_InvalidCastException();
+
             Test_case_4_Full_InvalidCastException();
             Test_case_3_Full_NullReferenceException();
             Test_case_2_Full_ExecutionEngineException();
@@ -32,7 +34,7 @@ namespace FastExpressionCompiler.IssueTests
             Test_case_1_Full_AccessViolationException();
             The_expression_with_anonymous_class_should_output_without_special_symbols();
 
-            return 10;
+            return 11;
         }
 
         [Test]
@@ -437,6 +439,29 @@ namespace FastExpressionCompiler.IssueTests
                 }
             }
         }
+
+        [Test]
+        public void Test_case_4_simplified_InvalidCastException()
+        {
+            var hs = Constant(new Delegate[] { (Action<string>)null });
+            var expr = Lambda<Func<SimpleDelegate>>(
+                Convert(
+                  ArrayIndex(hs, Constant(0)),
+                  typeof(SimpleDelegate))
+            );
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.IsNull(fs());
+
+            var f = expr.CompileFast(true);
+            f.PrintIL();
+            Assert.IsNull(f());
+        }
+
+        public static void SimpleStringHandler(string s) {}
 
         [Test]
         public void Test_case_4_Full_InvalidCastException()

@@ -2830,7 +2830,7 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
-                    if (targetType.GetTypeInfo().IsEnum)
+                    if (targetType.IsEnum)
                         targetType = Enum.GetUnderlyingType(targetType);
 
                     // fixes #159
@@ -4331,8 +4331,7 @@ namespace FastExpressionCompiler
                     rightOpType = Nullable.GetUnderlyingType(rightOpType);
                 }
 
-                var leftOpTypeInfo = leftOpType.GetTypeInfo();
-                if (!leftOpTypeInfo.IsPrimitive && !leftOpTypeInfo.IsEnum)
+                if (!leftOpType.IsPrimitive && !leftOpType.IsEnum)
                 {
                     var methodName
                         = expressionType == ExpressionType.Equal ? "op_Equality"
@@ -4346,8 +4345,8 @@ namespace FastExpressionCompiler
                     if (methodName == null)
                         return false;
 
-                    // todo: for now handling only parameters of the same type
-                    var methods = leftOpTypeInfo.GetMethods();
+                    // todo: @bug? for now handling only parameters of the same type
+                    var methods = leftOpType.GetMethods();
                     for (var i = 0; i < methods.Length; i++)
                     {
                         var m = methods[i];
@@ -4363,7 +4362,7 @@ namespace FastExpressionCompiler
                     }
 
                     if (expressionType != ExpressionType.Equal && expressionType != ExpressionType.NotEqual)
-                        return false;
+                        return false; // todo: @unclear what is the alternative?
 
                     il.Emit(OpCodes.Call, _objectEqualsMethod);
 
@@ -4376,7 +4375,7 @@ namespace FastExpressionCompiler
                     if (leftIsNullable)
                         goto nullCheck;
 
-                    if ((parent & ParentFlags.IgnoreResult) > 0)
+                    if ((parent & ParentFlags.IgnoreResult) != 0)
                         il.Emit(OpCodes.Pop);
 
                     return true;
@@ -4390,7 +4389,7 @@ namespace FastExpressionCompiler
                         break;
 
                     case ExpressionType.NotEqual:
-                        il.Emit(OpCodes.Ceq);
+                        il.Emit(OpCodes.Ceq);   // todo: @perf optimize the IL chain
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
                         break;
@@ -6415,8 +6414,8 @@ namespace FastExpressionCompiler
                     {
                         if (e.NodeType == ExpressionType.ArrayIndex)
                         {
-                            b.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append("[");
-                            return b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces).Append("]");
+                            b.Left.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces).Append(')');
+                            return b.Right.ToCSharpString(sb.Append("["), lineIdent, stripNamespace, printType, identSpaces).Append("]");
                         }
 
                         if (e.NodeType == ExpressionType.Assign ||
