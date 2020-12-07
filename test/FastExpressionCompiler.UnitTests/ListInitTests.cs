@@ -22,8 +22,7 @@ namespace FastExpressionCompiler.UnitTests
             return 1;
         }
 
-        [Test]
-        public void Simple_ListInit_works()
+        public static Expression<Func<ListInitTests, IEnumerable<PropertyValue>>> Get_Simple_ListInit_Expression()
         {
             var cp = new ClassProperty();
 
@@ -32,7 +31,7 @@ namespace FastExpressionCompiler.UnitTests
             var l = new LabelTarget[0]; // the labels 
             var expr = Lambda<Func<ListInitTests, IEnumerable<PropertyValue>>>( // $
                 e[0] =
-                // NOT_SUPPORTED_EXPRESSION: ListInit
+                    // NOT_SUPPORTED_EXPRESSION: ListInit
                     ListInit(
                         (NewExpression)(e[1] = New(/*0 args*/
                             typeof(List<PropertyValue>).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0])),
@@ -63,35 +62,42 @@ namespace FastExpressionCompiler.UnitTests
                         )),
                     p[0 // (ListInitTests obj)
                         ]);
+            return expr;
+        }
+
+        [Test]
+        public void Simple_ListInit_works()
+        {
+            var expr = Get_Simple_ListInit_Expression();
 
             var fs = expr.CompileSys();
             fs.PrintIL();
             var lt = new ListInitTests();
             var ps = fs(lt).ToArray();
-            Assert.AreEqual("id42"  , ps[0].Value);
+            Assert.AreEqual("id42", ps[0].Value);
             Assert.AreEqual("prop42", ps[1].Value);
 
             expr.PrintCSharp();
             var f = expr.CompileFast(true);
             f.PrintIL();
             ps = f(lt).ToArray();
-            Assert.AreEqual("id42"  , ps[0].Value);
+            Assert.AreEqual("id42", ps[0].Value);
             Assert.AreEqual("prop42", ps[1].Value);
         }
 
         public object Id { get; set; } = "id42";
         public object Property1 { get; set; } = "prop42";
 
-        public class ClassProperty {}
+        public class ClassProperty { }
         public class PropertyValue
         {
             public string Name;
             public object Value;
             public ClassProperty Property;
-            public PropertyValue(string name, object value, ClassProperty prop) 
+            public PropertyValue(string name, object value, ClassProperty prop)
             {
-                Name     = name;
-                Value    = value;
+                Name = name;
+                Value = value;
                 Property = prop;
             }
         }
