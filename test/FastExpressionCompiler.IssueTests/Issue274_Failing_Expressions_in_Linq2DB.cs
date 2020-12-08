@@ -20,6 +20,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_283_Case3_SecurityException();
             Test_283_Case2_NullRefException();
             Test_283_Case2_Minimal_NullRefException();
 
@@ -34,7 +35,7 @@ namespace FastExpressionCompiler.IssueTests
             Test_case_1_Full_AccessViolationException();
             The_expression_with_anonymous_class_should_output_without_special_symbols();
 
-            return 11;
+            return 12;
         }
 
         [Test]
@@ -533,6 +534,37 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Test_283_Case3_SecurityException()
+        {
+            var p = new ParameterExpression[2]; // the parameter expressions 
+            var e = new Expression[2]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda<Func<SampleClass, int, string>>(
+              e[0]=Property(
+                e[1]=Call(
+                  p[0]=Parameter(typeof(SampleClass), "s"), 
+                  typeof(SampleClass).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "GetOther" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
+                  p[1]=Parameter(typeof(int), "i")),
+                typeof(OtherClass).GetTypeInfo().GetDeclaredProperty("OtherStrProp")),
+              p[0 // (SampleClass s)
+                ], 
+              p[1 // (int i)
+                ]);
+
+            expr.PrintCSharp();
+
+            var concrete = new SampleClass { Id = 1, Value = 33 };
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.That(fs(concrete, 22), Is.EqualTo("OtherStrValue22"));
+
+            var fx = expr.CompileFast(true);
+            fx.PrintIL();
+            Assert.That(fx(concrete, 22), Is.EqualTo("OtherStrValue22"));
+        }
+
+        [Test]
         public void Test_283_Case2_NullRefException()
         {
             var p = new ParameterExpression[3]; // the parameter expressions 
@@ -659,16 +691,25 @@ namespace FastExpressionCompiler.IssueTests
 
         class SampleClass
         {
+            public int     Id       { get; set; }
+            public int     Value    { get; set; }
             public object Instance;
             public Delegate[] Delegates;
 
-            public SampleClass(object instance, Delegate[] delegates)
+            public OtherClass GetOther       (int idx) => new OtherClass { OtherStrProp = "OtherStrValue" + idx        };
+
+            public OtherClass GetOtherAnother(int idx) => new OtherClass { OtherStrProp = "OtherAnotherStrValue" + idx };
+
+            public SampleClass(object instance = null, Delegate[] delegates = null)
             {
                 Instance = instance;
                 Delegates = delegates;
             }
         }
-        class OtherClass { }
+        class OtherClass 
+        { 
+            public string OtherStrProp { get; set; }
+        }
 
         enum RegularEnum1 { }
         enum RegularEnum2 { }

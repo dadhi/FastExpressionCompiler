@@ -1,3 +1,4 @@
+using System.Reflection.Emit;
 using NUnit.Framework;
 
 #pragma warning disable 649
@@ -65,10 +66,25 @@ namespace FastExpressionCompiler.IssueTests
 
             LocalAssert(AssigningRefs);
 
+            lambda.PrintCSharp();
+
             var func = lambda.CompileSys();
+            func.PrintIL();
             LocalAssert(func);
 
             var funcFast = lambda.CompileFast(true);
+            funcFast.PrintIL();
+            funcFast.AssertOpCodes(
+                OpCodes.Ldarg_3,
+                OpCodes.Ldind_Ref,
+                OpCodes.Ldc_I4_5,
+                OpCodes.Stfld,
+                OpCodes.Ldarg_3,
+                OpCodes.Ldind_Ref,
+                OpCodes.Ldstr,
+                OpCodes.Stfld,
+                OpCodes.Ret
+            );
             LocalAssert(funcFast);
         }
 

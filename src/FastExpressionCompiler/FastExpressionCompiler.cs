@@ -2354,11 +2354,10 @@ namespace FastExpressionCompiler
                 if (paramIndex != -1)
                 {
                     var isArgByRef = byRefIndex != -1;
-                    closure.LastEmitIsAddress = 
-                        !isParamByRef && isArgByRef ||
-                        !isParamByRef && paramType.IsValueType &&
-                         (parent & ParentFlags.IndexAccess) == 0 && // #281
-                        ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall || (parent & ParentFlags.MemberAccess) != 0);
+                    closure.LastEmitIsAddress = !isParamByRef && 
+                        (isArgByRef || paramType.IsValueType &&
+                            (parent & ParentFlags.InstanceAccess) != 0 && // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283 
+                            (parent & ParentFlags.IndexAccess)    == 0);  // but the parameter is not used as an index #281
 
                     if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
@@ -2383,18 +2382,16 @@ namespace FastExpressionCompiler
                     {
                         if (paramType.IsValueType)
                         {
-                            if ((parent & ParentFlags.Call) != 0 && 
-                                // #248 - skip the cases with `ref param.Field` were we are actually want to 
-                                // load the `Field` address not the `param`
-                                (parent & ParentFlags.InstanceAccess) == 0 && 
-                                (parent & ParentFlags.MemberAccess)   == 0 && 
-                                !isArgByRef ||
+                            // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
+                            if (!isArgByRef &&
+                                // this means the parameter is the argument to the method call and not the instance in the method call or member access
+                                (parent & ParentFlags.Call) != 0 && (parent & ParentFlags.InstanceAccess) == 0 ||
                                 (parent & ParentFlags.Arithmetic) != 0)
                                 EmitValueTypeDereference(il, paramType);
                         }
                         else 
                         {
-                            if ((parent & ParentFlags.Call) != 0 && !isArgByRef ||
+                            if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce)) != 0)
                             il.Emit(OpCodes.Ldind_Ref);
                         }
@@ -3890,17 +3887,21 @@ namespace FastExpressionCompiler
                         EmitStoreLocalVariableAndLoadItsAddress(il, objExpr.Type);
                 }
 
-#if SUPPORTS_ARGUMENT_PROVIDER
-                var callArgs = (IArgumentProvider)callExpr;
-                for (var i = 0; i < methodParams.Length; i++)
-                    if (!TryEmit(callArgs.GetArgument(i), paramExprs, il, ref closure, setup, flags, methodParams[i].ParameterType.IsByRef ? i : -1))
-                        return false;
-#else
-                var callArgs = callExpr.Arguments;
-                for (var i = 0; i < methodParams.Length; i++)
-                    if (!TryEmit(callArgs[i], paramExprs, il, ref closure, setup, flags, methodParams[i].ParameterType.IsByRef ? i : -1))
-                        return false;
-#endif
+                if (methodParams.Length > 0) 
+                {
+                    flags = flags & ~ParentFlags.MemberAccess & ~ParentFlags.InstanceAccess;
+    #if SUPPORTS_ARGUMENT_PROVIDER
+                    var callArgs = (IArgumentProvider)callExpr;
+                    for (var i = 0; i < methodParams.Length; i++)
+                        if (!TryEmit(callArgs.GetArgument(i), paramExprs, il, ref closure, setup, flags, methodParams[i].ParameterType.IsByRef ? i : -1))
+                            return false;
+    #else
+                    var callArgs = callExpr.Arguments;
+                    for (var i = 0; i < methodParams.Length; i++)
+                        if (!TryEmit(callArgs[i], paramExprs, il, ref closure, setup, flags, methodParams[i].ParameterType.IsByRef ? i : -1))
+                            return false;
+    #endif
+                }
 
                 if (!objIsValueType) 
                     il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
