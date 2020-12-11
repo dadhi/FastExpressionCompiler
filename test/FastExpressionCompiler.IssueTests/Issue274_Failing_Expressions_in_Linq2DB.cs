@@ -20,7 +20,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_283_Case3_SecurityException();
+            Test_283_Case4_SecurityVerificationException();
+
+            Test_283_Case3_SecurityVerificationException();
             Test_283_Case2_NullRefException();
             Test_283_Case2_Minimal_NullRefException();
 
@@ -35,7 +37,7 @@ namespace FastExpressionCompiler.IssueTests
             Test_case_1_Full_AccessViolationException();
             The_expression_with_anonymous_class_should_output_without_special_symbols();
 
-            return 12;
+            return 13;
         }
 
         [Test]
@@ -534,7 +536,29 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Test_283_Case3_SecurityException()
+        public void Test_283_Case4_SecurityVerificationException()
+        {
+            var p = new ParameterExpression[1]; // the parameter expressions 
+            var e = new Expression[1]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda<System.Func<int, string>>( // $
+              e[0]=Call(
+                p[0]=Parameter(typeof(int), "p"), 
+                typeof(int).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ToString" && x.GetParameters().Length == 0)),
+              p[0 // (int p)
+                ]);
+
+              var fs = expr.CompileSys();
+              fs.PrintIL();
+              Assert.That(fs(1), Is.EqualTo("1"));
+
+              var fx = expr.CompileFast(true);
+              fx.PrintIL();
+              Assert.That(fx(1), Is.EqualTo("1"));
+        }
+
+        [Test]
+        public void Test_283_Case3_SecurityVerificationException()
         {
             var p = new ParameterExpression[2]; // the parameter expressions 
             var e = new Expression[2]; // the unique expressions 

@@ -1784,7 +1784,7 @@ namespace FastExpressionCompiler
                             return EmitMemberInit((MemberInitExpression)expr, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.ListInit:
-                            return EmitListInit((ListInitExpression)expr, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitListInit((ListInitExpression)expr, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Lambda:
                             return TryEmitNestedLambda((LambdaExpression)expr, paramExprs, il, ref closure);
@@ -3353,10 +3353,10 @@ namespace FastExpressionCompiler
             }
 
 #if LIGHT_EXPRESSION
-            private static bool EmitListInit(ListInitExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure, 
+            private static bool TryEmitListInit(ListInitExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure, 
                 CompilerFlags setup, ParentFlags parent)
 #else
-            private static bool EmitListInit(ListInitExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure, 
+            private static bool TryEmitListInit(ListInitExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure, 
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
@@ -3397,7 +3397,8 @@ namespace FastExpressionCompiler
 
                 var inits     = expr.Initializers;
                 var initCount = inits.Count;
-                var callFlags = parent & ~ParentFlags.IgnoreResult | ParentFlags.Call;
+                // see the TryEmitMethodCall for the reason of the callFlags
+                var callFlags = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.MemberAccess & ~ParentFlags.InstanceAccess | ParentFlags.Call;
                 for (var i = 0; i < initCount; ++i)
                 {
                     var elemInit = inits.GetArgument(i);
@@ -3426,7 +3427,9 @@ namespace FastExpressionCompiler
                             il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
                         else if (!method.IsVirtual) // #251 - no need for constrain or virtual call because it is already by-ref
                             il.Emit(OpCodes.Call, method);
-                        else if (method.IsVirtual)
+                        else if (method.DeclaringType == exprType)
+                            il.Emit(OpCodes.Call, method);
+                        else
                         {
                             il.Emit(OpCodes.Constrained, exprType); // todo: @check it is a value type so... can we de-virtualize the call?
                             il.Emit(OpCodes.Callvirt,    method);
@@ -3905,11 +3908,12 @@ namespace FastExpressionCompiler
 
                 if (!objIsValueType) 
                     il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
-                else if (objExpr is ParameterExpression p && p.IsByRef || !method.IsVirtual) // #251 - no need for constrain or virtual call because it is already by-ref
+                else if (!method.IsVirtual || objExpr is ParameterExpression p && p.IsByRef)
                     il.Emit(OpCodes.Call, method);
-                else if (method.IsVirtual)
+                else if (method.DeclaringType == objExpr.Type)
+                    il.Emit(OpCodes.Call, method);
+                else
                 {
-                    // todo: @check it is a value type so... can we de-virtualize the call?
                     il.Emit(OpCodes.Constrained, objExpr.Type);
                     il.Emit(OpCodes.Callvirt, method);
                 }
