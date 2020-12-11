@@ -20,8 +20,8 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_283_Case5_ConvertTests_NullableIntToNullableEnum_NullReferenceException();
             Test_283_Case4_SecurityVerificationException();
-
             Test_283_Case3_SecurityVerificationException();
             Test_283_Case2_NullRefException();
             Test_283_Case2_Minimal_NullRefException();
@@ -37,7 +37,7 @@ namespace FastExpressionCompiler.IssueTests
             Test_case_1_Full_AccessViolationException();
             The_expression_with_anonymous_class_should_output_without_special_symbols();
 
-            return 13;
+            return 14;
         }
 
         [Test]
@@ -534,6 +534,41 @@ namespace FastExpressionCompiler.IssueTests
             var s2 = f(obj2);
             Assert.IsInstanceOf<SampleClass>(s2);
         }
+
+        [Test]
+        public void Test_283_Case5_ConvertTests_NullableIntToNullableEnum_NullReferenceException()
+        {
+            var p = new ParameterExpression[1]; // the parameter expressions 
+            var e = new Expression[5]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda<Func<System.Nullable<int>, System.Nullable<Enum1>>>( // $
+              e[0]=Condition(
+                e[1]=Property(
+                  p[0]=Parameter(typeof(System.Nullable<int>), "p"),
+                  typeof(System.Nullable<int>).GetTypeInfo().GetDeclaredProperty("HasValue")),
+                e[2]=Convert(
+                  e[3]=Property(
+                    p[0 // ([struct] System.Nullable<int> p)
+                      ],
+                    typeof(System.Nullable<int>).GetTypeInfo().GetDeclaredProperty("Value")),
+                  typeof(System.Nullable<Enum1>)),
+                e[4]=Constant(null, typeof(System.Nullable<Enum1>)),
+                typeof(System.Nullable<Enum1>)),
+              p[0 // ([struct] System.Nullable<int> p)
+                ]);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.That(fs(null), Is.EqualTo(null));
+
+            var fx = expr.CompileFast(true);
+            fx.PrintIL(); 
+            Assert.That(fx(null), Is.EqualTo(null));
+        }
+
+        public enum Enum1 { X }
 
         [Test]
         public void Test_283_Case4_SecurityVerificationException()

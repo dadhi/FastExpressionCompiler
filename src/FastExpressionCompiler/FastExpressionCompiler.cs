@@ -2787,9 +2787,9 @@ namespace FastExpressionCompiler
                     // Conversion to Nullable: `new Nullable<T>(T val);`
                     if (!sourceTypeIsNullable)
                     {
-                        if (!TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false))
+                        if (!underlyingNullableTargetType.IsEnum && // todo: @clarify hope the source type is convertible to enum, huh 
+                            !TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false))
                             return false;
-
                         il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                     }
                     else
