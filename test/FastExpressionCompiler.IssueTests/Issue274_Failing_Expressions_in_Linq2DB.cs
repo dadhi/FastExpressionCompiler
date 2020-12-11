@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
+using System.Globalization;
 using NUnit.Framework;
 #pragma warning disable CS0164, CS0649
 
@@ -20,6 +21,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException();
             Test_283_Case5_ConvertTests_NullableIntToNullableEnum_NullReferenceException();
             Test_283_Case4_SecurityVerificationException();
             Test_283_Case3_SecurityVerificationException();
@@ -37,7 +39,7 @@ namespace FastExpressionCompiler.IssueTests
             Test_case_1_Full_AccessViolationException();
             The_expression_with_anonymous_class_should_output_without_special_symbols();
 
-            return 14;
+            return 15;
         }
 
         [Test]
@@ -533,6 +535,51 @@ namespace FastExpressionCompiler.IssueTests
             var obj2 = new object();
             var s2 = f(obj2);
             Assert.IsInstanceOf<SampleClass>(s2);
+        }
+
+        [Test]
+        public void Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException()
+        {
+            var ci = (CultureInfo)new CultureInfo("ru-RU", false).Clone();
+
+            ci.DateTimeFormat.FullDateTimePattern = "dd.MM.yyyy HH:mm:ss";
+            ci.DateTimeFormat.LongDatePattern = "dd.MM.yyyy";
+            ci.DateTimeFormat.ShortDatePattern = "dd.MM.yyyy";
+            ci.DateTimeFormat.LongTimePattern = "HH:mm:ss";
+            ci.DateTimeFormat.ShortTimePattern = "HH:mm:ss";
+
+            var x = new c__DisplayClass41_0();
+            x.info = ci;
+
+            var p = new ParameterExpression[1]; // the parameter expressions 
+            var e = new Expression[4]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda<Func<DateTime, string>>( // $
+              e[0]=Call(
+                p[0]=Parameter(typeof(System.DateTime), "v"), 
+                typeof(System.DateTime).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ToString" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(System.IFormatProvider) })),
+                e[1]=Property(
+                  e[2]=Field(
+                    e[3]=Constant(x, typeof(c__DisplayClass41_0)),
+                    typeof(c__DisplayClass41_0).GetTypeInfo().GetDeclaredField("info")),
+                  typeof(CultureInfo).GetTypeInfo().GetDeclaredProperty("DateTimeFormat"))),
+              p[0 // ([struct] System.DateTime v)
+                ]);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("20.01.2012 16:30:40", fs(new DateTime(2012, 1, 20, 16, 30, 40)));
+
+            var fx = expr.CompileFast(true);
+            fx.PrintIL(); 
+            Assert.AreEqual("20.01.2012 16:30:40", fs(new DateTime(2012, 1, 20, 16, 30, 40)));
+        }
+
+        class c__DisplayClass41_0
+        {
+            public System.Globalization.CultureInfo info; 
         }
 
         [Test]
