@@ -2712,7 +2712,7 @@ namespace FastExpressionCompiler
                         if (targetTypeIsNullable)
                             il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                        if ((parent & ParentFlags.IgnoreResult) != 0) // todo: @simplify move this thing into the method and refactor the usages
                             il.Emit(OpCodes.Pop);
 
                         return true;
@@ -2720,8 +2720,15 @@ namespace FastExpressionCompiler
                 }
                 else if (!targetTypeIsNullable)
                 {
-                    var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
+                    if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
+                    {
+                        il.Emit(OpCodes.Call, method);
+                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                            il.Emit(OpCodes.Pop);
+                        return true;
+                    }
 
+                    var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
                     var convertOpMethod = method ?? actualSourceType.FindConvertOperator(actualSourceType, targetType);
                     if (convertOpMethod != null)
                     {
@@ -2734,15 +2741,21 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Call, convertOpMethod);
                         if ((parent & ParentFlags.IgnoreResult) != 0)
                             il.Emit(OpCodes.Pop);
-
                         return true;
                     }
                 }
 
                 if (!targetTypeIsNullable && !targetType.IsPrimitive)
                 {
-                    var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
+                    if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
+                    {
+                        il.Emit(OpCodes.Call, method);
+                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                            il.Emit(OpCodes.Pop);
+                        return true;
+                    }
 
+                    var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
                     // ReSharper disable once ConstantNullCoalescingCondition
                     var convertOpMethod = method ?? targetType.FindConvertOperator(actualSourceType, targetType);
                     if (convertOpMethod != null)

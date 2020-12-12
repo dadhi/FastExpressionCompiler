@@ -21,6 +21,8 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_283_Case7_ConvertTests_NullableParameterInOperatorConvert_VerificationException();
+
             Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException();
             Test_283_Case5_ConvertTests_NullableIntToNullableEnum_NullReferenceException();
             Test_283_Case4_SecurityVerificationException();
@@ -39,7 +41,7 @@ namespace FastExpressionCompiler.IssueTests
             Test_case_1_Full_AccessViolationException();
             The_expression_with_anonymous_class_should_output_without_special_symbols();
 
-            return 15;
+            return 16;
         }
 
         [Test]
@@ -538,6 +540,40 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Test_287_Case1_ConvertTests_NullableParameterInOperatorConvert_VerificationException()
+        {
+            var p = new ParameterExpression[1]; // the parameter expressions 
+            var e = new Expression[2]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda<Func<System.Decimal, CustomMoneyType>>(
+              e[0]=Convert(
+                e[1]=New(/*1 args*/
+                  typeof(System.Nullable<System.Decimal>).GetTypeInfo().DeclaredConstructors.ToArray()[0],
+                  p[0]=Parameter(typeof(System.Decimal), "p")),
+                typeof(CustomMoneyType),
+                typeof(CustomMoneyType).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "op_Explicit" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(System.Nullable<System.Decimal>) }))),
+              p[0 // ([struct] System.Decimal p)
+                ]);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual(new CustomMoneyType { Amount = 1.11m }, fs(1.11m));
+
+            var fx = expr.CompileFast(true);
+            fx.PrintIL(); 
+            Assert.AreEqual(new CustomMoneyType { Amount = 1.11m }, fx(1.11m));
+        }
+
+        private struct CustomMoneyType
+        {
+          public decimal? Amount;
+          public static explicit operator CustomMoneyType(decimal? amount) =>
+            new CustomMoneyType() { Amount = amount };
+        }
+
+        [Test]
         public void Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException()
         {
             var ci = (CultureInfo)new CultureInfo("ru-RU", false).Clone();
@@ -574,7 +610,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var fx = expr.CompileFast(true);
             fx.PrintIL(); 
-            Assert.AreEqual("20.01.2012 16:30:40", fs(new DateTime(2012, 1, 20, 16, 30, 40)));
+            Assert.AreEqual("20.01.2012 16:30:40", fx(new DateTime(2012, 1, 20, 16, 30, 40)));
         }
 
         class c__DisplayClass41_0
