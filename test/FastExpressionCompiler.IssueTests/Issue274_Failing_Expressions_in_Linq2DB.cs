@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_283_Case7_ConvertTests_NullableParameterInOperatorConvert_VerificationException();
+            Test_287_Case1_ConvertTests_NullableParameterInOperatorConvert_VerificationException();
 
             Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException();
             Test_283_Case5_ConvertTests_NullableIntToNullableEnum_NullReferenceException();
