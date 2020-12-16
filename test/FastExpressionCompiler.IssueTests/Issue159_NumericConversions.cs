@@ -74,10 +74,13 @@ namespace FastExpressionCompiler.IssueTests
                 block,
                 ulongParameter);
 
-            var ulongValueOrDefaultFunc = ulongValueOrDefaultLambda.CompileFast(true);
-            var result = ulongValueOrDefaultFunc.Invoke(new ValueHolder<ulong> { Value = ulong.MaxValue });
+            var fs = ulongValueOrDefaultLambda.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual(default(int), fs(new ValueHolder<ulong> { Value = ulong.MaxValue }).Value);
 
-            Assert.AreEqual(default(int), result.Value);
+            var fx = ulongValueOrDefaultLambda.CompileFast(true);
+            fx.PrintIL();
+            Assert.AreEqual(default(int), fx(new ValueHolder<ulong> { Value = ulong.MaxValue }).Value);
         }
 
         [Test]
@@ -117,24 +120,6 @@ namespace FastExpressionCompiler.IssueTests
 
             var actual = lambdaExpr.CompileFast(true);
 
-            // todo: optimize to something like below
-            /*
-IL_0000:  ldarg.1     
-IL_0001:  callvirt    UserQuery+ValueHolder<System.Nullable<System.UInt64>>.get_Value
-IL_0006:  stloc.0     
-IL_0007:  ldc.i4      FF FF FF 7F 
-IL_000C:  conv.i8     
-IL_000D:  stloc.1     
-IL_000E:  ldloca.s    00 
-IL_0010:  call        System.Nullable<System.UInt64>.GetValueOrDefault
-IL_0015:  ldloc.1     
-IL_0016:  ble.un.s    IL_001A
-IL_0018:  ldc.i4.0    
-IL_0019:  ret         
-IL_001A:  ldloca.s    00 
-IL_001C:  call        System.Nullable<System.UInt64>.get_HasValue
-IL_0021:  ret 
-            */
             actual.Method.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Call,   // get_Value getter
@@ -147,10 +132,9 @@ IL_0021:  ret
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
                 OpCodes.Call,
-                OpCodes.Ble_Un_S,
+                OpCodes.Cgt_Un,
                 OpCodes.Ldc_I4_0,
-                OpCodes.Br_S,
-                OpCodes.Ldc_I4_1,
+                OpCodes.Ceq,
                 OpCodes.Ldloca_S,
                 OpCodes.Call,
                 OpCodes.Ldloca_S,
@@ -330,9 +314,6 @@ IL_0021:  ret
             var expr = Lambda<Func<ValueHolder<float>, bool>>(condition, floatParamExpr);
             var source = new ValueHolder<float> { Value = float.MaxValue };
 
-            var compiled = expr.CompileSys();
-            Assert.AreEqual(true, compiled(source));
-
             var compiledFast = expr.CompileFast(true);
 
             compiledFast.Method.AssertOpCodes(
@@ -340,10 +321,9 @@ IL_0021:  ret
                 OpCodes.Call,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
-                OpCodes.Bge_S,
+                OpCodes.Clt,
                 OpCodes.Ldc_I4_0,
-                OpCodes.Br_S,
-                OpCodes.Ldc_I4_1,
+                OpCodes.Ceq,
                 OpCodes.Ret);
 
             Assert.AreEqual(true, compiledFast(source));
@@ -363,28 +343,27 @@ IL_0021:  ret
             var source = new ValueHolder<float> { Value = float.MaxValue };
 
             var compiled = expr.CompileSys();
-            Assert.AreEqual(false, compiled(source));
+            compiled.PrintIL();
 
             var compiledFast = expr.CompileFast(true);
+            compiledFast.PrintIL();
 
             compiledFast.Method.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Call,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
-                OpCodes.Bge_S,
+                OpCodes.Clt,
                 OpCodes.Ldc_I4_0,
-                OpCodes.Br_S,
-                OpCodes.Ldc_I4_1,
+                OpCodes.Ceq,
                 OpCodes.Brfalse,
                 OpCodes.Ldarg_1,
                 OpCodes.Call,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
-                OpCodes.Ble_S,
+                OpCodes.Cgt,
                 OpCodes.Ldc_I4_0,
-                OpCodes.Br_S,
-                OpCodes.Ldc_I4_1,
+                OpCodes.Ceq,
                 OpCodes.Br,
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ret);

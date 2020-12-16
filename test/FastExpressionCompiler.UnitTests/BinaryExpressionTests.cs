@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class BinaryExpressionTests
+    public class BinaryExpressionTests : ITest
     {
         public int Run()
         {
@@ -54,6 +54,7 @@ namespace FastExpressionCompiler.UnitTests
             Power_compiles();
             PowerAssign_compiles();
             ReferenceEqual_compiles();
+            ReferenceEqual_in_Action_compiles();
             ReferenceNotEqual_compiles();
             RightShift_compiles();
             RightShiftAssign_compiles();
@@ -61,7 +62,7 @@ namespace FastExpressionCompiler.UnitTests
             SubtractAssign_compiles();
             SubtractAssignChecked_compiles();
             SubtractChecked_compiles();
-            return 45;
+            return 46;
         }
 
         [Test]
@@ -280,9 +281,13 @@ namespace FastExpressionCompiler.UnitTests
                 GreaterThanOrEqual(param, Constant(2)),
                 param);
 
-            bool result = expression.CompileFast(true)(2);
+            var fs = expression.CompileSys();
+            fs.PrintIL();
 
-            Assert.IsTrue(result);
+            var fx = expression.CompileFast(true);
+            fx.PrintIL();
+
+            Assert.IsTrue(fx(2));
         }
 
         [Test]
@@ -560,6 +565,23 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void ReferenceEqual_in_Action_compiles()
+        {
+            const string Value = "test";
+            var param = Parameter(typeof(object), "o");
+            var expression = Lambda<Action<object>>(
+                ReferenceEqual(param, Constant(Value)),
+                param);
+
+            var fs = expression.CompileSys();
+            fs.PrintIL();
+
+            var fx = expression.CompileFast(true);
+            fx.PrintIL();
+            fx(Value);
+        }
+
+        [Test]
         public void ReferenceNotEqual_compiles()
         {
             const string Value = "test";
@@ -568,9 +590,13 @@ namespace FastExpressionCompiler.UnitTests
                 ReferenceNotEqual(param, Constant(Value)),
                 param);
 
-            bool result = expression.CompileFast(true)(Value);
+            var fs = expression.CompileSys();
+            fs.PrintIL();
 
-            Assert.IsFalse(result);
+            var fx = expression.CompileFast(true);
+            fx.PrintIL();
+
+            Assert.IsFalse(fx(Value));
         }
 
         [Test]

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using ILDebugging.Decoder;
 using NUnit.Framework;
 #if LIGHT_EXPRESSION
@@ -32,13 +33,13 @@ namespace FastExpressionCompiler
             Console.WriteLine(result = expr.ToCSharpString());
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintIL(this Delegate @delegate, string tag = null) => @delegate.Method.PrintIL(tag);
+        public static void PrintIL(this Delegate @delegate, [CallerMemberName]string tag = null) => @delegate.Method.PrintIL(tag);
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void PrintIL(this MethodInfo method, string tag = null)
         {
             var s = new StringBuilder();
-            s.Append(tag == null ? "<il>" : "<" + tag + ">").AppendLine();
+            s.Append(tag == null ? "<il>" : "<il:" + tag + ">").AppendLine();
             method.ToILString(s);
             s.AppendLine().Append(tag == null ? "</il>" : "</" + tag + ">");
             Console.WriteLine(s);

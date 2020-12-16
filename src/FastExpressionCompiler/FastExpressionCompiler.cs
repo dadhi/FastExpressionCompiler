@@ -1679,6 +1679,13 @@ namespace FastExpressionCompiler
 
         internal static bool IgnoresResult(this ParentFlags parent) => (parent & ParentFlags.IgnoreResult) != 0;
 
+        internal static bool EmitPopIfIgnoreResult(this ILGenerator il, ParentFlags parent)
+        {
+            if ((parent & ParentFlags.IgnoreResult) != 0)
+                il.Emit(OpCodes.Pop);
+            return true;
+        }
+
         /// <summary>Supports emitting of selected expressions, e.g. lambdaExpr are not supported yet.
         /// When emitter find not supported expression it will return false from <see cref="TryEmit"/>, so I could fallback
         /// to normal and slow Expression.Compile.</summary>
@@ -2226,11 +2233,7 @@ namespace FastExpressionCompiler
                         il.MarkLabel(labelDone);
                     }
                 }
-
-                if ((parent & ParentFlags.IgnoreResult) != 0)
-                    il.Emit(OpCodes.Pop);
-
-                return true;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             private static void EmitDefault(Type type, ILGenerator il)
@@ -2556,22 +2559,13 @@ namespace FastExpressionCompiler
                     }
                 }
                 else if (expr.NodeType == ExpressionType.OnesComplement)
-                {
                     il.Emit(OpCodes.Not);
-                }
                 else if (expr.NodeType == ExpressionType.Unbox)
-                {
                     il.Emit(OpCodes.Unbox_Any, exprType);
-                }
-                else if (expr.NodeType == ExpressionType.IsTrue)
-                { }
-                else if (expr.NodeType == ExpressionType.UnaryPlus)
-                { }
+                // else if (expr.NodeType == ExpressionType.IsTrue) { }
+                // else if (expr.NodeType == ExpressionType.UnaryPlus) { }
 
-                if ((parent & ParentFlags.IgnoreResult) != 0)
-                    il.Emit(OpCodes.Pop);
-
-                return true;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
 #if LIGHT_EXPRESSION
@@ -2651,11 +2645,7 @@ namespace FastExpressionCompiler
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, 
                         parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1))
                         return false;
-
-                    il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
-                    if ((parent & ParentFlags.IgnoreResult) != 0 && method.ReturnType != typeof(void))
-                        il.Emit(OpCodes.Pop);
-                    return true;
+                    return EmitMethodCall(il, method);
                 }
 
                 var sourceType = opExpr.Type;
@@ -2673,10 +2663,7 @@ namespace FastExpressionCompiler
                         EmitStoreLocalVariableAndLoadItsAddress(il, sourceType);
 
                     il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
-
-                    if ((parent & ParentFlags.IgnoreResult) != 0)
-                        il.Emit(OpCodes.Pop);
-                    return true;
+                    return il.EmitPopIfIgnoreResult(parent);
                 }
 
                 if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
@@ -2694,9 +2681,7 @@ namespace FastExpressionCompiler
                 {
                     if (targetType == typeof(object) && sourceType.IsValueType)
                         il.Emit(OpCodes.Box, sourceType);
-                    if (IgnoresResult(parent))
-                        il.Emit(OpCodes.Pop);
-                    return true;
+                    return il.EmitPopIfIgnoreResult(parent);
                 }
 
                 // check implicit / explicit conversion operators on source and target types
@@ -2708,14 +2693,9 @@ namespace FastExpressionCompiler
                     if (convertOpMethod != null)
                     {
                         il.Emit(OpCodes.Call, convertOpMethod);
-
                         if (targetTypeIsNullable)
                             il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
-
-                        if ((parent & ParentFlags.IgnoreResult) != 0) // todo: @simplify move this thing into the method and refactor the usages
-                            il.Emit(OpCodes.Pop);
-
-                        return true;
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
                 else if (!targetTypeIsNullable)
@@ -2739,9 +2719,7 @@ namespace FastExpressionCompiler
                         }
 
                         il.Emit(OpCodes.Call, convertOpMethod);
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                            il.Emit(OpCodes.Pop);
-                        return true;
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
 
@@ -2750,9 +2728,7 @@ namespace FastExpressionCompiler
                     if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
                     {
                         il.Emit(OpCodes.Call, method);
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                            il.Emit(OpCodes.Pop);
-                        return true;
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
 
                     var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
@@ -2767,10 +2743,7 @@ namespace FastExpressionCompiler
                         }
 
                         il.Emit(OpCodes.Call, convertOpMethod);
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                            il.Emit(OpCodes.Pop);
-
-                        return true;
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
                 else if (!sourceTypeIsNullable)
@@ -2780,14 +2753,10 @@ namespace FastExpressionCompiler
                     if (convertOpMethod != null)
                     {
                         il.Emit(OpCodes.Call, convertOpMethod);
-
                         if (targetTypeIsNullable)
                             il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                            il.Emit(OpCodes.Pop);
-
-                        return true;
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
 
@@ -2859,10 +2828,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                if ((parent & ParentFlags.IgnoreResult) != 0)
-                    il.Emit(OpCodes.Pop);
-
-                return true;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             private static bool TryEmitValueConvert(Type targetType, ILGenerator il, bool isChecked)
@@ -2884,7 +2850,7 @@ namespace FastExpressionCompiler
                 else if (targetType == typeof(long))
                     il.Emit(isChecked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
                 else if (targetType == typeof(ulong))
-                    il.Emit(isChecked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8);
+                    il.Emit(isChecked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8); // should we consider if sourceType.IsUnsigned == false and using the OpCodes.Conv_I8 (seems like the System.Compile does it)
                 else if (targetType == typeof(double))
                     il.Emit(OpCodes.Conv_R8);
                 else
@@ -3987,7 +3953,7 @@ namespace FastExpressionCompiler
                         var p = (parent | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)
                             & ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner;
 
-                        if (!TryEmit(instanceExpr, paramExprs, il, ref closure, setup, p, -1/*pi*/))
+                        if (!TryEmit(instanceExpr, paramExprs, il, ref closure, setup, p, -1))
                             return false;
 
                         if ((parent & ParentFlags.DupMemberOwner) != 0)
@@ -4322,24 +4288,17 @@ namespace FastExpressionCompiler
                         (leftOpType == typeof(object) || rightOpType == typeof(object)))
                     {
                         if (expressionType == ExpressionType.Equal)
-                        {
                             il.Emit(OpCodes.Ceq);
-                            if ((parent & ParentFlags.IgnoreResult) != 0)
-                                il.Emit(OpCodes.Pop);
-                        }
                         else if (expressionType == ExpressionType.NotEqual)
                         {
                             il.Emit(OpCodes.Ceq);
-                            il.Emit(OpCodes.Ldc_I4_0); // todo: @perf may there is optimization for comparison with IL, like the `Bne_Un`
+                            il.Emit(OpCodes.Ldc_I4_0); // todo: @perf Currently it produces the same code a System Compile but I wonder if we can use OpCodes.Not
                             il.Emit(OpCodes.Ceq);
                         }
                         else
                             return false;
 
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                            il.Emit(OpCodes.Pop);
-
-                        return true;
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
 
@@ -4395,10 +4354,7 @@ namespace FastExpressionCompiler
                     if (leftIsNullable)
                         goto nullCheck;
 
-                    if ((parent & ParentFlags.IgnoreResult) != 0)
-                        il.Emit(OpCodes.Pop);
-
-                    return true;
+                    return il.EmitPopIfIgnoreResult(parent);
                 }
 
                 // handle primitives comparison
@@ -4409,7 +4365,7 @@ namespace FastExpressionCompiler
                         break;
 
                     case ExpressionType.NotEqual:
-                        il.Emit(OpCodes.Ceq);   // todo: @perf optimize the IL chain
+                        il.Emit(OpCodes.Ceq);
                         il.Emit(OpCodes.Ldc_I4_0);
                         il.Emit(OpCodes.Ceq);
                         break;
@@ -4423,22 +4379,23 @@ namespace FastExpressionCompiler
                         break;
 
                     case ExpressionType.GreaterThanOrEqual:
-                    case ExpressionType.LessThanOrEqual:
-                        var ifTrueLabel = il.DefineLabel();
-                        if (rightOpType == typeof(uint) || rightOpType == typeof(ulong) ||
-                            rightOpType == typeof(ushort) || rightOpType == typeof(byte))
-                            il.Emit(expressionType == ExpressionType.GreaterThanOrEqual ? OpCodes.Bge_Un_S : OpCodes.Ble_Un_S, ifTrueLabel);
-                        else
-                            il.Emit(expressionType == ExpressionType.GreaterThanOrEqual ? OpCodes.Bge_S : OpCodes.Ble_S, ifTrueLabel);
-
+                        // simplifying by using the LessThen (Clt) and comparing with negative outcome (Ceq 0)
+                        if (leftOpType.IsUnsigned() && rightOpType.IsUnsigned())
+                            il.Emit(OpCodes.Clt_Un);
+                        else 
+                            il.Emit(OpCodes.Clt);
                         il.Emit(OpCodes.Ldc_I4_0);
-                        var doneLabel = il.DefineLabel();
-                        il.Emit(OpCodes.Br_S, doneLabel);
+                        il.Emit(OpCodes.Ceq);
+                        break;
 
-                        il.MarkLabel(ifTrueLabel);
-                        il.Emit(OpCodes.Ldc_I4_1);
-
-                        il.MarkLabel(doneLabel);
+                    case ExpressionType.LessThanOrEqual:
+                        // simplifying by using the GreaterThen (Cgt) and comparing with negative outcome (Ceq 0)
+                        if (leftOpType.IsUnsigned() && rightOpType.IsUnsigned())
+                            il.Emit(OpCodes.Cgt_Un);
+                        else 
+                            il.Emit(OpCodes.Cgt);
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        il.Emit(OpCodes.Ceq);
                         break;
 
                     default:
@@ -4486,10 +4443,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                if ((parent & ParentFlags.IgnoreResult) != 0)
-                    il.Emit(OpCodes.Pop);
-
-                return true;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
 #if LIGHT_EXPRESSION
@@ -5048,7 +5002,10 @@ namespace FastExpressionCompiler
     internal static class Tools
     {
         internal static bool IsUnsigned(this Type type) =>
-            type == typeof(byte) || type == typeof(ushort) || type == typeof(uint) || type == typeof(ulong);
+            type == typeof(byte)    ||
+            type == typeof(ushort)  ||
+            type == typeof(uint)    ||
+            type == typeof(ulong);
 
         internal static bool IsNullable(this Type type) =>
             type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
@@ -5352,11 +5309,6 @@ namespace FastExpressionCompiler
             // our own helper - always available
             var postIncMethod = typeof(ILGeneratorHacks).GetTypeInfo().GetDeclaredMethod(nameof(PostInc));
 
-            // now let's compile the following method without allocating the LocalBuilder class:
-            /*
-                 il.m_localSignature.AddArgument(type);
-                 return PostInc(ref il.LocalCount);
-            */
             var efficientMethod = new DynamicMethod(string.Empty,
                 typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type) },
                 typeof(ExpressionCompiler.ArrayClosure), skipVisibility: true);
@@ -5498,13 +5450,15 @@ namespace FastExpressionCompiler
         }
 
         internal static StringBuilder ToExpressionString(this LabelTarget lt, StringBuilder sb, List<LabelTarget> labelTargets,
-            bool stripNamespace = false, Func<Type, string, string> printType = null)
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
             var i = labelTargets.Count - 1;
             while (i != -1 && !ReferenceEquals(labelTargets[i], lt)) --i;
             if (i != -1)
-                return sb.Append("l[").Append(i).Append("]/* ").AppendName(lt.Name, lt.Type, lt).Append(" */");
-
+                return sb.Append("l[").Append(i)
+                    .Append(" // (").AppendName(lt.Name, lt.Type, lt).Append(')')
+                    .NewLineIdent(lineIdent).Append(']');
+                
             labelTargets.Add(lt);
             sb.Append("l[").Append(labelTargets.Count - 1).Append("]=Label(");
             sb.AppendTypeof(lt.Type, stripNamespace, printType);
@@ -5666,7 +5620,7 @@ namespace FastExpressionCompiler
                     if (args.Count == 0 && e.Type.IsValueType)
                         return sb.Append("New(").AppendTypeof(e.Type, stripNamespace, printType).Append(')');
 
-                    sb.Append("New(/*").Append(args.Count).Append(" args*/");
+                    sb.Append("New( // ").Append(args.Count).Append(" args");
                     var ctorIndex = x.Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.ToArray().GetFirstIndex(x.Constructor);
                     sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType)
                         .Append(".GetTypeInfo().DeclaredConstructors.ToArray()[").Append(ctorIndex).Append("],");
@@ -5785,10 +5739,10 @@ namespace FastExpressionCompiler
                     sb.NewLineIdentExpr(x.Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
 
                     if (x.BreakLabel != null)
-                        x.BreakLabel.ToExpressionString(sb.Append(',').NewLineIdent(lineIdent), lts, stripNamespace, printType);
+                        x.BreakLabel.ToExpressionString(sb.Append(',').NewLineIdent(lineIdent), lts, lineIdent, stripNamespace, printType);
 
                     if (x.ContinueLabel != null)
-                        x.ContinueLabel.ToExpressionString(sb.Append(',').NewLineIdent(lineIdent), lts, stripNamespace, printType);
+                        x.ContinueLabel.ToExpressionString(sb.Append(',').NewLineIdent(lineIdent), lts, lineIdent, stripNamespace, printType);
 
                     return sb.Append(')');
                 }
@@ -5836,7 +5790,7 @@ namespace FastExpressionCompiler
                 {
                     var x = (LabelExpression)e;
                     sb.Append("Label(");
-                    x.Target.ToExpressionString(sb, lts, stripNamespace, printType);
+                    x.Target.ToExpressionString(sb, lts, lineIdent, stripNamespace, printType);
                     if (x.DefaultValue != null)
                         sb.Append(',').NewLineIdentExpr(x.DefaultValue, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(')');
@@ -5847,7 +5801,7 @@ namespace FastExpressionCompiler
                     sb.Append("MakeGoto(").AppendEnum(x.Kind, stripNamespace, printType).Append(',');
 
                     sb.NewLineIdent(lineIdent);
-                    x.Target.ToExpressionString(sb, lts, stripNamespace, printType).Append(',');
+                    x.Target.ToExpressionString(sb, lts, lineIdent, stripNamespace, printType).Append(',');
 
                     sb.NewLineIdentExpr(x.Value, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
                     sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType);
