@@ -468,7 +468,7 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNull(f());
         }
 
-        public static void SimpleStringHandler(string s) {}
+        public static void SimpleStringHandler(string s) { }
 
         [Test]
         public void Test_case_4_Full_InvalidCastException()
@@ -540,16 +540,60 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Test_287_Case2_SimpleDelegate_as_nested_lambda_in_TesCollection_test()
+        {
+            var p = new ParameterExpression[3]; // the parameter expressions 
+            var e = new Expression[8]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda( // $
+              typeof(Dynamic.SimpleDelegate),
+              e[0] = Block(
+                typeof(void),
+                new[] {
+                  p[0]=Parameter(typeof(SimpleDelegate), "handler")
+                },
+                e[1] = MakeBinary(ExpressionType.Assign,
+                  p[0 // (SimpleDelegate handler)
+                    ],
+                  e[2] = Field(
+                    p[1] = Parameter(typeof(SampleClass)),
+                    typeof(SampleClass).GetTypeInfo().GetDeclaredField("_SimpleDelegateEvent"))),
+                e[3] = Condition(
+                  e[4] = MakeBinary(ExpressionType.NotEqual,
+                    p[0 // (SimpleDelegate handler)
+                      ],
+                    e[5] = Constant(null, typeof(System.Delegate))),
+                  e[6] = Invoke(
+                    p[0 // (SimpleDelegate handler)
+                      ],
+                    p[2] = Parameter(typeof(string))),
+                  e[7] = Empty(),
+                  typeof(void))),
+              p[2 // (string string__41619574)
+                ]);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            // Assert.AreEqual(new CustomMoneyType { Amount = 1.11m }, fs(1.11m));
+
+            var fx = expr.CompileFast(true);
+            fx.PrintIL();
+            // Assert.AreEqual(new CustomMoneyType { Amount = 1.11m }, fx(1.11m));
+        }
+
+        [Test]
         public void Test_287_Case1_ConvertTests_NullableParameterInOperatorConvert_VerificationException()
         {
             var p = new ParameterExpression[1]; // the parameter expressions 
             var e = new Expression[2]; // the unique expressions 
             var l = new LabelTarget[0]; // the labels 
             var expr = Lambda<Func<System.Decimal, CustomMoneyType>>(
-              e[0]=Convert(
-                e[1]=New(/*1 args*/
+              e[0] = Convert(
+                e[1] = New(/*1 args*/
                   typeof(System.Nullable<System.Decimal>).GetTypeInfo().DeclaredConstructors.ToArray()[0],
-                  p[0]=Parameter(typeof(System.Decimal), "p")),
+                  p[0] = Parameter(typeof(System.Decimal), "p")),
                 typeof(CustomMoneyType),
                 typeof(CustomMoneyType).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "op_Explicit" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(System.Nullable<System.Decimal>) }))),
               p[0 // ([struct] System.Decimal p)
@@ -562,15 +606,15 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(new CustomMoneyType { Amount = 1.11m }, fs(1.11m));
 
             var fx = expr.CompileFast(true);
-            fx.PrintIL(); 
+            fx.PrintIL();
             Assert.AreEqual(new CustomMoneyType { Amount = 1.11m }, fx(1.11m));
         }
 
         private struct CustomMoneyType
         {
-          public decimal? Amount;
-          public static explicit operator CustomMoneyType(decimal? amount) =>
-            new CustomMoneyType() { Amount = amount };
+            public decimal? Amount;
+            public static explicit operator CustomMoneyType(decimal? amount) =>
+              new CustomMoneyType() { Amount = amount };
         }
 
         [Test]
@@ -591,12 +635,12 @@ namespace FastExpressionCompiler.IssueTests
             var e = new Expression[4]; // the unique expressions 
             var l = new LabelTarget[0]; // the labels 
             var expr = Lambda<Func<DateTime, string>>( // $
-              e[0]=Call(
-                p[0]=Parameter(typeof(System.DateTime), "v"), 
+              e[0] = Call(
+                p[0] = Parameter(typeof(System.DateTime), "v"),
                 typeof(System.DateTime).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ToString" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(System.IFormatProvider) })),
-                e[1]=Property(
-                  e[2]=Field(
-                    e[3]=Constant(x, typeof(c__DisplayClass41_0)),
+                e[1] = Property(
+                  e[2] = Field(
+                    e[3] = Constant(x, typeof(c__DisplayClass41_0)),
                     typeof(c__DisplayClass41_0).GetTypeInfo().GetDeclaredField("info")),
                   typeof(CultureInfo).GetTypeInfo().GetDeclaredProperty("DateTimeFormat"))),
               p[0 // ([struct] System.DateTime v)
@@ -609,13 +653,13 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual("20.01.2012 16:30:40", fs(new DateTime(2012, 1, 20, 16, 30, 40)));
 
             var fx = expr.CompileFast(true);
-            fx.PrintIL(); 
+            fx.PrintIL();
             Assert.AreEqual("20.01.2012 16:30:40", fx(new DateTime(2012, 1, 20, 16, 30, 40)));
         }
 
         class c__DisplayClass41_0
         {
-            public System.Globalization.CultureInfo info; 
+            public System.Globalization.CultureInfo info;
         }
 
         [Test]
@@ -625,17 +669,17 @@ namespace FastExpressionCompiler.IssueTests
             var e = new Expression[5]; // the unique expressions 
             var l = new LabelTarget[0]; // the labels 
             var expr = Lambda<Func<System.Nullable<int>, System.Nullable<Enum1>>>( // $
-              e[0]=Condition(
-                e[1]=Property(
-                  p[0]=Parameter(typeof(System.Nullable<int>), "p"),
+              e[0] = Condition(
+                e[1] = Property(
+                  p[0] = Parameter(typeof(System.Nullable<int>), "p"),
                   typeof(System.Nullable<int>).GetTypeInfo().GetDeclaredProperty("HasValue")),
-                e[2]=Convert(
-                  e[3]=Property(
+                e[2] = Convert(
+                  e[3] = Property(
                     p[0 // ([struct] System.Nullable<int> p)
                       ],
                     typeof(System.Nullable<int>).GetTypeInfo().GetDeclaredProperty("Value")),
                   typeof(System.Nullable<Enum1>)),
-                e[4]=Constant(null, typeof(System.Nullable<Enum1>)),
+                e[4] = Constant(null, typeof(System.Nullable<Enum1>)),
                 typeof(System.Nullable<Enum1>)),
               p[0 // ([struct] System.Nullable<int> p)
                 ]);
@@ -647,7 +691,7 @@ namespace FastExpressionCompiler.IssueTests
             Assert.That(fs(null), Is.EqualTo(null));
 
             var fx = expr.CompileFast(true);
-            fx.PrintIL(); 
+            fx.PrintIL();
             Assert.That(fx(null), Is.EqualTo(null));
         }
 
@@ -660,19 +704,19 @@ namespace FastExpressionCompiler.IssueTests
             var e = new Expression[1]; // the unique expressions 
             var l = new LabelTarget[0]; // the labels 
             var expr = Lambda<System.Func<int, string>>( // $
-              e[0]=Call(
-                p[0]=Parameter(typeof(int), "p"), 
+              e[0] = Call(
+                p[0] = Parameter(typeof(int), "p"),
                 typeof(int).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ToString" && x.GetParameters().Length == 0)),
               p[0 // (int p)
                 ]);
 
-              var fs = expr.CompileSys();
-              fs.PrintIL();
-              Assert.That(fs(1), Is.EqualTo("1"));
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.That(fs(1), Is.EqualTo("1"));
 
-              var fx = expr.CompileFast(true);
-              fx.PrintIL();
-              Assert.That(fx(1), Is.EqualTo("1"));
+            var fx = expr.CompileFast(true);
+            fx.PrintIL();
+            Assert.That(fx(1), Is.EqualTo("1"));
         }
 
         [Test]
@@ -682,14 +726,14 @@ namespace FastExpressionCompiler.IssueTests
             var e = new Expression[2]; // the unique expressions 
             var l = new LabelTarget[0]; // the labels 
             var expr = Lambda<Func<SampleClass, int, string>>(
-              e[0]=Property(
-                e[1]=Call(
-                  p[0]=Parameter(typeof(SampleClass), "s"), 
+              e[0] = Property(
+                e[1] = Call(
+                  p[0] = Parameter(typeof(SampleClass), "s"),
                   typeof(SampleClass).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "GetOther" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) })),
-                  p[1]=Parameter(typeof(int), "i")),
+                  p[1] = Parameter(typeof(int), "i")),
                 typeof(OtherClass).GetTypeInfo().GetDeclaredProperty("OtherStrProp")),
               p[0 // (SampleClass s)
-                ], 
+                ],
               p[1 // (int i)
                 ]);
 
@@ -790,7 +834,7 @@ namespace FastExpressionCompiler.IssueTests
                 Convert(
                   Convert(
                     Field(
-                      Convert(p, typeof(c__DisplayClass6_0)), 
+                      Convert(p, typeof(c__DisplayClass6_0)),
                       typeof(c__DisplayClass6_0).GetField(nameof(c__DisplayClass6_0.flag))),
                       typeof(System.Enum)),
                     typeof(object)),
@@ -810,21 +854,26 @@ namespace FastExpressionCompiler.IssueTests
         [Flags]
         public enum FlagsEnum
         {
-          None = 0,
+            None = 0,
 
-          Flag1 = 0x1,
-          Flag2 = 0x2,
-          Flag3 = 0x4,
+            Flag1 = 0x1,
+            Flag2 = 0x2,
+            Flag3 = 0x4,
 
-          All = Flag1 | Flag2 | Flag3
+            All = Flag1 | Flag2 | Flag3
         }
 
-        class c__DisplayClass6_0 
+        class c__DisplayClass6_0
         {
             public FlagsEnum flag = FlagsEnum.All;
         }
 
         public delegate void SimpleDelegate(string input);
+
+        public class Dynamic
+        {
+            public delegate void SimpleDelegate(string input);
+        }
 
         public static void HandleString(string s)
         {
@@ -833,14 +882,22 @@ namespace FastExpressionCompiler.IssueTests
 
         class SampleClass
         {
-            public int     Id       { get; set; }
-            public int     Value    { get; set; }
+            public int Id { get; set; }
+            public int Value { get; set; }
             public object Instance;
             public Delegate[] Delegates;
 
-            public OtherClass GetOther       (int idx) => new OtherClass { OtherStrProp = "OtherStrValue" + idx        };
+            public OtherClass GetOther(int idx) => new OtherClass { OtherStrProp = "OtherStrValue" + idx };
 
             public OtherClass GetOtherAnother(int idx) => new OtherClass { OtherStrProp = "OtherAnotherStrValue" + idx };
+
+            private SimpleDelegate _SimpleDelegateEvent;
+            public event SimpleDelegate SimpleDelegateEvent
+            {
+                add    => _SimpleDelegateEvent = (SimpleDelegate)Delegate.Combine(_SimpleDelegateEvent, value);
+                remove => _SimpleDelegateEvent = (SimpleDelegate)Delegate.Remove (_SimpleDelegateEvent, value);
+            }
+
 
             public SampleClass(object instance = null, Delegate[] delegates = null)
             {
@@ -848,8 +905,8 @@ namespace FastExpressionCompiler.IssueTests
                 Delegates = delegates;
             }
         }
-        class OtherClass 
-        { 
+        class OtherClass
+        {
             public string OtherStrProp { get; set; }
         }
 

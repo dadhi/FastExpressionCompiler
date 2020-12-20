@@ -1299,35 +1299,29 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Block:
                         var blockExpr = (BlockExpression)expr;
-                        var blockVarExprs = blockExpr.Variables;
                         var blockExprs = blockExpr.Expressions;
                         var blockExprCount = blockExprs.Count;
                         if (blockExprCount == 0)
                             return true; // yeah, this is the real case
 
-                        if (blockExprCount == 0)
-                        {
-                            for (var i = 0; i < blockExprCount - 1; i++)
-                                if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure, flags))
-                                    return false;
-                            expr = blockExprs[blockExprCount - 1];
+                        var varExprs     = blockExpr.Variables;
+                        var varExprCount = varExprs.Count;
+                        if (varExprCount == 1)
+                            closure.PushBlockWithVars(varExprs[0]);
+                        else if (varExprCount != 0)
+                            closure.PushBlockWithVars(varExprs);
+
+                        for (var i = 0; i < blockExprCount - 1; i++)
+                            if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure, flags))
+                                return false;
+
+                        expr = blockExprs[blockExprCount - 1];
+                        if (varExprCount == 0) // in case of no variables we can collect the last exp without recursion
                             continue;
-                        }
-                        else
-                        {
-                            if (blockVarExprs.Count == 1)
-                                closure.PushBlockWithVars(blockVarExprs[0]);
-                            else if (blockVarExprs.Count != 0)
-                                closure.PushBlockWithVars(blockVarExprs);
 
-                            for (var i = 0; i < blockExprCount; i++)
-                                if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure, flags))
-                                    return false;
-
-                            if (blockVarExprs.Count != 0)
-                                closure.PopBlock();
-                        }
-
+                        if (!TryCollectBoundConstants(ref closure, expr, paramExprs, isNestedLambda, ref rootClosure, flags))
+                            return false;
+                        closure.PopBlock();
                         return true;
 
                     case ExpressionType.Loop:
