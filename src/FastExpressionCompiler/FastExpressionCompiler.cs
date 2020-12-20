@@ -570,7 +570,7 @@ namespace FastExpressionCompiler
                     constValues == null ? Tools.Empty<int>() : constUsage ?? new int[constValues.Length]);
 
                 NonPassedParameters = Tools.Empty<ParameterExpression>();
-                NestedLambdas = Tools.Empty<NestedLambdaInfo>();
+                NestedLambdas       = Tools.Empty<NestedLambdaInfo>();
 
                 LastEmitIsAddress = false;
                 CurrentTryCatchFinallyIndex = -1;
@@ -1317,13 +1317,15 @@ namespace FastExpressionCompiler
                         {
                             if (blockVarExprs.Count == 1)
                                 closure.PushBlockWithVars(blockVarExprs[0]);
-                            else
+                            else if (blockVarExprs.Count != 0)
                                 closure.PushBlockWithVars(blockVarExprs);
 
                             for (var i = 0; i < blockExprCount; i++)
                                 if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure, flags))
                                     return false;
-                            closure.PopBlock();
+
+                            if (blockVarExprs.Count != 0)
+                                closure.PopBlock();
                         }
 
                         return true;
@@ -1823,8 +1825,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.ExclusiveOr:
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
-                            var arithmeticExpr = (BinaryExpression)expr;
-                            return TryEmitArithmetic(arithmeticExpr, expr.NodeType, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitArithmetic((BinaryExpression)expr, expr.NodeType, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
@@ -4469,10 +4470,9 @@ namespace FastExpressionCompiler
                         EmitStoreLocalVariableAndLoadItsAddress(il, lefType);
 
                     il.Emit(OpCodes.Dup);
-                    il.Emit(OpCodes.Call, lefType.FindNullableHasValueGetterMethod());
-
+                    il.Emit(OpCodes.Call,    lefType.FindNullableHasValueGetterMethod());
                     il.Emit(OpCodes.Brfalse, leftNoValueLabel);
-                    il.Emit(OpCodes.Call, lefType.FindNullableGetValueOrDefaultMethod());
+                    il.Emit(OpCodes.Call,    lefType.FindNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(leftExpr, paramExprs, il, ref closure, setup, flags))
                     return false;
@@ -4491,9 +4491,9 @@ namespace FastExpressionCompiler
                         EmitStoreLocalVariableAndLoadItsAddress(il, rightType);
 
                     il.Emit(OpCodes.Dup);
-                    il.Emit(OpCodes.Call, rightType.FindNullableHasValueGetterMethod());
+                    il.Emit(OpCodes.Call,    rightType.FindNullableHasValueGetterMethod());
                     il.Emit(OpCodes.Brfalse, rightNoValueLabel);
-                    il.Emit(OpCodes.Call, rightType.FindNullableGetValueOrDefaultMethod());
+                    il.Emit(OpCodes.Call,    rightType.FindNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(rightExpr, paramExprs, il, ref closure, setup, flags))
                     return false;
@@ -4518,8 +4518,7 @@ namespace FastExpressionCompiler
                     if (exprType.IsNullable())
                     {
                         var endL = il.DefineLabel();
-                        var locIndex = InitValueTypeVariable(il, exprType);
-                        EmitLoadLocalVariable(il, locIndex);
+                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
                         il.Emit(OpCodes.Br_S, endL);
                         il.MarkLabel(valueLabel);
                         il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.GetFirst());
@@ -4566,14 +4565,14 @@ namespace FastExpressionCompiler
                         else
                         {
                             var methodName
-                                = exprNodeType == ExpressionType.Add ? "op_Addition"
-                                : exprNodeType == ExpressionType.AddChecked ? "op_Addition"
-                                : exprNodeType == ExpressionType.Subtract ? "op_Subtraction"
+                                = exprNodeType == ExpressionType.Add ?             "op_Addition"
+                                : exprNodeType == ExpressionType.AddChecked ?      "op_Addition"
+                                : exprNodeType == ExpressionType.Subtract ?        "op_Subtraction"
                                 : exprNodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
-                                : exprNodeType == ExpressionType.Multiply ? "op_Multiply"
+                                : exprNodeType == ExpressionType.Multiply ?        "op_Multiply"
                                 : exprNodeType == ExpressionType.MultiplyChecked ? "op_Multiply"
-                                : exprNodeType == ExpressionType.Divide ? "op_Division"
-                                : exprNodeType == ExpressionType.Modulo ? "op_Modulus"
+                                : exprNodeType == ExpressionType.Divide ?          "op_Division"
+                                : exprNodeType == ExpressionType.Modulo ?          "op_Modulus"
                                 : null;
 
                             if (methodName != null)
@@ -4590,7 +4589,6 @@ namespace FastExpressionCompiler
 
                         if (method == null)
                             return false;
-
                         il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
                         return true;
                     }
@@ -5016,7 +5014,6 @@ namespace FastExpressionCompiler
             for (var i = 0; i < methods.Length; i++)
                 if (methods[i].Name == methodName)
                     return methods[i];
-
             return type.BaseType?.FindMethod(methodName);
         }
 

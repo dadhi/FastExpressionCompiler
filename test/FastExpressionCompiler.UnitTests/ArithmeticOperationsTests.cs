@@ -24,6 +24,7 @@ namespace FastExpressionCompiler.UnitTests
             Can_substract_with_unchecked_overflow();
             Can_not_substract_with_checked_overflow();
             Can_modulus_custom();
+            // Can_modulus_custom_in_Action();
             Can_modulus();
             Can_bit_or_1();
             Can_bit_and_1();
@@ -48,9 +49,9 @@ namespace FastExpressionCompiler.UnitTests
             Can_add_strings();
             Can_add_string_and_not_string();
 
-            return 28;
+            return 29;
 #else
-            return 25;
+            return 26;
 #endif
         }
 
@@ -182,9 +183,22 @@ namespace FastExpressionCompiler.UnitTests
             var expr = Lambda<Func<BigInteger, BigInteger, BigInteger>>(Modulo(a, b), a, b);
 
             var f = expr.CompileFast(true);
-
-            Assert.IsNotNull(f);
             Assert.AreEqual(new BigInteger(1), f(7, 6));
+        }
+
+        [Test, Ignore("todo: fixme")]
+        public void Can_modulus_custom_in_Action()
+        {
+            var a = Parameter(typeof(BigInteger), "a");
+            var b = Parameter(typeof(BigInteger), "b");
+            var expr = Lambda<Action<BigInteger, BigInteger>>(Modulo(a, b), a, b);
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var fx = expr.CompileFast(true);
+            fx.PrintIL();
+            fx(7, 6);
         }
 
         [Test]
