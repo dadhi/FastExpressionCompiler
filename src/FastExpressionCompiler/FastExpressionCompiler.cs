@@ -37,6 +37,9 @@ THE SOFTWARE.
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
+#if !NETSTANDARD2_0
+#define SUPPORTS_EMITCALL
+#endif
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 using PE = FastExpressionCompiler.LightExpression.ParameterExpression;
@@ -2077,11 +2080,11 @@ namespace FastExpressionCompiler
                 if (indexerPropGetter != null)
                     return EmitMethodCall(il, indexerPropGetter);
 
-                if (indexArgCount == 1) // one dimensional array
+                if (indexArgCount == 1) // one-dimensional array
                     return TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure);
 
-                // multi dimensional array
-                return EmitMethodCall(il, indexExpr.Object?.Type.FindMethod("Get"));
+                indexerPropGetter = indexExpr.Object?.Type.FindMethod("Get"); // multi-dimensional array
+                return indexerPropGetter != null && EmitMethodCall(il, indexerPropGetter);
             }
 
 #if LIGHT_EXPRESSION
@@ -3313,11 +3316,7 @@ namespace FastExpressionCompiler
                 if (member is PropertyInfo prop)
                 {
                     var method = prop.DeclaringType.FindPropertySetMethod(prop.Name);
-                    if (method == null)
-                        return false;
-
-                    il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
-                    return true;
+                    return method != null && EmitMethodCall(il, method);
                 }
                 if (member is FieldInfo field)
                 {
@@ -3400,7 +3399,7 @@ namespace FastExpressionCompiler
                             return false;
 
                         if (!exprType.IsValueType)
-                            il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                            EmitMethodCall(il, method);
                         else if (!method.IsVirtual) // #251 - no need for constrain or virtual call because it is already by-ref
                             il.Emit(OpCodes.Call, method);
                         else if (method.DeclaringType == exprType)
@@ -3837,8 +3836,8 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                // multi dimensional array
-                return EmitMethodCall(il, instType?.FindMethod("Set"));
+                var setter = instType?.FindMethod("Set");
+                return setter != null && EmitMethodCall(il, setter); // multi dimensional array
             }
 
 #if LIGHT_EXPRESSION
@@ -3883,7 +3882,7 @@ namespace FastExpressionCompiler
                 }
 
                 if (!objIsValueType) 
-                    il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                    EmitMethodCall(il, method);
                 else if (!method.IsVirtual || objExpr is ParameterExpression p && p.IsByRef)
                     il.Emit(OpCodes.Call, method);
                 else if (method.DeclaringType == objExpr.Type)
@@ -4496,7 +4495,7 @@ namespace FastExpressionCompiler
                 if (!TryEmitArithmeticOperation(expr, exprNodeType, exprType, il))
                     return false;
 
-                if (leftIsNullable || rightIsNullable)
+                if (leftIsNullable || rightIsNullable) // todo: @clarify that the code emitted is correct
                 {
                     var valueLabel = il.DefineLabel();
                     il.Emit(OpCodes.Br, valueLabel);
@@ -4581,10 +4580,7 @@ namespace FastExpressionCompiler
                             }
                         }
 
-                        if (method == null)
-                            return false;
-                        il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
-                        return true;
+                        return method != null && EmitMethodCall(il, method);
                     }
                 }
 
@@ -4855,15 +4851,14 @@ namespace FastExpressionCompiler
                 return testExpr;
             }
 
-            private static bool EmitMethodCall(ILGenerator il, MethodInfo method, ParentFlags parent = ParentFlags.Empty)
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool EmitMethodCall(ILGenerator il, MethodInfo method)
             {
-                if (method == null)
-                    return false;
-
+#if SUPPORTS_EMITCALL
+                il.EmitCall(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method, null);
+#else
                 il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
-
-                if ((parent & ParentFlags.IgnoreResult) != 0 && method.ReturnType != typeof(void))
-                    il.Emit(OpCodes.Pop);
+#endif
                 return true;
             }
 

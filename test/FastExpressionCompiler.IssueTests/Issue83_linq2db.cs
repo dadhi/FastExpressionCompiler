@@ -1235,9 +1235,15 @@ namespace FastExpressionCompiler.IssueTests
             var p = Parameter(typeof(int?));
             var body = Add(Constant(4, typeof(int?)), p);
             var expr = Lambda<Func<int?, int?>>(body, p);
-            var compiled = expr.CompileFast(true);
-            Assert.AreEqual(9, compiled(5));
-            Assert.AreEqual(null, compiled(null));
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var fx = expr.CompileFast(true);
+            fx.PrintIL();
+
+            Assert.AreEqual(9, fx(5));
+            Assert.AreEqual(null, fx(null));
         }
 
         [Test]

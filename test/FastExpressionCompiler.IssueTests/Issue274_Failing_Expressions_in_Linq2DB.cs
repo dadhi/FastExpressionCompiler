@@ -21,6 +21,8 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_287_Case2_SimpleDelegate_as_nested_lambda_in_TesCollection_test();
+
             Test_287_Case1_ConvertTests_NullableParameterInOperatorConvert_VerificationException();
 
             Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException();
@@ -41,7 +43,7 @@ namespace FastExpressionCompiler.IssueTests
             Test_case_1_Full_AccessViolationException();
             The_expression_with_anonymous_class_should_output_without_special_symbols();
 
-            return 16;
+            return 17;
         }
 
         [Test]
@@ -545,8 +547,7 @@ namespace FastExpressionCompiler.IssueTests
             var p = new ParameterExpression[3]; // the parameter expressions 
             var e = new Expression[8]; // the unique expressions 
             var l = new LabelTarget[0]; // the labels 
-            var expr = Lambda( // $
-              typeof(Dynamic.SimpleDelegate),
+            var expr = Lambda<Action<SampleClass, string>>( // $
               e[0] = Block(
                 typeof(void),
                 new[] {
@@ -569,18 +570,20 @@ namespace FastExpressionCompiler.IssueTests
                     p[2] = Parameter(typeof(string))),
                   e[7] = Empty(),
                   typeof(void))),
-              p[2 // (string string__41619574)
-                ]);
+                p[1 // (SampleClass)
+                  ],
+                p[2 // (string string__41619574)
+                  ]);
 
             expr.PrintCSharp();
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            // Assert.AreEqual(new CustomMoneyType { Amount = 1.11m }, fs(1.11m));
+            fs(new SampleClass(), "43");
 
             var fx = expr.CompileFast(true);
             fx.PrintIL();
-            // Assert.AreEqual(new CustomMoneyType { Amount = 1.11m }, fx(1.11m));
+            fx(new SampleClass(), "43");
         }
 
         [Test]
