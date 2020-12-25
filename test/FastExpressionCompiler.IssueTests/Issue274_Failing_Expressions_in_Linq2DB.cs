@@ -544,46 +544,42 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Test_287_Case2_SimpleDelegate_as_nested_lambda_in_TesCollection_test()
         {
-            var p = new ParameterExpression[3]; // the parameter expressions 
-            var e = new Expression[8]; // the unique expressions 
+            string gotS = null;
+            SimpleDelegate sd = s => gotS = s;
+
+            var p = new ParameterExpression[9]; // the parameter expressions 
+            var e = new Expression[63]; // the unique expressions 
             var l = new LabelTarget[0]; // the labels 
-            var expr = Lambda<Action<SampleClass, string>>( // $
+            var expr = Lambda<Action<Dynamic.SampleClass>>( // $
               e[0] = Block(
                 typeof(void),
-                new[] {
-                  p[0]=Parameter(typeof(SimpleDelegate), "handler")
-                },
-                e[1] = MakeBinary(ExpressionType.Assign,
-                  p[0 // (SimpleDelegate handler)
-                    ],
-                  e[2] = Field(
-                    p[1] = Parameter(typeof(SampleClass)),
-                    typeof(SampleClass).GetTypeInfo().GetDeclaredField("_SimpleDelegateEvent"))),
-                e[3] = Condition(
-                  e[4] = MakeBinary(ExpressionType.NotEqual,
-                    p[0 // (SimpleDelegate handler)
-                      ],
-                    e[5] = Constant(null, typeof(System.Delegate))),
-                  e[6] = Invoke(
-                    p[0 // (SimpleDelegate handler)
-                      ],
-                    p[2] = Parameter(typeof(string))),
-                  e[7] = Empty(),
-                  typeof(void))),
-                p[1 // (SampleClass)
-                  ],
-                p[2 // (string string__41619574)
-                  ]);
+                new ParameterExpression[0],
+                e[1] = Call(
+                  p[0] = Parameter(typeof(Dynamic.SampleClass)),
+                  typeof(Dynamic.SampleClass).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "add_SimpleDelegateEvent" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Dynamic.SimpleDelegate) })),
+                  e[4] = Lambda<Dynamic.SimpleDelegate>(Invoke(
+                      Constant(sd, typeof(SimpleDelegate)),
+                      p[1] = Parameter(typeof(string), "_")), 
+                    p[1]))
+                ),
+              p[0 // (SampleClass sampleclass__26320983)
+                ]);
 
             expr.PrintCSharp();
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            fs(new SampleClass(), "43");
+            var s = new Dynamic.SampleClass();
+            fs(s);
+            s.InvokeSimpleDelegateEvent("1");
+            Assert.AreEqual("1", gotS);
 
             var fx = expr.CompileFast(true);
             fx.PrintIL();
-            fx(new SampleClass(), "43");
+            s = new Dynamic.SampleClass();
+            fx(s);
+            s.InvokeSimpleDelegateEvent("2");
+            Assert.AreEqual("2", gotS);
         }
 
         [Test]
@@ -876,6 +872,13 @@ namespace FastExpressionCompiler.IssueTests
         public class Dynamic
         {
             public delegate void SimpleDelegate(string input);
+
+            public class SampleClass 
+            {
+                public event SimpleDelegate SimpleDelegateEvent;
+
+                public void InvokeSimpleDelegateEvent(string s) => SimpleDelegateEvent?.Invoke(s);
+            }
         }
 
         public static void HandleString(string s)
@@ -883,7 +886,13 @@ namespace FastExpressionCompiler.IssueTests
 
         }
 
-        class SampleClass
+        class TypeWrapper
+        {
+            public object instance_ { get; }
+        }
+
+
+        class SampleClass : TypeWrapper
         {
             public int Id { get; set; }
             public int Value { get; set; }
@@ -897,8 +906,8 @@ namespace FastExpressionCompiler.IssueTests
             private SimpleDelegate _SimpleDelegateEvent;
             public event SimpleDelegate SimpleDelegateEvent
             {
-                add    => _SimpleDelegateEvent = (SimpleDelegate)Delegate.Combine(_SimpleDelegateEvent, value);
-                remove => _SimpleDelegateEvent = (SimpleDelegate)Delegate.Remove (_SimpleDelegateEvent, value);
+                add => _SimpleDelegateEvent = (SimpleDelegate)Delegate.Combine(_SimpleDelegateEvent, value);
+                remove => _SimpleDelegateEvent = (SimpleDelegate)Delegate.Remove(_SimpleDelegateEvent, value);
             }
 
 
