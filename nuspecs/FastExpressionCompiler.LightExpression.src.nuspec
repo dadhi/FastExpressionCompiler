@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.LightExpression.src</id>
-        <version>3.0.0-preview-06</version>
+        <version>3.0.0-preview-07</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2013-2020 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
