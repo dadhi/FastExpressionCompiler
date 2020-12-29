@@ -84,6 +84,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new ValueTypeTests().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests().Run);
+
+                Console.WriteLine($"============={Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
             var issueTests = Task.Run(() => 
@@ -181,6 +183,8 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue284_Invalid_Program_after_Coalesce().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue284_Invalid_Program_after_Coalesce().Run);
+
+                Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
             Task.WaitAll(unitTests, issueTests);

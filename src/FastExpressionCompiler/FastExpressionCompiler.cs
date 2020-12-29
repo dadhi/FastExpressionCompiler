@@ -5320,6 +5320,28 @@ namespace FastExpressionCompiler
 
         /// <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
         public static int GetNextLocalVarIndex(this ILGenerator il, Type t) => _getNextLocalVarIndex(il, t);
+
+        // todo: @perf add MultiOpCodes emit to save on the EnsureCapacity calls
+        // todo: @perf create EmitMethod without additional GetParameters call
+        /*
+        public virtual void EmitCall(OpCode opcode, MethodInfo methodInfo, int paramCount)
+        { 
+            int tk = GetMethodToken(methodInfo, optionalParameterTypes, false);
+            EnsureCapacity(7);
+            InternalEmit(opcode);
+ 
+            int stackchange = 0;
+            if (methodInfo.ReturnType != typeof(void))
+                stackchange++;
+            stackchange -= paramCount;
+            if (!methodInfo.IsStatic)
+                stackchange--;
+
+            UpdateStackSize(opcode, stackchange); 
+            RecordTokenFixup();
+            PutInteger4(tk);
+        }
+        */ 
     }
 
     internal struct LiveCountArray<T>
