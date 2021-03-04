@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class ArithmeticOperationsTests
+    public class ArithmeticOperationsTests : ITest
     {
         public int Run()
         {
