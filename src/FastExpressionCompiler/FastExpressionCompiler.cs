@@ -610,7 +610,7 @@ namespace FastExpressionCompiler
 
                 if (NonPassedParameters.Length == 0)
                 {
-                    NonPassedParameters = new[] { expr };
+                    NonPassedParameters = new[] { expr }; // todo: @perf optimize for a single non passed parameter
                     return;
                 }
 
@@ -1044,7 +1044,7 @@ namespace FastExpressionCompiler
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr, IReadOnlyList<PE> paramExprs, bool isNestedLambda, 
             ref ClosureInfo rootClosure, CompilerFlags flags)
         {
-            var paramCount = paramExprs.Count;
+            var paramCount = paramExprs.Count; // todo: @perf move closer to usage - don't need it in the most cases
 #endif
             while (true)
             {
@@ -1070,7 +1070,7 @@ namespace FastExpressionCompiler
                     {
                         // if parameter is used BUT is not in passed parameters and not in local variables,
                         // it means parameter is provided by outer lambda and should be put in closure for current lambda
-                        var p = paramCount - 1;
+                        var p = paramCount - 1; // todo: @perf optimize for the 1 parameter - we don't need the while loop or call the methods
                         while (p != -1 && !ReferenceEquals(paramExprs.GetParameter(p), expr)) --p;
                         if (p == -1 && !closure.IsLocalVar(expr))
                         {

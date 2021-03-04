@@ -196,8 +196,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue284_Invalid_Program_after_Coalesce().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue284_Invalid_Program_after_Coalesce().Run);
 
-                // Run(new Issue293_Recursive_Methods().Run);
-                // Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue293_Recursive_Methods().Run);
+                Run(new Issue293_Recursive_Methods().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue293_Recursive_Methods().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
