@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class ClosureConstantTests
+    public class ClosureConstantTests : ITest
     {
         public int Run()
         {

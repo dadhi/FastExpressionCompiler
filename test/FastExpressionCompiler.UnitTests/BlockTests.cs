@@ -14,7 +14,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class BlockTests
+    public class BlockTests : ITest
     {
         public int Run()
         {

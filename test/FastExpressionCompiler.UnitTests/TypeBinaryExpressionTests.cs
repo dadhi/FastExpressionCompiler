@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class TypeBinaryExpressionTests
+    public class TypeBinaryExpressionTests : ITest
     {
         public int Run()
         {

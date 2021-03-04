@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class PreConstructedClosureTests
+    public class PreConstructedClosureTests : ITest
     {
         public int Run()
         {

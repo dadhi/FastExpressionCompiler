@@ -14,16 +14,6 @@
                 "kind": "build",
                 "isDefault": true
             }
-        },
-        {
-            "label": "build_benchmarks",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "${workspaceFolder}/test/FastExpressionCompiler.Benchmarks/FastExpressionCompiler.Benchmarks.csproj"
-            ],
-            "problemMatcher": "$msCompile"
         }
     ]
 }

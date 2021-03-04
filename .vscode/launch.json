@@ -4,37 +4,6 @@
    // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
    "version": "0.2.0",
    "configurations": [
-
-        {
-            "name": ".NET Core Launch (Benchmarks)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build_benchmarks",
-            // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/test/FastExpressionCompiler.Benchmarks/bin/Debug/netcoreapp3.1/FastExpressionCompiler.Benchmarks.exe",
-            "args": [],
-            "cwd": "${workspaceFolder}/test/FastExpressionCompiler.Benchmarks",
-            // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
-            "console": "internalConsole",
-            "stopAtEntry": false,
-            "internalConsoleOptions": "openOnSessionStart",
-            "requireExactSource": false // allows to for moderate code editing while debugging
-        },
-        {
-            "name": ".NET Core Launch (UnitTests)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build_testsrunner",
-            // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/test/FastExpressionCompiler.UnitTests/bin/Debug/netcoreapp3.1/FastExpressionCompiler.UnitTests.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/test/FastExpressionCompiler.TestsRunner",
-            // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
-            "console": "internalConsole",
-            "stopAtEntry": false,
-            "internalConsoleOptions": "openOnSessionStart",
-            "requireExactSource": false // allows to for moderate code editing while debugging
-        },
         {
             "name": ".NET Core Launch (TestsRunner)",
             "type": "coreclr",

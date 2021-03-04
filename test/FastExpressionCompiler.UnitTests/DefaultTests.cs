@@ -9,8 +9,8 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-[TestFixture]
-    public class DefaultTests
+    [TestFixture]
+    public class DefaultTests : ITest
     {
         public int Run()
         {

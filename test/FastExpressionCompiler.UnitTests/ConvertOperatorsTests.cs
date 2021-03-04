@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class ConvertOperatorsTests
+    public class ConvertOperatorsTests : ITest
     {
         public int Run()
         {

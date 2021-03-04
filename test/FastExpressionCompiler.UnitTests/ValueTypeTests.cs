@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     [TestFixture]
-    public class ValueTypeTests
+    public class ValueTypeTests : ITest
     {
         public int Run()
         {

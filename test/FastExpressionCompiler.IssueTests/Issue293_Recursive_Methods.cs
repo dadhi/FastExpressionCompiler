@@ -29,9 +29,13 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
             var res = fs(4);
 
-            var f = expr.CompileFast(true);
+            var f = expr.CompileFast(true, CompilerFlags.NoInvocationLambdaInlining);
             f.PrintIL();
             var res2 = f(4);
+
+            // f = expr.CompileFast(true);
+            // f.PrintIL();
+            // res2 = f(4);
 
             Assert.AreEqual(res, res2);
         }
@@ -41,7 +45,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var nParam = Expression.Parameter(typeof(T), "n");
             var methodVar = Expression.Variable(typeof(Func<T, T>), "factorial");
-            var one = Expression.Convert(Expression.Constant(1), typeof(T));
+            var one = Expression.Constant(1, typeof(T));
 
             return Expression.Lambda<Func<T, T>>(
                 Expression.Block(
