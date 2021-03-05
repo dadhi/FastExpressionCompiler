@@ -1039,12 +1039,10 @@ namespace FastExpressionCompiler
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr, IParameterProvider paramExprs, bool isNestedLambda, 
             ref ClosureInfo rootClosure, CompilerFlags flags)
         {
-            var paramCount = paramExprs.ParameterCount;
 #else
         private static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr, IReadOnlyList<PE> paramExprs, bool isNestedLambda, 
             ref ClosureInfo rootClosure, CompilerFlags flags)
         {
-            var paramCount = paramExprs.Count; // todo: @perf move closer to usage - don't need it in the most cases
 #endif
             while (true)
             {
@@ -1068,9 +1066,14 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Parameter:
                     {
+#if LIGHT_EXPRESSION
+                        var paramCount = paramExprs.ParameterCount;
+#else
+                        var paramCount = paramExprs.Count;
+#endif
                         // if parameter is used BUT is not in passed parameters and not in local variables,
                         // it means parameter is provided by outer lambda and should be put in closure for current lambda
-                        var p = paramCount - 1; // todo: @perf optimize for the 1 parameter - we don't need the while loop or call the methods
+                        var p = paramCount - 1;
                         while (p != -1 && !ReferenceEquals(paramExprs.GetParameter(p), expr)) --p;
                         if (p == -1 && !closure.IsLocalVar(expr))
                         {
@@ -4286,7 +4289,7 @@ namespace FastExpressionCompiler
                         else if (expressionType == ExpressionType.NotEqual)
                         {
                             il.Emit(OpCodes.Ceq);
-                            il.Emit(OpCodes.Ldc_I4_0); // todo: @perf Currently it produces the same code a System Compile but I wonder if we can use OpCodes.Not
+                            il.Emit(OpCodes.Ldc_I4_0); // todo: @perf Currently it produces the same code as a System Compile but I wonder if we can use OpCodes.Not
                             il.Emit(OpCodes.Ceq);
                         }
                         else
