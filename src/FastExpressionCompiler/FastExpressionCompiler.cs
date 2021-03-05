@@ -1061,7 +1061,6 @@ namespace FastExpressionCompiler
                             if (IsClosureBoundConstant(value, valueType))
                                 closure.AddConstantOrIncrementUsageCount(value, valueType);
                         }
-
                         return true;
 
                     case ExpressionType.Parameter:
@@ -1116,6 +1115,7 @@ namespace FastExpressionCompiler
                         expr = callArgs.GetArgument(lastArgIndex);
                         continue;
                     }
+
                     case ExpressionType.MemberAccess:
                         var memberExpr = ((MemberExpression)expr).Expression;
                         if (memberExpr == null)
@@ -1246,8 +1246,10 @@ namespace FastExpressionCompiler
                             // - We don't optimize the memory with IParameterProvider because anyway we materialize the parameters into the block below
 #if LIGHT_EXPRESSION
                             var pars = (IParameterProvider)la;
+                            var paramCount = paramExprs.ParameterCount;
 #else
                             var pars = la.Parameters;
+                            var paramCount = paramExprs.Count;
 #endif
                             var exprs = new Expression[argCount + 1];
                             List<ParameterExpression> vars = null;
