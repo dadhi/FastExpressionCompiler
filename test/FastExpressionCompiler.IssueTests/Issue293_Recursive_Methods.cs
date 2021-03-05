@@ -23,8 +23,8 @@ namespace FastExpressionCompiler.IssueTests
         public void Test_Recursive_Expression()
         {
             var expr = MakeFactorialExpressionWithTheTrick<int>();
-
             expr.PrintCSharp();
+
             var fs = expr.CompileSys();
             fs.PrintIL();
             var res = fs(4);
