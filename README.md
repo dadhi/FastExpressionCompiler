@@ -290,6 +290,8 @@ and fallback to the system `Expression.Compile()` for the not supported types:
 - `MemberInit` with the `MemberMemberBinding` and the `ListMemberBinding` binding types
 - `NewArrayInit` multi-dimensional array initializer is not supported yet
 
+To find what nodes are not supported in your expression you may use the technic described below in the [Diagnostics](#diagnostics) section. 
+
 The compilation is done by traversing the expression nodes and emitting the IL. 
 The code is tuned for the performance and the minimal memory consumption. 
 
@@ -300,6 +302,7 @@ The expression is traversed twice:
 
 If visitor finds the not supported expression node or the error condition, 
 the compilation is aborted, and `null` is returned enabling the fallback to System `.Compile()`.
+
 
 ## Diagnostics
 
@@ -317,6 +320,12 @@ Assert.IsNotNull(di.Expression);
 Assert.IsNotNull(di.ExpressionString);
 Assert.IsNotNull(di.CSharpString);
 ```
+
+Those conversion capabilities are also available as the `ToCSharpString` and `ToExpressionString` extension methods.
+
+Besides that, when converting the source expression to either C# code or to the Expression construction code you may find 
+the `// NOT_SUPPORTED_EXPRESSION` comments marking the not supported yet expressions by FEC. So you may verify the presence or absence of this comment in a test. 
+
 
 ## Additional optimizations
 

@@ -53,7 +53,6 @@ namespace FastExpressionCompiler.IssueTests
             // Func<int, int> tmp = n => n <= 1 ? 1 : n * recs[0](n - 1);
             // recs[0] = tmp; // setting the item inside the closure variable of array type should work because of reference semantic
 
-
             return Expression.Lambda<Func<T, T>>(
                 Expression.Block(
                     new[] { methodsVar, methodVar },
