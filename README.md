@@ -23,15 +23,15 @@ Targets .NET Standard 2.0, 2.1 and .NET 4.5
 
 FastExpressionCompiler on NuGet:
 
-- FastExpressionCompiler [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler/3.0.0)[![fuget.org package api diff](https://www.fuget.org/packages/FastExpressionCompiler/badge.svg?v=3.0.0)](https://www.fuget.org/packages/FastExpressionCompiler/3.0.0)  
-- FastExpressionCompiler.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.src)](https://www.nuget.org/packages/FastExpressionCompiler.src/3.0.0)[![fuget.org package api diff](https://www.fuget.org/packages/FastExpressionCompiler.src/badge.svg?v=3.0.0)](https://www.fuget.org/packages/FastExpressionCompiler.src/3.0.0)
-- FastExpressionCompiler.Internal.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.Internal.src)](https://www.nuget.org/packages/FastExpressionCompiler.Internal.src/3.0.0)[![fuget.org package api diff](https://www.fuget.org/packages/FastExpressionCompiler.Internal.src/badge.svg?v=3.0.0)](https://www.fuget.org/packages/FastExpressionCompiler.Internal.src/3.0.0)
+- FastExpressionCompiler [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler/3.0.0)  
+- FastExpressionCompiler.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.src)](https://www.nuget.org/packages/FastExpressionCompiler.src/3.0.0)
+- FastExpressionCompiler.Internal.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.Internal.src)](https://www.nuget.org/packages/FastExpressionCompiler.Internal.src/3.0.0)
 
 FastExpressionCompiler.LightExpression on NuGet:
 
-- FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression/3.0.0)[![fuget.org package last version](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/badge.svg?v=3.0.0)](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression/3.0.0)
-- FastExpressionCompiler.LightExpression.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression.src)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression.src/3.0.0)[![fuget.org package last version](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression.src/badge.svg?v=3.0.0)](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression.src/3.0.0)
-- FastExpressionCompiler.LightExpression.Internal.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression.Internal.src)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression.Internal.src/3.0.0)[![fuget.org package last version](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression.Internal.src/badge.svg?v=3.0.0)](https://www.fuget.org/packages/FastExpressionCompiler.LightExpression.Internal.src/3.0.0)
+- FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression/3.0.0)
+- FastExpressionCompiler.LightExpression.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression.src)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression.src/3.0.0)
+- FastExpressionCompiler.LightExpression.Internal.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression.Internal.src)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression.Internal.src/3.0.0)
 
 The project was originally a part of the [DryIoc], so check it out ;-)
 
