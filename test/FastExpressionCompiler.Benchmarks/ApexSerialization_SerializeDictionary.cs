@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.Benchmarks
     {
 /*
 
-## V3-preview-07
+## V3
 
 BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.630 (2004/?/20H1)
 Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores

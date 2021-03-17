@@ -2,26 +2,25 @@
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
         <VersionPrefix>3.0.0</VersionPrefix>
-        <VersionSuffix>preview-07</VersionSuffix>
+        <VersionSuffix></VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
         <Title>$(Product)</Title>
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
-
 ## v3.0.0 - Major feature release
 
-The version contains a lot of fixes and improvements and hopefully as-little-as-possible breaking changes.
+This version contains a lot of fixes and improvements and as-little-as-possible breaking changes.
 
 ### **FastExpressionCompiler** and **FastExpressionCompiler.LightExpression**
 
-- Performance and memory consumption is improved, especially for the expressions with the closure and for expressions with the nested lambdas.
-- Filled the gaps in the expressions support.
-- Many fixes in the IL emit.
-- Adds `ToCSharpString()` to output the compile-able C# code described by the expression (tries hard).
-- Adds `ToExpressionString()` to output the valid expression construction syntax, so given an expression object you'll get e.g. `Lambda(New(...))`.
-- Adds optional `enum CompilerFlags { Default, NoInvocationLambdaInlining, EnableDelegateDebugInfo}` parameter for the compilation 
+- Performance and memory consumption are improved, especially for the expressions with the closure and for expressions with the nested lambdas.
+- More expression types are supported.
+- Many fixes in the IL Emit.
+- Added `ToCSharpString()` extension method to output the compile-able C# code described by the expression (tries hard).
+- Added `ToExpressionString()` extension method to output the valid expression construction syntax, so given an expression object you'll get e.g. `Lambda(New(...))`.
+- Added optional `enum CompilerFlags { Default, NoInvocationLambdaInlining, EnableDelegateDebugInfo}` parameter for the compilation 
 - `EnableDelegateDebugInfo` adds the diagnostic info into the compiled delegate including its source Expression and C# code. Can be used as following: 
 ```cs
     var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
@@ -34,11 +33,11 @@ The version contains a lot of fixes and improvements and hopefully as-little-as-
 ### **FastExpressionCompiler.LightExpression**
 
 - Now includes the `ExpressionVisitor`.
-- Improves the compatibility (the drop-in replacement) between `FastExpressionCompiler.LightExpression.Expression` and `System.Linq.Expression`.
-- Decreasing the memory consumed by the created expressions, plus implementing the `IArgumentProvider` and `IParameterProvider` for some of the expressions.
+- Improves the compatibility (the drop-in replacement) between the `FastExpressionCompiler.LightExpression.Expression` and the `System.Linq.Expression`.
+- Decreasing the memory consumed by the created expressions partially via implementing the `IArgumentProvider` and `IParameterProvider` for some expressions.
 
 
-### The full list of fixes
+### The full list of the closed issues
 
 [Milestone v3.0.0](https://github.com/dadhi/FastExpressionCompiler/milestone/19)
 
