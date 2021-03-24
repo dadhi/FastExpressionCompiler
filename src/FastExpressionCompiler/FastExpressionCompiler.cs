@@ -34,6 +34,7 @@ THE SOFTWARE.
 
 #if SUPPORTS_FAST_EXPRESSION_COMPILER
 */
+//#define LIGHT_EXPRESSION
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
@@ -6096,7 +6097,7 @@ namespace FastExpressionCompiler
                         }
                     }
 
-                    sb.Append(") => ");
+                    sb.Append(") => //$");
                     if (x.ReturnType != typeof(void) &&
                         x.Body is BlockExpression == false)
                         sb.NewLineIdentCs(x.Body, lineIdent, stripNamespace, printType);
