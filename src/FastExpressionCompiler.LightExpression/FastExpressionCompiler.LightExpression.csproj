@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
 
-        <VersionPrefix>3.0.0</VersionPrefix>
+        <VersionPrefix>3.0.1</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -12,6 +12,9 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.0.1 Bug-fix release
+
+fixed: #298 LightExpression with the NewExpression of 4 arguments has ArgumentCount = 3
 
 ## v3.0.0 - Major feature release
 
