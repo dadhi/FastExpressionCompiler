@@ -32,24 +32,6 @@ NuGet packages:
 
 The project was originally a part of the [DryIoc], so check it out ;-)
 
-- [FastExpressionCompiler](#fastexpressioncompiler)
-  - [The problem](#the-problem)
-  - [The solution](#the-solution)
-  - [Difference between FastExpressionCompiler and FastExpressionCompiler.LightExpression](#difference-between-fastexpressioncompiler-and-fastexpressioncompilerlightexpression)
-  - [Who's using it](#whos-using-it)
-  - [How to use](#how-to-use)
-    - [Examples](#examples)
-  - [Benchmarks](#benchmarks)
-    - [Hoisted expression with the constructor and two arguments in closure](#hoisted-expression-with-the-constructor-and-two-arguments-in-closure)
-    - [Hoisted expression with the static method and two nested lambdas and two arguments in closure](#hoisted-expression-with-the-static-method-and-two-nested-lambdas-and-two-arguments-in-closure)
-    - [Manually composed expression with parameters and closure](#manually-composed-expression-with-parameters-and-closure)
-    - [FastExpressionCompiler.LightExpression.Expression vs System.Linq.Expressions.Expression](#fastexpressioncompilerlightexpressionexpression-vs-systemlinqexpressionsexpression)
-  - [How it works](#how-it-works)
-    - [What's not supported yet](#whats-not-supported-yet)
-  - [Diagnostics](#diagnostics)
-  - [Additional optimizations](#additional-optimizations)
-
-
 ## The problem
 
 [ExpressionTree] compilation is used by the wide variety of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
