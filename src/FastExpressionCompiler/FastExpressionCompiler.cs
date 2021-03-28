@@ -518,7 +518,7 @@ namespace FastExpressionCompiler
 
         private struct BlockInfo
         {
-            public object VarExprs;     // ParameterExpression  | IReadOnlyList<PE>
+            public object VarExprs;   // ParameterExpression  | IReadOnlyList<PE>
             public int[]  VarIndexes;
         }
 
@@ -656,8 +656,7 @@ namespace FastExpressionCompiler
 
             public void AddLabel(LabelTarget labelTarget)
             {
-                if (labelTarget != null &&
-                    GetLabelIndex(labelTarget) == -1)
+                if (labelTarget != null && GetLabelIndex(labelTarget) == -1)
                     _labels = _labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
             }
 
@@ -2130,7 +2129,7 @@ namespace FastExpressionCompiler
                 {
                     if ((closure.Status & ClosureStatus.ToBeCollected) == 0)
                         return false; // if no collection cycle then the labels may be not collected
-                    throw new InvalidOperationException("Cannot jump, no labels found");
+                    throw new InvalidOperationException($"Cannot jump, no labels found for the target `{expr.Target}`");
                 }
 
                 if (expr.Value != null &&
