@@ -531,6 +531,19 @@ namespace FastExpressionCompiler
             ShouldBeStaticMethod = 1 << 3
         }
 
+        internal struct LabelInfo 
+        {
+            public LabelTarget Target; // label target is the link between the goto and the label.
+            public Label Label;
+            public bool HasLabel;
+            public LabelInfo(LabelTarget target, Label label = default, bool hasLabel = false) 
+            {
+                Target   = target;
+                Label    = label;
+                HasLabel = hasLabel;
+            }
+        }
+
         /// Track the info required to build a closure object + some context information not directly related to closure.
         internal struct ClosureInfo
         {
@@ -544,8 +557,8 @@ namespace FastExpressionCompiler
             /// Tracks the stack of blocks where are we in emit phase
             private LiveCountArray<BlockInfo> _blockStack;
 
-            /// Dictionary for the used Labels in IL
-            private KeyValuePair<LabelTarget, Label?>[] _labels;
+            /// Dictionary for the used Labels to Goto links
+            private LabelInfo[] _labels;
 
             public ClosureStatus Status;
 
@@ -657,7 +670,10 @@ namespace FastExpressionCompiler
             public void AddLabel(LabelTarget labelTarget)
             {
                 if (labelTarget != null && GetLabelIndex(labelTarget) == -1)
-                    _labels = _labels.WithLast(new KeyValuePair<LabelTarget, Label?>(labelTarget, null));
+                {
+                    var labelInfo = new LabelInfo(labelTarget);
+                    _labels = _labels.WithLast(ref labelInfo);
+                }
             }
 
             public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) =>
@@ -665,18 +681,20 @@ namespace FastExpressionCompiler
 
             public Label GetOrCreateLabel(int index, ILGenerator il)
             {
-                var labelPair = _labels[index];
-                var label = labelPair.Value;
-                if (!label.HasValue)
-                    _labels[index] = new KeyValuePair<LabelTarget, Label?>(labelPair.Key, label = il.DefineLabel());
-                return label.Value;
+                ref var labelInfo = ref _labels[index];
+                if (!labelInfo.HasLabel)
+                {
+                    labelInfo.HasLabel = true;
+                    labelInfo.Label = il.DefineLabel();
+                }
+                return labelInfo.Label;
             }
 
             public int GetLabelIndex(LabelTarget labelTarget)
             {
                 if (_labels != null)
                     for (var i = 0; i < _labels.Length; ++i)
-                        if (_labels[i].Key == labelTarget)
+                        if (_labels[i].Target == labelTarget)
                             return i;
                 return -1;
             }
@@ -1361,21 +1379,18 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
-                        var defaultValueExpr = labelExpr.DefaultValue;
                         closure.AddLabel(labelExpr.Target);
-                        if (defaultValueExpr == null)
+                        if (labelExpr.DefaultValue == null)
                             return true;
-                        expr = defaultValueExpr;
+                        expr = labelExpr.DefaultValue;
                         continue;
 
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
                         if (gotoExpr.Kind == GotoExpressionKind.Return)
                             closure.MarkAsContainsReturnGotoExpression();
-
                         if (gotoExpr.Value == null)
                             return true;
-
                         expr = gotoExpr.Value;
                         continue;
 
@@ -5127,7 +5142,7 @@ namespace FastExpressionCompiler
 
         public static T[] Empty<T>() => EmptyArray<T>.Value;
 
-        public static T[] WithLast<T>(this T[] source, T value)
+        public static T[] WithLast<T>(this T[] source, ref T value)
         {
             if (source == null || source.Length == 0)
                 return new[] { value };
