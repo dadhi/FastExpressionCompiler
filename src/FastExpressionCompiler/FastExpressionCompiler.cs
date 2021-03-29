@@ -6581,9 +6581,13 @@ namespace FastExpressionCompiler
                 var expr = exprs[i];
 
                 // this is basically the return pattern (see #237) so we don't care for the rest of the expressions
+                // Note the sentence above is wrong because the may be a goto to this specific label, so we still need to print the label
                 if (expr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                     exprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                 {
+                    sb.NewLineIdent(lineIdent);
+                    label.Target.ToCSharpString(sb).Append(':');
+
                     sb.NewLineIdent(lineIdent);
                     if (gt.Value == null)
                         return b.Type == typeof(void) ? sb : sb.Append("return;");
