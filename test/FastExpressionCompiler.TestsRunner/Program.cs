@@ -11,9 +11,10 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue293_Recursive_Methods().Run();
+            // new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run();
 
-            //new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue293_Recursive_Methods().Run();
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue159_NumericConversions().Run();
             // new FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue284_Invalid_Program_after_Coalesce().Run();
@@ -91,7 +92,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new ValueTypeTests().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests().Run);
-                
+
                 Console.WriteLine($"============={Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
 
             });

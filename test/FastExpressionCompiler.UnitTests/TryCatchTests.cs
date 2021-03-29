@@ -29,7 +29,9 @@ namespace FastExpressionCompiler.UnitTests
             Can_return_try_block_result_using_label();
             Can_return_nested_catch_block_result();
 
-            return 10;
+            Can_return_from_try_block_using_label_with_the_more_code_after_label();
+            
+            return 11;
         }
 
         [Test]
@@ -180,10 +182,47 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 Label(returnLabel, Default(returnLabel.Type))));
 
+            expr.PrintCSharp();
+
             var func = expr.CompileFast(true);
 
             Assert.IsNotNull(func);
             Assert.AreEqual("From Try block", func());
+        }
+
+        [Test]
+        public void Can_return_from_try_block_using_label_with_the_more_code_after_label()
+        {
+            var label = Label(typeof(void));
+            var result = Parameter(typeof(string), "s");
+
+            var expr = Lambda<Func<string>>(Block(
+                new[] { result },
+                TryCatch(
+                    // Block(
+                        // Assign(result, Constant("trying...")),
+                        Goto(label, Constant("From Try block"), typeof(string)),
+                    Catch(
+                        typeof(Exception),
+                        // Block(
+                            // Assign(result, Constant("catching..."))
+                        Goto(label, Constant("From Catch block"), typeof(string))
+                    )
+                ),
+                Label(label),
+                Assign(result, Constant("the end")),
+                result
+            ));
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("the end", fs());
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual("the end", ff());
         }
 
         [Test]

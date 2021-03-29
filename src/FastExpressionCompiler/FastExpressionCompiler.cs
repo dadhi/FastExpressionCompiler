@@ -61,6 +61,7 @@ namespace FastExpressionCompiler
     using System.Threading;
     using System.Text;
     using System.Runtime.CompilerServices;
+    using System.Diagnostics;
     using static System.Environment;
 
     /// <summary>The options for the compiler</summary>
@@ -535,13 +536,7 @@ namespace FastExpressionCompiler
         {
             public LabelTarget Target; // label target is the link between the goto and the label.
             public Label Label;
-            public bool HasLabel;
-            public LabelInfo(LabelTarget target, Label label = default, bool hasLabel = false) 
-            {
-                Target   = target;
-                Label    = label;
-                HasLabel = hasLabel;
-            }
+            public bool IsLabelDefined;
         }
 
         /// Track the info required to build a closure object + some context information not directly related to closure.
@@ -557,8 +552,24 @@ namespace FastExpressionCompiler
             /// Tracks the stack of blocks where are we in emit phase
             private LiveCountArray<BlockInfo> _blockStack;
 
-            /// Dictionary for the used Labels to Goto links
+            /// Dictionary for the links between Labels and Goto's
             private LabelInfo[] _labels;
+
+            public ref LabelInfo AddLabel()
+            {
+                if (_labels == null)
+                    _labels = new LabelInfo[1];
+                var count = _labels.Length;
+                if (count == 1)
+                    _labels = new LabelInfo[2] { _labels[0], default };
+                if (count == 2)
+                    _labels = new LabelInfo[3] { _labels[0], _labels[1], default };
+                
+                var labels = new LabelInfo[count + 1];
+                Array.Copy(_labels, 0, labels, 0, count);
+                _labels = labels;
+                return ref _labels[count];
+            }
 
             public ClosureStatus Status;
 
@@ -592,7 +603,7 @@ namespace FastExpressionCompiler
                 LastEmitIsAddress = false;
                 CurrentTryCatchFinallyIndex = -1;
                 _tryCatchFinallyInfos = null;
-                _labels = null; // todo: @perf Use LiveCountArray instead
+                _labels = null;
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
             }
 
@@ -667,29 +678,6 @@ namespace FastExpressionCompiler
                 }
             }
 
-            public void AddLabel(LabelTarget labelTarget)
-            {
-                if (labelTarget != null && GetLabelIndex(labelTarget) == -1)
-                {
-                    var labelInfo = new LabelInfo(labelTarget);
-                    _labels = _labels.WithLast(ref labelInfo);
-                }
-            }
-
-            public Label GetOrCreateLabel(LabelTarget labelTarget, ILGenerator il) =>
-                GetOrCreateLabel(GetLabelIndex(labelTarget), il);
-
-            public Label GetOrCreateLabel(int index, ILGenerator il)
-            {
-                ref var labelInfo = ref _labels[index];
-                if (!labelInfo.HasLabel)
-                {
-                    labelInfo.HasLabel = true;
-                    labelInfo.Label = il.DefineLabel();
-                }
-                return labelInfo.Label;
-            }
-
             public int GetLabelIndex(LabelTarget labelTarget)
             {
                 if (_labels != null)
@@ -698,6 +686,31 @@ namespace FastExpressionCompiler
                             return i;
                 return -1;
             }
+
+            public void AddLabel(LabelTarget labelTarget)
+            {
+                if (GetLabelIndex(labelTarget) == -1)
+                {
+                    ref var label = ref AddLabel();
+                    label.Target = labelTarget; 
+                }
+            }
+
+            public ref LabelInfo GetLabel(int index) => ref _labels[index]; 
+
+            public Label GetDefinedLabel(int index, ILGenerator il)
+            {
+                ref var labelInfo = ref _labels[index];
+                if (!labelInfo.IsLabelDefined)
+                {
+                    labelInfo.IsLabelDefined = true;
+                    labelInfo.Label = il.DefineLabel();
+                }
+                return labelInfo.Label;
+            }
+
+            public Label GetDefinedLabel(LabelTarget labelTarget, ILGenerator il) => 
+                GetDefinedLabel(GetLabelIndex(labelTarget), il);
 
             public void AddTryCatchFinallyInfo()
             {
@@ -2045,7 +2058,7 @@ namespace FastExpressionCompiler
                 il.MarkLabel(loopBodyLabel);
 
                 if (loopExpr.ContinueLabel != null)
-                    il.MarkLabel(closure.GetOrCreateLabel(loopExpr.ContinueLabel, il));
+                    il.MarkLabel(closure.GetDefinedLabel(loopExpr.ContinueLabel, il));
 
                 if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, setup, parent))
                     return false;
@@ -2054,7 +2067,7 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Br, loopBodyLabel);
 
                 if (loopExpr.BreakLabel != null)
-                    il.MarkLabel(closure.GetOrCreateLabel(loopExpr.BreakLabel, il));
+                    il.MarkLabel(closure.GetDefinedLabel(loopExpr.BreakLabel, il));
 
                 return true;
             }
@@ -2119,12 +2132,16 @@ namespace FastExpressionCompiler
                 if (index == -1)
                     return false; // should be found in first collecting constants round
 
-                if (closure.IsTryReturnLabel(index))
-                    return true; // label will be emitted by TryEmitTryCatchFinallyBlock
+                if (closure.IsTryReturnLabel(index)) 
+                {
+                    ref var li = ref closure.GetLabel(index);
+                    Debug.Assert(li.IsLabelDefined == false, "No label should be defined for the TryCatch");
+                    return true; // label will be emitted by the TryEmitTryCatchFinallyBlock
+                }
 
                 // define a new label or use the label provided by the preceding GoTo expression
                 // todo: @fixme Ensure that for each defined label it is placed once only - there's should not be two `labelFoo:`
-                il.MarkLabel(closure.GetOrCreateLabel(index, il));
+                il.MarkLabel(closure.GetDefinedLabel(index, il));
 
                 // todo: @check do we need to emit the default value if it is `default(T)` or not `null`,
                 // because it is likely to be emit by Return (GotoExpression.Value)
@@ -2156,7 +2173,7 @@ namespace FastExpressionCompiler
                     case GotoExpressionKind.Break:
                     case GotoExpressionKind.Continue:
                         // use label defined by Label expression or define its own to use by subsequent Label
-                        il.Emit(OpCodes.Br, closure.GetOrCreateLabel(index, il));
+                        il.Emit(OpCodes.Br, closure.GetDefinedLabel(index, il));
                         return true;
 
                     case GotoExpressionKind.Goto:
@@ -2164,24 +2181,17 @@ namespace FastExpressionCompiler
                             goto case GotoExpressionKind.Return;
 
                         // use label defined by Label expression or define its own to use by subsequent Label
-                        il.Emit(OpCodes.Br, closure.GetOrCreateLabel(index, il));
+                        il.Emit(OpCodes.Br, closure.GetDefinedLabel(index, il));
                         return true;
 
                     case GotoExpressionKind.Return:
 
-                        // check that we are inside the Try-Catch-Finally block
+                        // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
+                        // to emit the Leave instruction, return label and return result
                         if ((parent & ParentFlags.TryCatch) != 0)
-                        {
-                            // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
-                            // to emit the Leave instruction, return label and return result
                             closure.MarkReturnLabelIndex(index);
-                        }
-                        else
-                        {
-                            // use label defined by Label expression or define its own to use by subsequent Label
-                            il.Emit(OpCodes.Ret, closure.GetOrCreateLabel(index, il));
-                        }
-
+                        else // use label defined by Label expression or define its own to use by subsequent Label
+                            il.Emit(OpCodes.Ret, closure.GetDefinedLabel(index, il));
                         return true;
 
                     default:
@@ -5142,21 +5152,6 @@ namespace FastExpressionCompiler
 
         public static T[] Empty<T>() => EmptyArray<T>.Value;
 
-        public static T[] WithLast<T>(this T[] source, ref T value)
-        {
-            if (source == null || source.Length == 0)
-                return new[] { value };
-            if (source.Length == 1)
-                return new[] { source[0], value };
-            if (source.Length == 2)
-                return new[] { source[0], source[1], value };
-            var sourceLength = source.Length;
-            var result = new T[sourceLength + 1];
-            Array.Copy(source, 0, result, 0, sourceLength);
-            result[sourceLength] = value;
-            return result;
-        }
-
         public static Type[] GetParamTypes(IReadOnlyList<PE> paramExprs)
         {
             if (paramExprs == null)
@@ -6226,7 +6221,7 @@ namespace FastExpressionCompiler
                     var x = (TryExpression)e;
                     sb.Append("try");
                     sb.NewLine(lineIdent, identSpaces).Append('{');
-                    sb.NewLineIdentCs(x.Body, lineIdent, stripNamespace, printType, identSpaces);
+                    sb.NewLineIdentCs(x.Body, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
                     sb.NewLine(lineIdent, identSpaces).Append('}');
 
                     var handlers = x.Handlers;
@@ -6250,7 +6245,7 @@ namespace FastExpressionCompiler
                                 sb.NewLine(lineIdent, identSpaces).Append(')');
                             }
                             sb.NewLine(lineIdent, identSpaces).Append('{');
-                            sb.NewLineIdentCs(h.Body, lineIdent, stripNamespace, printType, identSpaces);
+                            sb.NewLineIdentCs(h.Body, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
                             sb.NewLine(lineIdent, identSpaces).Append('}');
                         }
                     }
@@ -6486,6 +6481,14 @@ namespace FastExpressionCompiler
                     return sb.Append(e.ToString()); // falling back ToString and hoping for the best 
                 }
             }
+        }
+
+        private static StringBuilder AddSemicolonIfFits(this StringBuilder sb)
+        {
+            var lastChar = sb[sb.Length - 1];
+            if (lastChar != ';' && lastChar != '}')
+                return sb.Append(";");
+            return sb;
         }
 
         private static string GetCSharpName(this MemberInfo m)
