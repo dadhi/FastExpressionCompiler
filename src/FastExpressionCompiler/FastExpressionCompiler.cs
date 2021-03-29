@@ -532,11 +532,13 @@ namespace FastExpressionCompiler
             ShouldBeStaticMethod = 1 << 3
         }
 
+        internal enum LabelState : byte { Undefined = 0, Defined = 1, Marked = 2 }
+
         internal struct LabelInfo 
         {
             public LabelTarget Target; // label target is the link between the goto and the label.
             public Label Label;
-            public bool IsLabelDefined;
+            public LabelState State;
         }
 
         /// Track the info required to build a closure object + some context information not directly related to closure.
@@ -552,24 +554,8 @@ namespace FastExpressionCompiler
             /// Tracks the stack of blocks where are we in emit phase
             private LiveCountArray<BlockInfo> _blockStack;
 
-            /// Dictionary for the links between Labels and Goto's
-            private LabelInfo[] _labels;
-
-            public ref LabelInfo AddLabel()
-            {
-                if (_labels == null)
-                    _labels = new LabelInfo[1];
-                var count = _labels.Length;
-                if (count == 1)
-                    _labels = new LabelInfo[2] { _labels[0], default };
-                if (count == 2)
-                    _labels = new LabelInfo[3] { _labels[0], _labels[1], default };
-                
-                var labels = new LabelInfo[count + 1];
-                Array.Copy(_labels, 0, labels, 0, count);
-                _labels = labels;
-                return ref _labels[count];
-            }
+            /// Map of the links between Labels and Goto's
+            private LiveCountArray<LabelInfo> _labels;
 
             public ClosureStatus Status;
 
@@ -603,7 +589,7 @@ namespace FastExpressionCompiler
                 LastEmitIsAddress = false;
                 CurrentTryCatchFinallyIndex = -1;
                 _tryCatchFinallyInfos = null;
-                _labels = null;
+                _labels     = new LiveCountArray<LabelInfo>(Tools.Empty<LabelInfo>());
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
             }
 
@@ -680,10 +666,11 @@ namespace FastExpressionCompiler
 
             public int GetLabelIndex(LabelTarget labelTarget)
             {
-                if (_labels != null)
-                    for (var i = 0; i < _labels.Length; ++i)
-                        if (_labels[i].Target == labelTarget)
-                            return i;
+                var count = _labels.Count;
+                var items = _labels.Items;
+                for (var i = 0; i < count; ++i)
+                    if (items[i].Target == labelTarget)
+                        return i;
                 return -1;
             }
 
@@ -691,27 +678,40 @@ namespace FastExpressionCompiler
             {
                 if (GetLabelIndex(labelTarget) == -1)
                 {
-                    ref var label = ref AddLabel();
-                    label.Target = labelTarget; 
+                    ref var label = ref _labels.PushSlot();
+                    label.Target = labelTarget;
                 }
             }
 
-            public ref LabelInfo GetLabel(int index) => ref _labels[index]; 
+            public ref LabelInfo GetLabel(int index) => ref _labels.Items[index]; 
 
             public Label GetDefinedLabel(int index, ILGenerator il)
             {
-                ref var labelInfo = ref _labels[index];
-                if (!labelInfo.IsLabelDefined)
+                ref var label = ref _labels.Items[index];
+                if (label.State == LabelState.Undefined)
                 {
-                    labelInfo.IsLabelDefined = true;
-                    labelInfo.Label = il.DefineLabel();
+                    label.State = LabelState.Defined;
+                    label.Label = il.DefineLabel();
                 }
-                return labelInfo.Label;
+                return label.Label;
             }
 
-            public Label GetDefinedLabel(LabelTarget labelTarget, ILGenerator il) => 
-                GetDefinedLabel(GetLabelIndex(labelTarget), il);
+            public void TryMarkDefinedLabel(int index, ILGenerator il)
+            {
+                ref var label = ref _labels.Items[index];
+                if (label.State == LabelState.Undefined)
+                {
+                    label.State = LabelState.Marked;
+                    il.MarkLabel(label.Label = il.DefineLabel());
 
+                }
+                else if (label.State == LabelState.Defined)
+                {
+                    label.State = LabelState.Marked;
+                    il.MarkLabel(label.Label);
+                }
+            } 
+                
             public void AddTryCatchFinallyInfo()
             {
                 ++CurrentTryCatchFinallyIndex;
@@ -1932,15 +1932,28 @@ namespace FastExpressionCompiler
                                         continue;
                                     
                                     // This is basically the return pattern (see #237), so we don't care for the rest of expressions
+                                    // Note (#300) the sentence above is slightly wrong because that may be a goto to this specific label, so we still need to print the label
                                     if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
-                                        statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target &&
-                                        gt.Value != null)
+                                        statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                     {
                                         // we are generating the return value and ensuring here that it is not popped-out
-                                        if (!TryEmit(gt.Value, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
+                                        if (gt.Value != null)
+                                        {
+                                            if (!TryEmit(gt.Value, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
+                                                return false;
+                                            il.Emit(OpCodes.Ret);
+                                        }
+
+                                        // We still need the label here (#300) if we jump from the other goto here
+                                        closure.TryMarkDefinedLabel(closure.GetLabelIndex(label.Target), il);
+
+                                        // todo: @check do we need to emit the default value if it is `default(T)` or not `null`,
+                                        // because it is likely to be emit by Return (GotoExpression.Value)
+                                        if (label.DefaultValue != null && 
+                                            !TryEmit(label.DefaultValue, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
                                             return false;
 
-                                        // todo: @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
+                                        // @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
                                         // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
                                         // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement), 
                                         // so we should avoid it on our side.
@@ -2058,7 +2071,7 @@ namespace FastExpressionCompiler
                 il.MarkLabel(loopBodyLabel);
 
                 if (loopExpr.ContinueLabel != null)
-                    il.MarkLabel(closure.GetDefinedLabel(loopExpr.ContinueLabel, il));
+                    closure.TryMarkDefinedLabel(closure.GetLabelIndex(loopExpr.ContinueLabel), il);
 
                 if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, setup, parent))
                     return false;
@@ -2067,7 +2080,7 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Br, loopBodyLabel);
 
                 if (loopExpr.BreakLabel != null)
-                    il.MarkLabel(closure.GetDefinedLabel(loopExpr.BreakLabel, il));
+                    closure.TryMarkDefinedLabel(closure.GetLabelIndex(loopExpr.BreakLabel), il);
 
                 return true;
             }
@@ -2133,18 +2146,11 @@ namespace FastExpressionCompiler
                     return false; // should be found in first collecting constants round
 
                 if (closure.IsTryReturnLabel(index)) 
-                {
-                    ref var li = ref closure.GetLabel(index);
-                    Debug.Assert(li.IsLabelDefined == false, "No label should be defined for the TryCatch");
                     return true; // label will be emitted by the TryEmitTryCatchFinallyBlock
-                }
 
                 // define a new label or use the label provided by the preceding GoTo expression
-                // todo: @fixme Ensure that for each defined label it is placed once only - there's should not be two `labelFoo:`
-                il.MarkLabel(closure.GetDefinedLabel(index, il));
+                closure.TryMarkDefinedLabel(index, il);
 
-                // todo: @check do we need to emit the default value if it is `default(T)` or not `null`,
-                // because it is likely to be emit by Return (GotoExpression.Value)
                 return expr.DefaultValue == null || TryEmit(expr.DefaultValue, paramExprs, il, ref closure, setup, parent);
             }
 
@@ -6510,7 +6516,7 @@ namespace FastExpressionCompiler
         private const string NotSupportedExpression = "// NOT_SUPPORTED_EXPRESSION: ";
 
         internal static  StringBuilder ToCSharpString(this LabelTarget lt, StringBuilder sb) =>
-            (lt.Name != null ? sb.Append(lt.Name) : sb.Append(lt.Type.ToCode(true, null)))
+            (lt.Name != null ? sb.Append(lt.Name) : sb.Append(lt.Type.ToCode(true, null).Replace('.', '_')))
                 .Append("__").Append(lt.GetHashCode()); // append the hash because often the label names in the block and sub-blocks are selected to be the same
 
         private static StringBuilder ToCSharpString(this IReadOnlyList<MemberBinding> bindings, StringBuilder sb,
@@ -6581,20 +6587,22 @@ namespace FastExpressionCompiler
                 var expr = exprs[i];
 
                 // this is basically the return pattern (see #237) so we don't care for the rest of the expressions
-                // Note the sentence above is wrong because the may be a goto to this specific label, so we still need to print the label
+                // Note (#300) the sentence above is slightly wrong because that may be a goto to this specific label, so we still need to print the label
                 if (expr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                     exprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                 {
                     sb.NewLineIdent(lineIdent);
-                    label.Target.ToCSharpString(sb).Append(':');
+                    if (gt.Value == null)
+                        sb.Append("return;");
+                    else 
+                        gt.Value.ToCSharpString(sb.Append("return "), lineIdent, stripNamespace, printType, identSpaces).Append(";");
 
                     sb.NewLineIdent(lineIdent);
-                    if (gt.Value == null)
-                        return b.Type == typeof(void) ? sb : sb.Append("return;");
-
-                    sb.Append("return ");
-                    return gt.Value.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces)
-                        .Append(";");
+                    label.Target.ToCSharpString(sb).Append(':');
+                    if (label.DefaultValue == null) 
+                        return sb.AppendLine(); // no return because we may have other expressions after label
+                    sb.NewLineIdent(lineIdent);
+                    return label.DefaultValue.ToCSharpString(sb.Append("return "), lineIdent, stripNamespace, printType, identSpaces).Append(";");
                 }
 
                 if (expr is BlockExpression bl)

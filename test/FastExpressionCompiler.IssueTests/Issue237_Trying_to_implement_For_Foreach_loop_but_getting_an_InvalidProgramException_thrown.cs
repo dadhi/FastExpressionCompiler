@@ -393,8 +393,12 @@ namespace FastExpressionCompiler.IssueTests
         {
             var returnTarget = Label(typeof(string));
             var returnLabel = Label(returnTarget, Constant(null, typeof(string)));
-            var returnFalse = Block(Return(returnTarget, Constant("false"), typeof(string)), returnLabel);
-            var returnTrue = Block(Return(returnTarget, Constant("true"), typeof(string)), returnLabel);
+            var returnTrue = Block(
+                Return(returnTarget, Constant("true"), typeof(string)), 
+                returnLabel);
+            var returnFalse = Block(
+                Return(returnTarget, Constant("false"), typeof(string)), 
+                returnLabel);
 
             var boolParam = Parameter(typeof(bool), "b");
 
@@ -404,6 +408,8 @@ namespace FastExpressionCompiler.IssueTests
                         returnTrue),
                     returnFalse),
                 boolParam);
+
+            expr.PrintCSharp();
 
             var fs = expr.CompileSys();
             fs.PrintIL("system compiled il");

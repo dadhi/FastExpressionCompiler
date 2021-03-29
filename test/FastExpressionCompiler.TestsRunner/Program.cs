@@ -11,8 +11,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
             // new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run();
-
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue293_Recursive_Methods().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue159_NumericConversions().Run();
@@ -199,6 +199,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue293_Recursive_Methods().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue293_Recursive_Methods().Run);
+
+                Run(new Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
