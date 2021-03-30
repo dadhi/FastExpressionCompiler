@@ -18,12 +18,161 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test1();
-            return 1;
+            Test_301();
+            // Test_300();
+            return 2;
+        }
+
+        // [Test]
+        public void Test_301()
+        {
+            var p = new ParameterExpression[6]; // the parameter expressions 
+            var e = new Expression[41]; // the unique expressions 
+            var l = new LabelTarget[2]; // the labels 
+            var expr = Lambda<Func<Address[], AddressDTO[]>>( // $
+                e[0]=Block(
+                    typeof(AddressDTO[]),
+                    new[] {
+                    p[0]=Parameter(typeof(AddressDTO[]), "result")
+                    },
+                    e[1]=Condition(
+                    e[2]=MakeBinary(ExpressionType.Equal,
+                        p[1]=Parameter(typeof(Address[])),
+                        e[3]=Constant(null, typeof(Address[]))),
+                    e[4]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                        l[0]=Label(typeof(AddressDTO[])),
+                        e[5]=Constant(null, typeof(AddressDTO[])),
+                        typeof(void)),
+                    e[6]=Empty(),
+                    typeof(void)), 
+                    e[7]=MakeBinary(ExpressionType.Assign,
+                    p[0 // (AddressDTO[] result)
+                        ],
+                    e[8]=NewArrayBounds(
+                        typeof(AddressDTO), 
+                        e[9]=ArrayLength(
+                        p[1 // (Address[] address_arr__14993092)
+                            ]))), 
+                    e[10]=Block(
+                    typeof(void),
+                    new[] {
+                    p[2]=Parameter(typeof(int), "v")
+                    },
+                    e[11]=MakeBinary(ExpressionType.Assign,
+                        p[2 // (int v)
+                        ],
+                        e[12]=Constant((int)0)), 
+                    e[13]=Block(
+                        typeof(void),
+                        new[] {
+                        p[3]=Parameter(typeof(int), "i"),
+                        p[4]=Parameter(typeof(int), "len")
+                        },
+                        e[14]=MakeBinary(ExpressionType.Assign,
+                        p[3 // (int i)
+                            ],
+                        e[15]=Constant((int)0)), 
+                        e[16]=MakeBinary(ExpressionType.Assign,
+                        p[4 // (int len)
+                            ],
+                        e[17]=ArrayLength(
+                            p[1 // (Address[] address_arr__14993092)
+                            ])), 
+                        e[18]=Loop(
+                        e[19]=Condition(
+                            e[20]=MakeBinary(ExpressionType.LessThan,
+                            p[3 // (int i)
+                                ],
+                            p[4 // (int len)
+                                ]),
+                            e[21]=Block(
+                            typeof(int),
+                            new[] {
+                            p[5]=Parameter(typeof(Address), "item")
+                            },
+                            e[22]=MakeBinary(ExpressionType.Assign,
+                                p[5 // (Address item)
+                                ],
+                                e[23]=MakeBinary(ExpressionType.ArrayIndex,
+                                p[1 // (Address[] address_arr__14993092)
+                                    ],
+                                p[3 // (int i)
+                                    ])), 
+                            e[24]=MakeBinary(ExpressionType.Assign,
+                                e[25]=ArrayAccess(
+                                p[0 // (AddressDTO[] result)
+                                    ], new Expression[] {
+                                e[26]=PostIncrementAssign(
+                                    p[2 // (int v)
+                                    ])}),
+                                e[27]=Condition(
+                                e[28]=MakeBinary(ExpressionType.Equal,
+                                    p[5 // (Address item)
+                                    ],
+                                    e[29]=Constant(null, typeof(Address))),
+                                e[30]=Constant(null, typeof(AddressDTO)),
+                                e[31]=MemberInit((NewExpression)(
+                                    e[32]=New( // 0 args
+                                    typeof(AddressDTO).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0])), 
+                                    Bind(
+                                    typeof(AddressDTO).GetTypeInfo().GetDeclaredProperty("Id"), 
+                                    e[33]=Property(
+                                        p[5 // (Address item)
+                                        ],
+                                        typeof(Address).GetTypeInfo().GetDeclaredProperty("Id"))), 
+                                    Bind(
+                                    typeof(AddressDTO).GetTypeInfo().GetDeclaredProperty("City"), 
+                                    e[34]=Property(
+                                        p[5 // (Address item)
+                                        ],
+                                        typeof(Address).GetTypeInfo().GetDeclaredProperty("City"))), 
+                                    Bind(
+                                    typeof(AddressDTO).GetTypeInfo().GetDeclaredProperty("Country"), 
+                                    e[35]=Property(
+                                        p[5 // (Address item)
+                                        ],
+                                        typeof(Address).GetTypeInfo().GetDeclaredProperty("Country")))),
+                                typeof(AddressDTO))), 
+                            e[36]=PostIncrementAssign(
+                                p[3 // (int i)
+                                ])),
+                            e[37]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Break,
+                            l[1]=Label(typeof(void), "LoopBreak"),
+                            null,
+                            typeof(void)),
+                            typeof(void)),
+                        l[1 // (LoopBreak)
+                        ]))), 
+                    e[38]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                    l[0 // (addressdto_arr__58328727)
+                    ],
+                    p[0 // (AddressDTO[] result)
+                        ],
+                    typeof(void)), 
+                    e[39]=Label(l[0 // (addressdto_arr__58328727)
+                    ],
+                    e[40]=Constant(null, typeof(AddressDTO[])))),
+                p[1 // (Address[] address_arr__14993092)
+                    ]);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var addresses = new Address[] { new Address() };
+
+            var res = fs(addresses);
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            var res2 = ff(addresses);
+
+            CollectionAssert.AreEqual(res, res2);
         }
 
         [Test]
-        public void Test1()
+        public void Test_300()
         {
             var p = new ParameterExpression[3]; // the parameter expressions 
             var e = new Expression[56]; // the unique expressions 
