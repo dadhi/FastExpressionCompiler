@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
-        <VersionPrefix>3.0.1</VersionPrefix>
+        <VersionPrefix>3.0.2</VersionPrefix>
         <VersionSuffix></VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
@@ -9,9 +9,16 @@
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.0.2 Bug-fix release
+
+- fixed:  #300 Bad label content in ILGenerator in the Mapster benchmark with FEC V3
+- fixed: Small issues with the `ToCSharpString()`, specifically in the TryCatch, and the Goto, and the Label expressions
+
+
 ## v3.0.1 Bug-fix release
 
 fixed: #298 LightExpression with the NewExpression of 4 arguments has ArgumentCount = 3
+
 
 ## v3.0.0 - Major feature release
 
