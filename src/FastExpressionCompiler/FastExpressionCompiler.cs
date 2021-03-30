@@ -6515,9 +6515,8 @@ namespace FastExpressionCompiler
 
         private const string NotSupportedExpression = "// NOT_SUPPORTED_EXPRESSION: ";
 
-        internal static  StringBuilder ToCSharpString(this LabelTarget lt, StringBuilder sb) =>
-            (lt.Name != null ? sb.Append(lt.Name) : sb.Append(lt.Type.ToCode(true, null).Replace('.', '_')))
-                .Append("__").Append(lt.GetHashCode()); // append the hash because often the label names in the block and sub-blocks are selected to be the same
+        internal static  StringBuilder ToCSharpString(this LabelTarget target, StringBuilder sb) =>
+            sb.AppendName(target.Name, target.Type, target);
 
         private static StringBuilder ToCSharpString(this IReadOnlyList<MemberBinding> bindings, StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4) 
