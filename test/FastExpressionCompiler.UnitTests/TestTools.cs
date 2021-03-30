@@ -54,34 +54,41 @@ namespace FastExpressionCompiler
             var secondLine = false;
             foreach (var il in ilReader)
             {
-                if (secondLine) 
-                    s.AppendLine();
-                else 
-                    secondLine = true;
-                
-                s.Append(il.Offset.ToString().PadRight(4, ' ')).Append(' ').Append(il.OpCode);
-                if (il is InlineFieldInstruction f)
-                    s.Append(' ').Append(f.Field.DeclaringType.Name).Append('.').Append(f.Field.Name);
-                else if (il is InlineMethodInstruction m)
-                    s.Append(' ').Append(m.Method.DeclaringType.Name).Append('.').Append(m.Method.Name);
-                else if (il is InlineTypeInstruction t)
-                    s.Append(' ').Append(t.Type.Name);
-                else if (il is InlineTokInstruction tok)
-                    s.Append(' ').Append(tok.Member.Name);
-                else if (il is InlineBrTargetInstruction br)
-                    s.Append(' ').Append(br.TargetOffset);
-                else if (il is ShortInlineBrTargetInstruction sbr)
-                    s.Append(' ').Append(sbr.TargetOffset);
-                else if (il is InlineStringInstruction si)
-                    s.Append(' ').Append(si.String);
-                else if (il is InlineIInstruction ii)
-                    s.Append(' ').Append(ii.Int32);
-                else if (il is ShortInlineIInstruction sii)
-                    s.Append(' ').Append(sii.Byte);
-                else if (il is InlineVarInstruction iv)
-                    s.Append(' ').Append(iv.Ordinal);
-                else if (il is ShortInlineVarInstruction siv)
-                    s.Append(' ').Append(siv.Ordinal);
+                try 
+                {
+                    if (secondLine) 
+                        s.AppendLine();
+                    else 
+                        secondLine = true;
+                    
+                    s.Append(il.Offset.ToString().PadRight(4, ' ')).Append(' ').Append(il.OpCode);
+                    if (il is InlineFieldInstruction f)
+                        s.Append(' ').Append(f.Field.DeclaringType.Name).Append('.').Append(f.Field.Name);
+                    else if (il is InlineMethodInstruction m)
+                        s.Append(' ').Append(m.Method.DeclaringType.Name).Append('.').Append(m.Method.Name);
+                    else if (il is InlineTypeInstruction t)
+                        s.Append(' ').Append(t.Type?.Name);
+                    else if (il is InlineTokInstruction tok)
+                        s.Append(' ').Append(tok.Member.Name);
+                    else if (il is InlineBrTargetInstruction br)
+                        s.Append(' ').Append(br.TargetOffset);
+                    else if (il is ShortInlineBrTargetInstruction sbr)
+                        s.Append(' ').Append(sbr.TargetOffset);
+                    else if (il is InlineStringInstruction si)
+                        s.Append(' ').Append(si.String);
+                    else if (il is InlineIInstruction ii)
+                        s.Append(' ').Append(ii.Int32);
+                    else if (il is ShortInlineIInstruction sii)
+                        s.Append(' ').Append(sii.Byte);
+                    else if (il is InlineVarInstruction iv)
+                        s.Append(' ').Append(iv.Ordinal);
+                    else if (il is ShortInlineVarInstruction siv)
+                        s.Append(' ').Append(siv.Ordinal);
+                }
+                catch (Exception ex)
+                {
+                    s.AppendLine().AppendLine("EXCEPTION_IN_IL_PRINT: " + ex.Message).AppendLine();
+                }
             }
 
             return s;

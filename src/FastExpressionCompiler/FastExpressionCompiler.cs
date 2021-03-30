@@ -1781,10 +1781,7 @@ namespace FastExpressionCompiler
                             if (!TryEmit(((UnaryExpression)expr).Operand, paramExprs, il, ref closure, setup, parent))
                                 return false;
                             if ((parent & ParentFlags.IgnoreResult) == 0)
-                            {
                                 il.Emit(OpCodes.Ldlen);
-                                il.Emit(OpCodes.Conv_I4);
-                            }
                             return true;
 
                         case ExpressionType.Constant:

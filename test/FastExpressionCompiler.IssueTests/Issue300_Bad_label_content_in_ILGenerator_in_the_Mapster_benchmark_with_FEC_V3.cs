@@ -18,8 +18,8 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_301();
-            // Test_300();
+            // Test_301();
+            Test_300();
             return 2;
         }
 
