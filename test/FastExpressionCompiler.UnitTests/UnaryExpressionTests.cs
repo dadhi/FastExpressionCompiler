@@ -40,6 +40,9 @@ namespace FastExpressionCompiler.UnitTests
             ArrayParameterByRef_PostIncrementAssign_works();
             ArrayItemRefParameter_PostIncrementAssign_works();
 
+            ArrayOfStructParameter_MemberPostDecrementAssign_works();
+            ArrayOfStructParameter_MemberPreDecrementAssign_works();
+
             PreDecrementAssign_compiles();
             PreIncrementAssign_compiles();
             Throw_compiles();
@@ -47,7 +50,7 @@ namespace FastExpressionCompiler.UnitTests
             UnaryPlus_compiles();
             Unbox_compiles();
 
-            return 25;
+            return 27;
         }
 
         [Test]
@@ -334,6 +337,70 @@ namespace FastExpressionCompiler.UnitTests
             ff.PrintIL();
             Assert.AreEqual(34, fs(arr, 1));
             Assert.AreEqual(35, arr[1]);
+        }
+
+        struct X { public int N; public string S; }
+
+        [Test]
+        public void ArrayOfStructParameter_MemberPostDecrementAssign_works()
+        {
+            var a = Parameter(typeof(X[]), "a");
+            var i = Parameter(typeof(int), "i");
+            var expression = Lambda<Func<X[], int, int>>(
+                PostDecrementAssign(Field(ArrayAccess(a, i), nameof(X.N))),
+                a, i);
+
+            expression.PrintCSharp();
+
+            var f = (Func<X[], int, int>)((
+                UnaryExpressionTests.X[] a, int i) => //$
+                (a[i].N--));
+
+            var arr = new X[] { new X { N = 42 }, new X { N = 33 } };
+            Assert.AreEqual(33, f(arr, 1));
+            Assert.AreEqual(32, arr[1].N);
+
+            var fs = expression.CompileSys();
+            fs.PrintIL();
+
+            Assert.AreEqual(32, fs(arr, 1));
+            Assert.AreEqual(32, arr[1].N); // It should be 31, No? - The System Expression is wrong, what??
+
+            var ff = expression.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(32, ff(arr, 1));
+            Assert.AreEqual(31, arr[1].N);
+        }
+
+        [Test]
+        public void ArrayOfStructParameter_MemberPreDecrementAssign_works()
+        {
+            var a = Parameter(typeof(X[]), "a");
+            var i = Parameter(typeof(int), "i");
+            var expression = Lambda<Func<X[], int, int>>(
+                PreDecrementAssign(Field(ArrayAccess(a, i), nameof(X.N))),
+                a, i);
+
+            expression.PrintCSharp();
+
+            var f = (Func<X[], int, int>)((
+                UnaryExpressionTests.X[] a, int i) => //$
+                (--a[i].N));
+
+            var arr = new X[] { new X { N = 42 }, new X { N = 33 } };
+            Assert.AreEqual(32, f(arr, 1));
+            Assert.AreEqual(32, arr[1].N);
+
+            var fs = expression.CompileSys();
+            fs.PrintIL();
+
+            Assert.AreEqual(31, fs(arr, 1));
+            Assert.AreEqual(32, arr[1].N); // It should be 31, No? - The System Expression is wrong, what??
+
+            var ff = expression.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(31, ff(arr, 1));
+            Assert.AreEqual(31, arr[1].N);
         }
 
         delegate int FuncArrByRef(ref int[] a, int i);

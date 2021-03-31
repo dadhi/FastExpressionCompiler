@@ -6113,9 +6113,9 @@ namespace FastExpressionCompiler
                     var x = (LambdaExpression)e;
                     // The result should be something like this (taken from the #237)
                     //
-                    // `(DeserializerDlg<Word>)(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...})`
+                    // `(DeserializerDlg<Word>)((ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...})`
                     // 
-                    sb.Append('(').Append(e.Type.ToCode(stripNamespace, printType)).Append(")(");
+                    sb.Append('(').Append(e.Type.ToCode(stripNamespace, printType)).Append(")((");
                     var count = x.Parameters.Count;
                     if (count > 0)
                     {
@@ -6153,7 +6153,7 @@ namespace FastExpressionCompiler
 
                         sb.NewLine(lineIdent, identSpaces).Append("})");
                     }
-                    return sb;
+                    return sb.Append(')');
                 }
                 case ExpressionType.Invoke:
                 {
