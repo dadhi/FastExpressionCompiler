@@ -3508,86 +3508,48 @@ namespace FastExpressionCompiler
                 else
                     return false;
 
-                switch (expr.NodeType)
+                var resultVar = il.GetNextLocalVarIndex(expr.Type);
+                if (expr.NodeType == ExpressionType.PostIncrementAssign || expr.NodeType == ExpressionType.PostDecrementAssign)
+                    EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+
+                il.Emit(OpCodes.Ldc_I4_1);
+                
+                if (expr.NodeType == ExpressionType.PostIncrementAssign || expr.NodeType == ExpressionType.PreIncrementAssign)
+                    il.Emit(OpCodes.Add);
+                else
+                    il.Emit(OpCodes.Sub);
+
+                if (expr.NodeType == ExpressionType.PreIncrementAssign || expr.NodeType == ExpressionType.PreDecrementAssign)
+                    EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+
+                if (memberAccess != null)
                 {
-                    case ExpressionType.PreIncrementAssign:
-                    case ExpressionType.PostIncrementAssign:
-                    case ExpressionType.PreDecrementAssign:
-                    case ExpressionType.PostDecrementAssign:
-                        var resultVar = il.GetNextLocalVarIndex(expr.Type);
-                        if (expr.NodeType == ExpressionType.PostIncrementAssign || expr.NodeType == ExpressionType.PostDecrementAssign)
-                            EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
-
-                        il.Emit(OpCodes.Ldc_I4_1);
-                        
-                        if (expr.NodeType == ExpressionType.PostIncrementAssign || expr.NodeType == ExpressionType.PreIncrementAssign)
-                            il.Emit(OpCodes.Add);
-                        else
-                            il.Emit(OpCodes.Sub);
-
-                        if (expr.NodeType == ExpressionType.PreIncrementAssign || expr.NodeType == ExpressionType.PreDecrementAssign)
-                            EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
-
-                        if (memberAccess != null)
-                        {
-                            if (!EmitMemberAssign(il, memberAccess.Member))
-                                return false;
-                        }
-                        else if (paramIndex != -1)
-                        {
-                            if (((ParameterExpression)operandExpr).IsByRef)
-                            {
-                                var incrementedVar = il.GetNextLocalVarIndex(expr.Type);
-                                EmitStoreLocalVariable(il, incrementedVar);
-                                EmitLoadArg(il, paramIndex + 1);
-                                EmitLoadLocalVariable(il, incrementedVar);
-                                EmitStoreByRefValueType(il, expr.Type);
-                            }
-                            else
-                                il.Emit(OpCodes.Starg_S, paramIndex + 1);
-                        }
-                        else if (operandExpr is IndexExpression ie) 
-                        {
-                            if (!TryEmitIndexAssign(ie, ie.Object?.Type, expr.Type, il))
-                                return false;
-                        }
-                        else
-                            EmitStoreLocalVariable(il, localVarIndex); // store incremented value into the local value;
-                        
-                        if (usesResult)
-                            EmitLoadLocalVariable(il, resultVar); // load the original non-incremented value
-                        
-                        return true; // todo: @wip member assign
-
-                    // case ExpressionType.PreDecrementAssign:
-                    //     il.Emit(OpCodes.Ldc_I4_1);
-                    //     il.Emit(OpCodes.Sub);
-                    //     StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
-                    //     break;
-
-                    // case ExpressionType.PostDecrementAssign:
-                    //     StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
-                    //     il.Emit(OpCodes.Ldc_I4_1);
-                    //     il.Emit(OpCodes.Sub);
-                    //     break;
+                    if (!EmitMemberAssign(il, memberAccess.Member))
+                        return false;
                 }
-
-                if (isParameterOrVariable && paramIndex != -1)
-                    il.Emit(OpCodes.Starg_S, paramIndex + 1);
-                else if (isParameterOrVariable || useLocalVar && !usesResult) 
-                    EmitStoreLocalVariable(il, localVarIndex);
-
-                if (isParameterOrVariable)
-                    return true;
-
-                if (useLocalVar && !usesResult)
-                    EmitLoadLocalVariable(il, localVarIndex);
-
-                if (!EmitMemberAssign(il, memberAccess.Member))
-                    return false;
-
-                if (useLocalVar && usesResult)
-                    EmitLoadLocalVariable(il, localVarIndex);
+                else if (paramIndex != -1)
+                {
+                    if (((ParameterExpression)operandExpr).IsByRef)
+                    {
+                        var incrementedVar = il.GetNextLocalVarIndex(expr.Type);
+                        EmitStoreLocalVariable(il, incrementedVar);
+                        EmitLoadArg(il, paramIndex + 1);
+                        EmitLoadLocalVariable(il, incrementedVar);
+                        EmitStoreByRefValueType(il, expr.Type);
+                    }
+                    else
+                        il.Emit(OpCodes.Starg_S, paramIndex + 1);
+                }
+                else if (operandExpr is IndexExpression ie) 
+                {
+                    if (!TryEmitIndexAssign(ie, ie.Object?.Type, expr.Type, il))
+                        return false;
+                }
+                else
+                    EmitStoreLocalVariable(il, localVarIndex); // store incremented value into the local value;
+                
+                if (usesResult)
+                    EmitLoadLocalVariable(il, resultVar); // load the original non-incremented value
 
                 return true;
             }
