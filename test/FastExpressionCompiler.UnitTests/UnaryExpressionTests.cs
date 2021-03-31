@@ -33,7 +33,12 @@ namespace FastExpressionCompiler.UnitTests
             Binary_Not_compiles();
             OnesComplement_compiles();
             PostDecrementAssign_compiles();
-            PostIncrementAssign_compiles();
+
+            Parameter_PostIncrementAssign_compiles();
+            RefParameter_PostIncrementAssign_works();
+            ArrayItemParameter_PostIncrementAssign_works();
+            ArrayItemParameterByRef_PostIncrementAssign_works();
+
             PreDecrementAssign_compiles();
             PreIncrementAssign_compiles();
             Throw_compiles();
@@ -41,9 +46,8 @@ namespace FastExpressionCompiler.UnitTests
             UnaryPlus_compiles();
             Unbox_compiles();
 
-            return 21;
+            return 24;
         }
-
 
         [Test]
         public void ArrayLength_compiles()
@@ -242,16 +246,97 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void PostIncrementAssign_compiles()
+        public void Parameter_PostIncrementAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
             var expression = Lambda<Func<int, int>>(
                 PostIncrementAssign(param),
                 param);
 
-            var f = expression.CompileFast(true);
+            expression.PrintCSharp();
 
-            Assert.AreEqual(2, f(2));
+            var fs = expression.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual(2, fs(2));
+
+            var ff = expression.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(2, ff(2));
+        }
+
+        delegate int FuncByRef(ref int n);
+
+        [Test]
+        public void RefParameter_PostIncrementAssign_works()
+        {
+            var param = Parameter(typeof(int).MakeByRefType(), "i");
+            var expression = Lambda<FuncByRef>(
+                PostIncrementAssign(param),
+                param);
+
+            expression.PrintCSharp();
+
+            var fs = expression.CompileSys();
+            fs.PrintIL();
+            var n = 2;
+            Assert.AreEqual(2, fs(ref n));
+            Assert.AreEqual(3, n);
+
+            var ff = expression.CompileFast(true);
+            ff.PrintIL();
+            n = 3;
+            Assert.AreEqual(3, ff(ref n));
+            Assert.AreEqual(4, n);
+        }
+
+        [Test]
+        public void ArrayItemParameter_PostIncrementAssign_works()
+        {
+            var a = Parameter(typeof(int[]), "a");
+            var i = Parameter(typeof(int),   "i");
+            var expression = Lambda<Func<int[], int, int>>(
+                PostIncrementAssign(ArrayAccess(a, i)),
+                a, i);
+
+            expression.PrintCSharp();
+
+            var fs = expression.CompileSys();
+            fs.PrintIL();
+
+            var arr = new int[] { 42, 33 };
+            Assert.AreEqual(33, fs(arr, 1));
+            Assert.AreEqual(34, arr[1]);
+
+            var ff = expression.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(34, fs(arr, 1));
+            Assert.AreEqual(35, arr[1]);
+        }
+
+        delegate int FuncArrByRef(ref int[] a, int i);
+
+        [Test]
+        public void ArrayItemParameterByRef_PostIncrementAssign_works()
+        {
+            var a = Parameter(typeof(int[]).MakeByRefType(), "a");
+            var i = Parameter(typeof(int), "i");
+            var expression = Lambda<FuncArrByRef>(
+                PostIncrementAssign(ArrayAccess(a, i)),
+                a, i);
+
+            expression.PrintCSharp();
+
+            var fs = expression.CompileSys();
+            fs.PrintIL();
+
+            var arr = new int[] { 42, 33 };
+            Assert.AreEqual(33, fs(ref arr, 1));
+            Assert.AreEqual(34, arr[1]);
+
+            var ff = expression.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(34, fs(ref arr, 1));
+            Assert.AreEqual(35, arr[1]);
         }
 
         [Test]

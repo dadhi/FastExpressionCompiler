@@ -145,13 +145,20 @@ namespace FastExpressionCompiler.IssueTests
                 ),
                 p);
 
-            var del = lambda.CompileFast(true);
+            lambda.PrintCSharp();
 
-            Assert.IsNotNull(del);
+            var fs = lambda.CompileSys();
+            fs.PrintIL();
 
             var expectedValue = CounterProperty + 1;
-            del.Invoke(this);
+            fs.Invoke(this);
+            Assert.AreEqual(expectedValue, CounterProperty);
 
+            var ff = lambda.CompileFast(true);
+            ff.PrintIL();
+
+            expectedValue = CounterProperty + 1;
+            ff.Invoke(this);
             Assert.AreEqual(expectedValue, CounterProperty);
         }
 

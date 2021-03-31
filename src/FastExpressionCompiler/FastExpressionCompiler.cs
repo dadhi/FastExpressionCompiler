@@ -1773,7 +1773,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.ArrayIndex:
                             var arrIndexExpr = (BinaryExpression)expr;
-                            return TryEmit(arrIndexExpr.Left,  paramExprs, il, ref closure, setup, parent) 
+                            return TryEmit(arrIndexExpr.Left,  paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess) 
                                 && TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess) // #265
                                 && TryEmitArrayIndex(expr.Type, il, parent, ref closure);
 
@@ -1993,7 +1993,7 @@ namespace FastExpressionCompiler
                             return true;
 
                         case ExpressionType.Index:
-                            return TryEmitIndex((IndexExpression)expr, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitIndex((IndexExpression)expr, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess);
 
                         case ExpressionType.Goto:
                             return TryEmitGoto((GotoExpression)expr, paramExprs, il, ref closure, setup, parent);
@@ -2426,7 +2426,7 @@ namespace FastExpressionCompiler
                         else 
                         {
                             if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
-                                (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce)) != 0)
+                                (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce | ParentFlags.IndexAccess)) != 0)
                             il.Emit(OpCodes.Ldind_Ref);
                         }
                     }
@@ -3463,15 +3463,16 @@ namespace FastExpressionCompiler
 #endif
                 var operandExpr = expr.Operand;
                 
-                MemberExpression memberAccess;
+                MemberExpression memberAccess = null;
                 var useLocalVar = false;
-                int localVarIndex, paramIndex = -1;
+                var localVarIndex = -1;
+                var paramIndex = -1;
 
                 var isParameterOrVariable = operandExpr.NodeType == ExpressionType.Parameter;
                 var usesResult = (parent & ParentFlags.IgnoreResult) == 0;
-                if (isParameterOrVariable)
+                if (operandExpr is ParameterExpression p)
                 {
-                    localVarIndex = closure.GetDefinedLocalVarOrDefault((ParameterExpression)operandExpr);
+                    localVarIndex = closure.GetDefinedLocalVarOrDefault(p);
                     if (localVarIndex != -1)
                     {
                         EmitLoadLocalVariable(il, localVarIndex);
@@ -3480,15 +3481,14 @@ namespace FastExpressionCompiler
                     else
                     {
                         paramIndex = paramExprCount - 1;
-                        while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), operandExpr))
+                        while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), p))
                             --paramIndex;
                         if (paramIndex == -1)
                             return false;
                         il.Emit(OpCodes.Ldarg, paramIndex + 1);
+                        if (p.IsByRef) // todo: @unclear don't need to check for the value type because increment/decrement don't work for the reference type
+                            EmitValueTypeDereference(il, p.Type);
                     }
-
-                    memberAccess = null;
-
                 }
                 else if (operandExpr.NodeType == ExpressionType.MemberAccess)
                 {
@@ -3499,6 +3499,11 @@ namespace FastExpressionCompiler
 
                     useLocalVar = memberAccess.Expression != null && (usesResult || memberAccess.Member is PropertyInfo);
                     localVarIndex = useLocalVar ? il.GetNextLocalVarIndex(operandExpr.Type) : -1;
+                }
+                else if (operandExpr.NodeType == ExpressionType.Index)
+                {
+                    if (!TryEmit(operandExpr, paramExprs, il, ref closure, setup, parent))
+                        return false;
                 }
                 else
                     return false;
@@ -3512,10 +3517,41 @@ namespace FastExpressionCompiler
                         break;
 
                     case ExpressionType.PostIncrementAssign:
-                        StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
+                        var nonIncrementedVar = il.GetNextLocalVarIndex(expr.Type);
+                        EmitStoreAndLoadLocalVariable(il, nonIncrementedVar); // save the non-incremented value for the later further use
+                        // StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
+
                         il.Emit(OpCodes.Ldc_I4_1);
                         il.Emit(OpCodes.Add);
-                        break;
+
+                        if (memberAccess != null)
+                        {
+                            if (!EmitMemberAssign(il, memberAccess.Member))
+                                return false;
+                        }
+                        else if (paramIndex != -1)
+                        {
+                            if (((ParameterExpression)operandExpr).IsByRef)
+                            {
+                                var incrementedVar = il.GetNextLocalVarIndex(expr.Type);
+                                EmitStoreLocalVariable(il, incrementedVar);
+                                EmitLoadArg(il, paramIndex + 1);
+                                EmitLoadLocalVariable(il, incrementedVar);
+                                EmitStoreByRefValueType(il, expr.Type);
+                            }
+                            else
+                                il.Emit(OpCodes.Starg_S, paramIndex + 1);
+                        }
+                        else if (operandExpr is IndexExpression ie) 
+                        {
+                            if (!TryEmitIndexAssign(ie, ie.Object?.Type, expr.Type, il))
+                                return false;
+                        }
+                        else
+                            EmitStoreLocalVariable(il, localVarIndex); // store incremented value into the local value;
+                        if (usesResult)
+                            EmitLoadLocalVariable(il, nonIncrementedVar); // load the original non-incremented value
+                        return true; // todo: @wip member assign
 
                     case ExpressionType.PreDecrementAssign:
                         il.Emit(OpCodes.Ldc_I4_1);
@@ -3672,7 +3708,7 @@ namespace FastExpressionCompiler
                                 il.Emit(OpCodes.Dup); // duplicate value to assign and return
 
                             if (leftParamExpr.IsByRef)
-                                EmitByRefStore(il, leftParamExpr.Type);
+                                EmitStoreByRefValueType(il, leftParamExpr.Type);
                             else
                                 il.Emit(OpCodes.Starg_S, paramIndex);
 
@@ -3833,7 +3869,8 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static void EmitByRefStore(ILGenerator il, Type type)
+            // todo: @fix check that it is applied only for the ValueType
+            private static void EmitStoreByRefValueType(ILGenerator il, Type type)
             {
                 if (type == typeof(int) || type == typeof(uint))
                     il.Emit(OpCodes.Stind_I4);
@@ -4966,7 +5003,7 @@ namespace FastExpressionCompiler
             {
                 if (location == 0)
                     il.Emit(OpCodes.Stloc_0);
-                else if (location == 1) // todo: @perf make this a first branch because often the 0 location is occupied by stored closure array field
+                else if (location == 1)
                     il.Emit(OpCodes.Stloc_1);
                 else if (location == 2)
                     il.Emit(OpCodes.Stloc_2);
@@ -4976,6 +5013,40 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stloc_S, (byte)location);
                 else
                     il.Emit(OpCodes.Stloc, location);
+            }
+
+            private static void EmitStoreAndLoadLocalVariable(ILGenerator il, int location)
+            {
+                if (location == 0)
+                {
+                    il.Emit(OpCodes.Stloc_0);
+                    il.Emit(OpCodes.Ldloc_0);
+                }
+                else if (location == 1)
+                {
+                    il.Emit(OpCodes.Stloc_1);
+                    il.Emit(OpCodes.Ldloc_1);
+                }
+                else if (location == 2)
+                {
+                    il.Emit(OpCodes.Stloc_2);
+                    il.Emit(OpCodes.Ldloc_2);
+                }
+                else if (location == 3)
+                {
+                    il.Emit(OpCodes.Stloc_3);
+                    il.Emit(OpCodes.Ldloc_3);
+                }
+                else if (location < 256)
+                {
+                    il.Emit(OpCodes.Stloc_S, (byte)location);
+                    il.Emit(OpCodes.Ldloc_S, (byte)location);
+                }
+                else
+                {
+                    il.Emit(OpCodes.Stloc, location);
+                    il.Emit(OpCodes.Ldloc, location);
+                }
             }
 
             private static int EmitStoreLocalVariableAndLoadItsAddress(ILGenerator il, Type type)
@@ -5013,6 +5084,20 @@ namespace FastExpressionCompiler
                 }
 
                 return varIndex;
+            }
+
+            private static void EmitLoadArg(ILGenerator il, int paramIndex)
+            {
+                if (paramIndex == 0)
+                    il.Emit(OpCodes.Ldarg_0);
+                else if (paramIndex == 1)
+                    il.Emit(OpCodes.Ldarg_1);
+                else if (paramIndex == 2)
+                    il.Emit(OpCodes.Ldarg_2);
+                else if (paramIndex == 3)
+                    il.Emit(OpCodes.Ldarg_3);
+                else
+                    il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
             }
         }
     }
@@ -5714,7 +5799,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.Lambda:
                 {
                     var x = (LambdaExpression)e;
-                    sb.Append("Lambda( // $"); // bookmark for the lambdas - $ means the cost of the lambda, specifically nested lambda
+                    sb.Append("Lambda( //$"); // bookmark for the lambdas - $ means the cost of the lambda, specifically nested lambda
                     sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType).Append(',');
                     sb.NewLineIdentExpr(x.Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
                     sb.NewLineIdentArgumentExprs(x.Parameters, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
