@@ -3510,22 +3510,22 @@ namespace FastExpressionCompiler
 
                 switch (expr.NodeType)
                 {
-                    // case ExpressionType.PreIncrementAssign:
-                    //     il.Emit(OpCodes.Ldc_I4_1);
-                    //     il.Emit(OpCodes.Add);
-                    //     StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
-                    //     break;
-
                     case ExpressionType.PreIncrementAssign:
                     case ExpressionType.PostIncrementAssign:
+                    case ExpressionType.PreDecrementAssign:
+                    case ExpressionType.PostDecrementAssign:
                         var resultVar = il.GetNextLocalVarIndex(expr.Type);
-                        if (expr.NodeType == ExpressionType.PostIncrementAssign)
+                        if (expr.NodeType == ExpressionType.PostIncrementAssign || expr.NodeType == ExpressionType.PostDecrementAssign)
                             EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
 
                         il.Emit(OpCodes.Ldc_I4_1);
-                        il.Emit(OpCodes.Add);
+                        
+                        if (expr.NodeType == ExpressionType.PostIncrementAssign || expr.NodeType == ExpressionType.PreIncrementAssign)
+                            il.Emit(OpCodes.Add);
+                        else
+                            il.Emit(OpCodes.Sub);
 
-                        if (expr.NodeType == ExpressionType.PreIncrementAssign)
+                        if (expr.NodeType == ExpressionType.PreIncrementAssign || expr.NodeType == ExpressionType.PreDecrementAssign)
                             EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
 
                         if (memberAccess != null)
@@ -3559,17 +3559,17 @@ namespace FastExpressionCompiler
                         
                         return true; // todo: @wip member assign
 
-                    case ExpressionType.PreDecrementAssign:
-                        il.Emit(OpCodes.Ldc_I4_1);
-                        il.Emit(OpCodes.Sub);
-                        StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
-                        break;
+                    // case ExpressionType.PreDecrementAssign:
+                    //     il.Emit(OpCodes.Ldc_I4_1);
+                    //     il.Emit(OpCodes.Sub);
+                    //     StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
+                    //     break;
 
-                    case ExpressionType.PostDecrementAssign:
-                        StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
-                        il.Emit(OpCodes.Ldc_I4_1);
-                        il.Emit(OpCodes.Sub);
-                        break;
+                    // case ExpressionType.PostDecrementAssign:
+                    //     StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
+                    //     il.Emit(OpCodes.Ldc_I4_1);
+                    //     il.Emit(OpCodes.Sub);
+                    //     break;
                 }
 
                 if (isParameterOrVariable && paramIndex != -1)
