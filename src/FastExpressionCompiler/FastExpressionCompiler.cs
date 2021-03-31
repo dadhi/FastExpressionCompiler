@@ -1868,7 +1868,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.PreIncrementAssign:
                         case ExpressionType.PostDecrementAssign:
                         case ExpressionType.PreDecrementAssign:
-                            return TryEmitIncDecAssign((UnaryExpression)expr, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitIncDecAssign((UnaryExpression)expr, expr.NodeType, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.AddAssign: 
                         case ExpressionType.AddAssignChecked:
@@ -3451,33 +3451,28 @@ namespace FastExpressionCompiler
             }
 
 #if LIGHT_EXPRESSION
-            private static bool TryEmitIncDecAssign(UnaryExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure, 
+            private static bool TryEmitIncDecAssign(UnaryExpression expr, ExpressionType nodeType, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure, 
                 CompilerFlags setup, ParentFlags parent)
             {
-                var paramExprCount = paramExprs.ParameterCount;
 #else
-            private static bool TryEmitIncDecAssign(UnaryExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure, 
+            private static bool TryEmitIncDecAssign(UnaryExpression expr, ExpressionType nodeType, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure, 
                 CompilerFlags setup, ParentFlags parent)
             {
-                var paramExprCount = paramExprs.Count;
 #endif
                 var operandExpr = expr.Operand;
-                
-                MemberExpression memberAccess = null;
-                var useLocalVar = false;
-                var localVarIndex = -1;
-                var paramIndex = -1;
+                var resultVar = il.GetNextLocalVarIndex(expr.Type); // todo: @perf here is the opportunity to reuse the variable because is only needed in the local scope 
 
-                var isParameterOrVariable = operandExpr.NodeType == ExpressionType.Parameter;
-                var usesResult = (parent & ParentFlags.IgnoreResult) == 0;
                 if (operandExpr is ParameterExpression p)
                 {
-                    localVarIndex = closure.GetDefinedLocalVarOrDefault(p);
+#if LIGHT_EXPRESSION
+                    var paramExprCount = paramExprs.ParameterCount;
+#else
+                    var paramExprCount = paramExprs.Count;
+#endif
+                    var paramIndex = -1;
+                    var localVarIndex = closure.GetDefinedLocalVarOrDefault(p);
                     if (localVarIndex != -1)
-                    {
                         EmitLoadLocalVariable(il, localVarIndex);
-                        useLocalVar = true;
-                    }
                     else
                     {
                         paramIndex = paramExprCount - 1;
@@ -3486,50 +3481,20 @@ namespace FastExpressionCompiler
                         if (paramIndex == -1)
                             return false;
                         il.Emit(OpCodes.Ldarg, paramIndex + 1);
-                        if (p.IsByRef) // todo: @unclear don't need to check for the value type because increment/decrement don't work for the reference type
+                        if (p.IsByRef)
                             EmitValueTypeDereference(il, p.Type);
                     }
-                }
-                else if (operandExpr.NodeType == ExpressionType.MemberAccess)
-                {
-                    memberAccess = (MemberExpression)operandExpr;
 
-                    if (!TryEmitMemberAccess(memberAccess, paramExprs, il, ref closure, setup, parent | ParentFlags.DupMemberOwner))
-                        return false;
+                    if (nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Emit(nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PreIncrementAssign ? OpCodes.Add : OpCodes.Sub);
+                    if (nodeType == ExpressionType.PreIncrementAssign || nodeType == ExpressionType.PreDecrementAssign)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
 
-                    useLocalVar = memberAccess.Expression != null && (usesResult || memberAccess.Member is PropertyInfo);
-                    localVarIndex = useLocalVar ? il.GetNextLocalVarIndex(operandExpr.Type) : -1;
-                }
-                else if (operandExpr.NodeType == ExpressionType.Index)
-                {
-                    if (!TryEmit(operandExpr, paramExprs, il, ref closure, setup, parent))
-                        return false;
-                }
-                else
-                    return false;
-
-                var resultVar = il.GetNextLocalVarIndex(expr.Type);
-                if (expr.NodeType == ExpressionType.PostIncrementAssign || expr.NodeType == ExpressionType.PostDecrementAssign)
-                    EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
-
-                il.Emit(OpCodes.Ldc_I4_1);
-                
-                if (expr.NodeType == ExpressionType.PostIncrementAssign || expr.NodeType == ExpressionType.PreIncrementAssign)
-                    il.Emit(OpCodes.Add);
-                else
-                    il.Emit(OpCodes.Sub);
-
-                if (expr.NodeType == ExpressionType.PreIncrementAssign || expr.NodeType == ExpressionType.PreDecrementAssign)
-                    EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
-
-                if (memberAccess != null)
-                {
-                    if (!EmitMemberAssign(il, memberAccess.Member))
-                        return false;
-                }
-                else if (paramIndex != -1)
-                {
-                    if (((ParameterExpression)operandExpr).IsByRef)
+                    if (localVarIndex != -1)
+                        EmitStoreLocalVariable(il, localVarIndex); // store incremented value into the local value;
+                    else if (p.IsByRef)
                     {
                         var incrementedVar = il.GetNextLocalVarIndex(expr.Type);
                         EmitStoreLocalVariable(il, incrementedVar);
@@ -3540,32 +3505,42 @@ namespace FastExpressionCompiler
                     else
                         il.Emit(OpCodes.Starg_S, paramIndex + 1);
                 }
-                else if (operandExpr is IndexExpression ie) 
+                else if (operandExpr is MemberExpression m)
                 {
-                    if (!TryEmitIndexAssign(ie, ie.Object?.Type, expr.Type, il))
+                    if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, parent | ParentFlags.DupMemberOwner))
+                        return false;
+
+                    if (nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Emit(nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PreIncrementAssign ? OpCodes.Add : OpCodes.Sub);
+                    if (nodeType == ExpressionType.PreIncrementAssign || nodeType == ExpressionType.PreDecrementAssign)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+
+                    if (!EmitMemberAssign(il, m.Member))
+                        return false;
+                }
+                else if (operandExpr is IndexExpression i)
+                {
+                    if (!TryEmitIndex(i, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess))
+                        return false;
+
+                    if (nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Emit(nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PreIncrementAssign ? OpCodes.Add : OpCodes.Sub);
+                    if (nodeType == ExpressionType.PreIncrementAssign || nodeType == ExpressionType.PreDecrementAssign)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+
+                    if (!TryEmitIndexAssign(i, i.Object?.Type, expr.Type, il))
                         return false;
                 }
                 else
-                    EmitStoreLocalVariable(il, localVarIndex); // store incremented value into the local value;
-                
-                if (usesResult)
-                    EmitLoadLocalVariable(il, resultVar); // load the original non-incremented value
+                    return false; // not_supported_expression
 
+                if ((parent & ParentFlags.IgnoreResult) == 0)
+                    EmitLoadLocalVariable(il, resultVar); // todo: @perf here is the opportunity to reuse the variable because is only needed in the local scope
                 return true;
-            }
-
-            private static void StoreIncDecValue(ILGenerator il, bool usesResult, bool isVar, int localVarIndex)
-            {
-                if (!usesResult)
-                    return;
-
-                if (isVar || localVarIndex == -1)
-                    il.Emit(OpCodes.Dup);
-                else
-                {
-                    EmitStoreLocalVariable(il, localVarIndex);
-                    EmitLoadLocalVariable(il, localVarIndex);
-                }
             }
 
 #if LIGHT_EXPRESSION
