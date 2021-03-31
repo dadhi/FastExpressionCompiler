@@ -33,11 +33,12 @@ namespace FastExpressionCompiler.UnitTests
             Binary_Not_compiles();
             OnesComplement_compiles();
             PostDecrementAssign_compiles();
-
             Parameter_PostIncrementAssign_compiles();
+
             RefParameter_PostIncrementAssign_works();
-            ArrayItemParameter_PostIncrementAssign_works();
-            ArrayItemParameterByRef_PostIncrementAssign_works();
+            ArrayParameter_PostIncrementAssign_works();
+            ArrayParameterByRef_PostIncrementAssign_works();
+            ArrayItemRefParameter_PostIncrementAssign_works();
 
             PreDecrementAssign_compiles();
             PreIncrementAssign_compiles();
@@ -46,7 +47,7 @@ namespace FastExpressionCompiler.UnitTests
             UnaryPlus_compiles();
             Unbox_compiles();
 
-            return 24;
+            return 25;
         }
 
         [Test]
@@ -290,7 +291,29 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void ArrayItemParameter_PostIncrementAssign_works()
+        public void ArrayItemRefParameter_PostIncrementAssign_works()
+        {
+            var param = Parameter(typeof(int).MakeByRefType(), "i");
+            var expression = Lambda<FuncByRef>(
+                PostIncrementAssign(param),
+                param);
+
+            expression.PrintCSharp();
+
+            var fs = expression.CompileSys();
+            fs.PrintIL();
+            var arr = new[] { 42, 33 };
+            Assert.AreEqual(33, fs(ref arr[1]));
+            Assert.AreEqual(34, arr[1]);
+
+            var ff = expression.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(34, ff(ref arr[1]));
+            Assert.AreEqual(35, arr[1]);
+        }
+
+        [Test]
+        public void ArrayParameter_PostIncrementAssign_works()
         {
             var a = Parameter(typeof(int[]), "a");
             var i = Parameter(typeof(int),   "i");
@@ -316,7 +339,7 @@ namespace FastExpressionCompiler.UnitTests
         delegate int FuncArrByRef(ref int[] a, int i);
 
         [Test]
-        public void ArrayItemParameterByRef_PostIncrementAssign_works()
+        public void ArrayParameterByRef_PostIncrementAssign_works()
         {
             var a = Parameter(typeof(int[]).MakeByRefType(), "a");
             var i = Parameter(typeof(int), "i");

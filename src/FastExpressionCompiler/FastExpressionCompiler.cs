@@ -3510,19 +3510,23 @@ namespace FastExpressionCompiler
 
                 switch (expr.NodeType)
                 {
+                    // case ExpressionType.PreIncrementAssign:
+                    //     il.Emit(OpCodes.Ldc_I4_1);
+                    //     il.Emit(OpCodes.Add);
+                    //     StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
+                    //     break;
+
                     case ExpressionType.PreIncrementAssign:
-                        il.Emit(OpCodes.Ldc_I4_1);
-                        il.Emit(OpCodes.Add);
-                        StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
-                        break;
-
                     case ExpressionType.PostIncrementAssign:
-                        var nonIncrementedVar = il.GetNextLocalVarIndex(expr.Type);
-                        EmitStoreAndLoadLocalVariable(il, nonIncrementedVar); // save the non-incremented value for the later further use
-                        // StoreIncDecValue(il, usesResult, isParameterOrVariable, localVarIndex);
+                        var resultVar = il.GetNextLocalVarIndex(expr.Type);
+                        if (expr.NodeType == ExpressionType.PostIncrementAssign)
+                            EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
 
                         il.Emit(OpCodes.Ldc_I4_1);
                         il.Emit(OpCodes.Add);
+
+                        if (expr.NodeType == ExpressionType.PreIncrementAssign)
+                            EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
 
                         if (memberAccess != null)
                         {
@@ -3549,8 +3553,10 @@ namespace FastExpressionCompiler
                         }
                         else
                             EmitStoreLocalVariable(il, localVarIndex); // store incremented value into the local value;
+                        
                         if (usesResult)
-                            EmitLoadLocalVariable(il, nonIncrementedVar); // load the original non-incremented value
+                            EmitLoadLocalVariable(il, resultVar); // load the original non-incremented value
+                        
                         return true; // todo: @wip member assign
 
                     case ExpressionType.PreDecrementAssign:
