@@ -16,7 +16,7 @@
 [Apex.Serialization]: https://github.com/dbolin/Apex.Serialization
 [MapsterMapper]: https://github.com/MapsterMapper/Mapster 
 
-[![latest release notes](https://img.shields.io/badge/latest%20release%20notes-v3.0.2-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/v3.0.2)
+[![latest release notes](https://img.shields.io/badge/latest%20release%20notes-v3.0.3-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/v3.0.3)
 [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 
 Targets .NET Standard 2.0, 2.1 and .NET 4.5  
@@ -53,82 +53,6 @@ __Note:__ The actual performance may vary depending on the multiple factors:
 platform, how complex is expression, does it have a closure, does it contain nested lambdas, etc.
 
 In addition, the memory consumption taken by the compilation will be much smaller (check the `Allocated` column in the [benchmarks](#benchmarks) below).
-
-
-## Difference between FastExpressionCompiler and FastExpressionCompiler.LightExpression
-
-FastExpressionCompiler
-
-- Provides the `CompileFast` extension methods for the `System.Linq.Expressions.LambdaExpression`.
-
-FastExpressionCompiler.LightExpression
-
-- Provides the `CompileFast` extension methods for `FastExpressionCompiler.LightExpression.LambdaExpression`.
-- Provides the drop-in expression replacement with the less consumed memory and the faster construction at the cost of the less validation.
-- Includes its own `ExpressionVisitor`.
-- Supports `ToExpression` method to convert back to the `System.Linq.Expressions.Expression`.
-
-Both FastExpressionCompiler and FastExpressionCompiler.LightExpression
-
-- Support `ToCSharpString()` method to output the compile-able C# code represented by expression.
-- Support `ToExpressionString()` method to output the expression construction C# code, so given the expression object you'll get e.g. `Expression.Lambda(Expression.New(...))`.
-
-
-## Who's using it
-
-[Marten], [Rebus], [StructureMap], [Lamar], [ExpressionToCodeLib], [NServiceBus], [MapsterMapper]
-
-Considering: [Moq], [LINQ to DB], [Apex.Serialization]
-
-
-## How to use
-
-Install from the NuGet and add the `using FastExpressionCompiler;` and replace the call to the `.Compile()` with the `.CompileFast()` extension method.
-
-__Note:__ `CompileFast` has an optional parameter `bool ifFastFailedReturnNull = false` to disable fallback to `Compile`.
-
-### Examples
-
-Hoisted lambda expression (created by the C# Compiler):
-
-```cs
-var a = new A(); var b = new B();
-Expression<Func<X>> expr = () => new X(a, b);
-
-var getX = expr.CompileFast();
-var x = getX();
-```
-
-Manually composed lambda expression:
-
-```cs
-var a = new A();
-var bParamExpr = Expression.Parameter(typeof(B), "b");
-var expr = Expression.Lambda(
-    Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
-        Expression.Constant(a, typeof(A)), bParamExpr),
-    bParamExpr);
-
-var getX = expr.CompileFast();
-var x = getX(new B());
-```
-
-__Note:__ You may simplify Expression usage and enable faster refactoring with the C# `using static` statement:
-
-```cs
-using static System.Linq.Expressions.Expression;
-// or
-// using static FastExpressionCompiler.LightExpression.Expression;
-
-var a = new A();
-var bParamExpr = Parameter(typeof(B), "b");
-var expr = Lambda(
-    New(typeof(X).GetTypeInfo().DeclaredConstructors.First(), Constant(a, typeof(A)), bParamExpr),
-    bParamExpr);
-
-var x = expr.CompileFast()(new B());
-```
-
 
 ## Benchmarks
 
@@ -260,6 +184,81 @@ Creating and compiling:
 |          CreateExpression_and_Compile | 244.61 us | 4.700 us | 6.111 us | 17.92 |    0.50 | 1.7090 | 0.7324 |      - |    7.2 KB |
 |      CreateExpression_and_CompileFast |  17.69 us | 0.350 us | 0.443 us |  1.31 |    0.04 | 1.8005 | 0.8850 | 0.0305 |   7.36 KB |
 | CreateLightExpression_and_CompileFast |  13.50 us | 0.152 us | 0.143 us |  1.00 |    0.00 | 1.5869 | 0.7935 | 0.0305 |   6.58 KB |
+
+
+## Difference between FastExpressionCompiler and FastExpressionCompiler.LightExpression
+
+FastExpressionCompiler
+
+- Provides the `CompileFast` extension methods for the `System.Linq.Expressions.LambdaExpression`.
+
+FastExpressionCompiler.LightExpression
+
+- Provides the `CompileFast` extension methods for `FastExpressionCompiler.LightExpression.LambdaExpression`.
+- Provides the drop-in expression replacement with the less consumed memory and the faster construction at the cost of the less validation.
+- Includes its own `ExpressionVisitor`.
+- Supports `ToExpression` method to convert back to the `System.Linq.Expressions.Expression`.
+
+Both FastExpressionCompiler and FastExpressionCompiler.LightExpression
+
+- Support `ToCSharpString()` method to output the compile-able C# code represented by expression.
+- Support `ToExpressionString()` method to output the expression construction C# code, so given the expression object you'll get e.g. `Expression.Lambda(Expression.New(...))`.
+
+
+## Who's using it
+
+[Marten], [Rebus], [StructureMap], [Lamar], [ExpressionToCodeLib], [NServiceBus], [MapsterMapper]
+
+Considering: [Moq], [LINQ to DB], [Apex.Serialization]
+
+
+## How to use
+
+Install from the NuGet and add the `using FastExpressionCompiler;` and replace the call to the `.Compile()` with the `.CompileFast()` extension method.
+
+__Note:__ `CompileFast` has an optional parameter `bool ifFastFailedReturnNull = false` to disable fallback to `Compile`.
+
+### Examples
+
+Hoisted lambda expression (created by the C# Compiler):
+
+```cs
+var a = new A(); var b = new B();
+Expression<Func<X>> expr = () => new X(a, b);
+
+var getX = expr.CompileFast();
+var x = getX();
+```
+
+Manually composed lambda expression:
+
+```cs
+var a = new A();
+var bParamExpr = Expression.Parameter(typeof(B), "b");
+var expr = Expression.Lambda(
+    Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
+        Expression.Constant(a, typeof(A)), bParamExpr),
+    bParamExpr);
+
+var getX = expr.CompileFast();
+var x = getX(new B());
+```
+
+__Note:__ You may simplify Expression usage and enable faster refactoring with the C# `using static` statement:
+
+```cs
+using static System.Linq.Expressions.Expression;
+// or
+// using static FastExpressionCompiler.LightExpression.Expression;
+
+var a = new A();
+var bParamExpr = Parameter(typeof(B), "b");
+var expr = Lambda(
+    New(typeof(X).GetTypeInfo().DeclaredConstructors.First(), Constant(a, typeof(A)), bParamExpr),
+    bParamExpr);
+
+var x = expr.CompileFast()(new B());
+```
 
 
 ## How it works

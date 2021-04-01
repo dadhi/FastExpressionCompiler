@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
 
-        <VersionPrefix>3.0.2</VersionPrefix>
+        <VersionPrefix>3.0.3</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -12,6 +12,12 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.0.3 Bug-fix release
+
+- fixed: #301 InvalidOperationException in the Mapster
+- fixed: small bugs in the Lambda ToCSharpString output
+
+
 ## v3.0.2 Bug-fix release
 
 - fixed:  #300 Bad label content in ILGenerator in the Mapster benchmark with FEC V3

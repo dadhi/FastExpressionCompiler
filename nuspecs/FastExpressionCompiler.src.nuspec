@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.src</id>
-        <version>3.0.2</version>
+        <version>3.0.3</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2021 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,6 +12,12 @@
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <icon>logo.png</icon>
         <releaseNotes><![CDATA[
+## v3.0.3 Bug-fix release
+
+- fixed: #301 InvalidOperationException in the Mapster
+- fixed: small bugs in the Lambda ToCSharpString output
+
+
 ## v3.0.2 Bug-fix release
 
 - fixed:  #300 Bad label content in ILGenerator in the Mapster benchmark with FEC V3
