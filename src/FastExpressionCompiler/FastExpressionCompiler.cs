@@ -2194,7 +2194,11 @@ namespace FastExpressionCompiler
                         if ((parent & ParentFlags.TryCatch) != 0)
                             closure.MarkReturnLabelIndex(index);
                         else // use label defined by Label expression or define its own to use by subsequent Label
-                            il.Emit(OpCodes.Ret, closure.GetDefinedLabel(index, il));
+                        {
+                            // todo: @unclear in case Goto.Value is null, we may need to check the default value in the target LabelExpression 
+                            // and then do Br to the Label (where the DefaultValue is loaded on stack) instead of just Ret.
+                            il.Emit(OpCodes.Ret); // see #301 (#300) that we will get an invalid program if forget an additional return value on stack
+                        }
                         return true;
 
                     default:
@@ -4801,7 +4805,13 @@ namespace FastExpressionCompiler
                 var labelIfFalse = il.DefineLabel();
                 if (testExpr.NodeType == ExpressionType.Equal    && useBrFalseOrTrue == 0 ||
                     testExpr.NodeType == ExpressionType.NotEqual && useBrFalseOrTrue == 1)
+                {
+                    // todo: @perf incomplete:
+                    // try to recognize the pattern like in #301(300) `if (b == null) { goto return_label; }` 
+                    // and instead of generating two branches e.g. Brtrue to else branch and Br or Ret to the end of the body,
+                    // let's generate a single one e.g. Brfalse to return.
                     il.Emit(OpCodes.Brtrue, labelIfFalse);
+                }
                 else
                     il.Emit(OpCodes.Brfalse, labelIfFalse);
 

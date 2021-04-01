@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Test_301();
+            Test_301();
             Test_300();
             return 2;
         }
@@ -52,7 +52,8 @@ namespace FastExpressionCompiler.IssueTests
                         typeof(AddressDTO), 
                         e[9]=ArrayLength(
                         p[1 // (Address[] address_arr__14993092)
-                            ]))), 
+                            ]//=Parameter(typeof(Address[]))
+                            ))), 
                     e[10]=Block(
                     typeof(void),
                     new[] {
@@ -145,7 +146,8 @@ namespace FastExpressionCompiler.IssueTests
                         ]))), 
                     e[38]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
                     l[0 // (addressdto_arr__58328727)
-                    ],
+                    ]//=Label(typeof(AddressDTO[]))
+                    ,
                     p[0 // (AddressDTO[] result)
                         ],
                     typeof(void)), 
@@ -373,6 +375,9 @@ namespace FastExpressionCompiler.IssueTests
             public int Id { get; set; }
             public string City { get; set; }
             public string Country { get; set; }
+
+            public override bool Equals(object obj) => 
+                obj is AddressDTO a && a.Id == Id && a.City == City && a.Country == Country;
         }
 
         public class Customer
