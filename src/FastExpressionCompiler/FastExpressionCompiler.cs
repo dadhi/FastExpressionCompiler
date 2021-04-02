@@ -1338,8 +1338,13 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Block:
                         var blockExpr = (BlockExpression)expr;
+#if LIGHT_EXPRESSION
+                        var blockExprs = (IArgumentProvider)blockExpr;
+                        var blockExprCount = blockExpr.ArgumentCount;
+#else
                         var blockExprs = blockExpr.Expressions;
                         var blockExprCount = blockExprs.Count;
+#endif
                         if (blockExprCount == 0)
                             return true; // yeah, this is the real case
 
@@ -1351,10 +1356,10 @@ namespace FastExpressionCompiler
                             closure.PushBlockWithVars(varExprs);
 
                         for (var i = 0; i < blockExprCount - 1; i++)
-                            if (!TryCollectBoundConstants(ref closure, blockExprs[i], paramExprs, isNestedLambda, ref rootClosure, flags))
+                            if (!TryCollectBoundConstants(ref closure, blockExprs.GetArgument(i), paramExprs, isNestedLambda, ref rootClosure, flags))
                                 return false;
 
-                        expr = blockExprs[blockExprCount - 1];
+                        expr = blockExprs.GetArgument(blockExprCount - 1);
                         if (varExprCount == 0) // in case of no variables we can collect the last exp without recursion
                             continue;
 
@@ -1897,25 +1902,30 @@ namespace FastExpressionCompiler
                             else if (blockVarCount > 1)
                                 closure.PushBlockAndConstructLocalVars(blockVarExprs, il);
 
-                            var statementExprs = blockExpr.Expressions; // Trim the expressions after the Throw - #196
+#if LIGHT_EXPRESSION
+                            var statementExprs = (IArgumentProvider)blockExpr;
+                            var statementCount = statementExprs.ArgumentCount;
+#else
+                            var statementExprs = blockExpr.Expressions;
                             var statementCount = statementExprs.Count;
-                            if (statementCount == 0)
+#endif
+                           if (statementCount == 0)
                                 return true; // yeah, it is a valid thing
 
-                            expr = statementExprs[statementCount - 1]; // The last (result) statement in block will provide the result
+                            expr = statementExprs.GetArgument(statementCount - 1); // The last (result) statement in block will provide the result
 
                             // Try to trim the statements up to the Throw (if any)
                             if (statementCount > 1)
                             {
                                 var throwIndex = statementCount - 1;
-                                while (throwIndex != -1 && statementExprs[throwIndex].NodeType != ExpressionType.Throw)
+                                while (throwIndex != -1 && statementExprs.GetArgument(throwIndex).NodeType != ExpressionType.Throw)
                                     --throwIndex;
 
                                 // If we have a Throw and it is not the last one
                                 if (throwIndex != -1 && throwIndex != statementCount - 1)
                                 {
                                     // Change the Throw return type to match the one for the Block, and adjust the statement count
-                                    expr = Expression.Throw(((UnaryExpression)statementExprs[throwIndex]).Operand, blockExpr.Type);
+                                    expr = Expression.Throw(((UnaryExpression)statementExprs.GetArgument(throwIndex)).Operand, blockExpr.Type);
                                     statementCount = throwIndex + 1;
                                 }
                             }
@@ -1924,14 +1934,14 @@ namespace FastExpressionCompiler
                             if (statementCount > 1)
                                 for (var i = 0; i < statementCount - 1; i++)
                                 {
-                                    var stExpr = statementExprs[i];
+                                    var stExpr = statementExprs.GetArgument(i);
                                     if (stExpr.NodeType == ExpressionType.Default && stExpr.Type == typeof(void))
                                         continue;
                                     
                                     // This is basically the return pattern (see #237), so we don't care for the rest of expressions
                                     // Note (#300) the sentence above is slightly wrong because that may be a goto to this specific label, so we still need to print the label
                                     if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
-                                        statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
+                                        statementExprs.GetArgument(i + 1) is LabelExpression label && label.Target == gt.Target)
                                     {
                                         // we are generating the return value and ensuring here that it is not popped-out
                                         if (gt.Value != null)

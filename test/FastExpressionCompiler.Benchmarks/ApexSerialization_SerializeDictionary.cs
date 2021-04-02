@@ -26,6 +26,20 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 | CompileFast |  36.76 us | 0.691 us | 1.363 us |  1.00 |    0.00 | 1.8311 | 0.9155 | 0.0610 |   7.66 KB |
 |  CompileSys | 508.56 us | 6.580 us | 5.833 us | 13.96 |    0.59 | 6.8359 | 2.9297 |      - |  29.76 KB |
 
+## V3.0.3 + Block.ArgumentProvider
+
+BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
+Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+.NET Core SDK=5.0.201
+  [Host]     : .NET Core 3.1.13 (CoreCLR 4.700.21.11102, CoreFX 4.700.21.11602), X64 RyuJIT
+  DefaultJob : .NET Core 3.1.13 (CoreCLR 4.700.21.11102, CoreFX 4.700.21.11602), X64 RyuJIT
+
+
+|      Method |      Mean |    Error |    StdDev |    Median | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------ |----------:|---------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+| CompileFast |  33.83 us | 0.658 us |  1.063 us |  34.05 us |  1.00 |    0.00 | 1.2817 | 0.6104 | 0.0610 |   8.05 KB |
+|  CompileSys | 441.87 us | 8.580 us | 20.558 us | 434.85 us | 13.35 |    0.90 | 3.9063 | 1.9531 |      - |   29.9 KB |
+
 */
         [MemoryDiagnoser]
         public class Compile

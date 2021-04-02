@@ -231,9 +231,13 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitBlock(BlockExpression node)
         {
             // the order of the visiting is important
-            var expressions = Visit(node.Expressions);
+#if LIGHT_EXPRESSION
+            var expressions = VisitArguments((IArgumentProvider)node);
+#else
+            var expressions = VisitArguments(node.Expressions);
+#endif
             var variables = VisitAndConvert(node.Variables);
-            if (ReferenceEquals(expressions, node.Expressions) && ReferenceEquals(variables, node.Variables))
+            if (expressions == null && ReferenceEquals(variables, node.Variables))
                 return node;
             return Expression.MakeBlock(node.Type, variables, expressions);
         }
@@ -289,13 +293,14 @@ namespace FastExpressionCompiler.LightExpression
 
         protected internal virtual Expression VisitLambda(LambdaExpression node)
         {
+            // the order of visiting is important
             var body = Visit(node.Body);
 #if LIGHT_EXPRESSION
             var parameters = VisitAndConvertParameters((IParameterProvider)node);
 #else
             var parameters = VisitAndConvertArguments(node.Bindings, VisitAndConvert);
 #endif
-            if (body == node.Body && parameters == null)
+            if (parameters == null && body == node.Body)
                 return node;
             return Expression.Lambda(node.Type, body, parameters, node.ReturnType); 
         }
