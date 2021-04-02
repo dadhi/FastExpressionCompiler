@@ -3484,7 +3484,9 @@ namespace FastExpressionCompiler
                             --paramIndex;
                         if (paramIndex == -1)
                             return false;
-                        il.Emit(OpCodes.Ldarg, paramIndex + 1);
+                        if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
+                            ++paramIndex;
+                        il.Emit(OpCodes.Ldarg, paramIndex);
                         if (p.IsByRef)
                             EmitValueTypeDereference(il, p.Type);
                     }
@@ -3502,12 +3504,12 @@ namespace FastExpressionCompiler
                     {
                         var incrementedVar = il.GetNextLocalVarIndex(expr.Type);
                         EmitStoreLocalVariable(il, incrementedVar);
-                        EmitLoadArg(il, paramIndex + 1);
+                        EmitLoadArg(il, paramIndex);
                         EmitLoadLocalVariable(il, incrementedVar);
                         EmitStoreByRefValueType(il, expr.Type);
                     }
                     else
-                        il.Emit(OpCodes.Starg_S, paramIndex + 1);
+                        il.Emit(OpCodes.Starg_S, paramIndex);
                 }
                 else if (operandExpr is MemberExpression m)
                 {
