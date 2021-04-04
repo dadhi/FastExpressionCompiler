@@ -207,6 +207,20 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 |                 Create_n_CompileFast |  21.11 us | 0.365 us | 0.341 us |  1.59 |    0.03 | 1.4038 | 0.7019 | 0.0305 |   5.81 KB |
 | Create_n_CompileFast_LightExpression |  13.26 us | 0.185 us | 0.164 us |  1.00 |    0.00 | 1.0529 | 0.5188 | 0.0458 |   4.34 KB |
 
+## V3.0.3 + block of 3
+
+BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
+Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+.NET Core SDK=5.0.201
+  [Host]     : .NET Core 3.1.13 (CoreCLR 4.700.21.11102, CoreFX 4.700.21.11602), X64 RyuJIT
+  DefaultJob : .NET Core 3.1.13 (CoreCLR 4.700.21.11102, CoreFX 4.700.21.11602), X64 RyuJIT
+
+
+|                               Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                     Create_n_Compile | 253.49 us | 5.051 us | 7.561 us | 19.21 |    0.76 | 1.9531 | 0.9766 |      - |  13.34 KB |
+|                 Create_n_CompileFast |  20.58 us | 0.344 us | 0.305 us |  1.59 |    0.03 | 0.9155 | 0.4272 |      - |   5.97 KB |
+| Create_n_CompileFast_LightExpression |  12.94 us | 0.211 us | 0.165 us |  1.00 |    0.00 | 0.7477 | 0.3662 | 0.0305 |   4.59 KB |
 */
         [MemoryDiagnoser]
         public class Create_and_Compile
@@ -289,7 +303,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
                         Block(typeof(Dest), new[] { typeMapDestVar },
                             Assign(
                                 typeMapDestVar,
-                                Coalesce(destParam, New(typeof(Dest).GetTypeInfo().DeclaredConstructors.First()))),
+                                Coalesce(destParam, New(typeof(Dest).GetConstructors()[0]))),
                             TryCatch(
                                 /* Assign src.Value */
                                 Block(typeof(void), new[] { resolvedValueVar },
@@ -297,13 +311,13 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
                                         Assign(resolvedValueVar,
                                             Condition(Or(Equal(srcParam, Constant(null)), Constant(false)),
                                                 Default(typeof(int)),
-                                                Property(srcParam, "Value"))
+                                                Property(srcParam, "Value"))//srcParam.Type.GetProperty("Value")))
                                         ),
                                         Assign(Property(typeMapDestVar, "Value"), resolvedValueVar)
                                     )
                                 ),
                                 Catch(exceptionVar,
-                                    Throw(New(typeof(AutoMapperException).GetTypeInfo().DeclaredConstructors.First(),
+                                    Throw(New(typeof(AutoMapperException).GetConstructors()[0],
                                         Constant("Error mapping types."),
                                         exceptionVar))) // should skip this, cause does no make sense after the throw
                             ),
@@ -332,7 +346,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
                         L.Block(typeof(Dest), new[] { typeMapDestVar },
                             L.Assign(
                                 typeMapDestVar,
-                                L.Coalesce(destParam, L.New(typeof(Dest).GetTypeInfo().DeclaredConstructors.First()))),
+                                L.Coalesce(destParam, L.New(typeof(Dest).GetConstructors()[0]))),
                             L.TryCatch(
                                 /* Assign src.Value */
                                 L.Block(new[] { resolvedValueVar },
@@ -347,7 +361,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
                                 ),
                                 L.Catch(exceptionVar,
                                     L.Throw(
-                                        L.New(typeof(AutoMapperException).GetTypeInfo().DeclaredConstructors.First(),
+                                        L.New(typeof(AutoMapperException).GetConstructors()[0],
                                             L.Constant("Error mapping types."),
                                             exceptionVar),
                                         typeof(int))) // should skip this, cause does no make sense after the throw

@@ -1229,9 +1229,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public static BlockExpression Block(Expression expr0) => new NoVariablesOneExpressionBlockExpression(expr0);
         public static BlockExpression Block(Expression expr0, Expression expr1) => new NoVariablesTwoExpressionsBlockExpression(expr0, expr1);
-
-        public static BlockExpression Block(Expression expr0, Expression expr1, Expression expr2) =>
-            new NoVariablesManyExpressionsBlockExpression(new[] { expr0, expr1, expr2 });
+        public static BlockExpression Block(Expression expr0, Expression expr1, Expression expr2) => new NoVariablesThreeExpressionsBlockExpression(expr0, expr1, expr2);
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
             new ManyExpressionsBlockExpression(variables.AsReadOnlyList(), expressions);
@@ -1242,27 +1240,39 @@ namespace FastExpressionCompiler.LightExpression
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1) =>
             new TwoExpressionsBlockExpression(variables.AsReadOnlyList(), expr0, expr1);
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, 
-            Expression expr0, Expression expr1, Expression expr2) =>
-            new ManyExpressionsBlockExpression(variables.AsReadOnlyList(), new[] { expr0, expr1, expr2 });
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1, Expression expr2) =>
+            new ThreeExpressionsBlockExpression(variables.AsReadOnlyList(), expr0, expr1, expr2);
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
             new ManyExpressionsBlockExpression(variables.AsReadOnlyList(), expressions.AsReadOnlyList());
 
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
-            new TypedManyExpressionsBlockExpression(type, variables.AsReadOnlyList(), expressions);
+            type == expressions[expressions.Length - 1].Type 
+                ? new ManyExpressionsBlockExpression(variables.AsReadOnlyList(), expressions)
+                : new TypedManyExpressionsBlockExpression(type, variables.AsReadOnlyList(), expressions);
 
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0) =>
-            new TypedOneExpressionBlockExpression(type, variables.AsReadOnlyList(), expr0);
+            type == expr0.Type 
+                ? new OneExpressionBlockExpression(variables.AsReadOnlyList(), expr0)
+                : new TypedOneExpressionBlockExpression(type, variables.AsReadOnlyList(), expr0);
 
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1) =>
-            new TypedTwoExpressionsBlockExpression(type, variables.AsReadOnlyList(), expr0, expr1);
+            type == expr1.Type 
+                ? new TwoExpressionsBlockExpression(variables.AsReadOnlyList(), expr0, expr1)
+                : new TypedTwoExpressionsBlockExpression(type, variables.AsReadOnlyList(), expr0, expr1);
 
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1, Expression expr2) =>
-            new TypedManyExpressionsBlockExpression(type, variables.AsReadOnlyList(), new[] { expr0, expr1, expr2 });
+            type == expr2.Type 
+                ? new ThreeExpressionsBlockExpression(variables.AsReadOnlyList(), expr0, expr1, expr2)
+                : new TypedThreeExpressionsBlockExpression(type, variables.AsReadOnlyList(), expr0, expr1, expr2);
 
-        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
-            new TypedManyExpressionsBlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions)
+        {
+            var es = expressions.AsReadOnlyList();
+            return type == es[es.Count - 1].Type
+                ? new ManyExpressionsBlockExpression(variables.AsReadOnlyList(), es)
+                : new TypedManyExpressionsBlockExpression(type, variables.AsReadOnlyList(), es);
+        }
 
         public static BlockExpression MakeBlock(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions)
         {
@@ -2292,17 +2302,8 @@ namespace FastExpressionCompiler.LightExpression
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> _) => SysExpr.Constant(Value, Type);
 
         /// <summary>I want to see the actual Value not the default one</summary>
-        public override string ToString() => $"Constant({Value}, typeof({Type.ToCode()}))";
+        public override string ToString() => $"Constant({Value}, typeof({this.Type.ToCode()}))";
     }
-
-    // todo: @perf @incomplete
-    // public sealed class ConstantValueExpression<T> : ConstantExpression where T : struct
-    // {
-    //     public override Type Type => typeof(T)
-    //     public readonly T ValueValue;
-
-    //     internal ConstantValueExpression(T value) => ValueValue = value;
-    // }
 
     public sealed class TypedConstantExpression : ConstantExpression
     {
@@ -3195,6 +3196,37 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type { get; }
         internal TypedTwoExpressionsBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1) : 
             base(variables, e0, e1) => Type = type;
+    }
+
+    public class NoVariablesThreeExpressionsBlockExpression : BlockExpression
+    {
+        public readonly Expression Expression0, Expression1, Expression2;
+        public sealed override IReadOnlyList<Expression> Expressions => new[] { Expression0, Expression1, Expression2 };
+        public sealed override int ArgumentCount => 3;
+        public sealed override Expression GetArgument(int i) => i == 0 ? Expression0 : i == 1 ? Expression1 : Expression2;
+        internal NoVariablesThreeExpressionsBlockExpression(Expression e0, Expression e1, Expression e2)
+        {
+            Expression0 = e0; Expression1 = e1; Expression2 = e2;
+        }
+    }
+
+    public sealed class TypedNoVariablesThreeExpressionsBlockExpression : NoVariablesThreeExpressionsBlockExpression
+    {
+        public override Type Type { get; }
+        internal TypedNoVariablesThreeExpressionsBlockExpression(Type type, Expression e0, Expression e1, Expression e2) : base(e0, e1, e2) => Type = type;
+    }
+
+    public class ThreeExpressionsBlockExpression : NoVariablesThreeExpressionsBlockExpression
+    {
+        public sealed override IReadOnlyList<ParameterExpression> Variables { get; }
+        internal ThreeExpressionsBlockExpression(IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1, Expression e2) : base(e0, e1, e2) => Variables = variables;
+    }
+
+    public sealed class TypedThreeExpressionsBlockExpression : ThreeExpressionsBlockExpression
+    {
+        public override Type Type { get; }
+        internal TypedThreeExpressionsBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1, Expression e2) : 
+            base(variables, e0, e1, e2) => Type = type;
     }
 
     public class NoVariablesManyExpressionsBlockExpression : BlockExpression
