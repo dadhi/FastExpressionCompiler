@@ -190,6 +190,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run);
 
+                Run(new Issue302_Error_compiling_expression_with_array_access().Run);
+
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

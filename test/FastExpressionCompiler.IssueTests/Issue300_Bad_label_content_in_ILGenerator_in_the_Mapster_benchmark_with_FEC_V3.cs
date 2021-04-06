@@ -23,7 +23,7 @@ namespace FastExpressionCompiler.IssueTests
             return 2;
         }
 
-        // [Test]
+        [Test]
         public void Test_301()
         {
             var p = new ParameterExpression[6]; // the parameter expressions 

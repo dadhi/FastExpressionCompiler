@@ -3975,7 +3975,8 @@ namespace FastExpressionCompiler
                         var isByAddress = false;
                         if (field.FieldType.IsValueType) 
                         {
-                            if ((parent & ParentFlags.InstanceAccess) != 0)
+                            if ((parent & ParentFlags.InstanceAccess) != 0 &&
+                                (parent & ParentFlags.IndexAccess)    == 0) // #302 - if the field is used as an index
                                 isByAddress = true;
                             // #248 indicates that expression is argument passed by ref
                             // todo: Maybe introduce ParentFlags.Argument
