@@ -2401,20 +2401,9 @@ namespace FastExpressionCompiler
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     if (closure.LastEmitIsAddress)
-                        il.Emit(OpCodes.Ldarga_S, (byte)paramIndex);
+                        EmitLoadArgAddress(il, paramIndex);
                     else
-                    {
-                        if (paramIndex == 0)
-                            il.Emit(OpCodes.Ldarg_0);
-                        else if (paramIndex == 1)
-                            il.Emit(OpCodes.Ldarg_1);
-                        else if (paramIndex == 2)
-                            il.Emit(OpCodes.Ldarg_2);
-                        else if (paramIndex == 3)
-                            il.Emit(OpCodes.Ldarg_3);
-                        else
-                            il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
-                    }
+                        EmitLoadArg(il, paramIndex);
 
                     if (isParamByRef) 
                     {
@@ -3486,7 +3475,7 @@ namespace FastExpressionCompiler
                             return false;
                         if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
                             ++paramIndex;
-                        il.Emit(OpCodes.Ldarg, paramIndex);
+                        EmitLoadArg(il, paramIndex);
                         if (p.IsByRef)
                             EmitValueTypeDereference(il, p.Type);
                     }
@@ -3632,18 +3621,7 @@ namespace FastExpressionCompiler
                                 ++paramIndex;
 
                             if (leftParamExpr.IsByRef)
-                            {
-                                if (paramIndex == 0)
-                                    il.Emit(OpCodes.Ldarg_0);
-                                else if (paramIndex == 1)
-                                    il.Emit(OpCodes.Ldarg_1);
-                                else if (paramIndex == 2)
-                                    il.Emit(OpCodes.Ldarg_2);
-                                else if (paramIndex == 3)
-                                    il.Emit(OpCodes.Ldarg_3);
-                                else
-                                    il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
-                            }
+                                EmitLoadArg(il, paramIndex);
 
                             if (arithmeticNodeType == nodeType)
                             {
@@ -3869,8 +3847,8 @@ namespace FastExpressionCompiler
             {
                 var flags = parent & ~ParentFlags.IgnoreResult | ParentFlags.Call;
                 var callExpr = (MethodCallExpression)expr;
-                var objExpr = callExpr.Object;
-                var method = callExpr.Method;
+                var objExpr  = callExpr.Object;
+                var method   = callExpr.Method;
                 var methodParams = method.GetParameters();
                 
                 var objIsValueType = false;
@@ -5042,6 +5020,7 @@ namespace FastExpressionCompiler
                 return varIndex;
             }
 
+            [MethodImpl((MethodImplOptions)256)]
             private static void EmitLoadArg(ILGenerator il, int paramIndex)
             {
                 if (paramIndex == 0)
@@ -5052,8 +5031,19 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldarg_2);
                 else if (paramIndex == 3)
                     il.Emit(OpCodes.Ldarg_3);
-                else
+                else if ((uint)paramIndex <= byte.MaxValue)
                     il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
+                else
+                    il.Emit(OpCodes.Ldarg, (short)paramIndex);
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static void EmitLoadArgAddress(ILGenerator il, int paramIndex)
+            {
+                if ((uint)paramIndex <= byte.MaxValue)
+                    il.Emit(OpCodes.Ldarga_S, (byte)paramIndex);
+                else
+                    il.Emit(OpCodes.Ldarga, (short)paramIndex);
             }
         }
     }
@@ -5375,6 +5365,13 @@ namespace FastExpressionCompiler
 
             _getNextLocalVarIndex = (Func<ILGenerator, Type, int>)efficientMethod.CreateDelegate(
                 typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
+
+            // todo: @perf do batch Emit by manually calling `EnsureCapacity` once then `InternalEmit` multiple times
+            // todo: @perf Replace the `Emit(opcode, int)` with the more specialized `Emit(opcode)`, `Emit(opcode, byte)` or `Emit(opcode, short)` 
+            // avoiding internal check for Ldc_I4, Ldarg, Ldarga, Starg then call `PutInteger4` only if needed see https://source.dot.net/#System.Private.CoreLib/src/System/Reflection/Emit/ILGenerator.cs,690f350859394132
+            // var ensureCapacityMethod = ilGenTypeInfo.GetDeclaredMethod("EnsureCapacity");
+            // var internalEmitMethod   = ilGenTypeInfo.GetDeclaredMethod("InternalEmit");
+            // var putInteger4Method    = ilGenTypeInfo.GetDeclaredMethod("PutInteger4");
         }
 
         /// <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
@@ -5383,21 +5380,30 @@ namespace FastExpressionCompiler
         // todo: @perf add MultiOpCodes emit to save on the EnsureCapacity calls
         // todo: @perf create EmitMethod without additional GetParameters call
         /*
-        public virtual void EmitCall(OpCode opcode, MethodInfo methodInfo, int paramCount)
+        public virtual void EmitCall(OpCode opcode, MethodInfo methodInfo, 
+            int stackExchange = (methodInfo.ReturnType != typeof(void) ? 1 : 0) - methodInfo.GetParameterTypes().Length - (methodInfo.IsStatic ? 1 : 0))
         { 
-            int tk = GetMethodToken(methodInfo, optionalParameterTypes, false);
+            var tk = GetMemberRefToken(methodInfo, null);
+ 
             EnsureCapacity(7);
             InternalEmit(opcode);
  
-            int stackchange = 0;
-            if (methodInfo.ReturnType != typeof(void))
-                stackchange++;
-            stackchange -= paramCount;
-            if (!methodInfo.IsStatic)
-                stackchange--;
+            // * move outside of the method
+            // Push the return value if there is one.
+            // if (methodInfo.ReturnType != typeof(void))
+            //     stackchange++;
 
-            UpdateStackSize(opcode, stackchange); 
-            RecordTokenFixup();
+            // * move outside of the method
+            // Pop the parameters.
+            // stackchange -= methodInfo.GetParameterTypes().Length;
+
+            // * move outside of the method
+            // Pop the this parameter if the method is non-static and the
+            // instruction is not newobj.
+            // if (!methodInfo.IsStatic)
+            //     stackchange--;
+
+            UpdateStackSize(opcode, stackchange);
             PutInteger4(tk);
         }
         */ 
