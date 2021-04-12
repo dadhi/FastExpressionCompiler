@@ -6281,7 +6281,10 @@ namespace FastExpressionCompiler
                                 sb.NewLine(lineIdent, identSpaces).Append(')');
                             }
                             sb.NewLine(lineIdent, identSpaces).Append('{');
-                            sb.NewLineIdentCs(h.Body, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
+                            if (h.Body is BlockExpression fb)
+                                fb.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                            else
+                                sb.NewLineIdentCs(h.Body, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
                             sb.NewLine(lineIdent, identSpaces).Append('}');
                         }
                     }
@@ -6290,7 +6293,10 @@ namespace FastExpressionCompiler
                     {
                         sb.NewLine(lineIdent, identSpaces).Append("finally");
                         sb.NewLine(lineIdent, identSpaces).Append('{');
-                        sb.NewLineIdentCs(x.Finally, lineIdent, stripNamespace, printType, identSpaces);
+                        if (x.Finally is BlockExpression fb)
+                            fb.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                        else
+                            sb.NewLineIdentCs(x.Finally, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
                         sb.NewLine(lineIdent, identSpaces).Append('}');
                     }
                     return sb;
@@ -6309,7 +6315,16 @@ namespace FastExpressionCompiler
                 }
                 case ExpressionType.Goto:
                 {
-                    return ((GotoExpression)e).Target.ToCSharpString(sb.Append("goto "));
+                    var gt = (GotoExpression)e;
+                    if (gt.Kind == GotoExpressionKind.Return)
+                    {
+                        if (gt.Value == null || gt.Value.Type == typeof(void))
+                            return sb.Append("return");
+                        sb.Append("return ");
+                        gt.Value.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                        return sb; // the ';' will be placed by the container expression
+                    }
+                    return gt.Target.ToCSharpString(sb.Append("goto "));
                 }
                 case ExpressionType.Switch:
                 {
@@ -6658,7 +6673,7 @@ namespace FastExpressionCompiler
                     else if (!(
                         expr is LabelExpression ||
                         expr is DefaultExpression))
-                        sb.Append(';');
+                        sb.AddSemicolonIfFits();
                 }
             }
 
@@ -6671,11 +6686,11 @@ namespace FastExpressionCompiler
                 inTheLastBlock, // the last block is marked so if only it is itself in the last block
                 blockResultAssignment);
 
-            if(lastExpr is LabelExpression) // keep the last label on the same vertical line
+            if (lastExpr is LabelExpression) // keep the last label on the same vertical line
             {
                 lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                 if (inTheLastBlock)
-                    sb.Append(';'); // the last label forms the invalid C#, so we need at least ';' at the end
+                    sb.AddSemicolonIfFits(); // the last label forms the invalid C#, so we need at least ';' at the end
                 return sb;
             }
 
@@ -6710,10 +6725,9 @@ namespace FastExpressionCompiler
             else 
             {
                 lastExpr.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
-
                 if (blockResultAssignment?.NodeType == ExpressionType.PowerAssign)
                     sb.Append(')');
-                sb.Append(';');
+                sb.AddSemicolonIfFits();
             }
             return sb;
         }
