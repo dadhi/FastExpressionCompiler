@@ -6288,7 +6288,7 @@ namespace FastExpressionCompiler
 
                     if (x.Finally != null)
                     {
-                        sb.Append("finally");
+                        sb.NewLine(lineIdent, identSpaces).Append("finally");
                         sb.NewLine(lineIdent, identSpaces).Append('{');
                         sb.NewLineIdentCs(x.Finally, lineIdent, stripNamespace, printType, identSpaces);
                         sb.NewLine(lineIdent, identSpaces).Append('}');
