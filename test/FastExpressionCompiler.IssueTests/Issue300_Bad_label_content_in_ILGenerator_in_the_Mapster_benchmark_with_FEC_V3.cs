@@ -1,9 +1,10 @@
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 #if LIGHT_EXPRESSION
 using System.Text;
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -18,9 +19,264 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_301();
-            Test_300();
+            // Test_301();
+            // Test_300();
+            Test_301_TryCatch_case();
             return 2;
+        }
+
+        [Test]
+        public void Test_301_TryCatch_case()
+        {
+            var p = new ParameterExpression[7]; // the parameter expressions 
+            var e = new Expression[37]; // the unique expressions 
+            var l = new LabelTarget[1]; // the labels 
+            var expr = Lambda<Func<object, Test>>( //$
+                e[0]=Block(
+                    typeof(Test),
+                    new[] {
+                    p[0]=Parameter(typeof(Test))
+                    },
+                    e[1]=MakeBinary(ExpressionType.Assign,
+                    p[0 // (Test test__42119052)
+                        ],
+                    e[2]=Convert(
+                        p[1]=Parameter(typeof(object)),
+                        typeof(Test))), 
+                    e[3]=Block(
+                    typeof(Test),
+                    new[] {
+                    p[2]=Parameter(typeof(MapContextScope), "scope")
+                    },
+                    e[4]=Condition(
+                        e[5]=MakeBinary(ExpressionType.Equal,
+                        p[0 // (Test test__42119052)
+                            ],
+                        e[6]=Constant(null, typeof(Test))),
+                        e[7]=MakeGoto(GotoExpressionKind.Return,
+                        l[0]=Label(typeof(Test)),
+                        e[8]=Constant(null, typeof(Test)),
+                        typeof(void)),
+                        e[9]=Empty(),
+                        typeof(void)), 
+                    e[10]=MakeBinary(ExpressionType.Assign,
+                        p[2 // (MapContextScope scope)
+                        ],
+                        e[11]=New( // 0 args
+                        typeof(MapContextScope).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0])), 
+                    e[12]=TryCatchFinally(
+                        e[13]=Block(
+                        typeof(void),
+                        new[] {
+                        p[3]=Parameter(typeof(object), "cache"),
+                        p[4]=Parameter(typeof(Dictionary<ReferenceTuple, object>), "references"),
+                        p[5]=Parameter(typeof(ReferenceTuple), "key"),
+                        p[6]=Parameter(typeof(Test), "result")
+                        },
+                        e[14]=MakeBinary(ExpressionType.Assign,
+                            p[4 // (Dictionary<ReferenceTuple, object> references)
+                            ],
+                            e[15]=Property(
+                            e[16]=Property(
+                                p[2 // (MapContextScope scope)
+                                ],
+                                typeof(MapContextScope).GetTypeInfo().GetDeclaredProperty("Context")),
+                            typeof(MapContext).GetTypeInfo().GetDeclaredProperty("References"))), 
+                        e[17]=MakeBinary(ExpressionType.Assign,
+                            p[5 // ([struct] ReferenceTuple key)
+                            ],
+                            e[18]=New( // 2 args
+                            typeof(ReferenceTuple).GetTypeInfo().DeclaredConstructors.ToArray()[0],
+                            p[0 // (Test test__42119052)
+                                ], 
+                            e[19]=Constant(typeof(Test)))), 
+                        e[20]=Condition(
+                            e[21]=Call(
+                            p[4 // (Dictionary<ReferenceTuple, object> references)
+                                ], 
+                            typeof(Dictionary<ReferenceTuple, object>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "TryGetValue" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(ReferenceTuple), typeof(System.Object).MakeByRefType() })),
+                            p[5 // ([struct] ReferenceTuple key)
+                                ], 
+                            p[3 // (object cache)
+                                ]),
+                            e[22]=MakeGoto(GotoExpressionKind.Return,
+                            l[0 // (test__32347029)
+                            ],
+                            e[23]=Convert(
+                                p[3 // (object cache)
+                                ],
+                                typeof(Test)),
+                            typeof(void)),
+                            e[9 // Default of void
+                            ],
+                            typeof(void)), 
+                        e[24]=MakeBinary(ExpressionType.Assign,
+                            p[6 // (Test result)
+                            ],
+                            e[25]=New( // 0 args
+                            typeof(Test).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0])), 
+                        e[26]=MakeBinary(ExpressionType.Assign,
+                            e[27]=MakeIndex(
+                            p[4 // (Dictionary<ReferenceTuple, object> references)
+                                ], 
+                            typeof(Dictionary<ReferenceTuple, object>).GetTypeInfo().GetDeclaredProperty("Item"), new Expression[] {
+                            p[5 // ([struct] ReferenceTuple key)
+                                ]}),
+                            e[28]=Convert(
+                            p[6 // (Test result)
+                                ],
+                            typeof(object))), 
+                        e[29]=Block(
+                            typeof(string),
+                            new ParameterExpression[0], 
+                            e[30]=MakeBinary(ExpressionType.Assign,
+                            e[31]=Property(
+                                p[6 // (Test result)
+                                ],
+                                typeof(Test).GetTypeInfo().GetDeclaredProperty("TestString")),
+                            e[32]=Property(
+                                p[0 // (Test test__42119052)
+                                ],
+                                typeof(Test).GetTypeInfo().GetDeclaredProperty("TestString")))), 
+                        e[33]=MakeGoto(GotoExpressionKind.Return,
+                            l[0 // (test__32347029)
+                            ],
+                            p[6 // (Test result)
+                            ],
+                            typeof(void))),
+                        e[34]=Call(
+                        p[2 // (MapContextScope scope)
+                            ], 
+                        typeof(MapContextScope).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Dispose" && x.GetParameters().Length == 0)),
+                        new CatchBlock[0]), 
+                    e[35]=Label(l[0 // (test__32347029)
+                        ],
+                        e[36]=Constant(null, typeof(Test))))),
+                p[1 // (object object__56200037)
+                ]);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var test = new Test { TestString = "42" };
+            var res = fs(test);
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            var res2 = ff(test);
+
+            Assert.AreEqual(res.TestString, res2.TestString);
+        }
+
+        public class Test
+        {
+            public string TestString { get; set; }
+        }
+
+        public class MapContext
+        {
+#if NETSTANDARD
+            private static readonly AsyncLocal<MapContext?> _localContext = new AsyncLocal<MapContext?>();
+            public static MapContext? Current
+            {
+                get => _localContext.Value;
+                set => _localContext.Value = value;
+            }
+#else
+            [field: ThreadStatic]
+            public static MapContext? Current { get; set; }
+#endif
+
+            private Dictionary<ReferenceTuple, object>? _references;
+            public Dictionary<ReferenceTuple, object> References => _references ??= new Dictionary<ReferenceTuple, object>();
+
+            private Dictionary<string, object>? _parameters;
+            public Dictionary<string, object> Parameters => _parameters ??= new Dictionary<string, object>();
+        }
+
+        public class MapContextScope : IDisposable
+        {
+            public static MapContextScope Required()
+            {
+                return new MapContextScope();
+            }
+
+            public static MapContextScope RequiresNew()
+            {
+                return new MapContextScope(true);
+            }
+
+            public MapContext Context { get; }
+
+            private readonly MapContext? _previousContext;
+
+            public MapContextScope() : this(false) { }
+            public MapContextScope(bool ignorePreviousContext)
+            {
+                _previousContext = MapContext.Current;
+
+                this.Context = ignorePreviousContext
+                    ? new MapContext()
+                    : _previousContext ?? new MapContext();
+
+                MapContext.Current = this.Context;
+            }
+
+            public void Dispose()
+            {
+                MapContext.Current = _previousContext;
+            }
+
+            public static TResult GetOrAddMapReference<TResult>(ReferenceTuple key, Func<ReferenceTuple, TResult> mapFn) where TResult : notnull
+            {
+                using var context = new MapContextScope();
+                var dict = context.Context.References;
+                if (!dict.TryGetValue(key, out var reference))
+                    dict[key] = reference = mapFn(key);
+                return (TResult)reference;
+            }
+        }
+
+        public readonly struct ReferenceTuple : IEquatable<ReferenceTuple>
+        {
+            public object Reference { get; }
+            public Type DestinationType { get; }
+            public ReferenceTuple(object reference, Type destinationType)
+            {
+                this.Reference = reference;
+                this.DestinationType = destinationType;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is ReferenceTuple other && Equals(other);
+            }
+
+            public bool Equals(ReferenceTuple other)
+            {
+                return ReferenceEquals(this.Reference, other.Reference) 
+                    && this.DestinationType == other.DestinationType;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (RuntimeHelpers.GetHashCode(this.Reference) * 397) ^ DestinationType.GetHashCode();
+                }
+            }
+
+            public static bool operator ==(ReferenceTuple left, ReferenceTuple right)
+            {
+                return left.Equals(right);
+            }
+
+            public static bool operator !=(ReferenceTuple left, ReferenceTuple right)
+            {
+                return !(left == right);
+            }
         }
 
         [Test]
@@ -39,7 +295,7 @@ namespace FastExpressionCompiler.IssueTests
                     e[2]=MakeBinary(ExpressionType.Equal,
                         p[1]=Parameter(typeof(Address[])),
                         e[3]=Constant(null, typeof(Address[]))),
-                    e[4]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                    e[4]=MakeGoto(GotoExpressionKind.Return,
                         l[0]=Label(typeof(AddressDTO[])),
                         e[5]=Constant(null, typeof(AddressDTO[])),
                         typeof(void)),
@@ -137,14 +393,14 @@ namespace FastExpressionCompiler.IssueTests
                             e[36]=PostIncrementAssign(
                                 p[3 // (int i)
                                 ])),
-                            e[37]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Break,
+                            e[37]=MakeGoto(GotoExpressionKind.Break,
                             l[1]=Label(typeof(void), "LoopBreak"),
                             null,
                             typeof(void)),
                             typeof(void)),
                         l[1 // (LoopBreak)
                         ]))), 
-                    e[38]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                    e[38]=MakeGoto(GotoExpressionKind.Return,
                     l[0 // (addressdto_arr__58328727)
                     ]//=Label(typeof(AddressDTO[]))
                     ,
@@ -189,7 +445,7 @@ namespace FastExpressionCompiler.IssueTests
                 e[2]=MakeBinary(ExpressionType.Equal,
                     p[1]=Parameter(typeof(Customer)),
                     e[3]=Constant(null, typeof(Customer))),
-                e[4]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                e[4]=MakeGoto(GotoExpressionKind.Return,
                     l[0]=Label(typeof(CustomerDTO)),
                     e[5]=Constant(null, typeof(CustomerDTO)),
                     typeof(void)),
@@ -321,7 +577,7 @@ namespace FastExpressionCompiler.IssueTests
                         ],
                         typeof(Address).GetTypeInfo().GetDeclaredProperty("City")),
                     typeof(string)))), 
-                e[53]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                e[53]=MakeGoto(GotoExpressionKind.Return,
                 l[0 // (customerdto__39451090)
                 ],
                 p[0 // (CustomerDTO result)

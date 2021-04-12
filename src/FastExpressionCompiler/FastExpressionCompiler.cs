@@ -5839,8 +5839,8 @@ namespace FastExpressionCompiler
                     {
                         sb.Append("TryCatchFinally(");
                         sb.NewLineIdentExpr(x.Body,       paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-                        x.Handlers.ToExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
-                        sb.NewLineIdentExpr(x.Finally,    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
+                        sb.NewLineIdentExpr(x.Finally,    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
+                        x.Handlers.ToExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     }
 
                     return sb.Append(')');
@@ -6764,10 +6764,14 @@ namespace FastExpressionCompiler
     public static class CodePrinter
     {
         public static StringBuilder AppendTypeof(this StringBuilder sb, Type type, 
-            bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false) =>
-            type == null
-                ? sb.Append("null")
-                : sb.Append("typeof(").Append(type.ToCode(stripNamespace, printType, printGenericTypeArgs)).Append(')');
+            bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false)
+        {
+            if (type == null)
+                return sb.Append("null");
+
+            sb.Append("typeof(").Append(type.ToCode(stripNamespace, printType, printGenericTypeArgs)).Append(')');
+            return type.IsByRef ? sb.Append(".MakeByRefType()") : sb;
+        }
 
         public static StringBuilder AppendTypeofList(this StringBuilder sb, Type[] types, 
             bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false)
@@ -6988,9 +6992,7 @@ namespace FastExpressionCompiler
                 }
             }
 
-            var name = type.Name;
-            if (name.StartsWith("<>"))
-                name = name.Substring(2); // strip the "<>" from the `AnonymousType`
+            var name = type.Name.TrimStart('<', '>').TrimEnd('&');
 
             if (typeArgs != null && typeArgsConsumedByParentsCount < typeArgs.Length)
             {
