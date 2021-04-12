@@ -19,13 +19,13 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Test_301();
-            // Test_300();
-            Test_301_TryCatch_case();
+            Test_301();
+            Test_300();
+            // Test_301_TryCatch_case();
             return 2;
         }
 
-        [Test]
+        // [Test]
         public void Test_301_TryCatch_case()
         {
             var p = new ParameterExpression[7]; // the parameter expressions 
