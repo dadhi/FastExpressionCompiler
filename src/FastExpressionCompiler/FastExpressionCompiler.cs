@@ -6299,15 +6299,7 @@ namespace FastExpressionCompiler
                         else
                         {
                             sb.NewLineIdent(lineIdent);
-                            var pt = part.NodeType;
-                            var canBeReturned = returnsValue &&
-                                pt != ExpressionType.Goto &&
-                                pt != ExpressionType.Throw &&
-                                pt != ExpressionType.Block &&
-                                pt != ExpressionType.Try &&
-                                pt != ExpressionType.Loop;
-
-                            if (canBeReturned)
+                            if (returnsValue && CanBeReturned(part.NodeType))
                                 sb.Append("return ");
                             part.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
                         }
@@ -6368,13 +6360,16 @@ namespace FastExpressionCompiler
                 case ExpressionType.Goto:
                 {
                     var gt = (GotoExpression)e;
-                    if (gt.Kind == GotoExpressionKind.Return)
+                    if (gt.Kind == GotoExpressionKind.Return || gt.Value != null)
                     {
-                        if (gt.Value == null || gt.Value.Type == typeof(void))
-                            return sb.Append("return");
-                        sb.Append("return ");
-                        gt.Value.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                        return sb; // the ';' will be placed by the container expression
+                        var gtValue = gt.Value;
+                        if (gtValue == null)
+                            return sb.Append("return;");
+
+                        if (CanBeReturned(gtValue.NodeType))
+                            sb.Append("return ");
+                        gtValue.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                        return sb;
                     }
                     return gt.Target.ToCSharpString(sb.Append("goto "));
                 }
@@ -6593,6 +6588,13 @@ namespace FastExpressionCompiler
                 return sb.Append(";");
             return sb;
         }
+
+        private static bool CanBeReturned(ExpressionType nt) =>
+            nt != ExpressionType.Goto &&
+            nt != ExpressionType.Throw &&
+            nt != ExpressionType.Block &&
+            nt != ExpressionType.Try &&
+            nt != ExpressionType.Loop;
 
         private static string GetCSharpName(this MemberInfo m)
         {
