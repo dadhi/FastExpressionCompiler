@@ -532,13 +532,15 @@ namespace FastExpressionCompiler
             ShouldBeStaticMethod = 1 << 3
         }
 
-        internal enum LabelState : byte { Undefined = 0, Defined = 1, Marked = 2 }
+        [Flags] internal enum LabelFlags : byte { Undefined = 0, Defined = 1 }
 
         internal struct LabelInfo 
         {
             public LabelTarget Target; // label target is the link between the goto and the label.
             public Label Label;
-            public LabelState State;
+            public int   TryCatchReturnVariableIndexPlusOne;
+            public Label TryCatchReturnLabel;
+            public LabelFlags Flags;
         }
 
         /// Track the info required to build a closure object + some context information not directly related to closure.
@@ -555,7 +557,7 @@ namespace FastExpressionCompiler
             private LiveCountArray<BlockInfo> _blockStack;
 
             /// Map of the links between Labels and Goto's
-            private LiveCountArray<LabelInfo> _labels;
+            internal LiveCountArray<LabelInfo> Labels;
 
             public ClosureStatus Status;
 
@@ -589,7 +591,7 @@ namespace FastExpressionCompiler
                 LastEmitIsAddress = false;
                 CurrentTryCatchFinallyIndex = -1;
                 _tryCatchFinallyInfos = null;
-                _labels     = new LiveCountArray<LabelInfo>(Tools.Empty<LabelInfo>());
+                Labels      = new LiveCountArray<LabelInfo>(Tools.Empty<LabelInfo>());
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
             }
 
@@ -666,8 +668,8 @@ namespace FastExpressionCompiler
 
             public int GetLabelIndex(LabelTarget labelTarget)
             {
-                var count = _labels.Count;
-                var items = _labels.Items;
+                var count = Labels.Count;
+                var items = Labels.Items;
                 for (var i = 0; i < count; ++i)
                     if (items[i].Target == labelTarget)
                         return i;
@@ -678,19 +680,17 @@ namespace FastExpressionCompiler
             {
                 if (GetLabelIndex(labelTarget) == -1)
                 {
-                    ref var label = ref _labels.PushSlot();
+                    ref var label = ref Labels.PushSlot();
                     label.Target = labelTarget;
                 }
             }
 
-            public ref LabelInfo GetLabel(int index) => ref _labels.Items[index]; 
-
             public Label GetDefinedLabel(int index, ILGenerator il)
             {
-                ref var label = ref _labels.Items[index];
-                if (label.State == LabelState.Undefined)
+                ref var label = ref Labels.Items[index];
+                if ((label.Flags & LabelFlags.Defined) == 0)
                 {
-                    label.State = LabelState.Defined;
+                    label.Flags |= LabelFlags.Defined;
                     label.Label = il.DefineLabel();
                 }
                 return label.Label;
@@ -698,20 +698,16 @@ namespace FastExpressionCompiler
 
             public void TryMarkDefinedLabel(int index, ILGenerator il)
             {
-                ref var label = ref _labels.Items[index];
-                if (label.State == LabelState.Undefined)
-                {
-                    label.State = LabelState.Marked;
-                    il.MarkLabel(label.Label = il.DefineLabel());
-
-                }
-                else if (label.State == LabelState.Defined)
-                {
-                    label.State = LabelState.Marked;
+                ref var label = ref Labels.Items[index];
+                if ((label.Flags & LabelFlags.Defined) != 0)
                     il.MarkLabel(label.Label);
+                else
+                {
+                    label.Flags |= LabelFlags.Defined;
+                    il.MarkLabel(label.Label = il.DefineLabel());
                 }
-            } 
-                
+            }
+
             public void AddTryCatchFinallyInfo()
             {
                 ++CurrentTryCatchFinallyIndex;
@@ -1709,6 +1705,7 @@ namespace FastExpressionCompiler
             IndexAccess = 1 << 10
         }
 
+        [MethodImpl((MethodImplOptions)256)]
         internal static bool IgnoresResult(this ParentFlags parent) => (parent & ParentFlags.IgnoreResult) != 0;
 
         internal static bool EmitPopIfIgnoreResult(this ILGenerator il, ParentFlags parent)
@@ -1938,11 +1935,9 @@ namespace FastExpressionCompiler
                                         {
                                             if (!TryEmit(gt.Value, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
                                                 return false;
+                                            // todo: @bug test that we can return from TryCatch (TryCatchTests)
                                             il.Emit(OpCodes.Ret);
                                         }
-
-                                        // We still need the label here (#300) if we jump from the other goto here
-                                        closure.TryMarkDefinedLabel(closure.GetLabelIndex(label.Target), il);
 
                                         // todo: @check do we need to emit the default value if it is `default(T)` or not `null`,
                                         // because it is likely to be emit by Return (GotoExpression.Value)
@@ -1950,6 +1945,7 @@ namespace FastExpressionCompiler
                                             !TryEmit(label.DefaultValue, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
                                             return false;
 
+                                        // todo: @bug test that we can return from TryCatch (TryCatchTests)
                                         // @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
                                         // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
                                         // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement), 
@@ -2142,13 +2138,34 @@ namespace FastExpressionCompiler
                 if (index == -1)
                     return false; // should be found in first collecting constants round
 
-                if (closure.IsTryReturnLabel(index)) 
-                    return true; // label will be emitted by the TryEmitTryCatchFinallyBlock
+                ref var label = ref closure.Labels.Items[index];
+                if ((label.Flags & LabelFlags.Defined) != 0)
+                    il.MarkLabel(label.Label);
+                else
+                {
+                    label.Flags |= LabelFlags.Defined;
+                    il.MarkLabel(label.Label = il.DefineLabel());
+                }
 
-                // define a new label or use the label provided by the preceding GoTo expression
-                closure.TryMarkDefinedLabel(index, il);
+                var defaultValue = expr.DefaultValue;
+                if (defaultValue != null)
+                    TryEmit(defaultValue, paramExprs, il, ref closure, setup, parent);
 
-                return expr.DefaultValue == null || TryEmit(expr.DefaultValue, paramExprs, il, ref closure, setup, parent);
+                // get the TryCatch variable from the LabelInfo - if it is not 0:
+                // first if label has the default value then store into this return variable the defaultValue which is currently on stack
+                // mark the associated TryCatch return label here and load the variable if parent does not ignore the result, otherwise don't load
+                var tryCatchReturnVariableIndexPlusOne = label.TryCatchReturnVariableIndexPlusOne; 
+                if (tryCatchReturnVariableIndexPlusOne != 0)
+                {
+                    if (defaultValue != null)
+                        EmitStoreLocalVariable(il, tryCatchReturnVariableIndexPlusOne - 1);
+
+                    il.MarkLabel(label.TryCatchReturnLabel);
+                    if (!parent.IgnoresResult())
+                        EmitLoadLocalVariable(il, tryCatchReturnVariableIndexPlusOne - 1);
+                }
+
+                return true;
             }
 
 #if LIGHT_EXPRESSION
@@ -2167,8 +2184,9 @@ namespace FastExpressionCompiler
                     throw new InvalidOperationException($"Cannot jump, no labels found for the target `{expr.Target}`");
                 }
 
-                if (expr.Value != null &&
-                    !TryEmit(expr.Value, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
+                var gotoValue = expr.Value;
+                if (gotoValue != null &&
+                    !TryEmit(gotoValue, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
                 switch (expr.Kind)
@@ -2180,7 +2198,7 @@ namespace FastExpressionCompiler
                         return true;
 
                     case GotoExpressionKind.Goto:
-                        if (expr.Value != null)
+                        if (gotoValue != null)
                             goto case GotoExpressionKind.Return;
 
                         // use label defined by Label expression or define its own to use by subsequent Label
@@ -2188,17 +2206,29 @@ namespace FastExpressionCompiler
                         return true;
 
                     case GotoExpressionKind.Return:
-
-                        // Can't emit a Return inside a Try/Catch, so leave it to TryEmitTryCatchFinallyBlock
-                        // to emit the Leave instruction, return label and return result
                         if ((parent & ParentFlags.TryCatch) != 0)
-                            closure.MarkReturnLabelIndex(index);
-                        else // use label defined by Label expression or define its own to use by subsequent Label
                         {
-                            // todo: @unclear in case Goto.Value is null, we may need to check the default value in the target LabelExpression 
-                            // and then do Br to the Label (where the DefaultValue is loaded on stack) instead of just Ret.
-                            il.Emit(OpCodes.Ret); // see #301 (#300) that we will get an invalid program if forget an additional return value on stack
+                            if (gotoValue != null)
+                            {
+                                // for TryCatch get the variable for saving the result from the LabelInfo
+                                // store the return expression result into the that variable
+                                // emit OpCodes.Leave to the special label with the result which should be marked after the label to jump over its default value
+                                ref var label = ref closure.Labels.Items[index];
+                                var varIndex = label.TryCatchReturnVariableIndexPlusOne - 1; 
+                                if (varIndex == -1)
+                                {
+                                    varIndex = il.GetNextLocalVarIndex(gotoValue.Type);
+                                    label.TryCatchReturnVariableIndexPlusOne = varIndex + 1;
+                                    label.TryCatchReturnLabel = il.DefineLabel();
+                                }
+                                EmitStoreLocalVariable(il, varIndex);
+                                il.Emit(OpCodes.Leave, label.TryCatchReturnLabel);
+                            }
+                            else
+                                il.Emit(OpCodes.Leave, closure.GetDefinedLabel(index, il)); // if there is no return value just leave to the original label
                         }
+                        else
+                            il.Emit(OpCodes.Ret);
                         return true;
 
                     default:
@@ -2320,6 +2350,7 @@ namespace FastExpressionCompiler
 
                 var exprType = tryExpr.Type;
                 var returnsResult = exprType != typeof(void) && (containsReturnGotoExpression || !parent.IgnoresResult());
+                // todo: @wip should we change it into the `!containsReturnGotoExpression && exprType != typeof(void) && !parent.IgnoresResult()` because we handling the storing of the variable in the TryEmitGoto for the containsReturnGotoExpression
                 var resultVarIndex = -1;
 
                 if (returnsResult)
@@ -4196,23 +4227,23 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                // todo:
+                // todo: @perf
                 //- use switch statement for int comparison (if int difference is less or equal 3 -> use IL switch)
                 //- TryEmitComparison should not emit "CEQ" so we could use Beq_S instead of Brtrue_S (not always possible (nullable))
                 //- if switch SwitchValue is a nullable parameter, we should call getValue only once and store the result.
                 //- use comparison methods (when defined)
 
+                var cases = expr.Cases;
                 var endLabel = il.DefineLabel();
-                var labels = new Label[expr.Cases.Count];
-                for (var index = 0; index < expr.Cases.Count; index++)
+                var labels = new Label[cases.Count];
+                for (var index = 0; index < cases.Count; index++)
                 {
-                    var switchCase = expr.Cases[index];
+                    var switchCase = cases[index];
                     labels[index] = il.DefineLabel();
 
                     foreach (var switchCaseTestValue in switchCase.TestValues)
                     {
-                        if (!TryEmitComparison(expr.SwitchValue, switchCaseTestValue, ExpressionType.Equal, paramExprs, il,
-                            ref closure, setup, parent))
+                        if (!TryEmitComparison(expr.SwitchValue, switchCaseTestValue, ExpressionType.Equal, paramExprs, il, ref closure, setup, parent))
                             return false;
                         il.Emit(OpCodes.Brtrue, labels[index]);
                     }
@@ -4225,14 +4256,14 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Br, endLabel);
                 }
 
-                for (var index = 0; index < expr.Cases.Count; index++)
+                for (var index = 0; index < cases.Count; ++index)
                 {
-                    var switchCase = expr.Cases[index];
+                    var switchCase = cases[index];
                     il.MarkLabel(labels[index]);
                     if (!TryEmit(switchCase.Body, paramExprs, il, ref closure, setup, parent))
                         return false;
 
-                    if (index != expr.Cases.Count - 1)
+                    if (index != cases.Count - 1)
                         il.Emit(OpCodes.Br, endLabel);
                 }
 
@@ -6143,8 +6174,11 @@ namespace FastExpressionCompiler
                     }
 
                     sb.Append(") => //$");
+                    var body = x.Body;
                     if (x.ReturnType != typeof(void) &&
-                        x.Body is BlockExpression == false)
+                        body.NodeType != ExpressionType.Block && 
+                        body.NodeType != ExpressionType.Try &&
+                        body.NodeType != ExpressionType.Loop)
                         sb.NewLineIdentCs(x.Body, lineIdent, stripNamespace, printType);
                     else
                     {
@@ -6257,7 +6291,13 @@ namespace FastExpressionCompiler
                     var x = (TryExpression)e;
                     sb.Append("try");
                     sb.NewLine(lineIdent, identSpaces).Append('{');
-                    sb.NewLineIdentCs(x.Body, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
+
+                    var body = x.Body;
+                    if (body is BlockExpression bb)
+                        bb.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                    else
+                        sb.NewLineIdentCs(body, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
+
                     sb.NewLine(lineIdent, identSpaces).Append('}');
 
                     var handlers = x.Handlers;
@@ -6271,7 +6311,7 @@ namespace FastExpressionCompiler
                             sb.Append(exTypeName);
 
                             if (h.Variable != null)
-                                sb.AppendName(h.Variable.Name, h.Variable.Type, h.Variable);
+                                sb.Append(' ').AppendName(h.Variable.Name, h.Variable.Type, h.Variable);
 
                             sb.Append(')');
                             if (h.Filter != null)

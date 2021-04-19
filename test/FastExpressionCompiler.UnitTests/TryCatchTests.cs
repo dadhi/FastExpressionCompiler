@@ -18,20 +18,20 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
-            Can_catch_exception();
-            Can_execute_finally();
-            Can_handle_the_exception_and_return_result_from_TryCatch_block();
-            Can_use_exception_parameter();
-            Can_return_from_catch_block();
-            Can_throw_an_exception();
-            Can_return_from_try_block_using_label();
-            Can_return_from_catch_block_using_label();
-            Can_return_try_block_result_using_label();
-            Can_return_nested_catch_block_result();
-
-            Can_return_from_try_block_using_label_with_the_more_code_after_label();
+            // Can_catch_exception();
+            // Can_execute_finally();
+            // Can_handle_the_exception_and_return_result_from_TryCatch_block();
+            // Can_use_exception_parameter();
+            // Can_return_from_catch_block();
+            // Can_throw_an_exception();
+            // Can_return_from_try_block_using_label();
+            // Can_return_from_catch_block_using_label();
+            // Can_return_try_block_result_using_label_from_the_inner_try();
+            // Can_return_nested_catch_block_result();
+            Can_return_from_try_block_using_goto_to_label_with_default_value();
+            // Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label();
             
-            return 11;
+            return 12;
         }
 
         [Test]
@@ -73,18 +73,11 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Can_handle_the_exception_and_return_result_from_TryCatch_block()
         {
-            // Test expression
-            // (string a) => {
-            //      try { return int.Parse(a); }
-            //      catch (Exception ex) { return ex.Message.Length; }
-            // }
-
             var aParamExpr = Parameter(typeof(string), "a");
             var exParamExpr = Parameter(typeof(Exception), "ex");
 
             var expr = TryCatch(
-                Call(typeof(int).GetTypeInfo()
-                        .DeclaredMethods.First(m => m.Name == nameof(int.Parse)),
+                Call(typeof(int).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(int.Parse)),
                     aParamExpr
                 ),
                 Catch(exParamExpr,
@@ -102,13 +95,29 @@ namespace FastExpressionCompiler.UnitTests
                     ))
             );
 
-            // Test that expression is valid with system Compile
-            var fExpr = Lambda<Func<string, int>>(expr, aParamExpr);
+            var fe = Lambda<Func<string, int>>(expr, aParamExpr);
+            fe.PrintCSharp();
+            var f = (Func<string, int>)((string a) => //$
+            {
+            try
+            {
+                return int.Parse(a);
+            }
+            catch (Exception ex)
+            {
+                return ex.Message.Length > (int)0 ?
+                    (int)47 :
+                    (int)0;
+            }});
 
-            var ff = fExpr.CompileFast(ifFastFailedReturnNull: true);
-            Assert.IsNotNull(ff);
+            var fs = fe.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual(47,  fs("A"));
+            Assert.AreEqual(123, fs("123"));
 
-            Assert.AreEqual(47, ff("A"));
+            var ff = fe.CompileFast(ifFastFailedReturnNull: true);
+            ff.PrintIL();
+            Assert.AreEqual(47,  ff("A"));
             Assert.AreEqual(123, ff("123"));
         }
 
@@ -172,26 +181,59 @@ namespace FastExpressionCompiler.UnitTests
         {
             var returnLabel = Label(typeof(string));
 
-            var expr = Lambda<Func<string>>(Block(
-                TryCatch(
-                    Return(returnLabel, Constant("From Try block"), typeof(string)),
-                    Catch(
-                        typeof(Exception),
-                        Return(returnLabel, Constant("From Catch block"), typeof(string))
-                    )
-                ),
-                Label(returnLabel, Default(returnLabel.Type))));
+            var expr = Lambda<Func<string>>(
+                Block(
+                    TryCatch(
+                        Return(returnLabel, Constant("From Try block"), typeof(string)),
+                        Catch(
+                            typeof(Exception),
+                            Return(returnLabel, Constant("From Catch block"), typeof(string))
+                        )
+                    ),
+                    Label(returnLabel, Default(returnLabel.Type))));
 
             expr.PrintCSharp();
 
-            var func = expr.CompileFast(true);
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("From Try block", fs());
 
-            Assert.IsNotNull(func);
-            Assert.AreEqual("From Try block", func());
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual("From Try block", ff());
         }
 
         [Test]
-        public void Can_return_from_try_block_using_label_with_the_more_code_after_label()
+        public void Can_return_from_try_block_using_goto_to_label_with_default_value()
+        {
+            var label = Label(typeof(string));
+            var result = Parameter(typeof(string), "s");
+
+            var expr = Lambda<Func<string>>(Block(
+                typeof(string),
+                new[] { result },
+                TryCatch(
+                        Goto(label, Constant("From Try block"), typeof(string)),
+                    Catch(typeof(Exception),
+                        Goto(label, Constant("From Catch block"), typeof(string))
+                    )
+                ),
+                Label(label, result)
+            ));
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("From Try block", fs());
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual("From Try block", ff());
+        }
+
+        [Test]
+        public void Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label()
         {
             var label = Label(typeof(void));
             var result = Parameter(typeof(string), "s");
@@ -202,8 +244,7 @@ namespace FastExpressionCompiler.UnitTests
                     // Block(
                         // Assign(result, Constant("trying...")),
                         Goto(label, Constant("From Try block"), typeof(string)),
-                    Catch(
-                        typeof(Exception),
+                    Catch(typeof(Exception),
                         // Block(
                             // Assign(result, Constant("catching..."))
                         Goto(label, Constant("From Catch block"), typeof(string))
@@ -252,7 +293,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Can_return_try_block_result_using_label()
+        public void Can_return_try_block_result_using_label_from_the_inner_try()
         {
             var returnType = typeof(string);
             var innerReturnLabel = Label(returnType);
@@ -265,24 +306,27 @@ namespace FastExpressionCompiler.UnitTests
                         Block(
                             TryCatch(
                                 Return(innerReturnLabel, Constant("From inner Try block"), returnType),
-                                Catch(
-                                    typeof(Exception),
+                                Catch(typeof(Exception),
                                     Return(innerReturnLabel, Constant("From inner Catch block"), returnType)
                                 )
                             ),
                             Label(innerReturnLabel, Default(innerReturnLabel.Type))),
                         returnType),
-                    Catch(
-                        typeof(Exception),
+                    Catch(typeof(Exception),
                         Return(outerReturnLabel, Constant("From outer Catch block"), returnType)
                     )
                 ),
                 Label(outerReturnLabel, Default(outerReturnLabel.Type))));
 
-            var func = expr.CompileFast(true);
+            expr.PrintCSharp();
 
-            Assert.IsNotNull(func);
-            Assert.AreEqual("From inner Try block", func());
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("From inner Try block", fs());
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual("From inner Try block", ff());
         }
 
         [Test]

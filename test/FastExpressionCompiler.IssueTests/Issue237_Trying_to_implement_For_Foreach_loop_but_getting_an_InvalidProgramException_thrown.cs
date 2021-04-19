@@ -413,11 +413,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL("system compiled il");
+            Assert.AreEqual("true",  fs(true));
+            Assert.AreEqual("false", fs(false));
             
             var f = expr.CompileFast(true);
-            Assert.IsNotNull(f);
             f.PrintIL();
-
             Assert.AreEqual("true",  f(true));
             Assert.AreEqual("false", f(false));
         }

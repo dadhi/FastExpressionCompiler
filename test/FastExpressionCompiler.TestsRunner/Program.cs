@@ -9,12 +9,16 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            RunAllTests();
+            // RunAllTests();
 
-            // new FastExpressionCompiler.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run();
+            new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
+            // new FastExpressionCompiler.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run();
             // new FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue181_TryEmitIncDecAssign_InvalidCastException().Run();
+#if NETCOREAPP3_1
+            // new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
+#endif
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue293_Recursive_Methods().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue159_NumericConversions().Run();

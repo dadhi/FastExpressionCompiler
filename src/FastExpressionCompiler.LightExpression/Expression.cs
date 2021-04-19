@@ -3149,10 +3149,8 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class TypedBlockExpression : BlockExpression
     {
         public override Type Type { get; }
-        internal TypedBlockExpression(Type type, IReadOnlyList<Expression> expressions) : base(expressions) =>
-            Type = type;
+        internal TypedBlockExpression(Type type, IReadOnlyList<Expression> expressions) : base(expressions) => Type = type;
     }
-
 
     public class ManyVariablesBlockExpression : BlockExpression
     {
