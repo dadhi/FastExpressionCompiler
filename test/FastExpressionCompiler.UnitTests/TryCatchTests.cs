@@ -18,18 +18,18 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
-            // Can_catch_exception();
-            // Can_execute_finally();
-            // Can_handle_the_exception_and_return_result_from_TryCatch_block();
-            // Can_use_exception_parameter();
-            // Can_return_from_catch_block();
-            // Can_throw_an_exception();
-            // Can_return_from_try_block_using_label();
-            // Can_return_from_catch_block_using_label();
-            // Can_return_try_block_result_using_label_from_the_inner_try();
-            // Can_return_nested_catch_block_result();
+            Can_catch_exception();
+            Can_execute_finally();
+            Can_handle_the_exception_and_return_result_from_TryCatch_block();
+            Can_use_exception_parameter();
+            Can_return_from_catch_block();
+            Can_throw_an_exception();
+            Can_return_from_try_block_using_label();
+            Can_return_from_catch_block_using_label();
+            Can_return_try_block_result_using_label_from_the_inner_try();
+            Can_return_nested_catch_block_result();
             Can_return_from_try_block_using_goto_to_label_with_default_value();
-            // Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label();
+            Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label();
             
             return 12;
         }
@@ -97,6 +97,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var fe = Lambda<Func<string, int>>(expr, aParamExpr);
             fe.PrintCSharp();
+            // should print this:
             var f = (Func<string, int>)((string a) => //$
             {
             try

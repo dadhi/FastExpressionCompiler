@@ -6175,21 +6175,23 @@ namespace FastExpressionCompiler
 
                     sb.Append(") => //$");
                     var body = x.Body;
-                    if (x.ReturnType != typeof(void) &&
-                        body.NodeType != ExpressionType.Block && 
-                        body.NodeType != ExpressionType.Try &&
-                        body.NodeType != ExpressionType.Loop)
-                        sb.NewLineIdentCs(x.Body, lineIdent, stripNamespace, printType);
+                    var bNodeType = body.NodeType;
+                    var isBodyExpression = bNodeType != ExpressionType.Block && bNodeType != ExpressionType.Try && bNodeType != ExpressionType.Loop; 
+                    if (isBodyExpression && x.ReturnType != typeof(void))
+                        sb.NewLineIdentCs(body, lineIdent, stripNamespace, printType);
                     else
                     {
                         sb.NewLine(lineIdent, identSpaces).Append('{');
 
                         // Body handles ident and `;` itself
-                        if (x.Body is BlockExpression blockBody)
-                            blockBody.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, inTheLastBlock: true);
+                        if (body is BlockExpression bb)
+                            bb.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, inTheLastBlock: true);
                         else
-                            sb.NewLineIdentCs(x.Body, lineIdent, stripNamespace, printType).Append(';');
-
+                        {
+                            sb.NewLineIdentCs(body, lineIdent, stripNamespace, printType);
+                            if (isBodyExpression)
+                                sb.AddSemicolonIfFits();
+                        }
                         sb.NewLine(lineIdent, identSpaces).Append("})");
                     }
                     return sb.Append(')');
@@ -6289,15 +6291,31 @@ namespace FastExpressionCompiler
                 case ExpressionType.Try:
                 {
                     var x = (TryExpression)e;
+                    var returnsValue = e.Type != typeof(void);
+                    void PrintPart(Expression part) 
+                    {
+                        if (part is BlockExpression pb)
+                            pb.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                        else
+                        {
+                            sb.NewLineIdent(lineIdent);
+                            var pt = part.NodeType;
+                            var canBeReturned = returnsValue &&
+                                pt != ExpressionType.Goto &&
+                                pt != ExpressionType.Throw &&
+                                pt != ExpressionType.Block &&
+                                pt != ExpressionType.Try &&
+                                pt != ExpressionType.Loop;
+
+                            if (canBeReturned)
+                                sb.Append("return ");
+                            part.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
+                        }
+                    }
+
                     sb.Append("try");
                     sb.NewLine(lineIdent, identSpaces).Append('{');
-
-                    var body = x.Body;
-                    if (body is BlockExpression bb)
-                        bb.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    else
-                        sb.NewLineIdentCs(body, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
-
+                    PrintPart(x.Body);
                     sb.NewLine(lineIdent, identSpaces).Append('}');
 
                     var handlers = x.Handlers;
@@ -6321,10 +6339,7 @@ namespace FastExpressionCompiler
                                 sb.NewLine(lineIdent, identSpaces).Append(')');
                             }
                             sb.NewLine(lineIdent, identSpaces).Append('{');
-                            if (h.Body is BlockExpression fb)
-                                fb.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                            else
-                                sb.NewLineIdentCs(h.Body, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
+                            PrintPart(h.Body);
                             sb.NewLine(lineIdent, identSpaces).Append('}');
                         }
                     }
@@ -6333,10 +6348,7 @@ namespace FastExpressionCompiler
                     {
                         sb.NewLine(lineIdent, identSpaces).Append("finally");
                         sb.NewLine(lineIdent, identSpaces).Append('{');
-                        if (x.Finally is BlockExpression fb)
-                            fb.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                        else
-                            sb.NewLineIdentCs(x.Finally, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
+                        PrintPart(x.Finally);
                         sb.NewLine(lineIdent, identSpaces).Append('}');
                     }
                     return sb;
