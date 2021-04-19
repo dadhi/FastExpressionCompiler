@@ -4827,7 +4827,7 @@ namespace FastExpressionCompiler
                 else
                     il.Emit(OpCodes.Brfalse, labelIfFalse);
 
-                if (!TryEmit(expr.IfTrue, paramExprs, il, ref closure, setup, parent & ParentFlags.IgnoreResult))
+                if (!TryEmit(expr.IfTrue, paramExprs, il, ref closure, setup, parent))
                     return false;
 
                 var ifFalseExpr = expr.IfFalse;
@@ -4838,7 +4838,7 @@ namespace FastExpressionCompiler
                     var labelDone = il.DefineLabel();
                     il.Emit(OpCodes.Br, labelDone);
                     il.MarkLabel(labelIfFalse);
-                    if (!TryEmit(ifFalseExpr, paramExprs, il, ref closure, setup, parent & ParentFlags.IgnoreResult))
+                    if (!TryEmit(ifFalseExpr, paramExprs, il, ref closure, setup, parent))
                         return false;
                     il.MarkLabel(labelDone);
                 }
@@ -6113,15 +6113,15 @@ namespace FastExpressionCompiler
                 {
                     var x = (MemberInitExpression)e;
                     x.NewExpression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    sb.NewLine(lineIdent, identSpaces).Append(" { ");
-                    x.Bindings.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces);
+                    sb.NewLine(lineIdent, identSpaces).Append('{');
+                    x.Bindings.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.NewLine(lineIdent, identSpaces).Append('}');
                 }
                 case ExpressionType.ListInit:
                 {
                     var x = (ListInitExpression)e;
                     x.NewExpression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    sb.NewLine(lineIdent, identSpaces).Append(" { ");
+                    sb.NewLine(lineIdent, identSpaces).Append('{');
 
                     var inits = x.Initializers;
                     for (var i = 0; i < inits.Count; ++i)
@@ -6192,7 +6192,7 @@ namespace FastExpressionCompiler
                             if (isBodyExpression)
                                 sb.AddSemicolonIfFits();
                         }
-                        sb.NewLine(lineIdent, identSpaces).Append("})");
+                        sb.NewLine(lineIdent, identSpaces).Append('}');
                     }
                     return sb.Append(')');
                 }
