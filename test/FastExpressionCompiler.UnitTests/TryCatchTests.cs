@@ -160,10 +160,11 @@ namespace FastExpressionCompiler.UnitTests
                 )
             ));
 
-            var func = expr.CompileFast(true);
+            expr.PrintCSharp();
 
-            Assert.IsNotNull(func);
-            Assert.IsTrue(func());
+            var f = expr.CompileFast(true);
+            f.PrintIL("fec");
+            Assert.IsTrue(f());
         }
 
         [Test]

@@ -548,11 +548,6 @@ namespace FastExpressionCompiler
         {
             public bool LastEmitIsAddress;
 
-            /// Helpers to know if a Return GotoExpression's Label should be emitted.
-            /// First set bit is ContainsReturnGoto, the rest is ReturnLabelIndex
-            private int[] _tryCatchFinallyInfos; 
-            public int CurrentTryCatchFinallyIndex;
-
             /// Tracks the stack of blocks where are we in emit phase
             private LiveCountArray<BlockInfo> _blockStack;
 
@@ -589,8 +584,7 @@ namespace FastExpressionCompiler
                 NestedLambdas       = Tools.Empty<NestedLambdaInfo>();
 
                 LastEmitIsAddress = false;
-                CurrentTryCatchFinallyIndex = -1;
-                _tryCatchFinallyInfos = null;
+
                 Labels      = new LiveCountArray<LabelInfo>(Tools.Empty<LabelInfo>());
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
             }
@@ -707,40 +701,6 @@ namespace FastExpressionCompiler
                     il.MarkLabel(label.Label = il.DefineLabel());
                 }
             }
-
-            public void AddTryCatchFinallyInfo()
-            {
-                ++CurrentTryCatchFinallyIndex;
-                var infos = _tryCatchFinallyInfos;
-                if (infos == null)
-                    _tryCatchFinallyInfos = new int[1];
-                else if (infos.Length == 1)
-                    _tryCatchFinallyInfos = new[] { infos[0], 0 };
-                else if (infos.Length == 2)
-                    _tryCatchFinallyInfos = new[] { infos[0], infos[1], 0 };
-                else
-                {
-                    var sourceLength = infos.Length;
-                    var newInfos = new int[sourceLength + 1];
-                    Array.Copy(infos, newInfos, sourceLength);
-                    _tryCatchFinallyInfos = newInfos;
-                }
-            }
-
-            public void MarkAsContainsReturnGotoExpression()
-            {
-                if (CurrentTryCatchFinallyIndex != -1)
-                    _tryCatchFinallyInfos[CurrentTryCatchFinallyIndex] |= 1;
-            }
-
-            public void MarkReturnLabelIndex(int index)
-            {
-                if (CurrentTryCatchFinallyIndex != -1)
-                    _tryCatchFinallyInfos[CurrentTryCatchFinallyIndex] |= index << 1;
-            }
-
-            public bool TryCatchFinallyContainsReturnGotoExpression() =>
-                _tryCatchFinallyInfos != null && (_tryCatchFinallyInfos[++CurrentTryCatchFinallyIndex] & 1) != 0;
 
             public object[] GetArrayOfConstantsAndNestedLambdas()
             {
@@ -869,16 +829,6 @@ namespace FastExpressionCompiler
                                 return block.VarIndexes[j];
                 }
                 return -1;
-            }
-
-            public bool IsTryReturnLabel(int index)
-            {
-                var tryCatchFinallyInfos = _tryCatchFinallyInfos;
-                if (tryCatchFinallyInfos != null)
-                    for (var i = 0; i < tryCatchFinallyInfos.Length; ++i)
-                        if (tryCatchFinallyInfos[i] >> 1 == index)
-                            return true;
-                return false;
             }
         }
 
@@ -1396,8 +1346,8 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
-                        if (gotoExpr.Kind == GotoExpressionKind.Return)
-                            closure.MarkAsContainsReturnGotoExpression();
+                        // if (gotoExpr.Kind == GotoExpressionKind.Return)
+                        //     closure.MarkAsContainsReturnGotoExpression();
                         if (gotoExpr.Value == null)
                             return true;
                         expr = gotoExpr.Value;
@@ -1649,8 +1599,6 @@ namespace FastExpressionCompiler
             IReadOnlyList<PE> paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure, CompilerFlags flags)
         {
 #endif
-            closure.AddTryCatchFinallyInfo();
-
             if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs, isNestedLambda, ref rootClosure, flags))
                 return false;
 
@@ -1681,7 +1629,6 @@ namespace FastExpressionCompiler
                 !TryCollectBoundConstants(ref closure, tryExpr.Finally, paramExprs, isNestedLambda, ref rootClosure, flags))
                 return false;
 
-            --closure.CurrentTryCatchFinallyIndex;
             return true;
         }
 
@@ -2342,15 +2289,13 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                var containsReturnGotoExpression = closure.TryCatchFinallyContainsReturnGotoExpression();
                 il.BeginExceptionBlock();
 
                 if (!TryEmit(tryExpr.Body, paramExprs, il, ref closure, setup, parent))
                     return false;
 
                 var exprType = tryExpr.Type;
-                var returnsResult = exprType != typeof(void) && (containsReturnGotoExpression || !parent.IgnoresResult());
-                // todo: @wip should we change it into the `!containsReturnGotoExpression && exprType != typeof(void) && !parent.IgnoresResult()` because we handling the storing of the variable in the TryEmitGoto for the containsReturnGotoExpression
+                var returnsResult = exprType != typeof(void) && !parent.IgnoresResult();
                 var resultVarIndex = -1;
 
                 if (returnsResult)
@@ -2398,7 +2343,6 @@ namespace FastExpressionCompiler
                 if (returnsResult)
                     EmitLoadLocalVariable(il, resultVarIndex);
 
-                --closure.CurrentTryCatchFinallyIndex;
                 return true;
             }
 
@@ -2931,7 +2875,7 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, varIndex);
                     else
                     {
-                        il.Emit(OpCodes.Ldloc_0); // load constants array from the 0 variable // todo: @incomplete until we optimize for a single constant case - then we need a check here for number of constants
+                        il.Emit(OpCodes.Ldloc_0); // load constants array from the 0 variable // todo: @perf until we optimize for a single constant case - then we need a check here for number of constants
                         EmitLoadConstantInt(il, constIndex);
                         il.Emit(OpCodes.Ldelem_Ref);
                         if (exprType.IsValueType)
