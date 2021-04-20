@@ -6312,7 +6312,7 @@ namespace FastExpressionCompiler
 
                         if (CanBeReturned(gtValue.NodeType))
                             sb.Append("return ");
-                        gtValue.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                        gtValue.ToCSharpString(sb, lineIdent - identSpaces, stripNamespace, printType, identSpaces);
                         return sb;
                     }
                     return gt.Target.ToCSharpString(sb.Append("goto "));
