@@ -154,13 +154,16 @@ namespace FastExpressionCompiler.UnitTests
                     Throw(Constant(new DivideByZeroException())),
                     Constant(false)
                 ),
-                Catch(
-                    typeof(DivideByZeroException),
+                Catch(typeof(DivideByZeroException),
                     Constant(true)
                 )
             ));
 
             expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+            Assert.IsTrue(fs());
 
             var f = expr.CompileFast(true);
             f.PrintIL("fec");

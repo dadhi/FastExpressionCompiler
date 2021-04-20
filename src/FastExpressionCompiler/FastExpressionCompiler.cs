@@ -6239,7 +6239,7 @@ namespace FastExpressionCompiler
                     void PrintPart(Expression part) 
                     {
                         if (part is BlockExpression pb)
-                            pb.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                            pb.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, inTheLastBlock: true);
                         else
                         {
                             sb.NewLineIdent(lineIdent);
