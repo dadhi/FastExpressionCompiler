@@ -885,7 +885,7 @@ namespace FastExpressionCompiler
                 NonPassedParams = nonPassedParams;
         }
 
-        // todo: @incomplete this class is required until we move to a single constants list per lambda hierarchy 
+        // todo: @perf this class is required until we move to a single constants list per lambda hierarchy 
         public sealed class NestedLambdaWithConstantsAndNestedLambdas
         {
             public static FieldInfo NestedLambdaField =
@@ -1877,12 +1877,14 @@ namespace FastExpressionCompiler
                                     if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                                         statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                     {
+                                        if ((parent & ParentFlags.TryCatch) != 0)
+                                            return false; // todo: @feature return from the TryCatch with the internal label is not supported, though it is the unlikely case
+
                                         // we are generating the return value and ensuring here that it is not popped-out
                                         if (gt.Value != null)
                                         {
                                             if (!TryEmit(gt.Value, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
                                                 return false;
-                                            // todo: @bug test that we can return from TryCatch (TryCatchTests)
                                             il.Emit(OpCodes.Ret);
                                         }
 
@@ -1892,7 +1894,6 @@ namespace FastExpressionCompiler
                                             !TryEmit(label.DefaultValue, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
                                             return false;
 
-                                        // todo: @bug test that we can return from TryCatch (TryCatchTests)
                                         // @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
                                         // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
                                         // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement), 
@@ -3042,7 +3043,7 @@ namespace FastExpressionCompiler
                 int varIndex;
                 for (var i = 0; i < constCount; i++)
                 {
-                    if (constUsage[i] > 1) // todo: @incomplete should we proceed to do this or simplify and remove the usages for the closure info?
+                    if (constUsage[i] > 1) // todo: @perf should we proceed to do this or simplify and remove the usages for the closure info?
                     {
                         il.Emit(OpCodes.Ldloc_0);// SHOULD BE always at 0 locaton; load array field variable on the stack
                         EmitLoadConstantInt(il, i);
@@ -6474,7 +6475,7 @@ namespace FastExpressionCompiler
                             e.NodeType == ExpressionType.ModuloAssign
                         )
                         {
-                            // todo: @incomplete handle the right part is condition with the blocks for If and/or Else, e.g. see #261 test `Serialize_the_nullable_struct_array` 
+                            // todo: @perf handle the right part is condition with the blocks for If and/or Else, e.g. see #261 test `Serialize_the_nullable_struct_array` 
                             if (b.Right is BlockExpression rightBlock) // it is valid to assign the block and it is used to my surprise
                             {
                                 sb.Append("// { The block result will be assigned to `")

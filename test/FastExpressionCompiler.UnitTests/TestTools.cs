@@ -39,7 +39,7 @@ namespace FastExpressionCompiler
         public static void PrintIL(this MethodInfo method, string tag = null)
         {
             var s = new StringBuilder();
-            s.Append(tag == null ? "<il>" : "<il:" + tag + ">").AppendLine();
+            s.Append(tag == null ? "<il>" : "<" + tag + ">").AppendLine();
             method.ToILString(s);
             s.AppendLine().Append(tag == null ? "</il>" : "</" + tag + ">");
             Console.WriteLine(s);

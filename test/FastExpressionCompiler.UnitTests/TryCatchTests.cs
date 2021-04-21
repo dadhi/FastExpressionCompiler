@@ -23,6 +23,7 @@ namespace FastExpressionCompiler.UnitTests
             Can_handle_the_exception_and_return_result_from_TryCatch_block();
             Can_use_exception_parameter();
             Can_return_from_catch_block();
+            Can_return_with_return_goto_from_the_catch_block();
             Can_throw_an_exception();
             Can_return_from_try_block_using_label();
             Can_return_from_catch_block_using_label();
@@ -30,8 +31,8 @@ namespace FastExpressionCompiler.UnitTests
             Can_return_nested_catch_block_result();
             Can_return_from_try_block_using_goto_to_label_with_default_value();
             Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label();
-            
-            return 12;
+
+            return 13;
         }
 
         [Test]
@@ -166,6 +167,35 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsTrue(fs());
 
             var f = expr.CompileFast(true);
+            f.PrintIL("fec");
+            Assert.IsTrue(f());
+        }
+
+        [Test]
+        public void Can_return_with_return_goto_from_the_catch_block()
+        {
+            var returnLabel = Label(typeof(bool));
+
+            var expr = Lambda<Func<bool>>(TryCatch(
+                Block(
+                    Throw(Constant(new DivideByZeroException())),
+                    Constant(false)
+                ),
+                Catch(typeof(DivideByZeroException),
+                    Block(
+                        Return(returnLabel, Constant(true)),
+                        Label(returnLabel, Constant(false))
+                    )
+                )
+            ));
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+            Assert.IsTrue(fs());
+
+            var f = expr.CompileFast();
             f.PrintIL("fec");
             Assert.IsTrue(f());
         }
