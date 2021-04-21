@@ -24,17 +24,17 @@ namespace FastExpressionCompiler.Benchmarks
             //a.LightExpression_with_sub_expressions_CompiledFast();
             //a.Expression_with_sub_expressions_CompiledFast();
             //a.Expression_with_sub_expressions_Compiled();
-            // BenchmarkRunner.Run<NestedLambdasVsVars>();
+            BenchmarkRunner.Run<NestedLambdasVsVars>();
 
             // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
-            BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
+            // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
             // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
 
             //BenchmarkRunner.Run<NestedLambdaOverhead>();
 
             //BenchmarkRunner.Run<FEC_vs_ManualEmit_vs_Activator>();
 
-            //BenchmarkRunner.Run<MultipleNestedLambdaExprVsExprSharing>();
+            // BenchmarkRunner.Run<MultipleNestedLambdaExprVsExprSharing>();
 
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Compile>();
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Execute>();

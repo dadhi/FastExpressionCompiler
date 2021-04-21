@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
-        <VersionPrefix>3.0.4</VersionPrefix>
+        <VersionPrefix>3.0.5</VersionPrefix>
         <VersionSuffix></VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
@@ -9,6 +9,12 @@
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.0.5 Bug-fix release
+
+- fixed: another case in #301 InvalidOperationException in the Mapster
+- fixed: multiple problems with the TryCatch C# and Expression string output
+
+
 ## v3.0.4 Bug-fix release
 
 - fixed: #302 Error compiling expression with array access
