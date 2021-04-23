@@ -19,10 +19,113 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            // Test_301_Dictionary_case();
+            Test_301_TryCatch_case();
             Test_301();
             Test_300();
-            Test_301_TryCatch_case();
-            return 3;
+            return 4;
+        }
+
+        // [Test]
+        public void Test_301_Dictionary_case()
+        {
+            var f = (Func<object, Dictionary<string, object>>)((object object__36425974) => //$
+            {
+                SimplePoco simplepoco__61450107;
+                simplepoco__61450107 = ((SimplePoco)object__36425974);
+                return simplepoco__61450107 == null ?
+                    null :
+                    new Dictionary<string, object>()
+                    {
+                        { "Id", ((object)simplepoco__61450107.Id) }, 
+                        { "Name", simplepoco__61450107.Name == null ?
+                            null :
+                            ((object)simplepoco__61450107.Name) }
+                    };
+            });
+
+            var p = new ParameterExpression[2]; // the parameter expressions 
+            var e = new Expression[19]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+
+            var expr = Lambda<Func<object, Dictionary<string, object>>>( //$
+            e[0]=Block(
+                typeof(Dictionary<string, object>),
+                new[] {
+                p[0]=Parameter(typeof(SimplePoco))
+                },
+                e[1]=MakeBinary(ExpressionType.Assign,
+                p[0 // (SimplePoco simplepoco__61450107)
+                    ],
+                e[2]=Convert(
+                    p[1]=Parameter(typeof(object)),
+                    typeof(SimplePoco))), 
+                e[3]=Condition(
+                e[4]=MakeBinary(ExpressionType.Equal,
+                    p[0 // (SimplePoco simplepoco__61450107)
+                    ],
+                    e[5]=Constant(null, typeof(SimplePoco))),
+                e[6]=Constant(null, typeof(Dictionary<string, object>)),
+                e[7]=ListInit((NewExpression)(
+                    e[8]=New( // 0 args
+                    typeof(Dictionary<string, object>).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0])), 
+                    ElementInit(
+                    typeof(IDictionary<string, object>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Add" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(string), typeof(object) })), 
+                    e[9]=Constant("Id"), 
+                    e[10]=Convert(
+                    e[11]=Property(
+                        p[0 // (SimplePoco simplepoco__61450107)
+                        ],
+                        typeof(SimplePoco).GetTypeInfo().GetDeclaredProperty("Id")),
+                    typeof(object))), 
+                    ElementInit(
+                    typeof(IDictionary<string, object>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Add" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(string), typeof(object) })), 
+                    e[12]=Constant("Name"), 
+                    e[13]=Condition(
+                    e[14]=MakeBinary(ExpressionType.Equal,
+                        e[15]=Property(
+                        p[0 // (SimplePoco simplepoco__61450107)
+                            ],
+                        typeof(SimplePoco).GetTypeInfo().GetDeclaredProperty("Name")),
+                        e[16]=Constant(null, typeof(string))),
+                    e[17]=Constant(null),
+                    e[18]=Convert(
+                        e[15 // MemberAccess of string
+                        ],
+                        typeof(object)),
+                    typeof(object)))),
+                typeof(Dictionary<string, object>))),
+            p[1 // (object object__36425974)
+                ]);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+
+            var poco = new SimplePoco
+            {
+                Id = Guid.NewGuid(),
+                Name = "test",
+            };
+            var dict = fs(poco);
+            Assert.AreEqual(2, dict.Count);
+            Assert.AreEqual(poco.Id, dict["Id"]);
+            Assert.AreEqual(poco.Name, dict["Name"]);
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL("fec");
+            
+            var dict1 = ff(poco);
+            Assert.AreEqual(2, dict1.Count);
+            Assert.AreEqual(poco.Id, dict1["Id"]);
+            Assert.AreEqual(poco.Name, dict1["Name"]);
+        }
+
+        public class SimplePoco
+        {
+            public Guid Id { get; set; }
+            public string Name { get; set; }
         }
 
         [Test]
