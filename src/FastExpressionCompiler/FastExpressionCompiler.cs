@@ -6080,14 +6080,14 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            sb.Append('(');
+                            sb.Append('{');
                             for (var j = 0; j < args.Count; ++j)
                                 args.GetArgument(j).ToCSharpString(j == 0 ? sb : sb.Append(", "), 
                                     lineIdent + identSpaces, stripNamespace, printType, identSpaces);
-                            sb.Append(')');
+                            sb.Append('}');
                         }
                     }
-                    return sb.NewLine(lineIdent, identSpaces).Append('}');
+                    return sb.NewLine(lineIdent, identSpaces).Append("};");
                 }
                 case ExpressionType.Lambda:
                 {
@@ -6163,10 +6163,10 @@ namespace FastExpressionCompiler
                         sb.Append(')');
                         sb.NewLine(lineIdent, identSpaces).Append('{');
 
-                        if (x.IfTrue is BlockExpression)
-                            x.IfTrue.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
+                        if (x.IfTrue is BlockExpression tb)
+                            tb.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, inTheLastBlock: false);
                         else
-                            sb.NewLineIdentCs(x.IfTrue, lineIdent, stripNamespace, printType, identSpaces).Append(';');
+                            sb.NewLineIdentCs(x.IfTrue, lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
 
                         sb.NewLine(lineIdent, identSpaces).Append('}');
                         if (x.IfFalse.NodeType != ExpressionType.Default || x.IfFalse.Type != typeof(void))
@@ -6638,14 +6638,14 @@ namespace FastExpressionCompiler
                     if (gt.Value == null)
                         sb.Append("return;");
                     else 
-                        gt.Value.ToCSharpString(sb.Append("return "), lineIdent, stripNamespace, printType, identSpaces).Append(";");
+                        gt.Value.ToCSharpString(sb.Append("return "), lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
 
                     sb.NewLineIdent(lineIdent);
                     label.Target.ToCSharpString(sb).Append(':');
                     if (label.DefaultValue == null) 
                         return sb.AppendLine(); // no return because we may have other expressions after label
                     sb.NewLineIdent(lineIdent);
-                    return label.DefaultValue.ToCSharpString(sb.Append("return "), lineIdent, stripNamespace, printType, identSpaces).Append(";");
+                    return label.DefaultValue.ToCSharpString(sb.Append("return "), lineIdent, stripNamespace, printType, identSpaces).AddSemicolonIfFits();
                 }
 
                 if (expr is BlockExpression bl)
