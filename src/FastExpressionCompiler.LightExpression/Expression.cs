@@ -907,7 +907,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) =>
             new ListInitExpression(newExpression, initializers.AsReadOnlyList());
-
+        // todo: @perf optimize for the small amount of initializers the same as NewArrayInit
         public static ListInitExpression ListInit(NewExpression newExpression, params ElementInit[] initializers) =>
             new ListInitExpression(newExpression, initializers);
 

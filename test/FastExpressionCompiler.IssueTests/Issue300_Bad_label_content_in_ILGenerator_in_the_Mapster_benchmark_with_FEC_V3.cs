@@ -19,28 +19,28 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Test_301_Dictionary_case();
+            Test_301_Dictionary_case();
             Test_301_TryCatch_case();
             Test_301();
             Test_300();
             return 4;
         }
 
-        // [Test]
+        [Test]
         public void Test_301_Dictionary_case()
         {
-            var f = (Func<object, Dictionary<string, object>>)((object object__36425974) => //$
+            var f = (Func<object, Dictionary<string, object>>)((object object__58225482) => //$
             {
-                SimplePoco simplepoco__61450107;
-                simplepoco__61450107 = ((SimplePoco)object__36425974);
-                return simplepoco__61450107 == null ?
+                SimplePoco simplepoco__54267293;
+                simplepoco__54267293 = ((SimplePoco)object__58225482);
+                return simplepoco__54267293 == null ?
                     null :
                     new Dictionary<string, object>()
                     {
-                        { "Id", ((object)simplepoco__61450107.Id) }, 
-                        { "Name", simplepoco__61450107.Name == null ?
+                        {"Id", ((object)simplepoco__54267293.Id)}, 
+                        {"Name", simplepoco__54267293.Name == null ?
                             null :
-                            ((object)simplepoco__61450107.Name) }
+                            ((object)simplepoco__54267293.Name)}
                     };
             });
 

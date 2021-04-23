@@ -2065,13 +2065,13 @@ namespace FastExpressionCompiler
                 }
 
                 if (indexerPropGetter != null)
-                    return EmitMethodCall(il, indexerPropGetter);
+                    return EmitMethodCallOrVirtCall(il, indexerPropGetter);
 
                 if (indexArgCount == 1) // one-dimensional array
                     return TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure);
 
                 indexerPropGetter = indexExpr.Object?.Type.FindMethod("Get"); // multi-dimensional array
-                return indexerPropGetter != null && EmitMethodCall(il, indexerPropGetter);
+                return indexerPropGetter != null && EmitMethodCallOrVirtCall(il, indexerPropGetter);
             }
 
 #if LIGHT_EXPRESSION
@@ -2645,7 +2645,7 @@ namespace FastExpressionCompiler
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, 
                         parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1))
                         return false;
-                    return EmitMethodCall(il, method);
+                    return EmitMethodCallOrVirtCall(il, method);
                 }
 
                 var sourceType = opExpr.Type;
@@ -3318,7 +3318,7 @@ namespace FastExpressionCompiler
                 if (member is PropertyInfo prop)
                 {
                     var method = prop.DeclaringType.FindPropertySetMethod(prop.Name);
-                    return method != null && EmitMethodCall(il, method);
+                    return method != null && EmitMethodCallOrVirtCall(il, method);
                 }
                 if (member is FieldInfo field)
                 {
@@ -3378,10 +3378,14 @@ namespace FastExpressionCompiler
                 var callFlags = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.MemberAccess & ~ParentFlags.InstanceAccess | ParentFlags.Call;
                 for (var i = 0; i < initCount; ++i)
                 {
+                    if (valueVarIndex != -1) // load local value address, to set its members
+                        EmitLoadLocalVariableAddress(il, valueVarIndex);
+                    else
+                        il.Emit(OpCodes.Dup); // duplicate member owner on stack
+
                     var elemInit = inits.GetArgument(i);
                     var method       = elemInit.AddMethod;
                     var methodParams = method.GetParameters();
-
     #if LIGHT_EXPRESSION
                     var addArgs     = (IArgumentProvider)elemInit;
                     var addArgCount = elemInit.ArgumentCount;
@@ -3391,26 +3395,21 @@ namespace FastExpressionCompiler
     #endif
                     for (var a = 0; a < addArgCount; ++a)
                     {
-                        if (valueVarIndex != -1) // load local value address, to set its members
-                            EmitLoadLocalVariableAddress(il, valueVarIndex);
-                        else
-                            il.Emit(OpCodes.Dup); // duplicate member owner on stack
-
                         var arg = addArgs.GetArgument(a);
                         if (!TryEmit(addArgs.GetArgument(a), paramExprs, il, ref closure, setup, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1))
                             return false;
+                    }
 
-                        if (!exprType.IsValueType)
-                            EmitMethodCall(il, method);
-                        else if (!method.IsVirtual) // #251 - no need for constrain or virtual call because it is already by-ref
-                            il.Emit(OpCodes.Call, method);
-                        else if (method.DeclaringType == exprType)
-                            il.Emit(OpCodes.Call, method);
-                        else
-                        {
-                            il.Emit(OpCodes.Constrained, exprType); // todo: @check it is a value type so... can we de-virtualize the call?
-                            il.Emit(OpCodes.Callvirt,    method);
-                        }
+                    if (!exprType.IsValueType)
+                        EmitMethodCallOrVirtCall(il, method);
+                    else if (!method.IsVirtual) // #251 - no need for constrain or virtual call because it is already by-ref
+                        EmitMethodCall(il, method);
+                    else if (method.DeclaringType == exprType)
+                        EmitMethodCall(il, method);
+                    else
+                    {
+                        il.Emit(OpCodes.Constrained, exprType); // todo: @check it is a value type so... can we de-virtualize the call?
+                        il.Emit(OpCodes.Callvirt,    method);
                     }
                 }
 
@@ -3810,7 +3809,7 @@ namespace FastExpressionCompiler
                 }
 
                 var setter = instType?.FindMethod("Set");
-                return setter != null && EmitMethodCall(il, setter); // multi dimensional array
+                return setter != null && EmitMethodCallOrVirtCall(il, setter); // multi dimensional array
             }
 
 #if LIGHT_EXPRESSION
@@ -3855,11 +3854,11 @@ namespace FastExpressionCompiler
                 }
 
                 if (!objIsValueType) 
-                    EmitMethodCall(il, method);
+                    EmitMethodCallOrVirtCall(il, method);
                 else if (!method.IsVirtual || objExpr is ParameterExpression p && p.IsByRef)
-                    il.Emit(OpCodes.Call, method);
+                    EmitMethodCall(il, method);
                 else if (method.DeclaringType == objExpr.Type)
-                    il.Emit(OpCodes.Call, method);
+                    EmitMethodCall(il, method);
                 else
                 {
                     il.Emit(OpCodes.Constrained, objExpr.Type);
@@ -4081,7 +4080,7 @@ namespace FastExpressionCompiler
                     ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
                     : CurryClosureFuncs  .Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
 
-                il.Emit(OpCodes.Call, closureMethod);
+                EmitMethodCall(il, closureMethod);
                 return true;
             }
 
@@ -4157,7 +4156,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                il.Emit(OpCodes.Call, delegateInvokeMethod);
+                EmitMethodCall(il, delegateInvokeMethod);
                 if ((parent & ParentFlags.IgnoreResult) != 0 && delegateInvokeMethod.ReturnType != typeof(void))
                     il.Emit(OpCodes.Pop);
 
@@ -4242,7 +4241,7 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
-                    il.Emit(OpCodes.Call, leftOpType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il, leftOpType.FindNullableGetValueOrDefaultMethod());
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
 
@@ -4273,7 +4272,7 @@ namespace FastExpressionCompiler
                 if (rightOpType.IsNullable())
                 {
                     rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
-                    il.Emit(OpCodes.Call, rightOpType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il, rightOpType.FindNullableGetValueOrDefaultMethod());
                     // ReSharper disable once AssignNullToNotNullAttribute
                     rightOpType = Nullable.GetUnderlyingType(rightOpType);
                 }
@@ -4302,7 +4301,7 @@ namespace FastExpressionCompiler
                             var ps = m.GetParameters();
                             if (ps.Length == 2 && ps[0].ParameterType == leftOpType && ps[1].ParameterType == leftOpType)
                             {
-                                il.Emit(OpCodes.Call, m);
+                                EmitMethodCall(il, m);
                                 return true;
                             }
                         }
@@ -4311,7 +4310,7 @@ namespace FastExpressionCompiler
                     if (expressionType != ExpressionType.Equal && expressionType != ExpressionType.NotEqual)
                         return false; // todo: @unclear what is the alternative?
 
-                    il.Emit(OpCodes.Call, _objectEqualsMethod);
+                    EmitMethodCall(il, _objectEqualsMethod);
 
                     if (expressionType == ExpressionType.NotEqual) // invert result for not equal
                     {
@@ -4376,11 +4375,11 @@ namespace FastExpressionCompiler
                     var leftNullableHasValueGetterMethod = exprLeft.Type.FindNullableHasValueGetterMethod();
 
                     EmitLoadLocalVariableAddress(il, lVarIndex);
-                    il.Emit(OpCodes.Call, leftNullableHasValueGetterMethod);
+                    EmitMethodCall(il, leftNullableHasValueGetterMethod);
 
                     // ReSharper disable once AssignNullToNotNullAttribute
                     EmitLoadLocalVariableAddress(il, rVarIndex);
-                    il.Emit(OpCodes.Call, leftNullableHasValueGetterMethod);
+                    EmitMethodCall(il, leftNullableHasValueGetterMethod);
 
                     switch (expressionType)
                     {
@@ -4437,9 +4436,9 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariableAddress(il, lefType);
 
                     il.Emit(OpCodes.Dup);
-                    il.Emit(OpCodes.Call,    lefType.FindNullableHasValueGetterMethod());
+                    EmitMethodCall(il,       lefType.FindNullableHasValueGetterMethod());
                     il.Emit(OpCodes.Brfalse, leftNoValueLabel);
-                    il.Emit(OpCodes.Call,    lefType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il,       lefType.FindNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(leftExpr, paramExprs, il, ref closure, setup, flags))
                     return false;
@@ -4458,9 +4457,9 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariableAddress(il, rightType);
 
                     il.Emit(OpCodes.Dup);
-                    il.Emit(OpCodes.Call,    rightType.FindNullableHasValueGetterMethod());
+                    EmitMethodCall(il,       rightType.FindNullableHasValueGetterMethod());
                     il.Emit(OpCodes.Brfalse, rightNoValueLabel);
-                    il.Emit(OpCodes.Call,    rightType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il,       rightType.FindNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(rightExpr, paramExprs, il, ref closure, setup, flags))
                     return false;
@@ -4554,7 +4553,7 @@ namespace FastExpressionCompiler
                             }
                         }
 
-                        return method != null && EmitMethodCall(il, method);
+                        return method != null && EmitMethodCallOrVirtCall(il, method);
                     }
                 }
 
@@ -4626,7 +4625,7 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.Power:
-                        il.Emit(OpCodes.Call, typeof(Math).FindMethod("Pow"));
+                        EmitMethodCall(il, typeof(Math).FindMethod("Pow"));
                         return true;
                 }
 
@@ -4756,7 +4755,7 @@ namespace FastExpressionCompiler
                 {
                     if (!closure.LastEmitIsAddress)
                         EmitStoreAndLoadLocalVariableAddress(il, nullOfValueType);
-                    il.Emit(OpCodes.Call, nullOfValueType.FindNullableHasValueGetterMethod());
+                    EmitMethodCall(il, nullOfValueType.FindNullableHasValueGetterMethod());
                 }
 
                 var labelIfFalse = il.DefineLabel();
@@ -4831,13 +4830,26 @@ namespace FastExpressionCompiler
                 return testExpr;
             }
 
+            // get the advantage of the optimized specialized EmitCall method
             [MethodImpl((MethodImplOptions)256)]
-            private static bool EmitMethodCall(ILGenerator il, MethodInfo method)
+            private static bool EmitMethodCallOrVirtCall(ILGenerator il, MethodInfo method)
             {
 #if SUPPORTS_EMITCALL
                 il.EmitCall(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method, null);
 #else
                 il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+#endif
+                return true;
+            }
+
+            // get the advantage of the optimized specialized EmitCall method
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool EmitMethodCall(ILGenerator il, MethodInfo method)
+            {
+#if SUPPORTS_EMITCALL
+                il.EmitCall(OpCodes.Call, method, null);
+#else
+                il.Emit(OpCodes.Call, method);
 #endif
                 return true;
             }
