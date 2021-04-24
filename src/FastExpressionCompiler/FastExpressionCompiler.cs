@@ -6869,19 +6869,10 @@ namespace FastExpressionCompiler
             return sb.Append(" }))");
         }
 
-        private static string GetParameterOrVariableNameFromTheType(Type t, string s)
-        {
-            var dotIndex = s.LastIndexOf('.');
-            if (dotIndex != -1)
-                s = s.Substring(dotIndex + 1);
-            return (t.IsArray ? s.Replace("[]", "_arr") : 
-                t.IsGenericType ? s.Replace('<', '_').Replace('>', '_') : 
-                s).ToLowerInvariant();
-        }
-
         internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
             name != null ? sb.Append(name)
-                : sb.Append(type.ToCode(true, (t, s) => GetParameterOrVariableNameFromTheType(t, s))).Append("__").Append(identity.GetHashCode());
+                : sb.Append(type.ToCode(true).Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(", ", "_").ToLowerInvariant())
+                    .Append("__").Append(identity.GetHashCode());
 
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
         public static string ToCode(this Type type,

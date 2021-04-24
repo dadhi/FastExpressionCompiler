@@ -19,11 +19,307 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            // Test_301_Loop_case();
             Test_301_Dictionary_case();
             Test_301_TryCatch_case();
             Test_301();
             Test_300();
-            return 4;
+            return 5;
+        }
+
+        public class Post
+        {
+            public IDictionary<string,string> Dic { get; set; }
+            public string Secret { get; set; }
+        }
+
+
+        // [Test]
+        public void Test_301_Loop_case()
+        {
+            var f = (Func<Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post, Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post, Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post>)((
+                Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__1707556, 
+                Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__15368010) => //$
+            {
+                Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post result;
+                
+                if (issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__1707556 == null)
+                {
+                    return null;
+                }
+                
+                result = issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__15368010 ?? 
+                    new Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post();
+                result.Dic = new Func<IDictionary<string, string>, IDictionary<string, string>, IDictionary<string, string>>(
+                    (Func<IDictionary<string, string>, IDictionary<string, string>, IDictionary<string, string>>)((
+                        IDictionary<string, string> idictionary_string_string___32347029, 
+                        IDictionary<string, string> idictionary_string_string___22687807) => //$
+                    {
+                        IDictionary<string, string> result;
+                        
+                        if (idictionary_string_string___32347029 == null)
+                        {
+                            return null;
+                        }
+                        
+                        result = idictionary_string_string___22687807 ?? 
+                            new Dictionary<string, string>();
+                        result["Secret"] = null;
+                        
+                        if (object.ReferenceEquals(
+                            idictionary_string_string___32347029,
+                            result))
+                        {
+                            return result;
+                        }
+            
+                        IEnumerator<KeyValuePair<string, string>> enumerator;
+                        enumerator = idictionary_string_string___32347029.GetEnumerator();
+                        
+                        while (true)
+                        {
+                            if (enumerator.MoveNext())
+                            {
+                                KeyValuePair<string, string> kvp;
+                                kvp = enumerator.Current;
+                                string key;
+                                key = kvp.Key;
+                                result[key] = kvp.Value;
+                            }
+                            else
+                            {
+                                goto LoopBreak;
+                            }
+                        }
+                        LoopBreak: 
+                        idictionary_string_string___2863675:
+                        return null;
+                        return result;
+                        idictionary_string_string___25773083:
+                        return null;
+                    })).Invoke(
+                    issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__1707556.Dic,
+                    result.Dic);
+                result.Secret = null;
+                return result;
+                issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__30631159:
+                return null;
+            });
+
+            var p = new ParameterExpression[9]; // the parameter expressions 
+            var e = new Expression[62]; // the unique expressions 
+            var l = new LabelTarget[4]; // the labels 
+            var expr = Lambda<System.Func<Post, Post, Post>>( //$
+                e[0]=Block(
+                    typeof(Post),
+                    new[] {
+                    p[0]=Parameter(typeof(Post), "result")
+                    },
+                    e[1]=Condition(
+                    e[2]=MakeBinary(ExpressionType.Equal,
+                        p[1]=Parameter(typeof(Post)),
+                        e[3]=Constant(null, typeof(Post))),
+                    e[4]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                        l[0]=Label(typeof(Post)),
+                        e[5]=Constant(null, typeof(Post)),
+                        typeof(void)),
+                    e[6]=Empty(),
+                    typeof(void)), 
+                    e[7]=MakeBinary(ExpressionType.Assign,
+                    p[0 // (Post result)
+                        ],
+                    e[8]=Coalesce(
+                        p[2]=Parameter(typeof(Post)),
+                        e[9]=New( // 0 args
+                        typeof(Post).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0]))), 
+                    e[10]=Block(
+                    typeof(string),
+                    new ParameterExpression[0], 
+                    e[11]=MakeBinary(ExpressionType.Assign,
+                        e[12]=Property(
+                        p[0 // (Post result)
+                            ],
+                        typeof(Post).GetTypeInfo().GetDeclaredProperty("Dic")),
+                        e[13]=Invoke(
+                        e[14]=Lambda( //$
+                            typeof(System.Func<System.Collections.Generic.IDictionary<string, string>, System.Collections.Generic.IDictionary<string, string>, System.Collections.Generic.IDictionary<string, string>>),
+                            e[15]=Block(
+                            typeof(System.Collections.Generic.IDictionary<string, string>),
+                            new[] {
+                            p[3]=Parameter(typeof(System.Collections.Generic.IDictionary<string, string>), "result")
+                            },
+                            e[16]=Condition(
+                                e[17]=MakeBinary(ExpressionType.Equal,
+                                p[4]=Parameter(typeof(System.Collections.Generic.IDictionary<string, string>)),
+                                e[18]=Constant(null, typeof(System.Collections.Generic.IDictionary<string, string>))),
+                                e[19]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                                l[1]=Label(typeof(System.Collections.Generic.IDictionary<string, string>)),
+                                e[20]=Constant(null, typeof(System.Collections.Generic.IDictionary<string, string>)),
+                                typeof(void)),
+                                e[6 // Default of void
+                                ],
+                                typeof(void)), 
+                            e[21]=MakeBinary(ExpressionType.Assign,
+                                p[3 // (System.Collections.Generic.IDictionary<string, string> result)
+                                ],
+                                e[22]=Coalesce(
+                                p[5]=Parameter(typeof(System.Collections.Generic.IDictionary<string, string>)),
+                                e[23]=New( // 0 args
+                                    typeof(System.Collections.Generic.Dictionary<string, string>).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0]))), 
+                            e[24]=Block(
+                                typeof(System.Collections.Generic.IDictionary<string, string>),
+                                new ParameterExpression[0], 
+                                e[25]=Block(
+                                typeof(string),
+                                new ParameterExpression[0], 
+                                e[26]=MakeBinary(ExpressionType.Assign,
+                                    e[27]=MakeIndex(
+                                    p[3 // (System.Collections.Generic.IDictionary<string, string> result)
+                                        ], 
+                                    typeof(System.Collections.Generic.IDictionary<string, string>).GetTypeInfo().GetDeclaredProperty("Item"), new Expression[] {
+                                    e[28]=Constant("Secret")}),
+                                    e[29]=Constant(null, typeof(string)))), 
+                                e[30]=Condition(
+                                e[31]=Call(
+                                    null, 
+                                    typeof(object).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "ReferenceEquals" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(object), typeof(object) })),
+                                    p[4 // (System.Collections.Generic.IDictionary<string, string> idictionary_string, string___28691996)
+                                    ], 
+                                    p[3 // (System.Collections.Generic.IDictionary<string, string> result)
+                                    ]),
+                                e[32]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                                    l[2]=Label(typeof(System.Collections.Generic.IDictionary<string, string>)),
+                                    p[3 // (System.Collections.Generic.IDictionary<string, string> result)
+                                    ],
+                                    typeof(void)),
+                                e[6 // Default of void
+                                    ],
+                                typeof(void)), 
+                                e[33]=Block(
+                                typeof(void),
+                                new[] {
+                                p[6]=Parameter(typeof(System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<string, string>>), "enumerator")
+                                },
+                                e[34]=MakeBinary(ExpressionType.Assign,
+                                    p[6 // (System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<string, string>> enumerator)
+                                    ],
+                                    e[35]=Call(
+                                    p[4 // (System.Collections.Generic.IDictionary<string, string> idictionary_string, string___28691996)
+                                        ], 
+                                    typeof(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, string>>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "GetEnumerator" && x.GetParameters().Length == 0))), 
+                                e[36]=Loop(
+                                    e[37]=Condition(
+                                    e[38]=Call(
+                                        p[6 // (System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<string, string>> enumerator)
+                                        ], 
+                                        typeof(System.Collections.IEnumerator).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "MoveNext" && x.GetParameters().Length == 0)),
+                                    e[39]=Block(
+                                        typeof(string),
+                                        new[] {
+                                        p[7]=Parameter(typeof(System.Collections.Generic.KeyValuePair<string, string>), "kvp")
+                                        },
+                                        e[40]=MakeBinary(ExpressionType.Assign,
+                                        p[7 // ([struct] System.Collections.Generic.KeyValuePair<string, string> kvp)
+                                            ],
+                                        e[41]=Property(
+                                            p[6 // (System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<string, string>> enumerator)
+                                            ],
+                                            typeof(System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<string, string>>).GetTypeInfo().GetDeclaredProperty("Current"))), 
+                                        e[42]=Block(
+                                        typeof(string),
+                                        new[] {
+                                        p[8]=Parameter(typeof(string), "key")
+                                        },
+                                        e[43]=MakeBinary(ExpressionType.Assign,
+                                            p[8 // (string key)
+                                            ],
+                                            e[44]=Property(
+                                            p[7 // ([struct] System.Collections.Generic.KeyValuePair<string, string> kvp)
+                                                ],
+                                            typeof(System.Collections.Generic.KeyValuePair<string, string>).GetTypeInfo().GetDeclaredProperty("Key"))), 
+                                        e[45]=MakeBinary(ExpressionType.Assign,
+                                            e[46]=MakeIndex(
+                                            p[3 // (System.Collections.Generic.IDictionary<string, string> result)
+                                                ], 
+                                            typeof(System.Collections.Generic.IDictionary<string, string>).GetTypeInfo().GetDeclaredProperty("Item"), new Expression[] {
+                                            p[8 // (string key)
+                                                ]}),
+                                            e[47]=Property(
+                                            p[7 // ([struct] System.Collections.Generic.KeyValuePair<string, string> kvp)
+                                                ],
+                                            typeof(System.Collections.Generic.KeyValuePair<string, string>).GetTypeInfo().GetDeclaredProperty("Value"))))),
+                                    e[48]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Break,
+                                        l[3]=Label(typeof(void), "LoopBreak"),
+                                        null,
+                                        typeof(void)),
+                                    typeof(void)),
+                                    l[3 // (LoopBreak)
+                                    ])), 
+                                e[49]=Label(l[2 // (idictionary_string, string___64204788)
+                                ],
+                                e[50]=Constant(null, typeof(System.Collections.Generic.IDictionary<string, string>)))), 
+                            e[51]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                                l[1 // (idictionary_string, string___47410583)
+                                ],
+                                p[3 // (System.Collections.Generic.IDictionary<string, string> result)
+                                ],
+                                typeof(void)), 
+                            e[52]=Label(l[1 // (idictionary_string, string___47410583)
+                                ],
+                                e[53]=Constant(null, typeof(System.Collections.Generic.IDictionary<string, string>)))),
+                            p[4 // (System.Collections.Generic.IDictionary<string, string> idictionary_string, string___28691996)
+                            ], 
+                            p[5 // (System.Collections.Generic.IDictionary<string, string> idictionary_string, string___44280823)
+                            ]),
+                        e[54]=Property(
+                            p[1 // (Post post__37883691)
+                            ],
+                            typeof(Post).GetTypeInfo().GetDeclaredProperty("Dic")), 
+                        e[55]=Property(
+                            p[0 // (Post result)
+                            ],
+                            typeof(Post).GetTypeInfo().GetDeclaredProperty("Dic")))), 
+                    e[56]=MakeBinary(ExpressionType.Assign,
+                        e[57]=Property(
+                        p[0 // (Post result)
+                            ],
+                        typeof(Post).GetTypeInfo().GetDeclaredProperty("Secret")),
+                        e[58]=Constant(null, typeof(string)))), 
+                    e[59]=MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
+                    l[0 // (post__29732978)
+                    ],
+                    p[0 // (Post result)
+                        ],
+                    typeof(void)), 
+                    e[60]=Label(l[0 // (post__29732978)
+                    ],
+                    e[61]=Constant(null, typeof(Post)))),
+                p[1 // (Post post__37883691)
+                    ], 
+                p[2 // (Post post__27610371)
+                    ]);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+
+            var p1 = new Post
+            {
+                Secret = "Test", 
+                Dic = new Dictionary<string, string>
+                {
+                    { "Secret", "test" }, 
+                    {"B", "test2" }
+                }
+            };
+
+            var post1 = fs(p1, p1);
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL("fec");
+
+            var post2 = ff(p1, p1);
         }
 
         [Test]
@@ -115,7 +411,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = expr.CompileFast(true);
             ff.PrintIL("fec");
-            
+
             var dict1 = ff(poco);
             Assert.AreEqual(2, dict1.Count);
             Assert.AreEqual(poco.Id, dict1["Id"]);
