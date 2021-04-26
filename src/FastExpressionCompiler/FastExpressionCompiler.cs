@@ -6305,12 +6305,7 @@ namespace FastExpressionCompiler
                     var x = (LabelExpression)e;
                     sb.NewLineIdent(lineIdent);
                     x.Target.ToCSharpString(sb).Append(':');
-                    if (x.DefaultValue == null)
-                        return sb;
-
-                    sb.NewLineIdent(lineIdent).Append("return ");
-                    x.DefaultValue.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
-                    return sb.Append(';');
+                    return sb; // we don't output the default value and relying on the Goto Return `return` instead, otherwise we may change the logic of the code
                 }
                 case ExpressionType.Goto:
                 {
