@@ -5735,8 +5735,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.Lambda:
                 {
                     var x = (LambdaExpression)e;
-                    sb.Append("Lambda( //$"); // bookmark for the lambdas - $ means the cost of the lambda, specifically nested lambda
-                    sb.NewLineIdent(lineIdent).AppendTypeof(x.Type, stripNamespace, printType).Append(',');
+                    sb.Append("Lambda<").Append(x.Type.ToCode(stripNamespace, printType)).Append(">( //$"); // bookmark for the lambdas - $ means the cost of the lambda, specifically nested lambda
                     sb.NewLineIdentExpr(x.Body, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces).Append(',');
                     sb.NewLineIdentArgumentExprs(x.Parameters, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces);
                     return sb.Append(')');
@@ -6113,7 +6112,6 @@ namespace FastExpressionCompiler
                     if (count > 0)
                     {
                         var pars = x.Type.FindDelegateInvokeMethod().GetParameters();
-
                         for (var i = 0; i < count; i++)
                         {
                             if (i > 0)
@@ -6696,7 +6694,8 @@ namespace FastExpressionCompiler
                 return lastBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, 
                 inTheLastBlock, // the last block is marked so if only it is itself in the last block
                 blockResultAssignment);
-
+            
+            // todo: @wip if the label is already used by the Return GoTo we should skip it output here OR we need to replace the Return Goto `return` with `goto`  
             if (lastExpr is LabelExpression) // keep the last label on the same vertical line
             {
                 lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
