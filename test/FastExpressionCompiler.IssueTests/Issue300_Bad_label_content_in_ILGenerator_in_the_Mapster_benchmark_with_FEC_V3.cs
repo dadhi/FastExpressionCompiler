@@ -19,12 +19,13 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Test_301_Loop_case();
+            // Test_301_Invoke_Lambda_inlining_case_simplified();
+            // Test_301_Invoke_Lambda_inlining_case();
             Test_301_Dictionary_case();
             Test_301_TryCatch_case();
             Test_301();
             Test_300();
-            return 5;
+            return 6;
         }
 
         public class Post
@@ -33,9 +34,54 @@ namespace FastExpressionCompiler.IssueTests
             public string Secret { get; set; }
         }
 
+        // [Test]
+        public void Test_301_Invoke_Lambda_inlining_case_simplified()
+        {
+            var postPar = Parameter(typeof(Post), "post");
+            var dictPar = Parameter(typeof(IDictionary<string,string>), "dict");
+            var returnTarget = Label(typeof(IDictionary<string,string>));
+            var expr = Lambda<Func<Post, Post>>(
+                Block(typeof(Post), new ParameterExpression[0],
+                    Assign(
+                        Property(postPar, nameof(Post.Dic)),
+                        Invoke(
+                            Lambda<Func<IDictionary<string,string>, IDictionary<string,string>>>(
+                                Block(
+                                    Return(returnTarget, dictPar),
+                                    Label(returnTarget, Constant(null, typeof(IDictionary<string,string>)))
+                                ),
+                                dictPar
+                            ),
+                            Property(postPar, nameof(Post.Dic))
+                        )
+                    ),
+                    postPar
+                ),
+                postPar
+            );
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+
+            var p1 = new Post
+            {
+                Dic = new Dictionary<string, string>
+                {
+                    { "Secret", "test" } 
+                }
+            };
+            var post1 = fs(p1);
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL("fec");
+
+            var post2 = ff(p1);
+        }
 
         // [Test]
-        public void Test_301_Loop_case()
+        public void Test_301_Invoke_Lambda_inlining_case()
         {
             var f = (Func<Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post, Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post, Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post>)((
                 Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__1707556, 
@@ -93,7 +139,6 @@ namespace FastExpressionCompiler.IssueTests
                         }
                         LoopBreak: 
                         idictionary_string_string___2863675:
-                        return null;
                         return result;
                         idictionary_string_string___25773083:
                         return null;
