@@ -3346,6 +3346,7 @@ namespace FastExpressionCompiler.LightExpression
 
     public class ValueGotoExpression : GotoExpression
     {
+        public override Type Type => Target.Type; // non-void when the Value expression is provided
         public override Expression Value { get; }
         internal ValueGotoExpression(LabelTarget target, Expression value) : base(target) =>
             Value = value;

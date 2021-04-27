@@ -19,18 +19,19 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_301_Goto_to_label_with_default_value_should_not_return();
+            Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present();
+            Test_301_Goto_to_label_with_default_value_should_return_the_goto_value_when_no_other_expressions_is_present();
             // Test_301_Invoke_Lambda_inlining_case_simplified();
             // Test_301_Invoke_Lambda_inlining_case();
             Test_301_Dictionary_case();
             Test_301_TryCatch_case();
             Test_301();
             Test_300();
-            return 7;
+            return 8;
         }
 
         [Test]
-        public void Test_301_Goto_to_label_with_default_value_should_not_return()
+        public void Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present()
         {
             var labelTarget = Label();
             var expr = Lambda<Func<int>>(Block(typeof(int), new ParameterExpression[0],
@@ -50,6 +51,28 @@ namespace FastExpressionCompiler.IssueTests
             ff.PrintIL("fec");
             var n2 = ff();
             Assert.AreEqual(42, n2);
+        }
+
+        [Test]
+        public void Test_301_Goto_to_label_with_default_value_should_return_the_goto_value_when_no_other_expressions_is_present()
+        {
+            var labelTarget = Label(typeof(int));
+            var expr = Lambda<Func<int>>(Block(typeof(int), new ParameterExpression[0],
+                Goto(labelTarget, Constant(22)),
+                Label(labelTarget, Constant(33))
+            ));
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+            var n1 = fs();
+            Assert.AreEqual(22, n1);
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL("fec");
+            var n2 = ff();
+            Assert.AreEqual(22, n2);
         }
 
         public class Post
