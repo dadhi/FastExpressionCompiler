@@ -19,13 +19,37 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_301_Goto_to_label_with_default_value_should_not_return();
             // Test_301_Invoke_Lambda_inlining_case_simplified();
             // Test_301_Invoke_Lambda_inlining_case();
             Test_301_Dictionary_case();
             Test_301_TryCatch_case();
             Test_301();
             Test_300();
-            return 6;
+            return 7;
+        }
+
+        [Test]
+        public void Test_301_Goto_to_label_with_default_value_should_not_return()
+        {
+            var labelTarget = Label();
+            var expr = Lambda<Func<int>>(Block(typeof(int), new ParameterExpression[0],
+                Goto(labelTarget),
+                Label(labelTarget, Constant(33)),
+                Constant(42)
+            ));
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+            var n1 = fs();
+            Assert.AreEqual(42, n1);
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL("fec");
+            var n2 = ff();
+            Assert.AreEqual(42, n2);
         }
 
         public class Post
@@ -48,7 +72,7 @@ namespace FastExpressionCompiler.IssueTests
                             Lambda<Func<IDictionary<string,string>, IDictionary<string,string>>>(
                                 Block(
                                     Return(returnTarget, dictPar),
-                                    Label(returnTarget, Constant(null, typeof(IDictionary<string,string>)))
+                                    Label (returnTarget, Constant(null, typeof(IDictionary<string,string>)))
                                 ),
                                 dictPar
                             ),
