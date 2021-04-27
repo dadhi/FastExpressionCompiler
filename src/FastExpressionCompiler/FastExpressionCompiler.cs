@@ -690,7 +690,7 @@ namespace FastExpressionCompiler
                 }
             }
 
-            public int GetLabelIndex(LabelTarget labelTarget)
+            public int GetLabelIndex(object labelTarget)
             {
                 var count = Labels.Count;
                 var items = Labels.Items;
@@ -700,7 +700,7 @@ namespace FastExpressionCompiler
                 return -1;
             }
 
-            public void AddLabel(LabelTarget labelTarget)
+            public void AddLabel(object labelTarget)
             {
                 if (GetLabelIndex(labelTarget) == -1)
                 {
@@ -1244,6 +1244,8 @@ namespace FastExpressionCompiler
                         var invocatedExpr = invokeExpr.Expression;
                         if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invocatedExpr is LambdaExpression la)
                         {
+                            closure.AddLabel(expr);
+
                             // todo: @wip we need to convert the Return as into storing result variable, branch and loading the variable, see `Test_301_Invoke_Lambda_inlining_case_simplified`
                             if (argCount == 0)
                             {
@@ -1639,12 +1641,12 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
         private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr,
             IParameterProvider paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure, CompilerFlags flags)
-        {
 #else
         private static bool TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr,
             IReadOnlyList<PE> paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure, CompilerFlags flags)
-        {
 #endif
+        {
+            closure.AddLabel(tryExpr);
             if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs, isNestedLambda, ref rootClosure, flags))
                 return false;
 
