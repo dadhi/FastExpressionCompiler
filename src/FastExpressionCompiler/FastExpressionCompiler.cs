@@ -1210,17 +1210,18 @@ namespace FastExpressionCompiler
                         var invocatedExpr = invokeExpr.Expression;
                         if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invocatedExpr is LambdaExpression la)
                         {
+                            // todo: @wip we need to convert the Return as into storing result variable, branch and loading the variable, see `Test_301_Invoke_Lambda_inlining_case_simplified`
                             if (argCount == 0)
                             {
                                 expr = la.Body;
                                 continue;
                             }
 
-                            // To inline the lambda we will wrap its body into a block, paramaters into the block variables, 
-                            // and the invocation arguments into the variable assignments.
-                            // see #278
+                            // To inline the lambda we will wrap its body into a block, parameters into the block variables, 
+                            // and the invocation arguments into the variable assignments, see #278.
+                            // Note: we do the same in the `TryEmitInvoke`
 
-                            // - We don't optimize the memory with IParameterProvider because anyway we materialize the parameters into the block below
+                            // We don't optimize the memory with IParameterProvider because anyway we materialize the parameters into the block below
 #if LIGHT_EXPRESSION
                             var pars = (IParameterProvider)la;
                             var paramCount = paramExprs.ParameterCount;
@@ -1649,7 +1650,8 @@ namespace FastExpressionCompiler
             TryCatch = 1 << 8,
             InstanceCall = Call | InstanceAccess,
             CtorCall = Call | (1 << 9),
-            IndexAccess = 1 << 10
+            IndexAccess = 1 << 10,
+            InvokedInlinedLambda = 1 << 11
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -1873,7 +1875,6 @@ namespace FastExpressionCompiler
                                         continue;
                                     
                                     // This is basically the return pattern (see #237), so we don't care for the rest of expressions
-                                    // Note (#300) the sentence above is slightly wrong because that may be a goto to this specific label, so we still need to print the label
                                     if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                                         statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                     {
@@ -3516,14 +3517,11 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
             private static bool TryEmitAssign(BinaryExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure, 
                 CompilerFlags setup, ParentFlags parent)
-            {
-                var paramExprCount = paramExprs.ParameterCount;
 #else
             private static bool TryEmitAssign(BinaryExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure, 
                 CompilerFlags setup, ParentFlags parent)
-            {
-                var paramExprCount = paramExprs.Count;
 #endif
+            {
                 var left = expr.Left;
                 var right = expr.Right;
                 var leftNodeType = expr.Left.NodeType;
@@ -3537,7 +3535,11 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Parameter:
                         var leftParamExpr = (ParameterExpression)left;
-
+#if LIGHT_EXPRESSION
+                        var paramExprCount = paramExprs.ParameterCount;
+#else
+                        var paramExprCount = paramExprs.Count;
+#endif
                         var paramIndex = paramExprCount - 1;
                         while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), leftParamExpr))
                             --paramIndex;
