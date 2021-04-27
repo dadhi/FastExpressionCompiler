@@ -536,10 +536,10 @@ namespace FastExpressionCompiler
 
         internal struct LabelInfo 
         {
-            public LabelTarget Target; // label target is the link between the goto and the label.
-            public Label Label;
-            public int   TryCatchReturnVariableIndexPlusOne;
-            public Label TryCatchReturnLabel;
+            public object Target; // label target is the link between the goto and the label.
+            public Label  Label;
+            public int    TryCatchReturnVariableIndexPlusOne;
+            public Label  TryCatchReturnLabel;
             public LabelFlags Flags;
         }
 
@@ -1347,8 +1347,6 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
-                        // if (gotoExpr.Kind == GotoExpressionKind.Return)
-                        //     closure.MarkAsContainsReturnGotoExpression();
                         if (gotoExpr.Value == null)
                             return true;
                         expr = gotoExpr.Value;
@@ -1651,7 +1649,7 @@ namespace FastExpressionCompiler
             InstanceCall = Call | InstanceAccess,
             CtorCall = Call | (1 << 9),
             IndexAccess = 1 << 10,
-            InvokedInlinedLambda = 1 << 11
+            InlinedLambdaInvoke = 1 << 11
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -1878,6 +1876,11 @@ namespace FastExpressionCompiler
                                     if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                                         statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                     {
+                                        if (i + 2 == statementCount)
+                                        {
+                                            // todo: @wip
+                                        }
+
                                         if ((parent & ParentFlags.TryCatch) != 0)
                                             return false; // todo: @feature return from the TryCatch with the internal label is not supported, though it is the unlikely case
 
@@ -4107,6 +4110,7 @@ namespace FastExpressionCompiler
                 var lambda = expr.Expression;
                 if ((setup & CompilerFlags.NoInvocationLambdaInlining) == 0 && lambda is LambdaExpression la)
                 {
+                    parent |= ParentFlags.InlinedLambdaInvoke;
                     if (argCount == 0)
                         return TryEmit(la.Body, paramExprs, il, ref closure, setup, parent);
 #if LIGHT_EXPRESSION
