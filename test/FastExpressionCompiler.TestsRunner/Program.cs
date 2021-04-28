@@ -11,8 +11,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
-            // new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
+            // new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run();
             // new FastExpressionCompiler.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run();
             // new FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue181_TryEmitIncDecAssign_InvalidCastException().Run();

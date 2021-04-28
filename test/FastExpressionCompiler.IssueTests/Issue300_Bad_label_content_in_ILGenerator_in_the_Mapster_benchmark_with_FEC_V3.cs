@@ -19,10 +19,10 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_301_Invoke_Lambda_inlining_case_simplified();
+            Test_301_Invoke_Lambda_inlining_case();
             Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present();
             Test_301_Goto_to_label_with_default_value_should_return_the_goto_value_when_no_other_expressions_is_present();
-            // Test_301_Invoke_Lambda_inlining_case_simplified();
-            // Test_301_Invoke_Lambda_inlining_case();
             Test_301_Dictionary_case();
             Test_301_TryCatch_case();
             Test_301();
@@ -154,7 +154,7 @@ namespace FastExpressionCompiler.IssueTests
                         {
                             return null;
                         }
-                        
+
                         result = idictionary_string_string___22687807 ?? 
                             new Dictionary<string, string>();
                         result["Secret"] = null;
@@ -165,7 +165,7 @@ namespace FastExpressionCompiler.IssueTests
                         {
                             return result;
                         }
-            
+
                         IEnumerator<KeyValuePair<string, string>> enumerator;
                         enumerator = idictionary_string_string___32347029.GetEnumerator();
                         
