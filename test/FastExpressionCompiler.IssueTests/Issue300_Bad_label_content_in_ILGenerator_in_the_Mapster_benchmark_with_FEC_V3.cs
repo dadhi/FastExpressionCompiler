@@ -22,12 +22,36 @@ namespace FastExpressionCompiler.IssueTests
             Test_301_Invoke_Lambda_inlining_case_simplified();
             Test_301_Invoke_Lambda_inlining_case();
             Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present();
+            Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present_Custom_constant_output();
             Test_301_Goto_to_label_with_default_value_should_return_the_goto_value_when_no_other_expressions_is_present();
             Test_301_Dictionary_case();
             Test_301_TryCatch_case();
             Test_301();
             Test_300();
-            return 8;
+            return 9;
+        }
+
+        [Test]
+        public void Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present_Custom_constant_output()
+        {
+            var labelTarget = Label();
+            var expr = Lambda<Func<Post>>(Block(typeof(Post), new ParameterExpression[0],
+                Goto(labelTarget),
+                Label(labelTarget, Constant(new Post { Secret = "a" })),
+                Constant(new Post { Secret = "b" })
+            ));
+
+            expr.PrintCSharp(x => x.Value is Post p ? $@"new Post {{ Secret = ""{p.Secret}"" }}" : null);
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+            var n1 = fs();
+            Assert.AreEqual("b", n1.Secret);
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL("fec");
+            var n2 = ff();
+            Assert.AreEqual("b", n2.Secret);
         }
 
         [Test]
