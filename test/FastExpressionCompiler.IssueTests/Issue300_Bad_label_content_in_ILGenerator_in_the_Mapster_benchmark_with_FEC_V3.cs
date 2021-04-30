@@ -105,7 +105,7 @@ namespace FastExpressionCompiler.IssueTests
             public string Secret { get; set; }
         }
 
-        // [Test]
+        [Test]
         public void Test_301_Invoke_Lambda_inlining_case_simplified()
         {
             var postPar = Parameter(typeof(Post), "post");
@@ -151,7 +151,7 @@ namespace FastExpressionCompiler.IssueTests
             var post2 = ff(p1);
         }
 
-        // [Test]
+        [Test]
         public void Test_301_Invoke_Lambda_inlining_case()
         {
             var f = (Func<Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post, Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post, Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post>)((

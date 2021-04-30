@@ -570,7 +570,8 @@ namespace FastExpressionCompiler
             public Label  Label;
             public int    ReturnVariableIndexPlusOne;
             public Label  ReturnLabel;
-            public LabelFlags Flags;
+            public LabelFlags Flags; // todo: @perf combine flags and ReturnVariableIndexPlusOne into one to save space
+            public int InlinedLambdaInvokeIndex;
         }
 
         /// Track the info required to build a closure object + some context information not directly related to closure.
@@ -583,6 +584,7 @@ namespace FastExpressionCompiler
 
             /// Map of the links between Labels and Goto's
             internal LiveCountArray<LabelInfo> Labels;
+            internal int CurrentInlinedLambdaInvokeIndex;
 
             public ClosureStatus Status;
 
@@ -614,7 +616,7 @@ namespace FastExpressionCompiler
                 NestedLambdas       = Tools.Empty<NestedLambdaInfo>();
 
                 LastEmitIsAddress = false;
-
+                CurrentInlinedLambdaInvokeIndex = -1;
                 Labels      = new LiveCountArray<LabelInfo>(Tools.Empty<LabelInfo>());
                 _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
             }
@@ -690,7 +692,7 @@ namespace FastExpressionCompiler
                 }
             }
 
-            public int GetLabelOrInvokeOrTryIndex(object labelTarget)
+            public int GetLabelOrInvokeIndex(object labelTarget)
             {
                 var count = Labels.Count;
                 var items = Labels.Items;
@@ -700,13 +702,26 @@ namespace FastExpressionCompiler
                 return -1;
             }
 
-            public void AddLabelOrInvokeOrTry(object labelTarget)
+            public void AddLabel(LabelTarget labelTarget, int inlinedLambdaInvokeIndex = -1)
             {
-                if (GetLabelOrInvokeOrTryIndex(labelTarget) == -1)
+                if (GetLabelOrInvokeIndex(labelTarget) == -1)
                 {
                     ref var label = ref Labels.PushSlot();
                     label.Target = labelTarget;
+                    label.InlinedLambdaInvokeIndex = inlinedLambdaInvokeIndex;
                 }
+            }
+
+            public int AddInlinedLambdaInvoke(InvocationExpression e)
+            {
+                var index = GetLabelOrInvokeIndex(e);
+                if (index == -1)
+                {
+                    ref var label = ref Labels.PushSlot();
+                    label.Target = e;
+                    index = Labels.Count - 1;
+                }
+                return index;
             }
 
             public Label GetDefinedLabel(int index, ILGenerator il)
@@ -1241,15 +1256,16 @@ namespace FastExpressionCompiler
                         var invokeArgs = invokeExpr.Arguments;
                         var argCount = invokeArgs.Count;
 #endif
-                        var invocatedExpr = invokeExpr.Expression;
-                        if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invocatedExpr is LambdaExpression la)
+                        var invokedExpr = invokeExpr.Expression;
+                        if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression la)
                         {
-                            closure.AddLabelOrInvokeOrTry(expr);
+                            var oldIndex = closure.CurrentInlinedLambdaInvokeIndex;
+                            closure.CurrentInlinedLambdaInvokeIndex = closure.AddInlinedLambdaInvoke(invokeExpr);
 
                             if (argCount == 0)
                             {
-                                expr = la.Body;
-                                continue;
+                                if (!TryCollectBoundConstants(ref closure, la.Body, paramExprs, isNestedLambda, ref rootClosure, flags))
+                                    return false;
                             }
 
                             // To inline the lambda we will wrap its body into a block, parameters into the block variables, 
@@ -1290,16 +1306,20 @@ namespace FastExpressionCompiler
                             }
                             exprs[argCount] = la.Body;
                             expr = Block(vars ?? pars.ToReadOnlyList(), exprs);
-                            continue;
+                            if (!TryCollectBoundConstants(ref closure, expr, paramExprs, isNestedLambda, ref rootClosure, flags))
+                                return false;
+
+                            closure.CurrentInlinedLambdaInvokeIndex = oldIndex;
+                            return true;
                         }
 
                         if (argCount == 0)
                         {
-                            expr = invocatedExpr;
+                            expr = invokedExpr;
                             continue;
                         }
 
-                        if (!TryCollectBoundConstants(ref closure, invocatedExpr, paramExprs, isNestedLambda, ref rootClosure, flags))
+                        if (!TryCollectBoundConstants(ref closure, invokedExpr, paramExprs, isNestedLambda, ref rootClosure, flags))
                             return false;
 
                         var lastArgIndex = argCount - 1;
@@ -1346,8 +1366,8 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Loop:
                         var loopExpr = (LoopExpression)expr;
-                        closure.AddLabelOrInvokeOrTry(loopExpr.BreakLabel);
-                        closure.AddLabelOrInvokeOrTry(loopExpr.ContinueLabel);
+                        closure.AddLabel(loopExpr.BreakLabel);
+                        closure.AddLabel(loopExpr.ContinueLabel);
                         expr = loopExpr.Body;
                         continue;
 
@@ -1373,7 +1393,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
-                        closure.AddLabelOrInvokeOrTry(labelExpr.Target);
+                        closure.AddLabel(labelExpr.Target, closure.CurrentInlinedLambdaInvokeIndex);
                         if (labelExpr.DefaultValue == null)
                             return true;
                         expr = labelExpr.DefaultValue;
@@ -1644,7 +1664,6 @@ namespace FastExpressionCompiler
             IReadOnlyList<PE> paramExprs, bool isNestedLambda, ref ClosureInfo rootClosure, CompilerFlags flags)
 #endif
         {
-            closure.AddLabelOrInvokeOrTry(tryExpr);
             if (!TryCollectBoundConstants(ref closure, tryExpr.Body, paramExprs, isNestedLambda, ref rootClosure, flags))
                 return false;
 
@@ -1938,7 +1957,24 @@ namespace FastExpressionCompiler
                                             if (!TryEmit(gtOrLabelValue, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
                                                 return false;
 
-                                            if ((parent & ParentFlags.InlinedLambdaInvoke) == 0)
+                                            if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
+                                            {
+                                                var index = closure.GetLabelOrInvokeIndex(gt.Target);
+                                                var invokeIndex = closure.Labels.Items[index].InlinedLambdaInvokeIndex;
+                                                if (invokeIndex == -1)
+                                                    return false;
+                                                ref var invokeInfo = ref closure.Labels.Items[invokeIndex];
+                                                var varIndex = invokeInfo.ReturnVariableIndexPlusOne - 1; 
+                                                if (varIndex == -1)
+                                                {
+                                                    varIndex = il.GetNextLocalVarIndex(gtOrLabelValue.Type);
+                                                    invokeInfo.ReturnVariableIndexPlusOne = varIndex + 1;
+                                                    invokeInfo.ReturnLabel = il.DefineLabel();
+                                                }
+                                                EmitStoreLocalVariable(il, varIndex);
+                                                il.Emit(OpCodes.Br, invokeInfo.ReturnLabel);
+                                            }
+                                            else
                                             {
                                                 // @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
                                                 // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
@@ -1947,45 +1983,8 @@ namespace FastExpressionCompiler
                                                 if ((parent & ParentFlags.IgnoreResult) != 0)
                                                     il.Emit(OpCodes.Ret);
                                             }
-                                            else
-                                            {
-                                                var li = closure.GetLabelOrInvokeOrTryIndex(gt.Target); // todo: @optimize the search
-                                                var lis = closure.Labels.Items;
-                                                for (--li; li >= 0; --li)
-                                                {
-                                                    ref var labelInfo = ref lis[li];
-                                                    if (labelInfo.Target is InvocationExpression)
-                                                    {
-                                                        var varIndex = labelInfo.ReturnVariableIndexPlusOne - 1; 
-                                                        if (varIndex == -1)
-                                                        {
-                                                            varIndex = il.GetNextLocalVarIndex(gtOrLabelValue.Type);
-                                                            labelInfo.ReturnVariableIndexPlusOne = varIndex + 1;
-                                                            labelInfo.ReturnLabel = il.DefineLabel();
-                                                        }
-                                                        EmitStoreLocalVariable(il, varIndex);
-                                                        il.Emit(OpCodes.Br, labelInfo.ReturnLabel);
-                                                        break;
-                                                    }
-                                                }
-                                            }
                                         }
-
-                                        // todo: @wip
-                                        // todo: @check do we need to emit the default value if it is `default(T)` or not `null`,
-                                        // because it is likely to be emit by Return (GotoExpression.Value)
-                                        // if (label.DefaultValue != null && 
-                                        //     !TryEmit(label.DefaultValue, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
-                                        //     return false;
-                                        // todo: @wip
-                                        // @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
-                                        // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
-                                        // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement), 
-                                        // so we should avoid it on our side.
-                                        // if ((parent & ParentFlags.IgnoreResult) != 0)
-                                        //     il.Emit(OpCodes.Ret);
-
-                                        return true; // done
+                                        return true;
                                     }
 
                                     if (!TryEmit(stExpr, paramExprs, il, ref closure, setup, parent | ParentFlags.IgnoreResult))
@@ -2096,7 +2095,7 @@ namespace FastExpressionCompiler
                 il.MarkLabel(loopBodyLabel);
 
                 if (loopExpr.ContinueLabel != null)
-                    closure.TryMarkDefinedLabel(closure.GetLabelOrInvokeOrTryIndex(loopExpr.ContinueLabel), il);
+                    closure.TryMarkDefinedLabel(closure.GetLabelOrInvokeIndex(loopExpr.ContinueLabel), il);
 
                 if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, setup, parent))
                     return false;
@@ -2105,7 +2104,7 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Br, loopBodyLabel);
 
                 if (loopExpr.BreakLabel != null)
-                    closure.TryMarkDefinedLabel(closure.GetLabelOrInvokeOrTryIndex(loopExpr.BreakLabel), il);
+                    closure.TryMarkDefinedLabel(closure.GetLabelOrInvokeIndex(loopExpr.BreakLabel), il);
 
                 return true;
             }
@@ -2166,7 +2165,7 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                var index = closure.GetLabelOrInvokeOrTryIndex(expr.Target);
+                var index = closure.GetLabelOrInvokeIndex(expr.Target);
                 if (index == -1)
                     return false; // should be found in first collecting constants round
 
@@ -2186,15 +2185,15 @@ namespace FastExpressionCompiler
                 // get the TryCatch variable from the LabelInfo - if it is not 0:
                 // first if label has the default value then store into this return variable the defaultValue which is currently on stack
                 // mark the associated TryCatch return label here and load the variable if parent does not ignore the result, otherwise don't load
-                var ReturnVariableIndexPlusOne = label.ReturnVariableIndexPlusOne; 
-                if (ReturnVariableIndexPlusOne != 0)
+                var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOne; 
+                if (returnVariableIndexPlusOne != 0)
                 {
                     if (defaultValue != null)
-                        EmitStoreLocalVariable(il, ReturnVariableIndexPlusOne - 1);
+                        EmitStoreLocalVariable(il, returnVariableIndexPlusOne - 1);
 
                     il.MarkLabel(label.ReturnLabel);
                     if (!parent.IgnoresResult())
-                        EmitLoadLocalVariable(il, ReturnVariableIndexPlusOne - 1);
+                        EmitLoadLocalVariable(il,  returnVariableIndexPlusOne - 1);
                 }
 
                 return true;
@@ -2208,7 +2207,7 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                var index = closure.GetLabelOrInvokeOrTryIndex(expr.Target);
+                var index = closure.GetLabelOrInvokeIndex(expr.Target);
                 if (index == -1)
                 {
                     if ((closure.Status & ClosureStatus.ToBeCollected) == 0)
@@ -2240,7 +2239,6 @@ namespace FastExpressionCompiler
                     case GotoExpressionKind.Return:
                         if ((parent & ParentFlags.TryCatch) != 0)
                         {
-                            // todo: @wip use the `gotoValue ?? label.DefaultValue`
                             if (gotoValue != null)
                             {
                                 // for TryCatch get the variable for saving the result from the LabelInfo
@@ -2264,24 +2262,19 @@ namespace FastExpressionCompiler
                         {
                             if (gotoValue != null)
                             {
-                                var lis = closure.Labels.Items;
-                                for (--index; index >= 0; --index)
+                                var invokeIndex = closure.Labels.Items[index].InlinedLambdaInvokeIndex;
+                                if (invokeIndex == -1)
+                                    return false;
+                                ref var invokeInfo = ref closure.Labels.Items[invokeIndex];
+                                var varIndex = invokeInfo.ReturnVariableIndexPlusOne - 1; 
+                                if (varIndex == -1)
                                 {
-                                    ref var labelInfo = ref lis[index];
-                                    if (labelInfo.Target is InvocationExpression)
-                                    {
-                                        var varIndex = labelInfo.ReturnVariableIndexPlusOne - 1; 
-                                        if (varIndex == -1)
-                                        {
-                                            varIndex = il.GetNextLocalVarIndex(gotoValue.Type);
-                                            labelInfo.ReturnVariableIndexPlusOne = varIndex + 1;
-                                            labelInfo.ReturnLabel = il.DefineLabel();
-                                        }
-                                        EmitStoreLocalVariable(il, varIndex);
-                                        il.Emit(OpCodes.Br, labelInfo.ReturnLabel);
-                                        break;
-                                    }
+                                    varIndex = il.GetNextLocalVarIndex(gotoValue.Type);
+                                    invokeInfo.ReturnVariableIndexPlusOne = varIndex + 1;
+                                    invokeInfo.ReturnLabel = il.DefineLabel();
                                 }
+                                EmitStoreLocalVariable(il, varIndex);
+                                il.Emit(OpCodes.Br, invokeInfo.ReturnLabel);
                             }
                         }
                         else
@@ -4253,7 +4246,7 @@ namespace FastExpressionCompiler
                     if ((parent & ParentFlags.IgnoreResult) == 0 && la.Body.Type != typeof(void))
                     {
                         // find if the variable with the result is exist in the label infos
-                        var li = closure.GetLabelOrInvokeOrTryIndex(expr);
+                        var li = closure.GetLabelOrInvokeIndex(expr);
                         if (li != -1)
                         {
                             ref var labelInfo = ref closure.Labels.Items[li];
