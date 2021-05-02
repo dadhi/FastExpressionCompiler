@@ -1,14 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
-        <VersionPrefix>3.0.5</VersionPrefix>
-        <VersionSuffix></VersionSuffix>
+        <VersionPrefix>3.1.0</VersionPrefix>
+        <VersionSuffix>preview-01</VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
         <Title>$(Product)</Title>
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.1.0 Bug-fix release
+
+- added: #297 Add custom Constant to string output in the ToCSharpString and ToExpressionString
+- added: #303 Add CompilerFlags.ThrowOnNotSupportedException and throw NotSupportedExpressionException when the flag is passed to CompileFast
+- fixed: #301 Another case of the InvalidOperationException in the Mapster
+- fixed: ListInit compilation for the Dictionary
+
 ## v3.0.5 Bug-fix release
 
 - fixed: another case in #301 InvalidOperationException in the Mapster
