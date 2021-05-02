@@ -5213,7 +5213,7 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindPropertySetMethod(this Type propHolderType, string propName)
         {
-            var methods = propHolderType.GetMethods();
+            var methods = propHolderType.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
             for (var i = 0; i < methods.Length; i++)
             {
                 var method = methods[i];

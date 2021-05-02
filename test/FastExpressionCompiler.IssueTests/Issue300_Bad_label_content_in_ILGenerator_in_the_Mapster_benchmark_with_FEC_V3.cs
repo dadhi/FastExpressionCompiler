@@ -19,6 +19,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_301_MemberInit();
             Test_301_Invoke_Lambda_inlining_case_simplified();
             Test_301_Invoke_Lambda_inlining_case();
             Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present();
@@ -28,7 +29,53 @@ namespace FastExpressionCompiler.IssueTests
             Test_301_TryCatch_case();
             Test_301();
             Test_300();
-            return 9;
+            return 10;
+        }
+
+        [Test]
+        public void Test_301_MemberInit()
+        {
+            var p = new ParameterExpression[1]; // the parameter expressions 
+            var e = new Expression[8]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda<System.Func<SimplePoco, SimpleDto>>( //$
+                e[0]=Condition(
+                    e[1]=MakeBinary(ExpressionType.Equal,
+                    p[0]=Parameter(typeof(SimplePoco)),
+                    e[2]=Constant(null, typeof(SimplePoco))),
+                    e[3]=Constant(null, typeof(SimpleDto)),
+                    e[4]=MemberInit((NewExpression)(
+                    e[5]=New( // 0 args
+                        typeof(SimpleDto).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0])), 
+                    Bind(
+                        typeof(SimpleDto).GetTypeInfo().GetDeclaredProperty("Id"), 
+                        e[6]=Property(
+                        p[0 // (SimplePoco whenexplicitmappingrequired_simplepoco__63821092)
+                            ],
+                        typeof(SimplePoco).GetTypeInfo().GetDeclaredProperty("Id"))), 
+                    Bind(
+                        typeof(SimpleDto).GetTypeInfo().GetDeclaredProperty("Name"), 
+                        e[7]=Property(
+                        p[0 // (SimplePoco whenexplicitmappingrequired_simplepoco__63821092)
+                            ],
+                        typeof(SimplePoco).GetTypeInfo().GetDeclaredProperty("Name")))),
+                    typeof(SimpleDto)),
+                p[0 // (SimplePoco whenexplicitmappingrequired_simplepoco__63821092)
+                    ]);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+
+            var poco = new SimplePoco {Id = Guid.NewGuid(), Name = "TestName"};
+            var dto1 = fs(poco);
+            Assert.AreEqual(poco.Name, dto1.Name);
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL("fec");
+            var dto2 = ff(poco);
+            Assert.AreEqual(poco.Name, dto2.Name);
         }
 
         [Test]
@@ -540,6 +587,12 @@ namespace FastExpressionCompiler.IssueTests
         {
             public Guid Id { get; set; }
             public string Name { get; set; }
+        }
+
+        public class SimpleDto
+        {
+            public Guid Id { get; set; }
+            public string Name { get; internal set; }
         }
 
         [Test]
