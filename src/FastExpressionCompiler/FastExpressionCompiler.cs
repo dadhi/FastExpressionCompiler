@@ -566,15 +566,12 @@ namespace FastExpressionCompiler
             ShouldBeStaticMethod = 1 << 3
         }
 
-        [Flags] internal enum LabelFlags : byte { Undefined = 0, Defined = 1 }
-
         internal struct LabelInfo 
         {
             public object Target; // label target is the link between the goto and the label.
             public Label Label;
-            public int ReturnVariableIndexPlusOne;
+            public int ReturnVariableIndexPlusOneAndIsDefined;
             public Label ReturnLabel;
-            public LabelFlags Flags; // todo: @perf combine flags and ReturnVariableIndexPlusOne into one to save space
             public int InlinedLambdaInvokeIndex;
         }
 
@@ -731,9 +728,9 @@ namespace FastExpressionCompiler
             public Label GetDefinedLabel(int index, ILGenerator il)
             {
                 ref var label = ref Labels.Items[index];
-                if ((label.Flags & LabelFlags.Defined) == 0)
+                if ((label.ReturnVariableIndexPlusOneAndIsDefined & 1) == 0)
                 {
-                    label.Flags |= LabelFlags.Defined;
+                    label.ReturnVariableIndexPlusOneAndIsDefined |= 1;
                     label.Label = il.DefineLabel();
                 }
                 return label.Label;
@@ -742,11 +739,11 @@ namespace FastExpressionCompiler
             public void TryMarkDefinedLabel(int index, ILGenerator il)
             {
                 ref var label = ref Labels.Items[index];
-                if ((label.Flags & LabelFlags.Defined) != 0)
+                if ((label.ReturnVariableIndexPlusOneAndIsDefined & 1) == 1)
                     il.MarkLabel(label.Label);
                 else
                 {
-                    label.Flags |= LabelFlags.Defined;
+                    label.ReturnVariableIndexPlusOneAndIsDefined |= 1;
                     il.MarkLabel(label.Label = il.DefineLabel());
                 }
             }
@@ -1968,11 +1965,11 @@ namespace FastExpressionCompiler
                                                 if (invokeIndex == -1)
                                                     return false;
                                                 ref var invokeInfo = ref closure.Labels.Items[invokeIndex];
-                                                var varIndex = invokeInfo.ReturnVariableIndexPlusOne - 1; 
+                                                var varIndex = (invokeInfo.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1; 
                                                 if (varIndex == -1)
                                                 {
                                                     varIndex = il.GetNextLocalVarIndex(gtOrLabelValue.Type);
-                                                    invokeInfo.ReturnVariableIndexPlusOne = varIndex + 1;
+                                                    invokeInfo.ReturnVariableIndexPlusOneAndIsDefined = (varIndex + 1) << 1;
                                                     invokeInfo.ReturnLabel = il.DefineLabel();
                                                 }
                                                 EmitStoreLocalVariable(il, varIndex);
@@ -2174,11 +2171,11 @@ namespace FastExpressionCompiler
                     return false; // should be found in first collecting constants round
 
                 ref var label = ref closure.Labels.Items[index];
-                if ((label.Flags & LabelFlags.Defined) != 0)
+                if ((label.ReturnVariableIndexPlusOneAndIsDefined & 1) == 1)
                     il.MarkLabel(label.Label);
                 else
                 {
-                    label.Flags |= LabelFlags.Defined;
+                    label.ReturnVariableIndexPlusOneAndIsDefined |= 1;
                     il.MarkLabel(label.Label = il.DefineLabel());
                 }
 
@@ -2189,7 +2186,7 @@ namespace FastExpressionCompiler
                 // get the TryCatch variable from the LabelInfo - if it is not 0:
                 // first if label has the default value then store into this return variable the defaultValue which is currently on stack
                 // mark the associated TryCatch return label here and load the variable if parent does not ignore the result, otherwise don't load
-                var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOne; 
+                var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >> 1;
                 if (returnVariableIndexPlusOne != 0)
                 {
                     if (defaultValue != null)
@@ -2249,11 +2246,11 @@ namespace FastExpressionCompiler
                                 // store the return expression result into the that variable
                                 // emit OpCodes.Leave to the special label with the result which should be marked after the label to jump over its default value
                                 ref var label = ref closure.Labels.Items[index];
-                                var varIndex = label.ReturnVariableIndexPlusOne - 1; 
+                                var varIndex = (label.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1; 
                                 if (varIndex == -1)
                                 {
                                     varIndex = il.GetNextLocalVarIndex(gotoValue.Type);
-                                    label.ReturnVariableIndexPlusOne = varIndex + 1;
+                                    label.ReturnVariableIndexPlusOneAndIsDefined = (varIndex + 1) << 1;
                                     label.ReturnLabel = il.DefineLabel();
                                 }
                                 EmitStoreLocalVariable(il, varIndex);
@@ -2270,11 +2267,11 @@ namespace FastExpressionCompiler
                                 if (invokeIndex == -1)
                                     return false;
                                 ref var invokeInfo = ref closure.Labels.Items[invokeIndex];
-                                var varIndex = invokeInfo.ReturnVariableIndexPlusOne - 1; 
+                                var varIndex = (invokeInfo.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1; 
                                 if (varIndex == -1)
                                 {
                                     varIndex = il.GetNextLocalVarIndex(gotoValue.Type);
-                                    invokeInfo.ReturnVariableIndexPlusOne = varIndex + 1;
+                                    invokeInfo.ReturnVariableIndexPlusOneAndIsDefined = (varIndex + 1) << 1;
                                     invokeInfo.ReturnLabel = il.DefineLabel();
                                 }
                                 EmitStoreLocalVariable(il, varIndex);
@@ -4252,10 +4249,11 @@ namespace FastExpressionCompiler
                         if (li != -1)
                         {
                             ref var labelInfo = ref closure.Labels.Items[li];
-                            if (labelInfo.ReturnVariableIndexPlusOne != 0)
+                            var returnVariableIndexPlusOne = labelInfo.ReturnVariableIndexPlusOneAndIsDefined >> 1;
+                            if (returnVariableIndexPlusOne != 0)
                             {
                                 il.MarkLabel(labelInfo.ReturnLabel);
-                                EmitLoadLocalVariable(il, labelInfo.ReturnVariableIndexPlusOne - 1);
+                                EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
                             }
                         }
                     }
