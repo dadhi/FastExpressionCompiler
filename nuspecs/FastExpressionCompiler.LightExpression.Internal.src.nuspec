@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.LightExpression.Internal.src</id>
-        <version>3.0.5</version>
+        <version>3.1.0</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2021 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,6 +12,15 @@
         <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <releaseNotes><![CDATA[
+## v3.1.0 Feature and bug-fix release
+
+- added: #297 Add custom Constant to string output in the ToCSharpString and ToExpressionString
+- added: #303 Add CompilerFlags.ThrowOnNotSupportedException and throw NotSupportedExpressionException when the flag is passed to CompileFast
+- fixed: #301 Another case of the InvalidOperationException in the Mapster
+- fixed: ListInit compilation for the Dictionary
+- fixed: the lookup for the non-public property setter
+
+
 ## v3.0.5 Bug-fix release
 
 - fixed: another case in #301 InvalidOperationException in the Mapster
