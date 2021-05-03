@@ -94,7 +94,9 @@ namespace FastExpressionCompiler
         /// <summary>MemberInit ListBinding is not supported</summary>
         MemberInit_ListBinding,
         /// <summary>Goto of the Return kind from the TryCatch is not supported</summary>
-        Try_GotoReturnToTheFollowupLabel
+        Try_GotoReturnToTheFollowupLabel,
+        /// <summary>Not supported assignment target</summary>
+        Assign_Target
     }
 
     /// <summary>FEC Not Supported exception</summary>
@@ -104,6 +106,8 @@ namespace FastExpressionCompiler
         public readonly NotSupported Reason;
         /// <summary>Constructor</summary>
         public NotSupportedExpressionException(NotSupported reason) : base(reason.ToString()) => Reason = reason;
+        /// <summary>Constructor</summary>
+        public NotSupportedExpressionException(NotSupported reason, string message) : base(reason + ": " + message) => Reason = reason;
     }
 
     /// <summary>The interface is implemented by the compiled delegate Target if `CompilerFlags.EnableDelegateDebugInfo` is set.</summary>
@@ -2130,7 +2134,7 @@ namespace FastExpressionCompiler
                 var indexerProp = indexExpr.Indexer;
                 MethodInfo indexerPropGetter = null;
                 if (indexerProp != null)
-                    indexerPropGetter = indexerProp.DeclaringType.FindPropertyGetMethod(indexerProp.Name);
+                    indexerPropGetter = indexerProp.GetMethod;
 
                 var p = parent | ParentFlags.IndexAccess;
                 if (indexerPropGetter == null)
@@ -2148,13 +2152,13 @@ namespace FastExpressionCompiler
                 }
 
                 if (indexerPropGetter != null)
-                    return EmitMethodCallOrVirtCall(il, indexerPropGetter);
+                    return EmitMethodCallOrVirtualCall(il, indexerPropGetter);
 
                 if (indexArgCount == 1) // one-dimensional array
                     return TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure);
 
                 indexerPropGetter = indexExpr.Object?.Type.FindMethod("Get"); // multi-dimensional array
-                return indexerPropGetter != null && EmitMethodCallOrVirtCall(il, indexerPropGetter);
+                return indexerPropGetter != null && EmitMethodCallOrVirtualCall(il, indexerPropGetter);
             }
 
 #if LIGHT_EXPRESSION
@@ -2747,7 +2751,7 @@ namespace FastExpressionCompiler
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, 
                         parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1))
                         return false;
-                    return EmitMethodCallOrVirtCall(il, method);
+                    return EmitMethodCallOrVirtualCall(il, method);
                 }
 
                 var sourceType = opExpr.Type;
@@ -3419,8 +3423,8 @@ namespace FastExpressionCompiler
             {
                 if (member is PropertyInfo prop)
                 {
-                    var method = prop.DeclaringType.FindPropertySetMethod(prop.Name);
-                    return method != null && EmitMethodCallOrVirtCall(il, method);
+                    var method = prop.SetMethod;
+                    return method != null && EmitMethodCallOrVirtualCall(il, method);
                 }
                 if (member is FieldInfo field)
                 {
@@ -3503,7 +3507,7 @@ namespace FastExpressionCompiler
                     }
 
                     if (!exprType.IsValueType)
-                        EmitMethodCallOrVirtCall(il, method);
+                        EmitMethodCallOrVirtualCall(il, method);
                     else if (!method.IsVirtual) // #251 - no need for constrain or virtual call because it is already by-ref
                         EmitMethodCall(il, method);
                     else if (method.DeclaringType == exprType)
@@ -3869,7 +3873,9 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, varIndex);
                         return true;
 
-                    default: // todo: not yet support assignment targets
+                    default: // todo: @feature not yet support assignment targets
+                        if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                            throw new NotSupportedExpressionException(NotSupported.Assign_Target, $"Assignment target `{nodeType}` is not supported");
                         return false;
                 }
             }
@@ -3912,7 +3918,7 @@ namespace FastExpressionCompiler
                 }
 
                 var setter = instType?.FindMethod("Set");
-                return setter != null && EmitMethodCallOrVirtCall(il, setter); // multi dimensional array
+                return setter != null && EmitMethodCallOrVirtualCall(il, setter); // multi dimensional array
             }
 
 #if LIGHT_EXPRESSION
@@ -3957,7 +3963,7 @@ namespace FastExpressionCompiler
                 }
 
                 if (!objIsValueType) 
-                    EmitMethodCallOrVirtCall(il, method);
+                    EmitMethodCallOrVirtualCall(il, method);
                 else if (!method.IsVirtual || objExpr is ParameterExpression p && p.IsByRef)
                     EmitMethodCall(il, method);
                 else if (method.DeclaringType == objExpr.Type)
@@ -4006,11 +4012,7 @@ namespace FastExpressionCompiler
                     }
 
                     closure.LastEmitIsAddress = false;
-                    var propGetter = prop.DeclaringType.FindPropertyGetMethod(prop.Name);
-                    if (propGetter == null)
-                        return false;
-
-                    il.Emit(propGetter.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, propGetter);
+                    EmitMethodCallOrVirtualCall(il, prop.GetMethod);
                     return true;
                 }
 
@@ -4674,7 +4676,7 @@ namespace FastExpressionCompiler
                             }
                         }
 
-                        return method != null && EmitMethodCallOrVirtCall(il, method);
+                        return method != null && EmitMethodCallOrVirtualCall(il, method);
                     }
                 }
 
@@ -4953,7 +4955,7 @@ namespace FastExpressionCompiler
 
             // get the advantage of the optimized specialized EmitCall method
             [MethodImpl((MethodImplOptions)256)]
-            private static bool EmitMethodCallOrVirtCall(ILGenerator il, MethodInfo method)
+            private static bool EmitMethodCallOrVirtualCall(ILGenerator il, MethodInfo method)
             {
 #if SUPPORTS_EMITCALL
                 il.EmitCall(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method, null);
@@ -5166,7 +5168,7 @@ namespace FastExpressionCompiler
         }
 
         internal static MethodInfo DelegateTargetGetterMethod = 
-            typeof(Delegate).FindPropertyGetMethod("Target");
+            typeof(Delegate).GetProperty(nameof(Delegate.Target)).GetMethod;
 
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) => type.GetMethod("Invoke");
 
@@ -5183,63 +5185,17 @@ namespace FastExpressionCompiler
             return null;
         }
 
-        internal static MethodInfo FindValueGetterMethod(this Type type) =>
-            type.FindPropertyGetMethod("Value");
+        internal static MethodInfo FindValueGetterMethod(this Type type) => type.GetProperty("Value").GetMethod;
 
-        internal static MethodInfo FindNullableHasValueGetterMethod(this Type type) =>
-            type.FindPropertyGetMethod("HasValue");
-
-        internal static MethodInfo FindPropertyGetMethod(this Type propHolderType, string propName)
-        {
-            var methods = propHolderType.GetMethods();
-            for (var i = 0; i < methods.Length; i++)
-            {
-                var method = methods[i];
-                if (method.IsSpecialName)
-                {
-                    var methodName = method.Name;
-                    if (methodName.Length == propName.Length + 4 && methodName[0] == 'g' && methodName[3] == '_')
-                    {
-                        var j = propName.Length - 1;
-                        while (j != -1 && propName[j] == methodName[j + 4]) --j;
-                        if (j == -1)
-                            return method;
-                    }
-                }
-            }
-
-            return propHolderType.BaseType?.FindPropertyGetMethod(propName);
-        }
-
-        internal static MethodInfo FindPropertySetMethod(this Type propHolderType, string propName)
-        {
-            var methods = propHolderType.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-            for (var i = 0; i < methods.Length; i++)
-            {
-                var method = methods[i];
-                if (method.IsSpecialName)
-                {
-                    var methodName = method.Name;
-                    if (methodName.Length == propName.Length + 4 && methodName[0] == 's' && methodName[3] == '_')
-                    {
-                        var j = propName.Length - 1;
-                        while (j != -1 && propName[j] == methodName[j + 4]) --j;
-                        if (j == -1)
-                            return method;
-                    }
-                }
-            }
-
-            return propHolderType.BaseType?.FindPropertySetMethod(propName);
-        }
+        internal static MethodInfo FindNullableHasValueGetterMethod(this Type type) => type.GetProperty("HasValue").GetMethod;
 
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
-            var methods = type.GetMethods();
+            var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
             for (var i = 0; i < methods.Length; i++)
             {
                 var m = methods[i];
-                if (m.IsStatic && m.IsSpecialName && m.ReturnType == targetType)
+                if (m.IsSpecialName && m.ReturnType == targetType)
                 {
                     var n = m.Name;
                     // n == "op_Implicit" || n == "op_Explicit"
@@ -5255,7 +5211,7 @@ namespace FastExpressionCompiler
 
         internal static ConstructorInfo FindSingleParamConstructor(this Type type, Type paramType)
         {
-            var ctors = type.GetConstructors();
+            var ctors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             for (var i = 0; i < ctors.Length; i++)
             {
                 var ctor = ctors[i];
