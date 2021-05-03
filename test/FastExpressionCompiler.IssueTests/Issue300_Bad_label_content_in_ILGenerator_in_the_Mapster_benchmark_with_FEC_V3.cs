@@ -19,7 +19,8 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_301_MemberInit();
+            Test_301_MemberInit_PrivateProperty();
+            Test_301_MemberInit_InternalProperty();
             Test_301_Invoke_Lambda_inlining_case_simplified();
             Test_301_Invoke_Lambda_inlining_case();
             Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present();
@@ -29,15 +30,102 @@ namespace FastExpressionCompiler.IssueTests
             Test_301_TryCatch_case();
             Test_301();
             Test_300();
-            return 10;
+            return 11;
+        }
+
+        public class CustomerDTO2
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        public class CustomerWithPrivateProperty
+        {
+            public int Id { get; private set; }
+            private string Name { get; set; }
+
+            private CustomerWithPrivateProperty() { }
+
+            public CustomerWithPrivateProperty(int id, string name)
+            {
+                Id = id;
+                Name = name;
+            }
+
+            public bool HasName(string name)
+            {
+                return Name == name;
+            }
         }
 
         [Test]
-        public void Test_301_MemberInit()
+        public void Test_301_MemberInit_PrivateProperty()
+        {
+            var p = new ParameterExpression[2]; // the parameter expressions 
+            var e = new Expression[11]; // the unique expressions 
+            var l = new LabelTarget[0]; // the labels 
+            var expr = Lambda<System.Func<object, CustomerDTO2>>( //$
+                e[0]=Block(
+                    typeof(CustomerDTO2),
+                    new[] {
+                    p[0]=Parameter(typeof(CustomerWithPrivateProperty))
+                    },
+                    e[1]=MakeBinary(ExpressionType.Assign,
+                    p[0 // (CustomerWithPrivateProperty whenmappingprivatefieldsandproperties_customerwithprivateproperty__61071393)
+                        ],
+                    e[2]=Convert(
+                        p[1]=Parameter(typeof(object)),
+                        typeof(CustomerWithPrivateProperty))), 
+                    e[3]=Condition(
+                    e[4]=MakeBinary(ExpressionType.Equal,
+                        p[0 // (CustomerWithPrivateProperty whenmappingprivatefieldsandproperties_customerwithprivateproperty__61071393)
+                        ],
+                        e[5]=Constant(null, typeof(CustomerWithPrivateProperty))),
+                    e[6]=Constant(null, typeof(CustomerDTO2)),
+                    e[7]=MemberInit((NewExpression)(
+                        e[8]=New( // 0 args
+                        typeof(CustomerDTO2).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0])), 
+                        Bind(
+                        typeof(CustomerDTO2).GetTypeInfo().GetDeclaredProperty("Id"), 
+                        e[9]=Property(
+                            p[0 // (CustomerWithPrivateProperty whenmappingprivatefieldsandproperties_customerwithprivateproperty__61071393)
+                            ],
+                            typeof(CustomerWithPrivateProperty).GetTypeInfo().GetDeclaredProperty("Id"))), 
+                        Bind(
+                        typeof(CustomerDTO2).GetTypeInfo().GetDeclaredProperty("Name"), 
+                        e[10]=Property(
+                            p[0 // (CustomerWithPrivateProperty whenmappingprivatefieldsandproperties_customerwithprivateproperty__61071393)
+                            ],
+                            typeof(CustomerWithPrivateProperty).GetTypeInfo().GetDeclaredProperty("Name")))),
+                    typeof(CustomerDTO2))),
+                p[1 // (object object__47154838)
+                    ]);
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+
+            var customerId = 1;
+            var customerName = "Customer 1";
+            var customer = new CustomerWithPrivateProperty(customerId, customerName);
+            var dto1 = fs(customer);
+            Assert.AreEqual(customerName, dto1.Name);
+            Assert.AreEqual(customerId,   dto1.Id);
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL("fec");
+            var dto2 = ff(customer);
+            Assert.AreEqual(customerName, dto2.Name);
+            Assert.AreEqual(customerId,   dto2.Id);
+        }
+
+        [Test]
+        public void Test_301_MemberInit_InternalProperty()
         {
             var p = new ParameterExpression[1]; // the parameter expressions 
             var e = new Expression[8]; // the unique expressions 
-            var l = new LabelTarget[0]; // the labels 
+            var l = new LabelTarget[0]; // the labels
             var expr = Lambda<System.Func<SimplePoco, SimpleDto>>( //$
                 e[0]=Condition(
                     e[1]=MakeBinary(ExpressionType.Equal,
