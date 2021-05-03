@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
         <VersionPrefix>3.1.0</VersionPrefix>
-        <VersionSuffix>preview-01</VersionSuffix>
+        <VersionSuffix>preview-02</VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
         <Title>$(Product)</Title>
@@ -15,6 +15,7 @@
 - added: #303 Add CompilerFlags.ThrowOnNotSupportedException and throw NotSupportedExpressionException when the flag is passed to CompileFast
 - fixed: #301 Another case of the InvalidOperationException in the Mapster
 - fixed: ListInit compilation for the Dictionary
+- fixed: the lookup for the non-public property setter
 
 ## v3.0.5 Bug-fix release
 
