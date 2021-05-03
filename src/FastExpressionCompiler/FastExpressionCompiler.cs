@@ -570,9 +570,9 @@ namespace FastExpressionCompiler
         {
             public object Target; // label target is the link between the goto and the label.
             public Label Label;
-            public int ReturnVariableIndexPlusOneAndIsDefined;
             public Label ReturnLabel;
-            public int InlinedLambdaInvokeIndex;
+            public short ReturnVariableIndexPlusOneAndIsDefined;
+            public short InlinedLambdaInvokeIndex;
         }
 
         /// Track the info required to build a closure object + some context information not directly related to closure.
@@ -585,7 +585,7 @@ namespace FastExpressionCompiler
 
             /// Map of the links between Labels and Goto's
             internal LiveCountArray<LabelInfo> Labels;
-            internal int CurrentInlinedLambdaInvokeIndex;
+            internal short CurrentInlinedLambdaInvokeIndex;
 
             public ClosureStatus Status;
 
@@ -693,17 +693,17 @@ namespace FastExpressionCompiler
                 }
             }
 
-            public int GetLabelOrInvokeIndex(object labelTarget)
+            public short GetLabelOrInvokeIndex(object labelTarget)
             {
                 var count = Labels.Count;
                 var items = Labels.Items;
-                for (var i = 0; i < count; ++i)
+                for (short i = 0; i < count; ++i)
                     if (items[i].Target == labelTarget)
                         return i;
                 return -1;
             }
 
-            public void AddLabel(LabelTarget labelTarget, int inlinedLambdaInvokeIndex = -1)
+            public void AddLabel(LabelTarget labelTarget, short inlinedLambdaInvokeIndex = -1)
             {
                 if (GetLabelOrInvokeIndex(labelTarget) == -1)
                 {
@@ -713,14 +713,14 @@ namespace FastExpressionCompiler
                 }
             }
 
-            public int AddInlinedLambdaInvoke(InvocationExpression e)
+            public short AddInlinedLambdaInvoke(InvocationExpression e)
             {
                 var index = GetLabelOrInvokeIndex(e);
                 if (index == -1)
                 {
                     ref var label = ref Labels.PushSlot();
                     label.Target = e;
-                    index = Labels.Count - 1;
+                    index = (short)(Labels.Count - 1);
                 }
                 return index;
             }
@@ -1965,11 +1965,11 @@ namespace FastExpressionCompiler
                                                 if (invokeIndex == -1)
                                                     return false;
                                                 ref var invokeInfo = ref closure.Labels.Items[invokeIndex];
-                                                var varIndex = (invokeInfo.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1; 
+                                                var varIndex = (short)((invokeInfo.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1);
                                                 if (varIndex == -1)
                                                 {
-                                                    varIndex = il.GetNextLocalVarIndex(gtOrLabelValue.Type);
-                                                    invokeInfo.ReturnVariableIndexPlusOneAndIsDefined = (varIndex + 1) << 1;
+                                                    varIndex = (short)il.GetNextLocalVarIndex(gtOrLabelValue.Type);
+                                                    invokeInfo.ReturnVariableIndexPlusOneAndIsDefined = (short)((varIndex + 1) << 1);
                                                     invokeInfo.ReturnLabel = il.DefineLabel();
                                                 }
                                                 EmitStoreLocalVariable(il, varIndex);
@@ -2246,11 +2246,11 @@ namespace FastExpressionCompiler
                                 // store the return expression result into the that variable
                                 // emit OpCodes.Leave to the special label with the result which should be marked after the label to jump over its default value
                                 ref var label = ref closure.Labels.Items[index];
-                                var varIndex = (label.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1; 
+                                var varIndex = (short)(label.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1; 
                                 if (varIndex == -1)
                                 {
                                     varIndex = il.GetNextLocalVarIndex(gotoValue.Type);
-                                    label.ReturnVariableIndexPlusOneAndIsDefined = (varIndex + 1) << 1;
+                                    label.ReturnVariableIndexPlusOneAndIsDefined = (short)((varIndex + 1) << 1);
                                     label.ReturnLabel = il.DefineLabel();
                                 }
                                 EmitStoreLocalVariable(il, varIndex);
@@ -2267,11 +2267,11 @@ namespace FastExpressionCompiler
                                 if (invokeIndex == -1)
                                     return false;
                                 ref var invokeInfo = ref closure.Labels.Items[invokeIndex];
-                                var varIndex = (invokeInfo.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1; 
+                                var varIndex = (short)(invokeInfo.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1; 
                                 if (varIndex == -1)
                                 {
                                     varIndex = il.GetNextLocalVarIndex(gotoValue.Type);
-                                    invokeInfo.ReturnVariableIndexPlusOneAndIsDefined = (varIndex + 1) << 1;
+                                    invokeInfo.ReturnVariableIndexPlusOneAndIsDefined = (short)((varIndex + 1) << 1);
                                     invokeInfo.ReturnLabel = il.DefineLabel();
                                 }
                                 EmitStoreLocalVariable(il, varIndex);
