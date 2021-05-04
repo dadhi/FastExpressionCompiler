@@ -1308,10 +1308,13 @@ namespace FastExpressionCompiler.LightExpression
             new WithFinallyTryExpression(body, null, @finally);
 
         public static CatchBlock Catch(ParameterExpression variable, Expression body) =>
-            new CatchBlock(variable, body, null, variable.Type);
+            new CatchBlock(variable.Type, variable, body, null);
 
         public static CatchBlock Catch(Type test, Expression body) =>
-            new CatchBlock(null, body, null, test);
+            new CatchBlock(test, null, body, null);
+
+        public static CatchBlock MakeCatchBlock(Type test, ParameterExpression variable, Expression body, Expression filter) =>
+            new CatchBlock(test, variable, body, filter);
 
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception.</summary>
         public static UnaryExpression Throw(Expression value) => new ThrowUnaryExpression(value);
@@ -3247,19 +3250,18 @@ namespace FastExpressionCompiler.LightExpression
             Finally = @finally;
     }
 
-    // todo: @perf convert to class and minimize the memory for the general cases
-    public struct CatchBlock
+    public sealed class CatchBlock
     {
+        public readonly Type Test;
         public readonly ParameterExpression Variable;
         public readonly Expression Body;
         public readonly Expression Filter;
-        public readonly Type Test;
-        internal CatchBlock(ParameterExpression variable, Expression body, Expression filter, Type test)
+        internal CatchBlock(Type test, ParameterExpression variable, Expression body, Expression filter)
         {
+            Test     = test;
             Variable = variable;
-            Body = body;
-            Filter = filter;
-            Test = test;
+            Body     = body;
+            Filter   = filter;
         }
     }
 

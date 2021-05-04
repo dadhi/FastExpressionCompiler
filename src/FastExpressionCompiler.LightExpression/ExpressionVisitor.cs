@@ -405,7 +405,7 @@ namespace FastExpressionCompiler.LightExpression
             var body = Visit(node.Body);
             if (variable == node.Variable && filter == node.Filter && body == node.Body)
                 return node;
-            return new CatchBlock(variable, body, filter, node.Test);
+            return new CatchBlock(node.Test, variable, body, filter);
         }
 
         protected internal virtual Expression VisitTry(TryExpression node)
