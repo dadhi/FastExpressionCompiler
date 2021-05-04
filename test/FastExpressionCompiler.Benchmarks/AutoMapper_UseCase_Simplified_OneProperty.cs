@@ -222,6 +222,14 @@ Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical
 |                 Create_n_CompileFast |  21.16 us | 0.417 us | 0.684 us |  1.66 |    0.07 | 0.9155 | 0.4272 |      - |   5.97 KB |
 | Create_n_CompileFast_LightExpression |  12.88 us | 0.246 us | 0.218 us |  1.00 |    0.00 | 0.7324 | 0.3662 | 0.0305 |   4.52 KB |
 
+## v3.1
+
+|                               Method |      Mean |    Error |   StdDev |    Median | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------------------------------- |----------:|---------:|---------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                     Create_n_Compile | 251.00 us | 1.708 us | 1.334 us | 251.01 us | 22.70 |    1.07 | 1.9531 | 0.9766 |      - |  13.34 KB |
+|                 Create_n_CompileFast |  17.99 us | 0.358 us | 0.697 us |  17.63 us |  1.67 |    0.09 | 0.9155 | 0.4578 | 0.0305 |   5.73 KB |
+| Create_n_CompileFast_LightExpression |  10.80 us | 0.200 us | 0.385 us |  10.62 us |  1.00 |    0.00 | 0.6866 | 0.3357 | 0.0305 |   4.28 KB |
+
 */
         [MemoryDiagnoser]
         public class Create_and_Compile
