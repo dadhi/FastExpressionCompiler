@@ -43,11 +43,11 @@ THE SOFTWARE.
 #endif
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-using PE = FastExpressionCompiler.LightExpression.ParameterExpression;
-namespace FastExpressionCompiler.LightExpression
+using PE   = FastExpressionCompiler.LightExpression.ParameterExpression;
+namespace    FastExpressionCompiler.LightExpression
 #else
 using static System.Linq.Expressions.Expression;
-using PE = System.Linq.Expressions.ParameterExpression;
+using PE =   System.Linq.Expressions.ParameterExpression;
 namespace FastExpressionCompiler
 #endif
 {

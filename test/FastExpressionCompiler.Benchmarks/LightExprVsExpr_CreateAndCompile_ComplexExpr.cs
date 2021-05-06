@@ -53,6 +53,21 @@ namespace FastExpressionCompiler.Benchmarks
         |      CreateExpression_and_CompileFast |  17.69 us | 0.350 us | 0.443 us |  1.31 |    0.04 | 1.8005 | 0.8850 | 0.0305 |   7.36 KB |
         | CreateLightExpression_and_CompileFast |  13.50 us | 0.152 us | 0.143 us |  1.00 |    0.00 | 1.5869 | 0.7935 | 0.0305 |   6.58 KB |
 
+        ## v3.1
+
+        BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
+        Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+        .NET Core SDK=5.0.202
+        [Host]     : .NET Core 5.0.5 (CoreCLR 5.0.521.16609, CoreFX 5.0.521.16609), X64 RyuJIT
+        DefaultJob : .NET Core 5.0.5 (CoreCLR 5.0.521.16609, CoreFX 5.0.521.16609), X64 RyuJIT
+
+
+        |                                Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        |-------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+        |          CreateExpression_and_Compile | 185.081 us | 3.5893 us | 3.8406 us | 21.98 |    0.62 | 0.9766 | 0.4883 |      - |    7.2 KB |
+        |      CreateExpression_and_CompileFast |  11.538 us | 0.2286 us | 0.6411 us |  1.41 |    0.10 | 1.0223 | 0.5035 | 0.0458 |   6.28 KB |
+        | CreateLightExpression_and_CompileFast |   8.408 us | 0.1501 us | 0.1844 us |  1.00 |    0.00 | 0.8850 | 0.4425 | 0.0458 |   5.47 KB |
+
         */
 
         [Benchmark]
