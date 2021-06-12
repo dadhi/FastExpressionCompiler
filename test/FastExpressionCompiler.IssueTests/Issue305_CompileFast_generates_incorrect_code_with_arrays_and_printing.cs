@@ -19,12 +19,14 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        // [Test]
+        public static void WriteLine(double d) {}
+
+        [Test]
         public void Test1()
         {
             var arr = Variable(typeof(double[]), "arr");
 
-            var printDouble = typeof(Console).GetMethod(nameof(Console.WriteLine), new[] { typeof(double) });
+            var printDouble = this.GetType().GetMethod(nameof(WriteLine), new[] { typeof(double) });
 
             var expr = Lambda<Func<double>>(
                 Block(new[] { arr },

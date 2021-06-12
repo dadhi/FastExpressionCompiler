@@ -3332,15 +3332,40 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitArrayIndex(Type exprType, ILGenerator il, ParentFlags parent, ref ClosureInfo closure)
+            private static bool TryEmitArrayIndex(Type type, ILGenerator il, ParentFlags parent, ref ClosureInfo closure)
             {
-                if (!exprType.IsValueType)
+                if (!type.IsValueType)
+                {
                     il.Emit(OpCodes.Ldelem_Ref);
+                    return true;
+                }
+                if (type == typeof(Int32))
+                    il.Emit(OpCodes.Ldelem_I4);
+                else if (type == typeof(Int64))
+                    il.Emit(OpCodes.Ldelem_I8);
+                else if (type == typeof(Int16))
+                    il.Emit(OpCodes.Ldelem_I2);
+                else if (type == typeof(SByte))
+                    il.Emit(OpCodes.Ldelem_I1);
+                else if (type == typeof(Single))
+                    il.Emit(OpCodes.Ldelem_R4);
+                else if (type == typeof(Double))
+                    il.Emit(OpCodes.Ldelem_R8);
+                else if (type == typeof(IntPtr))
+                    il.Emit(OpCodes.Ldelem_I);
+                else if (type == typeof(UIntPtr))
+                    il.Emit(OpCodes.Ldelem_I);
+                else if (type == typeof(Byte))
+                    il.Emit(OpCodes.Ldelem_U1);
+                else if (type == typeof(UInt16))
+                    il.Emit(OpCodes.Ldelem_U2);
+                else if (type == typeof(UInt32))
+                    il.Emit(OpCodes.Ldelem_U4);
                 else if ((parent & (ParentFlags.MemberAccess | ParentFlags.Call)) == 0)
-                    il.Emit(OpCodes.Ldelem, exprType);
+                    il.Emit(OpCodes.Ldelem, type);
                 else
                 {
-                    il.Emit(OpCodes.Ldelema, exprType);
+                    il.Emit(OpCodes.Ldelema, type);
                     closure.LastEmitIsAddress = true;
                 }
                 return true;
@@ -3917,10 +3942,31 @@ namespace FastExpressionCompiler
 
                 if (indexExpr.Arguments.Count == 1) // one dimensional array
                 {
-                    if (elementType.IsValueType)
-                        il.Emit(OpCodes.Stelem, elementType);
-                    else
+                    if (!elementType.IsValueType)
+                    {
                         il.Emit(OpCodes.Stelem_Ref);
+                        return true;
+                    }
+
+                    if (elementType == typeof(Int32))
+                        il.Emit(OpCodes.Stelem_I4);
+                    else if (elementType == typeof(Int64))
+                        il.Emit(OpCodes.Stelem_I8);
+                    else if (elementType == typeof(Int16))
+                        il.Emit(OpCodes.Stelem_I2);
+                    else if (elementType == typeof(SByte))
+                        il.Emit(OpCodes.Stelem_I1);
+                    else if (elementType == typeof(Single))
+                        il.Emit(OpCodes.Stelem_R4);
+                    else if (elementType == typeof(Double))
+                        il.Emit(OpCodes.Stelem_R8);
+                    else if (elementType == typeof(IntPtr))
+                        il.Emit(OpCodes.Stelem_I);
+                    else if (elementType == typeof(UIntPtr))
+                        il.Emit(OpCodes.Stelem_I);
+                    else
+                        il.Emit(OpCodes.Stelem, elementType);
+                        //todo: UInt64 as there is no OpCodes? Stelem_Ref?
                     return true;
                 }
 

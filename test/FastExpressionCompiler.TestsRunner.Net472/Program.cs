@@ -192,6 +192,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue302_Error_compiling_expression_with_array_access().Run);
 
+                Run(new Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing().Run);
+
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
