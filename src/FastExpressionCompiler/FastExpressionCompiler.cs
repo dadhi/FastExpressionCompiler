@@ -3361,7 +3361,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldelem_U2);
                 else if (type == typeof(UInt32))
                     il.Emit(OpCodes.Ldelem_U4);
-                else if ((parent & (ParentFlags.MemberAccess | ParentFlags.Call)) == 0)
+                else if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) == 0)
                     il.Emit(OpCodes.Ldelem, type);
                 else
                 {
