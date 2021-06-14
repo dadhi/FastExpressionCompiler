@@ -3339,6 +3339,15 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldelem_Ref);
                     return true;
                 }
+
+                // access the value type by address when it is used later for the member access or as instance in the method call
+                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
+                {
+                    il.Emit(OpCodes.Ldelema, type);
+                    closure.LastEmitIsAddress = true;
+                    return true;
+                }
+
                 if (type == typeof(Int32))
                     il.Emit(OpCodes.Ldelem_I4);
                 else if (type == typeof(Int64))
@@ -3361,13 +3370,8 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldelem_U2);
                 else if (type == typeof(UInt32))
                     il.Emit(OpCodes.Ldelem_U4);
-                else if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) == 0)
-                    il.Emit(OpCodes.Ldelem, type);
                 else
-                {
-                    il.Emit(OpCodes.Ldelema, type);
-                    closure.LastEmitIsAddress = true;
-                }
+                    il.Emit(OpCodes.Ldelem, type);
                 return true;
             }
 
@@ -3966,7 +3970,6 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Stelem_I);
                     else
                         il.Emit(OpCodes.Stelem, elementType);
-                        //todo: UInt64 as there is no OpCodes? Stelem_Ref?
                     return true;
                 }
 
