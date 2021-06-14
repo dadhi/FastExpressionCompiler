@@ -16,7 +16,7 @@
 [Apex.Serialization]: https://github.com/dbolin/Apex.Serialization
 [MapsterMapper]: https://github.com/MapsterMapper/Mapster 
 
-[![latest release notes](https://img.shields.io/badge/latest%20release%20notes-v3.1.0-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/v3.1.0)
+[![latest release notes](https://img.shields.io/badge/latest%20release%20notes-v3.2.0-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/v3.2.0)
 [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 
 Targets .NET Standard 2.0, 2.1 and .NET 4.5
@@ -312,6 +312,14 @@ Those conversion capabilities are also available as the `ToCSharpString` and `To
 
 Besides that, when converting the source expression to either C# code or to the Expression construction code you may find 
 the `// NOT_SUPPORTED_EXPRESSION` comments marking the not supported yet expressions by FEC. So you may verify the presence or absence of this comment in a test. 
+
+
+### ThrowOnNotSupportedExpression and NotSupported cases enum
+
+FEC V3.1 adds to the compiler flags the `CompilerFlags.ThrowOnNotSupportedExpression` 
+so that compiling the expression with not supported node will throw the respective exception instead of returning `null`.
+
+To get the actual list of the not supported cases you may check `NotSupported` enum.
 
 
 ## Additional optimizations
