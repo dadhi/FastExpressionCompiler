@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
-        <VersionPrefix>3.1.0</VersionPrefix>
+        <VersionPrefix>3.2.0</VersionPrefix>
         <VersionSuffix></VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
@@ -9,6 +9,15 @@
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.2.0 Bug-fix and optimization release
+
+- fixed: #305 CompileFast generates incorrect code with arrays and printing
+- fixed: added missing Expression.MakeCatchBlock
+- optimized: memory of Expression of T
+- optimized: for the custom MethodCallExpression
+- optimized: adding the ConstantInt and ConstantOf without boxing and null constant with the less space
+
+
 ## v3.1.0 Feature and bug-fix release
 
 - added: #297 Add custom Constant to string output in the ToCSharpString and ToExpressionString

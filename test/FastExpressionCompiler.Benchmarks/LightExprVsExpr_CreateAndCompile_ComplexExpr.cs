@@ -68,6 +68,14 @@ namespace FastExpressionCompiler.Benchmarks
         |      CreateExpression_and_CompileFast |  11.538 us | 0.2286 us | 0.6411 us |  1.41 |    0.10 | 1.0223 | 0.5035 | 0.0458 |   6.28 KB |
         | CreateLightExpression_and_CompileFast |   8.408 us | 0.1501 us | 0.1844 us |  1.00 |    0.00 | 0.8850 | 0.4425 | 0.0458 |   5.47 KB |
 
+        ## v3.2
+
+        |                                Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        |-------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+        |          CreateExpression_and_Compile | 239.100 us | 3.4564 us | 3.2331 us | 25.78 |    0.54 | 0.9766 | 0.4883 |      - |   7.19 KB |
+        |      CreateExpression_and_CompileFast |  13.480 us | 0.2612 us | 0.2443 us |  1.45 |    0.02 | 1.0071 | 0.4883 | 0.0305 |   6.28 KB |
+        | CreateLightExpression_and_CompileFast |   9.278 us | 0.1465 us | 0.1370 us |  1.00 |    0.00 | 0.8698 | 0.4272 | 0.0305 |   5.41 KB |
+
         */
 
         [Benchmark]

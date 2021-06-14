@@ -2,9 +2,7 @@ using NUnit.Framework;
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 #if LIGHT_EXPRESSION
-using System.Text;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
 #else

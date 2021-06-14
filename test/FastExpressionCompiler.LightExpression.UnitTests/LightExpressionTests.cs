@@ -190,7 +190,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                     New(_ctorOfA,
                         New(_ctorOfB),
                         Convert(
-                            ArrayIndex(stateParamExpr, Constant(11)),
+                            ArrayIndex(stateParamExpr, ConstantInt(11)),
                             typeof(string)),
                         NewArrayInit(typeof(ID),
                             New(_ctorOfD1),
