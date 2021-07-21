@@ -4357,19 +4357,20 @@ namespace FastExpressionCompiler
                 //- if switch SwitchValue is a nullable parameter, we should call getValue only once and store the result.
                 //- use comparison methods (when defined)
 
-                var cases = expr.Cases;
                 var endLabel = il.DefineLabel();
+                var cases = expr.Cases;
                 var labels = new Label[cases.Count];
-                for (var index = 0; index < cases.Count; index++)
+                var dontIgnoreTestResult = parent & ~ParentFlags.IgnoreResult;
+                for (var caseIndex = 0; caseIndex < cases.Count; ++caseIndex)
                 {
-                    var switchCase = cases[index];
-                    labels[index] = il.DefineLabel();
+                    var cs = cases[caseIndex];
+                    labels[caseIndex] = il.DefineLabel();
 
-                    foreach (var switchCaseTestValue in switchCase.TestValues)
+                    foreach (var caseTestValue in cs.TestValues)
                     {
-                        if (!TryEmitComparison(expr.SwitchValue, switchCaseTestValue, ExpressionType.Equal, paramExprs, il, ref closure, setup, parent))
+                        if (!TryEmitComparison(expr.SwitchValue, caseTestValue, ExpressionType.Equal, paramExprs, il, ref closure, setup, dontIgnoreTestResult))
                             return false;
-                        il.Emit(OpCodes.Brtrue, labels[index]);
+                        il.Emit(OpCodes.Brtrue, labels[caseIndex]);
                     }
                 }
 
@@ -4380,19 +4381,18 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Br, endLabel);
                 }
 
-                for (var index = 0; index < cases.Count; ++index)
+                for (var caseIndex = 0; caseIndex < cases.Count; ++caseIndex)
                 {
-                    var switchCase = cases[index];
-                    il.MarkLabel(labels[index]);
-                    if (!TryEmit(switchCase.Body, paramExprs, il, ref closure, setup, parent))
+                    il.MarkLabel(labels[caseIndex]);
+                    var cs = cases[caseIndex];
+                    if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
                         return false;
 
-                    if (index != cases.Count - 1)
+                    if (caseIndex != cases.Count - 1)
                         il.Emit(OpCodes.Br, endLabel);
                 }
 
                 il.MarkLabel(endLabel);
-
                 return true;
             }
 
@@ -4414,8 +4414,8 @@ namespace FastExpressionCompiler
                 }
 
                 int lVarIndex = -1, rVarIndex = -1;
-                if (!TryEmit(exprLeft, paramExprs, il, ref closure, setup, 
-                    parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
+                var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                if (!TryEmit(exprLeft, paramExprs, il, ref closure, setup, operandParent))
                     return false;
 
                 if (leftIsNullable)
@@ -4425,8 +4425,7 @@ namespace FastExpressionCompiler
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
 
-                if (!TryEmit(exprRight, paramExprs, il, ref closure, setup, 
-                    parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
+                if (!TryEmit(exprRight, paramExprs, il, ref closure, setup, operandParent))
                     return false;
 
                 if (leftOpType != rightOpType)

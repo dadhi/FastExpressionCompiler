@@ -19,7 +19,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        // [Test]
+        [Test]
         public void Test1()
         {
             var param = Parameter(typeof(int), "p");
@@ -39,6 +39,18 @@ namespace FastExpressionCompiler.IssueTests
                 param);
 
             lambda.PrintCSharp();
+            // (Func<int, string>)((int p) => //$
+            // {
+            //     switch (p)
+            //     {
+            //         case (int)1:
+            //         case (int)2:
+            //             return "foo";
+            //         default:
+            //             return "bar";
+            //     }
+            //     string__58225482:;
+            // });
 
             var compiled = lambda.CompileSys();
             compiled.PrintIL();

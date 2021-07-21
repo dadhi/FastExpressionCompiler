@@ -195,6 +195,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing().Run);
 
+                Run(new Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run);
+
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
