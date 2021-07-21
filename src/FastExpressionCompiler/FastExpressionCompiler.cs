@@ -6122,6 +6122,7 @@ namespace FastExpressionCompiler
                     if (x.Value.GetType() != x.Type) // add the cast
                         sb.Append('(').Append(x.Type.ToCode(stripNamespace, printType)).Append(')');
 
+                    // value output may also add the cast for the primitive values
                     return sb.Append(x.Value.ToCode(CodePrinter.DefaultConstantValueToCode, stripNamespace, printType));
                 }
                 case ExpressionType.Parameter:
@@ -6482,30 +6483,28 @@ namespace FastExpressionCompiler
                 {
                     var x = (SwitchExpression)e;
                     sb.Append("switch (");
-                    x.SwitchValue.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
-                    sb.Append(") {");
+                    x.SwitchValue.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(')');
+                    sb.NewLine(lineIdent, identSpaces).Append('{');
 
                     foreach (var cs in x.Cases)
                     {
-                        sb.NewLineIdent(lineIdent);
                         foreach (var tv in cs.TestValues)
                         {
-                            sb.Append("case ");
-                            tv.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
-                            sb.Append(':');
-                            sb.NewLineIdent(lineIdent);
+                            sb.NewLineIdent(lineIdent).Append("case ");
+                            tv.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(':');
                         }
-                        
-                        cs.Body.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
+
+                        sb.NewLineIdent(lineIdent + identSpaces);
+                        cs.Body.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).AddSemicolonIfFits();
                     }
 
                     if (x.DefaultBody != null) 
                     {
-                        sb.NewLineIdent(lineIdent).Append("default:");
-                        x.DefaultBody.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
+                        sb.NewLineIdent(lineIdent).Append("default:").NewLineIdent(lineIdent + identSpaces);
+                        x.DefaultBody.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).AddSemicolonIfFits();
                     }
 
-                    return sb.NewLineIdent(lineIdent).Append("}");
+                    return sb.NewLine(lineIdent, identSpaces).Append("}");
                 }
                 case ExpressionType.Default:
                 {
