@@ -1,7 +1,5 @@
 using NUnit.Framework;
 using System;
-using System.Linq;
-using System.Collections.Generic;
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
