@@ -1856,8 +1856,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
                             var binaryExpr = (BinaryExpression)expr;
-                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, binaryExpr.NodeType,
-                                paramExprs, il, ref closure, setup, parent);
+                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, binaryExpr.NodeType, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Add:
                         case ExpressionType.AddChecked:
@@ -2717,15 +2716,13 @@ namespace FastExpressionCompiler
                 if (expr.Operand.NodeType == ExpressionType.Equal) 
                 {
                     var equalExpr = (BinaryExpression)expr.Operand;
-                    if (!TryEmitComparison(equalExpr.Left, equalExpr.Right, ExpressionType.NotEqual,
-                        paramExprs, il, ref closure, setup, parent))
-                        return false;
-                    return true;
+                    return TryEmitComparison(equalExpr.Left, equalExpr.Right, ExpressionType.NotEqual, paramExprs, il, ref closure, setup, parent);
                 }
 
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, setup, parent))
                     return false;
-                if ((parent & ParentFlags.IgnoreResult) > 0)
+
+                if ((parent & ParentFlags.IgnoreResult) != 0)
                     il.Emit(OpCodes.Pop);
                 else
                 {
