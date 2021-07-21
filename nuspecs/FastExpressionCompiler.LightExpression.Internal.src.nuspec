@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.LightExpression.Internal.src</id>
-        <version>3.2.0</version>
+        <version>3.2.1</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2021 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,6 +12,10 @@
         <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <releaseNotes><![CDATA[
+## v3.2.1 Bug-fix release
+
+- fixed: #307 Switch with fall through throws "System.InvalidProgramException: 'Common Language Runtime detected an invalid program.'"
+
 ## v3.2.0 Bug-fix and optimization release
 
 - fixed: #305 CompileFast generates incorrect code with arrays and printing

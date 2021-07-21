@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
-        <VersionPrefix>3.2.0</VersionPrefix>
+        <VersionPrefix>3.2.1</VersionPrefix>
         <VersionSuffix></VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
@@ -9,6 +9,10 @@
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.2.1 Bug-fix release
+
+- fixed: #307 Switch with fall through throws "System.InvalidProgramException: 'Common Language Runtime detected an invalid program.'"
+
 ## v3.2.0 Bug-fix and optimization release
 
 - fixed: #305 CompileFast generates incorrect code with arrays and printing
