@@ -79,7 +79,7 @@ namespace FastExpressionCompiler
                     else if (il is ShortInlineBrTargetInstruction sbr)
                         s.Append(' ').Append(sbr.TargetOffset);
                     else if (il is InlineStringInstruction si)
-                        s.Append(' ').Append(si.String);
+                        s.Append(" \"").Append(si.String).Append('"');
                     else if (il is InlineIInstruction ii)
                         s.Append(' ').Append(ii.Int32);
                     else if (il is ShortInlineIInstruction sii)
