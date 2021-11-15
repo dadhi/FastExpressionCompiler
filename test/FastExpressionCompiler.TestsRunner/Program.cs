@@ -11,6 +11,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            //new FastExpressionCompiler.LightExpression.IssueTests.Issue308_Wrong_delegate_type_returned_with_closure().Run();
+
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
@@ -57,7 +59,7 @@ namespace FastExpressionCompiler.UnitTests
             Console.WriteLine();
 
             // todo: @perf try Parallel.ForEach
-            var unitTests = Task.Run(() => 
+            var unitTests = Task.Run(() =>
             {
                 Run(new ArithmeticOperationsTests().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests().Run);
@@ -107,7 +109,7 @@ namespace FastExpressionCompiler.UnitTests
 
             });
 
-            var issueTests = Task.Run(() => 
+            var issueTests = Task.Run(() =>
             {
                 Run(new Issue14_String_constant_comparisons_fail().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue14_String_constant_comparisons_fail().Run);
@@ -188,7 +190,7 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run);
-                
+
                 Run(new Issue251_Bad_code_gen_for_byRef_parameters().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters().Run);
 #if NETCOREAPP3_1
@@ -212,14 +214,14 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run);
- 
+
                 Run(new Issue302_Error_compiling_expression_with_array_access().Run);
 
                 Run(new Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing().Run);
                 Run(new Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run);
- 
+
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
