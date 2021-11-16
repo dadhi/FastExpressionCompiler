@@ -19,7 +19,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate string Command();
 
-        //[Test]
+        [Test]
         public void Test1()
         {
             var p = Parameter(typeof(string), "vm");
@@ -27,14 +27,18 @@ namespace FastExpressionCompiler.IssueTests
 
             expr.PrintCSharp();
 
+            // var x = (Func<string, Issue308_Wrong_delegate_type_returned_with_closure.Command>)((string vm) => //$
+            //     (Issue308_Wrong_delegate_type_returned_with_closure.Command)(() => //$
+            //         vm));
+
             var fSys = expr.CompileSys();
             fSys.PrintIL();
-            
+
             Assert.IsInstanceOf<Command>(fSys(null));
-            
+
             var fFast = expr.CompileFast();
             fFast.PrintIL();
-            
+
             Assert.IsInstanceOf<Command>(fFast(null));
         }
     }

@@ -3172,12 +3172,12 @@ namespace FastExpressionCompiler
                 var nestedLambdas = closure.NestedLambdas;
                 for (var i = 0; i < nestedLambdas.Length; i++)
                 {
-                    var nestedLambda = nestedLambdas[i];
                     il.Emit(OpCodes.Ldloc_0);// SHOULD BE always at 0 locaton; load array field variable on the stack
                     EmitLoadConstantInt(il, constCount + i);
                     il.Emit(OpCodes.Ldelem_Ref);
                     
                     // store the nested lambda in the local variable 
+                    var nestedLambda = nestedLambdas[i];
                     varIndex = il.GetNextLocalVarIndex(nestedLambda.Lambda.GetType());
                     nestedLambda.LambdaVarIndex = varIndex; // save the var index
                     EmitStoreLocalVariable(il, varIndex);
@@ -4234,11 +4234,20 @@ namespace FastExpressionCompiler
                 // - call `Curry` method with nested lambda and array closure to produce a closed lambda with the expected signature
                 var lambdaTypeArgs = nestedLambda.GetType().GetTypeInfo().GenericTypeArguments;
 
-                var closureMethod = nestedLambdaInfo.LambdaExpression.ReturnType == typeof(void)
+                var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
+                var closureMethod = nestedLambdaExpr.ReturnType == typeof(void)
                     ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
                     : CurryClosureFuncs  .Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
 
                 EmitMethodCall(il, closureMethod);
+
+                // converting to the original possibly custom delegate type, see #308
+                if (closureMethod.ReturnType != nestedLambdaExpr.Type)
+                {
+                    il.Emit(OpCodes.Ldftn, closureMethod.ReturnType.FindDelegateInvokeMethod());
+                    il.Emit(OpCodes.Newobj, nestedLambdaExpr.Type.GetConstructors()[0]);
+                }
+
                 return true;
             }
 
@@ -4663,7 +4672,7 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
                         il.Emit(OpCodes.Br_S, endL);
                         il.MarkLabel(valueLabel);
-                        il.Emit(OpCodes.Newobj, exprType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                        il.Emit(OpCodes.Newobj, exprType.GetConstructors()[0]);
                         il.MarkLabel(endL);
                     }
                     else
