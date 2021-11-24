@@ -854,6 +854,11 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression ArrayIndex(Expression array, Expression index) =>
             new ArrayIndexExpression(array, index);
 
+        public static BinaryExpression ArrayIndex(Expression array, Expression index, MethodInfo method) => 
+            method == null 
+                ? new ArrayIndexExpression(array, index) 
+                : GetMethodBasedBinaryOperator(ExpressionType.ArrayIndex, array, index, method, liftToNull: true);
+
         public static MethodCallExpression ArrayIndex(Expression array, IEnumerable<Expression> indexes) =>
             Call(array, array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance), indexes.AsReadOnlyList());
 
@@ -1145,94 +1150,154 @@ namespace FastExpressionCompiler.LightExpression
         public static DefaultExpression Default(Type type) =>
             type == typeof(void) ? VoidDefault : new DefaultExpression(type);
 
+        public static BinaryExpression GetLeftTypedBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method) => 
+            method == null 
+                ? new LeftTypedBinaryExpression(nodeType, left, right) 
+                : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
+
         /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
         public static BinaryExpression Add(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.Add, left, right);
+
+        public static BinaryExpression Add(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Add, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that has overflow checking.</summary>
         public static BinaryExpression AddChecked(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.AddChecked, left, right);
 
+        public static BinaryExpression AddChecked(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Add, left, right, method);
+
         /// <summary>Creates a BinaryExpression that represents a bitwise XOR operation.</summary>
         public static BinaryExpression ExclusiveOr(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.ExclusiveOr, left, right);
+
+        public static BinaryExpression ExclusiveOr(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.ExclusiveOr, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents a bitwise left-shift operation.</summary>
         public static BinaryExpression LeftShift(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.LeftShift, left, right);
 
+        public static BinaryExpression LeftShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.LeftShift, left, right, method);
+
         /// <summary>Creates a BinaryExpression that represents an arithmetic remainder operation.</summary>
         public static BinaryExpression Modulo(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.Modulo, left, right);
+
+        public static BinaryExpression Modulo(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Modulo, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
         public static BinaryExpression RightShift(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.RightShift, left, right);
 
+        public static BinaryExpression RightShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.RightShift, left, right, method);
+
         /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that does not have overflow checking.</summary>
         public static BinaryExpression Subtract(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.Subtract, left, right);
+
+        public static BinaryExpression Subtract(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Subtract, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that has overflow checking.</summary>
         public static BinaryExpression SubtractChecked(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.SubtractChecked, left, right);
 
+        public static BinaryExpression SubtractChecked(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.SubtractChecked, left, right, method);
+
         /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that does not have overflow checking.</summary>
-        public static BinaryExpression Multiply(Expression left, Expression right) =>
+        public static BinaryExpression Multiply(Expression left, Expression right) => 
             new LeftTypedBinaryExpression(ExpressionType.Multiply, left, right);
+        
+        public static BinaryExpression Multiply(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Multiply, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that has overflow checking.</summary>
         public static BinaryExpression MultiplyChecked(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.MultiplyChecked, left, right);
 
+        public static BinaryExpression MultiplyChecked(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.MultiplyChecked, left, right, method);
+
         /// <summary>Creates a BinaryExpression that represents an arithmetic division operation.</summary>
         public static BinaryExpression Divide(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.Divide, left, right);
+
+        public static BinaryExpression Divide(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Divide, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents raising a number to a power.</summary>
         public static BinaryExpression Power(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.Power, left, right);
 
+        public static BinaryExpression Power(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Power, left, right, method);
+
         /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
         public static BinaryExpression And(Expression left, Expression right) =>
             new LogicalBinaryExpression(ExpressionType.And, left, right);
 
+        public static BinaryExpression And(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.And, left, right, method);
+
         /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
         public static BinaryExpression AndAlso(Expression left, Expression right) =>
             new LogicalBinaryExpression(ExpressionType.AndAlso, left, right);
+
+        public static BinaryExpression AndAlso(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.AndAlso, left, right, method);
 
         // note: @note it should be a `LeftTypedBinaryExpression` and not `LogicalBinaryExpression` so that it works both for logical and bitwise context
         /// <summary>Creates a BinaryExpression that represents a bitwise OR operation.</summary>
         public static BinaryExpression Or(Expression left, Expression right) =>
             new LeftTypedBinaryExpression(ExpressionType.Or, left, right);
 
+        public static BinaryExpression Or(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Or, left, right, method);
+
+        public static BinaryExpression GetLogicalBinary(ExpressionType nodeType, Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+            !liftToNull && method == null
+                ? new LogicalBinaryExpression(nodeType, left, right) 
+                : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull);
+
         /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
         public static BinaryExpression OrElse(Expression left, Expression right) =>
             new LogicalBinaryExpression(ExpressionType.OrElse, left, right);
+
+        public static BinaryExpression OrElse(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.OrElse, left, right, method); 
 
         /// <summary>Creates a BinaryExpression that represents an equality comparison.</summary>
         public static BinaryExpression Equal(Expression left, Expression right) =>
             new LogicalBinaryExpression(ExpressionType.Equal, left, right);
 
+        public static BinaryExpression Equal(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+            GetLogicalBinary(ExpressionType.Equal, left, right, liftToNull, method);
+
         /// <summary>Creates a BinaryExpression that represents an inequality comparison.</summary>
         public static BinaryExpression NotEqual(Expression left, Expression right) =>
             new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
+
+        public static BinaryExpression NotEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+            GetLogicalBinary(ExpressionType.NotEqual, left, right, liftToNull, method);
 
         /// <summary>Creates a BinaryExpression that represents a "greater than" numeric comparison.</summary>
         public static BinaryExpression GreaterThan(Expression left, Expression right) =>
             new LogicalBinaryExpression(ExpressionType.GreaterThan, left, right);
 
+        public static BinaryExpression GreaterThan(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+            GetLogicalBinary(ExpressionType.GreaterThan, left, right, liftToNull, method);
+
         /// <summary>Creates a BinaryExpression that represents a "greater than or equal" numeric comparison.</summary>
         public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right) =>
             new LogicalBinaryExpression(ExpressionType.GreaterThanOrEqual, left, right);
+        
+        public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) => 
+            GetLogicalBinary(ExpressionType.GreaterThanOrEqual, left, right, liftToNull, method);
 
         /// <summary>Creates a BinaryExpression that represents a "less than" numeric comparison.</summary>
         public static BinaryExpression LessThan(Expression left, Expression right) =>
             new LogicalBinaryExpression(ExpressionType.LessThan, left, right);
 
+        public static BinaryExpression LessThan(Expression left, Expression right, bool liftToNull, MethodInfo method) => 
+            GetLogicalBinary(ExpressionType.LessThan, left, right, liftToNull, method);
+
         /// <summary>Creates a BinaryExpression that represents a " less than or equal" numeric comparison.</summary>
         public static BinaryExpression LessThanOrEqual(Expression left, Expression right) =>
             new LogicalBinaryExpression(ExpressionType.LessThanOrEqual, left, right);
+
+        public static BinaryExpression LessThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+            GetLogicalBinary(ExpressionType.LessThanOrEqual, left, right, liftToNull, method);
 
         public static BlockExpression Block(IEnumerable<Expression> expressions) =>
             new BlockExpression(expressions.AsReadOnlyList());
@@ -1417,6 +1482,96 @@ namespace FastExpressionCompiler.LightExpression
             }
         }
 
+        public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, bool liftToNull, MethodInfo method, LambdaExpression conversion = null)
+        {
+            switch (binaryType)
+            {
+                case ExpressionType.Add:
+                case ExpressionType.AddChecked:
+                case ExpressionType.Subtract:
+                case ExpressionType.SubtractChecked:
+                case ExpressionType.Multiply:
+                case ExpressionType.MultiplyChecked:
+                case ExpressionType.Divide:
+                case ExpressionType.Modulo:
+                case ExpressionType.Power:
+                case ExpressionType.And:
+                case ExpressionType.AndAlso:
+                case ExpressionType.Or:
+                case ExpressionType.OrElse:
+                    return GetLeftTypedBinary(binaryType, left, right, method);
+
+                case ExpressionType.LessThan: return LessThan(left, right, liftToNull, method);
+                case ExpressionType.LessThanOrEqual: return LessThanOrEqual(left, right, liftToNull, method);
+                case ExpressionType.GreaterThan: return GreaterThan(left, right, liftToNull, method);
+                case ExpressionType.GreaterThanOrEqual: return GreaterThanOrEqual(left, right, liftToNull, method);
+                case ExpressionType.Equal: return Equal(left, right, liftToNull, method);
+                case ExpressionType.NotEqual: return NotEqual(left, right, liftToNull, method);
+                
+                case ExpressionType.ExclusiveOr: return ExclusiveOr(left, right, method);
+
+                case ExpressionType.Coalesce: return Coalesce(left, right, conversion);
+                
+                case ExpressionType.ArrayIndex: return ArrayIndex(left, right, method);
+                case ExpressionType.RightShift: return RightShift(left, right, method);
+                case ExpressionType.LeftShift: return LeftShift(left, right, method);
+
+                case ExpressionType.Assign: return Assign(left, right);
+                
+                // todo: @feature NOT_SUPPORTED_EXPRESSION, will be converted to system expression using the MakeBinary
+                case ExpressionType.AddAssign:
+                case ExpressionType.AndAssign:
+                case ExpressionType.DivideAssign:
+                case ExpressionType.ExclusiveOrAssign:
+                case ExpressionType.LeftShiftAssign:
+                case ExpressionType.ModuloAssign:
+                case ExpressionType.MultiplyAssign:
+                case ExpressionType.OrAssign:
+                case ExpressionType.PowerAssign:
+                case ExpressionType.RightShiftAssign:
+                case ExpressionType.SubtractAssign:
+                case ExpressionType.AddAssignChecked:
+                case ExpressionType.SubtractAssignChecked:
+                case ExpressionType.MultiplyAssignChecked: 
+                    return new OpAssignMethodConversionBinaryExpression(binaryType, left, right, method, conversion, liftToNull);
+                
+                default: throw new ArgumentException($"Unhandled binary node type: `{binaryType}`");
+            }
+        }
+
+        private static BinaryExpression GetMethodBasedBinaryOperator(ExpressionType binaryType, Expression left, Expression right, MethodInfo method, bool liftToNull)
+        {
+            var lType = left.Type;
+            var rType = right.Type;
+            if (method == null)
+            {
+                if (lType == rType && lType.IsNumeric())
+                    return lType.IsNullable() && liftToNull
+                        ? (BinaryExpression)new LiftedToNullBinaryExpression(binaryType, left, right)
+                        : new LeftTypedBinaryExpression(binaryType, left, right);
+
+                throw new NotSupportedException($"The user-defined binary operator is not supported yet for {binaryType} left `{left}` and `{right}`");
+            }
+
+            var ps = method.GetParameters();
+            if (ps.Length != 2)
+                throw new ArgumentException("IncorrectNumberOfMethodCallArguments in " + method, nameof(method));
+
+            var type = method.ReturnType;
+            if (ps[0].IsAssignableFrom(lType) && ps[1].IsAssignableFrom(rType))
+                return new MethodBinaryExpression(binaryType, left, right, type, method);
+
+            // check for lifted call
+            if (lType.IsNullable() && rType.IsNullable() &&
+                ps[0].IsAssignableFrom(lType.GetNonNullable()) && ps[1].IsAssignableFrom(rType.GetNonNullable()) &&
+                type.IsValueType && !type.IsNullable())
+                return type != typeof(bool) || liftToNull
+                    ? new MethodBinaryExpression(binaryType, left, right, type.GetNullable(), method)
+                    : new MethodBinaryExpression(binaryType, left, right, typeof(bool), method);
+            
+            throw new InvalidOperationException($"OperandTypesDoNotMatchParameters for {binaryType} and method {method.Name}");
+        }
+
         public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type)
         {
             switch (kind)
@@ -1584,7 +1739,54 @@ namespace FastExpressionCompiler.LightExpression
 
     internal static class TypeTools
     {
-        internal static Type GetNonRefType(this Type type) => type.IsByRef ? type.GetElementType() : type;
+        internal static Type GetNonRef(this Type type) => type.IsByRef ? type.GetElementType() : type;
+
+        internal static bool IsAssignableFrom(this ParameterInfo p, Type argType)
+        {
+            var pt = p.ParameterType.GetNonRef();
+            return pt == argType || pt.IsAssignableFrom(argType);
+        }
+
+        public static Type GetNonNullable(this Type type) => type.GetGenericArguments()[0];
+ 
+        public static Type GetNullable(this Type type) => typeof(Nullable<>).MakeGenericType(type);
+
+        public static bool IsArithmetic(this Type type)
+        {
+            type = type.GetNonNullable();
+            if (!type.IsEnum && ( 
+                type == typeof(Int32) ||
+                type == typeof(Int64) ||
+                type == typeof(Double) ||
+                type == typeof(Single) ||
+                type == typeof(UInt16) ||
+                type == typeof(UInt32) ||
+                type == typeof(UInt64)))
+                return true; 
+            return false;
+        }
+
+        public static bool IsNumeric(this Type type)
+        {
+            type = type.GetNonNullable();
+            if (!type.IsEnum)
+                switch (Type.GetTypeCode(type))
+                {
+                    case TypeCode.Char:
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                    case TypeCode.Int16:
+                    case TypeCode.Int32:
+                    case TypeCode.Int64:
+                    case TypeCode.Double:
+                    case TypeCode.Single:
+                    case TypeCode.UInt16:
+                    case TypeCode.UInt32:
+                    case TypeCode.UInt64:
+                        return true;
+                }
+            return false;
+        }
 
         internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
             source.IsValueType &&
@@ -1947,6 +2149,7 @@ namespace FastExpressionCompiler.LightExpression
     public abstract class BinaryExpression : Expression
     {
         public virtual MethodInfo Method => null; //todo: @feature - not supported yet
+
         public virtual LambdaExpression Conversion => null;
 
         // todo: @feature - not supported yet
@@ -1968,6 +2171,19 @@ namespace FastExpressionCompiler.LightExpression
 #endif
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
+    }
+
+    public sealed class MethodBinaryExpression : BinaryExpression
+    {
+        public override ExpressionType NodeType { get; }
+        public override Type Type { get; }
+        public override MethodInfo Method { get; }
+        public MethodBinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type, MethodInfo method) : base(left, right)
+        {
+            NodeType = nodeType;
+            Type = type;
+            Method = method;
+        }
     }
 
     /*
@@ -2027,6 +2243,15 @@ namespace FastExpressionCompiler.LightExpression
             NodeType = nodeType;
     }
 
+    internal sealed class LiftedToNullBinaryExpression : BinaryExpression
+    {
+        public override ExpressionType NodeType { get; }
+        public override Type Type => typeof(bool?);
+        internal LiftedToNullBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), true, null);
+    }
+
     // todo: @perf optimize (split) for the left or right target type
     internal class CoalesceBinaryExpression : BinaryExpression
     {
@@ -2066,10 +2291,27 @@ namespace FastExpressionCompiler.LightExpression
         internal AssignBinaryExpression(Expression left, Expression right) : base(left, right) {}
     }
 
-    public sealed class OpAssignBinaryExpression : AssignBinaryExpression
+    public class OpAssignBinaryExpression : AssignBinaryExpression
     {
-        public override ExpressionType NodeType { get; }
+        public sealed override ExpressionType NodeType { get; }
         internal OpAssignBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
+    }
+
+    public sealed class OpAssignMethodConversionBinaryExpression : OpAssignBinaryExpression
+    {
+        public override MethodInfo Method { get; }
+        public override LambdaExpression Conversion { get; }
+        public bool LiftToNull { get; }
+        internal OpAssignMethodConversionBinaryExpression(ExpressionType nodeType, Expression left, Expression right, MethodInfo method, LambdaExpression conversion, bool liftToNull) 
+            : base(nodeType, left, right)
+        {
+            Method = method;
+            Conversion = conversion;
+            LiftToNull = liftToNull;
+        }
+
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), LiftToNull, Method, Conversion.ToLambdaExpression());
     }
 
     public class ElementInit : IArgumentProvider
