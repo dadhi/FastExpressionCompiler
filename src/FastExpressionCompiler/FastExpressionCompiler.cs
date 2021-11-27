@@ -2763,6 +2763,12 @@ namespace FastExpressionCompiler
                 var underlyingNullableSourceType = Nullable.GetUnderlyingType(sourceType);
                 var targetType = expr.Type;
 
+                if (targetType.IsAssignableFrom(sourceType) && (parent & ParentFlags.IgnoreResult) != 0)
+                {
+                    // quick path for ignored result & conversion which can't cause exception: just do nothing
+                    return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent);
+                }
+
                 if (sourceTypeIsNullable && targetType == underlyingNullableSourceType)
                 {
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, 
@@ -2813,9 +2819,7 @@ namespace FastExpressionCompiler
                     if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
                     {
                         il.Emit(OpCodes.Call, method);
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                            il.Emit(OpCodes.Pop);
-                        return true;
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
 
                     var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
