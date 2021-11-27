@@ -2991,8 +2991,14 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldelem_Ref);
                         if (exprType.IsValueType)
                             il.Emit(OpCodes.Unbox_Any, exprType);
-                        else // todo: @perf it is probably required only for Full CLR starting from NET45, e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`
+                        else
+                        {
+                            // this is probably required only for Full CLR starting from NET45, e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`
+                            // .NET Core does not seem to care about verifiability and it's faster without the explicit cast
+#if NETFRAMEWORK
                             il.Emit(OpCodes.Castclass, exprType);
+#endif
+                        }
                     }
                 }
                 else
