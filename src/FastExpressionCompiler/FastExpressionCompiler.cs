@@ -5603,9 +5603,12 @@ namespace FastExpressionCompiler
             lts = new List<LabelTarget>();
             sb = expr.CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, 2, stripNamespace, printType, identSpaces, tryPrintConstant).Append(';');
             
-            sb.Insert(0, $"var l = new LabelTarget[{lts.Count}]; // the labels {NewLine}");
-            sb.Insert(0, $"var e = new Expression[{uniqueExprs.Count}]; // the unique expressions {NewLine}");
-            sb.Insert(0, $"var p = new ParameterExpression[{paramsExprs.Count}]; // the parameter expressions {NewLine}");
+            if (lts.Count > 0)
+                sb.Insert(0, $"var l = new LabelTarget[{lts.Count}]; // the labels {NewLine}");
+            if (uniqueExprs.Count > 0)
+                sb.Insert(0, $"var e = new Expression[{uniqueExprs.Count}]; // the unique expressions {NewLine}");
+            if (paramsExprs.Count > 0)
+                sb.Insert(0, $"var p = new ParameterExpression[{paramsExprs.Count}]; // the parameter expressions {NewLine}");
 
             return sb.ToString();
         }
@@ -5795,21 +5798,9 @@ namespace FastExpressionCompiler
                         sb.AppendTypeof(t, stripNamespace, printType);
                     else
                     {
-                        // For the closure bound constant let's output `null` or default value with the comment for user to provide the actual value
-                        if (ExpressionCompiler.IsClosureBoundConstant(x.Value, x.Type)) 
-                        {
-                            if (x.Type.IsValueType)
-                                sb.Append("default(").Append(x.Type.ToCode(stripNamespace, printType)).Append(')');
-                            else // specifying the type for the Constant, otherwise we will lost it with the `Constant(default(MyClass))` which is equivalent to `Constant(null)`
-                                sb.Append("null, ").AppendTypeof(x.Type, stripNamespace, printType);
-                            sb.NewLineIdent(lineIdent).Append("// !!! Please provide the non-default value").NewLineIdent(lineIdent);
-                        }
-                        else 
-                        {
-                            sb.Append(x.Value.ToCode(CodePrinter.DefaultConstantValueToCode, stripNamespace, printType));
-                            if (x.Value.GetType() != x.Type)
-                                sb.Append(", ").AppendTypeof(x.Type, stripNamespace, printType);
-                        }
+                        sb.Append(x.Value.ToCode(CodePrinter.DefaultConstantValueToCode, stripNamespace, printType));
+                        if (x.Value.GetType() != x.Type)
+                            sb.Append(", ").AppendTypeof(x.Type, stripNamespace, printType);
                     }
                     return sb.Append(')');
                 }
@@ -6098,6 +6089,15 @@ namespace FastExpressionCompiler
                         sb.Append("MakeBinary(").Append(typeof(ExpressionType).Name).Append('.').Append(name).Append(',');
                         sb.NewLineIdentExpr(b.Left,  paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(',');
                         sb.NewLineIdentExpr(b.Right, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
+                        if (b.IsLiftedToNull || b.Method != null || b.Conversion != null)
+                        {
+                            sb.Append(',').NewLineIdent(lineIdent).Append("liftToNull: ").Append(b.IsLiftedToNull.ToCode()).Append(',');
+                            sb.NewLineIdent(lineIdent).AppendMethod(b.Method, stripNamespace, printType);
+                        }
+                        if (b.Conversion != null)
+                        {
+                            sb.Append(',').NewLineIdentExpr(b.Conversion, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
+                        }
                     }
                     return sb.Append(')');
                 }
@@ -7052,6 +7052,12 @@ namespace FastExpressionCompiler
                 return !printGenericTypeArgs ? string.Empty
                     : (printType?.Invoke(type, type.Name) ?? type.Name);
 
+            if (Nullable.GetUnderlyingType(type) is Type nullableElementType && !type.IsGenericTypeDefinition)
+            {
+                var result = nullableElementType.ToCode(stripNamespace, printType, printGenericTypeArgs) + "?";
+                return printType?.Invoke(type, result) ?? result;
+            }
+
             Type arrayType = null;
             if (type.IsArray)
             {
@@ -7224,7 +7230,7 @@ namespace FastExpressionCompiler
         private class ConstantValueToCode : CodePrinter.IObjectToCode
         {
             public string ToCode(object x, bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-                "default(" + x.GetType().ToCode(stripNamespace, printType) + ")";
+                "default(" + x.GetType().ToCode(stripNamespace, printType) + ") /* " + x.ToString() + " !!! Please provide the non-default value */ ";
         }
 
 
@@ -7267,6 +7273,12 @@ namespace FastExpressionCompiler
             if (x is bool b)
                 return b.ToCode();
 
+            if (x is int i)
+                return i.ToString();
+            
+            if (x is double d)
+                return d.ToString();
+
             if (x is string s)
                 return s.ToCode();
 
@@ -7275,6 +7287,15 @@ namespace FastExpressionCompiler
 
             if (x is Type t)
                 return t.ToCode(stripNamespace, printType);
+
+            if (x is Guid guid)
+                return "Guid.Parse(" + guid.ToString().ToCode() + ")";
+
+            if (x is DateTime date)
+                return "DateTime.Parse(" + date.ToString().ToCode() + ")";
+
+            if (x is TimeSpan time)
+                return "TimeSpan.Parse(" + time.ToString().ToCode() + ")";
 
             var xType = x.GetType();
             var xTypeInfo = xType.GetTypeInfo();

@@ -229,6 +229,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue310_InvalidProgramException_ignored_nullable().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue310_InvalidProgramException_ignored_nullable().Run);
 
+                Run(new Issue314_LiftToNull_ToExpressionString().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue314_LiftToNull_ToExpressionString().Run);
+
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
