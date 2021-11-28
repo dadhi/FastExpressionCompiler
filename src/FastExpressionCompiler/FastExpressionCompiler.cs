@@ -96,7 +96,9 @@ namespace FastExpressionCompiler
         /// <summary>Goto of the Return kind from the TryCatch is not supported</summary>
         Try_GotoReturnToTheFollowupLabel,
         /// <summary>Not supported assignment target</summary>
-        Assign_Target
+        Assign_Target,
+        /// <summary> ExpressionType.TypeEqual is not supported </summary>
+        TypeEqual
     }
 
     /// <summary>FEC Not Supported exception</summary>
@@ -2693,15 +2695,20 @@ namespace FastExpressionCompiler
                     return false;
 
                 if ((parent & ParentFlags.IgnoreResult) != 0)
-                    il.Emit(OpCodes.Pop);
-                else
+                    return true;
+                else if (expr.NodeType == ExpressionType.TypeIs)
                 {
                     il.Emit(OpCodes.Isinst, expr.TypeOperand);
                     il.Emit(OpCodes.Ldnull);
                     il.Emit(OpCodes.Cgt_Un);
+                    return true;
                 }
-
-                return true;
+                else
+                {
+                    if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                        throw new NotSupportedExpressionException(NotSupported.TypeEqual);
+                    return false;
+                }
             }
 
 #if LIGHT_EXPRESSION
