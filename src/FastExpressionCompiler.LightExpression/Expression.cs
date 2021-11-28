@@ -2389,7 +2389,14 @@ namespace FastExpressionCompiler.LightExpression
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTypeBinary(this);
 #endif
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            SysExpr.TypeIs(Expression.ToExpression(ref exprsConverted), TypeOperand);
+            NodeType switch {
+                ExpressionType.TypeIs =>
+                    SysExpr.TypeIs(Expression.ToExpression(ref exprsConverted), TypeOperand),
+                ExpressionType.TypeEqual =>
+                    SysExpr.TypeEqual(Expression.ToExpression(ref exprsConverted), TypeOperand),
+                _ => throw new NotSupportedException()
+            };
+            
     }
 
     public class MemberInitExpression : Expression, IArgumentProvider<MemberBinding>
