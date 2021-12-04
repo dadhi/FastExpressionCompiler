@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -16,8 +16,9 @@ namespace FastExpressionCompiler.UnitTests
         {
             TypeEqual_should_work();
             TypeIs_should_work();
+            TypeIs_more_advanced();
 
-            return 2;
+            return 3;
         }
 
         [Test]
@@ -25,15 +26,19 @@ namespace FastExpressionCompiler.UnitTests
         {
             var sExpr = Parameter(typeof(object), "o");
             var expr = Lambda<Func<object, bool>>(
-                TypeEqual(sExpr, typeof(string)),
+                TypeEqual(sExpr, typeof(A)),
                 sExpr);
 
-            var f = expr.CompileFast(true);
+            var f = expr.CompileSys(); // TODO: CompileFast, but it does not work ATM
             Assert.IsNotNull(f);
-            bool result = f("123");
-
-            Assert.IsTrue(result);
+            bool result = f(new A());
+            Assert.IsTrue(result, expr.ToString());
+            bool result2 = f(new B());
+            Assert.IsFalse(result2, expr.GetType().FullName);
         }
+
+        class A { }
+        class B: A { }
 
         [Test]
         public void TypeIs_should_work()
@@ -48,5 +53,34 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.IsTrue(result);
         }
+
+        [Test]
+        public void TypeIs_more_advanced()
+        {
+            var fromParam = Parameter(typeof(object));
+            var exprInt = Lambda<Func<object, bool>>(TypeIs(fromParam, typeof(int)), fromParam).CompileFast(true);
+            var exprX = Lambda<Func<object, bool>>(TypeIs(fromParam, typeof(S)), fromParam).CompileFast(true);
+            var exprXEnum = Lambda<Func<object, bool>>(TypeIs(fromParam, typeof(E)), fromParam).CompileFast(true);
+            var exprString = Lambda<Func<object, bool>>(TypeIs(fromParam, typeof(string)), fromParam).CompileFast(true);
+            var exprIgnoredResult = Lambda<Action<object>>(TypeIs(fromParam, typeof(string)), fromParam).CompileFast(true);
+
+            Assert.AreEqual(true, exprInt(1));
+            Assert.AreEqual(false, exprInt("A"));
+            Assert.AreEqual(false, exprInt(1L));
+            Assert.AreEqual(true, exprX(new S()));
+            Assert.AreEqual(false, exprX("A"));
+            Assert.AreEqual(false, exprX(null));
+            Assert.AreEqual(true, exprXEnum(E.A));
+            Assert.AreEqual(false, exprXEnum("A"));
+            Assert.AreEqual(false, exprXEnum(null));
+            Assert.AreEqual(true, exprString("A"));
+            Assert.AreEqual(false, exprString(E.A));
+            Assert.AreEqual(false, exprXEnum(null));
+            exprIgnoredResult(1);
+            exprIgnoredResult("A");
+        }
+
+        struct S { }
+        enum E { A }
     }
 }

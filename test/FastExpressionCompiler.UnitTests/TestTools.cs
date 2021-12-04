@@ -51,6 +51,8 @@ namespace FastExpressionCompiler
 
         public static StringBuilder ToILString(this MethodInfo method, StringBuilder s = null)
         {
+            if (method is null) throw new ArgumentNullException(nameof(method));
+
             s = s ?? new StringBuilder();
 
             var ilReader = ILReaderFactory.Create(method);
@@ -64,7 +66,6 @@ namespace FastExpressionCompiler
                         s.AppendLine();
                     else 
                         secondLine = true;
-                    
                     s.Append(il.Offset.ToString().PadRight(4, ' ')).Append(' ').Append(il.OpCode);
                     if (il is InlineFieldInstruction f)
                         s.Append(' ').Append(f.Field.DeclaringType.Name).Append('.').Append(f.Field.Name);

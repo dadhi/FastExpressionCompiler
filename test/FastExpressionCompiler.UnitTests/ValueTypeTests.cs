@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -22,8 +22,9 @@ namespace FastExpressionCompiler.UnitTests
             Can_init_struct_member();
             Can_get_struct_member();
             Action_using_with_struct_closure_field();
+            Struct_Convert_to_interface();
 
-            return 7;
+            return 8;
         }
 
         [Test]
@@ -122,7 +123,19 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual("a", s.Value);
         }
 
-        public struct SS
+        [Test]
+        public void Struct_Convert_to_interface()
+        {
+            Expression<Func<int, IComparable>> expr = a => a;
+            Expression<Func<DateTimeKind, IComparable>> expr2 = a => a;
+            Expression<Func<SS, IDisposable>> expr3 = a => a;
+
+            Assert.AreEqual(12, expr.CompileFast(ifFastFailedReturnNull: true)(12));
+            Assert.AreEqual(DateTimeKind.Local, expr2.CompileFast(ifFastFailedReturnNull: true)(DateTimeKind.Local));
+            Assert.AreEqual(new SS { Value = "a" }, expr3.CompileFast(ifFastFailedReturnNull: true)(new SS { Value = "a" }));
+        }
+
+        public struct SS: IDisposable
         {
             public string Value;
 
@@ -130,6 +143,7 @@ namespace FastExpressionCompiler.UnitTests
             {
                 Value = s;
             }
+            public void Dispose() { }
         }
     }
 }

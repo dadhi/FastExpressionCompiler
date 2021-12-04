@@ -96,7 +96,9 @@ namespace FastExpressionCompiler
         /// <summary>Goto of the Return kind from the TryCatch is not supported</summary>
         Try_GotoReturnToTheFollowupLabel,
         /// <summary>Not supported assignment target</summary>
-        Assign_Target
+        Assign_Target,
+        /// <summary> ExpressionType.TypeEqual is not supported </summary>
+        TypeEqual
     }
 
     /// <summary>FEC Not Supported exception</summary>
@@ -2693,15 +2695,20 @@ namespace FastExpressionCompiler
                     return false;
 
                 if ((parent & ParentFlags.IgnoreResult) != 0)
-                    il.Emit(OpCodes.Pop);
-                else
+                    return true;
+                else if (expr.NodeType == ExpressionType.TypeIs)
                 {
                     il.Emit(OpCodes.Isinst, expr.TypeOperand);
                     il.Emit(OpCodes.Ldnull);
                     il.Emit(OpCodes.Cgt_Un);
+                    return true;
                 }
-
-                return true;
+                else
+                {
+                    if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                        throw new NotSupportedExpressionException(NotSupported.TypeEqual);
+                    return false;
+                }
             }
 
 #if LIGHT_EXPRESSION
@@ -2763,6 +2770,12 @@ namespace FastExpressionCompiler
                 var underlyingNullableSourceType = Nullable.GetUnderlyingType(sourceType);
                 var targetType = expr.Type;
 
+                if (targetType.IsAssignableFrom(sourceType) && (parent & ParentFlags.IgnoreResult) != 0)
+                {
+                    // quick path for ignored result & conversion which can't cause exception: just do nothing
+                    return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent);
+                }
+
                 if (sourceTypeIsNullable && targetType == underlyingNullableSourceType)
                 {
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, 
@@ -2813,9 +2826,7 @@ namespace FastExpressionCompiler
                     if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
                     {
                         il.Emit(OpCodes.Call, method);
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                            il.Emit(OpCodes.Pop);
-                        return true;
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
 
                     var actualSourceType = sourceTypeIsNullable ? underlyingNullableSourceType : sourceType;
@@ -2991,8 +3002,14 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Ldelem_Ref);
                         if (exprType.IsValueType)
                             il.Emit(OpCodes.Unbox_Any, exprType);
-                        else // todo: @perf it is probably required only for Full CLR starting from NET45, e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`
+                        else
+                        {
+                            // this is probably required only for Full CLR starting from NET45, e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`
+                            // .NET Core does not seem to care about verifiability and it's faster without the explicit cast
+#if NETFRAMEWORK
                             il.Emit(OpCodes.Castclass, exprType);
+#endif
+                        }
                     }
                 }
                 else
