@@ -1856,7 +1856,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
                             var binaryExpr = (BinaryExpression)expr;
-                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, binaryExpr.NodeType, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, binaryExpr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Add:
                         case ExpressionType.AddChecked:
@@ -2716,7 +2716,7 @@ namespace FastExpressionCompiler
                 if (expr.Operand.NodeType == ExpressionType.Equal) 
                 {
                     var equalExpr = (BinaryExpression)expr.Operand;
-                    return TryEmitComparison(equalExpr.Left, equalExpr.Right, ExpressionType.NotEqual, paramExprs, il, ref closure, setup, parent);
+                    return TryEmitComparison(equalExpr.Left, equalExpr.Right, ExpressionType.NotEqual, equalExpr.Type, paramExprs, il, ref closure, setup, parent);
                 }
 
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, setup, parent))
@@ -4374,7 +4374,7 @@ namespace FastExpressionCompiler
 
                     foreach (var caseTestValue in cs.TestValues)
                     {
-                        if (!TryEmitComparison(expr.SwitchValue, caseTestValue, ExpressionType.Equal, paramExprs, il, ref closure, setup, dontIgnoreTestResult))
+                        if (!TryEmitComparison(expr.SwitchValue, caseTestValue, ExpressionType.Equal, typeof(bool), paramExprs, il, ref closure, setup, dontIgnoreTestResult))
                             return false;
                         il.Emit(OpCodes.Brtrue, labels[caseIndex]);
                     }
@@ -4402,7 +4402,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitComparison(Expression exprLeft, Expression exprRight, ExpressionType expressionType, 
+            private static bool TryEmitComparison(Expression exprLeft, Expression exprRight, ExpressionType expressionType, Type exprType, 
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -4562,9 +4562,18 @@ namespace FastExpressionCompiler
                     EmitLoadLocalVariableAddress(il, lVarIndex);
                     EmitMethodCall(il, leftNullableHasValueGetterMethod);
 
+                    var isLiftedToNull = exprType == typeof(bool?);
+                    var leftHasValueVar = -1;
+                    if (isLiftedToNull)
+                        EmitStoreAndLoadLocalVariable(il, leftHasValueVar = il.GetNextLocalVarIndex(typeof(bool)));
+
                     // ReSharper disable once AssignNullToNotNullAttribute
                     EmitLoadLocalVariableAddress(il, rVarIndex);
                     EmitMethodCall(il, leftNullableHasValueGetterMethod);
+
+                    var rightHasValueVar = -1;
+                    if (isLiftedToNull)
+                        EmitStoreAndLoadLocalVariable(il, rightHasValueVar = il.GetNextLocalVarIndex(typeof(bool)));
 
                     switch (expressionType)
                     {
@@ -4592,6 +4601,20 @@ namespace FastExpressionCompiler
 
                         default:
                             return false;
+                    }
+
+                    if (isLiftedToNull)
+                    {
+                        var resultLabel = il.DefineLabel();
+                        var isNullLabel = il.DefineLabel();
+                        EmitLoadLocalVariable(il, leftHasValueVar);
+                        il.Emit(OpCodes.Brfalse, isNullLabel);
+                        EmitLoadLocalVariable(il, rightHasValueVar);
+                        il.Emit(OpCodes.Brtrue, resultLabel);
+                        il.MarkLabel(isNullLabel);
+                        il.Emit(OpCodes.Pop);
+                        il.Emit(OpCodes.Ldnull);
+                        il.MarkLabel(resultLabel);
                     }
                 }
 
@@ -6616,27 +6639,28 @@ namespace FastExpressionCompiler
 
                     if (e is BinaryExpression b)
                     {
-                        if (e.NodeType == ExpressionType.ArrayIndex)
+                        var nodeType = e.NodeType;
+                        if (nodeType == ExpressionType.ArrayIndex)
                         {
                             b.Left.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(')');
                             return b.Right.ToCSharpString(sb.Append("["), lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append("]");
                         }
 
-                        if (e.NodeType == ExpressionType.Assign ||
-                            e.NodeType == ExpressionType.PowerAssign ||
-                            e.NodeType == ExpressionType.AndAssign ||
-                            e.NodeType == ExpressionType.OrAssign ||
-                            e.NodeType == ExpressionType.AddAssign ||
-                            e.NodeType == ExpressionType.ExclusiveOrAssign ||
-                            e.NodeType == ExpressionType.AddAssignChecked ||
-                            e.NodeType == ExpressionType.SubtractAssign ||
-                            e.NodeType == ExpressionType.SubtractAssignChecked ||
-                            e.NodeType == ExpressionType.MultiplyAssign ||
-                            e.NodeType == ExpressionType.MultiplyAssignChecked ||
-                            e.NodeType == ExpressionType.DivideAssign ||
-                            e.NodeType == ExpressionType.LeftShiftAssign ||
-                            e.NodeType == ExpressionType.RightShiftAssign ||
-                            e.NodeType == ExpressionType.ModuloAssign
+                        if (nodeType == ExpressionType.Assign || 
+                            nodeType == ExpressionType.PowerAssign ||
+                            nodeType == ExpressionType.AndAssign ||
+                            nodeType == ExpressionType.OrAssign ||
+                            nodeType == ExpressionType.AddAssign ||
+                            nodeType == ExpressionType.ExclusiveOrAssign ||
+                            nodeType == ExpressionType.AddAssignChecked ||
+                            nodeType == ExpressionType.SubtractAssign ||
+                            nodeType == ExpressionType.SubtractAssignChecked ||
+                            nodeType == ExpressionType.MultiplyAssign ||
+                            nodeType == ExpressionType.MultiplyAssignChecked ||
+                            nodeType == ExpressionType.DivideAssign ||
+                            nodeType == ExpressionType.LeftShiftAssign ||
+                            nodeType == ExpressionType.RightShiftAssign ||
+                            nodeType == ExpressionType.ModuloAssign
                         )
                         {
                             // todo: @perf handle the right part is condition with the blocks for If and/or Else, e.g. see #261 test `Serialize_the_nullable_struct_array` 
@@ -6650,39 +6674,37 @@ namespace FastExpressionCompiler
                             }
 
                             b.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
-                            if (e.NodeType == ExpressionType.PowerAssign) 
+                            if (nodeType == ExpressionType.PowerAssign) 
                             {
                                 sb.Append(" = System.Math.Pow(");
                                 b.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(", ");
                                 return b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(")");
                             }
 
-                            sb.Append(OperatorToCSharpString(e.NodeType));
+                            sb.Append(OperatorToCSharpString(nodeType));
 
                             return b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
                         }
 
-                        
-                        b.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
+                        b.Left.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
 
-                        if (e.NodeType == ExpressionType.Equal)
+                        if (nodeType == ExpressionType.Equal)
                         {
                             if (b.Right is ConstantExpression r && r.Value is bool rb && rb)
                                 return sb;
                             sb.Append(" == ");
                         }
-                        else if (e.NodeType == ExpressionType.NotEqual)
+                        else if (nodeType == ExpressionType.NotEqual)
                         {
                             if (b.Right is ConstantExpression r && r.Value is bool rb)
                                 return rb ? sb.Append(" == false") : sb;
                             sb.Append(" != ");
                         }
                         else
-                        {
-                            sb.Append(OperatorToCSharpString(e.NodeType));
-                        }   
+                            sb.Append(OperatorToCSharpString(nodeType));
 
-                        return b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
+                        return b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant)
+                            .Append(')');
                     }
 
                     return sb.Append(e.ToString()); // falling back ToString and hoping for the best 
@@ -7047,23 +7069,23 @@ namespace FastExpressionCompiler
             string buildInTypeString = null;
             if (type == typeof(void))
                 buildInTypeString = "void";
-            if (type == typeof(object))
+            else if (type == typeof(object))
                 buildInTypeString = "object";
-            if (type == typeof(bool))
+            else if (type == typeof(bool))
                 buildInTypeString = "bool";
-            if (type == typeof(int))
+            else if (type == typeof(int))
                 buildInTypeString = "int";
-            if (type == typeof(short))
+            else if (type == typeof(short))
                 buildInTypeString = "short";
-            if (type == typeof(byte))
+            else if (type == typeof(byte))
                 buildInTypeString = "byte";
-            if (type == typeof(double))
+            else if (type == typeof(double))
                 buildInTypeString = "double";
-            if (type == typeof(float))
+            else if (type == typeof(float))
                 buildInTypeString = "float";
-            if (type == typeof(char))
+            else if (type == typeof(char))
                 buildInTypeString = "char";
-            if (type == typeof(string))
+            else if (type == typeof(string))
                 buildInTypeString = "string";
 
             if (buildInTypeString != null)
