@@ -9,8 +9,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            RunAllTests();
+            // RunAllTests();
 
+            // new Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true().Run();
+            new FastExpressionCompiler.LightExpression.IssueTests.Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue308_Wrong_delegate_type_returned_with_closure().Run();
 
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
@@ -225,6 +227,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue308_Wrong_delegate_type_returned_with_closure().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue308_Wrong_delegate_type_returned_with_closure().Run);
+
+                Run(new Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true().Run);
 
                 Run(new Issue310_InvalidProgramException_ignored_nullable().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue310_InvalidProgramException_ignored_nullable().Run);

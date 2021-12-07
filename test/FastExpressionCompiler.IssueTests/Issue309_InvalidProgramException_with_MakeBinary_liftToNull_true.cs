@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        // [Test]
+        [Test]
         public void Test1()
         {
             var expr = Lambda<Func<object>>(
