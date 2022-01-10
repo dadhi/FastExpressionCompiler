@@ -4755,17 +4755,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            var methodName
-                                = exprNodeType == ExpressionType.Add ?             "op_Addition"
-                                : exprNodeType == ExpressionType.AddChecked ?      "op_Addition"
-                                : exprNodeType == ExpressionType.Subtract ?        "op_Subtraction"
-                                : exprNodeType == ExpressionType.SubtractChecked ? "op_Subtraction"
-                                : exprNodeType == ExpressionType.Multiply ?        "op_Multiply"
-                                : exprNodeType == ExpressionType.MultiplyChecked ? "op_Multiply"
-                                : exprNodeType == ExpressionType.Divide ?          "op_Division"
-                                : exprNodeType == ExpressionType.Modulo ?          "op_Modulus"
-                                : null;
-
+                            var methodName = exprNodeType.GetArithmeticBinaryOperatorMethodName();
                             if (methodName != null)
                             {
                                 var methods = exprType.GetMethods();
@@ -5260,6 +5250,20 @@ namespace FastExpressionCompiler
         internal static bool IsNullable(this Type type) =>
             type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
 
+        public static string GetArithmeticBinaryOperatorMethodName(this ExpressionType nodeType) =>
+            nodeType switch 
+            {
+                ExpressionType.Add =>             "op_Addition",
+                ExpressionType.AddChecked =>      "op_Addition",
+                ExpressionType.Subtract =>        "op_Subtraction",
+                ExpressionType.SubtractChecked => "op_Subtraction",
+                ExpressionType.Multiply =>        "op_Multiply",
+                ExpressionType.MultiplyChecked => "op_Multiply",
+                ExpressionType.Divide =>          "op_Division",
+                ExpressionType.Modulo =>          "op_Modulus",
+                _ => null
+            };
+
         internal static MethodInfo FindMethod(this Type type, string methodName)
         {
             var methods = type.GetMethods();
@@ -5627,11 +5631,11 @@ namespace FastExpressionCompiler
             sb = expr.CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, 2, stripNamespace, printType, identSpaces, tryPrintConstant).Append(';');
             
             if (lts.Count > 0)
-                sb.Insert(0, $"var l = new LabelTarget[{lts.Count}]; // the labels {NewLine}");
+                sb.Insert(0, $"var l = new LabelTarget[{lts.Count}]; // the labels{NewLine}");
             if (uniqueExprs.Count > 0)
-                sb.Insert(0, $"var e = new Expression[{uniqueExprs.Count}]; // the unique expressions {NewLine}");
+                sb.Insert(0, $"var e = new Expression[{uniqueExprs.Count}]; // the unique expressions{NewLine}");
             if (paramsExprs.Count > 0)
-                sb.Insert(0, $"var p = new ParameterExpression[{paramsExprs.Count}]; // the parameter expressions {NewLine}");
+                sb.Insert(0, $"var p = new ParameterExpression[{paramsExprs.Count}]; // the parameter expressions{NewLine}");
 
             return sb.ToString();
         }
@@ -6112,16 +6116,18 @@ namespace FastExpressionCompiler
                         sb.Append("MakeBinary(").Append(typeof(ExpressionType).Name).Append('.').Append(name).Append(',');
                         sb.NewLineIdentExpr(b.Left,  paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(',');
                         sb.NewLineIdentExpr(b.Right, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
-                        if (b.IsLiftedToNull || b.Method != null || b.Conversion != null)
+                        if (b.IsLiftedToNull || b.Method != null)
                         {
-                            sb.Append(',').NewLineIdent(lineIdent).Append("liftToNull: ").Append(b.IsLiftedToNull.ToCode()).Append(',');
-                            sb.NewLineIdent(lineIdent).AppendMethod(b.Method, stripNamespace, printType);
+                            sb.Append(',').NewLineIdent(lineIdent).Append("liftToNull: ").Append(b.IsLiftedToNull.ToCode());
+                            sb.Append(',').NewLineIdent(lineIdent).AppendMethod(b.Method, stripNamespace, printType);
+                            if (b.Conversion != null)
+                                sb.Append(',').NewLineIdentExpr(b.Conversion, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
                         }
+
                         if (b.Conversion != null)
-                        {
                             sb.Append(',').NewLineIdentExpr(b.Conversion, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
-                        }
                     }
+
                     return sb.Append(')');
                 }
             }
