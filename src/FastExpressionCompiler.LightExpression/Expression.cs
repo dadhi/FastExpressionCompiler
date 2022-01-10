@@ -1517,12 +1517,14 @@ namespace FastExpressionCompiler.LightExpression
                 case ExpressionType.MultiplyChecked:
                 case ExpressionType.Divide:
                 case ExpressionType.Modulo:
+                    return GetArithmeticBinary(binaryType, left, right, method);
+
                 case ExpressionType.Power:
                 case ExpressionType.And:
                 case ExpressionType.AndAlso:
                 case ExpressionType.Or:
                 case ExpressionType.OrElse:
-                    return GetLeftTypedBinary(binaryType, left, right, method); // todo: @wip incomplete
+                    return GetLeftTypedBinary(binaryType, left, right, method); // todo: @wip incomplete, see GetArithmeticBinary
 
                 case ExpressionType.LessThan: return LessThan(left, right, liftToNull, method);
                 case ExpressionType.LessThanOrEqual: return LessThanOrEqual(left, right, liftToNull, method);
