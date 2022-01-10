@@ -1206,15 +1206,17 @@ namespace FastExpressionCompiler.LightExpression
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that does not have overflow checking.</summary>
         public static BinaryExpression Subtract(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.Subtract, left, right);
+            GetArithmeticLeftTypedBinary(ExpressionType.Subtract, left, right);
 
-        public static BinaryExpression Subtract(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Subtract, left, right, method);
+        public static BinaryExpression Subtract(Expression left, Expression right, MethodInfo method) => 
+            GetArithmeticLeftTypedBinary(ExpressionType.Subtract, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that has overflow checking.</summary>
         public static BinaryExpression SubtractChecked(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.SubtractChecked, left, right);
+            GetArithmeticLeftTypedBinary(ExpressionType.SubtractChecked, left, right);
 
-        public static BinaryExpression SubtractChecked(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.SubtractChecked, left, right, method);
+        public static BinaryExpression SubtractChecked(Expression left, Expression right, MethodInfo method) => 
+            GetArithmeticLeftTypedBinary(ExpressionType.SubtractChecked, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that does not have overflow checking.</summary>
         public static BinaryExpression Multiply(Expression left, Expression right) =>

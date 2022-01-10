@@ -10,8 +10,8 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             RunAllTests();
-            //new Issue314_LiftToNull_ToExpressionString().Run();
-            //new FastExpressionCompiler.LightExpression.IssueTests.Issue314_LiftToNull_ToExpressionString().Run();
+            // new Issue314_LiftToNull_ToExpressionString().Run();
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue314_LiftToNull_ToExpressionString().Run();
 
             // new Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true().Run();
