@@ -1456,14 +1456,17 @@ namespace FastExpressionCompiler.LightExpression
         {
             switch (binaryType)
             {
-                case ExpressionType.Add: return Add(left, right);
-                case ExpressionType.AddChecked: return AddChecked(left, right);
-                case ExpressionType.Subtract: return Subtract(left, right);
-                case ExpressionType.SubtractChecked: return SubtractChecked(left, right);
-                case ExpressionType.Multiply: return Multiply(left, right);
-                case ExpressionType.MultiplyChecked: return MultiplyChecked(left, right);
-                case ExpressionType.Divide: return Divide(left, right);
-                case ExpressionType.Modulo: return Modulo(left, right);
+                case ExpressionType.Add:
+                case ExpressionType.AddChecked:
+                case ExpressionType.Subtract:
+                case ExpressionType.SubtractChecked:
+                case ExpressionType.Multiply:
+                case ExpressionType.MultiplyChecked:
+                case ExpressionType.Divide:
+                case ExpressionType.Modulo:
+                    return GetArithmeticBinary(binaryType, left, right);
+
+                // todo: @wip incomplete - use similar to GetArithmeticBinary
                 case ExpressionType.Power: return Power(left, right);
                 case ExpressionType.And: return And(left, right);
                 case ExpressionType.AndAlso: return AndAlso(left, right);
@@ -1501,7 +1504,8 @@ namespace FastExpressionCompiler.LightExpression
             }
         }
 
-        public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, bool liftToNull, MethodInfo method, LambdaExpression conversion = null)
+        public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, bool liftToNull, MethodInfo method, 
+            LambdaExpression conversion = null)
         {
             switch (binaryType)
             {
@@ -1518,7 +1522,7 @@ namespace FastExpressionCompiler.LightExpression
                 case ExpressionType.AndAlso:
                 case ExpressionType.Or:
                 case ExpressionType.OrElse:
-                    return GetLeftTypedBinary(binaryType, left, right, method);
+                    return GetLeftTypedBinary(binaryType, left, right, method); // todo: @wip incomplete
 
                 case ExpressionType.LessThan: return LessThan(left, right, liftToNull, method);
                 case ExpressionType.LessThanOrEqual: return LessThanOrEqual(left, right, liftToNull, method);
