@@ -1150,7 +1150,7 @@ namespace FastExpressionCompiler.LightExpression
         public static DefaultExpression Default(Type type) =>
             type == typeof(void) ? VoidDefault : new DefaultExpression(type);
 
-        public static BinaryExpression GetArithmeticLeftTypedBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null)
+        public static BinaryExpression GetArithmeticBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null)
         {
             if (method == null)
             {
@@ -1168,17 +1168,17 @@ namespace FastExpressionCompiler.LightExpression
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
         public static BinaryExpression Add(Expression left, Expression right) => 
-            GetArithmeticLeftTypedBinary(ExpressionType.Add, left, right, null);
+            GetArithmeticBinary(ExpressionType.Add, left, right, null);
 
         public static BinaryExpression Add(Expression left, Expression right, MethodInfo method) => 
-            GetArithmeticLeftTypedBinary(ExpressionType.Add, left, right, method);
+            GetArithmeticBinary(ExpressionType.Add, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that has overflow checking.</summary>
         public static BinaryExpression AddChecked(Expression left, Expression right) =>
-            GetArithmeticLeftTypedBinary(ExpressionType.AddChecked, left, right);
+            GetArithmeticBinary(ExpressionType.AddChecked, left, right);
 
         public static BinaryExpression AddChecked(Expression left, Expression right, MethodInfo method) => 
-            GetArithmeticLeftTypedBinary(ExpressionType.AddChecked, left, right, method);
+            GetArithmeticBinary(ExpressionType.AddChecked, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents a bitwise XOR operation.</summary>
         public static BinaryExpression ExclusiveOr(Expression left, Expression right) =>
@@ -1194,9 +1194,10 @@ namespace FastExpressionCompiler.LightExpression
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic remainder operation.</summary>
         public static BinaryExpression Modulo(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.Modulo, left, right);
+            GetArithmeticBinary(ExpressionType.Modulo, left, right);
 
-        public static BinaryExpression Modulo(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Modulo, left, right, method);
+        public static BinaryExpression Modulo(Expression left, Expression right, MethodInfo method) => 
+            GetArithmeticBinary(ExpressionType.Modulo, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
         public static BinaryExpression RightShift(Expression left, Expression right) =>
@@ -1206,35 +1207,38 @@ namespace FastExpressionCompiler.LightExpression
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that does not have overflow checking.</summary>
         public static BinaryExpression Subtract(Expression left, Expression right) =>
-            GetArithmeticLeftTypedBinary(ExpressionType.Subtract, left, right);
+            GetArithmeticBinary(ExpressionType.Subtract, left, right);
 
         public static BinaryExpression Subtract(Expression left, Expression right, MethodInfo method) => 
-            GetArithmeticLeftTypedBinary(ExpressionType.Subtract, left, right, method);
+            GetArithmeticBinary(ExpressionType.Subtract, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that has overflow checking.</summary>
         public static BinaryExpression SubtractChecked(Expression left, Expression right) =>
-            GetArithmeticLeftTypedBinary(ExpressionType.SubtractChecked, left, right);
+            GetArithmeticBinary(ExpressionType.SubtractChecked, left, right);
 
         public static BinaryExpression SubtractChecked(Expression left, Expression right, MethodInfo method) => 
-            GetArithmeticLeftTypedBinary(ExpressionType.SubtractChecked, left, right, method);
+            GetArithmeticBinary(ExpressionType.SubtractChecked, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that does not have overflow checking.</summary>
         public static BinaryExpression Multiply(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.Multiply, left, right);
+            GetArithmeticBinary(ExpressionType.Multiply, left, right);
 
-        public static BinaryExpression Multiply(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Multiply, left, right, method);
+        public static BinaryExpression Multiply(Expression left, Expression right, MethodInfo method) => 
+            GetArithmeticBinary(ExpressionType.Multiply, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that has overflow checking.</summary>
         public static BinaryExpression MultiplyChecked(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.MultiplyChecked, left, right);
+            GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right);
 
-        public static BinaryExpression MultiplyChecked(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.MultiplyChecked, left, right, method);
+        public static BinaryExpression MultiplyChecked(Expression left, Expression right, MethodInfo method) => 
+            GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic division operation.</summary>
         public static BinaryExpression Divide(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.Divide, left, right);
+            GetArithmeticBinary(ExpressionType.Divide, left, right);
 
-        public static BinaryExpression Divide(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Divide, left, right, method);
+        public static BinaryExpression Divide(Expression left, Expression right, MethodInfo method) => 
+            GetArithmeticBinary(ExpressionType.Divide, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents raising a number to a power.</summary>
         public static BinaryExpression Power(Expression left, Expression right) =>
