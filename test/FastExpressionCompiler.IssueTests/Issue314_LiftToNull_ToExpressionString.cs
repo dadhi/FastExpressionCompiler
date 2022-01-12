@@ -68,21 +68,23 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void DateTimeConstant()
         {
-            var expr = Expression.Constant(new DateTime(2020, 3, 13));
+            var dt = new DateTime(2020, 3, 13);
+            var expr = Expression.Constant(dt);
 
             var str = expr.ToExpressionString();
 
-            Assert.AreEqual(@"var expr = Constant(DateTime.Parse(""3/13/2020 12:00:00 AM""));", str);
+            Assert.AreEqual(@$"var expr = Constant(DateTime.Parse(""{dt}""));", str);
         }
 
         [Test]
         public void NullableDateTimeConstant()
         {
-            var expr = Expression.Constant(new DateTime(2020, 3, 13), typeof(DateTime?));
+            var dt = new DateTime(2020, 3, 13);
+            var expr = Expression.Constant(dt, typeof(DateTime?));
 
             var str = expr.ToExpressionString();
 
-            Assert.AreEqual(@"var expr = Constant(DateTime.Parse(""3/13/2020 12:00:00 AM""), typeof(System.DateTime?));", str);
+            Assert.AreEqual(@$"var expr = Constant(DateTime.Parse(""{dt}""), typeof(System.DateTime?));", str);
         }
 
         class A {
