@@ -401,7 +401,7 @@ namespace FastExpressionCompiler.IssueTests
 
             expr.PrintCSharp();
             var reExpr = expr.ToExpressionString();
-            StringAssert.Contains("!!!", reExpr);
+            StringAssert.Contains("(!)", reExpr);
 
             var fs = expr.CompileSys();
             fs.PrintIL();

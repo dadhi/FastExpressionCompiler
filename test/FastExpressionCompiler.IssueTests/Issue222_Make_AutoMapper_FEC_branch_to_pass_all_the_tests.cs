@@ -268,7 +268,7 @@ namespace FastExpressionCompiler.IssueTests
                                                     p[10 // (Exception ex)
                                                     ], 
                                                     e[63]=Constant(null, typeof(PropertyMap)
-                                                    // !!! Please provide the non-default value
+                                                    // (!) Please provide the non-default value
                                                     )),
                                                 typeof(int)),
                                                 null)), 
@@ -432,7 +432,7 @@ namespace FastExpressionCompiler.IssueTests
                                                     p[10 // (Exception ex)
                                                     ], 
                                                     e[110]=Constant(null, typeof(PropertyMap)
-                                                    // !!! Please provide the non-default value
+                                                    // (!) Please provide the non-default value
                                                     )),
                                                 typeof(IList<DestObject>)),
                                                 null)), 
@@ -464,7 +464,7 @@ namespace FastExpressionCompiler.IssueTests
                         p[10 // (Exception ex)
                         ], 
                         e[115]=Constant(default(MapRequest)
-                        // !!! Please provide the non-default value
+                        // (!) Please provide the non-default value
                         )),
                     typeof(List<DestObject>)),
                     null)),

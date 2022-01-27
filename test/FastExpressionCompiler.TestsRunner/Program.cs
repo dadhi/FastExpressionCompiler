@@ -10,6 +10,9 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             RunAllTests();
+
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run();
+
             // new Issue314_LiftToNull_ToExpressionString().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue314_LiftToNull_ToExpressionString().Run();
 
@@ -238,6 +241,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue314_LiftToNull_ToExpressionString().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue314_LiftToNull_ToExpressionString().Run);
+
+                Run(new Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });

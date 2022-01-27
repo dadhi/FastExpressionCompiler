@@ -4100,14 +4100,14 @@ namespace FastExpressionCompiler
                         if ((parent & ParentFlags.DupMemberOwner) != 0)
                             il.Emit(OpCodes.Dup);
 
-                        var isByAddress = false;
+                        var isByAddress = byRefIndex != -1;
                         if (field.FieldType.IsValueType) 
                         {
                             if ((parent & ParentFlags.InstanceAccess) != 0 &&
                                 (parent & ParentFlags.IndexAccess)    == 0) // #302 - if the field is used as an index
                                 isByAddress = true;
                             // #248 indicates that expression is argument passed by ref
-                            // todo: Maybe introduce ParentFlags.Argument
+                            // todo: @improve Maybe introduce ParentFlags.Argument
                             else if ((parent & ParentFlags.Call) != 0 && byRefIndex != -1)
                                 isByAddress = true;
                         }
@@ -7258,7 +7258,7 @@ namespace FastExpressionCompiler
         private class ConstantValueToCode : CodePrinter.IObjectToCode
         {
             public string ToCode(object x, bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-                "default(" + x.GetType().ToCode(stripNamespace, printType) + ") /* " + x.ToString() + " !!! Please provide the non-default value */ ";
+                "default(" + x.GetType().ToCode(stripNamespace, printType) + ")/* (!) Please provide the non-default value for the constant */";
         }
 
 

@@ -29,6 +29,10 @@ namespace FastExpressionCompiler
             Console.WriteLine(expr.ToCSharpString());
 
         [System.Diagnostics.Conditional("DEBUG")]
+        public static void PrintCSharp(this Expression expr, Func<string, string> transform) =>
+            Console.WriteLine(transform(expr.ToCSharpString()));
+
+        [System.Diagnostics.Conditional("DEBUG")]
         public static void PrintCSharp(this Expression expr, TryPrintConstant tryPrintConstant) =>
             Console.WriteLine(expr.ToCSharpString(tryPrintConstant));
 

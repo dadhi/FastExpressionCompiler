@@ -30,7 +30,7 @@ namespace FastExpressionCompiler.IssueTests
         static private void TestStringOutMethod(string input, out string output) => output = input;
         static private void TestIntOutMethod(int input, out int output) => output = input;
 
-        //[Test]
+        [Test]
         public void Test_outparameter()
         {
             var stringMethod = this.GetType().GetMethod("TestStringOutMethod", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -47,16 +47,16 @@ namespace FastExpressionCompiler.IssueTests
 
             // Make a lambda and compile it
             var expr = Expression.Lambda<Action>(program);
-            expr.PrintCSharp();
+            expr.PrintCSharp(s => s.Replace(GetType().Name + ".", ""));
             // the output:
             var a = (Action)(() => //$
             {
                 TestStringOutMethod(
                     "hello world",
-                    out default(TestPOD) /* FastExpressionCompiler.IssueTests.TestPOD !!! Please provide the non-default value */ .stringvalue);
+                    out default(TestPOD)/*(!) Please provide the non-default value for the constant*/.stringvalue);
                 TestIntOutMethod(
                     4,
-                    out default(TestPOD) /* FastExpressionCompiler.IssueTests.TestPOD !!! Please provide the non-default value */ .intvalue);
+                    out default(TestPOD) /* (!) Please provide the non-default value for the constant*/.intvalue);
             });
 
             var fSys = expr.CompileSys();
