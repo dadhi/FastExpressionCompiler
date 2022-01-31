@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run();
+            //new FastExpressionCompiler.LightExpression.IssueTests.Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule().Run();
 
             // new Issue314_LiftToNull_ToExpressionString().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue314_LiftToNull_ToExpressionString().Run();
@@ -241,6 +241,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue314_LiftToNull_ToExpressionString().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue314_LiftToNull_ToExpressionString().Run);
+
+                Run(new Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule().Run);
 
                 Run(new Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run);

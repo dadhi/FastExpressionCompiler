@@ -39,7 +39,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var funcExpr = Lambda<Func<int, int, int>>(Add(paramA, paramB), paramA, paramB);
 
-            funcExpr.CompileFastToIL(methodBuilder.GetILGenerator(), true);
+            var success = funcExpr.CompileFastToIL(methodBuilder.GetILGenerator());
+            Assert.IsTrue(success);
 
             var dynamicType = typeBuilder.CreateType();
             var myAddMethod = dynamicType.GetTypeInfo().GetDeclaredMethod("MyAdd");

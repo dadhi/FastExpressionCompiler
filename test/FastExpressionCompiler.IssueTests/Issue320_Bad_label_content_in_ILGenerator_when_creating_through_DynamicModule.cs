@@ -17,12 +17,12 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_instance_call_without_ifthen();
             Test_instance_call();
+            Test_instance_call_without_ifthen();
             return 2;
         }
 
-        //[Test] // todo: @fix
+        [Test]
         public void Test_instance_call()
         {
             var expr = CreateExpression();
@@ -53,11 +53,10 @@ namespace FastExpressionCompiler.IssueTests
             GenerateAssemblyManually(expr);
         }
 
-        //[Test]
+        [Test]
         public void Test_instance_call_without_ifthen()
         {
             var expr = CreateNonIfThenExpression();
-
 
             var f = expr.CompileFast(true);
             Assert.IsNotNull(f);
@@ -91,8 +90,11 @@ namespace FastExpressionCompiler.IssueTests
 
         private Expression<Func<int>> CreateExpression()
         {
-            var instance = new TestMethods(314);
-            var call = Expression.Call(Expression.Constant(instance), typeof(TestMethods).GetMethod("InstanceMethod")!);
+            // var instance = new TestMethods(314);
+            // var instanceExpr = Expression.Constant(instance);
+            var instanceExpr = Expression.New(typeof(TestMethods).GetConstructors()[0], Expression.Constant(314));
+
+            var call = Expression.Call(instanceExpr, typeof(TestMethods).GetMethod("InstanceMethod")!);
 
             var localint = Expression.Variable(typeof(int), "ret");
             var setlocaltocall = Expression.Assign(localint, call);
@@ -109,8 +111,11 @@ namespace FastExpressionCompiler.IssueTests
 
         private Expression<Func<int>> CreateNonIfThenExpression()
         {
-            var instance = new TestMethods(8675309);
-            var call = Expression.Call(Expression.Constant(instance), typeof(TestMethods).GetMethod("InstanceMethod")!);
+            // var instance = new TestMethods(8675309);
+            // var instanceExpr = Expression.Constant(instance);
+            var instanceExpr = Expression.New(typeof(TestMethods).GetConstructors()[0], Expression.Constant(8675309));
+
+            var call = Expression.Call(instanceExpr, typeof(TestMethods).GetMethod("InstanceMethod")!);
 
             var localint = Expression.Variable(typeof(int), "ret");
             var setlocaltocall = Expression.Assign(localint, call);

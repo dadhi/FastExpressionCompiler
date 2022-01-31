@@ -142,21 +142,30 @@ namespace FastExpressionCompiler
 #endif
                 lambdaExpr.ReturnType, flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys()));
 
-        /// Compiles a static method to the passed IL Generator.
+        /// <summary>Compiles a static method to the passed IL Generator.
         /// Could be used as alternative for `CompileToMethod` like this <code><![CDATA[funcExpr.CompileFastToIL(methodBuilder.GetILGenerator())]]></code>.
-        /// Check `IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod.cs` for example.
-        public static bool CompileFastToIL(this LambdaExpression lambdaExpr, ILGenerator il, bool ifFastFailedReturnNull = false, 
-            CompilerFlags flags = CompilerFlags.Default)
+        /// Check `IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod.cs` for example.</summary>
+        public static bool CompileFastToIL(this LambdaExpression lambdaExpr, ILGenerator il, CompilerFlags flags = CompilerFlags.Default)
         {
-            var closureInfo = new ClosureInfo(ClosureStatus.ShouldBeStaticMethod);
+            if ((flags & CompilerFlags.EnableDelegateDebugInfo) != 0)
+                throw new NotSupportedException("The `CompilerFlags.EnableDelegateDebugInfo` is not supported because the debug info is gathered into the closure object which is not allowed for static lambda to be compiled to method.");
 
-            if (!EmittingVisitor.TryEmit(lambdaExpr.Body, 
 #if LIGHT_EXPRESSION
-                lambdaExpr,
+            var paramExprs = lambdaExpr;
 #else
-                lambdaExpr.Parameters, 
+            var paramExprs = lambdaExpr.Parameters;
 #endif
-                il, ref closureInfo, flags, lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty))
+            var bodyExpr = lambdaExpr.Body;
+
+            var closureInfo = new ClosureInfo(ClosureStatus.ShouldBeStaticMethod);
+            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo, flags))
+                return false;
+
+            if ((closureInfo.Status & ClosureStatus.HasClosure) != 0)
+                return false;
+
+            var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
+            if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
                 return false;
 
             il.Emit(OpCodes.Ret);
@@ -3027,10 +3036,6 @@ namespace FastExpressionCompiler
                         return true;
                     }
 
-                    // get raw enum type to light
-                    if (constValueType.IsEnum)
-                        constValueType = Enum.GetUnderlyingType(constValueType);
-
                     if (!TryEmitNumberConstant(il, constantValue, constValueType))
                         return false;
                 }
@@ -3049,9 +3054,17 @@ namespace FastExpressionCompiler
             // todo: @perf can we do something about boxing?
             private static bool TryEmitNumberConstant(ILGenerator il, object constantValue, Type constValueType)
             {
+                if (constValueType.IsEnum)
+                    constValueType = Enum.GetUnderlyingType(constValueType);
+
+                // more "commonly" used constants are higher in comparison
                 if (constValueType == typeof(int))
                 {
                     EmitLoadConstantInt(il, (int)constantValue);
+                }
+                else if (constValueType == typeof(bool))
+                {
+                    il.Emit((bool)constantValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                 }
                 else if (constValueType == typeof(char))
                 {
@@ -3098,10 +3111,6 @@ namespace FastExpressionCompiler
                 else if (constValueType == typeof(double))
                 {
                     il.Emit(OpCodes.Ldc_R8, (double)constantValue);
-                }
-                else if (constValueType == typeof(bool))
-                {
-                    il.Emit((bool)constantValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                 }
                 else if (constValueType == typeof(IntPtr))
                 {
