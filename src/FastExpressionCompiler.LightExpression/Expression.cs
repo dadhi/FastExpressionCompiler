@@ -3503,7 +3503,7 @@ namespace FastExpressionCompiler.LightExpression
     {
         public sealed override IReadOnlyList<Expression> Arguments { get; }
         internal ManyArgumentsIndexExpression(Expression @object, IReadOnlyList<Expression> arguments) : base(@object) =>
-            Arguments = arguments;
+            Arguments = arguments ?? Tools.Empty<Expression>();
     }
 
     public sealed class HasIndexerOneArgumentIndexExpression : OneArgumentIndexExpression
