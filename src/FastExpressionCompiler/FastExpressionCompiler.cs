@@ -1831,7 +1831,7 @@ namespace FastExpressionCompiler
                             }
 
                             return TryEmitConstantOfNotNullValue(closure.ContainsConstantsOrNestedLambdas(),
-                                constExpr.Type, constExpr.Value, il, ref closure);
+                                constExpr.Type, constExpr.Value, il, ref closure, byRefIndex);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall(expr, paramExprs, il, ref closure, setup, parent);
@@ -2989,7 +2989,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitConstantOfNotNullValue(
-                bool considerClosure, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure)
+                bool considerClosure, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
             {
                 var constValueType = constantValue.GetType();
                 if (considerClosure && IsClosureBoundConstant(constantValue, constValueType))
@@ -3010,7 +3010,11 @@ namespace FastExpressionCompiler
                         EmitLoadConstantInt(il, constIndex);
                         il.Emit(OpCodes.Ldelem_Ref);
                         if (exprType.IsValueType)
+                        {
                             il.Emit(OpCodes.Unbox_Any, exprType);
+                            if (byRefIndex != -1)
+                                EmitStoreAndLoadLocalVariableAddress(il, exprType);
+                        }
                         else
                         {
                             // this is probably required only for Full CLR starting from NET45, e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`

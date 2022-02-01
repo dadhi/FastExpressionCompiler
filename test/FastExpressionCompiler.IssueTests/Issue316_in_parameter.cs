@@ -17,7 +17,8 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_in_struct_parameter();
+            Test_constructor_in_struct_parameter_constant();
+            Test_method_in_struct_parameter_constant();
             return 1;
         }
 
@@ -36,11 +37,31 @@ namespace FastExpressionCompiler.IssueTests
             public int Position;
         }
 
-        //[Test]
-        public void Test_in_struct_parameter()
+        [Test]
+        public void Test_constructor_in_struct_parameter_constant()
         {
             var position = new TextPosition { Position = 42 };
             var program = Throw(New(typeof(ParseException).GetConstructors()[0], Constant("314"), Constant(position)));
+
+            var expr = Expression.Lambda<Action>(program);
+            expr.PrintCSharp(s => s.Replace(GetType().Name + ".", ""));
+
+            var fSys = expr.CompileSys();
+            fSys.PrintIL("sys");
+            Assert.Throws<ParseException>(() => fSys());
+
+            var fFast = expr.CompileFast();
+            fFast.PrintIL("fast");
+            Assert.Throws<ParseException>(() => fFast());
+        }
+
+        public static void ThrowParseException(in TextPosition position) => throw new ParseException("from method", in position);
+
+        [Test]
+        public void Test_method_in_struct_parameter_constant()
+        {
+            var position = new TextPosition { Position = 42 };
+            var program = Call(GetType().GetMethod(nameof(ThrowParseException)), Constant(position));
 
             var expr = Expression.Lambda<Action>(program);
             expr.PrintCSharp(s => s.Replace(GetType().Name + ".", ""));
