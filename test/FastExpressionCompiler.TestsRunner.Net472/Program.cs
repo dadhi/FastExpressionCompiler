@@ -210,6 +210,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue314_LiftToNull_ToExpressionString().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue314_LiftToNull_ToExpressionString().Run);
 
+                Run(new Issue316_in_parameter().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue316_in_parameter().Run);
+
                 Run(new Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule().Run);
 
