@@ -17,7 +17,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-        Test_constructor_in_struct_parameter_constant();
+            Test_constructor_in_struct_parameter_constant();
             Test_method_in_struct_parameter_constant();
             return 2;
         }

@@ -5187,16 +5187,55 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             private static int EmitStoreAndLoadLocalVariableAddress(ILGenerator il, Type type)
             {
+// #if DEBUG
+                // var ilLengthField = typeof(ILGenerator).GetField("m_length", BindingFlags.Instance | BindingFlags.NonPublic);
+                // var ilStreamField = typeof(ILGenerator).GetField("m_ILStream", BindingFlags.Instance | BindingFlags.NonPublic);
+                // var ilLength = (int)ilLengthField.GetValue(il);
+                // var ilStream = (byte[])ilStreamField.GetValue(il);
+// #endif
                 var location = il.GetNextLocalVarIndex(type);
                 if (location == 0)
                 {
+                    // todo: @perf
+                    // the indernal code for this is
+                    //
+                    // EnsureCapacity(3);
+                    // InternalEmit(opcode);
+                    // EnsureCapacity(4);
+                    // InternalEmit(opcode);
+                    // m_ILStream[m_length++] = (byte)arg;
+                    //
+                    // which translates to -> 
+                    //
+                    // if (m_length + 7 >= m_ILStream.Length)
+                    //     IncreaseCapacity(7);
+                    // // No stack change here cause 1st op decrease stack by 1 and second increase by 1
+                    // m_ILStream[m_length++] = (byte)OpCodes.Stloc_0.Value;
+                    // m_ILStream[m_length++] = (byte)OpCodes.Ldloca_S.Value;
+                    // m_ILStream[m_length++] = (byte)0; // we may no need it 
+                    //
                     il.Emit(OpCodes.Stloc_0);
                     il.Emit(OpCodes.Ldloca_S, (byte)0);
                 }
                 else if (location == 1)
                 {
-                    il.Emit(OpCodes.Stloc_1);
-                    il.Emit(OpCodes.Ldloca_S, (byte)1);
+                    // todo: @perf we may intriduce the EmitOne, EmitBatchNonStackModified(OpCode store, OpCode load, byte value), etc. method overloads 
+                    // 
+                    // if (m_length + 7 >= m_ILStream.Length)
+                    //     IncreaseCapacity(7);
+                    // // No stack change here cause 1st op decrease stack by 1 and second increase by 1
+                    // if (ilLength + 7 < ilStream.Length)
+                    // {
+                    //     ilStream[ilLength++] = (byte)OpCodes.Stloc_1.Value;
+                    //     ilStream[ilLength++] = (byte)OpCodes.Ldloca_S.Value;
+                    //     ilStream[ilLength++] = (byte)1;
+                    //     ilLengthField.SetValue(il, ilLength);
+                    // }
+                    // else
+                    // {
+                        il.Emit(OpCodes.Stloc_1);
+                        il.Emit(OpCodes.Ldloca_S, (byte)1);
+                    // }
                 }
                 else if (location == 2)
                 {
