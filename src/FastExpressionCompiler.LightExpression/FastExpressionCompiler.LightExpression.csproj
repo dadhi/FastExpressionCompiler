@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
 
-        <VersionPrefix>3.2.1</VersionPrefix>
+        <VersionPrefix>3.2.2</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -12,6 +12,16 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.2.2 Bug-fix release
+
+- fixed: #284 Invalid Program after Coalesce
+- fixed: #308 Wrong delegate type returned (with closure)
+- fixed: #310 InvalidProgramException when nullable result is ignored
+- fixed: #316 in parameter
+- fixed: #319 NRE in IndexExpression.get_ArgumentCount
+- fixed: #320 "Bad label content in ILGenerator" when creating through DynamicModule
+- fixed: #321 Call with out parameter to field type that is not value type fails
+
 ## v3.2.1 Bug-fix release
 
 - fixed: #307 Switch with fall through throws "System.InvalidProgramException: 'Common Language Runtime detected an invalid program.'"
