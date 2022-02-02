@@ -3270,6 +3270,7 @@ namespace FastExpressionCompiler
                 return null;
             });
 
+            // todo: @perf merge with EmitLoadLocalVariable 
             private static int InitValueTypeVariable(ILGenerator il, Type exprType)
             {
                 var locVarIndex = il.GetNextLocalVarIndex(exprType);
@@ -5192,6 +5193,11 @@ namespace FastExpressionCompiler
                 // var ilStreamField = typeof(ILGenerator).GetField("m_ILStream", BindingFlags.Instance | BindingFlags.NonPublic);
                 // var ilLength = (int)ilLengthField.GetValue(il);
                 // var ilStream = (byte[])ilStreamField.GetValue(il);
+
+                // var ilMaxMidStackField    = typeof(ILGenerator).GetField("m_maxMidStack", BindingFlags.Instance | BindingFlags.NonPublic);
+                // var ilMaxMidStackCurField = typeof(ILGenerator).GetField("m_maxMidStackCur", BindingFlags.Instance | BindingFlags.NonPublic);
+                // var ilMaxMidStack    = (int)ilMaxMidStackField.GetValue(il);
+                // var ilMaxMidStackCur = (int)ilMaxMidStackCurField.GetValue(il);
 // #endif
                 var location = il.GetNextLocalVarIndex(type);
                 if (location == 0)
@@ -5221,20 +5227,19 @@ namespace FastExpressionCompiler
                 {
                     // todo: @perf we may intriduce the EmitOne, EmitBatchNonStackModified(OpCode store, OpCode load, byte value), etc. method overloads 
                     // 
-                    // if (m_length + 7 >= m_ILStream.Length)
-                    //     IncreaseCapacity(7);
-                    // // No stack change here cause 1st op decrease stack by 1 and second increase by 1
                     // if (ilLength + 7 < ilStream.Length)
                     // {
                     //     ilStream[ilLength++] = (byte)OpCodes.Stloc_1.Value;
+                    //     if (ilMaxMidStackCur + 1 > ilMaxMidStack)
+                    //         ilMaxMidStackField.SetValue(il, ilMaxMidStackCur + 1);
                     //     ilStream[ilLength++] = (byte)OpCodes.Ldloca_S.Value;
                     //     ilStream[ilLength++] = (byte)1;
                     //     ilLengthField.SetValue(il, ilLength);
                     // }
                     // else
                     // {
-                        il.Emit(OpCodes.Stloc_1);
-                        il.Emit(OpCodes.Ldloca_S, (byte)1);
+                    il.Emit(OpCodes.Stloc_1);
+                    il.Emit(OpCodes.Ldloca_S, (byte)1);
                     // }
                 }
                 else if (location == 2)
