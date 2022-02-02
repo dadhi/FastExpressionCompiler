@@ -6,12 +6,12 @@ set /p APIKEY=<"..\..\ApiKey.txt"
 
 set PKGVER=3.2.2
 
-dotnet nuget push "%PACKAGES%\FastExpressionCompiler.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE%
-dotnet nuget push "%PACKAGES%\FastExpressionCompiler.src.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE%
-dotnet nuget push "%PACKAGES%\FastExpressionCompiler.Internal.src.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE%
-dotnet nuget push "%PACKAGES%\FastExpressionCompiler.LightExpression.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE%
-dotnet nuget push "%PACKAGES%\FastExpressionCompiler.LightExpression.src.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE%
-dotnet nuget push "%PACKAGES%\FastExpressionCompiler.LightExpression.Internal.src.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE%
+dotnet nuget push "%PACKAGES%\FastExpressionCompiler.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE% --skip-duplicate
+dotnet nuget push "%PACKAGES%\FastExpressionCompiler.src.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE% --skip-duplicate
+dotnet nuget push "%PACKAGES%\FastExpressionCompiler.Internal.src.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE% --skip-duplicate
+dotnet nuget push "%PACKAGES%\FastExpressionCompiler.LightExpression.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE% --skip-duplicate
+dotnet nuget push "%PACKAGES%\FastExpressionCompiler.LightExpression.src.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE% --skip-duplicate
+dotnet nuget push "%PACKAGES%\FastExpressionCompiler.LightExpression.Internal.src.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE% --skip-duplicate
 
 echo:
 echo:Publishing completed.
