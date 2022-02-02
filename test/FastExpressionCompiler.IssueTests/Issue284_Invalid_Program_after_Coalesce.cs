@@ -20,22 +20,23 @@ namespace FastExpressionCompiler.IssueTests
             Invalid_expresion_with_Coalesce_when_invoked_should_throw_NullRef_the_same_as_system_compiled();
             Invalid_Program_after_Coalesce();
             Coalesce_in_Assign_in_Block();
-            return 3;
+            New_test();
+            return 4;
         }
 
         [Test]
         public void Invalid_expresion_with_Coalesce_when_invoked_should_throw_NullRef_the_same_as_system_compiled()
         {
             var input = Parameter(typeof(Variable));
-            var text  = Parameter(typeof(string));
-            var ctor  = typeof(Variable).GetConstructor(new Type[] { typeof(string) });
-            var prop  = typeof(Variable).GetProperty(nameof(Variable.Name));
+            var text = Parameter(typeof(string));
+            var ctor = typeof(Variable).GetConstructor(new Type[] { typeof(string) });
+            var prop = typeof(Variable).GetProperty(nameof(Variable.Name));
 
             var lambda = Lambda<Func<Variable, string, Variable>>(
                 Block(
                     Coalesce(input, New(ctor, Constant("default"))),
                     Assign(Property(input, prop), text),
-                    input), 
+                    input),
                 input, text);
 
             // var t = lambda.ToExpressionString();
@@ -54,9 +55,9 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Invalid_Program_after_Coalesce()
         {
-            var input    = Parameter(typeof(Variable));
-            var text     = Parameter(typeof(string));
-            var ctor     = typeof(Variable).GetConstructor(new Type[] { typeof(string) });
+            var input = Parameter(typeof(Variable));
+            var text = Parameter(typeof(string));
+            var ctor = typeof(Variable).GetConstructor(new Type[] { typeof(string) });
             var property = typeof(Variable).GetProperty(nameof(Variable.Name));
 
             var lambda = Lambda<Func<Variable, string, Variable>>(
@@ -64,7 +65,7 @@ namespace FastExpressionCompiler.IssueTests
                     Assign(input, // NOTE: Don't forget to Assign!
                         Coalesce(input, New(ctor, Constant("default")))),
                     Assign(Property(input, property), text),
-                    input), 
+                    input),
                 input, text);
 
             lambda.PrintCSharp();
@@ -82,9 +83,9 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Coalesce_in_Assign_in_Block()
         {
-            var input    = Parameter(typeof(Variable));
-            var text     = Parameter(typeof(string));
-            var ctor     = typeof(Variable).GetConstructor(new Type[] { typeof(string) });
+            var input = Parameter(typeof(Variable));
+            var text = Parameter(typeof(string));
+            var ctor = typeof(Variable).GetConstructor(new Type[] { typeof(string) });
             var property = typeof(Variable).GetProperty(nameof(Variable.Name));
 
             var lambda = Lambda<Func<Variable, string, Variable>>(
@@ -103,6 +104,36 @@ namespace FastExpressionCompiler.IssueTests
             f.PrintIL();
             var v = f(null, "a");
             Assert.AreEqual("default", v.Name);
+        }
+
+        [Test]
+        public void New_test()
+        {
+            var input = Parameter(typeof(Variable));
+            var text = Parameter(typeof(string));
+            var ctor = typeof(Variable).GetConstructor(new Type[] { typeof(string) });
+            var property = typeof(Variable).GetProperty(nameof(Variable.Name));
+
+            var lambda = Lambda<Func<Variable, string, Variable>>(
+                Block(
+                    Coalesce(input, New(ctor, Constant("default"))),
+                    Assign(Property(input, property), text),
+                    input), 
+                input,
+                text);
+
+            lambda.PrintCSharp(s => s.Replace(GetType().Name + ".", ""));
+
+            var fSys = lambda.CompileSys();
+            fSys.PrintIL();
+            Assert.Throws(typeof(NullReferenceException), () =>
+                fSys(null, "a"));
+
+            var fFec = lambda.CompileFast();
+            Assert.IsNotNull(fFec);
+            fFec.PrintIL();
+            Assert.Throws(typeof(NullReferenceException), () =>
+                fFec(null, "a"));
         }
 
         public class Variable

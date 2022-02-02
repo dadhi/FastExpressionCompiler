@@ -36,7 +36,7 @@ namespace FastExpressionCompiler.UnitTests
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue159_NumericConversions().Run();
             // new FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue284_Invalid_Program_after_Coalesce().Run();
+            //new FastExpressionCompiler.LightExpression.IssueTests.Issue284_Invalid_Program_after_Coalesce().Run();
         }
 
         public static void RunAllTests()
