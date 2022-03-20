@@ -76,19 +76,40 @@ namespace FastExpressionCompiler.Benchmarks
         |      CreateExpression_and_CompileFast |  13.480 us | 0.2612 us | 0.2443 us |  1.45 |    0.02 | 1.0071 | 0.4883 | 0.0305 |   6.28 KB |
         | CreateLightExpression_and_CompileFast |   9.278 us | 0.1465 us | 0.1370 us |  1.00 |    0.00 | 0.8698 | 0.4272 | 0.0305 |   5.41 KB |
 
-        */
+        ## v3.3 with net6
 
-        [Benchmark]
+        BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19043
+        Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+        .NET Core SDK=6.0.201
+        [Host]     : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
+        DefaultJob : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
+
+        |                                Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        |-------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+        |          CreateExpression_and_Compile | 287.35 us | 5.465 us | 6.712 us | 23.80 |    0.76 | 0.9766 | 0.4883 |      - |   7.25 KB |
+        |      CreateExpression_and_CompileFast |  16.02 us | 0.261 us | 0.232 us |  1.32 |    0.03 | 1.0376 | 0.5188 | 0.0305 |   6.53 KB |
+        | CreateLightExpression_and_CompileFast |  12.07 us | 0.228 us | 0.272 us |  1.00 |    0.00 | 0.9003 | 0.4425 | 0.0305 |   5.58 KB |
+
+        |                                           Method |     Mean |     Error |    StdDev | Ratio |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        |------------------------------------------------- |---------:|----------:|----------:|------:|-------:|-------:|-------:|----------:|
+        |            CreateLightExpression_and_CompileFast | 9.368 us | 0.1285 us | 0.1139 us |  1.00 | 0.9003 | 0.4425 | 0.0458 |   5.58 KB |
+        | CreateLightExpression_and_CompileFast_NoByRefNew | 9.372 us | 0.1429 us | 0.1267 us |  1.00 | 0.9003 | 0.4425 | 0.0305 |   5.56 KB |        */
+
+        // [Benchmark]
         public object CreateExpression_and_Compile() =>
             LightExpressionTests.CreateComplexExpression().Compile();
 
-        [Benchmark]
+        // [Benchmark]
         public object CreateExpression_and_CompileFast() =>
             LightExpressionTests.CreateComplexExpression().CompileFast();
 
         [Benchmark(Baseline = true)]
         public object CreateLightExpression_and_CompileFast() =>
             LE.CompileFast(LightExpressionTests.CreateComplexLightExpression());
+
+        [Benchmark]
+        public object CreateLightExpression_and_CompileFast_NoByRefNew() =>
+            LE.CompileFast(LightExpressionTests.CreateComplexLightExpression_NoByRefNew());
     }
 
     [MemoryDiagnoser]
@@ -138,12 +159,12 @@ namespace FastExpressionCompiler.Benchmarks
         | CreateLightExpression |   284.2 ns |  5.19 ns |  4.85 ns |  1.00 |    0.00 | 0.1316 |     - |     - |     552 B |
 
         */
-        [Benchmark]
-        public object CreateExpression() =>
-            LightExpressionTests.CreateComplexExpression();
-
         [Benchmark(Baseline = true)]
         public object CreateLightExpression() =>
             LightExpressionTests.CreateComplexLightExpression();
+
+        [Benchmark]
+        public object CreateExpression() =>
+            LightExpressionTests.CreateComplexExpression();
     }
 }

@@ -205,6 +205,30 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return expr;
         }
 
+        public static Expression<Func<object[], object>> CreateComplexLightExpression_NoByRefNew(string p = null)
+        {
+            var stateParamExpr = Parameter(typeof(object[]), p);
+
+            var expr = Lambda<Func<object[], object>>(
+                MemberInit(
+                    NewNoByRefArgs(_ctorOfA,
+                        New(_ctorOfB),
+                        Convert(
+                            ArrayIndex(stateParamExpr, ConstantInt(11)),
+                            typeof(string)),
+                        NewArrayInit(typeof(ID),
+                            New(_ctorOfD1),
+                            New(_ctorOfD2))),
+                    Bind(_propAProp,
+                        NewNoByRefArgs(_ctorOfP,
+                            New(_ctorOfB))),
+                    Bind(_fieldABop,
+                        New(_ctorOfB))),
+                stateParamExpr);
+
+            return expr;
+        }
+
         [Test]
         public void Can_compile_complex_expr_with_Array_Properties_and_Casts()
         {
