@@ -2086,11 +2086,25 @@ namespace FastExpressionCompiler
 #endif
                 if (argCount > 0)
                 {
-                    var args = newExpr.Constructor.GetParameters(); // todo: @mem @perf it creates a copy man.
-                    for (var i = 0; i < args.Length; ++i)
-                        if (!TryEmit(argExprs.GetArgument(i),
-                            paramExprs, il, ref closure, setup, parent, args[i].ParameterType.IsByRef ? i : -1))
-                            return false;
+#if LIGHT_EXPRESSION
+                    var args = newExpr.NoByRefArgs ? null : newExpr.Constructor.GetParameters();
+#else
+                    var args = newExpr.Constructor.GetParameters();
+#endif
+                    if (args == null)
+                    {
+                        for (var i = 0; i < argCount; ++i)
+                            if (!TryEmit(argExprs.GetArgument(i),
+                                paramExprs, il, ref closure, setup, parent, -1))
+                                return false;
+                    }
+                    else
+                    {
+                        for (var i = 0; i < argCount; ++i)
+                            if (!TryEmit(argExprs.GetArgument(i),
+                                paramExprs, il, ref closure, setup, parent, args[i].ParameterType.IsByRef ? i : -1))
+                                return false;
+                    }
                 }
 
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse

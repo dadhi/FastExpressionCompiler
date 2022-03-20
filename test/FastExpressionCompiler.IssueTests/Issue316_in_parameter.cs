@@ -20,12 +20,26 @@ namespace FastExpressionCompiler.IssueTests
             Test_constructor_in_struct_parameter_constant();
             Test_method_in_struct_parameter_constant();
             Test_get_parameters();
+#if LIGHT_EXPRESSION
+            Test_constructor_in_struct_parameter_constant_with_NoArgByRef_New();
+            return 4;
+#endif
             return 3;
         }
 
         public class ParseException : Exception
         {
             public ParseException(string message, in TextPosition position) : base(message)
+            {
+                Position = position;
+            }
+
+            public TextPosition Position { get; set; }
+        }
+
+        public class ParseExceptionNoByRefArgs : Exception
+        {
+            public ParseExceptionNoByRefArgs(string message, TextPosition position) : base(message)
             {
                 Position = position;
             }
@@ -55,6 +69,26 @@ namespace FastExpressionCompiler.IssueTests
             fFast.PrintIL("fast");
             Assert.Throws<ParseException>(() => fFast());
         }
+
+#if LIGHT_EXPRESSION
+        [Test]
+        public void Test_constructor_in_struct_parameter_constant_with_NoArgByRef_New()
+        {
+            var position = new TextPosition { Position = 42 };
+            var program = Throw(NewNoByRefArgs(typeof(ParseExceptionNoByRefArgs).GetConstructors()[0], Constant("314"), Constant(position)));
+
+            var expr = Expression.Lambda<Action>(program);
+            expr.PrintCSharp(s => s.Replace(GetType().Name + ".", ""));
+
+            var fSys = expr.CompileSys();
+            fSys.PrintIL("sys");
+            Assert.Throws<ParseExceptionNoByRefArgs>(() => fSys());
+
+            var fFast = expr.CompileFast();
+            fFast.PrintIL("fast");
+            Assert.Throws<ParseExceptionNoByRefArgs>(() => fFast());
+        }
+#endif
 
         public static void ThrowParseException(in TextPosition position) => throw new ParseException("from method", in position);
 

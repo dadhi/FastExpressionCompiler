@@ -228,32 +228,62 @@ namespace FastExpressionCompiler.LightExpression
         public static NewExpression New(ConstructorInfo ctor, IEnumerable<Expression> arguments) =>
             New(ctor, arguments.AsReadOnlyList());
 
+        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, IReadOnlyList<Expression> arguments) =>
+            arguments == null || arguments.Count == 0
+            ? new NewExpression(ctor)
+            : new NoByRefManyArgumentsNewExpression(ctor, arguments);
+
         public static NewExpression New(ConstructorInfo ctor) => new NewExpression(ctor);
 
         public static NewExpression New(ConstructorInfo ctor, Expression arg) =>
             new OneArgumentNewExpression(ctor, arg);
 
+        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, Expression arg) =>
+            new NoByRefOneArgumentNewExpression(ctor, arg);
+
         public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1) =>
             new TwoArgumentsNewExpression(ctor, arg0, arg1);
 
+        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, Expression arg0, Expression arg1) =>
+            new NoByRefTwoArgumentsNewExpression(ctor, arg0, arg1);
+
         public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2) =>
             new ThreeArgumentsNewExpression(ctor, arg0, arg1, arg2);
+
+        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2) =>
+            new NoByRefThreeArgumentsNewExpression(ctor, arg0, arg1, arg2);
 
         public static NewExpression New(ConstructorInfo ctor,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
             new FourArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3);
 
+        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor,
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
+            new NoByRefFourArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3);
+
         public static NewExpression New(ConstructorInfo ctor,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
             new FiveArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4);
+
+        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor,
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
+            new NoByRefFiveArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4);
 
         public static NewExpression New(ConstructorInfo ctor,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5) =>
             new SixArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5);
 
+        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor,
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5) =>
+            new NoByRefSixArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5);
+
         public static NewExpression New(ConstructorInfo ctor,
             Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5, Expression arg6) =>
             new SevenArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+
+        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor,
+            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5, Expression arg6) =>
+            new NoByRefSevenArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
 
         public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
             arguments == null || arguments.Length == 0
@@ -2723,6 +2753,10 @@ namespace FastExpressionCompiler.LightExpression
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
         public virtual int ArgumentCount => 0;
         public virtual Expression GetArgument(int i) => throw new NotImplementedException();
+
+        /// <summary>Ensures that there no by-ref (in, our, ref) parameters in the constructor.
+        /// Which allows some optimizations when compiling the expression to the delegate</summary>
+        public virtual bool NoByRefArgs => false;
         internal NewExpression(ConstructorInfo constructor) => Constructor = constructor;
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNew(this);
@@ -2739,7 +2773,7 @@ namespace FastExpressionCompiler.LightExpression
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) => SysExpr.New(Type);
     }
 
-    public sealed class OneArgumentNewExpression : NewExpression
+    public class OneArgumentNewExpression : NewExpression
     {
         public readonly Expression Argument;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument };
@@ -2749,7 +2783,13 @@ namespace FastExpressionCompiler.LightExpression
             Argument = argument;
     }
 
-    public sealed class TwoArgumentsNewExpression : NewExpression
+    public class NoByRefOneArgumentNewExpression : OneArgumentNewExpression
+    {
+        public override bool NoByRefArgs => true;
+        internal NoByRefOneArgumentNewExpression(ConstructorInfo constructor, Expression argument) : base(constructor, argument) { }
+    }
+
+    public class TwoArgumentsNewExpression : NewExpression
     {
         public readonly Expression Argument0, Argument1;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
@@ -2761,7 +2801,13 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class ThreeArgumentsNewExpression : NewExpression
+    public class NoByRefTwoArgumentsNewExpression : TwoArgumentsNewExpression
+    {
+        public override bool NoByRefArgs => true;
+        internal NoByRefTwoArgumentsNewExpression(ConstructorInfo constructor, Expression a0, Expression a1) : base(constructor, a0, a1) { }
+    }
+
+    public class ThreeArgumentsNewExpression : NewExpression
     {
         public readonly Expression Argument0, Argument1, Argument2;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
@@ -2775,7 +2821,14 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class FourArgumentsNewExpression : NewExpression
+    public sealed class NoByRefThreeArgumentsNewExpression : ThreeArgumentsNewExpression
+    {
+        public override bool NoByRefArgs => true;
+        internal NoByRefThreeArgumentsNewExpression(ConstructorInfo constructor, Expression a0, Expression a1, Expression a2)
+            : base(constructor, a0, a1, a2) { }
+    }
+
+    public class FourArgumentsNewExpression : NewExpression
     {
         public readonly Expression Argument0, Argument1, Argument2, Argument3;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
@@ -2789,7 +2842,14 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class FiveArgumentsNewExpression : NewExpression
+    public sealed class NoByRefFourArgumentsNewExpression : FourArgumentsNewExpression
+    {
+        public override bool NoByRefArgs => true;
+        internal NoByRefFourArgumentsNewExpression(ConstructorInfo constructor, Expression a0, Expression a1, Expression a2, Expression a3)
+            : base(constructor, a0, a1, a2, a3) { }
+    }
+
+    public class FiveArgumentsNewExpression : NewExpression
     {
         public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4;
         public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
@@ -2803,7 +2863,14 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class SixArgumentsNewExpression : NewExpression
+    public sealed class NoByRefFiveArgumentsNewExpression : FiveArgumentsNewExpression
+    {
+        public override bool NoByRefArgs => true;
+        internal NoByRefFiveArgumentsNewExpression(ConstructorInfo constructor, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4)
+            : base(constructor, a0, a1, a2, a3, a4) { }
+    }
+
+    public class SixArgumentsNewExpression : NewExpression
     {
         public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4, Argument5;
         public override IReadOnlyList<Expression> Arguments =>
@@ -2818,7 +2885,14 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class SevenArgumentsNewExpression : NewExpression
+    public sealed class NoByRefSixArgumentsNewExpression : SixArgumentsNewExpression
+    {
+        public override bool NoByRefArgs => true;
+        internal NoByRefSixArgumentsNewExpression(ConstructorInfo constructor, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5)
+            : base(constructor, a0, a1, a2, a3, a4, a5) { }
+    }
+
+    public class SevenArgumentsNewExpression : NewExpression
     {
         public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4, Argument5, Argument6;
         public override IReadOnlyList<Expression> Arguments =>
@@ -2833,7 +2907,14 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public sealed class ManyArgumentsNewExpression : NewExpression
+    public sealed class NoByRefSevenArgumentsNewExpression : SevenArgumentsNewExpression
+    {
+        public override bool NoByRefArgs => true;
+        internal NoByRefSevenArgumentsNewExpression(ConstructorInfo constructor, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5, Expression a6)
+            : base(constructor, a0, a1, a2, a3, a4, a5, a6) { }
+    }
+
+    public class ManyArgumentsNewExpression : NewExpression
     {
         private readonly IReadOnlyList<Expression> _arguments;
         public override IReadOnlyList<Expression> Arguments => _arguments;
@@ -2841,6 +2922,12 @@ namespace FastExpressionCompiler.LightExpression
         public override Expression GetArgument(int i) => _arguments[i];
         internal ManyArgumentsNewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : base(constructor) =>
             _arguments = arguments;
+    }
+
+    public sealed class NoByRefManyArgumentsNewExpression : ManyArgumentsNewExpression
+    {
+        public override bool NoByRefArgs => true;
+        internal NoByRefManyArgumentsNewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : base(constructor, arguments) { }
     }
 
     public abstract class NewArrayExpression : Expression, IArgumentProvider
