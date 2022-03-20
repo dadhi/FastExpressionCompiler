@@ -19,7 +19,8 @@ namespace FastExpressionCompiler.IssueTests
         {
             Test_constructor_in_struct_parameter_constant();
             Test_method_in_struct_parameter_constant();
-            return 2;
+            Test_get_parameters();
+            return 3;
         }
 
         public class ParseException : Exception
@@ -74,5 +75,21 @@ namespace FastExpressionCompiler.IssueTests
             fFast.PrintIL("fast");
             Assert.Throws<ParseException>(() => fFast());
         }
+
+        [Test]
+        public void Test_get_parameters()
+        {
+            var c = typeof(A).GetConstructors()[0];
+            Assert.IsFalse(c.GetParameters() == c.GetParameters());
+            Assert.IsTrue(c.GetParameters()[0] == c.GetParameters()[0]);
+        }
+
+        public class A
+        {
+            public A(B b, C c) {}
+        }
+
+        public class B {}
+        public class C {}
     }
 }
