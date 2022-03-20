@@ -217,10 +217,13 @@ namespace FastExpressionCompiler.LightExpression
             throw new ArgumentException($"The type {type} is missing the default constructor");
         }
 
-        public static NewExpression New(ConstructorInfo ctor, params Expression[] arguments) =>
-            arguments == null || arguments.Length == 0
+        public static NewExpression New(ConstructorInfo ctor, IReadOnlyList<Expression> arguments) =>
+            arguments == null || arguments.Count == 0
             ? new NewExpression(ctor)
             : new ManyArgumentsNewExpression(ctor, arguments);
+
+        public static NewExpression New(ConstructorInfo ctor, params Expression[] arguments) =>
+            New(ctor, (IReadOnlyList<Expression>)arguments);
 
         public static NewExpression New(ConstructorInfo ctor, IEnumerable<Expression> arguments) =>
             New(ctor, arguments.AsReadOnlyList());
