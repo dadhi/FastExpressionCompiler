@@ -1167,17 +1167,17 @@ namespace FastExpressionCompiler.LightExpression
                  : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
-        public static BinaryExpression Add(Expression left, Expression right) => 
+        public static BinaryExpression Add(Expression left, Expression right) =>
             GetArithmeticBinary(ExpressionType.Add, left, right, null);
 
-        public static BinaryExpression Add(Expression left, Expression right, MethodInfo method) => 
+        public static BinaryExpression Add(Expression left, Expression right, MethodInfo method) =>
             GetArithmeticBinary(ExpressionType.Add, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that has overflow checking.</summary>
         public static BinaryExpression AddChecked(Expression left, Expression right) =>
             GetArithmeticBinary(ExpressionType.AddChecked, left, right);
 
-        public static BinaryExpression AddChecked(Expression left, Expression right, MethodInfo method) => 
+        public static BinaryExpression AddChecked(Expression left, Expression right, MethodInfo method) =>
             GetArithmeticBinary(ExpressionType.AddChecked, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents a bitwise XOR operation.</summary>
@@ -1196,7 +1196,7 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression Modulo(Expression left, Expression right) =>
             GetArithmeticBinary(ExpressionType.Modulo, left, right);
 
-        public static BinaryExpression Modulo(Expression left, Expression right, MethodInfo method) => 
+        public static BinaryExpression Modulo(Expression left, Expression right, MethodInfo method) =>
             GetArithmeticBinary(ExpressionType.Modulo, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
@@ -1209,35 +1209,35 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression Subtract(Expression left, Expression right) =>
             GetArithmeticBinary(ExpressionType.Subtract, left, right);
 
-        public static BinaryExpression Subtract(Expression left, Expression right, MethodInfo method) => 
+        public static BinaryExpression Subtract(Expression left, Expression right, MethodInfo method) =>
             GetArithmeticBinary(ExpressionType.Subtract, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that has overflow checking.</summary>
         public static BinaryExpression SubtractChecked(Expression left, Expression right) =>
             GetArithmeticBinary(ExpressionType.SubtractChecked, left, right);
 
-        public static BinaryExpression SubtractChecked(Expression left, Expression right, MethodInfo method) => 
+        public static BinaryExpression SubtractChecked(Expression left, Expression right, MethodInfo method) =>
             GetArithmeticBinary(ExpressionType.SubtractChecked, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that does not have overflow checking.</summary>
         public static BinaryExpression Multiply(Expression left, Expression right) =>
             GetArithmeticBinary(ExpressionType.Multiply, left, right);
 
-        public static BinaryExpression Multiply(Expression left, Expression right, MethodInfo method) => 
+        public static BinaryExpression Multiply(Expression left, Expression right, MethodInfo method) =>
             GetArithmeticBinary(ExpressionType.Multiply, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that has overflow checking.</summary>
         public static BinaryExpression MultiplyChecked(Expression left, Expression right) =>
             GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right);
 
-        public static BinaryExpression MultiplyChecked(Expression left, Expression right, MethodInfo method) => 
+        public static BinaryExpression MultiplyChecked(Expression left, Expression right, MethodInfo method) =>
             GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents an arithmetic division operation.</summary>
         public static BinaryExpression Divide(Expression left, Expression right) =>
             GetArithmeticBinary(ExpressionType.Divide, left, right);
 
-        public static BinaryExpression Divide(Expression left, Expression right, MethodInfo method) => 
+        public static BinaryExpression Divide(Expression left, Expression right, MethodInfo method) =>
             GetArithmeticBinary(ExpressionType.Divide, left, right, method);
 
         /// <summary>Creates a BinaryExpression that represents raising a number to a power.</summary>
@@ -1504,7 +1504,7 @@ namespace FastExpressionCompiler.LightExpression
             }
         }
 
-        public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, bool liftToNull, MethodInfo method, 
+        public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, bool liftToNull, MethodInfo method,
             LambdaExpression conversion = null)
         {
             switch (binaryType)
@@ -1570,7 +1570,7 @@ namespace FastExpressionCompiler.LightExpression
 
         private static BinaryExpression GetUserDefinedBinaryOperator(ExpressionType binaryType, string name, Expression left, Expression right, bool liftToNull)
         {
-            var leftType  = left.Type;
+            var leftType = left.Type;
             var rightType = right.Type;
             var method = GetUserDefinedBinaryOperator(binaryType, leftType, rightType, name);
             if (method != null)
@@ -1578,7 +1578,7 @@ namespace FastExpressionCompiler.LightExpression
 
             if (leftType.IsNullable() && rightType.IsNullable())
             {
-                var nnLeftType  = leftType.GetNonNullableOrSelf();
+                var nnLeftType = leftType.GetNonNullableOrSelf();
                 var nnRightType = rightType.GetNonNullableOrSelf();
                 method = GetUserDefinedBinaryOperator(binaryType, nnLeftType, nnRightType, name);
                 if (method != null && method.ReturnType.IsValueType && !method.ReturnType.IsNullable())
@@ -1604,7 +1604,7 @@ namespace FastExpressionCompiler.LightExpression
             }
 
             // Is lifting conditional logical operator
-            if (method == null && rightType != nnRightType && leftType != nnLeftType && 
+            if (method == null && rightType != nnRightType && leftType != nnLeftType &&
                 (binaryType == ExpressionType.AndAlso || binaryType == ExpressionType.OrElse))
                 method = GetUserDefinedBinaryOperator(binaryType, nnLeftType, nnRightType, name);
 
@@ -1900,11 +1900,11 @@ namespace FastExpressionCompiler.LightExpression
         {
             if (m == null)
                 return null;
- 
+
             var ps = m.GetParameters();
             if (ps.Length != argTypes.Length)
                 return null;
- 
+
             for (int i = 0; i < ps.Length; i++)
             {
                 var pType = ps[i].ParameterType;
@@ -1912,7 +1912,7 @@ namespace FastExpressionCompiler.LightExpression
                 if (pType != aType && !pType.IsAssignableFrom(aType))
                     return null;
             }
- 
+
             return m;
         }
 
@@ -2280,8 +2280,8 @@ namespace FastExpressionCompiler.LightExpression
         public MethodBinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type, MethodInfo method) : base(left, right)
         {
             NodeType = nodeType;
-            Type     = type;
-            Method   = method;
+            Type = type;
+            Method = method;
         }
     }
 
