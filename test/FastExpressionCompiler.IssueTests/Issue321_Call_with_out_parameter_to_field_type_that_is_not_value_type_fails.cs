@@ -18,7 +18,8 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Test_outparameter();
-            return 1;
+            Test_get_parameters();
+            return 2;
         }
 
         class TestPOD
@@ -67,5 +68,21 @@ namespace FastExpressionCompiler.IssueTests
             fFast.PrintIL("fast");
             fFast();
         }
+
+        [Test]
+        public void Test_get_parameters()
+        {
+            var c = typeof(A).GetConstructors()[0];
+            Assert.IsFalse(c.GetParameters() == c.GetParameters());
+            Assert.IsTrue(c.GetParameters()[0] == c.GetParameters()[0]);
+        }
+
+        public class A
+        {
+            public A(B b, C c) {}
+        }
+
+        public class B {}
+        public class C {}
     }
 }

@@ -2086,7 +2086,7 @@ namespace FastExpressionCompiler
 #endif
                 if (argCount > 0)
                 {
-                    var args = newExpr.Constructor.GetParameters();
+                    var args = newExpr.Constructor.GetParameters(); // todo: @mem @perf it creates a copy man.
                     for (var i = 0; i < args.Length; ++i)
                         if (!TryEmit(argExprs.GetArgument(i),
                             paramExprs, il, ref closure, setup, parent, args[i].ParameterType.IsByRef ? i : -1))
