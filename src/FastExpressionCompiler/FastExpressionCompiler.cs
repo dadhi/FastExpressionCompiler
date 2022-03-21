@@ -2084,12 +2084,13 @@ namespace FastExpressionCompiler
                 var argExprs = newExpr.Arguments;
                 var argCount = argExprs.Count;
 #endif
+                var ctor = newExpr.Constructor;
                 if (argCount > 0)
                 {
 #if LIGHT_EXPRESSION
-                    var args = newExpr.NoByRefArgs ? null : newExpr.Constructor.GetParameters();
+                    var args = newExpr.NoByRefArgs ? null : ctor.GetParameters();
 #else
-                    var args = newExpr.Constructor.GetParameters();
+                    var args = ctor.GetParameters();
 #endif
                     if (args == null)
                     {
@@ -2108,8 +2109,8 @@ namespace FastExpressionCompiler
                 }
 
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                if (newExpr.Constructor != null)
-                    il.Emit(OpCodes.Newobj, newExpr.Constructor);
+                if (ctor != null)
+                    il.Emit(OpCodes.Newobj, ctor);
                 else if (newExpr.Type.IsValueType)
                     EmitLoadLocalVariable(il, InitValueTypeVariable(il, newExpr.Type));
                 else
@@ -2778,27 +2779,24 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
             {
 #endif
+                // todo: @perf !!! put this whole thing in order to handle the hot path without heavy reflection calls
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
-                {
-                    if (!TryEmit(opExpr, paramExprs, il, ref closure, setup,
-                        parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1))
-                        return false;
-                    return EmitMethodCallOrVirtualCall(il, method);
-                }
+                    return TryEmit(opExpr, paramExprs, il, ref closure, setup,
+                        parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1)
+                        && EmitMethodCallOrVirtualCall(il, method);
 
                 var sourceType = opExpr.Type;
-                var sourceTypeIsNullable = sourceType.IsNullable();
-                var underlyingNullableSourceType = Nullable.GetUnderlyingType(sourceType);
                 var targetType = expr.Type;
 
-                if (targetType.IsAssignableFrom(sourceType) && (parent & ParentFlags.IgnoreResult) != 0)
-                {
-                    // quick path for ignored result & conversion which can't cause exception: just do nothing
+                // quick path for ignored result & conversion which can't cause exception: just do nothing
+                if (targetType.IsAssignableFrom(sourceType) &&
+                    (parent & ParentFlags.IgnoreResult) != 0)
                     return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent);
-                }
 
+                var sourceTypeIsNullable = sourceType.IsNullable();
+                var underlyingNullableSourceType = Nullable.GetUnderlyingType(sourceType);
                 if (sourceTypeIsNullable && targetType == underlyingNullableSourceType)
                 {
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup,
@@ -5318,8 +5316,9 @@ namespace FastExpressionCompiler
             type == typeof(uint) ||
             type == typeof(ulong);
 
+        [MethodImpl((MethodImplOptions)256)]
         internal static bool IsNullable(this Type type) =>
-            type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+            type.IsValueType && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
 
         public static string GetArithmeticBinaryOperatorMethodName(this ExpressionType nodeType) =>
             nodeType switch
