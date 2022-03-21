@@ -5323,6 +5323,7 @@ namespace FastExpressionCompiler
             type == typeof(uint) ||
             type == typeof(ulong);
 
+        // todo: @wip @perf replace with GetUnderlyingNullableTypeOrNull because they come together and do the same checks twice
         [MethodImpl((MethodImplOptions)256)]
         internal static bool IsNullable(this Type type) =>
             type.IsValueType && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
