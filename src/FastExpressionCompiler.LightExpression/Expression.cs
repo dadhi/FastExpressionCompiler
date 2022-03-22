@@ -115,6 +115,10 @@ namespace FastExpressionCompiler.LightExpression
             return new TypedParameterExpression(type, name);
         }
 
+        [MethodImpl((MethodImplOptions)256)]
+        public static ParameterExpression ParameterOf<T>(string name = null) =>
+            new TypedParameterExpression<T>(name);
+
         /// <summary>Variable is not by-ref yet</summary>
         public static ParameterExpression Variable(Type type, string name = null) =>
             type.IsEnum
