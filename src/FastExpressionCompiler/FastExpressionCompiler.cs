@@ -1087,7 +1087,7 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Constant:
 #if LIGHT_EXPRESSION
-                        if (expr is IntConstantExpression n)
+                        if (expr is IntConstantExpression n) // todo: @perf use more generic approach
                             return true;
 #endif
                         var constantExpr = (ConstantExpression)expr;
@@ -1104,7 +1104,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Parameter:
                         {
 #if LIGHT_EXPRESSION
-                        var paramCount = paramExprs.ParameterCount;
+                            var paramCount = paramExprs.ParameterCount;
 #else
                             var paramCount = paramExprs.Count;
 #endif
@@ -1126,8 +1126,8 @@ namespace FastExpressionCompiler
                             var callObjectExpr = callExpr.Object;
 
 #if SUPPORTS_ARGUMENT_PROVIDER
-                        var callArgs = (IArgumentProvider)callExpr;
-                        var argCount = callArgs.ArgumentCount;
+                            var callArgs = (IArgumentProvider)callExpr;
+                            var argCount = callArgs.ArgumentCount;
 #else
                             var callArgs = callExpr.Arguments;
                             var argCount = callArgs.Count;
@@ -1165,8 +1165,8 @@ namespace FastExpressionCompiler
                         {
                             var newExpr = (NewExpression)expr;
 #if SUPPORTS_ARGUMENT_PROVIDER
-                        var ctorArgs = (IArgumentProvider)newExpr;
-                        var argCount = ctorArgs.ArgumentCount;
+                            var ctorArgs = (IArgumentProvider)newExpr;
+                            var argCount = ctorArgs.ArgumentCount;
 #else
                             var ctorArgs = newExpr.Arguments;
                             var argCount = ctorArgs.Count;
@@ -1266,8 +1266,8 @@ namespace FastExpressionCompiler
                         {
                             var invokeExpr = (InvocationExpression)expr;
 #if SUPPORTS_ARGUMENT_PROVIDER
-                        var invokeArgs = (IArgumentProvider)invokeExpr;
-                        var argCount = invokeArgs.ArgumentCount;
+                            var invokeArgs = (IArgumentProvider)invokeExpr;
+                            var argCount = invokeArgs.ArgumentCount;
 #else
                             var invokeArgs = invokeExpr.Arguments;
                             var argCount = invokeArgs.Count;
