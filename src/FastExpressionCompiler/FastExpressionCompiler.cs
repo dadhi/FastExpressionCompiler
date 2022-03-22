@@ -2365,11 +2365,11 @@ namespace FastExpressionCompiler
                 if (leftType.IsValueType) // Nullable -> It's the only ValueType comparable to null
                 {
                     var varIndex = EmitStoreAndLoadLocalVariableAddress(il, leftType);
-                    il.Emit(OpCodes.Call, leftType.FindNullableHasValueGetterMethod());
+                    EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod());
 
                     il.Emit(OpCodes.Brfalse, labelFalse);
                     EmitLoadLocalVariableAddress(il, varIndex);
-                    il.Emit(OpCodes.Call, leftType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod());
 
                     il.Emit(OpCodes.Br, labelDone);
                     il.MarkLabel(labelFalse);
@@ -2684,7 +2684,7 @@ namespace FastExpressionCompiler
                         var method = typeInfo.GetDeclaredMethod("op_Increment");
                         if (method == null)
                             return false;
-                        il.Emit(OpCodes.Call, method);
+                        EmitMethodCall(il, method);
                     }
                 }
                 else if (expr.NodeType == ExpressionType.Decrement)
@@ -2701,7 +2701,7 @@ namespace FastExpressionCompiler
                         var method = typeInfo.GetDeclaredMethod("op_Decrement");
                         if (method == null)
                             return false;
-                        il.Emit(OpCodes.Call, method);
+                        EmitMethodCall(il, method);
                     }
                 }
                 else if (expr.NodeType == ExpressionType.Negate || expr.NodeType == ExpressionType.NegateChecked)
@@ -2714,7 +2714,7 @@ namespace FastExpressionCompiler
                         var method = typeInfo.GetDeclaredMethod("op_UnaryNegation");
                         if (method == null)
                             return false;
-                        il.Emit(OpCodes.Call, method);
+                        EmitMethodCall(il, method);
                     }
                 }
                 else if (expr.NodeType == ExpressionType.OnesComplement)
@@ -2835,7 +2835,7 @@ namespace FastExpressionCompiler
                     if (!closure.LastEmitIsAddress)
                         EmitStoreAndLoadLocalVariableAddress(il, sourceType);
 
-                    il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                    EmitMethodCall(il, sourceType.FindValueGetterMethod());
                     return il.EmitPopIfIgnoreResult(parent);
                 }
 
@@ -2864,7 +2864,7 @@ namespace FastExpressionCompiler
                     var convertOpMethod = method ?? sourceType.FindConvertOperator(sourceType, actualTargetType);
                     if (convertOpMethod != null)
                     {
-                        il.Emit(OpCodes.Call, convertOpMethod);
+                        EmitMethodCall(il, convertOpMethod);
                         if (underlyingNullableTargetType != null)
                             il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                         return il.EmitPopIfIgnoreResult(parent);
@@ -2874,7 +2874,7 @@ namespace FastExpressionCompiler
                 {
                     if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
                     {
-                        il.Emit(OpCodes.Call, method);
+                        EmitMethodCall(il, method);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 
@@ -2885,10 +2885,10 @@ namespace FastExpressionCompiler
                         if (underlyingNullableSourceType != null)
                         {
                             EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                            il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                            EmitMethodCall(il, sourceType.FindValueGetterMethod());
                         }
 
-                        il.Emit(OpCodes.Call, convertOpMethod);
+                        EmitMethodCall(il, convertOpMethod);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
@@ -2897,7 +2897,7 @@ namespace FastExpressionCompiler
                 {
                     if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
                     {
-                        il.Emit(OpCodes.Call, method);
+                        EmitMethodCall(il, method);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 
@@ -2909,10 +2909,10 @@ namespace FastExpressionCompiler
                         if (underlyingNullableSourceType != null)
                         {
                             EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                            il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                            EmitMethodCall(il, sourceType.FindValueGetterMethod());
                         }
 
-                        il.Emit(OpCodes.Call, convertOpMethod);
+                        EmitMethodCall(il, convertOpMethod);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
@@ -2922,7 +2922,7 @@ namespace FastExpressionCompiler
                     var convertOpMethod = method ?? actualTargetType.FindConvertOperator(sourceType, actualTargetType);
                     if (convertOpMethod != null)
                     {
-                        il.Emit(OpCodes.Call, convertOpMethod);
+                        EmitMethodCall(il, convertOpMethod);
                         if (underlyingNullableTargetType != null)
                             il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
 
@@ -2947,7 +2947,7 @@ namespace FastExpressionCompiler
                     else
                     {
                         var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                        il.Emit(OpCodes.Call, sourceType.FindNullableHasValueGetterMethod());
+                        EmitMethodCall(il, sourceType.FindNullableHasValueGetterMethod());
 
                         var labelSourceHasValue = il.DefineLabel();
                         il.Emit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
@@ -2962,7 +2962,7 @@ namespace FastExpressionCompiler
                         // if source nullable has a value:
                         il.MarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
-                        il.Emit(OpCodes.Call, sourceType.FindNullableGetValueOrDefaultMethod());
+                        EmitMethodCall(il, sourceType.FindNullableGetValueOrDefaultMethod());
 
                         if (!TryEmitValueConvert(underlyingNullableTargetType, il,
                             expr.NodeType == ExpressionType.ConvertChecked))
@@ -2970,7 +2970,7 @@ namespace FastExpressionCompiler
                             var convertOpMethod = method ?? underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
                             if (convertOpMethod == null)
                                 return false; // nor conversion nor conversion operator is found
-                            il.Emit(OpCodes.Call, convertOpMethod);
+                            EmitMethodCall(il, convertOpMethod);
                         }
 
                         il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
@@ -2986,7 +2986,7 @@ namespace FastExpressionCompiler
                     if (underlyingNullableSourceType != null)
                     {
                         EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                        il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                        EmitMethodCall(il, sourceType.FindValueGetterMethod());
                     }
 
                     // cast as the last resort and let's it fail if unlucky
@@ -3076,7 +3076,7 @@ namespace FastExpressionCompiler
                     if (constantValue is Type t)
                     {
                         il.Emit(OpCodes.Ldtoken, t);
-                        il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
+                        EmitMethodCall(il, _getTypeFromHandleMethod);
                         return true;
                     }
 
