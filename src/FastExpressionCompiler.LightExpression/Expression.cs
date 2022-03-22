@@ -24,28 +24,22 @@ THE SOFTWARE.
 */
 
 // ReSharper disable CoVariantArrayConversion
-/*
-// Lists the target platforms that are Not supported by FEC - simplifies the direct referencing of Expression.cs file
-// Don't forget to uncomment #endif at the end of file
 
-#if !PCL && !NET35 && !NET40 && !NET403 && !NETSTANDARD1_0 && !NETSTANDARD1_1 && !NETSTANDARD1_2 && !NETCOREAPP1_0 && !NETCOREAPP1_1
-#define SUPPORTS_FAST_EXPRESSION_COMPILER
-#endif
-
-#if SUPPORTS_FAST_EXPRESSION_COMPILER
-*/
 #define SUPPORTS_VISITOR
 
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
 using SysExpr = System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.LightExpression
 {
+    using static ExpressionCompiler;
+
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
     /// <summary>The base class and the Factpry methods provider for the Expression.</summary>
@@ -55,6 +49,15 @@ namespace FastExpressionCompiler.LightExpression
         public abstract ExpressionType NodeType { get; }
         /// <summary>All expressions should have a Type.</summary>
         public abstract Type Type { get; }
+
+        public virtual bool IsIntrinsic => false;
+
+        public virtual bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs, 
+            bool isNestedLambda, ref ClosureInfo rootClosure) => false;
+
+        public virtual bool TryEmit(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs, 
+            ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
+
 #if SUPPORTS_VISITOR
         protected internal abstract Expression Accept(ExpressionVisitor visitor);
 #endif
@@ -114,6 +117,10 @@ namespace FastExpressionCompiler.LightExpression
                 return new TypedParameterExpression<object[]>(name);
             return new TypedParameterExpression(type, name);
         }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static ParameterExpression ParameterOf<T>(string name = null) =>
+            new TypedParameterExpression<T>(name);
 
         /// <summary>Variable is not by-ref yet</summary>
         public static ParameterExpression Variable(Type type, string name = null) =>
@@ -4417,5 +4424,3 @@ namespace FastExpressionCompiler.LightExpression
         ParameterExpression GetParameter(int index);
     }
 }
-
-//#endif
