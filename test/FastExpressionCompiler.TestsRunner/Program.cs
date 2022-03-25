@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            // new FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue316_in_parameter().Run();
 
             // new Issue314_LiftToNull_ToExpressionString().Run();

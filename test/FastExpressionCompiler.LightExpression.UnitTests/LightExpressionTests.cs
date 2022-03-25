@@ -235,7 +235,13 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var expr = CreateComplexLightExpression();
 
             var func = expr.CompileFast(true);
-            func(new object[12]);
+
+            var input = new object[12];
+            for (int i = 0; i < input.Length; i++)
+                input[i] = i + "";
+            var x = func(input);
+
+            Assert.AreEqual("11", ((A)x).Sop);
         }
 
         [Test]

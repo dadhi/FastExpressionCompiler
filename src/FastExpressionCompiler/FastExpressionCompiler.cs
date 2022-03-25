@@ -2857,17 +2857,6 @@ namespace FastExpressionCompiler
                 if (targetType.IsAssignableFrom(sourceType) && (parent & ParentFlags.IgnoreResult) != 0)
                     return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent);
 
-                // todo: @wip
-                // another quick path, e.g. DryIoc get from scope methods
-                // var targetIsValueType = targetType.IsValueType;
-                // if (!targetIsValueType && sourceType == typeof(object))
-                // {
-                //     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent))
-                //         return false;
-                //     il.Emit(OpCodes.Castclass, targetType);
-                //     return true;
-                // }
-
                 var underlyingNullableSourceType = sourceType.GetUnderlyingNullableTypeOrNull();
                 if (underlyingNullableSourceType == targetType)
                 {
@@ -2900,75 +2889,78 @@ namespace FastExpressionCompiler
 
                 // check implicit / explicit conversion operators on source and target types
                 // for non-primitives and for non-primitive nullable - #73
-                if (underlyingNullableSourceType == null && !sourceType.IsPrimitive)
+                if (targetType != typeof(string))
                 {
-                    var actualTargetType = underlyingNullableTargetType ?? targetType;
-                    var convertOpMethod = method ?? sourceType.FindConvertOperator(sourceType, actualTargetType);
-                    if (convertOpMethod != null)
+                    if (underlyingNullableSourceType == null && !sourceType.IsPrimitive)
                     {
-                        il.Emit(OpCodes.Call, convertOpMethod);
-                        if (underlyingNullableTargetType != null)
-                            il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
-                }
-                else if (underlyingNullableTargetType == null)
-                {
-                    if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
-                    {
-                        il.Emit(OpCodes.Call, method);
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
-
-                    var actualSourceType = underlyingNullableSourceType ?? sourceType;
-                    var convertOpMethod = method ?? actualSourceType.FindConvertOperator(actualSourceType, targetType);
-                    if (convertOpMethod != null)
-                    {
-                        if (underlyingNullableSourceType != null)
+                        var actualTargetType = underlyingNullableTargetType ?? targetType;
+                        var convertOpMethod = method ?? sourceType.FindConvertOperator(sourceType, actualTargetType);
+                        if (convertOpMethod != null)
                         {
-                            EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                            il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                            il.Emit(OpCodes.Call, convertOpMethod);
+                            if (underlyingNullableTargetType != null)
+                                il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                            return il.EmitPopIfIgnoreResult(parent);
+                        }
+                    }
+                    else if (underlyingNullableTargetType == null) // means sourceType.IsPrimitive
+                    {
+                        if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
+                        {
+                            il.Emit(OpCodes.Call, method);
+                            return il.EmitPopIfIgnoreResult(parent);
                         }
 
-                        il.Emit(OpCodes.Call, convertOpMethod);
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
-                }
-
-                if (underlyingNullableTargetType == null && !targetType.IsPrimitive)
-                {
-                    if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
-                    {
-                        il.Emit(OpCodes.Call, method);
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
-
-                    var actualSourceType = underlyingNullableSourceType ?? sourceType;
-                    // ReSharper disable once ConstantNullCoalescingCondition
-                    var convertOpMethod = method ?? targetType.FindConvertOperator(actualSourceType, targetType);
-                    if (convertOpMethod != null)
-                    {
-                        if (underlyingNullableSourceType != null)
+                        var actualSourceType = underlyingNullableSourceType ?? sourceType;
+                        var convertOpMethod = method ?? actualSourceType.FindConvertOperator(actualSourceType, targetType);
+                        if (convertOpMethod != null)
                         {
-                            EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                            il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                            if (underlyingNullableSourceType != null)
+                            {
+                                EmitStoreAndLoadLocalVariableAddress(il, sourceType);
+                                il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                            }
+
+                            il.Emit(OpCodes.Call, convertOpMethod);
+                            return il.EmitPopIfIgnoreResult(parent);
+                        }
+                    }
+
+                    if (underlyingNullableTargetType == null && !targetType.IsPrimitive)
+                    {
+                        if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
+                        {
+                            il.Emit(OpCodes.Call, method);
+                            return il.EmitPopIfIgnoreResult(parent);
                         }
 
-                        il.Emit(OpCodes.Call, convertOpMethod);
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
-                }
-                else if (underlyingNullableSourceType == null)
-                {
-                    var actualTargetType = underlyingNullableTargetType ?? targetType;
-                    var convertOpMethod = method ?? actualTargetType.FindConvertOperator(sourceType, actualTargetType);
-                    if (convertOpMethod != null)
-                    {
-                        il.Emit(OpCodes.Call, convertOpMethod);
-                        if (underlyingNullableTargetType != null)
-                            il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                        var actualSourceType = underlyingNullableSourceType ?? sourceType;
+                        // ReSharper disable once ConstantNullCoalescingCondition
+                        var convertOpMethod = method ?? targetType.FindConvertOperator(actualSourceType, targetType);
+                        if (convertOpMethod != null)
+                        {
+                            if (underlyingNullableSourceType != null)
+                            {
+                                EmitStoreAndLoadLocalVariableAddress(il, sourceType);
+                                il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                            }
 
-                        return il.EmitPopIfIgnoreResult(parent);
+                            il.Emit(OpCodes.Call, convertOpMethod);
+                            return il.EmitPopIfIgnoreResult(parent);
+                        }
+                    }
+                    else if (underlyingNullableSourceType == null) // means targetType.IsPrimitive
+                    {
+                        var actualTargetType = underlyingNullableTargetType ?? targetType;
+                        var convertOpMethod = method ?? actualTargetType.FindConvertOperator(sourceType, actualTargetType);
+                        if (convertOpMethod != null)
+                        {
+                            il.Emit(OpCodes.Call, convertOpMethod);
+                            if (underlyingNullableTargetType != null)
+                                il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+
+                            return il.EmitPopIfIgnoreResult(parent);
+                        }
                     }
                 }
 
