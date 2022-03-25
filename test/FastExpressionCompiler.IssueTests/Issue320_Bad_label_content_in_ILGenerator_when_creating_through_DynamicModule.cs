@@ -3,7 +3,7 @@ using System.Reflection.Emit;
 using System.Reflection;
 using System;
 using NUnit.Framework;
-
+#pragma warning disable CS0164
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests

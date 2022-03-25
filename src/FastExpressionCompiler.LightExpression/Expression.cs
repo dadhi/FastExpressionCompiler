@@ -29,6 +29,7 @@ THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -52,10 +53,10 @@ namespace FastExpressionCompiler.LightExpression
 
         public virtual bool IsIntrinsic => false;
 
-        public virtual bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs, 
+        public virtual bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
             bool isNestedLambda, ref ClosureInfo rootClosure) => false;
 
-        public virtual bool TryEmit(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs, 
+        public virtual bool TryEmit(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
 
 #if SUPPORTS_VISITOR
@@ -2285,6 +2286,33 @@ namespace FastExpressionCompiler.LightExpression
             Method = method;
     }
 
+    public sealed class ConvertViaCastClassIntrinsicExpression : UnaryExpression
+    {
+        public override ExpressionType NodeType => ExpressionType.Convert;
+        public override Type Type { get; }
+        public ConvertViaCastClassIntrinsicExpression(Expression operand, Type type) : base(operand)
+        {
+            Debug.Assert(!type.IsValueType, $"the type `{type}` is exprected to be a non-value type");
+            Type = type;
+        }
+
+        public override bool IsIntrinsic => true;
+
+        public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
+            bool isNestedLambda, ref ClosureInfo rootClosure) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Operand, paramExprs, isNestedLambda, ref rootClosure, config);
+
+        public override bool TryEmit(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
+            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+        {
+            if (!EmittingVisitor.TryEmit(Operand, paramExprs, il, ref closure, config, parent, byRefIndex))
+                return false;
+            if (!parent.IgnoresResult())
+                il.Emit(OpCodes.Castclass, Type);
+            return true;
+        }
+    }
+
     public abstract class BinaryExpression : Expression
     {
         public virtual MethodInfo Method => null; //todo: @feature - not supported yet
@@ -2947,12 +2975,16 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
-            NodeType == ExpressionType.NewArrayInit
+        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        {
+            var elemType = Type.GetElementType();
+            var exprs = ToExpressions(Expressions, ref exprsConverted);
+            return NodeType == ExpressionType.NewArrayInit
                 // ReSharper disable once AssignNullToNotNullAttribute
-                ? SysExpr.NewArrayInit(Type.GetElementType(), ToExpressions(Expressions, ref exprsConverted))
+                ? SysExpr.NewArrayInit(Type.GetElementType(), exprs)
                 // ReSharper disable once AssignNullToNotNullAttribute
-                : SysExpr.NewArrayBounds(Type.GetElementType(), ToExpressions(Expressions, ref exprsConverted));
+                : SysExpr.NewArrayBounds(Type.GetElementType(), exprs);
+        }
     }
 
     public sealed class ManyElementsNewArrayInitExpression : NewArrayExpression
@@ -3068,7 +3100,7 @@ namespace FastExpressionCompiler.LightExpression
     public class MethodCallExpression : Expression, IArgumentProvider
     {
         public sealed override ExpressionType NodeType => ExpressionType.Call;
-        public override Type Type => Method.ReturnType;
+        public sealed override Type Type => Method.ReturnType;
         public virtual MethodInfo Method => null;
         public virtual Expression Object => null;
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();

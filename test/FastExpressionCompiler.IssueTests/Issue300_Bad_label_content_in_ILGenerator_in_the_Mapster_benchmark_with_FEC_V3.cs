@@ -5,6 +5,9 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Linq;
 using System.Linq.Expressions;
+
+#pragma warning disable CS0162, CS0164, CS8632
+
 #if LIGHT_EXPRESSION
 using System.Text;
 using static FastExpressionCompiler.LightExpression.Expression;

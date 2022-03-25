@@ -4,6 +4,8 @@ using System.Reflection;
 using System;
 using NUnit.Framework;
 
+#pragma warning disable CS0162
+
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
