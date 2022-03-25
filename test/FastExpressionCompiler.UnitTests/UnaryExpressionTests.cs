@@ -2,6 +2,8 @@
 using NUnit.Framework;
 using SysExpr = System.Linq.Expressions;
 
+#pragma warning disable CS0649
+
 #if LIGHT_EXPRESSION
 using ExpressionType = System.Linq.Expressions.ExpressionType;
 using static FastExpressionCompiler.LightExpression.Expression;

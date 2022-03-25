@@ -109,7 +109,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         [Benchmark]
         public object CreateLightExpression_and_CompileFast_NoByRefNew() =>
-            LE.CompileFast(LightExpressionTests.CreateComplexLightExpression_NoByRefNew());
+            LE.CompileFast(LightExpressionTests.CreateComplexLightExpression_with_tricks());
     }
 
     [MemoryDiagnoser]

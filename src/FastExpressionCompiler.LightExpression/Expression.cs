@@ -530,6 +530,12 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression Convert<T>(Expression expression) =>
             new TypedConvertUnaryExpression<T>(expression);
 
+        public static UnaryExpression ConvertViaCastClassIntrinsic(Expression expression, Type type) =>
+            new ConvertViaCastClassIntrinsicExpression(expression, type);
+
+        public static UnaryExpression ConvertViaCastClassIntrinsic<T>(Expression expression) where T : class =>
+            new ConvertViaCastClassIntrinsicExpression<T>(expression);
+
         /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
         public static UnaryExpression Convert(Expression expression, Type type, MethodInfo method) =>
             new ConvertWithMethodUnaryExpression(ExpressionType.Convert, expression, type, method);
@@ -2248,7 +2254,7 @@ namespace FastExpressionCompiler.LightExpression
     public class TypedUnaryExpression : UnaryExpression
     {
         public override ExpressionType NodeType { get; }
-        public override Type Type { get; }
+        public sealed override Type Type { get; }
         public TypedUnaryExpression(ExpressionType nodeType, Expression operand, Type type) : base(operand)
         {
             NodeType = nodeType;
@@ -2286,15 +2292,11 @@ namespace FastExpressionCompiler.LightExpression
             Method = method;
     }
 
-    public sealed class ConvertViaCastClassIntrinsicExpression : UnaryExpression
+    public class ConvertViaCastClassIntrinsicExpression<T> : UnaryExpression where T : class
     {
-        public override ExpressionType NodeType => ExpressionType.Convert;
-        public override Type Type { get; }
-        public ConvertViaCastClassIntrinsicExpression(Expression operand, Type type) : base(operand)
-        {
-            Debug.Assert(!type.IsValueType, $"the type `{type}` is exprected to be a non-value type");
-            Type = type;
-        }
+        public sealed override ExpressionType NodeType => ExpressionType.Convert;
+        public override Type Type => typeof(T);
+        public ConvertViaCastClassIntrinsicExpression(Expression operand) : base(operand) { }
 
         public override bool IsIntrinsic => true;
 
@@ -2310,6 +2312,16 @@ namespace FastExpressionCompiler.LightExpression
             if (!parent.IgnoresResult())
                 il.Emit(OpCodes.Castclass, Type);
             return true;
+        }
+    }
+
+    public sealed class ConvertViaCastClassIntrinsicExpression : ConvertViaCastClassIntrinsicExpression<object>
+    {
+        public override Type Type { get; }
+        public ConvertViaCastClassIntrinsicExpression(Expression operand, Type type) : base(operand)
+        {
+            Debug.Assert(!type.IsValueType, $"the type `{type}` is expected to be a non-value type");
+            Type = type;
         }
     }
 

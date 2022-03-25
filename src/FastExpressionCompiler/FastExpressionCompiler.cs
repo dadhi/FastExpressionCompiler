@@ -1833,7 +1833,7 @@ namespace FastExpressionCompiler
                             if ((parent & ParentFlags.IgnoreResult) != 0)
                                 return true;
 #if LIGHT_EXPRESSION
-                            if (expr is IntConstantExpression n)
+                            if (expr is IntConstantExpression n) // todo: convert to intrinsic
                             {
                                 EmitLoadConstantInt(il, n.IntValue);
                                 return true;

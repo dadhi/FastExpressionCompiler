@@ -19,13 +19,14 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_compile_lambda_with_call_and_property();
             Nested_Func_using_outer_parameter();
             Nested_Action_using_outer_parameter_and_closed_value();
-            Can_compile_complex_expr_with_Array_Properties_and_Casts();
+            Can_compile_complex_expr_with_Arrays_and_Casts();
+            Can_compile_complex_expr_with_perf_tricks_with_Arrays_and_Casts();
             Can_embed_normal_Expression_into_LightExpression_eg_as_Constructor_argument();
             Should_output_the_System_and_LightExpression_to_the_identical_construction_syntax();
             Should_output_the_System_and_LightExpression_to_the_identical_CSharp_syntax();
             Expression_produced_by_ToExpressionString_should_compile();
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
-            return 10;
+            return 11;
         }
 
         [Test]
@@ -205,7 +206,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return expr;
         }
 
-        public static Expression<Func<object[], object>> CreateComplexLightExpression_NoByRefNew(string p = null)
+        public static Expression<Func<object[], object>> CreateComplexLightExpression_with_tricks(string p = null)
         {
             var stateParamExpr = Parameter(typeof(object[]), p);
 
@@ -213,9 +214,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 MemberInit(
                     NewNoByRefArgs(_ctorOfA,
                         New(_ctorOfB),
-                        Convert(
-                            ArrayIndex(stateParamExpr, ConstantInt(11)),
-                            typeof(string)),
+                        ConvertViaCastClassIntrinsic<string>(
+                            ArrayIndex(stateParamExpr, ConstantInt(11))),
                         NewArrayInit(typeof(ID),
                             New(_ctorOfD1),
                             New(_ctorOfD2))),
@@ -230,12 +230,27 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         }
 
         [Test]
-        public void Can_compile_complex_expr_with_Array_Properties_and_Casts()
+        public void Can_compile_complex_expr_with_Arrays_and_Casts()
         {
             var expr = CreateComplexLightExpression();
 
             var func = expr.CompileFast(true);
             func(new object[12]);
+        }
+
+        [Test]
+        public void Can_compile_complex_expr_with_perf_tricks_with_Arrays_and_Casts()
+        {
+            var expr = CreateComplexLightExpression_with_tricks();
+
+            var func = expr.CompileFast(true);
+
+            var input = new object[12];
+            for (int i = 0; i < input.Length; i++)
+                input[i] = i + "";
+            var x = func(input);
+
+            Assert.AreEqual("11", ((A)x).Sop);
         }
 
         [Test]
@@ -272,32 +287,32 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var l = new LabelTarget[0]; // the labels 
             var expr = Lambda( // $
             typeof(System.Func<object[], object>),
-            e[0]=MemberInit(
-                e[1]=New(/*3 args*/
+            e[0] = MemberInit(
+                e[1] = New(/*3 args*/
                 typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.A).GetTypeInfo().DeclaredConstructors.ToArray()[0],
-                e[2]=New(/*0 args*/
-                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.B).GetTypeInfo().DeclaredConstructors.ToArray()[0],new Expression[0]),
-                e[3]=Convert(
-                    e[4]=MakeBinary(ExpressionType.ArrayIndex,
-                    p[0]=Parameter(typeof(object[])),
-                    e[5]=Constant((int)11)),
+                e[2] = New(/*0 args*/
+                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.B).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0]),
+                e[3] = Convert(
+                    e[4] = MakeBinary(ExpressionType.ArrayIndex,
+                    p[0] = Parameter(typeof(object[])),
+                    e[5] = Constant((int)11)),
                     typeof(string)),
-                e[6]=NewArrayInit(
-                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.ID), 
-                    e[7]=New(/*0 args*/
-                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.D1).GetTypeInfo().DeclaredConstructors.ToArray()[0],new Expression[0]),
-                    e[8]=New(/*0 args*/
-                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.D2).GetTypeInfo().DeclaredConstructors.ToArray()[0],new Expression[0]))), 
+                e[6] = NewArrayInit(
+                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.ID),
+                    e[7] = New(/*0 args*/
+                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.D1).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0]),
+                    e[8] = New(/*0 args*/
+                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.D2).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0]))),
                 Bind(
-                typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.A).GetTypeInfo().GetDeclaredProperty("Prop"), 
-                e[9]=New(/*1 args*/
+                typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.A).GetTypeInfo().GetDeclaredProperty("Prop"),
+                e[9] = New(/*1 args*/
                     typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.P).GetTypeInfo().DeclaredConstructors.ToArray()[0],
-                    e[10]=New(/*0 args*/
-                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.B).GetTypeInfo().DeclaredConstructors.ToArray()[0],new Expression[0]))), 
+                    e[10] = New(/*0 args*/
+                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.B).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0]))),
                 Bind(
-                typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.A).GetTypeInfo().GetDeclaredField("Bop"), 
-                e[11]=New(/*0 args*/
-                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.B).GetTypeInfo().DeclaredConstructors.ToArray()[0],new Expression[0]))),
+                typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.A).GetTypeInfo().GetDeclaredField("Bop"),
+                e[11] = New(/*0 args*/
+                    typeof(FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests.B).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0]))),
             p[0 // (object[] object_arr__38113962)
                 ]);
 
@@ -316,14 +331,21 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             StringAssert.Contains("SayHi", s);
         }
 
-        public static void SayHi(int i, int j) {}
+        public static void SayHi(int i, int j) { }
 
         public class A
         {
             public P Prop { get; set; }
             public B Bop;
+            public string Sop;
+            public IEnumerable<ID> Dop;
 
-            public A(B b, string s, IEnumerable<ID> ds) { }
+            public A(B b, string s, IEnumerable<ID> ds) 
+            { 
+                Bop = b;
+                Sop = s;
+                Dop = ds;
+            }
         }
 
         public class B { }
