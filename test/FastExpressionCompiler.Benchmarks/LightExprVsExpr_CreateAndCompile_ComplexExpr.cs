@@ -105,9 +105,8 @@ DefaultJob : .NET Core 6.0.2 (CoreCLR 6.0.222.6406, CoreFX 6.0.222.6406), X64 Ry
 
 |                                               Method |     Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |----------------------------------------------------- |---------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                CreateLightExpression_and_CompileFast | 7.514 us | 0.1438 us | 0.2805 us |  1.00 |    0.00 | 0.8850 | 0.3967 | 0.0458 |   2.71 KB |
-| CreateLightExpression_and_CompileFast_with_intrinsic | 6.925 us | 0.1381 us | 0.2594 us |  0.92 |    0.06 | 0.8698 | 0.4349 | 0.0458 |   2.67 KB |
-
+|                CreateLightExpression_and_CompileFast | 7.172 us | 0.1428 us | 0.1955 us |  1.00 |    0.00 | 0.4578 | 0.2289 | 0.0305 |   2.84 KB |
+| CreateLightExpression_and_CompileFast_with_intrinsic | 6.492 us | 0.1255 us | 0.1289 us |  0.91 |    0.03 | 0.4349 | 0.2136 | 0.0305 |   2.67 KB |
         */
 
         // [Benchmark]
