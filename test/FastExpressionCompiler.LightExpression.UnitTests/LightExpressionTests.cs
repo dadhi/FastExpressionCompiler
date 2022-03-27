@@ -208,7 +208,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public static Expression<Func<object[], object>> CreateComplexLightExpression_with_tricks(string p = null)
         {
-            var stateParamExpr = Parameter(typeof(object[]), p);
+            var stateParamExpr = ParameterOf<object[]>(p);
 
             var expr = Lambda<Func<object[], object>>(
                 MemberInit(
