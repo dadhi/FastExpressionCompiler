@@ -458,6 +458,17 @@ namespace FastExpressionCompiler
             return @delegate;
         }
 
+        private static Delegate CompileNoArgsNew(ConstructorInfo ctor, Type delegateType, Type[] closurePlusParamTypes, Type returnType)
+        {
+            var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+            var il = method.GetILGenerator(16); // 16 is enough for maximum of 3 possible ops
+            il.Emit(OpCodes.Newobj, ctor);
+            if (returnType == typeof(void))
+                il.Emit(OpCodes.Pop);
+            il.Emit(OpCodes.Ret);
+            return method.CreateDelegate(delegateType, EmptyArrayClosure);
+        }
+
 #if LIGHT_EXPRESSION
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs,
             Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
@@ -466,6 +477,10 @@ namespace FastExpressionCompiler
             Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
 #endif
         {
+#if LIGHT_EXPRESSION
+            if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
+                return CompileNoArgsNew(newNoArgs.Constructor, delegateType, closurePlusParamTypes, returnType);
+#endif
             var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo, flags))
                 return null;
@@ -498,12 +513,7 @@ namespace FastExpressionCompiler
             var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
             // todo: @perf @mem the default stream capacity is 64, consider to decrease it to 16 for a member or no argument method
-#if LIGHT_EXPRESSION
-            var streamSize = bodyExpr is NoArgsNewClassIntrinsicExpression ? 16 : 64;
-#else
-            var streamSize = 64; // the default system value
-#endif
-            var il = method.GetILGenerator(streamSize);
+            var il = method.GetILGenerator(64);
 
             if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
@@ -559,6 +569,7 @@ namespace FastExpressionCompiler
             return closureAndParamTypes;
         }
 
+        [MethodImpl((MethodImplOptions)256)]
         private static void ReturnClosureTypeToParamTypesToPool(Type[] closurePlusParamTypes)
         {
             var paramCount = closurePlusParamTypes.Length - 1;
@@ -1580,14 +1591,22 @@ namespace FastExpressionCompiler
                 return true;
 
             var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
-            ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
-
+            var nestedReturnType = nestedLambdaExpr.ReturnType;
+            var nestedLambdaBody = nestedLambdaExpr.Body;
 #if LIGHT_EXPRESSION
             var nestedLambdaParamExprs = (IParameterProvider)nestedLambdaExpr;
+
+            if (nestedLambdaBody is NoArgsNewClassIntrinsicExpression newNoArgs)
+            {
+                var paramTypes = GetClosureTypeToParamTypes(nestedLambdaParamExprs);
+                nestedLambdaInfo.Lambda = CompileNoArgsNew(newNoArgs.Constructor, nestedLambdaExpr.Type, paramTypes, nestedReturnType);
+                ReturnClosureTypeToParamTypesToPool(paramTypes);
+                return true;
+            }
 #else
             var nestedLambdaParamExprs = nestedLambdaExpr.Parameters;
 #endif
-
+            ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
             var nestedLambdaNestedLambdaOrLambdas = nestedClosureInfo.NestedLambdaOrLambdas;
             if (nestedLambdaNestedLambdaOrLambdas != null)
             {
@@ -1614,7 +1633,6 @@ namespace FastExpressionCompiler
                     nestedLambdaClosure = new ArrayClosure(nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas());
             }
 
-            var nestedReturnType = nestedLambdaExpr.ReturnType;
             var closurePlusParamTypes = GetClosureTypeToParamTypes(nestedLambdaParamExprs);
 
             var method = new DynamicMethod(string.Empty,
@@ -1627,7 +1645,7 @@ namespace FastExpressionCompiler
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo);
 
             var parent = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
-            if (!EmittingVisitor.TryEmit(nestedLambdaExpr.Body, nestedLambdaParamExprs, il, ref nestedClosureInfo, setup, parent))
+            if (!EmittingVisitor.TryEmit(nestedLambdaBody, nestedLambdaParamExprs, il, ref nestedClosureInfo, setup, parent))
                 return false;
             il.Emit(OpCodes.Ret);
 
