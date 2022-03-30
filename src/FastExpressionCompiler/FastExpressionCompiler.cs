@@ -4503,11 +4503,15 @@ namespace FastExpressionCompiler
                 if (!TryEmit(lambda, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
                     return false;
 
-                var delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod();
+                MethodInfo delegateInvokeMethod;
+                //if (lambda is ConstantExpression lambdaConst) // todo: @perf opportunity to optimize
+                //    delegateInvokeMethod = ((Delegate)lambdaConst.Value).GetMethodInfo();
+                //else 
+                delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod(); // todo: @perf bad thingy
                 if (argCount > 0)
                 {
                     var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
-                    var args = delegateInvokeMethod.GetParameters();
+                    var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
                     for (var i = 0; i < args.Length; ++i)
                     {
                         var argExpr = argExprs.GetArgument(i);
