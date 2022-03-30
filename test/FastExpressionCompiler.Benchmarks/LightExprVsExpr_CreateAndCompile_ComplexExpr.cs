@@ -123,7 +123,7 @@ DefaultJob : .NET Core 6.0.2 (CoreCLR 6.0.222.6406, CoreFX 6.0.222.6406), X64 Ry
 
         [Benchmark]
         public object CreateLightExpression_and_CompileFast_with_intrinsic() =>
-            LE.CompileFast(LightExpressionTests.CreateComplexLightExpression_with_tricks());
+            LE.CompileFast(LightExpressionTests.CreateComplexLightExpression_with_intrinsics());
     }
 
     [MemoryDiagnoser]
