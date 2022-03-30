@@ -495,10 +495,15 @@ namespace FastExpressionCompiler
                     : new DebugArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas(), debugExpr);
             }
 
-            var method = new DynamicMethod(string.Empty,
-                returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+            var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
-            var il = method.GetILGenerator();
+            // todo: @perf @mem the default stream capacity is 64, consider to decrease it to 16 for a member or no argument method
+#if LIGHT_EXPRESSION
+            var streamSize = bodyExpr is NoArgsNewClassIntrinsicExpression ? 16 : 64;
+#else
+            var streamSize = 64; // the default system value
+#endif
+            var il = method.GetILGenerator(streamSize);
 
             if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
@@ -2639,13 +2644,11 @@ namespace FastExpressionCompiler
             }
 
 #if LIGHT_EXPRESSION
-            public static bool TryEmitNonByRefNonValueTypeParameter(ParameterExpression paramExpr, IParameterProvider paramExprs,
-                ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+            public static bool TryEmitNonByRefNonValueTypeParameter(ParameterExpression paramExpr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
                 var paramExprCount = paramExprs.ParameterCount;
 #else
-            public static bool TryEmitNonByRefNonValueTypeParameter(ParameterExpression paramExpr, IReadOnlyList<PE> paramExprs,
-                ILGenerator il, ref ClosureInfo closure, ParentFlags parent)
+            public static bool TryEmitNonByRefNonValueTypeParameter(ParameterExpression paramExpr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure)
             {
                 var paramExprCount = paramExprs.Count;
 #endif
@@ -2678,7 +2681,6 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Emit(OpCodes.Ldelem_Ref);
-
                 return true;
             }
 
@@ -3124,6 +3126,7 @@ namespace FastExpressionCompiler
 #if NETFRAMEWORK
                             il.Emit(OpCodes.Castclass, exprType);
 #endif
+                            
                         }
                     }
                 }
@@ -3146,12 +3149,14 @@ namespace FastExpressionCompiler
                         return false;
                 }
 
-                var underlyingNullableType = Nullable.GetUnderlyingType(exprType);
-                if (underlyingNullableType != null)
-                    il.Emit(OpCodes.Newobj, exprType.GetConstructors().GetFirst());
-
-                // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
+                if (exprType.IsValueType)
+                {
+                    var underlyingNullableType = Nullable.GetUnderlyingType(exprType);
+                    if (underlyingNullableType != null)
+                        il.Emit(OpCodes.Newobj, exprType.GetConstructors().GetFirst());
+                }
                 else if (exprType == typeof(object) && constValueType.IsValueType)
+                    // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
                     il.Emit(OpCodes.Box, constantValue.GetType()); // using normal type for Enum instead of underlying type
 
                 return true;
@@ -4302,7 +4307,6 @@ namespace FastExpressionCompiler
                         return false;
                 }
 
-                var nestedLambda = nestedLambdaInfo.Lambda;
                 EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
@@ -4343,15 +4347,7 @@ namespace FastExpressionCompiler
                     if (outerParamIndex != -1) // load parameter from input outer params
                     {
                         // Add `+1` to index because the `0` index is for the closure argument
-                        if (outerParamIndex == 0)
-                            il.Emit(OpCodes.Ldarg_1);
-                        else if (outerParamIndex == 1)
-                            il.Emit(OpCodes.Ldarg_2);
-                        else if (outerParamIndex == 2)
-                            il.Emit(OpCodes.Ldarg_3);
-                        else
-                            il.Emit(OpCodes.Ldarg_S, (byte)(1 + outerParamIndex));
-
+                        EmitLoadArg(il, outerParamIndex + 1);
                         if (nestedParam.Type.IsValueType)
                             il.Emit(OpCodes.Box, nestedParam.Type);
                     }
@@ -4387,14 +4383,12 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stelem_Ref);
                 }
 
-                // - create `ArrayClosureWithNonPassedParams` out of the both above
-                if (containsConstants)
-                    il.Emit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsConstructor);
-                else
-                    il.Emit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsConstructorWithoutConstants);
+                // - emit the closure creation
+                var closureCtor = containsConstants ? ArrayClosureWithNonPassedParamsConstructor : ArrayClosureWithNonPassedParamsConstructorWithoutConstants;
+                il.Emit(OpCodes.Newobj, closureCtor);
 
                 // - call `Curry` method with nested lambda and array closure to produce a closed lambda with the expected signature
-                var lambdaTypeArgs = nestedLambda.GetType().GetTypeInfo().GenericTypeArguments;
+                var lambdaTypeArgs = nestedLambdaInfo.Lambda.GetType().GetGenericArguments();
 
                 var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
                 var closureMethod = nestedLambdaExpr.ReturnType == typeof(void)
