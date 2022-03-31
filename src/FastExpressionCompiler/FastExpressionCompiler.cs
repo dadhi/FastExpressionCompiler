@@ -472,35 +472,33 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs,
             Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
+        {
+            if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
+                return CompileNoArgsNew(newNoArgs.Constructor, delegateType, closurePlusParamTypes, returnType);
 #else
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IReadOnlyList<PE> paramExprs,
             Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
-#endif
         {
-#if LIGHT_EXPRESSION
-            if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
-                return CompileNoArgsNew(newNoArgs.Constructor, delegateType, closurePlusParamTypes, returnType);
 #endif
             var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo, flags))
                 return null;
 
             var nestedLambdaOrLambdas = closureInfo.NestedLambdaOrLambdas;
-            if (nestedLambdaOrLambdas is NestedLambdaInfo nestedLambda)
-            {
-                if (!TryCompileNestedLambda(ref closureInfo, 0, flags))
+            if (nestedLambdaOrLambdas != null)
+                if (nestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdas)
+                {
+                    for (var i = 0; i < nestedLambdas.Length; ++i)
+                        if (!TryCompileNestedLambda(nestedLambdaOrLambdas, i, flags))
+                            return null;
+                }
+                else if (!TryCompileNestedLambda(nestedLambdaOrLambdas, 0, flags))
                     return null;
-            }
-            else if (nestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdas)
-            {
-                for (var i = 0; i < nestedLambdas.Length; ++i)
-                    if (!TryCompileNestedLambda(ref closureInfo, i, flags))
-                        return null;
-            }
 
             ArrayClosure closure;
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
-                closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0 ? EmptyArrayClosure
+                closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0 
+                    ? EmptyArrayClosure
                     : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
             else
             {
@@ -1580,12 +1578,11 @@ namespace FastExpressionCompiler
             return null;
         }
 
-        private static bool TryCompileNestedLambda(ref ClosureInfo outerClosureInfo, int nestedLambdaIndex, CompilerFlags setup)
+        private static bool TryCompileNestedLambda(object nestedLambdaOrLambdas, int nestedLambdaIndex, CompilerFlags setup)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
             // 3. Add the compiled lambda to closure of outer lambda for later invocation
-            var nestedLambdaOrLambdas = outerClosureInfo.NestedLambdaOrLambdas;
             var nestedLambdaInfo = nestedLambdaOrLambdas as NestedLambdaInfo ?? ((NestedLambdaInfo[])nestedLambdaOrLambdas)[nestedLambdaIndex];
             if (nestedLambdaInfo.Lambda != null)
                 return true;
@@ -1609,20 +1606,14 @@ namespace FastExpressionCompiler
             ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
             var nestedLambdaNestedLambdaOrLambdas = nestedClosureInfo.NestedLambdaOrLambdas;
             if (nestedLambdaNestedLambdaOrLambdas != null)
-            {
-                if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo)
+                if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdaNestedLambdas)
                 {
-                    if (!TryCompileNestedLambda(ref nestedClosureInfo, 0, setup))
-                        return false;
-                }
-                else 
-                {
-                    var nestedLambdaNestedLambdas = (NestedLambdaInfo[])nestedLambdaNestedLambdaOrLambdas;
                     for (var i = 0; i < nestedLambdaNestedLambdas.Length; ++i)
-                        if (!TryCompileNestedLambda(ref nestedClosureInfo, i, setup))
+                        if (!TryCompileNestedLambda(nestedLambdaNestedLambdaOrLambdas, i, setup))
                             return false;
                 }
-            }
+                else if (!TryCompileNestedLambda(nestedLambdaNestedLambdaOrLambdas, 0, setup))
+                    return false;
 
             ArrayClosure nestedLambdaClosure = null;
             if (nestedClosureInfo.NonPassedParameters.Length == 0)
