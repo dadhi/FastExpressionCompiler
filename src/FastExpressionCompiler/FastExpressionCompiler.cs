@@ -807,33 +807,24 @@ namespace FastExpressionCompiler
                 var constItems = Constants.Items;
                 if (nestedLambdaOrLambdas == null)
                 {
-                    Array.Resize(ref constItems, constCount);
+                    if (constItems.Length != constCount)
+                        Array.Resize(ref constItems, constCount);
                     return constItems;
                 }
 
                 var nestedLambdas = nestedLambdaOrLambdas as NestedLambdaInfo[];
                 var lambdaCount = nestedLambdas != null ? nestedLambdas.Length : 1;
-                var itemCount = constCount + lambdaCount;
+                var constPlusLambdaCount = constCount + lambdaCount;
 
-                var closureItems = constItems;
-                if (itemCount > constItems.Length)
-                {
-                    closureItems = new object[itemCount];
-                    for (var i = 0; i < constCount; ++i)
-                        closureItems[i] = constItems[i];
-                }
-                else
-                {
-                    // shrink the items to the actual item count
-                    Array.Resize(ref constItems, itemCount);
-                }
+                if (constItems.Length != constPlusLambdaCount)
+                    Array.Resize(ref constItems, constPlusLambdaCount);
 
                 if (nestedLambdas == null)
-                    closureItems[constCount] = GetLambdaObject((NestedLambdaInfo)nestedLambdaOrLambdas);
+                    constItems[constCount] = GetLambdaObject((NestedLambdaInfo)nestedLambdaOrLambdas);
                 else for (var i = 0; i < nestedLambdas.Length; ++i)
-                    closureItems[constCount + i] = GetLambdaObject(nestedLambdas[i]);
+                    constItems[constCount + i] = GetLambdaObject(nestedLambdas[i]);
 
-                return closureItems;
+                return constItems;
             }
 
             /// LocalVar maybe a `null` in a collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
