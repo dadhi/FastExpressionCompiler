@@ -489,11 +489,12 @@ namespace FastExpressionCompiler
             if (nestedLambdaOrLambdas != null)
                 if (nestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdas)
                 {
-                    for (var i = 0; i < nestedLambdas.Length; ++i)
-                        if (!TryCompileNestedLambda(nestedLambdaOrLambdas, i, flags))
+                    foreach (var nestedLambda in nestedLambdas)
+                        if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambdas, nestedLambda, flags))
                             return null;
                 }
-                else if (!TryCompileNestedLambda(nestedLambdaOrLambdas, 0, flags))
+                else if (((NestedLambdaInfo)nestedLambdaOrLambdas).Lambda == null &&
+                    !TryCompileNestedLambda(nestedLambdaOrLambdas, (NestedLambdaInfo)nestedLambdaOrLambdas, flags))
                     return null;
 
             ArrayClosure closure;
@@ -1580,15 +1581,11 @@ namespace FastExpressionCompiler
             return null;
         }
 
-        private static bool TryCompileNestedLambda(object nestedLambdaOrLambdas, int nestedLambdaIndex, CompilerFlags setup)
+        private static bool TryCompileNestedLambda(object nestedLambdaOrLambdas, NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
             // 3. Add the compiled lambda to closure of outer lambda for later invocation
-            var nestedLambdaInfo = nestedLambdaOrLambdas as NestedLambdaInfo ?? ((NestedLambdaInfo[])nestedLambdaOrLambdas)[nestedLambdaIndex];
-            if (nestedLambdaInfo.Lambda != null)
-                return true;
-
             var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
             var nestedReturnType = nestedLambdaExpr.ReturnType;
             var nestedLambdaBody = nestedLambdaExpr.Body;
@@ -1610,11 +1607,12 @@ namespace FastExpressionCompiler
             if (nestedLambdaNestedLambdaOrLambdas != null)
                 if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdaNestedLambdas)
                 {
-                    for (var i = 0; i < nestedLambdaNestedLambdas.Length; ++i)
-                        if (!TryCompileNestedLambda(nestedLambdaNestedLambdaOrLambdas, i, setup))
+                    foreach (var nestedLambdaNestedLambda in nestedLambdaNestedLambdas)
+                        if (nestedLambdaInfo.Lambda == null &&!TryCompileNestedLambda(nestedLambdaNestedLambdas, nestedLambdaNestedLambda, setup))
                             return false;
                 }
-                else if (!TryCompileNestedLambda(nestedLambdaNestedLambdaOrLambdas, 0, setup))
+                else if (((NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas).Lambda == null &&
+                    !TryCompileNestedLambda(nestedLambdaNestedLambdaOrLambdas, (NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas, setup))
                     return false;
 
             ArrayClosure nestedLambdaClosure = null;
