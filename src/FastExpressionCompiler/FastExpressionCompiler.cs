@@ -490,11 +490,11 @@ namespace FastExpressionCompiler
                 if (nestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdas)
                 {
                     foreach (var nestedLambda in nestedLambdas)
-                        if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambdas, nestedLambda, flags))
+                        if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags))
                             return null;
                 }
                 else if (((NestedLambdaInfo)nestedLambdaOrLambdas).Lambda == null &&
-                    !TryCompileNestedLambda(nestedLambdaOrLambdas, (NestedLambdaInfo)nestedLambdaOrLambdas, flags))
+                    !TryCompileNestedLambda((NestedLambdaInfo)nestedLambdaOrLambdas, flags))
                     return null;
 
             ArrayClosure closure;
@@ -1581,7 +1581,7 @@ namespace FastExpressionCompiler
             return null;
         }
 
-        private static bool TryCompileNestedLambda(object nestedLambdaOrLambdas, NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup)
+        private static bool TryCompileNestedLambda(NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
@@ -1608,11 +1608,11 @@ namespace FastExpressionCompiler
                 if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdaNestedLambdas)
                 {
                     foreach (var nestedLambdaNestedLambda in nestedLambdaNestedLambdas)
-                        if (nestedLambdaInfo.Lambda == null &&!TryCompileNestedLambda(nestedLambdaNestedLambdas, nestedLambdaNestedLambda, setup))
+                        if (nestedLambdaInfo.Lambda == null &&!TryCompileNestedLambda(nestedLambdaNestedLambda, setup))
                             return false;
                 }
                 else if (((NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas).Lambda == null &&
-                    !TryCompileNestedLambda(nestedLambdaNestedLambdaOrLambdas, (NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas, setup))
+                    !TryCompileNestedLambda((NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas, setup))
                     return false;
 
             ArrayClosure nestedLambdaClosure = null;
@@ -3385,9 +3385,7 @@ namespace FastExpressionCompiler
 
                 il.Emit(sign ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                 EmitLoadConstantInt(il, scale);
-
                 il.Emit(OpCodes.Conv_U1);
-
                 il.Emit(OpCodes.Newobj, _decimalCtor.Value);
             }
 
@@ -5352,7 +5350,7 @@ namespace FastExpressionCompiler
                 if (location == 0)
                 {
                     // todo: @perf
-                    // the indernal code for this is
+                    // the internal code for this is
                     //
                     // EnsureCapacity(3);
                     // InternalEmit(opcode);
@@ -5374,7 +5372,7 @@ namespace FastExpressionCompiler
                 }
                 else if (location == 1)
                 {
-                    // todo: @perf we may intriduce the EmitOne, EmitBatchNonStackModified(OpCode store, OpCode load, byte value), etc. method overloads 
+                    // todo: @perf we may introduce the EmitOne, EmitBatchNonStackModified(OpCode store, OpCode load, byte value), etc. method overloads 
                     // 
                     // if (ilLength + 7 < ilStream.Length)
                     // {
