@@ -69,6 +69,13 @@ namespace FastExpressionCompiler.Benchmarks
             |     Compile | 479.87 us | 5.039 us | 4.208 us | 31.98 |    0.59 | 2.9297 | 1.4648 |      - |  12.17 KB |
             | CompileFast |  15.00 us | 0.291 us | 0.298 us |  1.00 |    0.00 | 1.1902 | 0.5493 | 0.0916 |   4.86 KB |
 
+            ## v3.3
+
+            |      Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |     Compile | 487.48 us | 8.819 us | 8.250 us | 30.60 |    0.70 | 1.9531 | 0.9766 |      - |  12.05 KB |
+            | CompileFast |  15.94 us | 0.237 us | 0.210 us |  1.00 |    0.00 | 0.8850 | 0.4272 | 0.0916 |   5.45 KB |
+
             */
             [Benchmark]
             public Func<X> Compile() => _hoistedExpr.Compile();

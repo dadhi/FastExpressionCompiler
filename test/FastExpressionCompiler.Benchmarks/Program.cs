@@ -52,7 +52,7 @@ namespace FastExpressionCompiler.Benchmarks
             // BenchmarkRunner.Run<Deserialize_Simple>();
 
             // BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
-            BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
+            // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
 
             //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_NestedLambdaExpr>();
             // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_SimpleExpr>();
@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.Benchmarks
             // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
             // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
-            // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
+            BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
             // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Invoke>();

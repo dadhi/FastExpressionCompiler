@@ -708,10 +708,9 @@ namespace FastExpressionCompiler
                 {
                     var nestedLambdas = (NestedLambdaInfo[])nestedLambdaOrLambdas;
                     var count = nestedLambdas.Length;
-                    var newNestedLambdas = new NestedLambdaInfo[count + 1];
-                    Array.Copy(nestedLambdas, 0, newNestedLambdas, 0, count);
-                    newNestedLambdas[count] = nestedLambdaInfo;
-                    NestedLambdaOrLambdas = newNestedLambdas;
+                    Array.Resize(ref nestedLambdas, count + 1);
+                    nestedLambdas[count] = nestedLambdaInfo;
+                    NestedLambdaOrLambdas = nestedLambdas;
                 }
             }
 
