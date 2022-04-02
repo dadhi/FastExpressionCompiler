@@ -620,8 +620,9 @@ namespace FastExpressionCompiler
 
             /// Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public LiveCountArray<object> Constants;
-            // todo: @perf combine Constants and Usage to save the memory
-            /// Constant usage count and variable index
+
+            /// Constant usage count and variable index.
+            /// It is a separate collection from the Constants because we directly convert later into the closure array
             public LiveCountArray<short> ConstantUsageThenVarIndex;
 
             /// Parameters not passed through lambda parameter list But used inside lambda body.
@@ -684,22 +685,14 @@ namespace FastExpressionCompiler
                     return;
                 }
 
-                var count = NonPassedParameters.Length;
+                var nonPassedParams = NonPassedParameters;
+                var count = nonPassedParams.Length;
                 for (var i = 0; i < count; ++i)
-                    if (ReferenceEquals(NonPassedParameters[i], expr))
+                    if (ReferenceEquals(nonPassedParams[i], expr))
                         return;
 
-                if (NonPassedParameters.Length == 1)
-                    NonPassedParameters = new[] { NonPassedParameters[0], expr };
-                else if (NonPassedParameters.Length == 2)
-                    NonPassedParameters = new[] { NonPassedParameters[0], NonPassedParameters[1], expr };
-                else
-                {
-                    var newItems = new ParameterExpression[count + 1];
-                    Array.Copy(NonPassedParameters, 0, newItems, 0, count);
-                    newItems[count] = expr;
-                    NonPassedParameters = newItems;
-                }
+                Array.Resize(ref NonPassedParameters, count + 1);
+                NonPassedParameters[count] = expr;
             }
 
             public void AddNestedLambda(NestedLambdaInfo nestedLambdaInfo)
@@ -1614,15 +1607,12 @@ namespace FastExpressionCompiler
 
             var closurePlusParamTypes = GetClosureTypeToParamTypes(nestedLambdaParamExprs);
 
-            var method = new DynamicMethod(string.Empty,
-                nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
-
+            var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
             var il = method.GetILGenerator();
 
             if ((nestedClosureInfo.Status & ClosureStatus.HasClosure) != 0 &&
                 nestedClosureInfo.ContainsConstantsOrNestedLambdas())
-                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(
-                    il, nestedLambdaNestedLambdaOrLambdas, ref nestedClosureInfo);
+                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, nestedLambdaNestedLambdaOrLambdas, ref nestedClosureInfo);
 
             var parent = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(nestedLambdaBody, nestedLambdaParamExprs, il, ref nestedClosureInfo, setup, parent))
