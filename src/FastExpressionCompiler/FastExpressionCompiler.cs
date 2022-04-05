@@ -5509,7 +5509,8 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
-            var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            // conversion operators should be declared as static and public 
+            var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public);
             for (var i = 0; i < methods.Length; i++)
             {
                 var m = methods[i];
