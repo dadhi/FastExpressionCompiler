@@ -1,8 +1,33 @@
 {
     "cSpell.words": [
+        "Brfalse",
+        "Brtrue",
+        "Callvirt",
         "cref",
+        "dont",
+        "Funcs",
         "intrinsics",
-        "Ldelema"
+        "Isinst",
+        "Ldarg",
+        "LDARGA",
+        "Ldelem",
+        "Ldelema",
+        "Ldfld",
+        "Ldflda",
+        "Ldftn",
+        "Ldlen",
+        "Ldloc",
+        "Ldloca",
+        "Ldnull",
+        "Ldobj",
+        "Ldsfld",
+        "Ldstr",
+        "Ldtoken",
+        "Stfld",
+        "Stind",
+        "Stloc",
+        "Stobj",
+        "Stsfld"
     ],
     "files.watcherExclude": {
         "**/target": true

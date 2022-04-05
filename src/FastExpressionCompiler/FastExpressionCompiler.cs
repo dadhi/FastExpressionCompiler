@@ -490,11 +490,11 @@ namespace FastExpressionCompiler
                 if (nestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdas)
                 {
                     foreach (var nestedLambda in nestedLambdas)
-                        if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambdas, nestedLambda, flags))
+                        if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags))
                             return null;
                 }
                 else if (((NestedLambdaInfo)nestedLambdaOrLambdas).Lambda == null &&
-                    !TryCompileNestedLambda(nestedLambdaOrLambdas, (NestedLambdaInfo)nestedLambdaOrLambdas, flags))
+                    !TryCompileNestedLambda((NestedLambdaInfo)nestedLambdaOrLambdas, flags))
                     return null;
 
             ArrayClosure closure;
@@ -620,8 +620,9 @@ namespace FastExpressionCompiler
 
             /// Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public LiveCountArray<object> Constants;
-            // todo: @perf combine Constants and Usage to save the memory
-            /// Constant usage count and variable index
+
+            /// Constant usage count and variable index.
+            /// It is a separate collection from the Constants because we directly convert later into the closure array
             public LiveCountArray<short> ConstantUsageThenVarIndex;
 
             /// Parameters not passed through lambda parameter list But used inside lambda body.
@@ -684,22 +685,14 @@ namespace FastExpressionCompiler
                     return;
                 }
 
-                var count = NonPassedParameters.Length;
+                var nonPassedParams = NonPassedParameters;
+                var count = nonPassedParams.Length;
                 for (var i = 0; i < count; ++i)
-                    if (ReferenceEquals(NonPassedParameters[i], expr))
+                    if (ReferenceEquals(nonPassedParams[i], expr))
                         return;
 
-                if (NonPassedParameters.Length == 1)
-                    NonPassedParameters = new[] { NonPassedParameters[0], expr };
-                else if (NonPassedParameters.Length == 2)
-                    NonPassedParameters = new[] { NonPassedParameters[0], NonPassedParameters[1], expr };
-                else
-                {
-                    var newItems = new ParameterExpression[count + 1];
-                    Array.Copy(NonPassedParameters, 0, newItems, 0, count);
-                    newItems[count] = expr;
-                    NonPassedParameters = newItems;
-                }
+                Array.Resize(ref NonPassedParameters, count + 1);
+                NonPassedParameters[count] = expr;
             }
 
             public void AddNestedLambda(NestedLambdaInfo nestedLambdaInfo)
@@ -715,10 +708,9 @@ namespace FastExpressionCompiler
                 {
                     var nestedLambdas = (NestedLambdaInfo[])nestedLambdaOrLambdas;
                     var count = nestedLambdas.Length;
-                    var newNestedLambdas = new NestedLambdaInfo[count + 1];
-                    Array.Copy(nestedLambdas, 0, newNestedLambdas, 0, count);
-                    newNestedLambdas[count] = nestedLambdaInfo;
-                    NestedLambdaOrLambdas = newNestedLambdas;
+                    Array.Resize(ref nestedLambdas, count + 1);
+                    nestedLambdas[count] = nestedLambdaInfo;
+                    NestedLambdaOrLambdas = nestedLambdas;
                 }
             }
 
@@ -807,33 +799,24 @@ namespace FastExpressionCompiler
                 var constItems = Constants.Items;
                 if (nestedLambdaOrLambdas == null)
                 {
-                    Array.Resize(ref constItems, constCount);
+                    if (constItems.Length != constCount)
+                        Array.Resize(ref constItems, constCount);
                     return constItems;
                 }
 
                 var nestedLambdas = nestedLambdaOrLambdas as NestedLambdaInfo[];
                 var lambdaCount = nestedLambdas != null ? nestedLambdas.Length : 1;
-                var itemCount = constCount + lambdaCount;
+                var constPlusLambdaCount = constCount + lambdaCount;
 
-                var closureItems = constItems;
-                if (itemCount > constItems.Length)
-                {
-                    closureItems = new object[itemCount];
-                    for (var i = 0; i < constCount; ++i)
-                        closureItems[i] = constItems[i];
-                }
-                else
-                {
-                    // shrink the items to the actual item count
-                    Array.Resize(ref constItems, itemCount);
-                }
+                if (constItems.Length != constPlusLambdaCount)
+                    Array.Resize(ref constItems, constPlusLambdaCount);
 
                 if (nestedLambdas == null)
-                    closureItems[constCount] = GetLambdaObject((NestedLambdaInfo)nestedLambdaOrLambdas);
+                    constItems[constCount] = GetLambdaObject((NestedLambdaInfo)nestedLambdaOrLambdas);
                 else for (var i = 0; i < nestedLambdas.Length; ++i)
-                    closureItems[constCount + i] = GetLambdaObject(nestedLambdas[i]);
+                    constItems[constCount + i] = GetLambdaObject(nestedLambdas[i]);
 
-                return closureItems;
+                return constItems;
             }
 
             /// LocalVar maybe a `null` in a collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
@@ -1581,7 +1564,7 @@ namespace FastExpressionCompiler
             return null;
         }
 
-        private static bool TryCompileNestedLambda(object nestedLambdaOrLambdas, NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup)
+        private static bool TryCompileNestedLambda(NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
@@ -1608,11 +1591,11 @@ namespace FastExpressionCompiler
                 if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdaNestedLambdas)
                 {
                     foreach (var nestedLambdaNestedLambda in nestedLambdaNestedLambdas)
-                        if (nestedLambdaInfo.Lambda == null &&!TryCompileNestedLambda(nestedLambdaNestedLambdas, nestedLambdaNestedLambda, setup))
+                        if (nestedLambdaInfo.Lambda == null &&!TryCompileNestedLambda(nestedLambdaNestedLambda, setup))
                             return false;
                 }
                 else if (((NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas).Lambda == null &&
-                    !TryCompileNestedLambda(nestedLambdaNestedLambdaOrLambdas, (NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas, setup))
+                    !TryCompileNestedLambda((NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas, setup))
                     return false;
 
             ArrayClosure nestedLambdaClosure = null;
@@ -1623,15 +1606,12 @@ namespace FastExpressionCompiler
 
             var closurePlusParamTypes = GetClosureTypeToParamTypes(nestedLambdaParamExprs);
 
-            var method = new DynamicMethod(string.Empty,
-                nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
-
+            var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
             var il = method.GetILGenerator();
 
             if ((nestedClosureInfo.Status & ClosureStatus.HasClosure) != 0 &&
                 nestedClosureInfo.ContainsConstantsOrNestedLambdas())
-                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(
-                    il, nestedLambdaNestedLambdaOrLambdas, ref nestedClosureInfo);
+                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, nestedLambdaNestedLambdaOrLambdas, ref nestedClosureInfo);
 
             var parent = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(nestedLambdaBody, nestedLambdaParamExprs, il, ref nestedClosureInfo, setup, parent))
@@ -3385,9 +3365,7 @@ namespace FastExpressionCompiler
 
                 il.Emit(sign ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                 EmitLoadConstantInt(il, scale);
-
                 il.Emit(OpCodes.Conv_U1);
-
                 il.Emit(OpCodes.Newobj, _decimalCtor.Value);
             }
 
@@ -5352,7 +5330,7 @@ namespace FastExpressionCompiler
                 if (location == 0)
                 {
                     // todo: @perf
-                    // the indernal code for this is
+                    // the internal code for this is
                     //
                     // EnsureCapacity(3);
                     // InternalEmit(opcode);
@@ -5374,7 +5352,7 @@ namespace FastExpressionCompiler
                 }
                 else if (location == 1)
                 {
-                    // todo: @perf we may intriduce the EmitOne, EmitBatchNonStackModified(OpCode store, OpCode load, byte value), etc. method overloads 
+                    // todo: @perf we may introduce the EmitOne, EmitBatchNonStackModified(OpCode store, OpCode load, byte value), etc. method overloads 
                     // 
                     // if (ilLength + 7 < ilStream.Length)
                     // {

@@ -11,6 +11,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            // new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run();
+
             // new FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue316_in_parameter().Run();
 
