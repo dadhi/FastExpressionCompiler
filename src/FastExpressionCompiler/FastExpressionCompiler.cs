@@ -655,7 +655,7 @@ namespace FastExpressionCompiler
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
 
-            public void AddConstantOrIncrementUsageCount(object value, Type type)
+            public bool AddConstantOrIncrementUsageCount(object value)
             {
                 Status |= ClosureStatus.HasClosure;
 
@@ -673,6 +673,7 @@ namespace FastExpressionCompiler
                 {
                     ++ConstantUsageThenVarIndex.Items[constIndex];
                 }
+                return true; // don't ask, just for fluency
             }
 
             public void AddNonPassedParam(ParameterExpression expr)
@@ -1099,13 +1100,8 @@ namespace FastExpressionCompiler
 #endif
                         var constantExpr = (ConstantExpression)expr;
                         var value = constantExpr.Value;
-                        if (value != null)
-                        {
-                            // todo: @perf find the way to speed-up this
-                            var valueType = value.GetType();
-                            if (IsClosureBoundConstant(value, valueType))
-                                closure.AddConstantOrIncrementUsageCount(value, valueType);
-                        }
+                        if (value != null && IsClosureBoundConstant(value, value.GetType()))
+                            closure.AddConstantOrIncrementUsageCount(value);
                         return true;
 
                     case ExpressionType.Parameter:
@@ -3081,10 +3077,12 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitConstantOfNotNullValue(
+            public static bool TryEmitConstantOfNotNullValue(
                 bool considerClosure, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
             {
                 var constValueType = constantValue.GetType();
+                if (exprType == null)
+                    exprType = constValueType;
                 if (considerClosure && IsClosureBoundConstant(constantValue, constValueType))
                 {
                     var constItems = closure.Constants.Items;
@@ -3106,15 +3104,15 @@ namespace FastExpressionCompiler
                             if (byRefIndex != -1)
                                 EmitStoreAndLoadLocalVariableAddress(il, exprType);
                         }
+#if NETFRAMEWORK
                         else
                         {
-                            // this is probably required only for Full CLR starting from NET45, e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`
-                            // .NET Core does not seem to care about verifiability and it's faster without the explicit cast
-#if NETFRAMEWORK
+                            // The cast probably required only for Full CLR starting from NET45, 
+                            // e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`.
+                            // .NET Core does not seem to care about verifiability and it's faster without the explicit cast.
                             il.Emit(OpCodes.Castclass, exprType);
-#endif
-                            
                         }
+#endif
                     }
                 }
                 else
@@ -3136,16 +3134,15 @@ namespace FastExpressionCompiler
                         return false;
                 }
 
+                // todo: @simplify optimize this together with closure bound constant handling above
                 if (exprType.IsValueType)
                 {
-                    var underlyingNullableType = Nullable.GetUnderlyingType(exprType);
-                    if (underlyingNullableType != null)
+                    if (exprType.IsNullable())
                         il.Emit(OpCodes.Newobj, exprType.GetConstructors().GetFirst());
                 }
+                // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
                 else if (exprType == typeof(object) && constValueType.IsValueType)
-                    // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
-                    il.Emit(OpCodes.Box, constantValue.GetType()); // using normal type for Enum instead of underlying type
-
+                    il.Emit(OpCodes.Box, constValueType); // using normal type for Enum instead of underlying type
                 return true;
             }
 
@@ -5487,7 +5484,8 @@ namespace FastExpressionCompiler
 
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
-            var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            // conversion operators should be declared as static and public 
+            var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public);
             for (var i = 0; i < methods.Length; i++)
             {
                 var m = methods[i];

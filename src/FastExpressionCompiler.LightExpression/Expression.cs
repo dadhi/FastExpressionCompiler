@@ -51,9 +51,21 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>All expressions should have a Type.</summary>
         public abstract Type Type { get; }
 
+        /// <summary>You may use it whatever you like overloading for the specific value in your custom expression.</summary>
+        public virtual object Tag => null;
+
+        /// <summary>Allows to overwrite the FEC stages to customize and optimize 
+        /// the expression constant(label, blocks, tries) collection and il emitting phase</summary>
         public virtual bool IsIntrinsic => false;
+        /// <summary>The first FEC stage of expression traversal where closure information is collected including the 
+        /// constant and the nested lambdas. Beside that the labels, block and try-catch information is also collected
+        /// for the next IL-emitting stage. The information regarding the currently traversed lambda expression
+        /// is accumulated in the `closure` structure. The `rootClosure` hold the first lambda expression info
+        /// for any nested lambda expression, which is indicated by `isNestedLambda`.</summary>
         public virtual bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
             bool isNestedLambda, ref ClosureInfo rootClosure) => false;
+        /// <summary>The second FEC state to emit the actual IL op-codes based on the information collected by the first traversal
+        /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
         public virtual bool TryEmit(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
 
@@ -184,11 +196,7 @@ namespace FastExpressionCompiler.LightExpression
         public static ConstantExpression Constant(object value, Type type)
         {
             if (value == null)
-            {
-                if (type == typeof(object))
-                    return NullConstant;
-                return new TypedNullConstantExpression(type);
-            }
+                return ConstantNull(type);
 
             if (type == typeof(bool))
                 return (bool)value ? TrueConstant : FalseConstant;
@@ -198,6 +206,10 @@ namespace FastExpressionCompiler.LightExpression
 
             return new TypedValueConstantExpression(value, type);
         }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static ConstantExpression ConstantNull(Type type = null) => 
+            type == null || type == typeof(object) ? NullConstant : new TypedNullConstantExpression(type);
 
         [MethodImpl((MethodImplOptions)256)]
         public static ConstantExpression ConstantNull<T>() => new NullConstantExpression<T>();
@@ -1082,7 +1094,7 @@ namespace FastExpressionCompiler.LightExpression
             new ManyArgumentsElementInit(addMethod, arguments.AsReadOnlyList());
 
         public static InvocationExpression Invoke(LambdaExpression expression) =>
-            new InvocationExpression(expression);
+            new NotNullExpressionInvocationExpression(expression);
 
         public static InvocationExpression Invoke(LambdaExpression expression, Expression a0) =>
             new OneArgumentInvocationExpression(expression, a0);
@@ -2308,7 +2320,11 @@ namespace FastExpressionCompiler.LightExpression
         {
             if (!EmittingVisitor.TryEmit(Operand, paramExprs, il, ref closure, config, parent, byRefIndex))
                 return false;
+#if NETFRAMEWORK
+            // The cast is required only for Full CLR starting from NET45, e.g.
+            // .NET Core does not seem to care about verifiability and it's faster without the explicit cast
             il.Emit(OpCodes.Castclass, Type);
+#endif
             return true;
         }
     }
@@ -2843,7 +2859,7 @@ namespace FastExpressionCompiler.LightExpression
             Argument = argument;
     }
 
-    public class NoByRefOneArgumentNewExpression : OneArgumentNewExpression
+    public sealed class NoByRefOneArgumentNewExpression : OneArgumentNewExpression
     {
         public override bool NoByRefArgs => true;
         internal NoByRefOneArgumentNewExpression(ConstructorInfo constructor, Expression argument) : base(constructor, argument) { }
@@ -2872,7 +2888,7 @@ namespace FastExpressionCompiler.LightExpression
         }
     }
 
-    public class NoByRefTwoArgumentsNewExpression : TwoArgumentsNewExpression
+    public sealed class NoByRefTwoArgumentsNewExpression : TwoArgumentsNewExpression
     {
         public override bool NoByRefArgs => true;
         internal NoByRefTwoArgumentsNewExpression(ConstructorInfo constructor, Expression a0, Expression a1) : base(constructor, a0, a1) { }
@@ -3341,7 +3357,6 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class InstanceThreeArgumentsMethodCallExpression : ThreeArgumentsMethodCallExpression
     {
         public override Expression Object { get; }
-
         internal InstanceThreeArgumentsMethodCallExpression(Expression instance, MethodInfo method,
             Expression a0, Expression a1, Expression a2) : base(method, a0, a1, a2) => Object = instance;
     }
@@ -3363,7 +3378,6 @@ namespace FastExpressionCompiler.LightExpression
     public sealed class InstanceFourArgumentsMethodCallExpression : FourArgumentsMethodCallExpression
     {
         public override Expression Object { get; }
-
         internal InstanceFourArgumentsMethodCallExpression(Expression instance, MethodInfo method,
             Expression argument0, Expression argument1, Expression argument2, Expression argument3)
             : base(method, argument0, argument1, argument2, argument3) => Object = instance;
@@ -3538,11 +3552,10 @@ namespace FastExpressionCompiler.LightExpression
     {
         public sealed override ExpressionType NodeType => ExpressionType.Invoke;
         public override Type Type => ((LambdaExpression)Expression).ReturnType;
-        public readonly Expression Expression;
+        public virtual Expression Expression => null;
         public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
         public virtual int ArgumentCount => 0;
         public virtual Expression GetArgument(int index) => throw new NotImplementedException();
-        internal InvocationExpression(Expression expression) => Expression = expression;
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
 #endif
@@ -3550,14 +3563,20 @@ namespace FastExpressionCompiler.LightExpression
             SysExpr.Invoke(Expression.ToExpression(ref exprsConverted), ToExpressions(Arguments, ref exprsConverted));
     }
 
-    public sealed class TypedInvocationExpression : InvocationExpression
+    public class NotNullExpressionInvocationExpression : InvocationExpression
+    {
+        public sealed override Expression Expression { get; }
+        internal NotNullExpressionInvocationExpression(Expression expression) => Expression = expression;
+    }
+
+    public sealed class TypedInvocationExpression : NotNullExpressionInvocationExpression
     {
         public override Type Type { get; }
         internal TypedInvocationExpression(Expression expression, Type type) : base(expression) =>
             Type = type;
     }
 
-    public class OneArgumentInvocationExpression : InvocationExpression
+    public class OneArgumentInvocationExpression : NotNullExpressionInvocationExpression
     {
         public readonly Expression Argument;
         public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument };
@@ -3574,7 +3593,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(expression, argument) => Type = type;
     }
 
-    public class TwoArgumentsInvocationExpression : InvocationExpression
+    public class TwoArgumentsInvocationExpression : NotNullExpressionInvocationExpression
     {
         public readonly Expression Argument0, Argument1;
         public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
@@ -3592,7 +3611,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(expression, a0, a1) => Type = type;
     }
 
-    public class ThreeArgumentsInvocationExpression : InvocationExpression
+    public class ThreeArgumentsInvocationExpression : NotNullExpressionInvocationExpression
     {
         public readonly Expression Argument0, Argument1, Argument2;
         public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
@@ -3610,7 +3629,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(expression, a0, a1, a2) => Type = type;
     }
 
-    public class FourArgumentsInvocationExpression : InvocationExpression
+    public class FourArgumentsInvocationExpression : NotNullExpressionInvocationExpression
     {
         public readonly Expression Argument0, Argument1, Argument2, Argument3;
         public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
@@ -3630,7 +3649,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(expression, a0, a1, a2, a3) => Type = type;
     }
 
-    public class FiveArgumentsInvocationExpression : InvocationExpression
+    public class FiveArgumentsInvocationExpression : NotNullExpressionInvocationExpression
     {
         public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4;
         public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
@@ -3650,7 +3669,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(expression, a0, a1, a2, a3, a4) => Type = type;
     }
 
-    public class SixArgumentsInvocationExpression : InvocationExpression
+    public class SixArgumentsInvocationExpression : NotNullExpressionInvocationExpression
     {
         public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4, Argument5;
         public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5 };
@@ -3670,7 +3689,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(expression, a0, a1, a2, a3, a4, a5) => Type = type;
     }
 
-    public class ManyArgumentsInvocationExpression : InvocationExpression
+    public class ManyArgumentsInvocationExpression : NotNullExpressionInvocationExpression
     {
         public sealed override IReadOnlyList<Expression> Arguments { get; }
         public sealed override int ArgumentCount => Arguments.Count;
