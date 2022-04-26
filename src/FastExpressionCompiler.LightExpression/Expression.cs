@@ -218,7 +218,8 @@ namespace FastExpressionCompiler.LightExpression
         public static ConstantExpression ConstantInt(int value) => new IntConstantExpression(value);
 
         [MethodImpl((MethodImplOptions)256)]
-        public static ConstantExpression ConstantOf<T>(T value) => new ValueConstantExpression<T>(value);
+        public static ConstantExpression ConstantOf<T>(T value) => 
+            ReferenceEquals(value, null) ? ConstantNull<T>() : new ValueConstantExpression<T>(value);
 
         [MethodImpl((MethodImplOptions)256)]
         public static int TryGetIntConstantValue(Expression e) => ((IntConstantExpression)e).IntValue;

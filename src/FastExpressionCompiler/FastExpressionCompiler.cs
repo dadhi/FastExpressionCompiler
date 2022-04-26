@@ -6378,6 +6378,8 @@ namespace FastExpressionCompiler
                         else if (args.Count > 1)
                             for (var i = 0; i < args.Count; i++)
                             {
+                                // @debug
+                                // sb.Append($"[lineIdent:{lineIdent}]");
                                 (i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent);
                                 args[i].ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, tryPrintConstant);
                             }
@@ -6428,6 +6430,8 @@ namespace FastExpressionCompiler
                                 if (p.ParameterType.IsByRef)
                                     sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
 
+                                // @debug
+                                // sb.Append($"[lineIdent:{lineIdent}]");
                                 args[i].ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, tryPrintConstant);
                             }
                         }
@@ -6439,7 +6443,7 @@ namespace FastExpressionCompiler
                         if (x.Expression != null)
                             x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
                         else
-                            sb.NewLineIdent(lineIdent).Append(x.Member.DeclaringType.ToCode(stripNamespace, printType));
+                            sb.Append(x.Member.DeclaringType.ToCode(stripNamespace, printType));
                         return sb.Append('.').Append(x.Member.GetCSharpName());
                     }
                 case ExpressionType.NewArrayBounds:
@@ -7430,10 +7434,20 @@ namespace FastExpressionCompiler
         public static string ToCode(this string x) =>
             x == null ? "null" : $"\"{x.Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n")}\"";
 
+        private static readonly char[] _enumValueSeparators = new[] {',', ' '};
+
         /// <summary>Prints valid C# Enum literal</summary>
         public static string ToEnumValueCode(this Type enumType, object x,
-            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-            $"{enumType.ToCode(stripNamespace, printType)}.{Enum.GetName(enumType, x)}";
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
+            var typeDotStr = enumType.ToCode(stripNamespace, printType) + ".";
+            var valueStr = x.ToString();
+            var flags = valueStr.Split(_enumValueSeparators, StringSplitOptions.RemoveEmptyEntries);
+            if (flags.Length == 1)
+                return typeDotStr + valueStr;
+            var orTypeDot = "|" + typeDotStr;
+            return typeDotStr + string.Join(orTypeDot, flags);
+        }
 
         private static Type[] GetGenericTypeParametersOrArguments(this TypeInfo typeInfo) =>
             typeInfo.IsGenericTypeDefinition ? typeInfo.GenericTypeParameters : typeInfo.GenericTypeArguments;
