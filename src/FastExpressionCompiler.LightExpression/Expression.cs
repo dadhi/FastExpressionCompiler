@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.LightExpression
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-    /// <summary>The base class and the Factpry methods provider for the Expression.</summary>
+    /// <summary>The base class and the Factory methods provider for the Expression.</summary>
     public abstract class Expression
     {
         /// <summary>Expression node type.</summary>
