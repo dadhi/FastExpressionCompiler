@@ -12,34 +12,9 @@ namespace FastExpressionCompiler.UnitTests
             RunAllTests();
 
             // new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run();
-
-            // new FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue316_in_parameter().Run();
-
-            // new Issue314_LiftToNull_ToExpressionString().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue314_LiftToNull_ToExpressionString().Run();
-
-            // new Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue308_Wrong_delegate_type_returned_with_closure().Run();
-
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue222_Make_AutoMapper_FEC_branch_to_pass_all_the_tests().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
-            // new FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests().Run();
-            // new FastExpressionCompiler.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run();
-            // new FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue181_TryEmitIncDecAssign_InvalidCastException().Run();
 #if NETCOREAPP3_1
             // new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
 #endif
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue293_Recursive_Methods().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue159_NumericConversions().Run();
-            // new FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests().Run();
-            //new FastExpressionCompiler.LightExpression.IssueTests.Issue284_Invalid_Program_after_Coalesce().Run();
         }
 
         public static void RunAllTests()
@@ -253,6 +228,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run);
+
+                Run(new Issue322_NullableIntArgumentWithDefaultIntValue().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue322_NullableIntArgumentWithDefaultIntValue().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
