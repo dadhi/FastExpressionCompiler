@@ -132,19 +132,19 @@ Compiling expression:
 
 |                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |---------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                     Compile | 148.633 us | 1.4863 us | 1.2411 us | 33.20 |    1.05 | 0.9766 | 0.4883 |      - |   4.78 KB |
-|                 CompileFast |   4.498 us | 0.0887 us | 0.1022 us |  1.02 |    0.04 | 0.3510 | 0.1755 | 0.0305 |   1.46 KB |
-| CompileFast_LightExpression |   4.365 us | 0.0860 us | 0.1364 us |  1.00 |    0.00 | 0.3433 | 0.1678 | 0.0305 |   1.42 KB |
+|                     Compile | 179.266 us | 3.5687 us | 7.2089 us | 39.11 |    2.15 | 1.4648 | 0.7324 |      - |   4.74 KB |
+|                 CompileFast |   4.791 us | 0.0955 us | 0.2307 us |  1.04 |    0.06 | 0.4578 | 0.2289 | 0.0305 |   1.41 KB |
+| CompileFast_LightExpression |   4.636 us | 0.0916 us | 0.1531 us |  1.00 |    0.00 | 0.4425 | 0.2213 | 0.0305 |   1.38 KB |
 
 
 Invoking the compiled delegate compared to the normal delegate and the direct call:
 
-|                             Method |     Mean |    Error |   StdDev | Ratio |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|----------------------------------- |---------:|---------:|---------:|------:|-------:|------:|------:|----------:|
-|                   DirectLambdaCall | 11.86 ns | 0.140 ns | 0.131 ns |  1.00 | 0.0076 |     - |     - |      32 B |
-|                     CompiledLambda | 13.44 ns | 0.115 ns | 0.096 ns |  1.13 | 0.0076 |     - |     - |      32 B |
-|                 FastCompiledLambda | 12.43 ns | 0.173 ns | 0.154 ns |  1.05 | 0.0076 |     - |     - |      32 B |
-| FastCompiledLambda_LightExpression | 11.87 ns | 0.121 ns | 0.101 ns |  1.00 | 0.0076 |     - |     - |      32 B |
+|                             Method |     Mean |    Error |   StdDev |   Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|----------------------------------- |---------:|---------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+|                   DirectLambdaCall | 13.72 ns | 0.274 ns | 0.500 ns | 13.62 ns |  1.05 |    0.06 | 0.0102 |     - |     - |      32 B |
+|                     CompiledLambda | 17.12 ns | 1.006 ns | 2.950 ns | 15.78 ns |  1.24 |    0.15 | 0.0102 |     - |     - |      32 B |
+|                 FastCompiledLambda | 12.87 ns | 0.164 ns | 0.128 ns | 12.88 ns |  0.97 |    0.03 | 0.0102 |     - |     - |      32 B |
+| FastCompiledLambda_LightExpression | 13.11 ns | 0.258 ns | 0.471 ns | 13.01 ns |  1.00 |    0.00 | 0.0102 |     - |     - |      32 B |
 
 
 ### FastExpressionCompiler.LightExpression.Expression vs System.Linq.Expressions.Expression

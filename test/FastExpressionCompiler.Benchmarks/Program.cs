@@ -68,8 +68,8 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
 
             // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>();
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
+            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
+            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
         }
     }
 }
