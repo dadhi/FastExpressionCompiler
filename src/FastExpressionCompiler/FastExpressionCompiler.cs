@@ -655,7 +655,7 @@ namespace FastExpressionCompiler
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
 
-            public void AddConstantOrIncrementUsageCount(object value, Type type)
+            public void AddConstantOrIncrementUsageCount(object value)
             {
                 Status |= ClosureStatus.HasClosure;
 
@@ -1099,13 +1099,8 @@ namespace FastExpressionCompiler
 #endif
                         var constantExpr = (ConstantExpression)expr;
                         var value = constantExpr.Value;
-                        if (value != null)
-                        {
-                            // todo: @perf find the way to speed-up this
-                            var valueType = value.GetType();
-                            if (IsClosureBoundConstant(value, valueType))
-                                closure.AddConstantOrIncrementUsageCount(value, valueType);
-                        }
+                        if (value != null && IsClosureBoundConstant(value, value.GetType()))
+                            closure.AddConstantOrIncrementUsageCount(value);
                         return true;
 
                     case ExpressionType.Parameter:
@@ -3138,14 +3133,12 @@ namespace FastExpressionCompiler
 
                 if (exprType.IsValueType)
                 {
-                    var underlyingNullableType = Nullable.GetUnderlyingType(exprType);
-                    if (underlyingNullableType != null)
+                    if (exprType.IsNullable())
                         il.Emit(OpCodes.Newobj, exprType.GetConstructors().GetFirst());
                 }
+                // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
                 else if (exprType == typeof(object) && constValueType.IsValueType)
-                    // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
-                    il.Emit(OpCodes.Box, constantValue.GetType()); // using normal type for Enum instead of underlying type
-
+                    il.Emit(OpCodes.Box, constValueType); // using normal type for Enum instead of underlying type
                 return true;
             }
 
