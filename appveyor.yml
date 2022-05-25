@@ -16,7 +16,7 @@ build_script:
 for:
   - matrix:
       only:
-        - image: Visual Studio 2019
+        - image: Visual Studio 2022
 
     build_script:
       - build_with_packaging.bat

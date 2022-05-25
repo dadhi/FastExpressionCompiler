@@ -219,6 +219,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run);
 
+                Run(new Issue322_NullableIntArgumentWithDefaultIntValue().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue322_NullableIntArgumentWithDefaultIntValue().Run);
+
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.LightExpression.src</id>
-        <version>3.2.2</version>
+        <version>3.3.0</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2022 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,98 +12,16 @@
         <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <releaseNotes><![CDATA[
-## v3.2.2 Bug-fix release
 
-- fixed: #284 Invalid Program after Coalesce
-- fixed: #308 Wrong delegate type returned (with closure)
-- fixed: #310 InvalidProgramException when nullable result is ignored
-- fixed: #316 in parameter
-- fixed: #319 NRE in IndexExpression.get_ArgumentCount
-- fixed: #320 "Bad label content in ILGenerator" when creating through DynamicModule
-- fixed: #321 Call with out parameter to field type that is not value type fails
+## v3.3.0 Feature and bug-fix release
 
-## v3.2.1 Bug-fix release
-
-- fixed: #307 Switch with fall through throws "System.InvalidProgramException: 'Common Language Runtime detected an invalid program.'"
-
-## v3.2.0 Bug-fix and optimization release
-
-- fixed: #305 CompileFast generates incorrect code with arrays and printing
-- fixed: added missing Expression.MakeCatchBlock
-- optimized: memory of Expression of T
-- optimized: for the custom MethodCallExpression
-- optimized: adding the ConstantInt and ConstantOf without boxing and null constant with the less space
-
-
-## v3.1.0 Feature and bug-fix release
-
-- added: #297 Add custom Constant to string output in the ToCSharpString and ToExpressionString
-- added: #303 Add CompilerFlags.ThrowOnNotSupportedException and throw NotSupportedExpressionException when the flag is passed to CompileFast
-- fixed: #301 Another case of the InvalidOperationException in the Mapster
-- fixed: ListInit compilation for the Dictionary
-- fixed: the lookup for the non-public property setter
-
-
-## v3.0.5 Bug-fix release
-
-- fixed: another case in #301 InvalidOperationException in the Mapster
-- fixed: multiple problems with the TryCatch C# and Expression string output
-
-
-## v3.0.4 Bug-fix release
-
-- fixed: #302 Error compiling expression with array access
-
-
-## v3.0.3 Bug-fix release
-
-- fixed: #301 InvalidOperationException in the Mapster
-- fixed: small bugs in the Lambda ToCSharpString output
-
-
-## v3.0.2 Bug-fix release
-
-- fixed:  #300 Bad label content in ILGenerator in the Mapster benchmark with FEC V3
-- fixed: Small issues with the `ToCSharpString()`, specifically in the TryCatch, and the Goto, and the Label expressions
-
-
-## v3.0.1 Bug-fix release
-
-fixed: #298 LightExpression with the NewExpression of 4 arguments has ArgumentCount = 3
-
-
-## v3.0.0 - Major feature release
-
-This version contains a lot of fixes and improvements and as-little-as-possible breaking changes.
-
-### **FastExpressionCompiler** and **FastExpressionCompiler.LightExpression**
-
-
-- Performance and memory consumption are improved, especially for the expressions with the closure and for expressions with the nested lambdas.
-- More expression types are supported.
-- Many fixes in the IL Emit.
-- Added `ToCSharpString()` extension method to output the compile-able C# code described by the expression (tries hard).
-- Added `ToExpressionString()` extension method to output the valid expression construction syntax, so given an expression object you'll get e.g. `Lambda(New(...))`.
-- Added optional `enum CompilerFlags { Default, NoInvocationLambdaInlining, EnableDelegateDebugInfo}` parameter for the compilation 
-- `EnableDelegateDebugInfo` adds the diagnostic info into the compiled delegate including its source Expression and C# code. Can be used as following: 
-```cs
-    var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-    var di = f.Target as IDelegateDebugInfo;
-    Assert.IsNotNull(di.Expression);
-    Assert.IsNotNull(di.ExpressionString);
-    Assert.IsNotNull(di.CSharpString);
-```
-
-### **FastExpressionCompiler.LightExpression**
-
-- Now includes the `ExpressionVisitor`.
-- Improves the compatibility (the drop-in replacement) between the `FastExpressionCompiler.LightExpression.Expression` and the `System.Linq.Expression`.
-- Decreasing the memory consumed by the created expressions partially via implementing the `IArgumentProvider` and `IParameterProvider` for some expressions.
-
-
-### The full list of the closed issues
-
-[Milestone v3.0.0](https://github.com/dadhi/FastExpressionCompiler/milestone/19)
+- added: #235 [GodMode] Expression to IL intrinsic
+- added: #325 Add LightExpression.NewNoByRefArgs overloads for performance
+- added: #327 Replace direct il.Emit(OpCodes.Call, ...) with EmitMethodCall
+- added: #329 Optimize special case compilation for New and Call with no arguments
+- added: #330 Optimize nested lambda ClosureInfo memory footprint
+- fixed: #324 The LightExpression.New of IEnumerable is recursive
+- fixed: #328 Fix the performance of TryEmitConvert to String
 
         ]]></releaseNotes>
         <contentFiles>

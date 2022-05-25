@@ -658,7 +658,6 @@ namespace FastExpressionCompiler
             public void AddConstantOrIncrementUsageCount(object value)
             {
                 Status |= ClosureStatus.HasClosure;
-
                 var constItems = Constants.Items;
                 var constIndex = Constants.Count - 1;
                 while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], value))
@@ -3076,10 +3075,12 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitConstantOfNotNullValue(
+            public static bool TryEmitConstantOfNotNullValue(
                 bool considerClosure, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
             {
                 var constValueType = constantValue.GetType();
+                if (exprType == null)
+                    exprType = constValueType;
                 if (considerClosure && IsClosureBoundConstant(constantValue, constValueType))
                 {
                     var constItems = closure.Constants.Items;
@@ -3101,15 +3102,15 @@ namespace FastExpressionCompiler
                             if (byRefIndex != -1)
                                 EmitStoreAndLoadLocalVariableAddress(il, exprType);
                         }
+#if NETFRAMEWORK
                         else
                         {
-                            // this is probably required only for Full CLR starting from NET45, e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`
-                            // .NET Core does not seem to care about verifiability and it's faster without the explicit cast
-#if NETFRAMEWORK
+                            // The cast probably required only for Full CLR starting from NET45, 
+                            // e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`.
+                            // .NET Core does not seem to care about verifiability and it's faster without the explicit cast.
                             il.Emit(OpCodes.Castclass, exprType);
-#endif
-                            
                         }
+#endif
                     }
                 }
                 else
@@ -3131,6 +3132,7 @@ namespace FastExpressionCompiler
                         return false;
                 }
 
+                // todo: @simplify optimize this together with closure bound constant handling above
                 if (exprType.IsValueType)
                 {
                     if (exprType.IsNullable())
@@ -6374,6 +6376,8 @@ namespace FastExpressionCompiler
                         else if (args.Count > 1)
                             for (var i = 0; i < args.Count; i++)
                             {
+                                // @debug
+                                // sb.Append($"[lineIdent:{lineIdent}]");
                                 (i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent);
                                 args[i].ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, tryPrintConstant);
                             }
@@ -6424,6 +6428,8 @@ namespace FastExpressionCompiler
                                 if (p.ParameterType.IsByRef)
                                     sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
 
+                                // @debug
+                                // sb.Append($"[lineIdent:{lineIdent}]");
                                 args[i].ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, tryPrintConstant);
                             }
                         }
@@ -6435,7 +6441,7 @@ namespace FastExpressionCompiler
                         if (x.Expression != null)
                             x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
                         else
-                            sb.NewLineIdent(lineIdent).Append(x.Member.DeclaringType.ToCode(stripNamespace, printType));
+                            sb.Append(x.Member.DeclaringType.ToCode(stripNamespace, printType));
                         return sb.Append('.').Append(x.Member.GetCSharpName());
                     }
                 case ExpressionType.NewArrayBounds:
@@ -7426,10 +7432,20 @@ namespace FastExpressionCompiler
         public static string ToCode(this string x) =>
             x == null ? "null" : $"\"{x.Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n")}\"";
 
+        private static readonly char[] _enumValueSeparators = new[] {',', ' '};
+
         /// <summary>Prints valid C# Enum literal</summary>
         public static string ToEnumValueCode(this Type enumType, object x,
-            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
-            $"{enumType.ToCode(stripNamespace, printType)}.{Enum.GetName(enumType, x)}";
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
+            var typeDotStr = enumType.ToCode(stripNamespace, printType) + ".";
+            var valueStr = x.ToString();
+            var flags = valueStr.Split(_enumValueSeparators, StringSplitOptions.RemoveEmptyEntries);
+            if (flags.Length == 1)
+                return typeDotStr + valueStr;
+            var orTypeDot = "|" + typeDotStr;
+            return typeDotStr + string.Join(orTypeDot, flags);
+        }
 
         private static Type[] GetGenericTypeParametersOrArguments(this TypeInfo typeInfo) =>
             typeInfo.IsGenericTypeDefinition ? typeInfo.GenericTypeParameters : typeInfo.GenericTypeArguments;
