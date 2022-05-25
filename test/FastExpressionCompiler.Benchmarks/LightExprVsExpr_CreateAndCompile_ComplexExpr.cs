@@ -90,30 +90,23 @@ namespace FastExpressionCompiler.Benchmarks
         |      CreateExpression_and_CompileFast |  16.02 us | 0.261 us | 0.232 us |  1.32 |    0.03 | 1.0376 | 0.5188 | 0.0305 |   6.53 KB |
         | CreateLightExpression_and_CompileFast |  12.07 us | 0.228 us | 0.272 us |  1.00 |    0.00 | 0.9003 | 0.4425 | 0.0305 |   5.58 KB |
 
-Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical cores
-.NET Core SDK=6.0.102
-[Host]     : .NET Core 6.0.2 (CoreCLR 6.0.222.6406, CoreFX 6.0.222.6406), X64 RyuJIT
-DefaultJob : .NET Core 6.0.2 (CoreCLR 6.0.222.6406, CoreFX 6.0.222.6406), X64 RyuJIT
 
+        ## v3.3.1
 
-|                                               Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|----------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                CreateLightExpression_and_CompileFast | 12.954 us | 0.2578 us | 0.3859 us |  1.00 |    0.00 | 1.8005 | 0.8850 | 0.0610 |    5.6 KB |
-| CreateLightExpression_and_CompileFast_with_intrinsic |  8.033 us | 0.1321 us | 0.1764 us |  0.62 |    0.02 | 0.8698 | 0.4272 | 0.0458 |   2.67 KB |        
+        |                                               Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+        |----------------------------------------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+        |                         CreateExpression_and_Compile | 541.65 us | 16.585 us | 47.048 us | 520.79 us | 33.98 |    3.97 | 1.9531 | 0.9766 |      - |   7.26 KB |
+        |                     CreateExpression_and_CompileFast |  23.51 us |  0.724 us |  2.102 us |  23.08 us |  1.47 |    0.17 | 1.2207 | 0.6104 | 0.0305 |   3.79 KB |
+        |                CreateLightExpression_and_CompileFast |  16.03 us |  0.430 us |  1.227 us |  15.50 us |  1.00 |    0.00 | 0.9155 | 0.4578 | 0.0305 |   2.84 KB |
+        | CreateLightExpression_and_CompileFast_with_intrinsic |  13.94 us |  0.629 us |  1.845 us |  13.37 us |  0.88 |    0.13 | 0.8545 | 0.4272 | 0.0305 |   2.64 KB |
 
-### Results after after a fix
-
-|                                               Method |     Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|----------------------------------------------------- |---------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                CreateLightExpression_and_CompileFast | 7.172 us | 0.1428 us | 0.1955 us |  1.00 |    0.00 | 0.4578 | 0.2289 | 0.0305 |   2.84 KB |
-| CreateLightExpression_and_CompileFast_with_intrinsic | 6.492 us | 0.1255 us | 0.1289 us |  0.91 |    0.03 | 0.4349 | 0.2136 | 0.0305 |   2.67 KB |
         */
 
-        // [Benchmark]
+        [Benchmark]
         public object CreateExpression_and_Compile() =>
             LightExpressionTests.CreateComplexExpression().Compile();
 
-        // [Benchmark]
+        [Benchmark]
         public object CreateExpression_and_CompileFast() =>
             LightExpressionTests.CreateComplexExpression().CompileFast();
 
@@ -134,29 +127,29 @@ DefaultJob : .NET Core 6.0.2 (CoreCLR 6.0.222.6406, CoreFX 6.0.222.6406), X64 Ry
 
                        Method  |       Mean |     Error |    StdDev | Ratio | RatioSD | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
         ---------------------- |-----------:|----------:|----------:|------:|--------:|------------:|------------:|------------:|--------------------:|
-             CreateExpression  | 3,574.7 ns | 8.0032 ns | 7.4862 ns |  9.18 |    0.02 |      0.2823 |           - |           - |              1344 B |
          CreateLightExpression |   389.5 ns | 0.9547 ns | 0.7972 ns |  1.00 |    0.00 |      0.1693 |           - |           - |               800 B |
+             CreateExpression  | 3,574.7 ns | 8.0032 ns | 7.4862 ns |  9.18 |    0.02 |      0.2823 |           - |           - |              1344 B |
 
         ## V3-preview-01
 
         |                Method |       Mean |    Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
         |---------------------- |-----------:|---------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-        |      CreateExpression | 2,805.2 ns | 55.57 ns | 107.06 ns |  4.76 |    0.32 | 0.3090 |     - |     - |    1304 B |
         | CreateLightExpression |   578.5 ns |  6.39 ns |   5.98 ns |  1.00 |    0.00 | 0.1678 |     - |     - |     704 B |
+        |      CreateExpression | 2,805.2 ns | 55.57 ns | 107.06 ns |  4.76 |    0.32 | 0.3090 |     - |     - |    1304 B |
 
         # V3-preview-02
 
         |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
         |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-        |      CreateExpression | 3,126.9 ns | 62.14 ns | 80.80 ns |  5.46 |    0.13 | 0.3052 |     - |     - |    1304 B |
         | CreateLightExpression |   578.4 ns |  8.07 ns |  7.54 ns |  1.00 |    0.00 | 0.1640 |     - |     - |     688 B |
+        |      CreateExpression | 3,126.9 ns | 62.14 ns | 80.80 ns |  5.46 |    0.13 | 0.3052 |     - |     - |    1304 B |
 
         # V3-preview-03
 
         |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
         |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-        |      CreateExpression | 3,351.7 ns | 59.81 ns | 55.94 ns | 10.03 |    0.23 | 0.3090 |     - |     - |    1304 B |
         | CreateLightExpression |   334.3 ns |  4.85 ns |  4.53 ns |  1.00 |    0.00 | 0.1316 |     - |     - |     552 B |
+        |      CreateExpression | 3,351.7 ns | 59.81 ns | 55.94 ns | 10.03 |    0.23 | 0.3090 |     - |     - |    1304 B |
 
         # V3-preview-05
 
@@ -166,19 +159,37 @@ DefaultJob : .NET Core 6.0.2 (CoreCLR 6.0.222.6406, CoreFX 6.0.222.6406), X64 Ry
         [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
         DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
 
-
         |                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
         |---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-        |      CreateExpression | 2,508.2 ns | 44.12 ns | 36.84 ns |  8.83 |    0.14 | 0.3128 |     - |     - |    1312 B |
         | CreateLightExpression |   284.2 ns |  5.19 ns |  4.85 ns |  1.00 |    0.00 | 0.1316 |     - |     - |     552 B |
+        |      CreateExpression | 2,508.2 ns | 44.12 ns | 36.84 ns |  8.83 |    0.14 | 0.3128 |     - |     - |    1312 B |
+
+        # V3.3.1
+
+        BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
+        Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical cores
+        .NET Core SDK=6.0.201
+        [Host]     : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
+        DefaultJob : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
+
+        |                                Method |       Mean |     Error |    StdDev |     Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+        |-------------------------------------- |-----------:|----------:|----------:|-----------:|------:|--------:|-------:|------:|------:|----------:|
+        |                      CreateExpression | 4,698.0 ns | 110.77 ns | 317.81 ns | 4,623.0 ns |  7.99 |    0.85 | 0.4501 |     - |     - |    1416 B |
+        |                 CreateLightExpression |   591.2 ns |  15.42 ns |  44.98 ns |   580.7 ns |  1.00 |    0.00 | 0.1574 |     - |     - |     496 B |
+        | CreateLightExpression_with_intrinsics |   580.2 ns |  16.95 ns |  48.08 ns |   565.0 ns |  0.98 |    0.10 | 0.1554 |     - |     - |     488 B |
 
         */
+
+        [Benchmark]
+        public object CreateExpression() =>
+            LightExpressionTests.CreateComplexExpression();
+
         [Benchmark(Baseline = true)]
         public object CreateLightExpression() =>
             LightExpressionTests.CreateComplexLightExpression();
 
         [Benchmark]
-        public object CreateExpression() =>
-            LightExpressionTests.CreateComplexExpression();
+        public object CreateLightExpression_with_intrinsics() =>
+            LightExpressionTests.CreateComplexLightExpression_with_intrinsics();
     }
 }

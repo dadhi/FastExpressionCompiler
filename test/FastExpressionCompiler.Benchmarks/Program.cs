@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.Benchmarks
             // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
             // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();
             
-            BenchmarkRunner.Run<ReflectionInvoke_vs_CallWithObjectArgsAndNestedLambda>();
+            // BenchmarkRunner.Run<ReflectionInvoke_vs_CallWithObjectArgsAndNestedLambda>();
             
             //BenchmarkRunner.Run<GenericConverter.Compilation>();
             //BenchmarkRunner.Run<GenericConverter.Invocation>();
@@ -51,7 +51,7 @@ namespace FastExpressionCompiler.Benchmarks
             
             // BenchmarkRunner.Run<Deserialize_Simple>();
 
-            // BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
+            BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
             // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
 
             //BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_NestedLambdaExpr>();
@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.Benchmarks
             // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
             // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
-            BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
+            // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
             // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Invoke>();

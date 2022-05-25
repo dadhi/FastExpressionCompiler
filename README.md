@@ -13,7 +13,7 @@
 [Lamar]: https://github.com/JasperFx/lamar
 [NServiceBus]: https://github.com/Particular/NServiceBus/pull/5071
 
-[LINQ to DB]: https://github.com/linq2db/linq2db/pull/1277
+[LINQ2DB]: https://github.com/linq2db/linq2db/pull/1277
 [Moq]: https://github.com/moq/moq4/issues/504#issuecomment-406714210
 [Apex.Serialization]: https://github.com/dbolin/Apex.Serialization
 [MapsterMapper]: https://github.com/MapsterMapper/Mapster 
@@ -172,20 +172,30 @@ Hopefully you are checking the expression arguments yourself and not waiting for
 
 [Sample expression](https://github.com/dadhi/FastExpressionCompiler/blob/6da130c62f6adaa293f34a1a0c19ea4522f9c989/test/FastExpressionCompiler.LightExpression.UnitTests/LightExpressionTests.cs#L167)
 
-Creating the expression:
 
-|                Method |       Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|---------------------- |-----------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-|      CreateExpression | 2,508.2 ns | 44.12 ns | 36.84 ns |  8.83 |    0.14 | 0.3128 |     - |     - |    1312 B |
-| CreateLightExpression |   284.2 ns |  5.19 ns |  4.85 ns |  1.00 |    0.00 | 0.1316 |     - |     - |     552 B |
+```md
+BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
+Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical cores
+.NET Core SDK=6.0.201
+  [Host]     : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
+  DefaultJob : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
+```
+
+Creating the expression:
+|                                Method |       Mean |     Error |    StdDev |     Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|-------------------------------------- |-----------:|----------:|----------:|-----------:|------:|--------:|-------:|------:|------:|----------:|
+|                      CreateExpression | 4,698.0 ns | 110.77 ns | 317.81 ns | 4,623.0 ns |  7.99 |    0.85 | 0.4501 |     - |     - |    1416 B |
+|                 CreateLightExpression |   591.2 ns |  15.42 ns |  44.98 ns |   580.7 ns |  1.00 |    0.00 | 0.1574 |     - |     - |     496 B |
+| CreateLightExpression_with_intrinsics |   580.2 ns |  16.95 ns |  48.08 ns |   565.0 ns |  0.98 |    0.10 | 0.1554 |     - |     - |     488 B |
 
 Creating and compiling:
 
-|                                Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|-------------------------------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
-|          CreateExpression_and_Compile | 244.61 us | 4.700 us | 6.111 us | 17.92 |    0.50 | 1.7090 | 0.7324 |      - |    7.2 KB |
-|      CreateExpression_and_CompileFast |  17.69 us | 0.350 us | 0.443 us |  1.31 |    0.04 | 1.8005 | 0.8850 | 0.0305 |   7.36 KB |
-| CreateLightExpression_and_CompileFast |  13.50 us | 0.152 us | 0.143 us |  1.00 |    0.00 | 1.5869 | 0.7935 | 0.0305 |   6.58 KB |
+|                                                Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------------------------------------------------ |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                          CreateExpression_and_Compile | 541.65 us | 16.585 us | 47.048 us | 520.79 us | 33.98 |    3.97 | 1.9531 | 0.9766 |      - |   7.26 KB |
+|                      CreateExpression_and_CompileFast |  23.51 us |  0.724 us |  2.102 us |  23.08 us |  1.47 |    0.17 | 1.2207 | 0.6104 | 0.0305 |   3.79 KB |
+|                 CreateLightExpression_and_CompileFast |  16.03 us |  0.430 us |  1.227 us |  15.50 us |  1.00 |    0.00 | 0.9155 | 0.4578 | 0.0305 |   2.84 KB |
+| CreateLightExpression_and_CompileFast_with_intrinsics |  13.94 us |  0.629 us |  1.845 us |  13.37 us |  0.88 |    0.13 | 0.8545 | 0.4272 | 0.0305 |   2.64 KB |
 
 
 ## Difference between FastExpressionCompiler and FastExpressionCompiler.LightExpression
@@ -209,9 +219,9 @@ Both FastExpressionCompiler and FastExpressionCompiler.LightExpression
 
 ## Who's using it
 
-[Marten], [Rebus], [StructureMap], [Lamar], [ExpressionToCodeLib], [NServiceBus], [MapsterMapper]
+[Marten], [Rebus], [StructureMap], [Lamar], [ExpressionToCodeLib], [NServiceBus], [LINQ2DB], [MapsterMapper]
 
-Considering: [Moq], [LINQ to DB], [Apex.Serialization]
+Considering: [Moq], [Apex.Serialization]
 
 
 ## How to use

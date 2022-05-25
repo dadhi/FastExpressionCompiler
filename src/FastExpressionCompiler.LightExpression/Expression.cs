@@ -118,29 +118,18 @@ namespace FastExpressionCompiler.LightExpression
             return result;
         }
 
-        public static ParameterExpression Parameter(Type type, string name = null)
-        {
-            if (type.IsByRef)
-                return new ByRefParameterExpression(type.GetElementType(), name);
-            if (type == typeof(object))   // often used in the reflection scenarios
-                return new ParameterExpression(name);
-            if (type == typeof(object[])) // often used in the reflection scenarios
-                return new TypedParameterExpression<object[]>(name);
-            return new TypedParameterExpression(type, name);
-        }
+        [MethodImpl((MethodImplOptions)256)]
+        public static ParameterExpression Parameter(Type type, string name = null) =>
+            type.IsByRef ? new ByRefParameterExpression(type.GetElementType(), name) :
+            type.IsEnum ? new TypedParameterExpression(type, name) : 
+                TryToMakeKnownTypeParameter(type, name);
 
         [MethodImpl((MethodImplOptions)256)]
-        public static ParameterExpression ParameterOf<T>(string name = null) =>
-            new TypedParameterExpression<T>(name);
+        public static ParameterExpression ParameterOf<T>(string name = null) => new TypedParameterExpression<T>(name);
 
-        /// <summary>Variable is not by-ref yet</summary>
-        public static ParameterExpression Variable(Type type, string name = null) =>
-            type.IsEnum
-                ? new TypedParameterExpression(type, name)
-                : TryToMakeKnownTypeParameter(type, name);
+        public static ParameterExpression Variable(Type type, string name = null) => Parameter(type, name);
 
         // todo: @perf benchmark thw switch on the LightExprVsExpr_Create_ComplexExpr
-        // todo: @perf but nevertheless optimize for the `object` and the `object[]` because their often used
         // Enum is excluded because otherwise TypeCode will return the thing for the underlying 
         private static ParameterExpression TryToMakeKnownTypeParameter(Type type, string name = null) =>
             Type.GetTypeCode(type) switch
@@ -160,8 +149,9 @@ namespace FastExpressionCompiler.LightExpression
                 TypeCode.UInt16 => new TypedParameterExpression<ushort>(name),
                 TypeCode.UInt32 => new TypedParameterExpression<uint>(name),
                 TypeCode.UInt64 => new TypedParameterExpression<ulong>(name),
-                _ => type == typeof(object)
-                    ? new ParameterExpression(name)
+                // we cannot match on TypeCode.Object because it corresponds to any reference type
+                _ => type == typeof(object) ? new TypedParameterExpression<object>(name)
+                    : type == typeof(object[]) ? new TypedParameterExpression<object[]>(name)
                     : new TypedParameterExpression(type, name)
             };
 
@@ -260,6 +250,10 @@ namespace FastExpressionCompiler.LightExpression
 
         public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, Expression arg) =>
             new NoByRefOneArgumentNewExpression(ctor, arg);
+
+        // todo: @perf @mem
+        // public static NewExpression NewNoByRefArgs<TArg>(ConstructorInfo ctor, TArg arg) =>
+        //     new NoByRefOneArgumentNewExpression<TArg>(ctor, arg); // the argument maybe Expression or directly ConstructorInfo, static MethodInfo, constant object
 
         public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1) =>
             new TwoArgumentsNewExpression(ctor, arg0, arg1);
@@ -2856,8 +2850,7 @@ namespace FastExpressionCompiler.LightExpression
         public override IReadOnlyList<Expression> Arguments => new[] { Argument };
         public override int ArgumentCount => 1;
         public override Expression GetArgument(int i) => Argument;
-        internal OneArgumentNewExpression(ConstructorInfo constructor, Expression argument) : base(constructor) =>
-            Argument = argument;
+        internal OneArgumentNewExpression(ConstructorInfo constructor, Expression argument) : base(constructor) => Argument = argument;
     }
 
     public sealed class NoByRefOneArgumentNewExpression : OneArgumentNewExpression
