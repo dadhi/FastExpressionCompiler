@@ -64,6 +64,16 @@ namespace FastExpressionCompiler.IssueTests
 
             expr.PrintCSharp();
 
+            var serializeSys = expr.CompileSys();
+            serializeSys.PrintIL();
+            serializeSys.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
+                OpCodes.Ldflda,
+                OpCodes.Ldflda,
+                OpCodes.Callvirt,
+                OpCodes.Ret);
+
             var serialize = expr.CompileFast(true);
             Assert.IsNotNull(serialize);
             serialize.PrintIL();
@@ -93,6 +103,15 @@ namespace FastExpressionCompiler.IssueTests
                 serializer, data);
 
             expr.PrintCSharp();
+
+            var serializeSys = expr.CompileSys();
+            serializeSys.PrintIL();
+            serializeSys.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
+                OpCodes.Ldfld,
+                OpCodes.Callvirt,
+                OpCodes.Ret);
 
             var serialize = expr.CompileFast(true);
             Assert.IsNotNull(serialize);
@@ -124,6 +143,19 @@ namespace FastExpressionCompiler.IssueTests
                 ), serializer, data);
 
             expr.PrintCSharp();
+
+            var serializeSys = expr.CompileSys();
+            serializeSys.PrintIL();
+            serializeSys.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
+                OpCodes.Ldflda,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Ldc_R4,
+                OpCodes.Newobj,
+                OpCodes.Ldfld,
+                OpCodes.Callvirt,
+                OpCodes.Ret);
 
             var serialize = expr.CompileFast(true);
             Assert.IsNotNull(serialize);

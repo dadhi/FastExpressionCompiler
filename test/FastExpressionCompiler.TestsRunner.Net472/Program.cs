@@ -222,6 +222,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue322_NullableIntArgumentWithDefaultIntValue().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue322_NullableIntArgumentWithDefaultIntValue().Run);
 
+                Run(new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run);
+
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

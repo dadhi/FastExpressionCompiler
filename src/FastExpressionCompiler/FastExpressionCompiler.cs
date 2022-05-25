@@ -499,7 +499,7 @@ namespace FastExpressionCompiler
 
             ArrayClosure closure;
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
-                closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0 
+                closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
                     ? EmptyArrayClosure
                     : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
             else
@@ -813,7 +813,7 @@ namespace FastExpressionCompiler
                 if (nestedLambdas == null)
                     constItems[constCount] = GetLambdaObject((NestedLambdaInfo)nestedLambdaOrLambdas);
                 else for (var i = 0; i < nestedLambdas.Length; ++i)
-                    constItems[constCount + i] = GetLambdaObject(nestedLambdas[i]);
+                        constItems[constCount + i] = GetLambdaObject(nestedLambdas[i]);
 
                 return constItems;
             }
@@ -1585,7 +1585,7 @@ namespace FastExpressionCompiler
                 if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdaNestedLambdas)
                 {
                     foreach (var nestedLambdaNestedLambda in nestedLambdaNestedLambdas)
-                        if (nestedLambdaInfo.Lambda == null &&!TryCompileNestedLambda(nestedLambdaNestedLambda, setup))
+                        if (nestedLambdaInfo.Lambda == null && !TryCompileNestedLambda(nestedLambdaNestedLambda, setup))
                             return false;
                 }
                 else if (((NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas).Lambda == null &&
@@ -1758,8 +1758,10 @@ namespace FastExpressionCompiler
             TryCatch = 1 << 8,
             /// Combination`of InstanceAccess and Call
             InstanceCall = Call | InstanceAccess,
+            /// Constructor
+            Ctor = 1 << 9,
             /// Constructor call
-            CtorCall = Call | (1 << 9),
+            CtorCall = Call | Ctor,
             /// Indexer
             IndexAccess = 1 << 10,
             /// Invoking the inlined lambda (the default System.Expression behavior)
@@ -2005,7 +2007,6 @@ namespace FastExpressionCompiler
                                                 return false; // todo: @feature return from the TryCatch with the internal label is not supported, though it is the unlikely case
                                             }
 
-                                            // todo: @wip use `gt.Value ?? label.DefaultValue` instead
                                             // we are generating the return value and ensuring here that it is not popped-out
                                             var gtOrLabelValue = gt.Value ?? label.DefaultValue;
                                             if (gtOrLabelValue != null)
@@ -2565,12 +2566,9 @@ namespace FastExpressionCompiler
                                 (parent & ParentFlags.Arithmetic) != 0)
                                 EmitValueTypeDereference(il, paramType);
                         }
-                        else
-                        {
-                            if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
+                        else if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce | ParentFlags.IndexAccess)) != 0)
                                 il.Emit(OpCodes.Ldind_Ref);
-                        }
                     }
 
                     return true;
@@ -3303,7 +3301,7 @@ namespace FastExpressionCompiler
                         nestedLambda.LambdaVarIndex = varIndex = (short)il.GetNextLocalVarIndex(nestedLambda.Lambda.GetType());
                         EmitStoreLocalVariable(il, varIndex);
                     }
-                    else 
+                    else
                     {
                         var nestedLambdas = (NestedLambdaInfo[])nestedLambdaOrLambdas;
                         for (var i = 0; i < nestedLambdas.Length; i++)
@@ -4180,7 +4178,7 @@ namespace FastExpressionCompiler
                     var instanceExpr = expr.Expression;
                     if (instanceExpr != null)
                     {
-                        var p = (parent | ParentFlags.Call | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)
+                        var p = (parent | ParentFlags.InstanceCall | ParentFlags.MemberAccess)
                             & ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner;
 
                         if (!TryEmit(instanceExpr, paramExprs, il, ref closure, setup, p))
@@ -4198,8 +4196,7 @@ namespace FastExpressionCompiler
                     }
 
                     closure.LastEmitIsAddress = false;
-                    EmitMethodCallOrVirtualCall(il, prop.GetMethod);
-                    return true;
+                    return EmitMethodCallOrVirtualCall(il, prop.GetMethod);
                 }
 
                 if (expr.Member is FieldInfo field)
@@ -4216,17 +4213,15 @@ namespace FastExpressionCompiler
                         if ((parent & ParentFlags.DupMemberOwner) != 0)
                             il.Emit(OpCodes.Dup);
 
+                        // #248 indicates that expression is argument passed by ref to Call
                         var isByAddress = byRefIndex != -1;
-                        if (field.FieldType.IsValueType)
-                        {
-                            if ((parent & ParentFlags.InstanceAccess) != 0 &&
-                                (parent & ParentFlags.IndexAccess) == 0) // #302 - if the field is used as an index
+                        if (field.FieldType.IsValueType && 
+                            (parent & ParentFlags.InstanceAccess) != 0 &&
+                                // #302 - if the field is used as an index or
+                                // #333 - if the field is access from the just constructed object `new Widget().DodgyValue`
+                                (parent & (ParentFlags.IndexAccess | ParentFlags.Ctor)) == 0)
                                 isByAddress = true;
-                            // #248 indicates that expression is argument passed by ref
-                            // todo: @improve Maybe introduce ParentFlags.Argument
-                            else if ((parent & ParentFlags.Call) != 0 && byRefIndex != -1)
-                                isByAddress = true;
-                        }
+
                         closure.LastEmitIsAddress = isByAddress;
                         il.Emit(isByAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
                     }
@@ -4235,17 +4230,14 @@ namespace FastExpressionCompiler
                         var fieldValue = field.GetValue(null);
                         if (fieldValue != null)
                             return TryEmitConstantOfNotNullValue(false, field.FieldType, fieldValue, il, ref closure);
-
                         il.Emit(OpCodes.Ldnull);
                     }
                     else
                     {
                         il.Emit(OpCodes.Ldsfld, field);
                     }
-
                     return true;
                 }
-
                 return false;
             }
 
@@ -5426,7 +5418,6 @@ namespace FastExpressionCompiler
             type == typeof(uint) ||
             type == typeof(ulong);
 
-        // todo: @wip @perf replace with GetUnderlyingNullableTypeOrNull because they come together and do the same checks twice
         [MethodImpl((MethodImplOptions)256)]
         internal static bool IsNullable(this Type type) =>
             type.IsValueType && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
@@ -7084,7 +7075,7 @@ namespace FastExpressionCompiler
                 inTheLastBlock, // the last block is marked so if only it is itself in the last block
                 blockResultAssignment);
 
-            // todo: @wip if the label is already used by the Return GoTo we should skip it output here OR we need to replace the Return Goto `return` with `goto`  
+            // todo: @improve the label is already used by the Return GoTo we should skip it output here OR we need to replace the Return Goto `return` with `goto`  
             if (lastExpr is LabelExpression) // keep the last label on the same vertical line
             {
                 lastExpr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
@@ -7432,7 +7423,7 @@ namespace FastExpressionCompiler
         public static string ToCode(this string x) =>
             x == null ? "null" : $"\"{x.Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n")}\"";
 
-        private static readonly char[] _enumValueSeparators = new[] {',', ' '};
+        private static readonly char[] _enumValueSeparators = new[] { ',', ' ' };
 
         /// <summary>Prints valid C# Enum literal</summary>
         public static string ToEnumValueCode(this Type enumType, object x,

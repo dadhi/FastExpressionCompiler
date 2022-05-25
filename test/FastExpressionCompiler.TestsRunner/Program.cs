@@ -11,6 +11,9 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            // new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run();
+            // new FastExpressionCompiler.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run();
+
             // new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run();
 #if NETCOREAPP3_1
             // new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
@@ -231,6 +234,8 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue322_NullableIntArgumentWithDefaultIntValue().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue322_NullableIntArgumentWithDefaultIntValue().Run);
+
+                Run(new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
