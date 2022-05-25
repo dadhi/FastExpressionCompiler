@@ -58,7 +58,7 @@ In addition, the memory consumption taken by the compilation will be much smalle
 
 ## Benchmarks
 
-**Updated to .NET 5**
+**Updated to .NET 6**
 
 ```ini
 BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
@@ -103,18 +103,18 @@ Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy
 
 Compiling expression:
 
-|      Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
-|     Compile | 479.87 us | 5.039 us | 4.208 us | 31.98 |    0.59 | 2.9297 | 1.4648 |      - |  12.17 KB |
-| CompileFast |  15.00 us | 0.291 us | 0.298 us |  1.00 |    0.00 | 1.1902 | 0.5493 | 0.0916 |   4.86 KB |
+|      Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------ |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|     Compile | 641.72 us | 12.785 us | 26.117 us | 28.87 |    1.78 | 3.9063 | 1.9531 |      - |  12.05 KB |
+| CompileFast |  22.31 us |  0.444 us |  0.876 us |  1.00 |    0.00 | 1.7700 | 0.8850 | 0.1221 |   5.45 KB |
 
 Invoking compiled delegate comparing to direct method call:
 
 |              Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 |-------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-|    DirectMethodCall |    53.24 ns |  0.721 ns |  0.674 ns |  1.06 |    0.02 | 0.0401 |     - |     - |     168 B |
-|     Invoke_Compiled | 1,486.71 ns | 13.620 ns | 12.741 ns | 29.64 |    0.25 | 0.0629 |     - |     - |     264 B |
-| Invoke_CompiledFast |    50.20 ns |  0.484 ns |  0.404 ns |  1.00 |    0.00 | 0.0248 |     - |     - |     104 B |
+|    DirectMethodCall |    67.15 ns |  1.401 ns |  1.965 ns |  1.06 |    0.05 | 0.0535 |     - |     - |     168 B |
+|     Invoke_Compiled | 1,889.47 ns | 37.145 ns | 53.272 ns | 29.75 |    1.44 | 0.0839 |     - |     - |     264 B |
+| Invoke_CompiledFast |    63.21 ns |  1.239 ns |  2.203 ns |  1.00 |    0.00 | 0.0331 |     - |     - |     104 B |
 
 
 ### Manually composed expression with parameters and closure
@@ -169,15 +169,6 @@ It __won't validate operations compatibility__ for the tree the way `System.Linq
 Hopefully you are checking the expression arguments yourself and not waiting for the `Expression` exceptions to blow-up.
 
 [Sample expression](https://github.com/dadhi/FastExpressionCompiler/blob/6da130c62f6adaa293f34a1a0c19ea4522f9c989/test/FastExpressionCompiler.LightExpression.UnitTests/LightExpressionTests.cs#L167)
-
-
-```ini
-BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
-Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical cores
-.NET Core SDK=6.0.201
-  [Host]     : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
-  DefaultJob : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
-```
 
 Creating the expression:
 |                                Method |       Mean |     Error |    StdDev |     Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |

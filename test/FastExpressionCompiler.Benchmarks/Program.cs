@@ -58,7 +58,7 @@ namespace FastExpressionCompiler.Benchmarks
             // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_SimpleExpr>();
 
             // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
-            BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
+            // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
             // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
             // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
