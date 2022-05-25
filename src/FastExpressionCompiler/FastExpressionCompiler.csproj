@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
-        <VersionPrefix>3.3.0</VersionPrefix>
+        <VersionPrefix>3.3.1</VersionPrefix>
         <VersionSuffix></VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
@@ -9,6 +9,10 @@
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.3.1 Optimization and bug-fix release
+
+- fixed: #333 AccessViolationException and other suspicious behaviour on invoking result of CompileFast()
+- optim: LightExpression.Parameter consumes less memory for the common standard types. 
 
 ## v3.3.0 Feature and bug-fix release
 

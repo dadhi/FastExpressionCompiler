@@ -177,7 +177,6 @@ namespace FastExpressionCompiler.Benchmarks
         |                      CreateExpression | 4,698.0 ns | 110.77 ns | 317.81 ns | 4,623.0 ns |  7.99 |    0.85 | 0.4501 |     - |     - |    1416 B |
         |                 CreateLightExpression |   591.2 ns |  15.42 ns |  44.98 ns |   580.7 ns |  1.00 |    0.00 | 0.1574 |     - |     - |     496 B |
         | CreateLightExpression_with_intrinsics |   580.2 ns |  16.95 ns |  48.08 ns |   565.0 ns |  0.98 |    0.10 | 0.1554 |     - |     - |     488 B |
-
         */
 
         [Benchmark]
