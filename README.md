@@ -61,13 +61,11 @@ In addition, the memory consumption taken by the compilation will be much smalle
 **Updated to .NET 5**
 
 ```ini
-
-BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.630 (2004/?/20H1)
-Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
-.NET Core SDK=5.0.100
-  [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
-  DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
-
+BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
+Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical cores
+.NET Core SDK=6.0.201
+  [Host]     : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
+  DefaultJob : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
 ```
 
 ### Hoisted expression with the constructor and two arguments in closure
@@ -80,19 +78,19 @@ Expression<Func<X>> e = () => new X(a, b);
 
 Compiling expression:
 
-|      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|     Compile | 274.722 us | 5.3167 us | 5.6888 us | 47.47 |    1.67 | 0.9766 | 0.4883 |      - |   4.52 KB |
-| CompileFast |   5.790 us | 0.1118 us | 0.1197 us |  1.00 |    0.00 | 0.3815 | 0.1907 | 0.0305 |   1.57 KB |
+|      Method |       Mean |     Error |     StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|------------ |-----------:|----------:|-----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|     Compile | 272.904 us | 5.4074 us | 11.8694 us | 50.84 |    3.34 | 1.4648 | 0.4883 |      - |   4.49 KB |
+| CompileFast |   5.379 us | 0.1063 us |  0.2048 us |  1.00 |    0.00 | 0.4959 | 0.2441 | 0.0381 |   1.52 KB |
 
 
 Invoking the compiled delegate (comparing to the direct constructor call):
 
-|                Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|---------------------- |----------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-| DirectConstructorCall |  7.634 ns | 0.2462 ns | 0.2303 ns |  0.54 |    0.02 | 0.0076 |     - |     - |      32 B |
-|        CompiledLambda | 15.553 ns | 0.1805 ns | 0.1600 ns |  1.09 |    0.02 | 0.0076 |     - |     - |      32 B |
-|    FastCompiledLambda | 14.241 ns | 0.2844 ns | 0.2521 ns |  1.00 |    0.00 | 0.0076 |     - |     - |      32 B |
+|                Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|---------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+| DirectConstructorCall |  7.736 ns | 0.2472 ns | 0.6336 ns |  7.510 ns |  0.57 |    0.05 | 0.0102 |     - |     - |      32 B |
+|        CompiledLambda | 13.917 ns | 0.2723 ns | 0.3818 ns | 13.872 ns |  1.03 |    0.04 | 0.0102 |     - |     - |      32 B |
+|    FastCompiledLambda | 13.412 ns | 0.2355 ns | 0.4124 ns | 13.328 ns |  1.00 |    0.00 | 0.0102 |     - |     - |      32 B |
 
 
 ### Hoisted expression with the static method and two nested lambdas and two arguments in closure
@@ -173,7 +171,7 @@ Hopefully you are checking the expression arguments yourself and not waiting for
 [Sample expression](https://github.com/dadhi/FastExpressionCompiler/blob/6da130c62f6adaa293f34a1a0c19ea4522f9c989/test/FastExpressionCompiler.LightExpression.UnitTests/LightExpressionTests.cs#L167)
 
 
-```md
+```ini
 BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
 Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical cores
 .NET Core SDK=6.0.201
