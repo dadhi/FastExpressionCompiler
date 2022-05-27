@@ -121,7 +121,7 @@ namespace FastExpressionCompiler.LightExpression
         [MethodImpl((MethodImplOptions)256)]
         public static ParameterExpression Parameter(Type type, string name = null) =>
             type.IsByRef ? new ByRefParameterExpression(type.GetElementType(), name) :
-            type.IsEnum ? new TypedParameterExpression(type, name) : 
+            type.IsEnum ? new TypedParameterExpression(type, name) :
                 TryToMakeKnownTypeParameter(type, name);
 
         [MethodImpl((MethodImplOptions)256)]
@@ -198,7 +198,7 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         [MethodImpl((MethodImplOptions)256)]
-        public static ConstantExpression ConstantNull(Type type = null) => 
+        public static ConstantExpression ConstantNull(Type type = null) =>
             type == null || type == typeof(object) ? NullConstant : new TypedNullConstantExpression(type);
 
         [MethodImpl((MethodImplOptions)256)]
@@ -208,7 +208,7 @@ namespace FastExpressionCompiler.LightExpression
         public static ConstantExpression ConstantInt(int value) => new IntConstantExpression(value);
 
         [MethodImpl((MethodImplOptions)256)]
-        public static ConstantExpression ConstantOf<T>(T value) => 
+        public static ConstantExpression ConstantOf<T>(T value) =>
             ReferenceEquals(value, null) ? ConstantNull<T>() : new ValueConstantExpression<T>(value);
 
         [MethodImpl((MethodImplOptions)256)]
@@ -242,7 +242,7 @@ namespace FastExpressionCompiler.LightExpression
             ? new NoArgsNewClassIntrinsicExpression(ctor)
             : new NoByRefManyArgumentsNewExpression(ctor, arguments);
 
-        public static NewExpression New(ConstructorInfo ctor) => 
+        public static NewExpression New(ConstructorInfo ctor) =>
             new NoArgsNewClassIntrinsicExpression(ctor);
 
         public static NewExpression New(ConstructorInfo ctor, Expression arg) =>
@@ -299,67 +299,45 @@ namespace FastExpressionCompiler.LightExpression
             Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5, Expression arg6) =>
             new NoByRefSevenArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
 
-        public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
-            arguments == null || arguments.Length == 0
+        public static MethodCallExpression Call(MethodInfo method, IReadOnlyList<Expression> arguments) =>
+            arguments == null || arguments.Count == 0
                 ? new NotNullMethodCallExpression(method)
                 : new ManyArgumentsMethodCallExpression(method, arguments);
 
-        public static MethodCallExpression Call(MethodInfo method, IEnumerable<Expression> arguments)
-        {
-            var args = arguments.AsReadOnlyList();
-            if (args == null || args.Count == 0)
-                return new NotNullMethodCallExpression(method);
-            return new ManyArgumentsMethodCallExpression(method, args);
-        }
+        public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
+            Call(method, (IReadOnlyList<Expression>)arguments);
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments)
-        {
-            if (arguments == null || arguments.Length == 0)
-                return new InstanceMethodCallExpression(instance, method);
-            return new InstanceManyArgumentsMethodCallExpression(instance, method, arguments);
-        }
+        public static MethodCallExpression Call(MethodInfo method, IEnumerable<Expression> arguments) =>
+            Call(method, arguments.AsReadOnlyList());
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments)
-        {
-            var args = arguments.AsReadOnlyList();
-            if (args == null || args.Count == 0)
-                return new InstanceMethodCallExpression(instance, method);
-            return new InstanceManyArgumentsMethodCallExpression(instance, method, args);
-        }
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, IReadOnlyList<Expression> arguments) =>
+            arguments == null || arguments.Count == 0
+                ? new InstanceMethodCallExpression(instance, method)
+                : new InstanceManyArgumentsMethodCallExpression(instance, method, arguments);
 
-        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments)
-        {
-            var method = type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.StaticMethods);
-            if (arguments == null || arguments.Length == 0)
-                return new NotNullMethodCallExpression(method);
-            return new ManyArgumentsMethodCallExpression(method, arguments);
-        }
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) =>
+            Call(instance, method, (IReadOnlyList<Expression>)arguments);
 
-        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments)
-        {
-            var argExprs = arguments.AsReadOnlyList();
-            var method = type.FindMethodOrThrow(methodName, typeArguments, argExprs, TypeTools.StaticMethods);
-            if (argExprs == null || argExprs.Count == 0)
-                return new NotNullMethodCallExpression(method);
-            return new ManyArgumentsMethodCallExpression(method, argExprs);
-        }
+        public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) =>
+            Call(instance, method, arguments.AsReadOnlyList());
 
-        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments)
-        {
-            var method = instance.Type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.InstanceMethods);
-            if (arguments == null || arguments.Length == 0)
-                return new InstanceMethodCallExpression(instance, method);
-            return new InstanceManyArgumentsMethodCallExpression(instance, method, arguments);
-        }
+        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IReadOnlyList<Expression> arguments) =>
+            Call(type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.StaticMethods), arguments);
 
-        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments)
-        {
-            var args = arguments.AsReadOnlyList();
-            var method = instance.Type.FindMethodOrThrow(methodName, typeArguments, args, TypeTools.InstanceMethods);
-            if (args == null || args.Count == 0)
-                return new InstanceMethodCallExpression(instance, method);
-            return new InstanceManyArgumentsMethodCallExpression(instance, method, args);
-        }
+        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) =>
+            Call(type, methodName, typeArguments, (IReadOnlyList<Expression>)arguments);
+
+        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments) =>
+            Call(type, methodName, typeArguments, arguments.AsReadOnlyList());
+
+        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IReadOnlyList<Expression> arguments) =>
+            Call(instance, instance.Type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.InstanceMethods), arguments);
+
+        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments) =>
+            Call(instance, methodName, typeArguments, (IReadOnlyList<Expression>)arguments);
+
+        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments) =>
+            Call(instance, methodName, typeArguments, arguments.AsReadOnlyList());
 
         public static MethodCallExpression Call(MethodInfo method) =>
             new NotNullMethodCallExpression(method);
@@ -490,11 +468,14 @@ namespace FastExpressionCompiler.LightExpression
         public static IndexExpression ArrayAccess(Expression array, Expression index) =>
             new OneArgumentIndexExpression(array, index);
 
-        public static IndexExpression ArrayAccess(Expression array, params Expression[] indexes) =>
+        public static IndexExpression ArrayAccess(Expression array, IReadOnlyList<Expression> indexes) =>
             new ManyArgumentsIndexExpression(array, indexes);
 
+        public static IndexExpression ArrayAccess(Expression array, params Expression[] indexes) =>
+            ArrayAccess(array, (IReadOnlyList<Expression>)indexes);
+
         public static IndexExpression ArrayAccess(Expression array, IEnumerable<Expression> indexes) =>
-            new ManyArgumentsIndexExpression(array, indexes.AsReadOnlyList());
+            ArrayAccess(array, indexes.AsReadOnlyList());
 
         public static MemberExpression Field(FieldInfo field) =>
             new FieldExpression(field);
@@ -664,12 +645,15 @@ namespace FastExpressionCompiler.LightExpression
         }
 
         public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters) =>
-            parameters?.Count > 0
-            ? new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters)
-            : new TypedLambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
+            parameters != null && parameters.Count > 0
+                ? new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters)
+                : new TypedLambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
 
         public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) =>
             Lambda(body, (IReadOnlyList<ParameterExpression>)parameters);
+
+        public static LambdaExpression Lambda(Expression body, IEnumerable<ParameterExpression> parameters) =>
+            Lambda(body, parameters.AsReadOnlyList<ParameterExpression>());
 
         public static LambdaExpression Lambda(Expression body, ParameterExpression parameter) =>
             new OneParameterLambdaExpression(Tools.GetFuncOrActionType(parameter.Type, body.Type), body, parameter);
@@ -957,36 +941,50 @@ namespace FastExpressionCompiler.LightExpression
             MemberBinding b2, MemberBinding b3, MemberBinding b4, MemberBinding b5) =>
             new SixBindingsMemberInitExpression(newExpr, b0, b1, b2, b3, b4, b5);
 
+        public static MemberInitExpression MemberInit(NewExpression newExpr, IReadOnlyList<MemberBinding> bindings) =>
+            bindings == null || bindings.Count == 0
+                ? new MemberInitExpression(newExpr)
+                : new ManyBindingsMemberInitExpression(newExpr, bindings);
+
         public static MemberInitExpression MemberInit(NewExpression newExpr, params MemberBinding[] bindings) =>
-            bindings == null || bindings.Length == 0
-            ? new MemberInitExpression(newExpr)
-            : new ManyBindingsMemberInitExpression(newExpr, bindings);
+            MemberInit(newExpr, (IReadOnlyList<MemberBinding>)bindings);
 
         public static MemberInitExpression MemberInit(NewExpression newExpr, IEnumerable<MemberBinding> bindings) =>
             MemberInit(newExpr, bindings.AsReadOnlyList());
 
-        // note: LIGHT_EXPRESSION only
+        // @LightExpression only - System expression does not support the member initialization list on the non new expression but why not :)
         /// <summary>Does not present in System Expression. Enables member assignment on existing instance expression.</summary>
-        public static MemberInitExpression MemberInit(Expression expression, params MemberBinding[] bindings) =>
-            bindings == null || bindings.Length == 0
-            ? new MemberInitExpression(expression)
-            : new ManyBindingsMemberInitExpression(expression, bindings);
+        public static MemberInitExpression MemberInit(Expression expression, IReadOnlyList<MemberBinding> bindings) =>
+            bindings == null || bindings.Count == 0
+                ? new MemberInitExpression(expression)
+                : new ManyBindingsMemberInitExpression(expression, bindings);
 
-        // note: LIGHT_EXPRESSION only
+        // @LightExpression only
+        public static MemberInitExpression MemberInit(Expression expression, params MemberBinding[] assignments) =>
+            MemberInit(expression, (IReadOnlyList<MemberBinding>)assignments);
+
+        // @LightExpression only
         public static MemberInitExpression MemberInit(Expression expression, IEnumerable<MemberBinding> assignments) =>
             MemberInit(expression, assignments.AsReadOnlyList());
 
-        public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) =>
-            new ListInitExpression(newExpression, initializers.AsReadOnlyList());
         // todo: @perf optimize for the small amount of initializers the same as NewArrayInit
-        public static ListInitExpression ListInit(NewExpression newExpression, params ElementInit[] initializers) =>
+        public static ListInitExpression ListInit(NewExpression newExpression, IReadOnlyList<ElementInit> initializers) =>
             new ListInitExpression(newExpression, initializers);
 
-        public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
+        public static ListInitExpression ListInit(NewExpression newExpression, params ElementInit[] initializers) =>
+            ListInit(newExpression, (IReadOnlyList<ElementInit>)initializers);
+
+        public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) =>
+            ListInit(newExpression, initializers.AsReadOnlyList());
+
+        public static NewArrayExpression NewArrayInit(Type type, IReadOnlyList<Expression> initializers) =>
             new ManyElementsNewArrayInitExpression(type.MakeArrayType(), initializers);
 
+        public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
+            NewArrayInit(type, (IReadOnlyList<Expression>)initializers);
+
         public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) =>
-            new ManyElementsNewArrayInitExpression(type.MakeArrayType(), initializers.AsReadOnlyList());
+            NewArrayInit(type, initializers.AsReadOnlyList());
 
         public static NewArrayExpression NewArrayInit(Type type, Expression element) =>
             new OneElementNewArrayInitExpression(type.MakeArrayType(), element);
@@ -1009,14 +1007,14 @@ namespace FastExpressionCompiler.LightExpression
             Expression el3, Expression el4, Expression el5) =>
             new SixElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2, el3, el4, el5);
 
-        public static NewArrayExpression MakeArrayBounds(Type type, IReadOnlyList<Expression> bounds) =>
-            new ManyBoundsNewArrayBoundsExpression(bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count), bounds);
-
         public static NewArrayExpression NewArrayBounds(Type type, Expression bound) =>
             new OneBoundNewArrayBoundsExpression(type.MakeArrayType(), bound);
 
+        public static NewArrayExpression MakeArrayBounds(Type type, IReadOnlyList<Expression> bounds) =>
+            new ManyBoundsNewArrayBoundsExpression(bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count), bounds);
+
         public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
-            MakeArrayBounds(type, bounds);
+            MakeArrayBounds(type, (IReadOnlyList<Expression>)bounds);
 
         public static NewArrayExpression NewArrayBounds(Type type, IEnumerable<Expression> bounds) =>
             MakeArrayBounds(type, bounds.AsReadOnlyList());
@@ -1082,11 +1080,14 @@ namespace FastExpressionCompiler.LightExpression
         public static ElementInit ElementInit(MethodInfo addMethod, Expression arg) =>
             new OneArgumentElementInit(addMethod, arg);
 
-        public static ElementInit ElementInit(MethodInfo addMethod, params Expression[] arguments) =>
+        public static ElementInit ElementInit(MethodInfo addMethod, IReadOnlyList<Expression> arguments) =>
             new ManyArgumentsElementInit(addMethod, arguments);
 
+        public static ElementInit ElementInit(MethodInfo addMethod, params Expression[] arguments) =>
+            ElementInit(addMethod, (IReadOnlyList<Expression>)arguments);
+
         public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) =>
-            new ManyArgumentsElementInit(addMethod, arguments.AsReadOnlyList());
+            ElementInit(addMethod, arguments.AsReadOnlyList());
 
         public static InvocationExpression Invoke(LambdaExpression expression) =>
             new NotNullExpressionInvocationExpression(expression);
@@ -1169,18 +1170,27 @@ namespace FastExpressionCompiler.LightExpression
                 ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
                 : new TypedSixArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3, a4, a5);
 
-        public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
+        public static InvocationExpression Invoke(Expression expression, IReadOnlyList<Expression> args) =>
             expression is LambdaExpression
-                ? new ManyArgumentsInvocationExpression(expression, args.AsReadOnlyList())
-                : new TypedManyArgumentsInvocationExpression(expression, args.AsReadOnlyList(), expression.Type.FindDelegateInvokeMethod().ReturnType);
+                ? new ManyArgumentsInvocationExpression(expression, args)
+                : new TypedManyArgumentsInvocationExpression(expression, args, expression.Type.FindDelegateInvokeMethod().ReturnType);
+
+        public static InvocationExpression Invoke(Expression expression, params Expression[] args) =>
+            Invoke(expression, (IReadOnlyList<Expression>)args);
+
+        public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
+            Invoke(expression, args.AsReadOnlyList());
+
+        public static InvocationExpression Invoke(Type returnType, Expression expression, IReadOnlyList<Expression> args) =>
+            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+                ? new ManyArgumentsInvocationExpression(expression, args)
+                : new TypedManyArgumentsInvocationExpression(expression, args, returnType);
+
+        public static InvocationExpression Invoke(Type returnType, Expression expression, params Expression[] args) =>
+            Invoke(returnType, expression, (IReadOnlyList<Expression>)args);
 
         public static InvocationExpression Invoke(Type returnType, Expression expression, IEnumerable<Expression> args) =>
-            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
-                ? new ManyArgumentsInvocationExpression(expression, args.AsReadOnlyList())
-                : new TypedManyArgumentsInvocationExpression(expression, args.AsReadOnlyList(), returnType);
-
-        public static InvocationExpression Invoke(Expression lambda, params Expression[] args) =>
-            Invoke(lambda, (IEnumerable<Expression>)args);
+            Invoke(returnType, expression, args.AsReadOnlyList());
 
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) =>
             new WithFalseBranchConditionalExpression(test, ifTrue, ifFalse);
@@ -1371,53 +1381,66 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression LessThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
             GetLogicalBinary(ExpressionType.LessThanOrEqual, left, right, liftToNull, method);
 
-        public static BlockExpression Block(IEnumerable<Expression> expressions) =>
-            new BlockExpression(expressions.AsReadOnlyList());
-
-        public static BlockExpression Block(params Expression[] expressions) =>
-            new BlockExpression(expressions);
-
+        // todo: @perf @mem optimize
         public static BlockExpression Block(Expression expr0) =>
             new BlockExpression(new[] { expr0 });
 
+        // todo: @perf @mem optimize
         public static BlockExpression Block(Expression expr0, Expression expr1) =>
             new BlockExpression(new[] { expr0, expr1 });
 
+        // todo: @perf @mem optimize
         public static BlockExpression Block(Expression expr0, Expression expr1, Expression expr2) =>
             new BlockExpression(new[] { expr0, expr1, expr2 });
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
-            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions);
+        public static BlockExpression Block(IReadOnlyList<Expression> expressions) => new BlockExpression(expressions);
+        public static BlockExpression Block(params Expression[] expressions) => Block((IReadOnlyList<Expression>)expressions);
+        public static BlockExpression Block(IEnumerable<Expression> expressions) => Block(expressions.AsReadOnlyList());
 
+        // todo: @perf @mem optimize
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0) =>
             new ManyVariablesBlockExpression(variables.AsReadOnlyList(), new[] { expr0 });
 
+        // todo: @perf @mem optimize
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1) =>
             new ManyVariablesBlockExpression(variables.AsReadOnlyList(), new[] { expr0, expr1 });
 
+        // todo: @perf @mem optimize
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables,
             Expression expr0, Expression expr1, Expression expr2) =>
             new ManyVariablesBlockExpression(variables.AsReadOnlyList(), new[] { expr0, expr1, expr2 });
 
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IReadOnlyList<Expression> expressions) =>
+            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions);
+
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
+            Block(variables, (IReadOnlyList<Expression>)expressions);
+
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
-            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+            Block(variables, expressions.AsReadOnlyList());
 
-        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
-            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions);
-
+        // todo: @perf @mem optimize
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0) =>
             new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), new[] { expr0 });
 
+        // todo: @perf @mem optimize
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables,
             Expression expr0, Expression expr1) =>
             new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), new[] { expr0, expr1 });
 
+        // todo: @perf @mem optimize
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables,
             Expression expr0, Expression expr1, Expression expr2) =>
             new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), new[] { expr0, expr1, expr2 });
 
+        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IReadOnlyList<Expression> expressions) =>
+            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions);
+
+        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, params Expression[] expressions) =>
+            Block(type, variables, (IReadOnlyList<Expression>)expressions);
+
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
-            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList());
+            Block(type, variables, expressions.AsReadOnlyList());
 
         public static BlockExpression MakeBlock(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions)
         {
@@ -1764,7 +1787,7 @@ namespace FastExpressionCompiler.LightExpression
             new ContinueGotoExpression(target);
 
         public static GotoExpression Continue(LabelTarget target, Type type) =>
-            type == null ? new ContinueGotoExpression(target) : (GotoExpression)new ContinueTypedGotoExpression(target, type);
+            type == null ? new ContinueGotoExpression(target) : new ContinueTypedGotoExpression(target, type);
 
         public static GotoExpression Return(LabelTarget target) =>
             new ReturnGotoExpression(target);
@@ -2832,7 +2855,7 @@ namespace FastExpressionCompiler.LightExpression
 
     public sealed class NoArgsNewClassIntrinsicExpression : NewExpression
     {
-        internal NoArgsNewClassIntrinsicExpression(ConstructorInfo constructor) : base(constructor) {}
+        internal NoArgsNewClassIntrinsicExpression(ConstructorInfo constructor) : base(constructor) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
             bool isNestedLambda, ref ClosureInfo rootClosure) => true;
@@ -2859,7 +2882,7 @@ namespace FastExpressionCompiler.LightExpression
         internal NoByRefOneArgumentNewExpression(ConstructorInfo constructor, Expression argument) : base(constructor, argument) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) => 
+            bool isNestedLambda, ref ClosureInfo rootClosure) =>
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument, paramExprs, isNestedLambda, ref rootClosure, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
@@ -2888,14 +2911,14 @@ namespace FastExpressionCompiler.LightExpression
         internal NoByRefTwoArgumentsNewExpression(ConstructorInfo constructor, Expression a0, Expression a1) : base(constructor, a0, a1) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) => 
+            bool isNestedLambda, ref ClosureInfo rootClosure) =>
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
             var ok = EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
+                && EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
             il.Emit(OpCodes.Newobj, Constructor);
             return ok;
         }
@@ -2922,7 +2945,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) => 
+            bool isNestedLambda, ref ClosureInfo rootClosure) =>
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, isNestedLambda, ref rootClosure, config);
@@ -2930,8 +2953,8 @@ namespace FastExpressionCompiler.LightExpression
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
             var ok = EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
+                && EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
             il.Emit(OpCodes.Newobj, Constructor);
             return ok;
         }
@@ -2958,7 +2981,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) => 
+            bool isNestedLambda, ref ClosureInfo rootClosure) =>
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, isNestedLambda, ref rootClosure, config) &&
@@ -2967,9 +2990,9 @@ namespace FastExpressionCompiler.LightExpression
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
             var ok = EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
+                && EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
             il.Emit(OpCodes.Newobj, Constructor);
             return ok;
         }
@@ -2996,7 +3019,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3, a4) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) => 
+            bool isNestedLambda, ref ClosureInfo rootClosure) =>
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, isNestedLambda, ref rootClosure, config) &&
@@ -3006,10 +3029,10 @@ namespace FastExpressionCompiler.LightExpression
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
             var ok = EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
+                && EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
             il.Emit(OpCodes.Newobj, Constructor);
             return ok;
         }
@@ -3037,7 +3060,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3, a4, a5) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) => 
+            bool isNestedLambda, ref ClosureInfo rootClosure) =>
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, isNestedLambda, ref rootClosure, config) &&
@@ -3048,11 +3071,11 @@ namespace FastExpressionCompiler.LightExpression
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
             var ok = EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument5, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
+                && EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument5, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
             il.Emit(OpCodes.Newobj, Constructor);
             return ok;
         }
@@ -3080,7 +3103,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3, a4, a5, a6) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) => 
+            bool isNestedLambda, ref ClosureInfo rootClosure) =>
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config) &&
             ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, isNestedLambda, ref rootClosure, config) &&
@@ -3092,12 +3115,12 @@ namespace FastExpressionCompiler.LightExpression
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
             var ok = EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument5, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
-                &&   EmittingVisitor.TryEmit(Argument6, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
+                && EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument5, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1)
+                && EmittingVisitor.TryEmit(Argument6, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
             il.Emit(OpCodes.Newobj, Constructor);
             return ok;
         }
