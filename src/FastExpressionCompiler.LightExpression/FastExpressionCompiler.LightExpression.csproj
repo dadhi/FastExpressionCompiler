@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
 
-        <VersionPrefix>3.3.1</VersionPrefix>
+        <VersionPrefix>3.3.2</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -12,6 +12,10 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.3.2 Bug-fix release
+
+- fixed: #335 FastExpressionCompiler.LightExpressions - MemberInit has recursive calls
+
 ## v3.3.1 Optimization and bug-fix release
 
 - fixed: #333 AccessViolationException and other suspicious behaviour on invoking result of CompileFast()
