@@ -27,7 +27,8 @@
         "Stind",
         "Stloc",
         "Stobj",
-        "Stsfld"
+        "Stsfld",
+        "typeparamref"
     ],
     "files.watcherExclude": {
         "**/target": true

@@ -58,7 +58,7 @@ namespace FastExpressionCompiler
 
     /// <summary>The options for the compiler</summary>
     [Flags]
-    public enum CompilerFlags
+    public enum CompilerFlags : byte
     {
         /// <summary>The default options: Invocation lambda is inlined, no debug info</summary>
         Default = 0,
@@ -71,7 +71,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>Indicates the not supported expression combination</summary>
-    public enum NotSupported
+    public enum NotSupported : ushort
     {
         /// <summary>Multi-dimensional array initializer is not supported</summary>
         NewArrayInit_MultidimensionalArray,
@@ -128,9 +128,9 @@ namespace FastExpressionCompiler
             (TDelegate)(TryCompileBoundToFirstClosureParam(
                 typeof(TDelegate) == typeof(Delegate) ? lambdaExpr.Type : typeof(TDelegate), lambdaExpr.Body,
 #if LIGHT_EXPRESSION
-                lambdaExpr, GetClosureTypeToParamTypes(lambdaExpr),
+                lambdaExpr, RentOrNewClosureTypeToParamTypes(lambdaExpr),
 #else
-                lambdaExpr.Parameters, GetClosureTypeToParamTypes(lambdaExpr.Parameters),
+                lambdaExpr.Parameters, RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters),
 #endif
                 lambdaExpr.ReturnType, flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys()));
 
@@ -168,9 +168,9 @@ namespace FastExpressionCompiler
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false, CompilerFlags flags = CompilerFlags.Default) =>
             (Delegate)TryCompileBoundToFirstClosureParam(lambdaExpr.Type, lambdaExpr.Body,
 #if LIGHT_EXPRESSION
-            lambdaExpr, GetClosureTypeToParamTypes(lambdaExpr),
+            lambdaExpr, RentOrNewClosureTypeToParamTypes(lambdaExpr),
 #else
-            lambdaExpr.Parameters, GetClosureTypeToParamTypes(lambdaExpr.Parameters),
+            lambdaExpr.Parameters, RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters),
 #endif
             lambdaExpr.ReturnType, flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
@@ -364,9 +364,9 @@ namespace FastExpressionCompiler
             where TDelegate : class =>
             (TDelegate)TryCompileBoundToFirstClosureParam(typeof(TDelegate) == typeof(Delegate) ? lambdaExpr.Type : typeof(TDelegate), lambdaExpr.Body,
 #if LIGHT_EXPRESSION
-            lambdaExpr, GetClosureTypeToParamTypes(lambdaExpr),
+            lambdaExpr, RentOrNewClosureTypeToParamTypes(lambdaExpr),
 #else
-            lambdaExpr.Parameters, GetClosureTypeToParamTypes(lambdaExpr.Parameters),
+            lambdaExpr.Parameters, RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters),
 #endif
             lambdaExpr.ReturnType, flags);
 
@@ -398,9 +398,9 @@ namespace FastExpressionCompiler
             this LambdaExpression lambdaExpr, ref ClosureInfo closureInfo, CompilerFlags flags) where TDelegate : class
         {
 #if LIGHT_EXPRESSION
-            var closurePlusParamTypes = GetClosureTypeToParamTypes(lambdaExpr);
+            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr);
 #else
-            var closurePlusParamTypes = GetClosureTypeToParamTypes(lambdaExpr.Parameters);
+            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters);
 #endif
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
@@ -434,9 +434,9 @@ namespace FastExpressionCompiler
         {
             var closureInfo = new ClosureInfo(ClosureStatus.UserProvided);
 #if LIGHT_EXPRESSION
-            var closurePlusParamTypes = GetClosureTypeToParamTypes(lambdaExpr);
+            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr);
 #else
-            var closurePlusParamTypes = GetClosureTypeToParamTypes(lambdaExpr.Parameters);
+            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters);
 #endif
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes, typeof(ArrayClosure),
                 skipVisibility: true);
@@ -485,7 +485,7 @@ namespace FastExpressionCompiler
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo, flags))
                 return null;
 
-            var nestedLambdaOrLambdas = closureInfo.NestedLambdaOrLambdas;
+            var nestedLambdaOrLambdas = closureInfo.NestedLambdaOrLambdas; // todo: @perf @mem can we pool a single nested lambda info?
             if (nestedLambdaOrLambdas != null)
                 if (nestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdas)
                 {
@@ -521,23 +521,20 @@ namespace FastExpressionCompiler
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
                 return null;
-
             il.Emit(OpCodes.Ret);
 
-            var @delegate = method.CreateDelegate(delegateType, closure);
-            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
-            return @delegate;
+            return method.CreateDelegate(delegateType, closure);
         }
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
         private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][];
 
 #if LIGHT_EXPRESSION
-        private static Type[] GetClosureTypeToParamTypes(IParameterProvider paramExprs)
+        private static Type[] RentOrNewClosureTypeToParamTypes(IParameterProvider paramExprs)
         {
             var count = paramExprs.ParameterCount;
 #else
-        private static Type[] GetClosureTypeToParamTypes(IReadOnlyList<PE> paramExprs)
+        private static Type[] RentOrNewClosureTypeToParamTypes(IReadOnlyList<PE> paramExprs)
         {
             var count = paramExprs.Count;
 #endif
@@ -551,7 +548,7 @@ namespace FastExpressionCompiler
                 {
                     for (var i = 0; i < count; i++)
                     {
-                        var parameterExpr = paramExprs.GetParameter(i);
+                        var parameterExpr = paramExprs.GetParameter(i); // todo: @perf can we avoid calling virtual GetParameter() and maybe use intrinsic with NoByRef?
                         pooledClosureAndParamTypes[i + 1] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
                     }
                     return pooledClosureAndParamTypes;
@@ -574,7 +571,7 @@ namespace FastExpressionCompiler
         {
             var paramCount = closurePlusParamTypes.Length - 1;
             if (paramCount != 0 && paramCount < 8)
-                Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], closurePlusParamTypes);
+                Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
         }
 
         private struct BlockInfo
@@ -975,6 +972,13 @@ namespace FastExpressionCompiler
                 ClosureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
                 Lambda = null;
             }
+            internal bool IsTheSameLambda(LambdaExpression lambda) => // todo: @unclear @wip parameters or is comparing the body is enough?
+                ReferenceEquals(LambdaExpression, lambda) ||
+                ReferenceEquals(LambdaExpression.Body, lambda.Body)
+#if LIGHT_EXPRESSION
+                && LambdaExpression.ParameterCount == lambda.ParameterCount
+#endif
+                ;
         }
 
         internal static class CurryClosureFuncs
@@ -1086,7 +1090,7 @@ namespace FastExpressionCompiler
                     return false;
 
 #if LIGHT_EXPRESSION
-                if (expr.IsIntrinsic) 
+                if (expr.IsIntrinsic)
                     return expr.TryCollectBoundConstants(flags, ref closure, paramExprs, isNestedLambda, ref rootClosure);
 #endif
 
@@ -1523,7 +1527,7 @@ namespace FastExpressionCompiler
         private static NestedLambdaInfo FindAlreadyCollectedNestedLambdaInfo(
             NestedLambdaInfo nestedLambda, LambdaExpression nestedLambdaExpr, out object foundInLambdaOrLambdas)
         {
-            if (ReferenceEquals(nestedLambda.LambdaExpression, nestedLambdaExpr))
+            if (nestedLambda.IsTheSameLambda(nestedLambdaExpr))
             {
                 foundInLambdaOrLambdas = nestedLambda;
                 return nestedLambda;
@@ -1572,7 +1576,7 @@ namespace FastExpressionCompiler
 
             if (nestedLambdaBody is NoArgsNewClassIntrinsicExpression newNoArgs)
             {
-                var paramTypes = GetClosureTypeToParamTypes(nestedLambdaParamExprs);
+                var paramTypes = RentOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
                 nestedLambdaInfo.Lambda = CompileNoArgsNew(newNoArgs.Constructor, nestedLambdaExpr.Type, paramTypes, nestedReturnType);
                 ReturnClosureTypeToParamTypesToPool(paramTypes);
                 return true;
@@ -1599,7 +1603,7 @@ namespace FastExpressionCompiler
                     ? EmptyArrayClosure
                     : new ArrayClosure(nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas());
 
-            var closurePlusParamTypes = GetClosureTypeToParamTypes(nestedLambdaParamExprs);
+            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
 
             var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
             var il = method.GetILGenerator();
@@ -1613,18 +1617,11 @@ namespace FastExpressionCompiler
                 return false;
             il.Emit(OpCodes.Ret);
 
-            if (nestedLambdaClosure != null)
-            {
-                nestedLambdaInfo.Lambda = method.CreateDelegate(nestedLambdaExpr.Type, nestedLambdaClosure);
-            }
-            else
-            {
-                // Otherwise create a static or an open delegate to pass closure later with `TryEmitNestedLambda`,
-                // constructing the new closure with non-passed arguments and the rest of items
-                nestedLambdaInfo.Lambda = method.CreateDelegate(
-                    Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType),
-                    null);
-            }
+            // If we don't have closure then create a static or an open delegate to pass closure later with `TryEmitNestedLambda`,
+            // constructing the new closure with non-passed arguments and the rest of items
+            nestedLambdaInfo.Lambda = nestedLambdaClosure != null
+                ? method.CreateDelegate(nestedLambdaExpr.Type, nestedLambdaClosure)
+                : method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType), null);
 
             ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return true;
@@ -1779,6 +1776,13 @@ namespace FastExpressionCompiler
             return true;
         }
 
+        internal static bool TryEmitBoxOf(this ILGenerator il, Type sourceType)
+        {
+            if (sourceType.IsValueType)
+                il.Emit(OpCodes.Box, sourceType);
+            return true;
+        }
+
         /// <summary>Supports emitting of selected expressions, e.g. lambdaExpr are not supported yet.
         /// When emitter find not supported expression it will return false from <see cref="TryEmit"/>, so I could fallback
         /// to normal and slow Expression.Compile.</summary>
@@ -1862,9 +1866,8 @@ namespace FastExpressionCompiler
                             if (constExpr.Value == null)
                             {
                                 if (constExpr.Type.IsValueType)
-                                    EmitLoadLocalVariable(il, InitValueTypeVariable(il, constExpr.Type)); // yep, this is a proper way to emit the Nullable null
-                                else
-                                    il.Emit(OpCodes.Ldnull);
+                                    return EmitLoadLocalVariable(il, InitValueTypeVariable(il, constExpr.Type)); // yep, this is a proper way to emit the Nullable null
+                                il.Emit(OpCodes.Ldnull);
                                 return true;
                             }
 
@@ -2124,27 +2127,12 @@ namespace FastExpressionCompiler
                 var ctor = newExpr.Constructor;
                 if (argCount > 0)
                 {
-#if LIGHT_EXPRESSION
-                    var args = newExpr.NoByRefArgs ? null : ctor.GetParameters();
-#else
                     var args = ctor.GetParameters();
-#endif
-                    if (args == null)
-                    {
-                        for (var i = 0; i < argCount; ++i)
-                            if (!TryEmit(argExprs.GetArgument(i),
-                                paramExprs, il, ref closure, setup, parent, -1))
-                                return false;
-                    }
-                    else
-                    {
-                        for (var i = 0; i < argCount; ++i)
-                            if (!TryEmit(argExprs.GetArgument(i),
-                                paramExprs, il, ref closure, setup, parent, args[i].ParameterType.IsByRef ? i : -1))
-                                return false;
-                    }
+                    for (var i = 0; i < argCount; ++i)
+                        if (!TryEmit(argExprs.GetArgument(i),
+                            paramExprs, il, ref closure, setup, parent, args[i].ParameterType.IsByRef ? i : -1))
+                            return false;
                 }
-
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (ctor != null)
                     il.Emit(OpCodes.Newobj, ctor);
@@ -2406,10 +2394,7 @@ namespace FastExpressionCompiler
                         return false;
 
                     if (right.Type != exprObj.Type)
-                    {
-                        if (right.Type.IsValueType)
-                            il.Emit(OpCodes.Box, right.Type);
-                    }
+                        il.TryEmitBoxOf(right.Type);
 
                     if (left.Type == exprObj.Type)
                         il.MarkLabel(labelFalse);
@@ -2569,7 +2554,7 @@ namespace FastExpressionCompiler
                         }
                         else if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce | ParentFlags.IndexAccess)) != 0)
-                                il.Emit(OpCodes.Ldind_Ref);
+                            il.Emit(OpCodes.Ldind_Ref);
                     }
 
                     return true;
@@ -2894,8 +2879,8 @@ namespace FastExpressionCompiler
 
                 if (sourceType == targetType || targetType == typeof(object))
                 {
-                    if (targetType == typeof(object) && sourceType.IsValueType)
-                        il.Emit(OpCodes.Box, sourceType);
+                    if (targetType == typeof(object))
+                        il.TryEmitBoxOf(sourceType);
                     return il.EmitPopIfIgnoreResult(parent);
                 }
 
@@ -3038,8 +3023,7 @@ namespace FastExpressionCompiler
                     // cast as the last resort and let's it fail if unlucky
                     if (!TryEmitValueConvert(targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                     {
-                        if (sourceType.IsValueType)
-                            il.Emit(OpCodes.Box, sourceType);
+                        il.TryEmitBoxOf(sourceType);
                         il.Emit(OpCodes.Castclass, targetType);
                     }
                 }
@@ -3072,6 +3056,19 @@ namespace FastExpressionCompiler
                 else
                     return false;
                 return true;
+            }
+
+            public static bool TryEmitConstant(
+                bool considerClosure, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
+            {
+                if (constantValue == null)
+                {
+                    if (exprType.IsValueType)
+                        return EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType)); // yep, this is a proper way to emit the Nullable null
+                    il.Emit(OpCodes.Ldnull);
+                    return true;
+                }
+                return TryEmitConstantOfNotNullValue(closure.ContainsConstantsOrNestedLambdas(), exprType, constantValue, il, ref closure, byRefIndex);
             }
 
             public static bool TryEmitConstantOfNotNullValue(
@@ -3138,8 +3135,8 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Newobj, exprType.GetConstructors().GetFirst());
                 }
                 // boxing the value type, otherwise we can get a strange result when 0 is treated as Null.
-                else if (exprType == typeof(object) && constValueType.IsValueType)
-                    il.Emit(OpCodes.Box, constValueType); // using normal type for Enum instead of underlying type
+                else if (exprType == typeof(object))
+                    return il.TryEmitBoxOf(constValueType); // using normal type for Enum instead of underlying type
                 return true;
             }
 
@@ -3943,8 +3940,7 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                             EmitLoadConstantInt(il, nonPassedParamIndex);
                             EmitLoadLocalVariable(il, valueVarIndex);
-                            if (expr.Type.IsValueType)
-                                il.Emit(OpCodes.Box, expr.Type);
+                            il.TryEmitBoxOf(expr.Type);
                             il.Emit(OpCodes.Stelem_Ref); // put the variable into array
                             EmitLoadLocalVariable(il, valueVarIndex); // todo: @perf what if we just dup the `valueVar`?
                         }
@@ -3957,8 +3953,7 @@ namespace FastExpressionCompiler
                             if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                                 return false;
 
-                            if (expr.Type.IsValueType)
-                                il.Emit(OpCodes.Box, expr.Type);
+                            il.TryEmitBoxOf(expr.Type);
                             il.Emit(OpCodes.Stelem_Ref); // put the variable into array
                         }
 
@@ -4216,12 +4211,12 @@ namespace FastExpressionCompiler
 
                         // #248 indicates that expression is argument passed by ref to Call
                         var isByAddress = byRefIndex != -1;
-                        if (field.FieldType.IsValueType && 
+                        if (field.FieldType.IsValueType &&
                             (parent & ParentFlags.InstanceAccess) != 0 &&
                                 // #302 - if the field is used as an index or
                                 // #333 - if the field is access from the just constructed object `new Widget().DodgyValue`
                                 (parent & (ParentFlags.IndexAccess | ParentFlags.Ctor)) == 0)
-                                isByAddress = true;
+                            isByAddress = true;
 
                         closure.LastEmitIsAddress = isByAddress;
                         il.Emit(isByAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
@@ -4260,7 +4255,7 @@ namespace FastExpressionCompiler
                 var nestedLambdaInfo = outerNestedLambdaOrLambdas as NestedLambdaInfo;
                 if (nestedLambdaInfo != null)
                 {
-                    if (!ReferenceEquals(nestedLambdaInfo.LambdaExpression, lambdaExpr))
+                    if (!nestedLambdaInfo.IsTheSameLambda(lambdaExpr))
                         return false;
                 }
                 else
@@ -4269,7 +4264,7 @@ namespace FastExpressionCompiler
                     for (var i = 0; i < outerNestedLambdas.Length && nestedLambdaInfo == null; ++i)
                     {
                         var outer = outerNestedLambdas[i];
-                        if (ReferenceEquals(outer.LambdaExpression, lambdaExpr))
+                        if (outer.IsTheSameLambda(lambdaExpr))
                         {
                             nestedLambdaInfo = outer;
                             nestedLambdaInClosureIndex += i;
@@ -4321,8 +4316,7 @@ namespace FastExpressionCompiler
                     {
                         // Add `+1` to index because the `0` index is for the closure argument
                         EmitLoadArg(il, outerParamIndex + 1);
-                        if (nestedParam.Type.IsValueType)
-                            il.Emit(OpCodes.Box, nestedParam.Type);
+                        il.TryEmitBoxOf(nestedParam.Type);
                     }
                     else // load parameter from outer closure or from the local variables
                     {
@@ -4333,8 +4327,7 @@ namespace FastExpressionCompiler
                         if (outerLocalVarIndex != -1) // it's a local variable
                         {
                             EmitLoadLocalVariable(il, outerLocalVarIndex);
-                            if (nestedParam.Type.IsValueType) // don't forget to box the value type when we store it into object array, (fixes #255)
-                                il.Emit(OpCodes.Box, nestedParam.Type);
+                            il.TryEmitBoxOf(nestedParam.Type);
                         }
                         else // it's a parameter from the outer closure
                         {
@@ -5232,7 +5225,7 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            private static void EmitLoadLocalVariable(ILGenerator il, int location)
+            private static bool EmitLoadLocalVariable(ILGenerator il, int location)
             {
                 if (location == 0)
                     il.Emit(OpCodes.Ldloc_0);
@@ -5246,6 +5239,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldloc_S, (byte)location);
                 else
                     il.Emit(OpCodes.Ldloc, (short)location);
+                return true;
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -5413,6 +5407,15 @@ namespace FastExpressionCompiler
     // in order to prevent conflicts with YOUR helpers with standard names
     internal static class Tools
     {
+        public static Expression AsExpr(this object obj) => obj as Expression ?? Constant(obj);
+        public static Expression[] AsExprs(this object[] obj)
+        {
+            var exprs = new Expression[obj.Length];
+            for (var i = 0; i < obj.Length; i++)
+                exprs[i] = obj[i].AsExpr();
+            return exprs;
+        }
+
         internal static bool IsUnsigned(this Type type) =>
             type == typeof(byte) ||
             type == typeof(ushort) ||
@@ -6036,13 +6039,14 @@ namespace FastExpressionCompiler
                     }
                 case ExpressionType.Call:
                     {
-                        var x = (MethodCallExpression)e;
-                        sb.Append("Call(");
-                        sb.NewLineIdentExpr(x.Object, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(", ");
-                        sb.NewLineIdent(lineIdent).AppendMethod(x.Method, stripNamespace, printType);
-                        if (x.Arguments.Count > 0)
-                            sb.Append(',').NewLineIdentArgumentExprs(x.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
-                        return sb.Append(')');
+                        var mc = (MethodCallExpression)e;
+                        var diffTypes = mc.Type != mc.Method.ReturnType;
+                        sb.Append(diffTypes ? "Convert(Call(" : "Call(");
+                        sb.NewLineIdentExpr(mc.Object, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(", ");
+                        sb.NewLineIdent(lineIdent).AppendMethod(mc.Method, stripNamespace, printType);
+                        if (mc.Arguments.Count > 0)
+                            sb.Append(',').NewLineIdentArgumentExprs(mc.Arguments, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
+                        return diffTypes ? sb.Append("), ").AppendTypeof(e.Type, stripNamespace, printType).Append(')') : sb.Append(')');
                     }
                 case ExpressionType.MemberAccess:
                     {
@@ -6275,6 +6279,7 @@ namespace FastExpressionCompiler
                         if (e is UnaryExpression u)
                         {
                             sb.Append(name).Append('(');
+                            // todo: @feature maybe for big expression it makes sense to print the Type in comment here so you don't navigate to the closing parentheses to find it
                             sb.NewLineIdentExpr(u.Operand, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
 
                             if (e.NodeType == ExpressionType.Convert ||
@@ -6377,33 +6382,35 @@ namespace FastExpressionCompiler
                     }
                 case ExpressionType.Call:
                     {
-                        var x = (MethodCallExpression)e;
-                        if (x.Object != null)
-                            x.Object.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
-                        else // for the static method or the static extension method we need to qualify with the class
-                            sb.Append(x.Method.DeclaringType.ToCode(stripNamespace, printType));
+                        var mc = (MethodCallExpression)e;
 
-                        var name = x.Method.Name;
+                        // output convert only if it is required, e.g. it may happen for custom expressions designed by users
+                        var diffTypes = mc.Type != mc.Method.ReturnType;
+                        if (diffTypes) sb.Append("((").Append(mc.Type.ToCode(stripNamespace, printType)).Append(')');
+
+                        if (mc.Object != null)
+                            mc.Object.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
+                        else // for the static method or the static extension method we need to qualify with the class
+                            sb.Append(mc.Method.DeclaringType.ToCode(stripNamespace, printType));
+
+                        var name = mc.Method.Name;
                         // check for the special methods, e.g. property access `get_` or `set_` and output them as properties
-                        if (x.Method.IsSpecialName)
-                        {
-                            if (name.StartsWith("get_") || name.StartsWith("set_"))
-                                return sb.Append('.').Append(name.Substring(4));
-                        }
+                        if (mc.Method.IsSpecialName && (name.StartsWith("get_") || name.StartsWith("set_")))
+                            return sb.Append('.').Append(name.Substring(4));
 
                         sb.Append('.').Append(name);
-                        if (x.Method.IsGenericMethod)
+                        if (mc.Method.IsGenericMethod)
                         {
                             sb.Append('<');
-                            var typeArgs = x.Method.GetGenericArguments();
+                            var typeArgs = mc.Method.GetGenericArguments();
                             for (var i = 0; i < typeArgs.Length; i++)
                                 (i == 0 ? sb : sb.Append(", ")).Append(typeArgs[i].ToCode(stripNamespace, printType));
                             sb.Append('>');
                         }
 
                         sb.Append('(');
-                        var pars = x.Method.GetParameters();
-                        var args = x.Arguments;
+                        var pars = mc.Method.GetParameters();
+                        var args = mc.Arguments;
                         if (args.Count == 1)
                         {
                             var p = pars[0];
@@ -6425,7 +6432,8 @@ namespace FastExpressionCompiler
                                 args[i].ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, tryPrintConstant);
                             }
                         }
-                        return sb.Append(')');
+                        // for the different return and expression types wrapping the whole expression including the cast with additional parentheses
+                        return diffTypes ? sb.Append("))") : sb.Append(')');
                     }
                 case ExpressionType.MemberAccess:
                     {
@@ -6790,8 +6798,11 @@ namespace FastExpressionCompiler
 
                                 case ExpressionType.Convert:
                                 case ExpressionType.ConvertChecked:
-                                    sb.Append("((").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
-                                    return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(')');
+                                    var diffTypes = e.Type != op.Type; // output convert only if it is required
+                                    if (diffTypes) sb.Append("((").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
+                                    sb = op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant);
+                                    if (diffTypes) sb.Append(')');
+                                    return sb;
 
                                 case ExpressionType.Decrement:
                                     return op.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces, tryPrintConstant).Append(" - 1)");

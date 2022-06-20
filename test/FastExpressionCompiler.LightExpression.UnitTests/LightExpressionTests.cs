@@ -214,7 +214,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 MemberInit(
                     NewNoByRefArgs(_ctorOfA,
                         New(_ctorOfB),
-                        ConvertViaCastClassIntrinsic<string>(
+                        TryConvertIntrinsic<string>(
                             ArrayIndex(stateParamExpr, ConstantInt(11))),
                         NewArrayInit(typeof(ID),
                             New(_ctorOfD1),
