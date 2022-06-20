@@ -655,7 +655,7 @@ namespace FastExpressionCompiler
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
 
-            public void AddConstantOrIncrementUsageCount(object value)
+            public bool AddConstantOrIncrementUsageCount(object value)
             {
                 Status |= ClosureStatus.HasClosure;
                 var constItems = Constants.Items;
@@ -672,6 +672,7 @@ namespace FastExpressionCompiler
                 {
                     ++ConstantUsageThenVarIndex.Items[constIndex];
                 }
+                return true; // here for fluency, don't delete
             }
 
             public void AddNonPassedParam(ParameterExpression expr)
