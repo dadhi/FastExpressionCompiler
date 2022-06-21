@@ -4,10 +4,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Remove="FastExpressionCompiler.UnitTests.v3.ncrunchproject" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj" />
     </ItemGroup>
 

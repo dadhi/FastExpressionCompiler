@@ -1,14 +1,10 @@
 using System;
 using NUnit.Framework;
 
-#if LIGHT_EXPRESSION
-using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.UnitTests
-#else
+#if !LIGHT_EXPRESSION
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
-#endif
 {
     [TestFixture]
     public class ValueTypeTests : ITest
@@ -23,7 +19,6 @@ namespace FastExpressionCompiler.UnitTests
             Can_get_struct_member();
             Action_using_with_struct_closure_field();
             Struct_Convert_to_interface();
-
             return 8;
         }
 
@@ -147,3 +142,4 @@ namespace FastExpressionCompiler.UnitTests
         }
     }
 }
+#endif

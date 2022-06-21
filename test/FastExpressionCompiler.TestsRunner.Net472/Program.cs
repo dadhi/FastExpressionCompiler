@@ -84,6 +84,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new ValueTypeTests().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests().Run);
+                Run(new ToCSharpStringTests().Run);
+                Run(new FastExpressionCompiler.LightExpression.UnitTests.ToCSharpStringTests().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
             });

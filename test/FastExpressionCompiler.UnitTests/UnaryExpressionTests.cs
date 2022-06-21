@@ -7,12 +7,10 @@ using SysExpr = System.Linq.Expressions;
 #if LIGHT_EXPRESSION
 using ExpressionType = System.Linq.Expressions.ExpressionType;
 using static FastExpressionCompiler.LightExpression.Expression;
-
 namespace FastExpressionCompiler.LightExpression.UnitTests
 #else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
-
 namespace FastExpressionCompiler.UnitTests
 #endif
 {

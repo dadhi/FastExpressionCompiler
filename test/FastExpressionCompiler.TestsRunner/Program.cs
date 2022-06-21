@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            // new FastExpressionCompiler.UnitTests.ToCSharpStringTests().Run();
             // new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run();
             // new FastExpressionCompiler.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run();
 
@@ -92,6 +93,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new ValueTypeTests().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests().Run);
+                Run(new ToCSharpStringTests().Run);
+                Run(new FastExpressionCompiler.LightExpression.UnitTests.ToCSharpStringTests().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
 

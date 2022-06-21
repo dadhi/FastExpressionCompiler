@@ -25,7 +25,6 @@ namespace FastExpressionCompiler.UnitTests
             Member_test_block_result_should_detect_non_block_variable();
             Member_test_block_result();
             Member_test_try_catch_finally_result();
-
             Array_index_assign_body_less();
             Array_index_assign_ref_type_body_less();
             Array_index_assign_value_type_block();
