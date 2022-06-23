@@ -401,7 +401,7 @@ namespace FastExpressionCompiler.IssueTests
 
             expr.PrintCSharp();
             var reExpr = expr.ToExpressionString();
-            StringAssert.Contains("(!)", reExpr);
+            StringAssert.Contains(")/*Please provide the non-default value for the constant!", reExpr); // contains the constant
 
             var fs = expr.CompileSys();
             fs.PrintIL();

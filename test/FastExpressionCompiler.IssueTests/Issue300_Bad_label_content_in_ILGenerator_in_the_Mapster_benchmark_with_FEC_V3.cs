@@ -179,9 +179,11 @@ namespace FastExpressionCompiler.IssueTests
                 Constant(new Post { Secret = "b" })
             ));
 
-            expr.PrintCSharp(x => x.Value is Post p ? $@"new Post {{ Secret = ""{p.Secret}"" }}" : null);
+            CodePrinter.ObjectToCode printPost = (val, sn, pt) => val is Post p ? $@"new Post {{ Secret = ""{p.Secret}"" }}" : null;
 
-            var s = expr.ToExpressionString(x => x.Value is Post p ? $@"new Post {{ Secret = ""{p.Secret}"" }}" : null);
+            expr.PrintCSharp(printPost);
+
+            var s = expr.ToExpressionString(printPost);
 
             var fs = expr.CompileSys();
             fs.PrintIL("sys");
