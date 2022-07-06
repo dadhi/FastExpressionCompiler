@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
+        <TargetFrameworks>net472;netstandard2.0;netstandard2.1</TargetFrameworks>
         <VersionPrefix>3.3.2</VersionPrefix>
         <VersionSuffix></VersionSuffix>
         <Product>FastExpressionCompiler</Product>
@@ -33,9 +33,7 @@
         <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
         <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
     </PropertyGroup>
-    <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-        <PackageReference Include="System.ValueTuple" Version="4.5.0"/>
-    </ItemGroup>
+    
     <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
         <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0"/>
