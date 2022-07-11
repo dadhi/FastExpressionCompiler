@@ -1559,6 +1559,7 @@ namespace FastExpressionCompiler.IssueTests
 
 #if !LIGHT_EXPRESSION
         [Test]
+        [Culture("en-US")]
         public void Should_throw_for_the_equal_expression_of_different_types()
         {
             var ex = Assert.Throws<InvalidOperationException>(() =>
@@ -1732,6 +1733,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        [Culture("en-US")]
         public void FindMethodOrThrow_in_the_class_hierarchy()
         {
             var bar = new Bar();
