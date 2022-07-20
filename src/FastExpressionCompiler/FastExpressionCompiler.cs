@@ -4539,11 +4539,10 @@ namespace FastExpressionCompiler
                 var leftOpType = exprLeft.Type;
                 var leftIsNullable = leftOpType.IsNullable();
                 var rightOpType = exprRight.Type;
-                if (exprRight is ConstantExpression r && r.Value == null)
-                {
-                    if (exprRight.Type == typeof(object))
-                        rightOpType = leftOpType;
-                }
+
+                var comparisonWithNull = exprRight is ConstantExpression r && r.Value == null;
+                if (comparisonWithNull && exprRight.Type == typeof(object))
+                    rightOpType = leftOpType;
 
                 int lVarIndex = -1, rVarIndex = -1;
                 var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
@@ -4553,6 +4552,18 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
+                    if (comparisonWithNull & (expressionType == ExpressionType.Equal || expressionType == ExpressionType.NotEqual))
+                    {
+                        EmitMethodCall(il, leftOpType.FindNullableHasValueGetterMethod());
+                        if (expressionType == ExpressionType.Equal)
+                        {
+                            il.Emit(OpCodes.Ldc_I4_0); // OpCodes.Not does not work here because it is a bitwise operation
+                            il.Emit(OpCodes.Ceq);
+
+                        }
+                        return il.EmitPopIfIgnoreResult(parent);
+                    }
+
                     EmitMethodCall(il, leftOpType.FindNullableGetValueOrDefaultMethod());
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
@@ -4570,7 +4581,8 @@ namespace FastExpressionCompiler
                         else if (expressionType == ExpressionType.NotEqual)
                         {
                             il.Emit(OpCodes.Ceq);
-                            il.Emit(OpCodes.Ldc_I4_0); // todo: @perf Currently it produces the same code as a System Compile but I wonder if we can use OpCodes.Not
+                            // OpCodes.Not does not work here because it is a bitwise operation
+                            il.Emit(OpCodes.Ldc_I4_0);
                             il.Emit(OpCodes.Ceq);
                         }
                         else

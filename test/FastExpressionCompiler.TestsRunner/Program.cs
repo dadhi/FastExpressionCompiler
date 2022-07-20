@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
-            // new FastExpressionCompiler.UnitTests.ToCSharpStringTests().Run();
+            //new FastExpressionCompiler.IssueTests.Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run();
             // new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run();
             // new FastExpressionCompiler.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run();
 
@@ -239,6 +239,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue322_NullableIntArgumentWithDefaultIntValue().Run);
 
                 Run(new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run);
+                Run(new FastExpressionCompiler.IssueTests.Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
