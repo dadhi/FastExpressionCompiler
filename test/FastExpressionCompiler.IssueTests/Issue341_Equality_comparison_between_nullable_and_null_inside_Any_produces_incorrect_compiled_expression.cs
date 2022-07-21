@@ -12,15 +12,38 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Compare_nullable_decimal_with_null_not_equal_should_work();
-            Compare_nullable_decimal_with_null_should_work();
-            Compare_nullable_decimal_member_with_null_should_work();
-            Works_with_Compile_but_not_with_CompileFast();
-            return 4;
+            Nullable_decimal_not_equality_to_zero();
+            Nullable_decimal_not_equality_to_null();
+            Nullable_decimal_equality_to_null();
+            Nullable_decimal_member_not_equality_to_null();
+            Nullable_decimal_member_not_equality_to_null_inside_predicate();
+            return 5;
         }
 
         [Test]
-        public void Compare_nullable_decimal_with_null_should_work()
+        public void Nullable_decimal_not_equality_to_zero()
+        {
+            Expression<Func<decimal?, bool>> expression = n => n != 0M;
+            expression.PrintCSharp(); // just for debug
+
+            var compiledSys = expression.Compile();
+            var compiledFast = expression.CompileFast(true);
+
+            var instance = default(decimal);
+
+            compiledSys.PrintIL("sys");
+            compiledFast.PrintIL("fast");
+
+            var result = compiledSys(instance);
+            Assert.IsFalse(result);
+
+            result = compiledFast(instance);
+            Assert.IsFalse(result);
+        }
+
+
+        [Test]
+        public void Nullable_decimal_not_equality_to_null()
         {
             Expression<Func<decimal?, bool>> expression = n => n != null;
             expression.PrintCSharp(); // just for debug
@@ -41,7 +64,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Compare_nullable_decimal_with_null_not_equal_should_work()
+        public void Nullable_decimal_equality_to_null()
         {
             Expression<Func<decimal?, bool>> expression = n => n == null;
             expression.PrintCSharp(); // just for debug
@@ -62,7 +85,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Compare_nullable_decimal_member_with_null_should_work()
+        public void Nullable_decimal_member_not_equality_to_null()
         {
             // todo: @perf optimize comparison of nullable with null
             Expression<Func<Test2, bool>> expression = t => t.Value != null;
@@ -84,7 +107,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Works_with_Compile_but_not_with_CompileFast()
+        public void Nullable_decimal_member_not_equality_to_null_inside_predicate()
         {
             Expression<Func<Test, bool>> expression = t => t.A.Any(e => e.Value != null);
             expression.PrintCSharp(); // just for debug
