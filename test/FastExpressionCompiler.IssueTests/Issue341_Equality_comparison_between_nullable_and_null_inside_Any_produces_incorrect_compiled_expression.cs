@@ -13,11 +13,12 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Nullable_decimal_not_equal_to_zero();
+            Nullable_decimal_greater_than_zero();
             Nullable_decimal_not_equal_to_null();
             Nullable_decimal_equal_to_null();
             Nullable_decimal_member_not_equal_to_null();
             Nullable_decimal_member_not_equal_to_null_inside_predicate();
-            return 5;
+            return 6;
         }
 
         [Test]

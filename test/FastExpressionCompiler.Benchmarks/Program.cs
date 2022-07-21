@@ -6,6 +6,9 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
+            BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
+            BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
+         
             // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
             // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();
             
@@ -68,8 +71,8 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
 
             // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>();
-            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
-            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
+            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
+            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
         }
     }
 }
