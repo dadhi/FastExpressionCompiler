@@ -1098,8 +1098,9 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Constant:
 #if LIGHT_EXPRESSION
-                        if (expr is IntConstantExpression n) // todo: @perf use more generic approach
-                            return true;
+                    // todo: @perf @simplify convert to intrinsic
+                    if (expr == NullConstant || expr == FalseConstant || expr == TrueConstant || expr is IntConstantExpression n)
+                        return true;
 #endif
                         var constantExpr = (ConstantExpression)expr;
                         var value = constantExpr.Value;
@@ -1853,23 +1854,7 @@ namespace FastExpressionCompiler
                             return true;
 
                         case ExpressionType.Constant:
-                            if ((parent & ParentFlags.IgnoreResult) != 0)
-                                return true;
-#if LIGHT_EXPRESSION
-                            if (expr is IntConstantExpression n) // todo: convert to intrinsic
-                            {
-                                EmitLoadConstantInt(il, n.IntValue);
-                                return true;
-                            }
-#endif
-                            var constExpr = (ConstantExpression)expr;
-                            var constType = constExpr.Type;
-                            if (constExpr.Value != null)
-                                return TryEmitConstantOfNotNullValue(closure.ContainsConstantsOrNestedLambdas(), constType, constExpr.Value, il, ref closure, byRefIndex);
-                            if (constExpr.Type.IsValueType)
-                                return EmitLoadLocalVariable(il, InitValueTypeVariable(il, constType)); // yep, this is a proper way to emit the Nullable null
-                            il.Emit(OpCodes.Ldnull);
-                            return true;
+                            return (parent & ParentFlags.IgnoreResult) != 0 || TryEmitConstant(expr, il, ref closure, byRefIndex);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall(expr, paramExprs, il, ref closure, setup, parent);
@@ -3055,26 +3040,55 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            public static bool TryEmitConstant(Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
+            public static bool TryEmitConstant(Expression expr, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
             {
-                if (constantValue != null)
-                    return TryEmitConstantOfNotNullValue(closure.ContainsConstantsOrNestedLambdas(), exprType, constantValue, il, ref closure, byRefIndex);
-                if (exprType.IsValueType)
-                    return EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType)); // yep, this is a proper way to emit the Nullable null
+#if LIGHT_EXPRESSION
+                // todo: @perf @simplify convert to intrinsic
+                if (expr == NullConstant)
+                {
+                    il.Emit(OpCodes.Ldnull);
+                    return true;
+                }
+                if (expr == FalseConstant || expr == ZeroConstant)
+                {
+                    il.Emit(OpCodes.Ldc_I4_0);
+                    return true;
+                }
+                if (expr == TrueConstant || expr == OneConstant)
+                {
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    return true;
+                }
+                if (expr == MinusOneConstant)
+                {
+                    il.Emit(OpCodes.Ldc_I4_M1);
+                    return true;
+                }
+                if (expr is IntConstantExpression n)
+                {
+                    EmitLoadConstantInt(il, n.IntValue);
+                    return true;
+                }
+#endif
+                var constExpr = (ConstantExpression)expr;
+                var constValue = constExpr.Value;
+                if (constValue != null)
+                    return TryEmitConstant(closure.ContainsConstantsOrNestedLambdas(), expr.Type, constValue.GetType(), constValue, il, ref closure, byRefIndex);
+                if (expr.Type.IsValueType)
+                    return EmitLoadLocalVariable(il, InitValueTypeVariable(il, expr.Type)); // yep, this is a proper way to emit the Nullable null
                 il.Emit(OpCodes.Ldnull);
                 return true;
             }
-            public static bool TryEmitConstantOfNotNullValue(
-                bool considerClosure, Type exprType, object constantValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
+
+            public static bool TryEmitConstant(bool considerClosure, Type exprType, Type constType, object consValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
             {
-                var constValueType = constantValue.GetType();
                 if (exprType == null)
-                    exprType = constValueType;
-                if (considerClosure && IsClosureBoundConstant(constantValue, constValueType))
+                    exprType = constType;
+                if (considerClosure && IsClosureBoundConstant(consValue, constType))
                 {
                     var constItems = closure.Constants.Items;
                     var constIndex = closure.Constants.Count - 1;
-                    while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], constantValue))
+                    while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], consValue))
                         --constIndex;
                     if (constIndex == -1)
                         return false;
@@ -3104,92 +3118,92 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
-                    if (constantValue is string s)
+                    if (consValue is string s)
                     {
                         il.Emit(OpCodes.Ldstr, s);
                         return true;
                     }
-                    if (constantValue is Type t)
+                    if (consValue is Type t)
                     {
                         il.Emit(OpCodes.Ldtoken, t);
                         il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
                         return true;
                     }
-                    if (!TryEmitPrimitiveOrEnumOrDecimalConstant(il, constantValue, constValueType))
+                    if (!TryEmitPrimitiveOrEnumOrDecimalConstant(il, consValue, constType))
                         return false;
                 }
 
                 if (exprType.IsValueType && exprType.IsNullable())
                     il.Emit(OpCodes.Newobj, exprType.GetConstructors().GetFirst());
                 else if (exprType == typeof(object))
-                    return il.TryEmitBoxOf(constValueType); // using normal type for Enum instead of underlying type
+                    return il.TryEmitBoxOf(constType); // using normal type for Enum instead of underlying type
                 return true;
             }
 
-            private static bool TryEmitPrimitiveOrEnumOrDecimalConstant(ILGenerator il, object constantValue, Type constValueType)
+            private static bool TryEmitPrimitiveOrEnumOrDecimalConstant(ILGenerator il, object consValue, Type constType)
             {
-                if (constValueType.IsEnum)
-                    constValueType = Enum.GetUnderlyingType(constValueType);
+                if (constType.IsEnum)
+                    constType = Enum.GetUnderlyingType(constType);
 
-                switch (Type.GetTypeCode(constValueType))
+                switch (Type.GetTypeCode(constType))
                 {
                     case TypeCode.Boolean:
-                        il.Emit((bool)constantValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0); // todo: @perf check for LightExpression
+                        il.Emit((bool)consValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0); // todo: @perf check for LightExpression
                         break;
                     case TypeCode.Char:
-                        EmitLoadConstantInt(il, (char)constantValue);
+                        EmitLoadConstantInt(il, (char)consValue);
                         break;
                     case TypeCode.SByte:
-                        EmitLoadConstantInt(il, (sbyte)constantValue);
+                        EmitLoadConstantInt(il, (sbyte)consValue);
                         break;
                     case TypeCode.Byte:
-                        EmitLoadConstantInt(il, (byte)constantValue);
+                        EmitLoadConstantInt(il, (byte)consValue);
                         break;
                     case TypeCode.Int16:
-                        EmitLoadConstantInt(il, (short)constantValue);
+                        EmitLoadConstantInt(il, (short)consValue);
                         break;
                     case TypeCode.Int32: // todo: @perf check for LightExpression
-                        EmitLoadConstantInt(il, (int)constantValue);
+                        EmitLoadConstantInt(il, (int)consValue);
                         break;
                     case TypeCode.Int64:
-                        il.Emit(OpCodes.Ldc_I8, (long)constantValue);
+                        il.Emit(OpCodes.Ldc_I8, (long)consValue);
                         break;
                     case TypeCode.Double:
-                        il.Emit(OpCodes.Ldc_R8, (double)constantValue);
+                        il.Emit(OpCodes.Ldc_R8, (double)consValue);
                         break;
                     case TypeCode.Single:
-                        il.Emit(OpCodes.Ldc_R4, (float)constantValue);
+                        il.Emit(OpCodes.Ldc_R4, (float)consValue);
                         break;
                     case TypeCode.UInt16:
-                        EmitLoadConstantInt(il, (ushort)constantValue);
+                        EmitLoadConstantInt(il, (ushort)consValue);
                         break;
                     case TypeCode.UInt32:
                         unchecked
                         {
-                            EmitLoadConstantInt(il, (int)(uint)constantValue);
+                            EmitLoadConstantInt(il, (int)(uint)consValue);
                         }
                         break;
                     case TypeCode.UInt64:
                         unchecked
                         {
-                            il.Emit(OpCodes.Ldc_I8, (long)(ulong)constantValue);
+                            il.Emit(OpCodes.Ldc_I8, (long)(ulong)consValue);
                         }
                         break;
                     case TypeCode.Decimal:
-                        EmitDecimalConstant((decimal)constantValue, il);
+                        EmitDecimalConstant((decimal)consValue, il);
                         break;
                     // todo: @feature for net7 add Half, Int128, UInt128
                     default:
-                        if (constValueType == typeof(IntPtr))
+                        if (constType == typeof(IntPtr))
                         {
-                            il.Emit(OpCodes.Ldc_I8, ((IntPtr)constantValue).ToInt64());
+                            il.Emit(OpCodes.Ldc_I8, ((IntPtr)consValue).ToInt64());
                             break;
                         }
-                        else if (constValueType == typeof(UIntPtr))
+                        else if (constType == typeof(UIntPtr))
                         {
                             unchecked
                             {
-                                il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)constantValue).ToUInt64());
+                                il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)consValue).ToUInt64());
                             }
                             break;
                         }
@@ -4197,7 +4211,7 @@ namespace FastExpressionCompiler
                     {
                         var fieldValue = field.GetValue(null);
                         if (fieldValue != null)
-                            return TryEmitConstantOfNotNullValue(false, field.FieldType, fieldValue, il, ref closure);
+                            return TryEmitConstant(false, null, field.FieldType, fieldValue, il, ref closure);
                         il.Emit(OpCodes.Ldnull);
                     }
                     else
