@@ -14,11 +14,14 @@ namespace FastExpressionCompiler.IssueTests
         {
             Nullable_decimal_not_equal_to_zero();
             Nullable_decimal_greater_than_zero();
+            Nullable_decimal_not_equal_decimal();
+            Nullable_decimal_less_then_decimal();
             Nullable_decimal_not_equal_to_null();
+            Null_not_equal_to_nullable_decimal();
             Nullable_decimal_equal_to_null();
             Nullable_decimal_member_not_equal_to_null();
             Nullable_decimal_member_not_equal_to_null_inside_predicate();
-            return 6;
+            return 9;
         }
 
         [Test]
@@ -63,11 +66,73 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsFalse(result);
         }
 
+        [Test]
+        public void Nullable_decimal_not_equal_decimal()
+        {
+            Expression<Func<decimal?, bool>> expression = n => n != 1.11M;
+            expression.PrintCSharp(); // just for debug
+
+            var compiledSys = expression.Compile();
+            var compiledFast = expression.CompileFast(true);
+
+            var instance = 1.111M;
+
+            compiledSys.PrintIL("sys");
+            compiledFast.PrintIL("fast");
+
+            var result = compiledSys(instance);
+            Assert.IsTrue(result);
+
+            result = compiledFast(instance);
+            Assert.IsTrue(result);
+        }
+
+        [Test]
+        public void Nullable_decimal_less_then_decimal()
+        {
+            Expression<Func<decimal?, bool>> expression = n => n < 1.11M;
+            expression.PrintCSharp(); // just for debug
+
+            var compiledSys = expression.Compile();
+            var compiledFast = expression.CompileFast(true);
+
+            var instance = 1.101M;
+
+            compiledSys.PrintIL("sys");
+            compiledFast.PrintIL("fast");
+
+            var result = compiledSys(instance);
+            Assert.IsTrue(result);
+
+            result = compiledFast(instance);
+            Assert.IsTrue(result);
+        }
 
         [Test]
         public void Nullable_decimal_not_equal_to_null()
         {
             Expression<Func<decimal?, bool>> expression = n => n != null;
+            expression.PrintCSharp(); // just for debug
+
+            var compiledSys = expression.Compile();
+            var compiledFast = expression.CompileFast(true);
+
+            var instance = default(decimal);
+
+            compiledSys.PrintIL("sys");
+            compiledFast.PrintIL("fast");
+
+            var result = compiledSys(instance);
+            Assert.IsTrue(result);
+
+            result = compiledFast(instance);
+            Assert.IsTrue(result);
+        }
+
+        [Test]
+        public void Null_not_equal_to_nullable_decimal()
+        {
+            Expression<Func<decimal?, bool>> expression = n => null != n;
             expression.PrintCSharp(); // just for debug
 
             var compiledSys = expression.Compile();

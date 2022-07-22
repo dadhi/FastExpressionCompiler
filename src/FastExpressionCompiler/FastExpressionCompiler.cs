@@ -2797,18 +2797,10 @@ namespace FastExpressionCompiler
 
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     il.Emit(OpCodes.Pop);
+                else if (expr.Type == typeof(bool))
+                    EmitEqualToZeroOrNull(il);
                 else
-                {
-                    if (expr.Type == typeof(bool))
-                    {
-                        il.Emit(OpCodes.Ldc_I4_0);
-                        il.Emit(OpCodes.Ceq);
-                    }
-                    else
-                    {
-                        il.Emit(OpCodes.Not);
-                    }
-                }
+                    il.Emit(OpCodes.Not);
                 return true;
             }
 
@@ -3049,19 +3041,14 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldnull);
                     return true;
                 }
-                if (expr == FalseConstant || expr == ZeroConstant)
+                if (expr == FalseConstant)
                 {
                     il.Emit(OpCodes.Ldc_I4_0);
                     return true;
                 }
-                if (expr == TrueConstant || expr == OneConstant)
+                if (expr == TrueConstant)
                 {
                     il.Emit(OpCodes.Ldc_I4_1);
-                    return true;
-                }
-                if (expr == MinusOneConstant)
-                {
-                    il.Emit(OpCodes.Ldc_I4_M1);
                     return true;
                 }
                 if (expr is IntConstantExpression n)
@@ -4526,30 +4513,50 @@ namespace FastExpressionCompiler
                 var leftIsNullable = leftOpType.IsNullable();
                 var rightOpType = exprRight.Type;
 
-                var comparisonWithNull = exprRight is ConstantExpression r && r.Value == null;
-                if (comparisonWithNull && exprRight.Type == typeof(object))
+                // if on member is `null` object then list its type to match other member
+                var rightIsNull = exprRight is ConstantExpression r && r.Value == null;
+                if (rightIsNull && rightOpType == typeof(object))
                     rightOpType = leftOpType;
 
-                int lVarIndex = -1, rVarIndex = -1;
+                var leftIsNull = exprLeft is ConstantExpression l && l.Value == null;
+                if (leftIsNull && leftOpType == typeof(object))
+                    leftOpType = rightOpType;
+
                 var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+
+                // short circuit the comparison with null on the right
+                var isEqualityOp = expressionType == ExpressionType.Equal || expressionType == ExpressionType.NotEqual;
+                if (isEqualityOp)
+                {
+                    if (leftIsNullable && rightIsNull)
+                    {
+                        if (!TryEmit(exprLeft, paramExprs, il, ref closure, setup, operandParent))
+                            return false;
+                        EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
+                        EmitMethodCall(il, leftOpType.FindNullableHasValueGetterMethod());
+                        if (expressionType == ExpressionType.Equal)
+                            EmitEqualToZeroOrNull(il);
+                        return il.EmitPopIfIgnoreResult(parent);
+                    }
+                    if (leftIsNull && rightOpType.IsNullable())
+                    {
+                        if (!TryEmit(exprRight, paramExprs, il, ref closure, setup, operandParent))
+                            return false;
+                        EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
+                        EmitMethodCall(il, rightOpType.FindNullableHasValueGetterMethod());
+                        if (expressionType == ExpressionType.Equal)
+                            EmitEqualToZeroOrNull(il);
+                        return il.EmitPopIfIgnoreResult(parent);
+                    }
+                }
+
                 if (!TryEmit(exprLeft, paramExprs, il, ref closure, setup, operandParent))
                     return false;
 
+                int lVarIndex = -1, rVarIndex = -1;
                 if (leftIsNullable)
                 {
                     lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
-                    if (comparisonWithNull & (expressionType == ExpressionType.Equal || expressionType == ExpressionType.NotEqual))
-                    {
-                        EmitMethodCall(il, leftOpType.FindNullableHasValueGetterMethod());
-                        if (expressionType == ExpressionType.Equal)
-                        {
-                            il.Emit(OpCodes.Ldc_I4_0); // OpCodes.Not does not work here because it is a bitwise operation
-                            il.Emit(OpCodes.Ceq);
-
-                        }
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
-
                     EmitMethodCall(il, leftOpType.FindNullableGetValueOrDefaultMethod());
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
@@ -4557,32 +4564,21 @@ namespace FastExpressionCompiler
                 if (!TryEmit(exprRight, paramExprs, il, ref closure, setup, operandParent))
                     return false;
 
-                if (leftOpType != rightOpType)
+                if (leftOpType != rightOpType && leftOpType.IsClass && rightOpType.IsClass &&
+                    (leftOpType == typeof(object) || rightOpType == typeof(object)))
                 {
-                    if (leftOpType.IsClass && rightOpType.IsClass &&
-                        (leftOpType == typeof(object) || rightOpType == typeof(object)))
-                    {
-                        if (expressionType == ExpressionType.Equal)
-                            il.Emit(OpCodes.Ceq);
-                        else if (expressionType == ExpressionType.NotEqual)
-                        {
-                            il.Emit(OpCodes.Ceq);
-                            // OpCodes.Not does not work here because it is a bitwise operation
-                            il.Emit(OpCodes.Ldc_I4_0);
-                            il.Emit(OpCodes.Ceq);
-                        }
-                        else
-                            return false;
-
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
+                    if (!isEqualityOp)
+                        return false;
+                    il.Emit(OpCodes.Ceq); // todo: @wip test it why not _objectEqualsMethod 
+                    if (expressionType == ExpressionType.NotEqual)
+                        EmitEqualToZeroOrNull(il);
+                    return il.EmitPopIfIgnoreResult(parent);
                 }
 
                 if (rightOpType.IsNullable())
                 {
                     rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
                     EmitMethodCall(il, rightOpType.FindNullableGetValueOrDefaultMethod());
-                    // ReSharper disable once AssignNullToNotNullAttribute
                     rightOpType = Nullable.GetUnderlyingType(rightOpType);
                 }
 
@@ -4616,19 +4612,15 @@ namespace FastExpressionCompiler
                         }
                     }
 
-                    if (expressionType != ExpressionType.Equal && expressionType != ExpressionType.NotEqual)
+                    if (!isEqualityOp)
                         return false; // todo: @unclear what is the alternative?
 
                     EmitMethodCall(il, _objectEqualsMethod);
-
                     if (expressionType == ExpressionType.NotEqual) // invert result for not equal
-                    {
-                        il.Emit(OpCodes.Ldc_I4_0);
-                        il.Emit(OpCodes.Ceq);
-                    }
+                        EmitEqualToZeroOrNull(il);
 
                     if (leftIsNullable)
-                        goto nullCheck;
+                        goto nullableCheck;
 
                     return il.EmitPopIfIgnoreResult(parent);
                 }
@@ -4639,46 +4631,38 @@ namespace FastExpressionCompiler
                     case ExpressionType.Equal:
                         il.Emit(OpCodes.Ceq);
                         break;
-
                     case ExpressionType.NotEqual:
                         il.Emit(OpCodes.Ceq);
-                        il.Emit(OpCodes.Ldc_I4_0);
-                        il.Emit(OpCodes.Ceq);
+                        EmitEqualToZeroOrNull(il);
                         break;
-
                     case ExpressionType.LessThan:
                         il.Emit(OpCodes.Clt);
                         break;
-
                     case ExpressionType.GreaterThan:
                         il.Emit(OpCodes.Cgt);
                         break;
-
                     case ExpressionType.GreaterThanOrEqual:
                         // simplifying by using the LessThen (Clt) and comparing with negative outcome (Ceq 0)
                         if (leftOpType.IsUnsigned() && rightOpType.IsUnsigned())
                             il.Emit(OpCodes.Clt_Un);
                         else
                             il.Emit(OpCodes.Clt);
-                        il.Emit(OpCodes.Ldc_I4_0);
-                        il.Emit(OpCodes.Ceq);
+                        EmitEqualToZeroOrNull(il);
                         break;
-
                     case ExpressionType.LessThanOrEqual:
                         // simplifying by using the GreaterThen (Cgt) and comparing with negative outcome (Ceq 0)
                         if (leftOpType.IsUnsigned() && rightOpType.IsUnsigned())
                             il.Emit(OpCodes.Cgt_Un);
                         else
                             il.Emit(OpCodes.Cgt);
-                        il.Emit(OpCodes.Ldc_I4_0);
-                        il.Emit(OpCodes.Ceq);
+                        EmitEqualToZeroOrNull(il);
                         break;
 
                     default:
                         return false;
                 }
 
-            nullCheck:
+            nullableCheck:
                 if (leftIsNullable)
                 {
                     var leftNullableHasValueGetterMethod = exprLeft.Type.FindNullableHasValueGetterMethod();
@@ -4708,8 +4692,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.NotEqual:
                             il.Emit(OpCodes.Ceq);
-                            il.Emit(OpCodes.Ldc_I4_0);
-                            il.Emit(OpCodes.Ceq);
+                            EmitEqualToZeroOrNull(il);
                             il.Emit(OpCodes.Or);
                             break;
 
@@ -5150,6 +5133,13 @@ namespace FastExpressionCompiler
                 }
 
                 return testExpr;
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            public static void EmitEqualToZeroOrNull(ILGenerator il)
+            {
+                il.Emit(OpCodes.Ldc_I4_0); // OpCodes.Not does not work here because it is a bitwise operation
+                il.Emit(OpCodes.Ceq);
             }
 
             /// Get the advantage of the optimized specialized EmitCall method
