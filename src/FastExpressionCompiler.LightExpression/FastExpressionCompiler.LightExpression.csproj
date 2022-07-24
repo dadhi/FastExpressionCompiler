@@ -14,7 +14,10 @@
         <PackageReleaseNotes><![CDATA[
 ## v3.3.3 Bug-fix release
 
-- fixed: #341 Equality comparison between nullable and null inside Any produces incorrect compiled expression bug
+- fixed: #336 Method TryCompileBoundToFirstClosureParam is returning passed Type array to pool may cause undefined behavior
+- fixed: #337 Switch LightExpression.Expression.ToString from System.Expression.ToString pseudo-code to ToCSharpString
+- fixed: #338 InvocationExpression is not properly converted to System Expression via ToExpression for non-lambda expression
+- fixed: #341 Equality comparison between nullable and null inside Any produces incorrect compiled expression
 
 ## v3.3.2 Bug-fix release
 
