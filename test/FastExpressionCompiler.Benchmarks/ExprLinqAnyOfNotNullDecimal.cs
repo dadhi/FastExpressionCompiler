@@ -23,10 +23,11 @@ namespace FastExpressionCompiler.Benchmarks
 //
 // ## Invoke compiled vs compiled fast
 //
-// |             Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-// |------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-// | InvokeCompiled     | 690.90 ns | 13.430 ns | 20.101 ns | 688.92 ns | 19.05 |    1.57 | 0.0381 |     - |     - |     120 B |
-// | InvokeCompiledFast |  35.37 ns |  1.191 ns |  3.513 ns |  34.21 ns |  1.00 |    0.00 | 0.0178 |     - |     - |      56 B |
+// |              Method |      Mean |    Error |   StdDev |    Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+// |-------------------- |----------:|---------:|---------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+// |      InvokeCompiled | 666.34 ns | 9.137 ns | 8.546 ns | 664.91 ns | 20.66 |    0.76 | 0.0381 |     - |     - |     120 B |
+// |  InvokeCompiledFast |  32.03 ns | 0.636 ns | 1.045 ns |  31.79 ns |  1.00 |    0.00 | 0.0178 |     - |     - |      56 B |
+// | InvokePlainDelegate |  32.74 ns | 0.798 ns | 2.314 ns |  31.79 ns |  1.02 |    0.08 | 0.0178 |     - |     - |      56 B |
 //
 
     public class ExprLinqAnyOfNotNullDecimal
@@ -55,6 +56,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         static Func<Test, bool> _compiledSystem = _expression.Compile();
         static Func<Test, bool> _compiledFast = _expression.CompileFast();
+        static Func<Test, bool> _delegate = t => t.A.Any(e => e.Value != null);
 
         static Test _test = new Test()
         {
@@ -72,6 +74,9 @@ namespace FastExpressionCompiler.Benchmarks
 
             [Benchmark(Baseline = true)]
             public object InvokeCompiledFast() => _compiledFast(_test);
+
+            [Benchmark]
+            public object InvokePlainDelegate() => _delegate(_test);
         }
     }
 }

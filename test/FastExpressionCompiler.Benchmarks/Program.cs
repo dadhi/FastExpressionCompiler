@@ -6,7 +6,7 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
+            // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
             BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
          
             // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
