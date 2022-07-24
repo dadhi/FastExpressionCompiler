@@ -6,6 +6,7 @@ using NUnit.Framework;
 
 #if !LIGHT_EXPRESSION
 using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 {
     [TestFixture, Ignore("fixme")]
@@ -14,9 +15,10 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             foreach (var (a, op, b, expected) in Data)
-            {
-                Decimal_nullable_comparison_cases(a, op, b, expected);
-            }
+                Nullable_decimal_parameters_comparison_cases(a, op, b, expected);
+
+            foreach (var (a, op, b, expected) in Data)
+                Nullable_decimal_parameter_with_decimal_constant_comparison_cases(a, op, b, expected);
 
             Nullable_decimal_not_equal_to_zero();
             Nullable_decimal_greater_than_zero();
@@ -28,12 +30,12 @@ namespace FastExpressionCompiler.IssueTests
             Nullable_decimal_member_not_equal_to_null();
             Nullable_decimal_member_not_equal_to_null_inside_predicate();
 
-            return Data.Length + 9;
+            return Data.Length * 2 + 9;
         }
 
         public enum Ops { Equal, NotEqual, Greater, Less, GreaterOrEqual, LessOrEqual }
 
-        public static Expression<Func<decimal?, decimal?, bool>>[] opsExpressions = 
+        public static Expression<Func<decimal?, decimal?, bool>>[] twoParamsExpressions = 
         {
             (a, b) => a == b,
             (a, b) => a != b,
@@ -41,6 +43,17 @@ namespace FastExpressionCompiler.IssueTests
             (a, b) => a <  b,
             (a, b) => a >= b,
             (a, b) => a <= b,
+        };
+
+        public static ParameterExpression aParam = Parameter(typeof(decimal?), "a"); 
+        public static Func<decimal?, Expression<Func<decimal?, bool>>>[] oneParamExpressions = 
+        {
+            b => Lambda<Func<decimal?, bool>>(Equal(aParam, Constant(b, typeof(decimal?))), aParam),
+            b => Lambda<Func<decimal?, bool>>(NotEqual(aParam, Constant(b, typeof(decimal?))), aParam),
+            b => Lambda<Func<decimal?, bool>>(GreaterThan(aParam, Constant(b, typeof(decimal?))), aParam),
+            b => Lambda<Func<decimal?, bool>>(LessThan(aParam, Constant(b, typeof(decimal?))), aParam),
+            b => Lambda<Func<decimal?, bool>>(GreaterThanOrEqual(aParam, Constant(b, typeof(decimal?))), aParam),
+            b => Lambda<Func<decimal?, bool>>(LessThanOrEqual(aParam, Constant(b, typeof(decimal?))), aParam),
         };
 
         public static readonly (decimal?, Ops, decimal?, bool)[] Data =
@@ -65,9 +78,28 @@ namespace FastExpressionCompiler.IssueTests
         
 
         [Test, TestCaseSource(nameof(TestCases))]
-        public void Decimal_nullable_comparison_cases(decimal? a, Ops op, decimal? b, bool expected)
+        public void Nullable_decimal_parameters_comparison_cases(decimal? a, Ops op, decimal? b, bool expected)
         {
-            var expression = opsExpressions[(int)op];
+            var expression = oneParamExpressions[(int)op](b);
+            expression.PrintCSharp(); // just for debug
+
+            var compiledSys = expression.Compile();
+            var compiledFast = expression.CompileFast(true);
+
+            compiledSys.PrintIL("sys");
+            compiledFast.PrintIL("fast");
+
+            var result = compiledSys(a);
+            Assert.AreEqual(expected, result);
+
+            result = compiledFast(a);
+            Assert.AreEqual(expected, result);
+        }
+
+        [Test, TestCaseSource(nameof(TestCases))]
+        public void Nullable_decimal_parameter_with_decimal_constant_comparison_cases(decimal? a, Ops op, decimal? b, bool expected)
+        {
+            var expression = twoParamsExpressions[(int)op];
             expression.PrintCSharp(); // just for debug
 
             var compiledSys = expression.Compile();
