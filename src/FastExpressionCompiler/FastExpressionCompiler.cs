@@ -2353,11 +2353,11 @@ namespace FastExpressionCompiler
                 if (leftType.IsValueType) // Nullable -> It's the only ValueType comparable to null
                 {
                     var varIndex = EmitStoreAndLoadLocalVariableAddress(il, leftType);
-                    il.Emit(OpCodes.Call, leftType.FindNullableHasValueGetterMethod());
+                    EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod());
 
                     il.Emit(OpCodes.Brfalse, labelFalse);
                     EmitLoadLocalVariableAddress(il, varIndex);
-                    il.Emit(OpCodes.Call, leftType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod());
 
                     il.Emit(OpCodes.Br, labelDone);
                     il.MarkLabel(labelFalse);
@@ -2693,50 +2693,32 @@ namespace FastExpressionCompiler
                 }
                 else if (expr.NodeType == ExpressionType.Increment)
                 {
-                    var typeInfo = exprType.GetTypeInfo();
-                    if (typeInfo.IsPrimitive)
+                    if (exprType.IsPrimitive)
                     {
                         if (!TryEmitNumberOne(il, exprType))
                             return false;
                         il.Emit(OpCodes.Add);
                     }
-                    else
-                    {
-                        var method = typeInfo.GetDeclaredMethod("op_Increment");
-                        if (method == null)
-                            return false;
-                        il.Emit(OpCodes.Call, method);
-                    }
+                    else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_Increment")))
+                        return false;
                 }
                 else if (expr.NodeType == ExpressionType.Decrement)
                 {
-                    var typeInfo = exprType.GetTypeInfo();
-                    if (typeInfo.IsPrimitive)
+                    if (exprType.IsPrimitive)
                     {
                         if (!TryEmitNumberOne(il, exprType))
                             return false;
                         il.Emit(OpCodes.Sub);
                     }
-                    else
-                    {
-                        var method = typeInfo.GetDeclaredMethod("op_Decrement");
-                        if (method == null)
-                            return false;
-                        il.Emit(OpCodes.Call, method);
-                    }
+                    else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_Decrement")))
+                        return false;
                 }
                 else if (expr.NodeType == ExpressionType.Negate || expr.NodeType == ExpressionType.NegateChecked)
                 {
-                    var typeInfo = exprType.GetTypeInfo();
-                    if (typeInfo.IsPrimitive)
+                    if (exprType.IsPrimitive)
                         il.Emit(OpCodes.Neg);
-                    else
-                    {
-                        var method = typeInfo.GetDeclaredMethod("op_UnaryNegation");
-                        if (method == null)
-                            return false;
-                        il.Emit(OpCodes.Call, method);
-                    }
+                    else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_UnaryNegation")))
+                        return false;
                 }
                 else if (expr.NodeType == ExpressionType.OnesComplement)
                     il.Emit(OpCodes.Not);
@@ -5168,6 +5150,11 @@ namespace FastExpressionCompiler
 #endif
                 return true;
             }
+
+            /// Same as EmitMethodCall which checks the method for null first, and returns false if it is null. 
+            [MethodImpl((MethodImplOptions)256)]
+            public static bool EmitMethodCallCheckForNull(ILGenerator il, MethodInfo method) =>
+                method != null && EmitMethodCall(il, method);
 
             /// Efficiently emit the int constant
             [MethodImpl((MethodImplOptions)256)]
