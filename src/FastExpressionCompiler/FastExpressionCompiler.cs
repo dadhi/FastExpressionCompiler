@@ -3067,6 +3067,10 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            [MethodImpl((MethodImplOptions)256)]
+            public static bool TryEmitNotNullConstant(bool considerClosure, object consValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1) =>
+                TryEmitConstant(considerClosure, null, consValue.GetType(), consValue, il, ref closure, byRefIndex);
+
             public static bool TryEmitConstant(bool considerClosure, Type exprType, Type constType, object consValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
             {
                 if (exprType == null)
