@@ -6,14 +6,16 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
+            BenchmarkRunner.Run<SimpleConstructorEmit>();
+
             // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
-            BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
-         
+            // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
+
             // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
             // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();
-            
+
             // BenchmarkRunner.Run<ReflectionInvoke_vs_CallWithObjectArgsAndNestedLambda>();
-            
+
             //BenchmarkRunner.Run<GenericConverter.Compilation>();
             //BenchmarkRunner.Run<GenericConverter.Invocation>();
 
@@ -51,7 +53,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Invocation>();
 
             //BenchmarkRunner.Run<SimpleExpr_ParamPlusParam>();
-            
+
             // BenchmarkRunner.Run<Deserialize_Simple>();
 
             // BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();

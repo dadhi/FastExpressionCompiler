@@ -15,10 +15,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Remove="FastExpressionCompiler.Benchmarks.v3.ncrunchproject"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="BenchmarkDotNet" Version="0.12.1"/>
     </ItemGroup>
 

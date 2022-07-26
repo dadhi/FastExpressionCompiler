@@ -20,6 +20,21 @@
             "requireExactSource": false // allows to for moderate code editing while debugging
         },
         {
+            "name": "Benchmarks",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build_benchmarks",
+            // If you have changed target frameworks, make sure to update the program path.
+            "program": "${workspaceFolder}/test/FastExpressionCompiler.Benchmarks/bin/Debug/net6.0/FastExpressionCompiler.Benchmarks.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/test/FastExpressionCompiler.Benchmarks",
+            // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "internalConsoleOptions": "openOnSessionStart",
+            "requireExactSource": false // allows to for moderate code editing while debugging
+        },
+        {
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach",
