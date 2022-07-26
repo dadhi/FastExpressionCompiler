@@ -2837,8 +2837,7 @@ namespace FastExpressionCompiler
                     if (!closure.LastEmitIsAddress)
                         EmitStoreAndLoadLocalVariableAddress(il, sourceType);
 
-                    il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
-                    return il.EmitPopIfIgnoreResult(parent);
+                    return EmitMethodCall(il, sourceType.FindValueGetterMethod()) && il.EmitPopIfIgnoreResult(parent);
                 }
 
                 if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
@@ -2851,12 +2850,11 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                if (sourceType == targetType || targetType == typeof(object))
-                {
-                    if (targetType == typeof(object))
-                        il.TryEmitBoxOf(sourceType);
+                if (sourceType == targetType)
                     return il.EmitPopIfIgnoreResult(parent);
-                }
+
+                if (targetType == typeof(object))
+                    return il.TryEmitBoxOf(sourceType) && il.EmitPopIfIgnoreResult(parent);
 
                 // check implicit / explicit conversion operators on source and target types
                 // for non-primitives and for non-primitive nullable - #73
@@ -2866,7 +2864,7 @@ namespace FastExpressionCompiler
                     var convertOpMethod = method ?? sourceType.FindConvertOperator(sourceType, actualTargetType);
                     if (convertOpMethod != null)
                     {
-                        il.Emit(OpCodes.Call, convertOpMethod);
+                        EmitMethodCall(il, convertOpMethod);
                         if (underlyingNullableTargetType != null)
                             il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                         return il.EmitPopIfIgnoreResult(parent);
@@ -2875,10 +2873,7 @@ namespace FastExpressionCompiler
                 else if (underlyingNullableTargetType == null) // means sourceType.IsPrimitive
                 {
                     if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
-                    {
-                        il.Emit(OpCodes.Call, method);
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
+                        return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
 
                     var actualSourceType = underlyingNullableSourceType ?? sourceType;
                     var convertOpMethod = method ?? actualSourceType.FindConvertOperator(actualSourceType, targetType);
@@ -2887,11 +2882,9 @@ namespace FastExpressionCompiler
                         if (underlyingNullableSourceType != null)
                         {
                             EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                            il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                            EmitMethodCall(il, sourceType.FindValueGetterMethod());
                         }
-
-                        il.Emit(OpCodes.Call, convertOpMethod);
-                        return il.EmitPopIfIgnoreResult(parent);
+                        return EmitMethodCall(il, convertOpMethod) && il.EmitPopIfIgnoreResult(parent);
                     }
                 }
 
@@ -2900,10 +2893,7 @@ namespace FastExpressionCompiler
                     if (underlyingNullableTargetType == null && !targetType.IsPrimitive)
                     {
                         if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
-                        {
-                            il.Emit(OpCodes.Call, method);
-                            return il.EmitPopIfIgnoreResult(parent);
-                        }
+                            return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
 
                         var actualSourceType = underlyingNullableSourceType ?? sourceType;
                         // ReSharper disable once ConstantNullCoalescingCondition
@@ -2913,11 +2903,9 @@ namespace FastExpressionCompiler
                             if (underlyingNullableSourceType != null)
                             {
                                 EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                                il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                                EmitMethodCall(il, sourceType.FindValueGetterMethod());
                             }
-
-                            il.Emit(OpCodes.Call, convertOpMethod);
-                            return il.EmitPopIfIgnoreResult(parent);
+                            return EmitMethodCall(il, convertOpMethod) && il.EmitPopIfIgnoreResult(parent);
                         }
                     }
                     else if (underlyingNullableSourceType == null) // means targetType.IsPrimitive
@@ -2926,10 +2914,9 @@ namespace FastExpressionCompiler
                         var convertOpMethod = method ?? actualTargetType.FindConvertOperator(sourceType, actualTargetType);
                         if (convertOpMethod != null)
                         {
-                            il.Emit(OpCodes.Call, convertOpMethod);
+                            EmitMethodCall(il, convertOpMethod);
                             if (underlyingNullableTargetType != null)
                                 il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
-
                             return il.EmitPopIfIgnoreResult(parent);
                         }
                     }
@@ -2952,7 +2939,7 @@ namespace FastExpressionCompiler
                     else
                     {
                         var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                        il.Emit(OpCodes.Call, sourceType.FindNullableHasValueGetterMethod());
+                        EmitMethodCall(il, sourceType.FindNullableHasValueGetterMethod());
 
                         var labelSourceHasValue = il.DefineLabel();
                         il.Emit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
@@ -2967,7 +2954,7 @@ namespace FastExpressionCompiler
                         // if source nullable has a value:
                         il.MarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
-                        il.Emit(OpCodes.Call, sourceType.FindNullableGetValueOrDefaultMethod());
+                        EmitMethodCall(il, sourceType.FindNullableGetValueOrDefaultMethod());
 
                         if (!TryEmitValueConvert(underlyingNullableTargetType, il,
                             expr.NodeType == ExpressionType.ConvertChecked))
@@ -2975,7 +2962,7 @@ namespace FastExpressionCompiler
                             var convertOpMethod = method ?? underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
                             if (convertOpMethod == null)
                                 return false; // nor conversion nor conversion operator is found
-                            il.Emit(OpCodes.Call, convertOpMethod);
+                            EmitMethodCall(il, convertOpMethod);
                         }
 
                         il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
@@ -2991,7 +2978,7 @@ namespace FastExpressionCompiler
                     if (underlyingNullableSourceType != null)
                     {
                         EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                        il.Emit(OpCodes.Call, sourceType.FindValueGetterMethod());
+                        EmitMethodCall(il, sourceType.FindValueGetterMethod());
                     }
 
                     // cast as the last resort and let's it fail if unlucky
@@ -3117,7 +3104,7 @@ namespace FastExpressionCompiler
                     if (consValue is Type t)
                     {
                         il.Emit(OpCodes.Ldtoken, t);
-                        il.Emit(OpCodes.Call, _getTypeFromHandleMethod);
+                        EmitMethodCall(il, _getTypeFromHandleMethod);
                         return true;
                     }
                     if (!TryEmitPrimitiveOrEnumOrDecimalConstant(il, consValue, constType))
