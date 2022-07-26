@@ -5658,12 +5658,12 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Ldfld, localSignatureField);
             il.Emit(OpCodes.Ldarg_2);  // load `type` argument
             il.Emit(OpCodes.Ldc_I4_0); // load `pinned: false` argument
-            il.Emit(OpCodes.Call, addArgumentMethod);
+            EmitMethodCall(il, addArgumentMethod);
 
             // emitting `return PostInc(ref il.LocalCount);`
             il.Emit(OpCodes.Ldarg_1); // load `il` argument
             il.Emit(OpCodes.Ldflda, localCountField);
-            il.Emit(OpCodes.Call, postIncMethod);
+            EmitMethodCall(il, postIncMethod);
 
             il.Emit(OpCodes.Ret);
 
