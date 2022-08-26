@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace FastExpressionCompiler.IssueTests
 {
     [TestFixture]
-    public class EmitSimpleConstructorTest : ITest
+    public class EmitHacksTest : ITest
     {
         public int Run()
         {

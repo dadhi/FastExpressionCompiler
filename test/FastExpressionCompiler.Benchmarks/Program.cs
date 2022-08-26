@@ -6,7 +6,7 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<MethodStaticNoArgsEmit>();
+            BenchmarkRunner.Run<EmitHacksTest.MethodStaticNoArgsEmit>();
 
             // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
             // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
