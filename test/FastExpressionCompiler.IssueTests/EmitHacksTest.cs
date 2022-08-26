@@ -27,6 +27,16 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(42, a);
         }
 
+        static Type ilType = typeof(ILGenerator).Assembly.GetType("System.Reflection.Emit.DynamicILGenerator");
+        static FieldInfo mScopeField = ilType.GetField("m_scope", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        static Type scopeType = ilType.Assembly.GetType("System.Reflection.Emit.DynamicScope");
+        static FieldInfo mTokensField = scopeType.GetField("m_tokens", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        static FieldInfo mLengthField = typeof(ILGenerator).GetField("m_length", BindingFlags.Instance | BindingFlags.NonPublic);
+        static FieldInfo mILStreamField = typeof(ILGenerator).GetField("m_ILStream", BindingFlags.Instance | BindingFlags.NonPublic);
+        static MethodInfo updateStackSize = typeof(ILGenerator).GetMethod("UpdateStackSize", BindingFlags.Instance | BindingFlags.NonPublic);
+
         public static Func<int> Get_DynamicMethod_Emit_Hack()
         {
             var dynMethod = new DynamicMethod(string.Empty,
@@ -38,52 +48,25 @@ namespace FastExpressionCompiler.IssueTests
             var opCode = OpCodes.Call;
             var meth = MethodStaticNoArgs;
             var paramCount = 0;
-
-            // // stripped down code for not generic method and not array method:
-            // public override void Emit(OpCode opcode, MethodInfo meth, int paramCount)
-            // {
-
-            //     m_scope.m_tokens.Add(((RuntimeMethodInfo)meth).MethodHandle);
             var methodHandle = meth.MethodHandle;
-            var mScopeField = ilType.GetField("m_scope", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (mScopeField == null)
-                return null;
-            var mScope = mScopeField.GetValue(il);
 
-            var mTokensField = mScope.GetType().GetField("m_tokens", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (mTokensField == null)
-                return null;
+            var mScope = mScopeField.GetValue(il);
 
             var mTokens = (IList<object?>)mTokensField.GetValue(mScope);
             mTokens.Add(methodHandle);
 
-            //     var token = m_scope.m_tokens.Count - 1 | (int)MetadataTokenType.MethodDef; // MethodDef is 0x06000000
             var token = mTokens.Count - 1 | (int)0x06000000; // MetadataTokenType.MethodDef
             Console.WriteLine("token: {0}", token);
 
-            //     // Guarantees an array capable of holding at least size elements.
-            //     if (m_length + 7 >= m_ILStream.Length)
-            //         IncreaseCapacity(7);
-            var mLengthField = typeof(ILGenerator).GetField("m_length", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (mLengthField == null)
-                return null;
             var mLength = (int)mLengthField.GetValue(il);
 
-            var mILStreamField = typeof(ILGenerator).GetField("m_ILStream", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (mILStreamField == null)
-                return null;
             var mILStream = (byte[])mILStreamField.GetValue(il);
             if (mILStream.Length < mLength + 7)
                 Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + 7));
 
-            //     m_ILStream[m_length++] = (byte)opcode.Value;
             mILStream[mLength++] = (byte)opCode.Value;
             mLengthField.SetValue(il, mLength);
 
-            //     UpdateStackSize(opcode, 0);
-            var updateStackSize = ilType.GetMethod("UpdateStackSize", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (updateStackSize == null)
-                return null;
             updateStackSize.Invoke(il, new object[] { opCode, 0 });
 
             int stackchange = 0;
@@ -93,14 +76,10 @@ namespace FastExpressionCompiler.IssueTests
             if (!meth.IsStatic)
                 stackchange--;
 
-            //     UpdateStackSize(opcode, stackchange);
             updateStackSize.Invoke(il, new object[] { opCode, stackchange });
 
             BinaryPrimitives.WriteInt32LittleEndian(mILStream.AsSpan(mLength), token);
-            //     m_length += 4;
             mLengthField.SetValue(il, mLength + 4);
-            // }
-
 
             il.Emit(OpCodes.Ret);
 

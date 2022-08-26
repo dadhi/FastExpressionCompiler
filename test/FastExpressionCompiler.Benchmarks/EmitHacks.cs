@@ -49,6 +49,13 @@ namespace FastExpressionCompiler.Benchmarks
             |-------------------------------- |----------:|----------:|-----------:|----------:|------:|--------:|----------:|------------:|
             | DynamicMethod_Emit_OpCodes_Call |  36.03 us |  1.354 us |   3.993 us |  34.30 us |  1.00 |    0.00 |   1.16 KB |        1.00 |
             |         DynamicMethod_Emit_Hack | 607.97 us | 40.797 us | 119.008 us | 560.64 us | 17.03 |    3.79 |    1.4 KB |        1.22 |
+
+            ## Moving fields and methods discovery to statics
+
+            |                          Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Allocated | Alloc Ratio |
+            |-------------------------------- |----------:|----------:|----------:|------:|--------:|----------:|------------:|
+            | DynamicMethod_Emit_OpCodes_Call |  32.74 us |  0.651 us |  1.534 us |  1.00 |    0.00 |   1.16 KB |        1.00 |
+            |         DynamicMethod_Emit_Hack | 599.96 us | 28.561 us | 83.313 us | 18.31 |    2.84 |    1.4 KB |        1.21 |            
             */
 
             [Benchmark(Baseline = true)]
