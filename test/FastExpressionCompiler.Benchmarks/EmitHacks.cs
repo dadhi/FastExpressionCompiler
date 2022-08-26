@@ -55,7 +55,16 @@ namespace FastExpressionCompiler.Benchmarks
             |                          Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Allocated | Alloc Ratio |
             |-------------------------------- |----------:|----------:|----------:|------:|--------:|----------:|------------:|
             | DynamicMethod_Emit_OpCodes_Call |  32.74 us |  0.651 us |  1.534 us |  1.00 |    0.00 |   1.16 KB |        1.00 |
-            |         DynamicMethod_Emit_Hack | 599.96 us | 28.561 us | 83.313 us | 18.31 |    2.84 |    1.4 KB |        1.21 |            
+            |         DynamicMethod_Emit_Hack | 599.96 us | 28.561 us | 83.313 us | 18.31 |    2.84 |    1.4 KB |        1.21 |
+
+            ## Did some code mangling and now we are talking
+
+            |                          Method |     Mean |    Error |   StdDev |   Median | Ratio | RatioSD | Allocated | Alloc Ratio |
+            |-------------------------------- |---------:|---------:|---------:|---------:|------:|--------:|----------:|------------:|
+            | DynamicMethod_Emit_OpCodes_Call | 35.79 us | 0.789 us | 2.172 us | 35.07 us |  1.00 |    0.00 |   1.16 KB |        1.00 |
+            |         DynamicMethod_Emit_Hack | 37.82 us | 0.749 us | 1.513 us | 37.38 us |  1.05 |    0.07 |   1.31 KB |        1.13 |
+
+
             */
 
             [Benchmark(Baseline = true)]

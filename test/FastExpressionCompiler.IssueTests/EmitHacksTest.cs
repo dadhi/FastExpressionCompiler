@@ -39,24 +39,22 @@ namespace FastExpressionCompiler.IssueTests
 
         public static Func<int> Get_DynamicMethod_Emit_Hack()
         {
+            var opCode = OpCodes.Call;
+            var meth = MethodStaticNoArgs;
+            var paramCount = 0;
+
             var dynMethod = new DynamicMethod(string.Empty,
                 typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure) },
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = dynMethod.GetILGenerator();
-            var ilType = il.GetType();
-            var opCode = OpCodes.Call;
-            var meth = MethodStaticNoArgs;
-            var paramCount = 0;
-            var methodHandle = meth.MethodHandle;
 
             var mScope = mScopeField.GetValue(il);
 
             var mTokens = (IList<object?>)mTokensField.GetValue(mScope);
-            mTokens.Add(methodHandle);
+            mTokens.Add(meth.MethodHandle);
 
             var token = mTokens.Count - 1 | (int)0x06000000; // MetadataTokenType.MethodDef
-            Console.WriteLine("token: {0}", token);
 
             var mLength = (int)mLengthField.GetValue(il);
 
@@ -67,16 +65,10 @@ namespace FastExpressionCompiler.IssueTests
             mILStream[mLength++] = (byte)opCode.Value;
             mLengthField.SetValue(il, mLength);
 
-            updateStackSize.Invoke(il, new object[] { opCode, 0 });
+            // updateStackSize.Invoke(il, new object[] { opCode, 0 }); // todo: @wip check that we need this
 
-            int stackchange = 0;
-            if (meth.ReturnType != typeof(void))
-                stackchange++;
-            stackchange -= paramCount;
-            if (!meth.IsStatic)
-                stackchange--;
-
-            updateStackSize.Invoke(il, new object[] { opCode, stackchange });
+            var stackExchange = CalcStackExchange(meth, paramCount);
+            updateStackSize.Invoke(il, new object[] { opCode, stackExchange });
 
             BinaryPrimitives.WriteInt32LittleEndian(mILStream.AsSpan(mLength), token);
             mLengthField.SetValue(il, mLength + 4);
@@ -84,6 +76,17 @@ namespace FastExpressionCompiler.IssueTests
             il.Emit(OpCodes.Ret);
 
             return (Func<int>)dynMethod.CreateDelegate(typeof(Func<int>), ExpressionCompiler.EmptyArrayClosure);
+        }
+
+        private static int CalcStackExchange(MethodInfo meth, int paramCount)
+        {
+            var stackchange = 0;
+            if (meth.ReturnType != typeof(void))
+                stackchange++;
+            stackchange -= paramCount;
+            if (!meth.IsStatic)
+                stackchange--;
+            return stackchange;
         }
 
         [Test]
