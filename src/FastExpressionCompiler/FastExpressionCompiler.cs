@@ -5114,7 +5114,7 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitMethodCallOrVirtualCall(ILGenerator il, MethodInfo method)
             {
-                // todo: @feature EmitCall is specifically for the varags method and not for normal conventions methods,
+                // todo: @feature EmitCall is specifically for the varags method and not for normal C# conventions methods,
                 // for those you need to call Emit(OpCodes.Call|Callvirt, methodInfo).
                 // So for now the varargs methods are not supported yet.
                 var ok = (method.CallingConvention & CallingConventions.VarArgs) == 0;
@@ -5125,7 +5125,7 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitVirtualMethodCall(ILGenerator il, MethodInfo method)
             {
-                // todo: @feature EmitCall is specifically for the varags method and not for normal conventions methods,
+                // todo: @feature EmitCall is specifically for the varags method and not for normal C# conventions methods,
                 // for those you need to call Emit(OpCodes.Call|Callvirt, methodInfo).
                 // So for now the varargs methods are not supported yet.
                 var ok = (method.CallingConvention & CallingConventions.VarArgs) == 0;
@@ -5136,7 +5136,7 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitMethodCall(ILGenerator il, MethodInfo method)
             {
-                // todo: @feature EmitCall is specifically for the varags method and not for normal conventions methods,
+                // todo: @feature EmitCall is specifically for the varags method and not for normal C# conventions methods,
                 // for those you need to call Emit(OpCodes.Call|Callvirt, methodInfo).
                 // So for now the varargs methods are not supported yet.
                 var ok = (method.CallingConvention & CallingConventions.VarArgs) == 0;
@@ -5677,31 +5677,84 @@ namespace FastExpressionCompiler
         // todo: @perf add MultiOpCodes emit to save on the EnsureCapacity calls
         // todo: @perf create EmitMethod without additional GetParameters call
         /*
-        public virtual void EmitCall(OpCode opcode, MethodInfo methodInfo, 
-            int stackExchange = (methodInfo.ReturnType != typeof(void) ? 1 : 0) - methodInfo.GetParameterTypes().Length - (methodInfo.IsStatic ? 1 : 0))
-        { 
-            var tk = GetMemberRefToken(methodInfo, null);
+        // original code:
+        public override void Emit(OpCode opcode, MethodInfo meth)
+        {
+            ArgumentNullException.ThrowIfNull(meth);
+ 
+            int stackchange = 0;
+            int token;
+            DynamicMethod? dynMeth = meth as DynamicMethod;
+            if (dynMeth == null)
+            {
+                RuntimeMethodInfo? rtMeth = meth as RuntimeMethodInfo;
+                if (rtMeth == null)
+                    throw new ArgumentException(SR.Argument_MustBeRuntimeMethodInfo, nameof(meth));
+ 
+                RuntimeType declaringType = rtMeth.GetRuntimeType();
+                if (declaringType != null && (declaringType.IsGenericType || declaringType.IsArray))
+                    token = GetTokenFor(rtMeth, declaringType);
+                else
+                    token = GetTokenFor(rtMeth);
+            }
+            else
+            {
+                // rule out not allowed operations on DynamicMethods
+                if (opcode.Equals(OpCodes.Ldtoken) || opcode.Equals(OpCodes.Ldftn) || opcode.Equals(OpCodes.Ldvirtftn))
+                {
+                    throw new ArgumentException(SR.Argument_InvalidOpCodeOnDynamicMethod);
+                }
+                token = GetTokenFor(dynMeth);
+            }
  
             EnsureCapacity(7);
             InternalEmit(opcode);
  
-            // * move outside of the method
-            // Push the return value if there is one.
-            // if (methodInfo.ReturnType != typeof(void))
-            //     stackchange++;
-
-            // * move outside of the method
-            // Pop the parameters.
-            // stackchange -= methodInfo.GetParameterTypes().Length;
-
-            // * move outside of the method
-            // Pop the this parameter if the method is non-static and the
-            // instruction is not newobj.
-            // if (!methodInfo.IsStatic)
-            //     stackchange--;
-
+            if (opcode.StackBehaviourPush == StackBehaviour.Varpush
+                && meth.ReturnType != typeof(void))
+            {
+                stackchange++;
+            }
+            if (opcode.StackBehaviourPop == StackBehaviour.Varpop)
+            {
+                stackchange -= meth.GetParametersNoCopy().Length;
+            }
+            // Pop the "this" parameter if the method is non-static,
+            //  and the instruction is not newobj/ldtoken/ldftn.
+            if (!meth.IsStatic &&
+                !(opcode.Equals(OpCodes.Newobj) || opcode.Equals(OpCodes.Ldtoken) || opcode.Equals(OpCodes.Ldftn)))
+            {
+                stackchange--;
+            }
+ 
             UpdateStackSize(opcode, stackchange);
-            PutInteger4(tk);
+            PutInteger4(token);
+        }
+
+        // stripped down code for not generic method and not array method:
+        public override void Emit(OpCode opcode, MethodInfo meth, int paramCount)
+        {
+            m_scope.m_tokens.Add(((RuntimeMethodInfo)meth).MethodHandle);
+            var token = m_scope.m_tokens.Count - 1 | (int)MetadataTokenType.MethodDef; // MethodDef is 0x06000000
+
+            // Guarantees an array capable of holding at least size elements.
+            if (m_length + size >= m_ILStream.Length)
+                IncreaseCapacity(7);
+
+            m_ILStream[m_length++] = (byte)opcode.Value; 
+            UpdateStackSize(opcode, 0);
+ 
+            int stackchange = 0;
+            if (meth.ReturnType != typeof(void))
+                stackchange++;
+            stackchange -= paramCount;
+            if (!meth.IsStatic)
+                stackchange--;
+ 
+            UpdateStackSize(opcode, stackchange);
+
+            BinaryPrimitives.WriteInt32LittleEndian(m_ILStream.AsSpan(m_length), token);
+            m_length += 4;
         }
         */
     }

@@ -17,6 +17,28 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void DynamicMethod_Emit_OpCodes_Call()
+        {
+            var f = Get_DynamicMethod_Emit_OpCodes_Call();
+            var a = f();
+            Assert.AreEqual(42, a);
+        }
+
+        public static Func<int> Get_DynamicMethod_Emit_OpCodes_Call()
+        {
+            var dynMethod = new DynamicMethod(string.Empty,
+                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure) },
+                typeof(ExpressionCompiler), skipVisibility: true);
+
+            var il = dynMethod.GetILGenerator();
+
+            il.Emit(OpCodes.Call, MethodStaticNoArgs);
+            il.Emit(OpCodes.Ret);
+
+            return (Func<int>)dynMethod.CreateDelegate(typeof(Func<int>), ExpressionCompiler.EmptyArrayClosure);
+        }
+
+        [Test]
         public void DynamicMethod_Emit_Newobj()
         {
             var f = Get_DynamicMethod_Emit_Newobj();
@@ -40,7 +62,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var il = dynMethod.GetILGenerator();
 
-            il.Emit(OpCodes.Newobj, _aCtor);
+            il.Emit(OpCodes.Newobj, _ctor);
             il.Emit(OpCodes.Ret);
 
             return (Func<A>)dynMethod.CreateDelegate(typeof(Func<A>), ExpressionCompiler.EmptyArrayClosure);
@@ -55,11 +77,11 @@ namespace FastExpressionCompiler.IssueTests
             var il = dynMethod.GetILGenerator();
             var ilType = il.GetType();
 
-            il.Emit(OpCodes.Newobj, _aCtor);
+            il.Emit(OpCodes.Newobj, _ctor);
 
-            Debug.Assert(_aCtor.DeclaringType != null && !_aCtor.DeclaringType.IsGenericType);
+            Debug.Assert(_ctor.DeclaringType != null && !_ctor.DeclaringType.IsGenericType);
             // var rtConstructor = con as RuntimeConstructorInfo;
-            var methodHandle = _aCtor.MethodHandle;
+            var methodHandle = _ctor.MethodHandle;
 
             // m_tokens.Add(rtConstructor.MethodHandle);
             // var tk = m_tokens.Count - 1 | (int)MetadataTokenType.MethodDef;
@@ -83,9 +105,12 @@ namespace FastExpressionCompiler.IssueTests
         public class A
         {
             public A() { }
+
+            public static int M() => 42;
         }
 
-        private static readonly ConstructorInfo _aCtor = typeof(A).GetConstructor(Type.EmptyTypes);
+        private static readonly ConstructorInfo _ctor = typeof(A).GetConstructor(Type.EmptyTypes);
+        public static readonly MethodInfo MethodStaticNoArgs = typeof(A).GetMethod(nameof(A.M));
     }
 }
 #endif
