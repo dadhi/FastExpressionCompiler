@@ -64,7 +64,6 @@ namespace FastExpressionCompiler.Benchmarks
             | DynamicMethod_Emit_OpCodes_Call | 35.79 us | 0.789 us | 2.172 us | 35.07 us |  1.00 |    0.00 |   1.16 KB |        1.00 |
             |         DynamicMethod_Emit_Hack | 37.82 us | 0.749 us | 1.513 us | 37.38 us |  1.05 |    0.07 |   1.31 KB |        1.13 |
 
-
             */
 
             [Benchmark(Baseline = true)]

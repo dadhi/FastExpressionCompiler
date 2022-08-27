@@ -1,4 +1,4 @@
-﻿#if !LIGHT_EXPRESSION
+﻿#if !LIGHT_EXPRESSION && !NETFRAMEWORK
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
