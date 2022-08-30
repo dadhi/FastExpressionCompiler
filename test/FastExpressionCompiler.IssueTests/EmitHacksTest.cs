@@ -67,7 +67,7 @@ namespace FastExpressionCompiler.IssueTests
 
             // updateStackSize.Invoke(il, new object[] { opCode, 0 }); // todo: @wip check that we need this
 
-            var stackExchange = CalcStackExchange(meth, paramCount);
+            var stackExchange = CalcStackChange(meth, paramCount);
             updateStackSize.Invoke(il, new object[] { opCode, stackExchange });
 
             BinaryPrimitives.WriteInt32LittleEndian(mILStream.AsSpan(mLength), token);
@@ -78,15 +78,15 @@ namespace FastExpressionCompiler.IssueTests
             return (Func<int>)dynMethod.CreateDelegate(typeof(Func<int>), ExpressionCompiler.EmptyArrayClosure);
         }
 
-        private static int CalcStackExchange(MethodInfo meth, int paramCount)
+        private static int CalcStackChange(MethodInfo meth, int paramCount)
         {
-            var stackchange = 0;
+            var stackChange = 0;
             if (meth.ReturnType != typeof(void))
-                stackchange++;
-            stackchange -= paramCount;
+                stackChange++;
+            stackChange -= paramCount;
             if (!meth.IsStatic)
-                stackchange--;
-            return stackchange;
+                stackChange--;
+            return stackChange;
         }
 
         [Test]
