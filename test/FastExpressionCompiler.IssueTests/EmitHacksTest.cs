@@ -70,6 +70,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         static GetFieldRefDelegate<ILGenerator, int> mLengthFieldAccessor = CreateFieldAccessor<ILGenerator, int>(mLengthField);
+        static GetFieldRefDelegate<ILGenerator, byte[]> mILStreamAccessor = CreateFieldAccessor<ILGenerator, byte[]>(mILStreamField);
 
         static Action<ILGenerator, OpCode, int> updateStackSizeDelegate =
             (Action<ILGenerator, OpCode, int>)Delegate.CreateDelegate(typeof(Action<ILGenerator, OpCode, int>), null, updateStackSize);
@@ -98,7 +99,8 @@ namespace FastExpressionCompiler.IssueTests
             ref var mLength = ref mLengthFieldAccessor(il);
 
             // todo: @perf read field if bytes array
-            var mILStream = (byte[])mILStreamField.GetValue(il);
+            // var mILStream = (byte[])mILStreamField.GetValue(il);
+            ref var mILStream = ref mILStreamAccessor(il);
             if (mILStream.Length < mLength + 7)
                 Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + 7));
 
