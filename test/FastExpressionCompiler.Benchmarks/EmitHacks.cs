@@ -71,20 +71,27 @@ namespace FastExpressionCompiler.Benchmarks
             | DynamicMethod_Emit_OpCodes_Call | 35.48 us | 0.720 us | 2.031 us | 34.86 us |  1.00 |    0.00 |   1.16 KB |        1.00 |
             |         DynamicMethod_Emit_Hack | 34.62 us | 0.685 us | 1.253 us | 34.49 us |  0.97 |    0.07 |   1.16 KB |        1.00 |
 
+            ## Method with one argument
+
+            |                          Method |     Mean |    Error |   StdDev | Ratio | RatioSD | Allocated | Alloc Ratio |
+            |-------------------------------- |---------:|---------:|---------:|------:|--------:|----------:|------------:|
+            | DynamicMethod_Emit_OpCodes_Call | 42.67 us | 0.840 us | 1.844 us |  1.00 |    0.00 |   1.17 KB |        1.00 |
+            |         DynamicMethod_Emit_Hack | 42.13 us | 0.837 us | 1.145 us |  0.99 |    0.06 |   1.17 KB |        1.00 |
+
             */
 
             [Benchmark(Baseline = true)]
             public int DynamicMethod_Emit_OpCodes_Call()
             {
                 var f = EmitHacksTest.Get_DynamicMethod_Emit_OpCodes_Call();
-                return f();
+                return f(41);
             }
 
             [Benchmark]
             public int DynamicMethod_Emit_Hack()
             {
                 var f = EmitHacksTest.Get_DynamicMethod_Emit_Hack();
-                return f();
+                return f(41);
             }
 
             // [Benchmark]

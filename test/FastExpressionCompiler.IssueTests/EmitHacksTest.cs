@@ -23,7 +23,7 @@ namespace FastExpressionCompiler.IssueTests
         public void DynamicMethod_Emit_Hack()
         {
             var f = Get_DynamicMethod_Emit_Hack();
-            var a = f();
+            var a = f(41);
             Assert.AreEqual(42, a);
         }
 
@@ -75,17 +75,19 @@ namespace FastExpressionCompiler.IssueTests
         static Action<ILGenerator, OpCode, int> updateStackSizeDelegate =
             (Action<ILGenerator, OpCode, int>)Delegate.CreateDelegate(typeof(Action<ILGenerator, OpCode, int>), null, updateStackSize);
 
-        public static Func<int> Get_DynamicMethod_Emit_Hack()
+        public static Func<int, int> Get_DynamicMethod_Emit_Hack()
         {
             var opCode = OpCodes.Call;
-            var meth = MethodStaticNoArgs;
-            var paramCount = 0;
+            var meth = MethodStatic1Arg;
+            var paramCount = 1;
 
             var dynMethod = new DynamicMethod(string.Empty,
-                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure) },
+                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(int) },
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = dynMethod.GetILGenerator();
+
+            il.Emit(OpCodes.Ldarg_1);
 
             // var mScope = mScopeField.GetValue(il);
             // var mTokens = (IList<object?>)mTokensField.GetValue(mScope);
@@ -126,7 +128,7 @@ namespace FastExpressionCompiler.IssueTests
 
             il.Emit(OpCodes.Ret);
 
-            return (Func<int>)dynMethod.CreateDelegate(typeof(Func<int>), ExpressionCompiler.EmptyArrayClosure);
+            return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
         }
 
         private static int CalcStackChange(MethodInfo meth, int paramCount)
@@ -144,22 +146,25 @@ namespace FastExpressionCompiler.IssueTests
         public void DynamicMethod_Emit_OpCodes_Call()
         {
             var f = Get_DynamicMethod_Emit_OpCodes_Call();
-            var a = f();
+            var a = f(41);
             Assert.AreEqual(42, a);
         }
 
-        public static Func<int> Get_DynamicMethod_Emit_OpCodes_Call()
+        public static Func<int, int> Get_DynamicMethod_Emit_OpCodes_Call()
         {
             var dynMethod = new DynamicMethod(string.Empty,
-                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure) },
+                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(int) },
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = dynMethod.GetILGenerator();
 
-            il.Emit(OpCodes.Call, MethodStaticNoArgs);
+            il.Emit(OpCodes.Ldarg_1);
+
+            il.Emit(OpCodes.Call, MethodStatic1Arg);
+            // il.Emit(OpCodes.Call, MethodStaticNoArgs);
             il.Emit(OpCodes.Ret);
 
-            return (Func<int>)dynMethod.CreateDelegate(typeof(Func<int>), ExpressionCompiler.EmptyArrayClosure);
+            return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
         }
 
         [Test]
@@ -231,10 +236,12 @@ namespace FastExpressionCompiler.IssueTests
             public A() { }
 
             public static int M() => 42;
+            public static int M1(int q) => q + 1;
         }
 
         private static readonly ConstructorInfo _ctor = typeof(A).GetConstructor(Type.EmptyTypes);
         public static readonly MethodInfo MethodStaticNoArgs = typeof(A).GetMethod(nameof(A.M));
+        public static readonly MethodInfo MethodStatic1Arg = typeof(A).GetMethod(nameof(A.M1));
     }
 }
 #endif
