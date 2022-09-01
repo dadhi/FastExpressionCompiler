@@ -53,27 +53,23 @@ namespace FastExpressionCompiler.IssueTests
         }
         static readonly Func<ILGenerator, IList<object>> getScopeTokens = GetScopeTokens();
 
-        private static Func<ILGenerator, int, int> IncLength()
-        {
-            var dynMethod = new DynamicMethod(string.Empty,
-                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(int) },
-                typeof(ExpressionCompiler), skipVisibility: true);
-            var il = dynMethod.GetILGenerator();
+        private delegate ref TField GetFieldRefDelegate<TFieldHolder, TField>(TFieldHolder holder);
 
+        private static GetFieldRefDelegate<TFieldHolder, TField> CreateFieldAccessor<TFieldHolder, TField>(FieldInfo field) 
+        {
+            var dynMethod = new DynamicMethod(string.Empty, 
+                typeof(TField).MakeByRefType(), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(TFieldHolder) }, 
+                typeof(TFieldHolder), skipVisibility: true);
+
+            var il = dynMethod.GetILGenerator();
             il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Ldfld, mLengthField);
-            il.Emit(OpCodes.Stloc_0);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Ldloc_0);
-            il.Emit(OpCodes.Ldarg_2);
-            il.Emit(OpCodes.Add);
-            il.Emit(OpCodes.Stfld, mLengthField);
-            il.Emit(OpCodes.Ldloc_0);
+            il.Emit(OpCodes.Ldflda, field);
             il.Emit(OpCodes.Ret);
 
-            return (Func<ILGenerator, int, int>)dynMethod.CreateDelegate(typeof(Func<ILGenerator, int, int>), ExpressionCompiler.EmptyArrayClosure);
+            return (GetFieldRefDelegate<TFieldHolder, TField>)dynMethod.CreateDelegate(typeof(GetFieldRefDelegate<TFieldHolder, TField>));
         }
-        static readonly Func<ILGenerator, int, int> incLength = IncLength();
+
+        static GetFieldRefDelegate<ILGenerator, int> mLengthFieldAccessor = CreateFieldAccessor<ILGenerator, int>(mLengthField);
 
         static Action<ILGenerator, OpCode, int> updateStackSizeDelegate =
             (Action<ILGenerator, OpCode, int>)Delegate.CreateDelegate(typeof(Action<ILGenerator, OpCode, int>), null, updateStackSize);
@@ -98,15 +94,16 @@ namespace FastExpressionCompiler.IssueTests
             var token = mTokens.Count - 1 | (int)0x06000000; // MetadataTokenType.MethodDef
 
             // todo: @perf read field of int
-            var mLength = (int)mLengthField.GetValue(il);
-            // var mLength = incLength(il, 5);
+            // var mLength = (int)mLengthField.GetValue(il);
+            ref var mLength = ref mLengthFieldAccessor(il);
 
             // todo: @perf read field if bytes array
             var mILStream = (byte[])mILStreamField.GetValue(il);
             if (mILStream.Length < mLength + 7)
                 Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + 7));
 
-            mILStream[mLength++] = (byte)opCode.Value;
+            mILStream[mLength] = (byte)opCode.Value;
+            ++mLength;
 
             // todo: @wip  we don't need it as the value set again later
             // mLengthField.SetValue(il, mLength);
@@ -122,7 +119,8 @@ namespace FastExpressionCompiler.IssueTests
             BinaryPrimitives.WriteInt32LittleEndian(mILStream.AsSpan(mLength), token);
 
             // todo: @perf sets the value of int
-            mLengthField.SetValue(il, mLength + 4);
+            // mLengthField.SetValue(il, mLength + 4);
+            mLength += 4;
 
             il.Emit(OpCodes.Ret);
 
