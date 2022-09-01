@@ -37,6 +37,44 @@ namespace FastExpressionCompiler.IssueTests
         static FieldInfo mILStreamField = typeof(ILGenerator).GetField("m_ILStream", BindingFlags.Instance | BindingFlags.NonPublic);
         static MethodInfo updateStackSize = typeof(ILGenerator).GetMethod("UpdateStackSize", BindingFlags.Instance | BindingFlags.NonPublic);
 
+        private static Func<ILGenerator, IList<object>> GetScopeTokens()
+        {
+            var dynMethod = new DynamicMethod(string.Empty,
+                typeof(IList<object>), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator) },
+                typeof(ExpressionCompiler), skipVisibility: true);
+            var il = dynMethod.GetILGenerator();
+
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Ldfld, mScopeField);
+            il.Emit(OpCodes.Ldfld, mTokensField);
+            il.Emit(OpCodes.Ret);
+
+            return (Func<ILGenerator, IList<object>>)dynMethod.CreateDelegate(typeof(Func<ILGenerator, IList<object>>), ExpressionCompiler.EmptyArrayClosure);
+        }
+        static readonly Func<ILGenerator, IList<object>> getScopeTokens = GetScopeTokens();
+
+        private static Func<ILGenerator, int, int> IncLength()
+        {
+            var dynMethod = new DynamicMethod(string.Empty,
+                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(int) },
+                typeof(ExpressionCompiler), skipVisibility: true);
+            var il = dynMethod.GetILGenerator();
+
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Ldfld, mLengthField);
+            il.Emit(OpCodes.Stloc_0);
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Ldloc_0);
+            il.Emit(OpCodes.Ldarg_2);
+            il.Emit(OpCodes.Add);
+            il.Emit(OpCodes.Stfld, mLengthField);
+            il.Emit(OpCodes.Ldloc_0);
+            il.Emit(OpCodes.Ret);
+
+            return (Func<ILGenerator, int, int>)dynMethod.CreateDelegate(typeof(Func<ILGenerator, int, int>), ExpressionCompiler.EmptyArrayClosure);
+        }
+        static readonly Func<ILGenerator, int, int> incLength = IncLength();
+
         public static Func<int> Get_DynamicMethod_Emit_Hack()
         {
             var opCode = OpCodes.Call;
@@ -49,28 +87,37 @@ namespace FastExpressionCompiler.IssueTests
 
             var il = dynMethod.GetILGenerator();
 
-            var mScope = mScopeField.GetValue(il);
-
-            var mTokens = (IList<object?>)mTokensField.GetValue(mScope);
+            // var mScope = mScopeField.GetValue(il);
+            // var mTokens = (IList<object?>)mTokensField.GetValue(mScope);
+            var mTokens = getScopeTokens(il);
             mTokens.Add(meth.MethodHandle);
 
             var token = mTokens.Count - 1 | (int)0x06000000; // MetadataTokenType.MethodDef
 
+            // todo: @perf read field of int
             var mLength = (int)mLengthField.GetValue(il);
+            // var mLength = incLength(il, 5);
 
+            // todo: @perf read field if bytes array
             var mILStream = (byte[])mILStreamField.GetValue(il);
             if (mILStream.Length < mLength + 7)
                 Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + 7));
 
-            mILStream[mLength++] = (byte)opCode.Value;
-            mLengthField.SetValue(il, mLength);
+            mILStream[mLength] = (byte)opCode.Value;
 
-            // updateStackSize.Invoke(il, new object[] { opCode, 0 }); // todo: @wip check that we need this
+            // todo: @wip  we don't need it as the value set again later
+            // mLengthField.SetValue(il, mLength);
+            // todo: @wip check that we need this
+            // updateStackSize.Invoke(il, new object[] { opCode, 0 });
 
             var stackExchange = CalcStackChange(meth, paramCount);
+
+            // todo: @perf call method
             updateStackSize.Invoke(il, new object[] { opCode, stackExchange });
 
             BinaryPrimitives.WriteInt32LittleEndian(mILStream.AsSpan(mLength), token);
+
+            // todo: @perf sets the value of int
             mLengthField.SetValue(il, mLength + 4);
 
             il.Emit(OpCodes.Ret);

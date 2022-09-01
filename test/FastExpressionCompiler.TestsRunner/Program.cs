@@ -9,9 +9,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            RunAllTests();
+            // RunAllTests();
 
-            // new FastExpressionCompiler.IssueTests.EmitHacksTest().Run();
+            new FastExpressionCompiler.IssueTests.EmitHacksTest().Run();
             
             // new FastExpressionCompiler.IssueTests.Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run();
             // new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run();
