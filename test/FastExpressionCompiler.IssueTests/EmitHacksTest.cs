@@ -75,6 +75,9 @@ namespace FastExpressionCompiler.IssueTests
         }
         static readonly Func<ILGenerator, int, int> incLength = IncLength();
 
+        static Action<ILGenerator, OpCode, int> updateStackSizeDelegate =
+            (Action<ILGenerator, OpCode, int>)Delegate.CreateDelegate(typeof(Action<ILGenerator, OpCode, int>), null, updateStackSize);
+
         public static Func<int> Get_DynamicMethod_Emit_Hack()
         {
             var opCode = OpCodes.Call;
@@ -113,7 +116,8 @@ namespace FastExpressionCompiler.IssueTests
             var stackExchange = CalcStackChange(meth, paramCount);
 
             // todo: @perf call method
-            updateStackSize.Invoke(il, new object[] { opCode, stackExchange });
+            // updateStackSize.Invoke(il, new object[] { opCode, stackExchange });
+            updateStackSizeDelegate(il, opCode, stackExchange);
 
             BinaryPrimitives.WriteInt32LittleEndian(mILStream.AsSpan(mLength), token);
 
