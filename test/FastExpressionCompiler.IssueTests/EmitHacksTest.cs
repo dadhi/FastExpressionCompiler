@@ -103,7 +103,7 @@ namespace FastExpressionCompiler.IssueTests
             if (mILStream.Length < mLength + 7)
                 Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + 7));
 
-            mILStream[mLength] = (byte)opCode.Value;
+            mILStream[mLength++] = (byte)opCode.Value;
 
             // todo: @wip  we don't need it as the value set again later
             // mLengthField.SetValue(il, mLength);
