@@ -5,7 +5,9 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
 using NUnit.Framework;
+
 namespace FastExpressionCompiler.IssueTests
 {
     [TestFixture]
@@ -77,7 +79,6 @@ namespace FastExpressionCompiler.IssueTests
 
         public static Func<int, int> Get_DynamicMethod_Emit_Hack()
         {
-            var opCode = OpCodes.Call;
             var meth = MethodStatic1Arg;
             var paramCount = 1;
 
@@ -85,52 +86,37 @@ namespace FastExpressionCompiler.IssueTests
                 typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(int) },
                 typeof(ExpressionCompiler), skipVisibility: true);
 
-            var il = dynMethod.GetILGenerator();
+            // Ensuring the size of stream upfront, otherwise we would need this code
+            // if (mILStream.Length < mLength + 13)
+            //     Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + 13));
+            // Ldarg_1(3) + Call(7) + Ret(3) = 13
+            var il = dynMethod.GetILGenerator(16);
 
-            il.Emit(OpCodes.Ldarg_1);
+            ref var mLength = ref mLengthFieldAccessor(il);
+            ref var mILStream = ref mILStreamAccessor(il);
 
-            // var mScope = mScopeField.GetValue(il);
-            // var mTokens = (IList<object?>)mTokensField.GetValue(mScope);
+            // il.Emit(OpCodes.Ldarg_1);
+            mILStream[mLength++] = (byte)OpCodes.Ldarg_1.Value;
+            updateStackSizeDelegate(il, OpCodes.Ldarg_1, 1);
+
+            // il.Emit(OpCodes.Call, meth);
+            mILStream[mLength++] = (byte)OpCodes.Call.Value;
+            updateStackSizeDelegate(il, OpCodes.Call, CalcStackChange(meth, paramCount));
+
             var mTokens = getScopeTokens(il);
             mTokens.Add(meth.MethodHandle);
-
             var token = mTokens.Count - 1 | (int)0x06000000; // MetadataTokenType.MethodDef
-
-            // todo: @perf read field of int
-            // var mLength = (int)mLengthField.GetValue(il);
-            ref var mLength = ref mLengthFieldAccessor(il);
-
-            // todo: @perf read field if bytes array
-            // var mILStream = (byte[])mILStreamField.GetValue(il);
-            ref var mILStream = ref mILStreamAccessor(il);
-            if (mILStream.Length < mLength + 7)
-                Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + 7));
-
-            mILStream[mLength] = (byte)opCode.Value;
-            ++mLength;
-
-            // todo: @wip  we don't need it as the value set again later
-            // mLengthField.SetValue(il, mLength);
-            // todo: @wip check that we need this
-            // updateStackSize.Invoke(il, new object[] { opCode, 0 });
-
-            var stackExchange = CalcStackChange(meth, paramCount);
-
-            // todo: @perf call method
-            // updateStackSize.Invoke(il, new object[] { opCode, stackExchange });
-            updateStackSizeDelegate(il, opCode, stackExchange);
-
             BinaryPrimitives.WriteInt32LittleEndian(mILStream.AsSpan(mLength), token);
-
-            // todo: @perf sets the value of int
-            // mLengthField.SetValue(il, mLength + 4);
             mLength += 4;
 
-            il.Emit(OpCodes.Ret);
+            // il.Emit(OpCodes.Ret);
+            mILStream[mLength++] = (byte)OpCodes.Ret.Value;
+            updateStackSizeDelegate(il, OpCodes.Ret, 0);
 
             return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int CalcStackChange(MethodInfo meth, int paramCount)
         {
             var stackChange = 0;

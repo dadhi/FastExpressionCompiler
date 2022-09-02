@@ -78,6 +78,13 @@ namespace FastExpressionCompiler.Benchmarks
             | DynamicMethod_Emit_OpCodes_Call | 42.67 us | 0.840 us | 1.844 us |  1.00 |    0.00 |   1.17 KB |        1.00 |
             |         DynamicMethod_Emit_Hack | 42.13 us | 0.837 us | 1.145 us |  0.99 |    0.06 |   1.17 KB |        1.00 |
 
+            ## All emits replaced by hacks
+
+            |                          Method |     Mean |    Error |   StdDev |   Median | Ratio | RatioSD | Allocated | Alloc Ratio |
+            |-------------------------------- |---------:|---------:|---------:|---------:|------:|--------:|----------:|------------:|
+            | DynamicMethod_Emit_OpCodes_Call | 49.92 us | 2.486 us | 7.292 us | 47.76 us |  1.00 |    0.00 |   1.17 KB |        1.00 |
+            |         DynamicMethod_Emit_Hack | 46.16 us | 1.322 us | 3.751 us | 45.31 us |  0.94 |    0.15 |   1.12 KB |        0.96 |
+
             */
 
             [Benchmark(Baseline = true)]

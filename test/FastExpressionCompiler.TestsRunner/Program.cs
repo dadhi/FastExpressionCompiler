@@ -9,16 +9,16 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // RunAllTests();
+            RunAllTests();
 
-            new FastExpressionCompiler.IssueTests.EmitHacksTest().Run();
+            // new FastExpressionCompiler.IssueTests.EmitHacksTest().Run();
             
             // new FastExpressionCompiler.IssueTests.Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run();
             // new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run();
             // new FastExpressionCompiler.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run();
 
             // new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run();
-#if NETCOREAPP3_1
+#if !NETFRAMEWORK
             // new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
 #endif
         }
@@ -46,7 +46,7 @@ namespace FastExpressionCompiler.UnitTests
             var sw = Stopwatch.StartNew();
 
             Console.WriteLine();
-            Console.WriteLine("NETCOREAPP3.1: Running UnitTests and IssueTests in parallel...");
+            Console.WriteLine("NET6: Running UnitTests and IssueTests in parallel...");
             Console.WriteLine();
 
             // todo: @perf try Parallel.ForEach
@@ -186,9 +186,11 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue251_Bad_code_gen_for_byRef_parameters().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters().Run);
-#if NETCOREAPP3_1
+#if !NETFRAMEWORK
                 Run(new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
+
+                Run(new EmitHacksTest().Run);
 #endif
                 Run(new Issue261_Loop_wih_conditions_fails().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run);
