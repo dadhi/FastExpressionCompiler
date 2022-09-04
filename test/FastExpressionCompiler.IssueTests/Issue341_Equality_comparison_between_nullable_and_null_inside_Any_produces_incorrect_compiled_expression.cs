@@ -1,10 +1,11 @@
+
+#if !LIGHT_EXPRESSION
 using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 
-#if !LIGHT_EXPRESSION
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
