@@ -28,15 +28,16 @@ namespace FastExpressionCompiler.UnitTests
         public void Loop_with_return()
         {
             var intVariable = Variable(typeof(int), "i");
-            var incrementVariable = PreIncrementAssign(intVariable);
-
             var returnLabel = Label();
 
-            var variableMoreThanThree = GreaterThan(intVariable, Constant(3));
-            var ifMoreThanThreeReturn = IfThen(variableMoreThanThree, Return(returnLabel));
-
-            var loop = Loop(Block(ifMoreThanThreeReturn, incrementVariable));
-            var lambdaBody = Block(new[] { intVariable }, loop, Label(returnLabel));
+            var lambdaBody = Block(
+                new[] { intVariable },
+                Loop(
+                    Block(
+                        IfThen(GreaterThan(intVariable, Constant(3)), Return(returnLabel)),
+                        PreIncrementAssign(intVariable)
+                )),
+                Label(returnLabel));
 
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
@@ -50,17 +51,16 @@ namespace FastExpressionCompiler.UnitTests
         public void Loop_with_break()
         {
             var intVariable = Variable(typeof(int), "i");
-            var incrementVariable = PreIncrementAssign(intVariable);
-
             var breakLabel = Label();
 
-            var variableMoreThanThree = GreaterThan(intVariable, Constant(3));
-            var ifMoreThanThreeBreak = IfThen(variableMoreThanThree, Break(breakLabel));
-
-            var loopBody = Block(new[] { intVariable }, ifMoreThanThreeBreak, incrementVariable);
-            var loopWithBreak = Loop(loopBody, breakLabel);
-
-            var loopLambda = Lambda<Action>(loopWithBreak);
+            var loopLambda = Lambda<Action>(
+                Loop(
+                    Block(
+                        new[] { intVariable },
+                        IfThen(GreaterThan(intVariable, Constant(3)), Break(breakLabel)), 
+                        PreIncrementAssign(intVariable)),
+                    breakLabel)
+                );
             var loopFunc = loopLambda.CompileFast(true);
 
             Assert.IsNotNull(loopFunc);
