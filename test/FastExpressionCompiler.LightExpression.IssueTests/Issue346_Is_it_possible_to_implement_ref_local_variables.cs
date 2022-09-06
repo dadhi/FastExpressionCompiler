@@ -10,11 +10,37 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            Test();
+            // SimpleTest();
+            // Test();
             return 1;
         }
 
-        [Test]
+        // [Test]
+        public void SimpleTest()
+        {
+            // ref var n = ref array[0];
+            var a = Parameter(typeof(int[]), "a");
+            var n = Variable(typeof(int).MakeByRefType(), "n");
+            var e = Lambda<Action<int[]>>(
+                Block(typeof(void), new[] { n },
+                    Assign(n, ArrayAccess(a, Constant(0))),
+                    // PreIncrementAssign(n)
+                    AddAssign(n, Constant(1))
+                ),
+                a
+            );
+            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+
+            var f = e.CompileFast(true);
+            f.PrintIL();
+
+            var array = new[] { 42 };
+            f(array);
+
+            Assert.AreEqual(43, array[0]);
+        }
+
+        // [Test]
         public void Test()
         {
             // Vector3[] array = new Vector3[100]; // struct btw
@@ -58,29 +84,30 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             );
 
             e.PrintCSharp();
-
-            // verify the code:
+            // verify the printed code is compiled:
             // var ff = (Func<Issue346_Is_it_possible_to_implement_ref_local_variables.Vector3[]>)(() =>
             // {
             //     Issue346_Is_it_possible_to_implement_ref_local_variables.Vector3[] array;
             //     int i;
             //     array = new Issue346_Is_it_possible_to_implement_ref_local_variables.Vector3[100];
-            //     i = 0; while (true)
+            //     i = 0;
+
+            //     while (true)
             //     {
-            //         if ((i < array.Length))
+            //         if (i < array.Length)
             //         {
-            //             Issue346_Is_it_possible_to_implement_ref_local_variables.Vector3 v;
-            //             v = array[i];
+            //             ref Issue346_Is_it_possible_to_implement_ref_local_variables.Vector3 v = ref array[i];
             //             v.x += 12;
             //             v.Normalize();
-            //             (++i); // todo: @wip - this does not compile
+            //             ++i;
             //         }
             //         else
             //         {
-            //             goto void__54267293;
+            //             goto void__43495525;
             //         }
             //     }
-            // void__54267293:
+            //     void__43495525:;
+
             //     return array;
             // });
 

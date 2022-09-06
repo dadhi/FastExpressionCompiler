@@ -1761,7 +1761,9 @@ namespace FastExpressionCompiler
             /// Indexer
             IndexAccess = 1 << 10,
             /// Invoking the inlined lambda (the default System.Expression behavior)
-            InlinedLambdaInvoke = 1 << 11
+            InlinedLambdaInvoke = 1 << 11,
+            /// Indicates that the expression is part of ref local initialization eg `ref var x = ref foo()`
+            RefAssignment = 1 << 12 
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -3410,7 +3412,7 @@ namespace FastExpressionCompiler
                 }
 
                 // access the value type by address when it is used later for the member access or as instance in the method call
-                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
+                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.RefAssignment)) != 0)
                 {
                     il.Emit(OpCodes.Ldelema, type);
                     closure.LastEmitIsAddress = true;
@@ -3648,7 +3650,7 @@ namespace FastExpressionCompiler
                     var paramIndex = -1;
                     var localVarIndex = closure.GetDefinedLocalVarOrDefault(p);
                     if (localVarIndex != -1)
-                        EmitLoadLocalVariable(il, localVarIndex);
+                        EmitLoadLocalVariable(il, localVarIndex); // todo: @wip #346
                     else
                     {
                         paramIndex = paramExprCount - 1;
@@ -3827,7 +3829,7 @@ namespace FastExpressionCompiler
                         }
                         else if (arithmeticNodeType != nodeType)
                         {
-                            var localVarIdx = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
+                            var localVarIdx = closure.GetDefinedLocalVarOrDefault(leftParamExpr); // todo: @wip make the similar code for ref parameter
                             if (localVarIdx != -1)
                             {
                                 if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, parent))
@@ -3844,11 +3846,14 @@ namespace FastExpressionCompiler
                         var localVarIndex = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
                         if (localVarIndex != -1)
                         {
+                            if (leftParamExpr.IsByRef)
+                                flags |= ParentFlags.RefAssignment;
+
                             if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                                 return false;
 
                             if ((right as ParameterExpression)?.IsByRef == true)
-                                il.Emit(OpCodes.Ldind_I4);
+                                il.Emit(OpCodes.Ldind_I4); // todo: @clarify what is that
 
                             if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
                                 il.Emit(OpCodes.Dup);
