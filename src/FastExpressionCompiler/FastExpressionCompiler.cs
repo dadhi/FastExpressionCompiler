@@ -6341,7 +6341,7 @@ namespace FastExpressionCompiler
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null) =>
             e.ToCSharpString(sb, EnclosedIn.Whatever, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
-        internal enum EnclosedIn { Whatever = 0, IfTest, Block }
+        internal enum EnclosedIn { Whatever = 0, IfTest, Block, RefAssignment }
 
         internal static StringBuilder ToCSharpString(this Expression e, StringBuilder sb, EnclosedIn enclosedIn,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null)
@@ -6615,7 +6615,7 @@ namespace FastExpressionCompiler
                         if (x.ContinueLabel != null)
                         {
                             sb.NewLine(lineIdent, identSpaces);
-                            x.ContinueLabel.ToCSharpString(sb).Append(": ");
+                            x.ContinueLabel.ToCSharpString(sb).Append(":;"); // todo: @improve the label is with the semicolon, because it will invalid code at the end of lambda without it
                         }
 
                         x.Body.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
@@ -6625,7 +6625,7 @@ namespace FastExpressionCompiler
                         if (x.BreakLabel != null)
                         {
                             sb.NewLine(lineIdent, identSpaces);
-                            x.BreakLabel.ToCSharpString(sb).Append(":;");
+                            x.BreakLabel.ToCSharpString(sb).Append(":;"); // todo: @improve the label is with the semicolon, because it will invalid code at the end of lambda without it
                         }
                         return sb;
                     }
@@ -6904,8 +6904,12 @@ namespace FastExpressionCompiler
 
                                 sb.Append(OperatorToCSharpString(nodeType));
 
+                                if (enclosedIn == EnclosedIn.RefAssignment)
+                                    sb.Append("ref ");
+
                                 return b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             }
+
                             sb = enclosedIn != EnclosedIn.IfTest ? sb.Append('(') : sb;
                             b.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
@@ -7022,21 +7026,20 @@ namespace FastExpressionCompiler
             {
                 sb.NewLineIdent(lineIdent);
 
-                if (v.IsByRef)
+                if (!v.IsByRef)
                 {
-                    sb.Append("ref ");
-                    sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ');
-                    var assign = exprs.FirstOrDefault(a => a.NodeType == ExpressionType.Assign && ((BinaryExpression)a).Left == v);
-                    if (assign != null)
-                    {
-                        assign.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-                        exprs = exprs.Where(e => e != assign).ToList();
-                    }
+                    sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ').AppendName(v.Name, v.Type, v).Append(';');
                     continue;
                 }
 
+                sb.Append("ref ");
                 sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ');
-                sb.AppendName(v.Name, v.Type, v).Append(';');
+                var assign = exprs.FirstOrDefault(a => a.NodeType == ExpressionType.Assign && ((BinaryExpression)a).Left == v);
+                if (assign != null)
+                {
+                    assign.ToCSharpString(sb, EnclosedIn.RefAssignment, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).AddSemicolonIfFits();
+                    exprs = exprs.Where(e => e != assign).ToList(); // remove the assignment expression as it was already printed as part of the ref initialization
+                }
             }
 
             // we don't inline a single expression case because it can always go crazy with assignment, e.g. `var a; a = 1 + (a = 2) + a * 2`
