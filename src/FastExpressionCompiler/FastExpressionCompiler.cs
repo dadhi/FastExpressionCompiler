@@ -3864,12 +3864,8 @@ namespace FastExpressionCompiler
 
                         // check that it's a captured parameter by closure
                         var nonPassedParams = closure.NonPassedParameters;
-                        var nonPassedParamIndex = nonPassedParams.Length - 1;
-                        while (nonPassedParamIndex != -1 &&
-                               !ReferenceEquals(nonPassedParams[nonPassedParamIndex], leftParamExpr))
-                            --nonPassedParamIndex;
-                        if (nonPassedParamIndex == -1)
-                            return false; // what??? no chance
+                        if (!nonPassedParams.TryGetIndexByRef(leftParamExpr, out var nonPassedParamIndex))
+                            return false;
 
                         il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
 
@@ -5483,6 +5479,18 @@ namespace FastExpressionCompiler
 
         internal static IList<T> AsList<T>(this IEnumerable<T> source) =>
             source == null ? Empty<T>() : source as IList<T> ?? source.ToList();
+
+        internal static bool TryGetIndexByRef<T>(this T[] items, T item, out int index)
+        {
+            for (var i = 0; i < items.Length; i++)
+                if (ReferenceEquals(items[i], item)) 
+                {
+                    index = i;
+                    return true;
+                }
+            index = -1;
+            return false;
+        }
 
         private static class EmptyArray<T>
         {
