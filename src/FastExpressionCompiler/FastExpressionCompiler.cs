@@ -2570,11 +2570,8 @@ namespace FastExpressionCompiler
                 // the only possibility that we are here is because we are in the nested lambda,
                 // and it uses the parameter or variable from the outer lambda
                 var nonPassedParams = closure.NonPassedParameters;
-                var nonPassedParamIndex = nonPassedParams.Length - 1;
-                while (nonPassedParamIndex != -1 && !ReferenceEquals(nonPassedParams[nonPassedParamIndex], paramExpr))
-                    --nonPassedParamIndex;
-                if (nonPassedParamIndex == -1)
-                    return false; // what??? no chance
+                if (!nonPassedParams.TryGetIndexByRef(paramExpr, out var nonPassedParamIndex))
+                    return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
                 il.Emit(OpCodes.Ldarg_0);
@@ -2616,11 +2613,8 @@ namespace FastExpressionCompiler
                 // the only possibility that we are here is because we are in the nested lambda,
                 // and it uses the parameter or variable from the outer lambda
                 var nonPassedParams = closure.NonPassedParameters;
-                var nonPassedParamIndex = nonPassedParams.Length - 1;
-                while (nonPassedParamIndex != -1 && !ReferenceEquals(nonPassedParams[nonPassedParamIndex], paramExpr))
-                    --nonPassedParamIndex;
-                if (nonPassedParamIndex == -1)
-                    return false; // what??? no chance
+                if (!nonPassedParams.TryGetIndexByRef(paramExpr, out var nonPassedParamIndex))
+                    return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
                 il.Emit(OpCodes.Ldarg_0);
