@@ -4263,11 +4263,8 @@ namespace FastExpressionCompiler
                         }
                         else // it's a parameter from the outer closure
                         {
-                            var outerNonPassedParamIndex = outerNonPassedParams.Length - 1;
-                            while (outerNonPassedParamIndex != -1 && !ReferenceEquals(outerNonPassedParams[outerNonPassedParamIndex], nestedParam))
-                                --outerNonPassedParamIndex;
-                            if (outerNonPassedParamIndex == -1)
-                                return false; // impossible
+                            if (!outerNonPassedParams.TryGetIndexByReferenceEquals(out var outerNonPassedParamIndex, nestedParam, outerNonPassedParams.Length))
+                                return false; // impossible, better to throw?
 
                             // Load the parameter from outer closure `Items` array
                             il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
@@ -5482,6 +5479,18 @@ namespace FastExpressionCompiler
             return false;
         }
 
+        internal static bool TryGetIndexByReferenceEquals<T>(this IList<T> items, out int index, T item, int count)
+        {
+            for (var i = 0; (uint)i < count; ++i)
+                if (ReferenceEquals(items[i], item)) 
+                {
+                    index = i;
+                    return true;
+                }
+            index = -1;
+            return false;
+        }
+
         private static class EmptyArray<T>
         {
             public static readonly T[] Value = new T[0];
@@ -5848,9 +5857,7 @@ namespace FastExpressionCompiler
             if (expr is ParameterExpression p)
                 return p.ToExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
-            var i = uniqueExprs.Count - 1;
-            while (i != -1 && !ReferenceEquals(uniqueExprs[i], expr)) --i;
-            if (i != -1)
+            if (uniqueExprs.TryGetIndexByReferenceEquals(out var i, expr, uniqueExprs.Count))
                 return sb.Append("e[").Append(i)
                     // output expression type and kind to help to understand what is it
                     .Append(" // ").Append(expr.NodeType.ToString()).Append(" of ")
@@ -5866,9 +5873,7 @@ namespace FastExpressionCompiler
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces, CodePrinter.ObjectToCode notRecognizedToCode)
         {
-            var i = paramsExprs.Count - 1;
-            while (i != -1 && !ReferenceEquals(paramsExprs[i], pe)) --i;
-            if (i != -1)
+            if (paramsExprs.TryGetIndexByReferenceEquals(out var i, pe, paramsExprs.Count))
                 return sb.Append("p[").Append(i)
                     .Append(" // (")
                     .Append(!pe.Type.IsPrimitive && pe.Type.IsValueType ? "[struct] " : string.Empty)
@@ -5884,9 +5889,7 @@ namespace FastExpressionCompiler
         internal static StringBuilder ToExpressionString(this LabelTarget lt, StringBuilder sb, List<LabelTarget> labelTargets,
             int lineIdent, bool stripNamespace, Func<Type, string, string> printType)
         {
-            var i = labelTargets.Count - 1;
-            while (i != -1 && !ReferenceEquals(labelTargets[i], lt)) --i;
-            if (i != -1)
+            if (labelTargets.TryGetIndexByReferenceEquals(out var i, lt, labelTargets.Count))
                 return sb.Append("l[").Append(i)
                     .Append(" // (").AppendName(lt.Name, lt.Type, lt).Append(')')
                     .NewLineIdent(lineIdent).Append(']');
@@ -6041,9 +6044,9 @@ namespace FastExpressionCompiler
                             return sb.Append("New(").AppendTypeOf(e.Type, stripNamespace, printType).Append(')');
 
                         sb.Append("New( // ").Append(args.Count).Append(" args");
-                        var ctorIndex = x.Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.ToArray().GetFirstIndexByReferenceEquals(x.Constructor);
+                        var ctorIndex = x.Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.AsArray().GetFirstIndexByReferenceEquals(x.Constructor);
                         sb.NewLineIdent(lineIdent).AppendTypeOf(x.Type, stripNamespace, printType)
-                            .Append(".GetTypeInfo().DeclaredConstructors.ToArray()[").Append(ctorIndex).Append("],");
+                            .Append(".GetTypeInfo().DeclaredConstructors.AsArray()[").Append(ctorIndex).Append("],");
                         sb.NewLineIdentArgumentExprs(args, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         return sb.Append(')');
                     }
