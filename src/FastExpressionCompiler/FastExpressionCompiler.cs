@@ -3033,17 +3033,13 @@ namespace FastExpressionCompiler
             public static bool TryEmitNotNullConstant(bool considerClosure, object consValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1) =>
                 TryEmitConstant(considerClosure, null, consValue.GetType(), consValue, il, ref closure, byRefIndex);
 
-            public static bool TryEmitConstant(bool considerClosure, Type exprType, Type constType, object consValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
+            public static bool TryEmitConstant(bool considerClosure, Type exprType, Type constType, object constValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
             {
                 if (exprType == null)
                     exprType = constType;
-                if (considerClosure && IsClosureBoundConstant(consValue, constType))
+                if (considerClosure && IsClosureBoundConstant(constValue, constType))
                 {
-                    var constItems = closure.Constants.Items;
-                    var constIndex = closure.Constants.Count - 1;
-                    while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], consValue))
-                        --constIndex;
-                    if (constIndex == -1)
+                    if (!closure.Constants.Items.TryGetIndexByReferenceEquals(out var constIndex, constValue, closure.Constants.Count))
                         return false;
 
                     var varIndex = closure.ConstantUsageThenVarIndex.Items[constIndex] - 1;
@@ -3071,18 +3067,18 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
-                    if (consValue is string s)
+                    if (constValue is string s)
                     {
                         il.Emit(OpCodes.Ldstr, s);
                         return true;
                     }
-                    if (consValue is Type t)
+                    if (constValue is Type t)
                     {
                         il.Emit(OpCodes.Ldtoken, t);
                         EmitMethodCall(il, _getTypeFromHandleMethod);
                         return true;
                     }
-                    if (!TryEmitPrimitiveOrEnumOrDecimalConstant(il, consValue, constType))
+                    if (!TryEmitPrimitiveOrEnumOrDecimalConstant(il, constValue, constType))
                         return false;
                 }
 
