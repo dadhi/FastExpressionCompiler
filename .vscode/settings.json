@@ -25,13 +25,17 @@
         "Ldstr",
         "Ldtoken",
         "NETFRAMEWORK",
+        "Newarr",
         "Newobj",
+        "stackchange",
+        "Stelem",
         "Stfld",
         "Stind",
         "Stloc",
         "Stobj",
         "Stsfld",
-        "typeparamref"
+        "typeparamref",
+        "varags"
     ],
     "files.watcherExclude": {
         "**/target": true

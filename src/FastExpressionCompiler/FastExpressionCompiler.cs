@@ -2570,7 +2570,7 @@ namespace FastExpressionCompiler
                 // the only possibility that we are here is because we are in the nested lambda,
                 // and it uses the parameter or variable from the outer lambda
                 var nonPassedParams = closure.NonPassedParameters;
-                if (!nonPassedParams.TryGetIndexByRef(paramExpr, out var nonPassedParamIndex))
+                if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, paramExpr, nonPassedParams.Length))
                     return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
@@ -2613,7 +2613,7 @@ namespace FastExpressionCompiler
                 // the only possibility that we are here is because we are in the nested lambda,
                 // and it uses the parameter or variable from the outer lambda
                 var nonPassedParams = closure.NonPassedParameters;
-                if (!nonPassedParams.TryGetIndexByRef(paramExpr, out var nonPassedParamIndex))
+                if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, paramExpr, nonPassedParams.Length))
                     return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
@@ -3858,7 +3858,7 @@ namespace FastExpressionCompiler
 
                         // check that it's a captured parameter by closure
                         var nonPassedParams = closure.NonPassedParameters;
-                        if (!nonPassedParams.TryGetIndexByRef(leftParamExpr, out var nonPassedParamIndex))
+                        if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, leftParamExpr, nonPassedParams.Length))
                             return false;
 
                         il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
@@ -5474,9 +5474,9 @@ namespace FastExpressionCompiler
         internal static IList<T> AsList<T>(this IEnumerable<T> source) =>
             source == null ? Empty<T>() : source as IList<T> ?? source.ToList();
 
-        internal static bool TryGetIndexByRef<T>(this T[] items, T item, out int index)
+        internal static bool TryGetIndexByReferenceEquals<T>(this T[] items, out int index, T item, int count)
         {
-            for (var i = 0; i < items.Length; i++)
+            for (var i = 0; (uint)i < count; ++i)
                 if (ReferenceEquals(items[i], item)) 
                 {
                     index = i;
