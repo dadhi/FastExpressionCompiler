@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
         <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
@@ -11,6 +11,6 @@
         <ProjectReference Include="..\FastExpressionCompiler.LightExpression.IssueTests\FastExpressionCompiler.LightExpression.IssueTests.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="NUnit" Version="3.12.0"/>
+        <PackageReference Include="NUnit" Version="3.13.3"/>
     </ItemGroup>
 </Project>

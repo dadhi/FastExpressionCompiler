@@ -27,6 +27,7 @@
         "NETFRAMEWORK",
         "Newarr",
         "Newobj",
+        "shortcircuit",
         "stackchange",
         "Stelem",
         "Stfld",

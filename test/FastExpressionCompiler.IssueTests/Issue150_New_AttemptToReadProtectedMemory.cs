@@ -54,7 +54,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var linqFirstOrDefaultMethod = typeof(Enumerable)
                 .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .First(m => m.Name == "FirstOrDefault" && m.GetParameters().Length == 2)
+                .First(m => m.Name == "FirstOrDefault" && m.GetParameters().Length == 2 && m.GetParameters()[1].ParameterType.Name.StartsWith("Func"))
                 .MakeGenericMethod(typeof(string));
 
             var dictionaryKeys = Property(sourceDictionary, "Keys");

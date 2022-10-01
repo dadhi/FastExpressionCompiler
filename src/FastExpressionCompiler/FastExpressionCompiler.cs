@@ -573,7 +573,7 @@ namespace FastExpressionCompiler
 
         private struct BlockInfo
         {
-            public object VarExprs;   // ParameterExpression  | IReadOnlyList<PE>
+            public object VarExprs; // ParameterExpression  | IReadOnlyList<PE>
             public int[] VarIndexes;
         }
 
