@@ -3,7 +3,7 @@ image:
   - Ubuntu
   - macOS
 
-version: 3.3.2-b{build}
+version: 3.3.3-b{build}
 
 test: off
 
@@ -11,7 +11,7 @@ skip_commits:
   message: /noci .*/
 
 build_script:
-  - dotnet run  -f netcoreapp3.1 -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+  - dotnet run  -f net6.0 -c Release -p test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 
 for:
   - matrix:
