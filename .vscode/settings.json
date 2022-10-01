@@ -36,7 +36,8 @@
         "Stobj",
         "Stsfld",
         "typeparamref",
-        "varags"
+        "varags",
+        "varargs"
     ],
     "files.watcherExclude": {
         "**/target": true

@@ -982,6 +982,7 @@ namespace FastExpressionCompiler
         {
             public static readonly MethodInfo[] Methods = typeof(CurryClosureFuncs).GetMethods();
 
+            // todo: @mem @perf can we avoid closure creation over `f` and `c`?
             public static Func<R> Curry<C, R>(Func<C, R> f, C c) =>
                 () => f(c);
 
@@ -2889,10 +2890,10 @@ namespace FastExpressionCompiler
                         var convertOpMethod = method ?? actualTargetType.FindConvertOperator(sourceType, actualTargetType);
                         if (convertOpMethod != null)
                         {
-                            EmitMethodCall(il, convertOpMethod);
+                            var ok = EmitMethodCall(il, convertOpMethod);
                             if (underlyingNullableTargetType != null)
                                 il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
-                            return il.EmitPopIfIgnoreResult(parent);
+                            return ok && il.EmitPopIfIgnoreResult(parent);
                         }
                     }
                 }
@@ -3075,8 +3076,7 @@ namespace FastExpressionCompiler
                     if (constValue is Type t)
                     {
                         il.Emit(OpCodes.Ldtoken, t);
-                        EmitMethodCall(il, _getTypeFromHandleMethod);
-                        return true;
+                        return EmitMethodCall(il, _getTypeFromHandleMethod);
                     }
                     if (!TryEmitPrimitiveOrEnumOrDecimalConstant(il, constValue, constType))
                         return false;
@@ -4290,7 +4290,7 @@ namespace FastExpressionCompiler
                     ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
                     : CurryClosureFuncs.Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
 
-                EmitMethodCall(il, closureMethod);
+                var ok = EmitMethodCall(il, closureMethod);
 
                 // converting to the original possibly custom delegate type, see #308
                 if (closureMethod.ReturnType != nestedLambdaExpr.Type)
@@ -4299,7 +4299,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Newobj, nestedLambdaExpr.Type.GetConstructors()[0]);
                 }
 
-                return true;
+                return ok;
             }
 
 #if LIGHT_EXPRESSION
@@ -4561,10 +4561,7 @@ namespace FastExpressionCompiler
                         {
                             var ps = m.GetParameters();
                             if (ps.Length == 2 && ps[0].ParameterType == leftOpType && ps[1].ParameterType == leftOpType)
-                            {
-                                EmitMethodCall(il, m);
-                                return true;
-                            }
+                                return EmitMethodCall(il, m);
                         }
                     }
 
@@ -4886,8 +4883,7 @@ namespace FastExpressionCompiler
                         return true;
 
                     case ExpressionType.Power:
-                        EmitMethodCall(il, typeof(Math).FindMethod("Pow"));
-                        return true;
+                        return EmitMethodCall(il, typeof(Math).FindMethod("Pow"));
                 }
 
                 return false;
