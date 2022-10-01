@@ -36,12 +36,14 @@ namespace FastExpressionCompiler
             );
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintCSharp(this Expression expr, bool completeTypeNames = false) =>
-            Console.WriteLine(
-                expr.ToCSharpString(new StringBuilder(1024), lineIdent: 0, stripNamespace: true, 
-                printType: completeTypeNames ? null : _stripOuterTypes,
-                identSpaces: 4)
-            );
+        public static void PrintCSharp(this Expression expr, bool completeTypeNames = false) 
+        {
+            var sb = new StringBuilder(1024);
+            sb.Append("var @cs = ");
+            sb = expr.ToCSharpString(sb, lineIdent: 0, stripNamespace: true, printType: completeTypeNames ? null : _stripOuterTypes, identSpaces: 4);
+            sb.Append(";");
+            Console.WriteLine(sb.ToString());
+        }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void PrintCSharp(this Expression expr, Func<string, string> transform) =>

@@ -5822,6 +5822,7 @@ namespace FastExpressionCompiler
         public static string ToExpressionString(this Expression expr, CodePrinter.ObjectToCode notRecognizedToCode = null) =>
             expr.ToExpressionString(out var _, out var _, out var _, notRecognizedToCode: notRecognizedToCode);
 
+        // todo: @api There should be a version returning StringBuilder the same as for ToCSharpString
         /// <summary>
         /// Prints the expression in its constructing syntax - 
         /// helpful to get the expression from the debug session and put into it the code for the test.
@@ -5874,12 +5875,14 @@ namespace FastExpressionCompiler
             int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces, CodePrinter.ObjectToCode notRecognizedToCode)
         {
             if (paramsExprs.TryGetIndexByReferenceEquals(out var i, pe, paramsExprs.Count))
-                return sb.Append("p[").Append(i)
+                return sb
+                    .Append("p[").Append(i)
                     .Append(" // (")
                     .Append(!pe.Type.IsPrimitive && pe.Type.IsValueType ? "[struct] " : string.Empty)
                     .Append(pe.Type.ToCode(stripNamespace, printType))
                     .Append(' ').AppendName(pe.Name, pe.Type, pe).Append(')')
-                    .NewLineIdent(lineIdent).Append(']');
+                    .NewLineIdent(lineIdent)
+                    .Append(']');
 
             paramsExprs.Add(pe);
             sb.Append("p[").Append(paramsExprs.Count - 1).Append("]=");
