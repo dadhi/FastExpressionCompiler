@@ -500,7 +500,7 @@ namespace FastExpressionCompiler
                     ? EmptyArrayClosure
                     : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
             else
-            {
+            {   // todo: @feature add the debug info to the nested lambdas!
                 var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
                 closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
                     ? new DebugArrayClosure(null, debugExpr)

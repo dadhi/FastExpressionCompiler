@@ -21,12 +21,57 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test();
-            return 1;
+            Test_nullable_of_struct_and_struct_field_in_the_nested_lambda();
+            // Test_original();
+            return 2;
+        }
+
+        public static int Inc(Func<int> f) => f() + 1;
+
+        [Test]
+        public void Test_nullable_of_struct_and_struct_field_in_the_nested_lambda()
+        {
+            var incMethod = GetType().GetMethod(nameof(Inc), BindingFlags.Public | BindingFlags.Static);
+            var propValue = typeof(NotifyContainer?).GetProperty(nameof(Nullable<NotifyContainer>.Value));
+            var propModel = typeof(NotifyContainer).GetProperty(nameof(NotifyContainer.model));
+            var propNumber1 = typeof(NotifyModel).GetProperty(nameof(NotifyModel.Number1));
+
+            var p = Parameter(typeof(NotifyContainer?), "p");
+            var expr = Lambda<Func<NotifyContainer?, int>>(
+                Call(incMethod,
+                    Lambda<Func<int>>(
+                        Property(
+                            Property(
+                                Property(p,
+                                propValue),
+                                propModel),
+                                propNumber1)
+                        )
+                    ),
+                p
+            );
+
+            expr.PrintCSharp();
+
+            var model = new NotifyModel(42, 3);
+            var container = new NotifyContainer(new List<NotifyModel> { model }, model);
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var x = fs(container);
+            Assert.AreEqual(43, x);
+
+            var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            Assert.IsNotNull(f);
+            f.PrintIL();
+
+            var y = f(container);
+            Assert.AreEqual(43, y);
         }
 
         [Test]
-        public void Test()
+        public void Test_original()
         {
             // Expression<Func<NotifyContainer?, IReadOnlyListRecord<NotifyModel>>> e =
             //     x => x.Value.collectionA.Where(i => i.Number1 % 2 == 0 || x.Value.model.Number2 == 0).ToReadOnlyRecord();
@@ -34,36 +79,36 @@ namespace FastExpressionCompiler.IssueTests
             var p = new ParameterExpression[2]; // the parameter expressions
             var e = new Expression[16]; // the unique expressions
             var expr = Lambda<Func<NotifyContainer?, IReadOnlyListRecord<NotifyModel>>>(
-            e[0]=Call(
+            e[0] = Call(
                 null,
                 typeof(Extensions).GetMethods().Where(x => x.IsGenericMethod && x.Name == "ToReadOnlyRecord" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(NotifyModel)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(IEnumerable<NotifyModel>) })),
-                e[1]=Call(
+                e[1] = Call(
                     null,
                     typeof(Enumerable).GetMethods().Where(x => x.IsGenericMethod && x.Name == "Where" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(NotifyModel)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(IEnumerable<NotifyModel>), typeof(Func<NotifyModel, bool>) })),
-                    e[2]=Property(
-                        e[3]=Property(
-                            p[0]=Parameter(typeof(NotifyContainer?), "x"),
+                    e[2] = Property(
+                        e[3] = Property(
+                            p[0] = Parameter(typeof(NotifyContainer?), "x"),
                             typeof(NotifyContainer?).GetTypeInfo().GetDeclaredProperty("Value")),
                         typeof(NotifyContainer).GetTypeInfo().GetDeclaredProperty("collectionA")),
-                    e[4]=Lambda<Func<NotifyModel, bool>>(
-                        e[5]=MakeBinary(ExpressionType.OrElse,
-                            e[6]=MakeBinary(ExpressionType.Equal,
-                                e[7]=MakeBinary(ExpressionType.Modulo,
-                                    e[8]=Property(
-                                        p[1]=Parameter(typeof(NotifyModel), "i"),
+                    e[4] = Lambda<Func<NotifyModel, bool>>(
+                        e[5] = MakeBinary(ExpressionType.OrElse,
+                            e[6] = MakeBinary(ExpressionType.Equal,
+                                e[7] = MakeBinary(ExpressionType.Modulo,
+                                    e[8] = Property(
+                                        p[1] = Parameter(typeof(NotifyModel), "i"),
                                         typeof(NotifyModel).GetTypeInfo().GetDeclaredProperty("Number1")),
-                                    e[9]=Constant(2)),
-                                e[10]=Constant(0)),
-                            e[11]=MakeBinary(ExpressionType.Equal,
-                                e[12]=Property(
-                                    e[13]=Property(
-                                        e[14]=Property(
+                                    e[9] = Constant(2)),
+                                e[10] = Constant(0)),
+                            e[11] = MakeBinary(ExpressionType.Equal,
+                                e[12] = Property(
+                                    e[13] = Property(
+                                        e[14] = Property(
                                             p[0 // ([struct] NotifyContainer? x)
                                                 ],
                                             typeof(NotifyContainer?).GetTypeInfo().GetDeclaredProperty("Value")),
                                         typeof(NotifyContainer).GetTypeInfo().GetDeclaredProperty("model")),
                                     typeof(NotifyModel).GetTypeInfo().GetDeclaredProperty("Number2")),
-                                e[15]=Constant(0))),
+                                e[15] = Constant(0))),
                         p[1 // ([struct] NotifyModel i)
                             ]))),
             p[0 // ([struct] NotifyContainer? x)
@@ -82,11 +127,15 @@ namespace FastExpressionCompiler.IssueTests
             var container = new NotifyContainer(new List<NotifyModel> { model }, model);
 
             var fs = expr.CompileSys();
+            fs.PrintIL();
+
             var x = fs(container);
             Assert.AreEqual(1, x.Count);
 
             var f = expr.CompileFast(true);
             Assert.IsNotNull(f);
+            f.PrintIL();
+
             var y = f(container);
             Assert.AreEqual(1, y.Count);
         }
