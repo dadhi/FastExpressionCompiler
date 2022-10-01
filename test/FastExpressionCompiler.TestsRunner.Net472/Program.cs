@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             RunAllTests();
+            // new Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run();
         }
 
         public static void RunAllTests()

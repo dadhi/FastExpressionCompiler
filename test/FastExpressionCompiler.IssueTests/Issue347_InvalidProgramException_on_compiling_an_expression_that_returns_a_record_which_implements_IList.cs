@@ -27,11 +27,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Test()
         {
-            Expression<Func<NotifyContainer?, IReadOnlyListRecord<NotifyModel>>> e = 
+            Expression<Func<NotifyContainer?, IReadOnlyListRecord<NotifyModel>>> e =
                 x => x.Value.collectionA.Where(i => i.Number1 % 2 == 0 || x.Value.model.Number2 == 0).ToReadOnlyRecord();
 
-            var expr = e.ToExpressionString();
-            var cs = e.ToCSharpString();
+            e.PrintExpression();
+            e.PrintCSharp();
 
             var model = new NotifyModel(42, 3);
             var container = new NotifyContainer(new List<NotifyModel> { model }, model);
@@ -49,7 +49,7 @@ namespace FastExpressionCompiler.IssueTests
         public record struct NotifyContainer(List<NotifyModel> collectionA, NotifyModel model);
 
         public record struct NotifyModel(int Number1, int Number2);
-   }
+    }
 
     internal interface IReadOnlyListRecord<T> : IEnumerable<T>
     {

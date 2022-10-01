@@ -24,9 +24,24 @@ namespace FastExpressionCompiler
         public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes) =>
             CollectionAssert.AreEqual(expectedCodes, method.GetOpCodes(), "Unexpected IL OpCodes...");
 
+        static private readonly Func<Type, string, string> _stripOuterTypes = (t, s) => s.Substring(s.LastIndexOf('.') + 1);
+
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintCSharp(this Expression expr) =>
-            Console.WriteLine(expr.ToCSharpString());
+        public static void PrintExpression(this Expression expr, bool completeTypeNames = false) =>
+            Console.WriteLine(
+                expr.ToExpressionString(out var _, out var _, out var _, 
+                stripNamespace: true,
+                printType: completeTypeNames ? null : _stripOuterTypes,
+                identSpaces: 4)
+            );
+
+        [System.Diagnostics.Conditional("DEBUG")]
+        public static void PrintCSharp(this Expression expr, bool completeTypeNames = false) =>
+            Console.WriteLine(
+                expr.ToCSharpString(new StringBuilder(1024), lineIdent: 0, stripNamespace: true, 
+                printType: completeTypeNames ? null : _stripOuterTypes,
+                identSpaces: 4)
+            );
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void PrintCSharp(this Expression expr, Func<string, string> transform) =>

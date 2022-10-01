@@ -6333,16 +6333,16 @@ namespace FastExpressionCompiler
     /// <summary>Converts the expression into the valid C# code representation</summary>
     public static class ToCSharpPrinter
     {
-        /// <summary>Tries hard to convert the expression into the correct C# code</summary>
+        /// <summary>Tries hard to convert the expression into the valid C# code</summary>
         public static string ToCSharpString(this Expression expr) =>
             expr.ToCSharpString(new StringBuilder(1024), stripNamespace: true).Append(';').ToString();
 
-        /// <summary>Tries hard to convert the expression into the correct C# code</summary>
+        /// <summary>Tries hard to convert the expression into the valid C# code</summary>
         public static string ToCSharpString(this Expression expr, CodePrinter.ObjectToCode notRecognizedToCode) =>
             expr.ToCSharpString(new StringBuilder(1024), stripNamespace: true, notRecognizedToCode: notRecognizedToCode).Append(';').ToString();
 
 
-        /// <summary>Tries hard to convert the expression into the correct C# code</summary>
+        /// <summary>Tries hard to convert the expression into the valid C# code</summary>
         public static StringBuilder ToCSharpString(this Expression e, StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null) =>
             e.ToCSharpString(sb, EnclosedIn.Whatever, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
