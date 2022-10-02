@@ -21,9 +21,38 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_nullable_of_struct_and_struct_field_in_the_nested_lambda();
+            Test_nullable_param_in_closure_of_the_nested_lambda();
+            // Test_nullable_of_struct_and_struct_field_in_the_nested_lambda();
             // Test_original();
-            return 2;
+            return 3;
+        }
+
+        [Test]
+        public void Test_nullable_param_in_closure_of_the_nested_lambda()
+        {
+            var incMethod = GetType().GetMethod(nameof(Inc), BindingFlags.Public | BindingFlags.Static);
+            var propValue = typeof(int?).GetProperty(nameof(Nullable<int>.Value));
+
+            var p = Parameter(typeof(int?), "p");
+            var expr = Lambda<Func<int?, int>>(
+                Call(incMethod, Lambda<Func<int>>(Property(p, propValue))),
+                p
+            );
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var x = fs(42);
+            Assert.AreEqual(43, x);
+
+            var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            Assert.IsNotNull(f);
+            f.PrintIL();
+
+            var y = f(42);
+            Assert.AreEqual(43, y);
         }
 
         public static int Inc(Func<int> f) => f() + 1;
