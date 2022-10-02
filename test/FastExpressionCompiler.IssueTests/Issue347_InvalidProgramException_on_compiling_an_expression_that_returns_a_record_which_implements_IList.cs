@@ -21,11 +21,44 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            // Test_passing_struct_item_in_object_array_parameter();
             Test_struct_parameter_in_closure_of_the_nested_lambda();
             // Test_nullable_param_in_closure_of_the_nested_lambda();
             // Test_nullable_of_struct_and_struct_field_in_the_nested_lambda();
             // Test_original();
             return 4;
+        }
+
+        [Test]
+        public void Test_passing_struct_item_in_object_array_parameter()
+        {
+            var incMethod = GetType().GetMethod(nameof(Inc), BindingFlags.Public | BindingFlags.Static);
+            var propValue = typeof(NotifyModel).GetProperty(nameof(NotifyModel.Number1));
+
+            var p = Parameter(typeof(object[]), "arr");
+            var expr = Lambda<Func<object[], int>>(
+                Property(
+                    Convert(ArrayIndex(p, Constant(0)), typeof(NotifyModel)),
+                    propValue),
+                p
+            );
+
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var arr = new object[] { new NotifyModel(42, -1) };
+
+            var x = fs(arr);
+            Assert.AreEqual(42, x);
+
+            var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            Assert.IsNotNull(f);
+            f.PrintIL();
+
+            var y = f(arr);
+            Assert.AreEqual(42, y);
         }
 
         [Test]
@@ -53,6 +86,9 @@ namespace FastExpressionCompiler.IssueTests
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
             f.PrintIL();
+
+            if (f.TryGetDebugClosureNestedLambdaOrConstant(out var item) && item is Delegate d)
+                d.PrintIL("predicate");
 
             var y = f(m);
             Assert.AreEqual(43, y);

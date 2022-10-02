@@ -920,6 +920,22 @@ namespace FastExpressionCompiler
             }
         }
 
+        public static bool TryGetDebugClosureNestedLambdaOrConstant(this Delegate parentLambda, out object item, int itemIndex = 0)
+        {
+            var target = parentLambda.Target;
+            if (target is ExpressionCompiler.DebugArrayClosure t)
+            {
+                var closureItems = t.ConstantsAndNestedLambdas;
+                if (itemIndex < closureItems.Length)
+                {
+                    item = closureItems[itemIndex];
+                    return true;
+                }
+            }
+            item = null;
+            return false;
+        }
+
         // todo: @perf better to move the case with no constants to another class OR we can reuse ArrayClosure but now ConstantsAndNestedLambdas will hold NonPassedParams
         public sealed class ArrayClosureWithNonPassedParams : ArrayClosure
         {

@@ -36,7 +36,7 @@ namespace FastExpressionCompiler.IssueTests
 
         public enum Ops { Equal, NotEqual, Greater, Less, GreaterOrEqual, LessOrEqual }
 
-        public static Expression<Func<decimal?, decimal?, bool>>[] twoParamsExpressions = 
+        public static Expression<Func<decimal?, decimal?, bool>>[] twoParamsExpressions =
         {
             (a, b) => a == b,
             (a, b) => a != b,
@@ -46,8 +46,8 @@ namespace FastExpressionCompiler.IssueTests
             (a, b) => a <= b,
         };
 
-        public static ParameterExpression aParam = Parameter(typeof(decimal?), "a"); 
-        public static Func<decimal?, Expression<Func<decimal?, bool>>>[] oneParamExpressions = 
+        public static ParameterExpression aParam = Parameter(typeof(decimal?), "a");
+        public static Func<decimal?, Expression<Func<decimal?, bool>>>[] oneParamExpressions =
         {
             b => Lambda<Func<decimal?, bool>>(Equal(aParam, Constant(b, typeof(decimal?))), aParam),
             b => Lambda<Func<decimal?, bool>>(NotEqual(aParam, Constant(b, typeof(decimal?))), aParam),
@@ -76,7 +76,6 @@ namespace FastExpressionCompiler.IssueTests
         };
 
         public static readonly IEnumerable<TestCaseData> TestCases = Data.Select(x => new TestCaseData(x.Item1, x.Item2, x.Item3, x.Item4));
-        
 
         [Test, TestCaseSource(nameof(TestCases))]
         public void Nullable_decimal_parameters_comparison_cases(decimal? a, Ops op, decimal? b, bool expected)
@@ -292,12 +291,15 @@ namespace FastExpressionCompiler.IssueTests
             expression.PrintCSharp(); // just for debug
 
             var compiledSys = expression.Compile();
+            compiledSys.PrintIL("sys");
 
             var compiledFast = expression.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(compiledFast);
-            var target = compiledFast.Target;
-            var t = target as ExpressionCompiler.DebugArrayClosure;
-            var closure = t.ConstantsAndNestedLambdas;
+
+            compiledFast.PrintIL("fast");
+
+            if (compiledFast.TryGetDebugClosureNestedLambdaOrConstant(out var item) && item is Delegate d)
+                d.PrintIL("predicate");
 
             var instance = new Test()
             {
@@ -306,11 +308,6 @@ namespace FastExpressionCompiler.IssueTests
                     new Test2() { Value = 0 },
                 },
             };
-
-            compiledSys.PrintIL("sys");
-
-            compiledFast.PrintIL("fast");
-            ((Delegate)closure[0]).PrintIL("predicate");
 
             var result = compiledSys(instance);
             Assert.IsTrue(result);
