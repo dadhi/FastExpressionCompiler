@@ -21,10 +21,10 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Test_passing_struct_item_in_object_array_parameter();
-            // Test_struct_parameter_in_closure_of_the_nested_lambda();
-            // Test_nullable_param_in_closure_of_the_nested_lambda();
-            // Test_nullable_of_struct_and_struct_field_in_the_nested_lambda();
+            Test_passing_struct_item_in_object_array_parameter();
+            Test_struct_parameter_in_closure_of_the_nested_lambda();
+            Test_nullable_param_in_closure_of_the_nested_lambda();
+            Test_nullable_of_struct_and_struct_field_in_the_nested_lambda();
             Test_original();
             return 5;
         }

@@ -2600,7 +2600,7 @@ namespace FastExpressionCompiler
                 if (paramType.IsValueType)
                 {
                     il.Emit(OpCodes.Unbox_Any, paramType);
-                    EmitStoreAndLoadLocalVariableAddress(il, paramType);
+                    EmitStoreAndLoadLocalVariableAddress(il, paramType); // fixes #347
                 }
 
                 return true;
