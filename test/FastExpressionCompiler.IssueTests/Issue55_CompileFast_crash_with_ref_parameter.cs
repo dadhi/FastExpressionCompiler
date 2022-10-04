@@ -18,16 +18,17 @@ namespace FastExpressionCompiler.IssueTests
 {
     // considers in/out/ref in C# represented by ByRef in expressions (i.e. single representation for 3 C# keywords)
     [TestFixture]
-    public class Issue55_CompileFast_crash_with_ref_parameter
+    public class Issue55_CompileFast_crash_with_ref_parameter : ITest
     {
-         public int Run()
+        public int Run()
         {
             RefDoNothingShouldNoCrash();
             RefDoNothingShouldNoCrashCustomStruct();
             RefFromConstant();
             RefMethodCallingRefMethod();
             RefMethodCallingRefMethodCustomStruct();
-            RefMethodCallingRefMethodWithLocal();
+            RefMethodCallingRefMethodWithLocal_OfInt();
+            RefMethodCallingRefMethodWithLocal_OfString();
             OutRefMethodCallingRefMethodWithLocal();
             RefMethodCallingRefMethodWithLocalReturnLocalCalled();
             VariableVariableRefVariableRefParameterReturn();
@@ -181,7 +182,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void RefMethodCallingRefMethodWithLocal()
+        public void RefMethodCallingRefMethodWithLocal_OfInt()
         {
             void SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
             {
@@ -194,7 +195,9 @@ namespace FastExpressionCompiler.IssueTests
             var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(SetMinus1));
             var lambda = Lambda<ActionRef<int>>(Block(new[] { variable }, Assign(variable, objRef), Call(call, variable)), objRef);
 
-            var compiledB = lambda.CompileFast<ActionRef<int>>(true);
+            lambda.PrintCSharp();
+
+            var compiledB = lambda.CompileFast(true);
             var exampleB = default(int);
             compiledB(ref exampleB);
             Assert.AreEqual(0, exampleB);
@@ -204,6 +207,41 @@ namespace FastExpressionCompiler.IssueTests
             direct(ref exampleC);
             Assert.AreEqual(0, exampleC);
         }
+
+        private static void SetMinus1_OfString(ref string localByRef) { localByRef = "-1"; }
+
+        [Test]
+        public void RefMethodCallingRefMethodWithLocal_OfString()
+        {
+            void SetIntoLocalVariableAndCallOtherRef(ref string localByRef)
+            {
+                var objVal = localByRef;
+                SetMinus1_OfString(ref objVal);
+            }
+
+            var objRef = Parameter(typeof(string).MakeByRefType());
+            var variable = Variable(typeof(string));
+            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(SetMinus1_OfString));
+            var lambda = Lambda<ActionRef<string>>(Block(new[] { variable }, Assign(variable, objRef), Call(call, variable)), objRef);
+
+            lambda.PrintCSharp();
+
+            var compiledS = lambda.CompileSys();
+            compiledS.PrintIL();
+
+            var compiledB = lambda.CompileFast(true);
+            compiledB.PrintIL();
+
+            var exampleB = "0";
+            compiledB(ref exampleB);
+            Assert.AreEqual("0", exampleB);
+
+            ActionRef<string> direct = SetIntoLocalVariableAndCallOtherRef;
+            var exampleC = "0";
+            direct(ref exampleC);
+            Assert.AreEqual("0", exampleC);
+        }
+
         private static void OutSetMinus1(out int localByRef) { localByRef = -1; }
 
         [Test]
