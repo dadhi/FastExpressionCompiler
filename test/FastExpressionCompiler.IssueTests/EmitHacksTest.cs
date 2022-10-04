@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.IssueTests
             DynamicMethod_Emit_Hack();
             // DynamicMethod_Emit_Newobj();
             // DynamicMethod_Hack_Emit_Newobj();
-            return 2;
+            return 3;
         }
 
         [Test]
@@ -84,13 +84,27 @@ namespace FastExpressionCompiler.IssueTests
 
             var dynMethod = new DynamicMethod(string.Empty,
                 typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(int) },
-                typeof(ExpressionCompiler), skipVisibility: true);
+                typeof(ExpressionCompiler), 
+                skipVisibility: true);
 
             // Ensuring the size of stream upfront, otherwise we would need this code
             // if (mILStream.Length < mLength + 13)
             //     Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + 13));
             // Ldarg_1(3) + Call(7) + Ret(3) = 13
-            var il = dynMethod.GetILGenerator(16);
+            var il = dynMethod.GetILGenerator(16); // todo: @perf #351 how to reuse the mILStream - we may either set it initially or reuse when expanding it
+
+            // current IL stream extension
+            // internal void EnsureCapacity(int size)
+            // {
+            //     if (m_length + size >= m_ILStream.Length)
+            //         IncreaseCapacity(size);
+            // }
+            // private void IncreaseCapacity(int size)
+            // {
+            //     byte[] temp = new byte[Math.Max(m_ILStream.Length * 2, m_length + size)]; // todo: @perf #351 how to use existing ILStream here
+            //     Array.Copy(m_ILStream, temp, m_ILStream.Length);
+            //     m_ILStream = temp;
+            // }
 
             ref var mLength = ref mLengthFieldAccessor(il);
             ref var mILStream = ref mILStreamAccessor(il);
