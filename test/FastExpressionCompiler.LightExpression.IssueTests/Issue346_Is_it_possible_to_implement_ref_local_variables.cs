@@ -10,12 +10,44 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            // SimpleTest();
+            Check_assignment_to_by_ref_float_parameter();
+            SimpleTest();
             // Test();
-            return 1;
+            return 3;
         }
 
-        // [Test]
+        delegate void IncRefFloat(ref float x);
+
+        [Test]
+        public void Check_assignment_to_by_ref_float_parameter()
+        {
+            // void (ref float x) => x += 1;
+            var p = Parameter(typeof(float).MakeByRefType(), "x");
+            var e = Lambda<IncRefFloat>(
+                Block(typeof(void), null,
+                    // PreIncrementAssign(n)
+                    AddAssign(p, Constant(1.0f))
+                ),
+                p
+            );
+            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+
+            var s = e.CompileSys();
+            s.PrintIL();
+
+            var x = 1.0f;
+            s(ref x);
+            Assert.AreEqual(2, (int)x);
+
+            var f = e.CompileFast(true);
+            f.PrintIL();
+
+            var y = 1.0f;
+            f(ref y);
+            Assert.AreEqual(2, (int)y);
+        }
+
+        [Test]
         public void SimpleTest()
         {
             // ref var n = ref array[0];
@@ -30,6 +62,11 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 a
             );
             e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            // var @cs = (Action<int[]>)((int[] a) =>
+            // {
+            //     ref int n = ref a[0];
+            //     n += 1;
+            // });
 
             var f = e.CompileFast(true);
             f.PrintIL();
@@ -40,7 +77,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Assert.AreEqual(43, array[0]);
         }
 
-        // [Test]
+        [Test]
         public void Test()
         {
             // Vector3[] array = new Vector3[100]; // struct btw

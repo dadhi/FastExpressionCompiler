@@ -2717,7 +2717,7 @@ namespace FastExpressionCompiler.LightExpression
         internal static System.Linq.Expressions.ParameterExpression[] ToParameterExpressions(
             IReadOnlyList<ParameterExpression> ps, ref LiveCountArray<LightAndSysExpr> exprsConverted)
         {
-            if (ps.Count == 0)
+            if (ps == null || ps.Count == 0)
                 return Tools.Empty<System.Linq.Expressions.ParameterExpression>();
             if (ps.Count == 1)
                 return new[] { (System.Linq.Expressions.ParameterExpression)ps[0].ToExpression(ref exprsConverted) };

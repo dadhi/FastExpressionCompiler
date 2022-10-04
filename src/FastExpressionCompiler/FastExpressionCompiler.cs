@@ -1382,7 +1382,7 @@ namespace FastExpressionCompiler
                             return true; // yeah, this is the real case
 
                         var varExprs = blockExpr.Variables;
-                        var varExprCount = varExprs.Count;
+                        var varExprCount = varExprs?.Count ?? 0; // todo: @perf optimize for the empty and a single variable
                         if (varExprCount == 1)
                             closure.PushBlockWithVars(varExprs[0]);
                         else if (varExprCount != 0)
@@ -1961,7 +1961,7 @@ namespace FastExpressionCompiler
                             {
                                 var blockExpr = (BlockExpression)expr;
                                 var blockVarExprs = blockExpr.Variables;
-                                var blockVarCount = blockVarExprs.Count;
+                                var blockVarCount = blockVarExprs?.Count ?? 0;
                                 if (blockVarCount == 1)
                                     closure.PushBlockWithVars(blockVarExprs[0], il.GetNextLocalVarIndex(blockVarExprs[0].Type));
                                 else if (blockVarCount > 1)
@@ -2643,10 +2643,10 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Ldelem_Ref);
                 return true;
             }
-
+            // todo: @wip rename to LoadIndirectly
             private static void EmitValueTypeDereference(ILGenerator il, Type type)
             {
-                if (type == typeof(Int32))
+                if (type == typeof(Int32)) // todo: @simplify convert to switch
                     il.Emit(OpCodes.Ldind_I4);
                 else if (type == typeof(Int64))
                     il.Emit(OpCodes.Ldind_I8);
@@ -3762,7 +3762,7 @@ namespace FastExpressionCompiler
                         while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), leftParamExpr))
                             --paramIndex;
 
-                        var arithmeticNodeType = nodeType;
+                        var arithmeticNodeType = nodeType; // todo: @simplify the conversion via switch expression
                         switch (nodeType)
                         {
                             case ExpressionType.AddAssign:
@@ -3862,7 +3862,7 @@ namespace FastExpressionCompiler
                                 return false;
 
                             if ((right as ParameterExpression)?.IsByRef == true)
-                                il.Emit(OpCodes.Ldind_I4); // todo: @clarify what is that
+                                il.Emit(OpCodes.Ldind_I4); // todo: @bug? loads the parameter by-ref but only the int32 (I4) for some reason
 
                             if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
                                 il.Emit(OpCodes.Dup);
@@ -7044,7 +7044,7 @@ namespace FastExpressionCompiler
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
             CodePrinter.ObjectToCode notRecognizedToCode = null, bool inTheLastBlock = false, BinaryExpression blockResultAssignment = null)
         {
-            var vars = b.Variables;
+            var vars = b.Variables.AsList();
             var exprs = b.Expressions.AsList();
             foreach (var v in vars)
             {
