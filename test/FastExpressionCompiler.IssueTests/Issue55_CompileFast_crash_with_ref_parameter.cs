@@ -227,11 +227,21 @@ namespace FastExpressionCompiler.IssueTests
 
             lambda.PrintCSharp();
 
+            var expectedIL = new[]
+            {
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_Ref,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloca_S,
+                OpCodes.Call,
+                OpCodes.Ret
+            };
+
             var compiledS = lambda.CompileSys();
-            compiledS.PrintIL();
+            compiledS.AssertOpCodes(expectedIL);
 
             var compiledB = lambda.CompileFast(true);
-            compiledB.PrintIL();
+            compiledB.AssertOpCodes(expectedIL);
 
             var exampleB = "0";
             compiledB(ref exampleB);
@@ -262,12 +272,21 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<ActionRef<RecVal>>(Block(new[] { variable }, Assign(variable, objRef), Call(call, variable)), objRef);
 
             lambda.PrintCSharp();
+            var expectedIL = new[]
+            {
+                OpCodes.Ldarg_1,
+                OpCodes.Ldobj,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloca_S,
+                OpCodes.Call,
+                OpCodes.Ret
+            };
 
             var compiledS = lambda.CompileSys();
-            compiledS.PrintIL();
+            compiledS.AssertOpCodes(expectedIL);
 
             var compiledB = lambda.CompileFast(true);
-            compiledB.PrintIL();
+            compiledB.AssertOpCodes(expectedIL);
 
             var exampleB = new RecVal("0");
             compiledB(ref exampleB);

@@ -2540,7 +2540,7 @@ namespace FastExpressionCompiler
                         EmitLoadArg(il, paramIndex);
 
                     if (isParamByRef)
-                    {
+                    {   // todo: @simplify it is complex overall and EmitLoadIndirectlyByRef does the Ldind_Ref too
                         if (paramType.IsValueType)
                         {
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
@@ -2548,7 +2548,7 @@ namespace FastExpressionCompiler
                                 // this means the parameter is the argument to the method call and not the instance in the method call or member access
                                 (parent & ParentFlags.Call) != 0 && (parent & ParentFlags.InstanceAccess) == 0 ||
                                 (parent & ParentFlags.Arithmetic) != 0)
-                                EmitLoadIndirectly(il, paramType);
+                                EmitLoadIndirectlyByRef(il, paramType);
                         }
                         else if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce | ParentFlags.IndexAccess)) != 0)
@@ -2643,33 +2643,33 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static void EmitLoadIndirectly(ILGenerator il, Type type)
+            private static void EmitLoadIndirectlyByRef(ILGenerator il, Type type)
             {
-                if (type == typeof(Int32)) // todo: @simplify convert to switch
-                    il.Emit(OpCodes.Ldind_I4);
-                else if (type == typeof(Int64))
-                    il.Emit(OpCodes.Ldind_I8);
-                else if (type == typeof(Int16))
-                    il.Emit(OpCodes.Ldind_I2);
-                else if (type == typeof(SByte))
-                    il.Emit(OpCodes.Ldind_I1);
-                else if (type == typeof(Single))
-                    il.Emit(OpCodes.Ldind_R4);
-                else if (type == typeof(Double))
-                    il.Emit(OpCodes.Ldind_R8);
-                else if (type == typeof(IntPtr))
-                    il.Emit(OpCodes.Ldind_I);
-                else if (type == typeof(UIntPtr))
-                    il.Emit(OpCodes.Ldind_I);
-                else if (type == typeof(Byte))
-                    il.Emit(OpCodes.Ldind_U1);
-                else if (type == typeof(UInt16))
-                    il.Emit(OpCodes.Ldind_U2);
-                else if (type == typeof(UInt32))
-                    il.Emit(OpCodes.Ldind_U4);
+                if (type.IsEnum)
+                    type = Enum.GetUnderlyingType(type);
+
+                var opCode = Type.GetTypeCode(type) switch
+                {
+                    TypeCode.Boolean => OpCodes.Ldind_U1,
+                    TypeCode.Char    => OpCodes.Ldind_U1,
+                    TypeCode.Byte    => OpCodes.Ldind_U1,
+                    TypeCode.SByte   => OpCodes.Ldind_I1,
+                    TypeCode.Int16   => OpCodes.Ldind_I2,
+                    TypeCode.Int32   => OpCodes.Ldind_I4,
+                    TypeCode.Int64   => OpCodes.Ldind_I8,
+                    TypeCode.Double  => OpCodes.Ldind_R8,
+                    TypeCode.Single  => OpCodes.Ldind_R4,
+                    TypeCode.UInt16  => OpCodes.Ldind_U2,
+                    TypeCode.UInt32  => OpCodes.Ldind_U4,
+                    TypeCode.UInt64  => OpCodes.Ldobj,
+                    TypeCode.String  => OpCodes.Ldind_Ref,
+                    _                => type.IsValueType ? OpCodes.Ldobj : OpCodes.Ldind_Ref
+                };
+
+                if (opCode.Equals(OpCodes.Ldobj))
+                    il.Emit(opCode, type);
                 else
-                    il.Emit(OpCodes.Ldobj, type);
-                //todo: UInt64 as there is no OpCodes? Ldind_Ref?
+                    il.Emit(opCode);
             }
 
 #if LIGHT_EXPRESSION
@@ -3016,7 +3016,7 @@ namespace FastExpressionCompiler
             public static bool TryEmitConstant(Expression expr, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
             {
 #if LIGHT_EXPRESSION
-                // todo: @perf @simplify convert to intrinsic
+                // todo: @perf @simplify convert to intrinsic?
                 if (expr == NullConstant)
                 {
                     il.Emit(OpCodes.Ldnull);
@@ -3107,7 +3107,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitPrimitiveOrEnumOrDecimalConstant(ILGenerator il, object consValue, Type constType)
+            private static bool TryEmitPrimitiveOrEnumOrDecimalConstant(ILGenerator il, object constValue, Type constType)
             {
                 if (constType.IsEnum)
                     constType = Enum.GetUnderlyingType(constType);
@@ -3115,62 +3115,62 @@ namespace FastExpressionCompiler
                 switch (Type.GetTypeCode(constType))
                 {
                     case TypeCode.Boolean:
-                        il.Emit((bool)consValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0); // todo: @perf check for LightExpression
+                        il.Emit((bool)constValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0); // todo: @perf check for LightExpression
                         break;
                     case TypeCode.Char:
-                        EmitLoadConstantInt(il, (char)consValue);
+                        EmitLoadConstantInt(il, (char)constValue);
                         break;
                     case TypeCode.SByte:
-                        EmitLoadConstantInt(il, (sbyte)consValue);
+                        EmitLoadConstantInt(il, (sbyte)constValue);
                         break;
                     case TypeCode.Byte:
-                        EmitLoadConstantInt(il, (byte)consValue);
+                        EmitLoadConstantInt(il, (byte)constValue);
                         break;
                     case TypeCode.Int16:
-                        EmitLoadConstantInt(il, (short)consValue);
+                        EmitLoadConstantInt(il, (short)constValue);
                         break;
-                    case TypeCode.Int32: // todo: @perf check for LightExpression
-                        EmitLoadConstantInt(il, (int)consValue);
+                    case TypeCode.Int32:
+                        EmitLoadConstantInt(il, (int)constValue);
                         break;
                     case TypeCode.Int64:
-                        il.Emit(OpCodes.Ldc_I8, (long)consValue);
+                        il.Emit(OpCodes.Ldc_I8, (long)constValue);
                         break;
                     case TypeCode.Double:
-                        il.Emit(OpCodes.Ldc_R8, (double)consValue);
+                        il.Emit(OpCodes.Ldc_R8, (double)constValue);
                         break;
                     case TypeCode.Single:
-                        il.Emit(OpCodes.Ldc_R4, (float)consValue);
+                        il.Emit(OpCodes.Ldc_R4, (float)constValue);
                         break;
                     case TypeCode.UInt16:
-                        EmitLoadConstantInt(il, (ushort)consValue);
+                        EmitLoadConstantInt(il, (ushort)constValue);
                         break;
                     case TypeCode.UInt32:
                         unchecked
                         {
-                            EmitLoadConstantInt(il, (int)(uint)consValue);
+                            EmitLoadConstantInt(il, (int)(uint)constValue);
                         }
                         break;
                     case TypeCode.UInt64:
                         unchecked
                         {
-                            il.Emit(OpCodes.Ldc_I8, (long)(ulong)consValue);
+                            il.Emit(OpCodes.Ldc_I8, (long)(ulong)constValue);
                         }
                         break;
                     case TypeCode.Decimal:
-                        EmitDecimalConstant((decimal)consValue, il);
+                        EmitDecimalConstant((decimal)constValue, il);
                         break;
                     // todo: @feature for net7 add Half, Int128, UInt128
                     default:
                         if (constType == typeof(IntPtr))
                         {
-                            il.Emit(OpCodes.Ldc_I8, ((IntPtr)consValue).ToInt64());
+                            il.Emit(OpCodes.Ldc_I8, ((IntPtr)constValue).ToInt64());
                             break;
                         }
                         else if (constType == typeof(UIntPtr))
                         {
                             unchecked
                             {
-                                il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)consValue).ToUInt64());
+                                il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)constValue).ToUInt64());
                             }
                             break;
                         }
@@ -3670,7 +3670,7 @@ namespace FastExpressionCompiler
                             ++paramIndex;
                         EmitLoadArg(il, paramIndex);
                         if (p.IsByRef)
-                            EmitLoadIndirectly(il, p.Type);
+                            EmitLoadIndirectlyByRef(il, p.Type);
                     }
 
                     if (nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign)
@@ -3688,7 +3688,7 @@ namespace FastExpressionCompiler
                         EmitStoreLocalVariable(il, incrementedVar);
                         EmitLoadArg(il, paramIndex);
                         EmitLoadLocalVariable(il, incrementedVar);
-                        EmitStoreByRefValueType(il, expr.Type);
+                        EmitStoreIndirectlyByRefValueType(il, expr.Type);
                     }
                     else
                         il.Emit(OpCodes.Starg_S, paramIndex);
@@ -3829,7 +3829,7 @@ namespace FastExpressionCompiler
                                 il.Emit(OpCodes.Dup); // duplicate value to assign and return
 
                             if (leftParamExpr.IsByRef)
-                                EmitStoreByRefValueType(il, leftParamExpr.Type);
+                                EmitStoreIndirectlyByRefValueType(il, leftParamExpr.Type);
                             else
                                 il.Emit(OpCodes.Starg_S, paramIndex);
 
@@ -3857,17 +3857,16 @@ namespace FastExpressionCompiler
                             if (leftParamExpr.IsByRef)
                                 flags |= ParentFlags.RefAssignment;
 
-                            if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
-                                return false;
+                            var ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
 
-                            if ((right as ParameterExpression)?.IsByRef == true)
-                                il.Emit(OpCodes.Ldind_I4); // todo: @bug? loads the parameter by-ref but only the int32 (I4) for some reason
+                            if (right is ParameterExpression rp && rp.IsByRef)
+                                EmitLoadIndirectlyByRef(il, rp.Type);
 
                             if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
                                 il.Emit(OpCodes.Dup);
 
                             EmitStoreLocalVariable(il, localVarIndex);
-                            return true;
+                            return ok;
                         }
 
                         // check that it's a captured parameter by closure
@@ -3990,7 +3989,7 @@ namespace FastExpressionCompiler
             }
 
             // todo: @fix check that it is applied only for the ValueType
-            private static void EmitStoreByRefValueType(ILGenerator il, Type type)
+            private static void EmitStoreIndirectlyByRefValueType(ILGenerator il, Type type)
             {
                 if (type == typeof(int) || type == typeof(uint))
                     il.Emit(OpCodes.Stind_I4);
