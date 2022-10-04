@@ -29,6 +29,7 @@ namespace FastExpressionCompiler.IssueTests
             RefMethodCallingRefMethodCustomStruct();
             RefMethodCallingRefMethodWithLocal_OfInt();
             RefMethodCallingRefMethodWithLocal_OfString();
+            RefMethodCallingRefMethodWithLocal_OfStruct();
             OutRefMethodCallingRefMethodWithLocal();
             RefMethodCallingRefMethodWithLocalReturnLocalCalled();
             VariableVariableRefVariableRefParameterReturn();
@@ -56,9 +57,9 @@ namespace FastExpressionCompiler.IssueTests
 #if !LIGHT_EXPRESSION
             IntPtrZeroReturn();
             NewIntPtr13Return();
-            return 31;
+            return 33;
 #else            
-            return 29;
+            return 31;
 #endif
         }
  
@@ -240,6 +241,42 @@ namespace FastExpressionCompiler.IssueTests
             var exampleC = "0";
             direct(ref exampleC);
             Assert.AreEqual("0", exampleC);
+        }
+
+        record struct RecVal(string S);
+
+        private static void SetMinus1_OfStruct(ref RecVal localByRef) { localByRef = new RecVal("-1"); }
+
+        [Test]
+        public void RefMethodCallingRefMethodWithLocal_OfStruct()
+        {
+            void SetIntoLocalVariableAndCallOtherRef(ref RecVal localByRef)
+            {
+                var objVal = localByRef;
+                SetMinus1_OfStruct(ref objVal);
+            }
+
+            var objRef = Parameter(typeof(RecVal).MakeByRefType());
+            var variable = Variable(typeof(RecVal));
+            var call = typeof(Issue55_CompileFast_crash_with_ref_parameter).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(SetMinus1_OfStruct));
+            var lambda = Lambda<ActionRef<RecVal>>(Block(new[] { variable }, Assign(variable, objRef), Call(call, variable)), objRef);
+
+            lambda.PrintCSharp();
+
+            var compiledS = lambda.CompileSys();
+            compiledS.PrintIL();
+
+            var compiledB = lambda.CompileFast(true);
+            compiledB.PrintIL();
+
+            var exampleB = new RecVal("0");
+            compiledB(ref exampleB);
+            Assert.AreEqual("0", exampleB.S);
+
+            ActionRef<RecVal> direct = SetIntoLocalVariableAndCallOtherRef;
+            var exampleC = new RecVal("0");
+            direct(ref exampleC);
+            Assert.AreEqual("0", exampleC.S);
         }
 
         private static void OutSetMinus1(out int localByRef) { localByRef = -1; }
