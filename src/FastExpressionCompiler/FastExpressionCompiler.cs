@@ -2548,13 +2548,12 @@ namespace FastExpressionCompiler
                                 // this means the parameter is the argument to the method call and not the instance in the method call or member access
                                 (parent & ParentFlags.Call) != 0 && (parent & ParentFlags.InstanceAccess) == 0 ||
                                 (parent & ParentFlags.Arithmetic) != 0)
-                                EmitValueTypeDereference(il, paramType);
+                                EmitLoadIndirectly(il, paramType);
                         }
                         else if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce | ParentFlags.IndexAccess)) != 0)
                             il.Emit(OpCodes.Ldind_Ref);
                     }
-
                     return true;
                 }
 
@@ -2643,8 +2642,8 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Ldelem_Ref);
                 return true;
             }
-            // todo: @wip rename to LoadIndirectly
-            private static void EmitValueTypeDereference(ILGenerator il, Type type)
+
+            private static void EmitLoadIndirectly(ILGenerator il, Type type)
             {
                 if (type == typeof(Int32)) // todo: @simplify convert to switch
                     il.Emit(OpCodes.Ldind_I4);
@@ -3671,7 +3670,7 @@ namespace FastExpressionCompiler
                             ++paramIndex;
                         EmitLoadArg(il, paramIndex);
                         if (p.IsByRef)
-                            EmitValueTypeDereference(il, p.Type);
+                            EmitLoadIndirectly(il, p.Type);
                     }
 
                     if (nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign)
@@ -3823,7 +3822,7 @@ namespace FastExpressionCompiler
                                 if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                                     return false;
                             }
-                            else if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, parent))
+                            else if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, flags))
                                 return false;
 
                             if ((parent & ParentFlags.IgnoreResult) == 0)
