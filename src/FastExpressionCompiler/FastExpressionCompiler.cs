@@ -1793,6 +1793,7 @@ namespace FastExpressionCompiler
             return true;
         }
 
+        [MethodImpl((MethodImplOptions)256)]
         internal static bool TryEmitBoxOf(this ILGenerator il, Type sourceType)
         {
             if (sourceType.IsValueType)
@@ -3739,6 +3740,7 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
+                bool ok = false;
                 var left = expr.Left;
                 var right = expr.Right;
                 var leftNodeType = expr.Left.NodeType;
@@ -3779,57 +3781,52 @@ namespace FastExpressionCompiler
                             ExpressionType.RightShiftAssign => ExpressionType.RightShift,
                             _ => nodeType
                         };
-
+                        var leftVarIndex = -1;
                         if (paramIndex != -1)
                         {
                             // shift parameter index by one, because the first one will be closure
                             if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
                                 ++paramIndex;
 
-                            if (leftParamExpr.IsByRef)
+                            var isLeftByRef = leftParamExpr.IsByRef;
+                            if (isLeftByRef)
                                 EmitLoadArg(il, paramIndex);
 
-                            if (arithmeticNodeType == nodeType)
-                            {
-                                if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
-                                    return false;
-                            }
-                            else if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, flags))
-                                return false;
+                            ok = arithmeticNodeType == nodeType
+                                ? TryEmit(right, paramExprs, il, ref closure, setup, flags)
+                                : TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, flags);
 
                             if ((parent & ParentFlags.IgnoreResult) == 0)
                                 il.Emit(OpCodes.Dup); // duplicate value to assign and return
 
-                            if (leftParamExpr.IsByRef)
+                            if (isLeftByRef)
                                 EmitStoreIndirectlyByRefValueType(il, leftParamExpr.Type);
                             else
                                 il.Emit(OpCodes.Starg_S, paramIndex);
-
-                            return true;
+                            return ok;
                         }
                         else if (arithmeticNodeType != nodeType)
                         {
-                            var localVarIdx = closure.GetDefinedLocalVarOrDefault(leftParamExpr); // todo: @wip make the similar code for ref parameter
-                            if (localVarIdx != -1)
+                            leftVarIndex = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
+                            if (leftVarIndex != -1)
                             {
-                                if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, parent))
-                                    return false;
-
-                                EmitStoreLocalVariable(il, localVarIdx);
-                                return true;
+                                ok = TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, parent);
+                                EmitStoreLocalVariable(il, leftVarIndex);
+                                return ok;
                             }
                         }
 
                         // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                         // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
                         // if it's a local variable, then store the right value in it
-                        var localVarIndex = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
-                        if (localVarIndex != -1)
+                        if (leftVarIndex == -1)
+                            leftVarIndex = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
+                        if (leftVarIndex != -1)
                         {
                             if (leftParamExpr.IsByRef)
-                                flags |= ParentFlags.RefAssignment;
+                                flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
 
-                            var ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
+                            ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
 
                             if (right is ParameterExpression rp && rp.IsByRef)
                                 EmitLoadIndirectlyByRef(il, rp.Type);
@@ -3837,7 +3834,7 @@ namespace FastExpressionCompiler
                             if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
                                 il.Emit(OpCodes.Dup);
 
-                            EmitStoreLocalVariable(il, localVarIndex);
+                            EmitStoreLocalVariable(il, leftVarIndex);
                             return ok;
                         }
 
@@ -3846,7 +3843,7 @@ namespace FastExpressionCompiler
                         if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, leftParamExpr, nonPassedParams.Length))
                             return false;
 
-                        il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
+                        il.Emit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
 
                         if ((parent & ParentFlags.IgnoreResult) == 0)
                         {
@@ -3881,15 +3878,12 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.MemberAccess:
                         var assignFromLocalVar = right.NodeType == ExpressionType.Try;
-
                         var resultLocalVarIndex = -1;
                         if (assignFromLocalVar)
                         {
                             resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
-
                             if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
                                 return false;
-
                             EmitStoreLocalVariable(il, resultLocalVarIndex);
                         }
 
@@ -3909,15 +3903,11 @@ namespace FastExpressionCompiler
                             return EmitMemberAssign(il, member);
 
                         il.Emit(OpCodes.Dup);
-
                         var rightVarIndex = il.GetNextLocalVarIndex(expr.Type); // store right value in variable
                         EmitStoreLocalVariable(il, rightVarIndex);
-
-                        if (!EmitMemberAssign(il, member))
-                            return false;
-
+                        ok = EmitMemberAssign(il, member);
                         EmitLoadLocalVariable(il, rightVarIndex);
-                        return true;
+                        return ok;
 
                     case ExpressionType.Index:
                         var indexExpr = (IndexExpression)left;
@@ -3947,11 +3937,9 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Dup);
                         EmitStoreLocalVariable(il, varIndex);
 
-                        if (!TryEmitIndexAssign(indexExpr, obj?.Type, expr.Type, il))
-                            return false;
-
+                        ok = TryEmitIndexAssign(indexExpr, obj?.Type, expr.Type, il);
                         EmitLoadLocalVariable(il, varIndex);
-                        return true;
+                        return ok;
 
                     default: // todo: @feature not yet support assignment targets
                         if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
@@ -4677,7 +4665,7 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                var flags = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall | ParentFlags.Arithmetic;
+                var flags = (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall) | ParentFlags.Arithmetic;
 
                 var leftNoValueLabel = default(Label);
                 var leftExpr = expr.Left;
@@ -4693,7 +4681,7 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariableAddress(il, lefType);
 
                     il.Emit(OpCodes.Dup);
-                    EmitMethodCall(il, lefType.FindNullableHasValueGetterMethod());
+                    EmitMethodCall(il, lefType.FindNullableHasValueGetterMethod()); // todo: @check that the EmitMethodCall may return false
                     il.Emit(OpCodes.Brfalse, leftNoValueLabel);
                     EmitMethodCall(il, lefType.FindNullableGetValueOrDefaultMethod());
                 }
@@ -4804,7 +4792,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                switch (exprNodeType)
+                switch (exprNodeType) // todo: @simplify convert to switch expression to calculate the result op-code
                 {
                     case ExpressionType.Add:
                     case ExpressionType.AddAssign:
