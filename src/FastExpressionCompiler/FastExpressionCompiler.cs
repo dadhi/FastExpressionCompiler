@@ -2644,35 +2644,6 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static void EmitLoadIndirectlyByRef(ILGenerator il, Type type)
-            {
-                if (type.IsEnum)
-                    type = Enum.GetUnderlyingType(type);
-
-                var opCode = Type.GetTypeCode(type) switch
-                {
-                    TypeCode.Boolean => OpCodes.Ldind_U1,
-                    TypeCode.Char    => OpCodes.Ldind_U1,
-                    TypeCode.Byte    => OpCodes.Ldind_U1,
-                    TypeCode.SByte   => OpCodes.Ldind_I1,
-                    TypeCode.Int16   => OpCodes.Ldind_I2,
-                    TypeCode.Int32   => OpCodes.Ldind_I4,
-                    TypeCode.Int64   => OpCodes.Ldind_I8,
-                    TypeCode.Double  => OpCodes.Ldind_R8,
-                    TypeCode.Single  => OpCodes.Ldind_R4,
-                    TypeCode.UInt16  => OpCodes.Ldind_U2,
-                    TypeCode.UInt32  => OpCodes.Ldind_U4,
-                    TypeCode.UInt64  => OpCodes.Ldobj,
-                    TypeCode.String  => OpCodes.Ldind_Ref,
-                    _                => type.IsValueType ? OpCodes.Ldobj : OpCodes.Ldind_Ref
-                };
-
-                if (opCode.Equals(OpCodes.Ldobj))
-                    il.Emit(opCode, type);
-                else
-                    il.Emit(opCode);
-            }
-
 #if LIGHT_EXPRESSION
             private static bool TryEmitSimpleUnaryExpression(UnaryExpression expr, IParameterProvider paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
@@ -3689,7 +3660,7 @@ namespace FastExpressionCompiler
                         EmitStoreLocalVariable(il, incrementedVar);
                         EmitLoadArg(il, paramIndex);
                         EmitLoadLocalVariable(il, incrementedVar);
-                        EmitStoreIndirectlyByRefValueType(il, expr.Type);
+                        EmitStoreIndirectlyByRef(il, expr.Type);
                     }
                     else
                         il.Emit(OpCodes.Starg_S, paramIndex);
@@ -3778,12 +3749,10 @@ namespace FastExpressionCompiler
 #else
                         var paramExprCount = paramExprs.Count;
 #endif
-                        var paramIndex = paramExprCount - 1;
-                        while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), leftParamExpr))
-                            --paramIndex;
-
                         var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
-                        var leftVarIndex = -1;
+
+                        var paramIndex = paramExprCount - 1;
+                        while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), leftParamExpr)) --paramIndex;
                         if (paramIndex != -1)
                         {
                             // shift parameter index by one, because the first one will be closure
@@ -3800,50 +3769,38 @@ namespace FastExpressionCompiler
 
                             if ((parent & ParentFlags.IgnoreResult) == 0)
                                 il.Emit(OpCodes.Dup); // duplicate value to assign and return
-
                             if (isLeftByRef)
-                                EmitStoreIndirectlyByRefValueType(il, leftParamExpr.Type);
+                                EmitStoreIndirectlyByRef(il, leftParamExpr.Type);
                             else
                                 il.Emit(OpCodes.Starg_S, paramIndex);
                             return ok;
-                        }
-                        else if (arithmeticNodeType != nodeType)
-                        {
-                            leftVarIndex = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
-                            if (leftVarIndex != -1)
-                            {
-                                if (leftParamExpr.IsByRef)
-                                    flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
-
-                                ok = TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, flags);
-                                EmitStoreLocalVariable(il, leftVarIndex);
-                                return ok;
-                            }
                         }
 
                         // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                         // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
                         // if it's a local variable, then store the right value in it
-                        if (leftVarIndex == -1)
-                            leftVarIndex = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
+                        var leftVarIndex = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
                         if (leftVarIndex != -1)
                         {
-                            if (leftParamExpr.IsByRef)
-                                flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
+                            // if (leftParamExpr.IsByRef)
+                            //     flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
 
-                            ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
+                            if (arithmeticNodeType != nodeType)
+                                ok = TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, flags);
+                            else
+                            {
+                                ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
 
-                            if (right is ParameterExpression rp && rp.IsByRef)
-                                EmitLoadIndirectlyByRef(il, rp.Type);
-
-                            if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
-                                il.Emit(OpCodes.Dup);
-
+                                if (right is ParameterExpression rp && rp.IsByRef)
+                                    EmitLoadIndirectlyByRef(il, rp.Type);
+                                if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
+                                    il.Emit(OpCodes.Dup);
+                            }
                             EmitStoreLocalVariable(il, leftVarIndex);
                             return ok;
                         }
 
-                        // check that it's a captured parameter by closure
+                        // check that it is a captured parameter by closure
                         var nonPassedParams = closure.NonPassedParameters;
                         if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, leftParamExpr, nonPassedParams.Length))
                             return false;
@@ -3952,8 +3909,38 @@ namespace FastExpressionCompiler
                 }
             }
 
-            // todo: @fix check that it is applied only for the ValueType
-            private static void EmitStoreIndirectlyByRefValueType(ILGenerator il, Type type)
+            private static void EmitLoadIndirectlyByRef(ILGenerator il, Type type)
+            {
+                if (type.IsEnum)
+                    type = Enum.GetUnderlyingType(type);
+
+                var opCode = Type.GetTypeCode(type) switch
+                {
+                    TypeCode.Boolean => OpCodes.Ldind_U1,
+                    TypeCode.Char    => OpCodes.Ldind_U1,
+                    TypeCode.Byte    => OpCodes.Ldind_U1,
+                    TypeCode.SByte   => OpCodes.Ldind_I1,
+                    TypeCode.Int16   => OpCodes.Ldind_I2,
+                    TypeCode.Int32   => OpCodes.Ldind_I4,
+                    TypeCode.Int64   => OpCodes.Ldind_I8,
+                    TypeCode.Double  => OpCodes.Ldind_R8,
+                    TypeCode.Single  => OpCodes.Ldind_R4,
+                    TypeCode.UInt16  => OpCodes.Ldind_U2,
+                    TypeCode.UInt32  => OpCodes.Ldind_U4,
+                    TypeCode.UInt64  => OpCodes.Ldobj,
+                    TypeCode.String  => OpCodes.Ldind_Ref,
+                    _                => type.IsValueType ? OpCodes.Ldobj : OpCodes.Ldind_Ref
+                };
+
+                if (opCode.Equals(OpCodes.Ldobj))
+                    il.Emit(opCode, type);
+                else
+                    il.Emit(opCode);
+            }
+
+            // todo: @simplify convert to switch expression
+            // todo: @fix check that it is applied only for the ValueType OR make applied to the ReferenceType the same way as EmitLoadIndirectlyByRef
+            private static void EmitStoreIndirectlyByRef(ILGenerator il, Type type)
             {
                 if (type == typeof(int) || type == typeof(uint))
                     il.Emit(OpCodes.Stind_I4);
