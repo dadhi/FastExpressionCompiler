@@ -1,5 +1,6 @@
 ﻿using System;
 using NUnit.Framework;
+using System.Reflection.Emit;
 using static FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.LightExpression.IssueTests
@@ -10,8 +11,8 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            Check_assignment_to_by_ref_float_parameter();
-            // SimpleTest();
+            // Check_assignment_to_by_ref_float_parameter();
+            SimpleTest();
             // Test();
             return 3;
         }
@@ -54,14 +55,15 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var a = Parameter(typeof(int[]), "a");
             var n = Variable(typeof(int).MakeByRefType(), "n");
             var e = Lambda<Action<int[]>>(
-                Block(typeof(void), new[] { n },
+                Block(typeof(void), new[] { n }, // todo: @wip C# output should work without specifying `typeof(void)`
                     Assign(n, ArrayAccess(a, Constant(0))),
                     // PreIncrementAssign(n)
                     AddAssign(n, Constant(1))
                 ),
                 a
             );
-            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+
+            e.PrintCSharp(); // todo: @wip fix output of non-void block in the void lambda/Action
             // var @cs = (Action<int[]>)((int[] a) =>
             // {
             //     ref int n = ref a[0];
@@ -70,6 +72,17 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var f = e.CompileFast(true);
             f.PrintIL();
+            f.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Ldelema,
+                OpCodes.Dup,
+                OpCodes.Ldind_I4,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stind_I4,
+                OpCodes.Ret
+            );
 
             var array = new[] { 42 };
             f(array);

@@ -3426,7 +3426,7 @@ namespace FastExpressionCompiler
                     closure.LastEmitIsAddress = true;
                     return true;
                 }
-
+                // todo: @perf @simplify convert to switch on TypeCode
                 if (type == typeof(Int32))
                     il.Emit(OpCodes.Ldelem_I4);
                 else if (type == typeof(Int64))
@@ -3761,52 +3761,24 @@ namespace FastExpressionCompiler
                         while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), leftParamExpr))
                             --paramIndex;
 
-                        var arithmeticNodeType = nodeType; // todo: @simplify the conversion via switch expression
-                        switch (nodeType)
+                        var arithmeticNodeType = nodeType switch
                         {
-                            case ExpressionType.AddAssign:
-                                arithmeticNodeType = ExpressionType.Add;
-                                break;
-                            case ExpressionType.AddAssignChecked:
-                                arithmeticNodeType = ExpressionType.AddChecked;
-                                break;
-                            case ExpressionType.SubtractAssign:
-                                arithmeticNodeType = ExpressionType.Subtract;
-                                break;
-                            case ExpressionType.SubtractAssignChecked:
-                                arithmeticNodeType = ExpressionType.SubtractChecked;
-                                break;
-                            case ExpressionType.MultiplyAssign:
-                                arithmeticNodeType = ExpressionType.Multiply;
-                                break;
-                            case ExpressionType.MultiplyAssignChecked:
-                                arithmeticNodeType = ExpressionType.MultiplyChecked;
-                                break;
-                            case ExpressionType.DivideAssign:
-                                arithmeticNodeType = ExpressionType.Divide;
-                                break;
-                            case ExpressionType.ModuloAssign:
-                                arithmeticNodeType = ExpressionType.Modulo;
-                                break;
-                            case ExpressionType.PowerAssign:
-                                arithmeticNodeType = ExpressionType.Power;
-                                break;
-                            case ExpressionType.AndAssign:
-                                arithmeticNodeType = ExpressionType.And;
-                                break;
-                            case ExpressionType.OrAssign:
-                                arithmeticNodeType = ExpressionType.Or;
-                                break;
-                            case ExpressionType.ExclusiveOrAssign:
-                                arithmeticNodeType = ExpressionType.ExclusiveOr;
-                                break;
-                            case ExpressionType.LeftShiftAssign:
-                                arithmeticNodeType = ExpressionType.LeftShift;
-                                break;
-                            case ExpressionType.RightShiftAssign:
-                                arithmeticNodeType = ExpressionType.RightShift;
-                                break;
-                        }
+                            ExpressionType.AddAssign => ExpressionType.Add,
+                            ExpressionType.AddAssignChecked => ExpressionType.AddChecked,
+                            ExpressionType.SubtractAssign => ExpressionType.Subtract,
+                            ExpressionType.SubtractAssignChecked => ExpressionType.SubtractChecked,
+                            ExpressionType.MultiplyAssign => ExpressionType.Multiply,
+                            ExpressionType.MultiplyAssignChecked => ExpressionType.MultiplyChecked,
+                            ExpressionType.DivideAssign => ExpressionType.Divide,
+                            ExpressionType.ModuloAssign => ExpressionType.Modulo,
+                            ExpressionType.PowerAssign => ExpressionType.Power,
+                            ExpressionType.AndAssign => ExpressionType.And,
+                            ExpressionType.OrAssign => ExpressionType.Or,
+                            ExpressionType.ExclusiveOrAssign => ExpressionType.ExclusiveOr,
+                            ExpressionType.LeftShiftAssign => ExpressionType.LeftShift,
+                            ExpressionType.RightShiftAssign => ExpressionType.RightShift,
+                            _ => nodeType
+                        };
 
                         if (paramIndex != -1)
                         {
