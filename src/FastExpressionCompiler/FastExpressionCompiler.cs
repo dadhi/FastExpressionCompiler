@@ -2517,20 +2517,19 @@ namespace FastExpressionCompiler
             {
                 var paramExprCount = paramExprs.Count;
 #endif
-                // if parameter is passed through, then just load it on stack
                 var paramType = paramExpr.Type;
-                var isParamByRef = paramExpr.IsByRef;
+                var isParamOrVarByRef = paramExpr.IsByRef;
+                var isArgByRef = byRefIndex != -1;
 
                 var paramIndex = paramExprCount - 1;
-                while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), paramExpr))
-                    --paramIndex;
+                while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), paramExpr)) --paramIndex;
                 if (paramIndex != -1)
                 {
-                    var isArgByRef = byRefIndex != -1;
-                    closure.LastEmitIsAddress = !isParamByRef &&
-                        (isArgByRef || paramType.IsValueType &&
-                            (parent & ParentFlags.InstanceAccess) != 0 && // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283 
-                            (parent & ParentFlags.IndexAccess) == 0);  // but the parameter is not used as an index #281
+                    closure.LastEmitIsAddress = !isParamOrVarByRef &&
+                        (isArgByRef || 
+                            paramType.IsValueType &&
+                            (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281
+                            (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
 
                     if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
@@ -2540,7 +2539,7 @@ namespace FastExpressionCompiler
                     else
                         EmitLoadArg(il, paramIndex);
 
-                    if (isParamByRef)
+                    if (isParamOrVarByRef)
                     {   // todo: @simplify it is complex overall and EmitLoadIndirectlyByRef does the Ldind_Ref too
                         if (paramType.IsValueType)
                         {
@@ -2564,7 +2563,13 @@ namespace FastExpressionCompiler
                 var varIndex = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (varIndex != -1)
                 {
-                    if (byRefIndex != -1 ||
+                    // var isArgByRef = byRefIndex != -1;
+                    // closure.LastEmitIsAddress = !isParamOrVarByRef &&
+                    //     (isArgByRef || paramType.IsValueType &&
+                    //         (parent & ParentFlags.IndexAccess) == 0);     // but the parameter is not used as an index #281
+                    //         (parent & ParentFlags.InstanceAccess) != 0 && // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283 
+
+                    if (isArgByRef ||
                         paramType.IsValueType &&
                         (parent & ParentFlags.IndexAccess) == 0 && // #265, #281
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
@@ -2577,10 +2582,9 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                if (isParamByRef)
+                if (isParamOrVarByRef)
                 {
-                    EmitLoadLocalVariableAddress(il, byRefIndex);
-                    //todo: @bug? `closure.LastEmitIsAddress = true;` should we do it too as in above code with the variable 
+                    EmitLoadLocalVariableAddress(il, byRefIndex); // todo: @bug? `closure.LastEmitIsAddress = true;` should we do it too as in above code with the variable 
                     return true;
                 }
 
