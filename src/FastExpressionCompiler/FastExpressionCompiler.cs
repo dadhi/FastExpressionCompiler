@@ -2525,14 +2525,14 @@ namespace FastExpressionCompiler
                 while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), paramExpr)) --paramIndex;
                 if (paramIndex != -1)
                 {
+                    if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
+                        ++paramIndex; // shift parameter index by one, because the first one will be closure
+
                     closure.LastEmitIsAddress = !isParamOrVarByRef &&
                         (isArgByRef || 
                             paramType.IsValueType &&
-                            (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281
+                            (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281, #265
                             (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
-
-                    if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
-                        ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     if (closure.LastEmitIsAddress)
                         EmitLoadArgAddress(il, paramIndex);
@@ -2563,20 +2563,14 @@ namespace FastExpressionCompiler
                 var varIndex = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (varIndex != -1)
                 {
-                    // var isArgByRef = byRefIndex != -1;
-                    // closure.LastEmitIsAddress = !isParamOrVarByRef &&
-                    //     (isArgByRef || paramType.IsValueType &&
-                    //         (parent & ParentFlags.IndexAccess) == 0);     // but the parameter is not used as an index #281
-                    //         (parent & ParentFlags.InstanceAccess) != 0 && // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283 
+                    closure.LastEmitIsAddress = !isParamOrVarByRef &&
+                        (isArgByRef || 
+                            paramType.IsValueType &&
+                            (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281, #265
+                            (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
 
-                    if (isArgByRef ||
-                        paramType.IsValueType &&
-                        (parent & ParentFlags.IndexAccess) == 0 && // #265, #281
-                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0)
-                    {
+                    if (closure.LastEmitIsAddress)
                         EmitLoadLocalVariableAddress(il, varIndex);
-                        closure.LastEmitIsAddress = true;
-                    }
                     else
                         EmitLoadLocalVariable(il, varIndex);
                     return true;
