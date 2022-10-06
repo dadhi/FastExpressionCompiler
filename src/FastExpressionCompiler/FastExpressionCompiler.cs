@@ -3732,6 +3732,25 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static ExpressionType AssignToArithmeticOrSelf(ExpressionType nodeType) => nodeType switch
+            {
+                ExpressionType.AddAssign => ExpressionType.Add,
+                ExpressionType.AddAssignChecked => ExpressionType.AddChecked,
+                ExpressionType.SubtractAssign => ExpressionType.Subtract,
+                ExpressionType.SubtractAssignChecked => ExpressionType.SubtractChecked,
+                ExpressionType.MultiplyAssign => ExpressionType.Multiply,
+                ExpressionType.MultiplyAssignChecked => ExpressionType.MultiplyChecked,
+                ExpressionType.DivideAssign => ExpressionType.Divide,
+                ExpressionType.ModuloAssign => ExpressionType.Modulo,
+                ExpressionType.PowerAssign => ExpressionType.Power,
+                ExpressionType.AndAssign => ExpressionType.And,
+                ExpressionType.OrAssign => ExpressionType.Or,
+                ExpressionType.ExclusiveOrAssign => ExpressionType.ExclusiveOr,
+                ExpressionType.LeftShiftAssign => ExpressionType.LeftShift,
+                ExpressionType.RightShiftAssign => ExpressionType.RightShift,
+                _ => nodeType
+            };
+
 #if LIGHT_EXPRESSION
             private static bool TryEmitAssign(BinaryExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
                 CompilerFlags setup, ParentFlags parent)
@@ -3763,24 +3782,7 @@ namespace FastExpressionCompiler
                         while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), leftParamExpr))
                             --paramIndex;
 
-                        var arithmeticNodeType = nodeType switch
-                        {
-                            ExpressionType.AddAssign => ExpressionType.Add,
-                            ExpressionType.AddAssignChecked => ExpressionType.AddChecked,
-                            ExpressionType.SubtractAssign => ExpressionType.Subtract,
-                            ExpressionType.SubtractAssignChecked => ExpressionType.SubtractChecked,
-                            ExpressionType.MultiplyAssign => ExpressionType.Multiply,
-                            ExpressionType.MultiplyAssignChecked => ExpressionType.MultiplyChecked,
-                            ExpressionType.DivideAssign => ExpressionType.Divide,
-                            ExpressionType.ModuloAssign => ExpressionType.Modulo,
-                            ExpressionType.PowerAssign => ExpressionType.Power,
-                            ExpressionType.AndAssign => ExpressionType.And,
-                            ExpressionType.OrAssign => ExpressionType.Or,
-                            ExpressionType.ExclusiveOrAssign => ExpressionType.ExclusiveOr,
-                            ExpressionType.LeftShiftAssign => ExpressionType.LeftShift,
-                            ExpressionType.RightShiftAssign => ExpressionType.RightShift,
-                            _ => nodeType
-                        };
+                        var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
                         var leftVarIndex = -1;
                         if (paramIndex != -1)
                         {
@@ -3810,7 +3812,10 @@ namespace FastExpressionCompiler
                             leftVarIndex = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
                             if (leftVarIndex != -1)
                             {
-                                ok = TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, parent);
+                                if (leftParamExpr.IsByRef)
+                                    flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
+
+                                ok = TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, flags);
                                 EmitStoreLocalVariable(il, leftVarIndex);
                                 return ok;
                             }
@@ -3873,7 +3878,6 @@ namespace FastExpressionCompiler
                             il.TryEmitBoxOf(expr.Type);
                             il.Emit(OpCodes.Stelem_Ref); // put the variable into array
                         }
-
                         return true;
 
                     case ExpressionType.MemberAccess:
@@ -4666,7 +4670,6 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var flags = (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall) | ParentFlags.Arithmetic;
-
                 var leftNoValueLabel = default(Label);
                 var leftExpr = expr.Left;
                 var lefType = leftExpr.Type;
@@ -4741,7 +4744,6 @@ namespace FastExpressionCompiler
                         il.MarkLabel(valueLabel);
                     }
                 }
-
                 return true;
             }
 
@@ -4792,78 +4794,30 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                switch (exprNodeType) // todo: @simplify convert to switch expression to calculate the result op-code
+                var opCode = AssignToArithmeticOrSelf(exprNodeType) switch 
                 {
-                    case ExpressionType.Add:
-                    case ExpressionType.AddAssign:
-                        il.Emit(OpCodes.Add);
-                        return true;
+                    ExpressionType.Add => OpCodes.Add,
+                    ExpressionType.AddChecked => exprType.IsUnsigned() ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf,
+                    ExpressionType.Subtract => OpCodes.Sub,
+                    ExpressionType.SubtractChecked => exprType.IsUnsigned() ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf,
+                    ExpressionType.Multiply => OpCodes.Mul,
+                    ExpressionType.MultiplyChecked => exprType.IsUnsigned() ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf,
+                    ExpressionType.Divide => OpCodes.Div,
+                    ExpressionType.Modulo => OpCodes.Rem,
+                    ExpressionType.And => OpCodes.And,
+                    ExpressionType.Or => OpCodes.Or,
+                    ExpressionType.ExclusiveOr => OpCodes.Xor,
+                    ExpressionType.LeftShift => OpCodes.Shl,
+                    ExpressionType.RightShift => OpCodes.Shr,
+                    ExpressionType.Power => OpCodes.Call,
+                    _ => throw new NotSupportedException("Unsupported arithmetic operation: " + exprNodeType)
+                };
 
-                    case ExpressionType.AddChecked:
-                    case ExpressionType.AddAssignChecked:
-                        il.Emit(exprType.IsUnsigned() ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf);
-                        return true;
-
-                    case ExpressionType.Subtract:
-                    case ExpressionType.SubtractAssign:
-                        il.Emit(OpCodes.Sub);
-                        return true;
-
-                    case ExpressionType.SubtractChecked:
-                    case ExpressionType.SubtractAssignChecked:
-                        il.Emit(exprType.IsUnsigned() ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf);
-                        return true;
-
-                    case ExpressionType.Multiply:
-                    case ExpressionType.MultiplyAssign:
-                        il.Emit(OpCodes.Mul);
-                        return true;
-
-                    case ExpressionType.MultiplyChecked:
-                    case ExpressionType.MultiplyAssignChecked:
-                        il.Emit(exprType.IsUnsigned() ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf);
-                        return true;
-
-                    case ExpressionType.Divide:
-                    case ExpressionType.DivideAssign:
-                        il.Emit(OpCodes.Div);
-                        return true;
-
-                    case ExpressionType.Modulo:
-                    case ExpressionType.ModuloAssign:
-                        il.Emit(OpCodes.Rem);
-                        return true;
-
-                    case ExpressionType.And:
-                    case ExpressionType.AndAssign:
-                        il.Emit(OpCodes.And);
-                        return true;
-
-                    case ExpressionType.Or:
-                    case ExpressionType.OrAssign:
-                        il.Emit(OpCodes.Or);
-                        return true;
-
-                    case ExpressionType.ExclusiveOr:
-                    case ExpressionType.ExclusiveOrAssign:
-                        il.Emit(OpCodes.Xor);
-                        return true;
-
-                    case ExpressionType.LeftShift:
-                    case ExpressionType.LeftShiftAssign:
-                        il.Emit(OpCodes.Shl);
-                        return true;
-
-                    case ExpressionType.RightShift:
-                    case ExpressionType.RightShiftAssign:
-                        il.Emit(OpCodes.Shr);
-                        return true;
-
-                    case ExpressionType.Power:
-                        return EmitMethodCall(il, typeof(Math).FindMethod("Pow"));
-                }
-
-                return false;
+                if (opCode.Equals(OpCodes.Call))
+                    il.Emit(OpCodes.Call, typeof(Math).FindMethod("Pow"));
+                else
+                    il.Emit(opCode);
+                return true;
             }
 
 #if LIGHT_EXPRESSION
