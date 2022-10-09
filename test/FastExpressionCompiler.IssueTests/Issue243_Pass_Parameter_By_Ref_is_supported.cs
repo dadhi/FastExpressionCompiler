@@ -17,10 +17,12 @@ namespace FastExpressionCompiler.IssueTests
         {
             Lambda_Parameter_Passed_Into_Ref_Method();
             Lambda_Ref_Parameter_Passed_Into_Ref_Method();
-            Lambda_Ref_Parameter_Passed_Into_Value_Method();
+            Lambda_Ref_Parameter_Passed_Into_Static_Value_Method();
+            Lambda_Ref_Parameter_Passed_Into_Instance_Value_Method();
+            Lambda_Ref_Parameter_Passed_Into_Struct_Instance_Value_Method();
             Lambda_Ref_ValueType_Parameter_Passed_Into_Value_Method();
             Lambda_Parameter_Passed_Into_Ref_Method_Extra_Assignment();
-            return 5;
+            return 7;
         }
 
         public static string PassByRef(ref string test)
@@ -54,6 +56,8 @@ namespace FastExpressionCompiler.IssueTests
 
         public delegate string RefDelegate(ref string val);
 
+        public delegate string RefInstanceDelegate<T, P>(ref T instance, ref P val);
+
         public delegate string RefValueTypeDelegate(ref int val);
 
         [Test]
@@ -73,12 +77,20 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Lambda_Ref_Parameter_Passed_Into_Value_Method()
+        public void Lambda_Ref_Parameter_Passed_Into_Static_Value_Method()
         {
             var parameter = Parameter(typeof(string).MakeByRefType());
-            var call = Call(GetType().GetMethod(nameof(PassByValue)), parameter);
 
-            var lambda = Lambda<RefDelegate>(call, parameter);
+            var lambda = Lambda<RefDelegate>(
+                Call(GetType().GetMethod(nameof(PassByValue)), parameter), 
+                parameter);
+
+            lambda.PrintCSharp();
+
+            var systCompiled = lambda.CompileSys();
+            systCompiled.PrintIL();
+            var a = "test";
+            Assert.AreEqual(a, systCompiled(ref a));
 
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
             Assert.NotNull(fastCompiled);
@@ -89,8 +101,90 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,
                 OpCodes.Ret);
 
-            var data = "test";
-            Assert.AreEqual(data, fastCompiled(ref data));
+            var b = "test";
+            Assert.AreEqual(b, fastCompiled(ref b));
+        }
+
+        public class PassedByRefClass 
+        {
+            public string PassByRef(ref string test) => test.ToString();
+
+            public string PassByValue(string test) => test.ToString();
+        }
+
+        [Test]
+        public void Lambda_Ref_Parameter_Passed_Into_Instance_Value_Method()
+        {
+            var i = Parameter(typeof(PassedByRefClass).MakeByRefType());
+            var s = Parameter(typeof(string).MakeByRefType());
+
+            var lambda = Lambda<RefInstanceDelegate<PassedByRefClass, string>>(
+                Call(i, typeof(PassedByRefClass).GetMethod(nameof(PassByValue)), s),
+                i, s);
+
+            lambda.PrintCSharp();
+
+            var cls = new PassedByRefClass();
+
+            var systCompiled = lambda.CompileSys();
+            systCompiled.PrintIL();
+            var a = "test";
+            Assert.AreEqual(a, systCompiled(ref cls, ref a));
+
+            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
+            Assert.NotNull(fastCompiled);
+
+            fastCompiled.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_Ref,
+                OpCodes.Ldarg_2,
+                OpCodes.Ldind_Ref,
+                OpCodes.Call,
+                OpCodes.Ret);
+
+            var b = "test";
+            Assert.AreEqual(b, fastCompiled(ref cls, ref b));
+        }
+
+        public struct PassedByRefStruct
+        {
+            public string PassByRef(ref string test) => test.ToString();
+
+            public string PassByValue(int test) => test.ToString();
+        }
+
+        [Test]
+        public void Lambda_Ref_Parameter_Passed_Into_Struct_Instance_Value_Method()
+        {
+            var i = Parameter(typeof(PassedByRefStruct).MakeByRefType());
+            var s = Parameter(typeof(int).MakeByRefType());
+
+            var lambda = Lambda<RefInstanceDelegate<PassedByRefStruct, int>>(
+                Call(i, typeof(PassedByRefStruct).GetMethod(nameof(PassByValue)), s),
+                i, s);
+
+            lambda.PrintCSharp();
+
+            var cls = new PassedByRefStruct();
+
+            var systCompiled = lambda.CompileSys();
+            systCompiled.PrintIL();
+            var a = 1;
+            Assert.AreEqual("1", systCompiled(ref cls, ref a));
+
+            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
+            Assert.NotNull(fastCompiled);
+            fastCompiled.PrintIL();
+
+            fastCompiled.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
+                OpCodes.Ldind_I4,
+                OpCodes.Call,
+                OpCodes.Ret);
+
+            var b = 2;
+            Assert.AreEqual("2", fastCompiled(ref cls, ref b));
         }
 
         [Test]

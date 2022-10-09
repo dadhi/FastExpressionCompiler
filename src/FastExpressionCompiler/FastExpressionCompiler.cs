@@ -2529,7 +2529,7 @@ namespace FastExpressionCompiler
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     closure.LastEmitIsAddress = !isParamOrVarByRef &&
-                        (isArgByRef || 
+                        (isArgByRef ||
                             paramType.IsValueType &&
                             (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281, #265
                             (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
@@ -2539,20 +2539,23 @@ namespace FastExpressionCompiler
                     else
                         EmitLoadArg(il, paramIndex);
 
+                    // todo: @simplify it is complex overall and EmitLoadIndirectlyByRef does the Ldind_Ref too
                     if (isParamOrVarByRef)
-                    {   // todo: @simplify it is complex overall and EmitLoadIndirectlyByRef does the Ldind_Ref too
+                    {
                         if (paramType.IsValueType)
                         {
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
-                            if (!isArgByRef &&
-                                // this means the parameter is the argument to the method call and not the instance in the method call or member access
-                                (parent & ParentFlags.Call) != 0 && (parent & ParentFlags.InstanceAccess) == 0 ||
+                            // this means the parameter is the argument to the method call and not the instance in the method call or member access
+                            if (!isArgByRef && (parent & ParentFlags.Call) != 0 && (parent & ParentFlags.InstanceAccess) == 0 ||
                                 (parent & ParentFlags.Arithmetic) != 0)
                                 EmitLoadIndirectlyByRef(il, paramType);
                         }
-                        else if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
-                                (parent & (ParentFlags.MemberAccess | ParentFlags.Coalesce | ParentFlags.IndexAccess)) != 0)
-                            il.Emit(OpCodes.Ldind_Ref);
+                        else
+                        {
+                            if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
+                                (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess)) != 0)
+                                il.Emit(OpCodes.Ldind_Ref);
+                        }
                     }
                     return true;
                 }
@@ -4701,7 +4704,7 @@ namespace FastExpressionCompiler
                 if (!TryEmitArithmeticOperation(expr, exprNodeType, exprType, il))
                     return false;
 
-                if (leftIsNullable || rightIsNullable) // todo: @clarify that the code emitted is correct
+                if (leftIsNullable || rightIsNullable) // todo: @clarify that the emitted code is correct
                 {
                     var valueLabel = il.DefineLabel();
                     il.Emit(OpCodes.Br, valueLabel);
