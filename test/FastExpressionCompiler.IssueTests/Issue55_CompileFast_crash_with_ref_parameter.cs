@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.IssueTests
             RefRefVoid();
             RefRefReturnToVoid();
             RefSetSetForFields();
-            RefDoNothingReturnCostant();
+            RefDoNothingReturnConstant();
             RefFromLargeConstant();
             RefSetFromParameter();
             NonGenericSetterFieldShould_not_crash();
@@ -701,7 +701,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void RefDoNothingReturnCostant()
+        public void RefDoNothingReturnConstant()
         {
             int DoNothing(ref int localByRef) => default(int);
             var objRef = Parameter(typeof(int).MakeByRefType());
@@ -767,9 +767,10 @@ namespace FastExpressionCompiler.IssueTests
             s.PrintIL();
 
             var f = lambda.CompileFast(true);
+            f.PrintIL();
             f.AssertOpCodes(
-                OpCodes.Ldarg_0,
                 OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
                 OpCodes.Stfld,
                 OpCodes.Ret
             );
