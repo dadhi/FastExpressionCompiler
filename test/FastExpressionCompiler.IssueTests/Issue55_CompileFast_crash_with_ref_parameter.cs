@@ -803,7 +803,8 @@ namespace FastExpressionCompiler.IssueTests
                 byRef = byRef + 3.0;
             }
             var objRef = Parameter(typeof(double).MakeByRefType());
-            var lambda = Lambda<ActionRef<double>>(Assign(objRef, Add(objRef, Constant(3.0))), objRef);
+            var lambda = Lambda<ActionRef<double>>(
+                Assign(objRef, Add(objRef, Constant(3.0))), objRef);
 
             void LocalAssert(ActionRef<double> invoke)
             {
@@ -812,7 +813,20 @@ namespace FastExpressionCompiler.IssueTests
                 Assert.AreEqual(8.0, exampleA);
             }
 
-            var compiledB = lambda.CompileFast<ActionRef<double>>(true);
+            var compiledA = lambda.CompileSys();
+            compiledA.PrintIL();
+            LocalAssert(compiledA);
+
+            var compiledB = lambda.CompileFast(true);
+            compiledB.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_R8,
+                OpCodes.Ldc_R8,
+                OpCodes.Add,
+                OpCodes.Stind_R8,
+                OpCodes.Ret);
+
             LocalAssert(compiledB);
 
             ActionRef<double> direct = AddSet;
