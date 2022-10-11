@@ -21,7 +21,8 @@ namespace FastExpressionCompiler.IssueTests
             InvokeActionConstantIsSupported();
             InvokeActionConstantIsSupportedSimple();
             InvokeActionConstantIsSupportedSimpleStruct();
-            return 3;
+            // InvokeActionConstantIsSupportedSimpleClass(); // todo: @fixme failing
+            return 4;
         }
 
         delegate void DeserializeDelegate<T>(byte[] buffer, ref int offset, ref T value);
@@ -152,6 +153,40 @@ namespace FastExpressionCompiler.IssueTests
 
             var funcFast = lambda.CompileFast(true);
             LocalAssert(funcFast);
+        }
+
+        class SimplePersonClass
+        {
+            public int Health;
+        }
+
+        [Test]
+        public void InvokeActionConstantIsSupportedSimpleClass()
+        {
+            var refValueArg = Parameter(typeof(SimplePersonClass).MakeByRefType(), "value");
+
+            void AssigningRefs(ref SimplePersonClass value) => value.Health += 5;
+
+            var lambda = Lambda<DeserializeDelegateSimple<SimplePersonClass>>(
+                AddAssign(PropertyOrField(refValueArg, nameof(SimplePersonClass.Health)), Constant(5)),
+                refValueArg);
+            lambda.PrintCSharp();
+
+            void LocalAssert(DeserializeDelegateSimple<SimplePersonClass> invoke)
+            {
+                var person = new SimplePersonClass { Health = 1 };
+                invoke(ref person);
+                Assert.AreEqual(6, person.Health);
+            }
+            LocalAssert(AssigningRefs);
+
+            var s = lambda.CompileSys();
+            s.PrintIL();
+            LocalAssert(s);
+
+            var f = lambda.CompileFast(true);
+            f.PrintIL();
+            LocalAssert(f);
         }
     }
 }

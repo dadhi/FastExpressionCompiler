@@ -759,13 +759,23 @@ namespace FastExpressionCompiler.IssueTests
         {
             var objRef = Parameter(typeof(StructWithIntField).MakeByRefType());
             var objVal = Parameter(typeof(int));
-            var prop = PropertyOrField(objRef, nameof(StructWithIntField.IntField));
-            var body = Assign(prop, objVal);
-            var lambda = Lambda<ActionRefIn<StructWithIntField, int>>(body, objRef, objVal);
+            var lambda = Lambda<ActionRefIn<StructWithIntField, int>>(
+                Assign(PropertyOrField(objRef, nameof(StructWithIntField.IntField)), objVal),
+                objRef, objVal);
 
-            var fastCompiled = lambda.CompileFast<ActionRefIn<StructWithIntField, int>>(true);
+            var s = lambda.CompileSys();
+            s.PrintIL();
+
+            var f = lambda.CompileFast(true);
+            f.AssertOpCodes(
+                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
+                OpCodes.Stfld,
+                OpCodes.Ret
+            );
+
             var exampleB = default(StructWithIntField);
-            fastCompiled(ref exampleB, 7);
+            f(ref exampleB, 7);
             Assert.AreEqual(7, exampleB.IntField);
         }
 
