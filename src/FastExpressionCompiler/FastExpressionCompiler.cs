@@ -6957,7 +6957,11 @@ namespace FastExpressionCompiler
 
                 if (!v.IsByRef)
                 {
-                    sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ').AppendName(v.Name, v.Type, v).Append(';');
+                    sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ').AppendName(v.Name, v.Type, v);
+                    if (typeof(Delegate).IsAssignableFrom(v.Type)) // in case of a delegate, it should be assigned if we want to invoke it recursively in itself, see #353 for example
+                        sb.Append(" = null;");
+                    else 
+                        sb.Append(';');
                     continue;
                 }
 
