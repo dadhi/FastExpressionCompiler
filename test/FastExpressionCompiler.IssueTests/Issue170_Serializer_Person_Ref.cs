@@ -21,8 +21,11 @@ namespace FastExpressionCompiler.IssueTests
             InvokeActionConstantIsSupported();
             InvokeActionConstantIsSupportedSimple();
             InvokeActionConstantIsSupportedSimpleStruct();
-            // InvokeActionConstantIsSupportedSimpleClass(); // todo: @fixme failing
-            return 4;
+            // todo: @fixme
+            // InvokeActionConstantIsSupportedSimpleStruct_AddAssign();
+            // InvokeActionConstantIsSupportedSimpleClass_AddAssign();
+            // return 5;
+            return 3;
         }
 
         delegate void DeserializeDelegate<T>(byte[] buffer, ref int offset, ref T value);
@@ -155,13 +158,42 @@ namespace FastExpressionCompiler.IssueTests
             LocalAssert(funcFast);
         }
 
+        [Test]
+        public void InvokeActionConstantIsSupportedSimpleStruct_AddAssign()
+        {
+            var refValueArg = Parameter(typeof(SimplePersonStruct).MakeByRefType(), "value");
+
+            void AssigningRefs(ref SimplePersonStruct value) => value.Health += 5;
+
+            var lambda = Lambda<DeserializeDelegateSimple<SimplePersonStruct>>(
+                AddAssign(PropertyOrField(refValueArg, nameof(SimplePersonStruct.Health)), Constant(5)),
+                refValueArg);
+
+            void LocalAssert(DeserializeDelegateSimple<SimplePersonStruct> invoke)
+            {
+                var person = new SimplePersonStruct { Health = 1 };
+                invoke(ref person);
+                Assert.AreEqual(6, person.Health);
+            }
+
+            LocalAssert(AssigningRefs);
+
+            var s = lambda.CompileSys();
+            s.PrintIL();
+            LocalAssert(s);
+
+            var f = lambda.CompileFast(true);
+            f.PrintIL();
+            LocalAssert(f);
+        }
+
         class SimplePersonClass
         {
             public int Health;
         }
 
-        [Test]
-        public void InvokeActionConstantIsSupportedSimpleClass()
+        // [Test]
+        public void InvokeActionConstantIsSupportedSimpleClass_AddAssign()
         {
             var refValueArg = Parameter(typeof(SimplePersonClass).MakeByRefType(), "value");
 

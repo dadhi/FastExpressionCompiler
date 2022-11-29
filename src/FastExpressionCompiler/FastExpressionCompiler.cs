@@ -2555,6 +2555,11 @@ namespace FastExpressionCompiler
                             if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
                                 (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess)) != 0)
                                 il.Emit(OpCodes.Ldind_Ref);
+                            // else if ((parent & ParentFlags.Arithmetic) != 0)
+                            // {
+                                // todo: @wip debugging #170/#346
+                            //     Console.WriteLine("TryEmitParameter parent: " + parent);
+                            // }
                         }
                     }
                     return true;
