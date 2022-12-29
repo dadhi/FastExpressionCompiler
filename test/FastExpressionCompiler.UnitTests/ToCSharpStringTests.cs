@@ -31,6 +31,35 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(typeof(A<string>), f());
         }
 
+        [Test]
+        public void Outputs_default_reference_type_is_just_null()
+        {
+            var cs = Default(typeof(string)).ToCSharpString();
+            Assert.AreEqual("null;", cs);
+
+            cs = Default(typeof(System.Collections.Generic.List<string>)).ToCSharpString();
+            Assert.AreEqual("null;", cs);
+        }
+
+        [Test]
+        public void Somehow_handles_block_in_expression()
+        {
+            // it's probably not possible to output compilable C# for expressions like this, but at least it can be easy to read
+            var variable = Parameter(typeof(int), "variable");
+            var cs = Add(Constant(1), Block(new [] { variable },
+                Assign(variable, Constant(2)),
+                variable
+            )).ToCSharpString();
+            Assert.AreEqual("""
+                    (1 + {
+                        int variable;
+                        variable = 2;
+                        variable;
+                    });
+                    """, cs);
+        }
+
+
         class A<X> {}
     }
 }

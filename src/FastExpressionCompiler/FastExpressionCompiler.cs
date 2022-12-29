@@ -6760,7 +6760,7 @@ namespace FastExpressionCompiler
                     {
                         var x = (ConstantExpression)e;
                         if (x.Value == null)
-                            return x.Type != null
+                            return x.Type != null && x.Type.IsValueType
                                 ? sb.Append("default(").Append(x.Type.ToCode(stripNamespace, printType)).Append(')')
                                 : sb.Append("null");
 
@@ -6948,7 +6948,8 @@ namespace FastExpressionCompiler
                             sb.NewLineIdentCs(body, EnclosedIn.LambdaBody, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         else
                         {
-                            sb.NewLine(lineIdent, identSpaces).Append('{');
+                            sb.NewLineIdent(lineIdent).Append('{');
+
                             // Body handles `;` itself
                             if (body is BlockExpression bb)
                                 bb.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode,
@@ -6959,7 +6960,7 @@ namespace FastExpressionCompiler
                                 if (isBodyExpression)
                                     sb.AddSemicolonIfFits();
                             }
-                            sb.NewLine(lineIdent, identSpaces).Append('}');
+                            sb.NewLineIdent(lineIdent).Append('}');
                         }
                         return sb.Append(')');
                     }
@@ -7011,7 +7012,14 @@ namespace FastExpressionCompiler
                     }
                 case ExpressionType.Block:
                     {
-                        return BlockToCSharpString((BlockExpression)e, sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode: notRecognizedToCode);
+                        if (enclosedIn == EnclosedIn.Block)
+                            return BlockToCSharpString((BlockExpression)e, sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode: notRecognizedToCode);
+                        else
+                        {
+                            sb.Append('{');
+                            BlockToCSharpString((BlockExpression)e, sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode: notRecognizedToCode);
+                            return sb.AddSemicolonIfFits().NewLineIdent(lineIdent).Append('}');
+                        }
                     }
                 case ExpressionType.Loop:
                     {
@@ -7162,11 +7170,12 @@ namespace FastExpressionCompiler
                     }
                 case ExpressionType.Default:
                     {
-                        return e.Type == typeof(void) ? sb // `default(void)` does not make sense in the C#
-                            : sb.Append("default(").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
+                        return e.Type == typeof(void) ? sb : // `default(void)` does not make sense in the C#
+                            !e.Type.IsValueType && !e.Type.IsGenericParameter ? sb.Append("null") :
+                            sb.Append("default(").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
                     }
                 case ExpressionType.TypeIs:
-                case ExpressionType.TypeEqual:
+                case ExpressionType.TypeEqual: // TODO: type equal
                     {
                         var x = (TypeBinaryExpression)e;
                         sb.Append('(');
@@ -8118,3 +8127,4 @@ namespace System.Diagnostics.CodeAnalysis
     }
 }
 #endif
+}
