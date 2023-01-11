@@ -4801,7 +4801,7 @@ namespace FastExpressionCompiler
                     ExpressionType.Or => OpCodes.Or,
                     ExpressionType.ExclusiveOr => OpCodes.Xor,
                     ExpressionType.LeftShift => OpCodes.Shl,
-                    ExpressionType.RightShift => OpCodes.Shr,
+                    ExpressionType.RightShift => exprType.IsUnsigned() ? OpCodes.Shr_Un : OpCodes.Shr,
                     ExpressionType.Power => OpCodes.Call,
                     _ => throw new NotSupportedException("Unsupported arithmetic operation: " + exprNodeType)
                 };
