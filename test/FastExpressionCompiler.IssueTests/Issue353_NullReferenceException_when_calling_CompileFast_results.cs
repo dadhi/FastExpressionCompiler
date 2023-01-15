@@ -21,21 +21,67 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test1();
-            return 1;
+            Test0_1();
+            // Test1();
+            return 2;
+        }
+
+        [Test]
+        public void Test0_1()
+        {
+            var sumFunc = Parameter(typeof(Func<int, int>), "sumFunc");
+            var i = Parameter(typeof(int), "i");
+            var n = Parameter(typeof(int), "n");
+
+            var expr = Lambda<Func<int, int>>(
+                Block(new[] { sumFunc },
+                    Assign(
+                        sumFunc,
+                        Lambda(
+                            MakeBinary(ExpressionType.Add, i, Constant(45)),
+                            i)),
+                    Invoke(sumFunc, n)
+                ),
+                n);
+
+            expr.PrintCSharp();
+            // print outputs valid csharp code:
+            var @cs = (Func<int, int>)((int n) =>
+            {
+                Func<int, int> sumFunc = null;
+                sumFunc = (Func<int, int>)((int i) =>
+                    (i + 45));
+                return new Func<int, int>(
+                    sumFunc).Invoke(
+                    n);
+            });
+            Assert.AreEqual(55, @cs(10));
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var x = fs(10);
+            Assert.AreEqual(55, x);
+
+            var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            Assert.IsNotNull(f);
+            f.PrintIL();
+
+            var y = f(10);
+            Assert.AreEqual(55, y);
         }
 
         [Test]
         public void Test1()
         {
-            var sum = Parameter(typeof(Func<int, int>));
+            var sumFunc = Parameter(typeof(Func<int, int>), "sumFunc");
             var i = Parameter(typeof(int), "i");
             var n = Parameter(typeof(int), "n");
 
             var expr = Lambda<Func<int, int>>(
-                Block(new[] { sum },
+                Block(new[] { sumFunc },
                     Assign(
-                        sum,
+                        sumFunc,
                         Lambda(
                             Condition(
                                 MakeBinary(ExpressionType.Equal, i, Constant(0)),
@@ -44,10 +90,10 @@ namespace FastExpressionCompiler.IssueTests
                                     ExpressionType.Add,
                                     i,
                                     Invoke(
-                                        sum,
+                                        sumFunc,
                                         MakeBinary(ExpressionType.Subtract, i, Constant(1))))),
                             i)),
-                    Invoke(sum, n)),
+                    Invoke(sumFunc, n)),
                 n);
 
             expr.PrintCSharp();
