@@ -254,6 +254,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run);
 
+                Run(new Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
                 Run(new FastExpressionCompiler.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
