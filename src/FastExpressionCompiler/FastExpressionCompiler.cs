@@ -2581,6 +2581,14 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariableAddress(il, varIndex);
                     else
                         EmitLoadLocalVariable(il, varIndex);
+
+                    // todo: @wip #353
+                    // var nonPassedPars = closure.NonPassedParameters;
+                    // if (nonPassedPars.TryGetIndexByReferenceEquals(out var nonPassedParIndex, paramExpr, nonPassedPars.Length))
+                    // {
+                    //     Console.WriteLine("TryEmitParameter: nonPassedParamIndex: " + nonPassedParIndex);
+                    // }
+
                     return true;
                 }
 
@@ -2592,6 +2600,7 @@ namespace FastExpressionCompiler
 
                 // the only possibility that we are here is because we are in the nested lambda,
                 // and it uses the parameter or variable from the outer lambda
+                // todo: @wip @bug? nope, we may be in situation of #353
                 var nonPassedParams = closure.NonPassedParameters;
                 if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, paramExpr, nonPassedParams.Length))
                     return false;
@@ -5386,7 +5395,7 @@ namespace FastExpressionCompiler
 
         internal static IList<T> AsList<T>(this IEnumerable<T> source) =>
             source == null ? Empty<T>() : source as IList<T> ?? source.ToList();
-
+        // todo: @perf optimize using marshal arts, e.g. `ref MemoryMarshal.GetArrayDataReference(arr)` and `ref Unsafe.Add<T (ref T source, nuint elementOffset);`
         internal static bool TryGetIndexByReferenceEquals<T>(this T[] items, out int index, T item, int count)
         {
             for (var i = 0; (uint)i < count; ++i)

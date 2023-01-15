@@ -21,25 +21,24 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test0_1();
-            // Test1();
+            Test1();
+            // Test2();
             return 2;
         }
 
         [Test]
-        public void Test0_1()
+        public void Test1()
         {
             var sumFunc = Parameter(typeof(Func<int, int>), "sumFunc");
             var i = Parameter(typeof(int), "i");
             var n = Parameter(typeof(int), "n");
+            var m = Parameter(typeof(int), "m");
 
             var expr = Lambda<Func<int, int>>(
-                Block(new[] { sumFunc },
-                    Assign(
-                        sumFunc,
-                        Lambda(
-                            MakeBinary(ExpressionType.Add, i, Constant(45)),
-                            i)),
+                Block(new[] { sumFunc, m },
+                    Assign(m, Constant(45)),  // let's assign before and see if the variable value is correctly used in the nested lambda
+                    Assign(sumFunc, Lambda(MakeBinary(ExpressionType.Add, i, m), i)),
+                    Assign(m, Constant(999)), // todo: @fixme assign the variable later when the lambda is already created above
                     Invoke(sumFunc, n)
                 ),
                 n);
@@ -49,19 +48,22 @@ namespace FastExpressionCompiler.IssueTests
             var @cs = (Func<int, int>)((int n) =>
             {
                 Func<int, int> sumFunc = null;
+                int m;
+                m = 45;
                 sumFunc = (Func<int, int>)((int i) =>
-                    (i + 45));
+                    (i + m));
+                m = 999;
                 return new Func<int, int>(
                     sumFunc).Invoke(
                     n);
             });
-            Assert.AreEqual(55, @cs(10));
+            Assert.AreEqual(1009, @cs(10));
 
             var fs = expr.CompileSys();
             fs.PrintIL();
 
             var x = fs(10);
-            Assert.AreEqual(55, x);
+            Assert.AreEqual(1009, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
@@ -72,7 +74,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Test1()
+        public void Test2()
         {
             var sumFunc = Parameter(typeof(Func<int, int>), "sumFunc");
             var i = Parameter(typeof(int), "i");
