@@ -2,9 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.Internal.src</id>
-        <version>3.3.3</version>
+        <version>3.3.4</version>
         <authors>Maksim Volkau</authors>
-        <copyright>Copyright © 2016-2022 Maksim Volkau</copyright>
+        <copyright>Copyright © 2016-2023 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
         <license type="expression">MIT</license>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -12,6 +12,19 @@
         <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <releaseNotes><![CDATA[
+## v3.3.4 Bug-fix release
+
+- fixed: #345 EmitCall is for the varargs method and should not be used for normal convention
+- fixed: #347 InvalidProgramException on compiling an expression that returns a record which implements IList
+- fixed: #349 Error when loading struct parameters closed by the nested lambda e.g. predicate in Linq
+- fixed: #355 Error with converting to/from signed/unsigned integers (Thanks to @TYoungSL for the PR!)
+
+- fixed: the C# output for if-else test condition, and inc/dec operations; and for label at the end of the lambda
+- fixed: ref assignment C# output
+
+- perf: Replace ILGenerator.Emit(OpCodes.Call, ..) with EmitMethodCall performance
+
+
 ## v3.3.3 Bug-fix release
 
 - fixed: #336 Method TryCompileBoundToFirstClosureParam is returning passed Type array to pool may cause undefined behavior

@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
 
-        <VersionPrefix>3.3.3</VersionPrefix>
+        <VersionPrefix>3.3.4</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -12,6 +12,19 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v3.3.4 Bug-fix release
+
+- fixed: #345 EmitCall is for the varargs method and should not be used for normal convention
+- fixed: #347 InvalidProgramException on compiling an expression that returns a record which implements IList
+- fixed: #349 Error when loading struct parameters closed by the nested lambda e.g. predicate in Linq
+- fixed: #355 Error with converting to/from signed/unsigned integers (Thanks to @TYoungSL for the PR!)
+
+- fixed: the C# output for if-else test condition, and inc/dec operations; and for label at the end of the lambda
+- fixed: ref assignment C# output
+
+- perf: Replace ILGenerator.Emit(OpCodes.Call, ..) with EmitMethodCall performance
+
+
 ## v3.3.3 Bug-fix release
 
 - fixed: #336 Method TryCompileBoundToFirstClosureParam is returning passed Type array to pool may cause undefined behavior

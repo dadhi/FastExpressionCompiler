@@ -1,11 +1,11 @@
 <Project>
     <PropertyGroup>
         <Authors>Maksim Volkau</Authors>
-        <Copyright>Copyright © 2016-2022 Maksim Volkau</Copyright>
+        <Copyright>Copyright © 2016-2023 Maksim Volkau</Copyright>
         <NeutralLanguage>en-US</NeutralLanguage>
     </PropertyGroup>
     <PropertyGroup>
-        <LangVersion>10.0</LangVersion>
+        <LangVersion>11.0</LangVersion>
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
         <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     </PropertyGroup>

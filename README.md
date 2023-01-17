@@ -18,7 +18,7 @@
 [Apex.Serialization]: https://github.com/dbolin/Apex.Serialization
 [MapsterMapper]: https://github.com/MapsterMapper/Mapster 
 
-[![latest release notes](https://img.shields.io/badge/latest%20release%20notes-v3.3.3-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/v3.3.3)
+[![latest release notes](https://img.shields.io/badge/latest%20release%20notes-v3.3.4-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/v3.3.4)
 [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 
 Targets .NET Standard 2.0, 2.1 and .NET 4.5
