@@ -5,7 +5,7 @@
         <NeutralLanguage>en-US</NeutralLanguage>
     </PropertyGroup>
     <PropertyGroup>
-        <LangVersion>preview</LangVersion>
+        <LangVersion>10</LangVersion>
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
         <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     </PropertyGroup>
