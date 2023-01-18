@@ -19,7 +19,19 @@ namespace FastExpressionCompiler.Benchmarks
 // |-------------- |----------:|---------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
 // | CompileSystem | 203.18 us | 4.013 us | 6.594 us | 15.26 |    0.60 | 3.1738 | 1.4648 |      - |  10.05 KB |
 // |   CompileFast |  13.32 us | 0.266 us | 0.382 us |  1.00 |    0.00 | 1.2512 | 0.6256 | 0.0763 |   3.84 KB |
-//
+
+// ## net 7.0
+
+// BenchmarkDotNet=v0.13.4, OS=Windows 10 (10.0.19042.928/20H2/October2020Update)
+// Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical cores
+// .NET SDK=7.0.100
+//   [Host]     : .NET 7.0.0 (7.0.22.51805), X64 RyuJIT AVX2
+//   DefaultJob : .NET 7.0.0 (7.0.22.51805), X64 RyuJIT AVX2
+
+// |        Method |      Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+// |-------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+// | CompileSystem | 268.22 us | 10.680 us | 31.323 us | 22.98 |    3.51 | 2.9297 | 2.4414 |   9.88 KB |        3.40 |
+// |   CompileFast |  11.77 us |  0.387 us |  1.123 us |  1.00 |    0.00 | 0.9460 | 0.9308 |   2.91 KB |        1.00 |
 //
 // ## Invoke compiled vs compiled fast
 //
@@ -28,6 +40,20 @@ namespace FastExpressionCompiler.Benchmarks
 // |      InvokeCompiled | 666.34 ns | 9.137 ns | 8.546 ns | 664.91 ns | 20.66 |    0.76 | 0.0381 |     - |     - |     120 B |
 // |  InvokeCompiledFast |  32.03 ns | 0.636 ns | 1.045 ns |  31.79 ns |  1.00 |    0.00 | 0.0178 |     - |     - |      56 B |
 // | InvokePlainDelegate |  32.74 ns | 0.798 ns | 2.314 ns |  31.79 ns |  1.02 |    0.08 | 0.0178 |     - |     - |      56 B |
+
+// ## net 7.0
+
+// BenchmarkDotNet=v0.13.4, OS=Windows 10 (10.0.19042.928/20H2/October2020Update)
+// Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical cores
+// .NET SDK=7.0.100
+//   [Host]     : .NET 7.0.0 (7.0.22.51805), X64 RyuJIT AVX2
+//   DefaultJob : .NET 7.0.0 (7.0.22.51805), X64 RyuJIT AVX2
+
+// |              Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
+// |-------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
+// |      InvokeCompiled | 682.98 ns | 13.190 ns | 37.845 ns | 668.13 ns | 19.88 |    1.50 | 0.0381 |     120 B |        2.14 |
+// |  InvokeCompiledFast |  34.44 ns |  0.689 ns |  1.989 ns |  33.76 ns |  1.00 |    0.00 | 0.0178 |      56 B |        1.00 |
+// | InvokePlainDelegate |  35.20 ns |  0.914 ns |  2.665 ns |  34.26 ns |  1.02 |    0.10 | 0.0178 |      56 B |        1.00 |
 //
 
     public class ExprLinqAnyOfNotNullDecimal

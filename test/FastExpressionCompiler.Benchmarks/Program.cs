@@ -6,10 +6,10 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
+            // BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
 
             // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
-            // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
+            BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
 
             // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
             // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();
