@@ -9,9 +9,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // RunAllTests();
+            RunAllTests();
 
-            new Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
+            // new Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
 
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue170_Serializer_Person_Ref().Run();
