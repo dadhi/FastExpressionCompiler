@@ -59,6 +59,24 @@ namespace FastExpressionCompiler.IssueTests
             });
             Assert.AreEqual(1009, @cs(10));
 
+            // how it is done right now
+            var @cs2 = (Func<int, int>)((int n) =>
+            {
+                Func<object[], int, int> sumFunc = null;
+                int m;
+                m = 45;
+                var closure = new object[] { m };
+                sumFunc = (Func<object[], int, int>)(
+                    (object[] cl, int i) =>
+                    {
+                        var m1 = (int)cl[0];
+                        return i + m1;
+                    });
+                closure[0] = 999;
+                return sumFunc(closure, n);
+            });
+            Assert.AreEqual(1009, @cs2(10));
+
             var fs = expr.CompileSys();
             fs.PrintIL();
 
