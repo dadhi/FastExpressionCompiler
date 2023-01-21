@@ -6299,7 +6299,7 @@ namespace FastExpressionCompiler
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null) =>
             e.ToCSharpString(sb, EnclosedIn.Whatever, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
-        internal enum EnclosedIn { Whatever = 0, IfTest, Block, RefAssignment }
+        internal enum EnclosedIn { Whatever = 0, IfTest, Block, RefAssignment, LambdaBody }
 
         internal static StringBuilder ToCSharpString(this Expression e, StringBuilder sb, EnclosedIn enclosedIn,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null)
@@ -6494,17 +6494,16 @@ namespace FastExpressionCompiler
                         var bNodeType = body.NodeType;
                         var isBodyExpression = bNodeType != ExpressionType.Block && bNodeType != ExpressionType.Try && bNodeType != ExpressionType.Loop;
                         if (isBodyExpression && x.ReturnType != typeof(void))
-                            sb.NewLineIdentCs(body, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            sb.NewLineIdentCs(body, EnclosedIn.LambdaBody, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         else
                         {
                             sb.NewLine(lineIdent, identSpaces).Append('{');
-
                             // Body handles `;` itself
                             if (body is BlockExpression bb)
                                 bb.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode, inTheLastBlock: true);
                             else
                             {
-                                sb.NewLineIdentCs(body, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                sb.NewLineIdentCs(body, EnclosedIn.LambdaBody, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                                 if (isBodyExpression)
                                     sb.AddSemicolonIfFits();
                             }
@@ -6866,7 +6865,8 @@ namespace FastExpressionCompiler
                                 return b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             }
 
-                            sb = enclosedIn != EnclosedIn.IfTest ? sb.Append('(') : sb;
+                            var requiresBrackets = enclosedIn != EnclosedIn.IfTest && enclosedIn != EnclosedIn.LambdaBody;
+                            sb = requiresBrackets ? sb.Append('(') : sb;
                             b.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
                             if (nodeType == ExpressionType.Equal)
@@ -6885,7 +6885,7 @@ namespace FastExpressionCompiler
                                 sb.Append(OperatorToCSharpString(nodeType));
 
                             b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-                            return enclosedIn != EnclosedIn.IfTest ? sb.Append(')') : sb;
+                            return requiresBrackets ? sb.Append(')') : sb;
                         }
 
                         return sb.Append(e.ToString()); // falling back ToString and hoping for the best 
@@ -7574,11 +7574,14 @@ namespace FastExpressionCompiler
         }
 
         internal static StringBuilder NewLineIdentCs(this StringBuilder sb, Expression expr,
-            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces, CodePrinter.ObjectToCode notRecognizedToCode)
-        {
-            sb.NewLineIdent(lineIdent);
-            return expr?.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode) ?? sb.Append("null");
-        }
+            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces, CodePrinter.ObjectToCode notRecognizedToCode) =>
+            expr?.ToCSharpString(sb.NewLineIdent(lineIdent), lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode) 
+            ?? sb.Append("null");
+
+        internal static StringBuilder NewLineIdentCs(this StringBuilder sb, Expression expr, ToCSharpPrinter.EnclosedIn enclosedIn,
+            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces, CodePrinter.ObjectToCode notRecognizedToCode) =>
+            expr?.ToCSharpString(sb.NewLineIdent(lineIdent), enclosedIn, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode) 
+            ?? sb.Append("null");
 
         /// <summary>Helper method to find the number of lambdas in the C# `code` string</summary>
         public static int CountLambdas(string code)
