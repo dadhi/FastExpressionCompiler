@@ -626,15 +626,32 @@ namespace FastExpressionCompiler
             /// All nested lambda(s) `NestedLambdaInfo|NestedLambdaInfo[]` recursively nested in expression
             public object NestedLambdaOrLambdas;
 
+            /// <summary>Populates the info</summary>
+            public ClosureInfo(ClosureStatus status)
+            {
+                Status = status;
+
+                Constants = new LiveCountArray<object>();
+                ConstantUsageThenVarIndex = new LiveCountArray<short>();
+
+                NonPassedParameters = Tools.Empty<ParameterExpression>();
+                NestedLambdaOrLambdas = null;
+
+                LastEmitIsAddress = false;
+                CurrentInlinedLambdaInvokeIndex = -1;
+                Labels = new LiveCountArray<LabelInfo>();
+                _blockStack = new LiveCountArray<BlockInfo>();
+            }
+
             /// <summary>Populates info directly with provided closure object and constants.
             /// If provided, the <paramref name="constUsage"/> is the const variable indexes,
             /// should be the size of <paramref name="constValues"/>
             /// </summary>
-            public ClosureInfo(ClosureStatus status, object[] constValues = null, short[] constUsage = null)
+            public ClosureInfo(ClosureStatus status, object[] constValues, short[] constUsage = null)
             {
                 Status = status;
 
-                Constants = new LiveCountArray<object>(constValues ?? Tools.Empty<object>()); //todo: @perf combine constValues != null conditions
+                Constants = new LiveCountArray<object>(constValues ?? Tools.Empty<object>());
                 ConstantUsageThenVarIndex = new LiveCountArray<short>(
                     constValues == null ? Tools.Empty<short>() : constUsage ?? new short[constValues.Length]);
 
@@ -643,8 +660,8 @@ namespace FastExpressionCompiler
 
                 LastEmitIsAddress = false;
                 CurrentInlinedLambdaInvokeIndex = -1;
-                Labels = new LiveCountArray<LabelInfo>(Tools.Empty<LabelInfo>());
-                _blockStack = new LiveCountArray<BlockInfo>(Tools.Empty<BlockInfo>());
+                Labels = new LiveCountArray<LabelInfo>();
+                _blockStack = new LiveCountArray<BlockInfo>();
             }
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
@@ -656,7 +673,6 @@ namespace FastExpressionCompiler
                 var constIndex = Constants.Count - 1;
                 while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], value))
                     --constIndex;
-
                 if (constIndex == -1)
                 {
                     Constants.PushSlot(value);
@@ -1517,7 +1533,7 @@ namespace FastExpressionCompiler
             var paramExprCount = paramExprs.Count;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.Count;
 #endif
-            // If nested non passed parameter is not matched with any outer passed parameter, 
+            // If nested non passed parameter is not matched with any outer passed parameter,
             // then ensure it goes to outer non passed parameter.
             // But check that having a non-passed parameter in root expression is invalid.
             for (var i = 0; i < nestedNonPassedParams.Length; i++)
@@ -4200,7 +4216,7 @@ namespace FastExpressionCompiler
 
                 //-------------------------------------------------------------------
                 // For the lambda with non-passed parameters (or variables) in closure
-                // we have loaded `NestedLambdaWithConstantsAndNestedLambdas` pair.
+                // we are loading `NestedLambdaWithConstantsAndNestedLambdas` pair.
 
                 var containsConstants = nestedClosureInfo.ContainsConstantsOrNestedLambdas();
                 if (containsConstants)
@@ -5708,11 +5724,15 @@ namespace FastExpressionCompiler
         public int Count;
         public T[] Items;
 
-        public LiveCountArray(T[] items)
+        public LiveCountArray(T[] items, int count)
         {
             Items = items;
-            Count = items.Length;
+            Count = count;
         }
+
+        public LiveCountArray(T[] items) : this(items, items.Length) { }
+
+        public LiveCountArray() : this(Tools.Empty<T>(), 0) { }
 
         public ref T PushSlot()
         {
@@ -6495,9 +6515,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.Invoke:
                     {
                         var x = (InvocationExpression)e;
-                        sb.Append("new ").Append(x.Expression.Type.ToCode(stripNamespace, printType)).Append("(");
-                        sb.NewLineIdentCs(x.Expression, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-                        sb.Append(").Invoke(");
+                        x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append('(');
                         for (var i = 0; i < x.Arguments.Count; i++)
                             (i > 0 ? sb.Append(',') : sb)
                             .NewLineIdentCs(x.Arguments[i], lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
