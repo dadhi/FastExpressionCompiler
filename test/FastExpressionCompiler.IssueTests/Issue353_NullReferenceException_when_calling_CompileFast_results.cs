@@ -53,8 +53,7 @@ namespace FastExpressionCompiler.IssueTests
                 sumFunc = (Func<int, int>)((int i) =>
                     (i + m));
                 m = 999;
-                return new Func<int, int>(
-                    sumFunc).Invoke(
+                return sumFunc(
                     n);
             });
             Assert.AreEqual(1009, @cs(10));
