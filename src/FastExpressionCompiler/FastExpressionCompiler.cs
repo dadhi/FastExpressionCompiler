@@ -2634,7 +2634,8 @@ namespace FastExpressionCompiler
                 if (paramType.IsValueType)
                 {
                     il.Emit(OpCodes.Unbox_Any, paramType);
-                    EmitStoreAndLoadLocalVariableAddress(il, paramType); // fixes #347
+                    if ((parent & (ParentFlags.InstanceAccess | ParentFlags.IndexAccess)) != 0)
+                        EmitStoreAndLoadLocalVariableAddress(il, paramType); // fixes #347, todo: @fixme but breaks the #353
                 }
 
                 return true;
@@ -6332,7 +6333,7 @@ namespace FastExpressionCompiler
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null) =>
             e.ToCSharpString(sb, EnclosedIn.Whatever, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
-        internal enum EnclosedIn { Whatever = 0, IfTest, Block, RefAssignment, LambdaBody }
+        internal enum EnclosedIn { Whatever = 0, IfTest, Block, RefAssignment, LambdaBody, Return }
 
         internal static StringBuilder ToCSharpString(this Expression e, StringBuilder sb, EnclosedIn enclosedIn,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null)
@@ -6898,7 +6899,7 @@ namespace FastExpressionCompiler
                                 return b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             }
 
-                            var requiresBrackets = enclosedIn != EnclosedIn.IfTest && enclosedIn != EnclosedIn.LambdaBody;
+                            var requiresBrackets = enclosedIn != EnclosedIn.IfTest && enclosedIn != EnclosedIn.LambdaBody && enclosedIn != EnclosedIn.Return;
                             sb = requiresBrackets ? sb.Append('(') : sb;
                             b.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
@@ -7017,11 +7018,7 @@ namespace FastExpressionCompiler
 
                 if (!v.IsByRef)
                 {
-                    sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ').AppendName(v.Name, v.Type, v);
-                    if (v.Type.IsClass) // in case of class, let's initialize to ensure we have the valid code, see #353 for example
-                        sb.Append(" = null;");
-                    else 
-                        sb.Append(';');
+                    sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ').AppendName(v.Name, v.Type, v).Append(" = default;");
                     continue;
                 }
 
@@ -7049,14 +7046,16 @@ namespace FastExpressionCompiler
                     if (gt.Value == null)
                         sb.Append("return;");
                     else
-                        gt.Value.ToCSharpString(sb.Append("return "), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).AddSemicolonIfFits();
+                        gt.Value.ToCSharpString(sb.Append("return "), EnclosedIn.Return, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode)
+                            .AddSemicolonIfFits();
 
                     sb.NewLineIdent(lineIdent);
                     label.Target.ToCSharpString(sb).Append(':');
                     if (label.DefaultValue == null)
                         return sb.AppendLine(); // no return because we may have other expressions after label
                     sb.NewLineIdent(lineIdent);
-                    return label.DefaultValue.ToCSharpString(sb.Append("return "), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).AddSemicolonIfFits();
+                    return label.DefaultValue.ToCSharpString(sb.Append("return "), EnclosedIn.Return, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode)
+                        .AddSemicolonIfFits();
                 }
 
                 if (expr is BlockExpression bl)
