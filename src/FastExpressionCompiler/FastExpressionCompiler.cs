@@ -993,7 +993,10 @@ namespace FastExpressionCompiler
             /// <summary>Compiled lambda</summary>
             public object Lambda;
             /// <summary>Index of the compiled lambda in the parent lambda closure array</summary>
-            public int LambdaVarIndex;
+            public short LambdaVarIndex;
+            /// <summary>Index of the variable which store the non-passed variables array before passing it to the closure constructor.
+            /// It used to assign the closed variables from the outside of the nested lambda</summary>
+            public short NonPassedParamsVarIndex;
             /// <summary>Constructor</summary>
             public NestedLambdaInfo(LambdaExpression lambdaExpression)
             {
@@ -3827,7 +3830,31 @@ namespace FastExpressionCompiler
                                 if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
                                     il.Emit(OpCodes.Dup);
                             }
+
                             EmitStoreLocalVariable(il, leftVarIndex);
+
+                            var nestedLambdaInfo = closure.NestedLambdaOrLambdas as NestedLambdaInfo;
+                            if (nestedLambdaInfo != null)
+                            {
+                                if (nestedLambdaInfo.NonPassedParamsVarIndex != 0)
+                                {
+                                    var nonPassedPars = nestedLambdaInfo.ClosureInfo.NonPassedParameters;
+                                    if (nonPassedPars.TryGetIndexByReferenceEquals(out var nonPassedParIndex, leftParamExpr, nonPassedPars.Length))
+                                    {
+                                        EmitLoadLocalVariable(il, nestedLambdaInfo.NonPassedParamsVarIndex);
+                                        EmitLoadConstantInt(il, nonPassedParIndex);
+                                        EmitLoadLocalVariable(il, leftVarIndex);
+                                        il.TryEmitBoxOf(expr.Type);
+                                        il.Emit(OpCodes.Stelem_Ref); // put the variable into non-passed parameters (variables) array
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // todo: @wip #353 support multiple nested lambdas
+                                // var outerNestedLambdas = (NestedLambdaInfo[])outerNestedLambdaOrLambdas;
+                            }
+
                             return ok;
                         }
 
@@ -4226,9 +4253,14 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
                 }
 
-                // - create `NonPassedParameters` array
+                // - create `NonPassedParameters` array for the non-passed parameters and variables
                 EmitLoadConstantInt(il, nestedNonPassedParams.Length); // load the length of array
                 il.Emit(OpCodes.Newarr, typeof(object));
+                
+                // we need to store the array in local variable, because we may assign to closed variable after the closure is passed to the lambda
+                var nonPassedParamsVarIndex = il.GetNextLocalVarIndex(typeof(object[]));
+                EmitStoreAndLoadLocalVariable(il, nonPassedParamsVarIndex);
+                nestedLambdaInfo.NonPassedParamsVarIndex = (short)nonPassedParamsVarIndex;
 
                 // - populate the `NonPassedParameters` array
                 var outerNonPassedParams = closure.NonPassedParameters;
@@ -4277,13 +4309,14 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stelem_Ref);
                 }
 
-                // - emit the closure creation
-                var closureCtor = containsConstants ? ArrayClosureWithNonPassedParamsConstructor : ArrayClosureWithNonPassedParamsConstructorWithoutConstants;
+                // - emit the closure constructor call
+                var closureCtor = containsConstants 
+                    ? ArrayClosureWithNonPassedParamsConstructor
+                    : ArrayClosureWithNonPassedParamsConstructorWithoutConstants;
                 il.Emit(OpCodes.Newobj, closureCtor);
 
                 // - call `Curry` method with nested lambda and array closure to produce a closed lambda with the expected signature
                 var lambdaTypeArgs = nestedLambdaInfo.Lambda.GetType().GetGenericArguments();
-
                 var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
                 var closureMethod = nestedLambdaExpr.ReturnType == typeof(void)
                     ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
@@ -6413,7 +6446,7 @@ namespace FastExpressionCompiler
                     {
                         var x = (NewArrayExpression)e;
                         sb.Append("new ").Append(e.Type.GetElementType().ToCode(stripNamespace, printType));
-                        sb.Append(e.NodeType == ExpressionType.NewArrayInit ? "[] {" : "[");
+                        sb.Append(e.NodeType == ExpressionType.NewArrayInit ? "[]{" : "[");
 
                         var exprs = x.Expressions;
                         if (exprs.Count == 1)
@@ -6985,7 +7018,7 @@ namespace FastExpressionCompiler
                 if (!v.IsByRef)
                 {
                     sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ').AppendName(v.Name, v.Type, v);
-                    if (typeof(Delegate).IsAssignableFrom(v.Type)) // in case of a delegate, it should be assigned if we want to invoke it recursively in itself, see #353 for example
+                    if (v.Type.IsClass) // in case of class, let's initialize to ensure we have the valid code, see #353 for example
                         sb.Append(" = null;");
                     else 
                         sb.Append(';');

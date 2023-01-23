@@ -21,11 +21,51 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test1_manual_closure();
+            // Test1_manual_closure();
+            Test1_closure_over_array_and_changing_its_element();
             // Test1_simplified();
             // Test1();
             // Test2();
             return 2;
+        }
+
+        [Test]
+        public void Test1_closure_over_array_and_changing_its_element()
+        {
+            var n = Parameter(typeof(int), "n");
+            var i = Parameter(typeof(int), "i");
+
+            var f = Parameter(typeof(Func<int, int>), "f");
+            var a = Parameter(typeof(object[]), "a");
+            var b = Parameter(typeof(object[]), "b");
+
+            var expr = Lambda<Func<int, int>>(
+                Block(new[] { f, b },
+                    Assign(f, Lambda<Func<int, int>>(
+                        MakeBinary(ExpressionType.Add, i, Convert(ArrayAccess(b, Constant(0)), typeof(int))),
+                        i)),
+                    Assign(b, NewArrayInit(typeof(object), Constant(999, typeof(object)))),
+                    Invoke(f, n)
+                ),
+                n);
+
+            expr.PrintCSharp();
+            // c# output
+
+            // Assert.AreEqual(1009, @cs(10));
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var x = fs(10);
+            Assert.AreEqual(1009, x);
+
+            var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            Assert.IsNotNull(ff);
+            ff.PrintIL();
+
+            var y = ff(10);
+            Assert.AreEqual(1009, y);
         }
 
         [Test]
