@@ -2600,14 +2600,6 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariableAddress(il, varIndex);
                     else
                         EmitLoadLocalVariable(il, varIndex);
-
-                    // todo: @wip #353
-                    // var nonPassedPars = closure.NonPassedParameters;
-                    // if (nonPassedPars.TryGetIndexByReferenceEquals(out var nonPassedParIndex, paramExpr, nonPassedPars.Length))
-                    // {
-                    //     Console.WriteLine("TryEmitParameter: nonPassedParamIndex: " + nonPassedParIndex);
-                    // }
-
                     return true;
                 }
 
@@ -2619,7 +2611,6 @@ namespace FastExpressionCompiler
 
                 // the only possibility that we are here is because we are in the nested lambda,
                 // and it uses the parameter or variable from the outer lambda
-                // todo: @wip @bug? nope, we may be in situation of #353
                 var nonPassedParams = closure.NonPassedParameters;
                 if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, paramExpr, nonPassedParams.Length))
                     return false;
@@ -2634,8 +2625,8 @@ namespace FastExpressionCompiler
                 if (paramType.IsValueType)
                 {
                     il.Emit(OpCodes.Unbox_Any, paramType);
-                    if ((parent & (ParentFlags.InstanceAccess | ParentFlags.IndexAccess)) != 0)
-                        EmitStoreAndLoadLocalVariableAddress(il, paramType); // fixes #347, todo: @fixme but breaks the #353
+                    if ((parent & (ParentFlags.InstanceAccess | ParentFlags.IndexAccess)) != 0) // the condition fixes the #353, because we don't want to load the address of arithmetic operand
+                        EmitStoreAndLoadLocalVariableAddress(il, paramType); // fixes #347
                 }
 
                 return true;
@@ -3834,28 +3825,15 @@ namespace FastExpressionCompiler
 
                             EmitStoreLocalVariable(il, leftVarIndex);
 
-                            var nestedLambdaInfo = closure.NestedLambdaOrLambdas as NestedLambdaInfo;
-                            if (nestedLambdaInfo != null)
+                            // assigning the new value into the already closed variable - it enables the recursive nested lambda calls, see #353
+                            if (closure.NestedLambdaOrLambdas != null) 
                             {
-                                if (nestedLambdaInfo.NonPassedParamsVarIndex != 0)
-                                {
-                                    var nonPassedPars = nestedLambdaInfo.ClosureInfo.NonPassedParameters;
-                                    if (nonPassedPars.TryGetIndexByReferenceEquals(out var nonPassedParIndex, leftParamExpr, nonPassedPars.Length))
-                                    {
-                                        EmitLoadLocalVariable(il, nestedLambdaInfo.NonPassedParamsVarIndex);
-                                        EmitLoadConstantInt(il, nonPassedParIndex);
-                                        EmitLoadLocalVariable(il, leftVarIndex);
-                                        il.TryEmitBoxOf(expr.Type);
-                                        il.Emit(OpCodes.Stelem_Ref); // put the variable into non-passed parameters (variables) array
-                                    }
-                                }
+                                if (closure.NestedLambdaOrLambdas is NestedLambdaInfo nestedLambdaInfo)
+                                    EmitStoreAssignedLeftVatIntoClosureArray(il, nestedLambdaInfo, leftParamExpr, leftVarIndex);
+                                else
+                                    foreach (var nl in (NestedLambdaInfo[])closure.NestedLambdaOrLambdas)
+                                        EmitStoreAssignedLeftVatIntoClosureArray(il, nl, leftParamExpr, leftVarIndex);
                             }
-                            else
-                            {
-                                // todo: @wip #353 support multiple nested lambdas
-                                // var outerNestedLambdas = (NestedLambdaInfo[])outerNestedLambdaOrLambdas;
-                            }
-
                             return ok;
                         }
 
@@ -3965,6 +3943,21 @@ namespace FastExpressionCompiler
                         if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
                             throw new NotSupportedExpressionException(NotSupported.Assign_Target, $"Assignment target `{nodeType}` is not supported");
                         return false;
+                }
+            }
+
+            private static void EmitStoreAssignedLeftVatIntoClosureArray(ILGenerator il, NestedLambdaInfo nestedLambdaInfo, ParameterExpression assignedLeftVar, int assignedLeftVarIndex)
+            {
+                if (nestedLambdaInfo.NonPassedParamsVarIndex == 0)
+                    return;
+                var nonPassedPars = nestedLambdaInfo.ClosureInfo.NonPassedParameters;
+                if (nonPassedPars.TryGetIndexByReferenceEquals(out var nonPassedParIndex, assignedLeftVar, nonPassedPars.Length))
+                {
+                    EmitLoadLocalVariable(il, nestedLambdaInfo.NonPassedParamsVarIndex);
+                    EmitLoadConstantInt(il, nonPassedParIndex);
+                    EmitLoadLocalVariable(il, assignedLeftVarIndex);
+                    il.TryEmitBoxOf(assignedLeftVar.Type);
+                    il.Emit(OpCodes.Stelem_Ref); // put the variable into non-passed parameters (variables) array
                 }
             }
 
@@ -4558,7 +4551,7 @@ namespace FastExpressionCompiler
                 {
                     if (!isEqualityOp)
                         return false;
-                    il.Emit(OpCodes.Ceq); // todo: @wip test it why not _objectEqualsMethod 
+                    il.Emit(OpCodes.Ceq); // todo: @? test it, why it is not _objectEqualsMethod 
                     if (expressionType == ExpressionType.NotEqual)
                         EmitEqualToZeroOrNull(il);
                     return il.EmitPopIfIgnoreResult(parent);
