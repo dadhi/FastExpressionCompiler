@@ -63,7 +63,7 @@ namespace FastExpressionCompiler
         NoInvocationLambdaInlining = 1,
         /// <summary>Adds the Expression, ExpressionString, and CSharpString to the delegate closure for the debugging inspection</summary>
         EnableDelegateDebugInfo = 1 << 1,
-        /// <summary>When the flag is set then instead of the returning `null` the specific exception is thrown</summary>
+        /// <summary>When the flag is set then instead of the returning `null` the specific exception is thrown*346</summary>
         ThrowOnNotSupportedExpression = 1 << 2
     }
 
@@ -3769,6 +3769,7 @@ namespace FastExpressionCompiler
                 switch (leftNodeType)
                 {
                     case ExpressionType.Parameter:
+                    {
                         var leftParamExpr = (ParameterExpression)left;
 #if LIGHT_EXPRESSION
                         var paramExprCount = paramExprs.ParameterCount;
@@ -3873,12 +3874,16 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Stelem_Ref); // put the variable into array
                         }
                         return true;
-
+                    }
                     case ExpressionType.MemberAccess:
+                    {
                         var assignFromLocalVar = right.NodeType == ExpressionType.Try;
                         var resultLocalVarIndex = -1;
                         if (assignFromLocalVar)
                         {
+                            var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
+                            if (arithmeticNodeType != nodeType)
+                                return false; // todo: @feature does not support ???Assign operations when the right operant is the Try expression, see AssignTests.
                             resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
                             if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
                                 return false;
@@ -3893,8 +3898,20 @@ namespace FastExpressionCompiler
 
                         if (assignFromLocalVar)
                             EmitLoadLocalVariable(il, resultLocalVarIndex);
-                        else if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
-                            return false;
+                        else 
+                        {
+                            var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
+                            if (arithmeticNodeType != nodeType)
+                            {
+                                if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, flags))
+                                    return false;
+                            }
+                            else
+                            {
+                                if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
+                                    return false;
+                            }
+                        }
 
                         var member = memberExpr.Member;
                         if ((parent & ParentFlags.IgnoreResult) != 0)
@@ -3906,8 +3923,9 @@ namespace FastExpressionCompiler
                         ok = EmitMemberAssign(il, member);
                         EmitLoadLocalVariable(il, rightVarIndex);
                         return ok;
-
+                    }
                     case ExpressionType.Index:
+                    {
                         var indexExpr = (IndexExpression)left;
 
                         var obj = indexExpr.Object;
@@ -3938,7 +3956,7 @@ namespace FastExpressionCompiler
                         ok = TryEmitIndexAssign(indexExpr, obj?.Type, expr.Type, il);
                         EmitLoadLocalVariable(il, varIndex);
                         return ok;
-
+                    }
                     default: // todo: @feature not yet support assignment targets
                         if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
                             throw new NotSupportedExpressionException(NotSupported.Assign_Target, $"Assignment target `{nodeType}` is not supported");

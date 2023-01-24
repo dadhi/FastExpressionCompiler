@@ -227,6 +227,32 @@ namespace FastExpressionCompiler.UnitTests
                     ),
                     Catch(typeof(Exception), Default(tryCatchVar.Type))));
 
+            assignExpr.PrintCSharp();
+            // var @cs = (Func<TryCatchTest>)(() =>
+            // {
+            // try
+            // {
+            //     TryCatchTest assigntests_trycatchtest__58225482 = default;
+            //     assigntests_trycatchtest__58225482 = new TryCatchTest();
+            //     assigntests_trycatchtest__58225482.NestedTest = try
+            //     {
+            //         TryCatchNestedTest assigntests_trycatchnestedtest__54267293 = default;
+            //         assigntests_trycatchnestedtest__54267293 = new TryCatchNestedTest();
+            //         assigntests_trycatchnestedtest__54267293.Nested = "Value";
+            //         return assigntests_trycatchnestedtest__54267293;
+            //     }
+            //     catch (Exception)
+            //     {
+            //         return default(TryCatchNestedTest);
+            //     };
+            //     return assigntests_trycatchtest__58225482;
+            // }
+            // catch (Exception)
+            // {
+            //     return default(TryCatchTest);
+            // }
+            // });
+
             var func = assignExpr.CompileFast(true);
 
             Assert.IsNotNull(func);

@@ -1395,6 +1395,15 @@ namespace FastExpressionCompiler.LightExpression
             Block(variables, expressions.AsReadOnlyList());
 
         // todo: @perf @mem optimize
+        public static BlockExpression Block(Type type, Expression expr0) =>
+            new TypedBlockExpression(type, new[] { expr0 });
+
+        // todo: @perf add the rest of overloads
+        // todo: @perf @mem optimize
+        public static BlockExpression Block(Type type, params Expression[] expressions) =>
+            new TypedBlockExpression(type, expressions);
+
+        // todo: @perf @mem optimize
         public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0) =>
             new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), new[] { expr0 });
 
@@ -1421,17 +1430,14 @@ namespace FastExpressionCompiler.LightExpression
         {
             var vars = variables.AsReadOnlyList();
             var exprs = expressions.AsReadOnlyList();
-            var result = exprs[exprs.Count - 1];
+            var result = exprs[exprs.Count - 1]; // todo: @check what if empty?
             if (result.Type == type)
-            {
-                if (vars == null || vars.Count == 0)
-                    return new BlockExpression(exprs);
-                return new ManyVariablesBlockExpression(vars, exprs);
-            }
-
-            if (vars == null || vars.Count == 0)
-                return new TypedBlockExpression(type, exprs);
-            return new TypedManyVariablesBlockExpression(type, vars, exprs);
+                return vars == null || vars.Count == 0
+                    ? new BlockExpression(exprs)
+                    : new ManyVariablesBlockExpression(vars, exprs);
+            return vars == null || vars.Count == 0
+                ? new TypedBlockExpression(type, exprs)
+                : new TypedManyVariablesBlockExpression(type, vars, exprs);
         }
 
         public static Expression DebugInfo(SymbolDocumentInfo doc,
@@ -3893,7 +3899,7 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type => Result.Type;
         public virtual IReadOnlyList<ParameterExpression> Variables => Tools.Empty<ParameterExpression>();
         public readonly IReadOnlyList<Expression> Expressions;
-        public Expression Result => Expressions[Expressions.Count - 1];
+        public Expression Result => Expressions[Expressions.Count - 1]; // todo: @check what if no expressions?
         public virtual int ArgumentCount => 0;
         public virtual Expression GetArgument(int index) => throw new NotImplementedException();
         internal BlockExpression(IReadOnlyList<Expression> expressions) => Expressions = expressions;

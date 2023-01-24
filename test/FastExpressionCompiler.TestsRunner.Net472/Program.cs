@@ -230,6 +230,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run);
 
+                Run(new Issue352_xxxAssign_does_not_work_with_MemberAccess().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run);
+
                 Run(new Issue353_NullReferenceException_when_calling_CompileFast_results().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results().Run);
 

@@ -21,13 +21,12 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test0_1();
-            // Test1();
-            return 2;
+            Test1();
+            return 1;
         }
 
         [Test]
-        public void Test0_1()
+        public void Test1()
         {
             var x = -1;
             var y = 0x7fffffff;

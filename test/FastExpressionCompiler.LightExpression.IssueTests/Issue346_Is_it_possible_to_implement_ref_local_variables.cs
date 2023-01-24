@@ -11,10 +11,10 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            // Check_assignment_to_by_ref_float_parameter();
-            SimpleTest();
+            Check_assignment_to_by_ref_float_parameter();
+            // SimpleTest();
             // Test();
-            return 3;
+            return 2; // todo: @wip update when fixed
         }
 
         delegate void IncRefFloat(ref float x);
@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             // void (ref float x) => x += 1;
             var p = Parameter(typeof(float).MakeByRefType(), "x");
             var e = Lambda<IncRefFloat>(
-                Block(typeof(void), null,
+                Block(typeof(void),
                     // PreIncrementAssign(n)
                     AddAssign(p, Constant(1.0f))
                 ),

@@ -11,18 +11,11 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run();
-
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue170_Serializer_Person_Ref().Run();
-
+            // new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
-            // new FastExpressionCompiler.IssueTests.EmitHacksTest().Run();
-            // new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run();
-            // new FastExpressionCompiler.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run();
 
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
+            // new FastExpressionCompiler.IssueTests.EmitHacksTest().Run();
             // new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run();
 #if !NETFRAMEWORK
             // new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
@@ -250,8 +243,12 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run);
                 Run(new FastExpressionCompiler.IssueTests.Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run);
+
                 Run(new Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run);
+
+                Run(new Issue352_xxxAssign_does_not_work_with_MemberAccess().Run);
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run);
 
                 Run(new Issue353_NullReferenceException_when_calling_CompileFast_results().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results().Run);
