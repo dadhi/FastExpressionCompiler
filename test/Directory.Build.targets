@@ -1,8 +1,8 @@
 <Project>
     <ItemGroup Condition="'$(IsTestProject)' == 'true'">
         <PackageReference Include="NUnit" Version="3.13.3"/>
-        <PackageReference Include="NUnit3TestAdapter" Version="4.2.1"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2"/>
+        <PackageReference Include="NUnit3TestAdapter" Version="4.3.1"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1"/>
     </ItemGroup>
     <ItemGroup Condition="'$(TargetFramework)' == 'NET472'">
         <PackageReference Include="System.ValueTuple" Version="4.5.0"/>

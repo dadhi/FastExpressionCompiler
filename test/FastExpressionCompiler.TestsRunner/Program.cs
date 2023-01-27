@@ -11,8 +11,10 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
-            // new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run();
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
+            
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
+            // new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run();
 
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
             // new FastExpressionCompiler.IssueTests.EmitHacksTest().Run();

@@ -32,26 +32,26 @@ namespace FastExpressionCompiler.IssueTests
 
             public int Prop3 { get; set; }
 
-            public aa Prop4 { get; set; }
+            public Aa Prop4 { get; set; }
         }
 
-        public struct aa
+        public struct Aa
         {
             public int b;
 
             public override bool Equals(Object obj)
             {
-                return obj is aa && this == (aa)obj;
+                return obj is Aa && this == (Aa)obj;
             }
             public override int GetHashCode()
             {
                 return b.GetHashCode();
             }
-            public static bool operator ==(aa x, aa y)
+            public static bool operator ==(Aa x, Aa y)
             {
                 return x.b == y.b;
             }
-            public static bool operator !=(aa x, aa y)
+            public static bool operator !=(Aa x, Aa y)
             {
                 return !(x == y);
             }
@@ -76,7 +76,7 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Comparing_struct_equal_works()
         {
-            var aaComparand = new aa();
+            var aaComparand = new Aa();
             Expression<Func<Foo, bool>> e = foo => foo.Prop4 == aaComparand;
 
             var f = e.CompileFast(true);

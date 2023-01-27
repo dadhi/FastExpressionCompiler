@@ -21,10 +21,39 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            // Check_ArrayAccess_AddAssign();
+
             Check_MemberAccess_AddAssign();
             Check_MemberAccess_PreIncrement();
-            // todo: @wip add the ArrayAccess_AddAssign test
-            return 2;
+            
+            return 3;
+        }
+
+        [Test]
+        public void Check_ArrayAccess_AddAssign()
+        {
+            var a = Parameter(typeof(int[]), "a");
+            var e = Lambda<Action<int[]>>(
+                Block(typeof(void), // todo: do we need the `typeof(void)` here and the `null` for vars? 
+                    AddAssign(ArrayAccess(a, Constant(1)), Constant(33))
+                ),
+                a
+            );
+            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            // Assert.AreEqual(42, b1.Value);
+            
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            var arr = new[] { 1, 9 };
+            fs(arr);
+            Assert.AreEqual(42, arr[1]);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            ff(arr);
+            Assert.AreEqual(75, arr[1]);
         }
 
         class Box

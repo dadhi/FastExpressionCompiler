@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.IssueTests
 
         class MyObject
         {
-            public bool a<b>(b i)
+            public bool a<B>(B i)
             {
                 return Equals(i, false);
             }

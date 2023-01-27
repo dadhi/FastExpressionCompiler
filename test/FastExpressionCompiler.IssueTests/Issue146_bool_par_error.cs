@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.IssueTests
 
         class MyObject
         {
-            public bool a<b>(b i)
+            public bool A<B>(B i)
             {
                 return Equals(i, false);
             }
@@ -36,7 +36,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var objParam = Parameter(typeof(MyObject), "myObj");
             var boolParam = Parameter(typeof(bool), "isSomething");
-            var myMethod = typeof(MyObject).GetMethod("a").MakeGenericMethod(typeof(bool));
+            var myMethod = typeof(MyObject).GetMethod("A").MakeGenericMethod(typeof(bool));
             var call = Call(objParam, myMethod, boolParam);
 
             var lambda = Lambda<Func<MyObject, bool, bool>>(
