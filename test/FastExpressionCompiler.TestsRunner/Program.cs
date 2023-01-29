@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Collections.Generic;
 using FastExpressionCompiler.IssueTests;
 
 namespace FastExpressionCompiler.UnitTests
@@ -22,6 +24,10 @@ namespace FastExpressionCompiler.UnitTests
 #if !NETFRAMEWORK
             // new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
 #endif
+
+            // Console.WriteLine("Local variable usage:");
+            // foreach (var t in FastExpressionCompiler.ILGeneratorHacks.LocalVarUsage.OrderByDescending(x => x.Value))
+            //     Console.WriteLine($"{t.Key.Name} -> {t.Value}");
         }
 
         public static void RunAllTests()

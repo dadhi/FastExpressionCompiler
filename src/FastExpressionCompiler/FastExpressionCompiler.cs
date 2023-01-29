@@ -26,6 +26,7 @@ THE SOFTWARE.
 // ReSharper disable CoVariantArrayConversion
 
 // #define LIGHT_EXPRESSION
+// #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
@@ -5744,9 +5745,22 @@ namespace FastExpressionCompiler
             // var putInteger4Method    = ilGenTypeInfo.GetDeclaredMethod("PutInteger4");
         }
 
+
+#if DEBUG_INFO_LOCAL_VARIABLE_USAGE
+        public static readonly Dictionary<Type, int> LocalVarUsage = new Dictionary<Type, int>(); 
+#endif
         // todo: @perf add the map of the used local variables that can be reused, e.g. we are getting the variable used in the local scope but then we may return them into POOL and reuse (many of int variable can be reuses, say for indexes)
         /// <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
-        public static int GetNextLocalVarIndex(this ILGenerator il, Type t) => _getNextLocalVarIndex(il, t);
+        public static int GetNextLocalVarIndex(this ILGenerator il, Type t)
+        { 
+#if DEBUG_INFO_LOCAL_VARIABLE_USAGE
+            if (!LocalVarUsage.ContainsKey(t))
+                LocalVarUsage[t] = 1;
+            else 
+                ++LocalVarUsage[t];
+#endif
+            return _getNextLocalVarIndex(il, t);
+        }
 
         // todo: @perf add MultiOpCodes emit to save on the EnsureCapacity calls
         // todo: @perf create EmitMethod without additional GetParameters call
