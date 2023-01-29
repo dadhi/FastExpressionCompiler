@@ -1799,7 +1799,7 @@ namespace FastExpressionCompiler
             /// Invoking the inlined lambda (the default System.Expression behavior)
             InlinedLambdaInvoke = 1 << 11,
             /// Indicates that the expression is part of ref local initialization eg `ref var x = ref foo()`
-            RefAssignment = 1 << 12 
+            RefAssignment = 1 << 12
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -1890,7 +1890,8 @@ namespace FastExpressionCompiler
                             return true;
 
                         case ExpressionType.Constant:
-                            return (parent & ParentFlags.IgnoreResult) != 0 || TryEmitConstant(expr, il, ref closure, byRefIndex);
+                            return (parent & ParentFlags.IgnoreResult) != 0 || 
+                                TryEmitConstant(expr, il, ref closure, byRefIndex);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall(expr, paramExprs, il, ref closure, setup, parent);
@@ -2099,7 +2100,7 @@ namespace FastExpressionCompiler
                             return true;
 
                         case ExpressionType.Index:
-                            return TryEmitIndex((IndexExpression)expr, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess);
+                            return TryEmitIndex((IndexExpression)expr, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Goto:
                             return TryEmitGoto((GotoExpression)expr, paramExprs, il, ref closure, setup, parent);
@@ -2196,9 +2197,13 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                if (indexExpr.Object != null && !TryEmit(indexExpr.Object, paramExprs, il, ref closure, setup, parent))
-                    return false;
-
+                var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
+                if (indexExpr.Object != null)
+                {  
+                    // we still need to emit object if result is ignored, because at least we need to access its index
+                    if (!TryEmit(indexExpr.Object, paramExprs, il, ref closure, setup, p | ParentFlags.InstanceAccess))
+                        return false;
+                }
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var indexArgs = (IArgumentProvider)indexExpr;
                 var indexArgCount = indexArgs.ArgumentCount;
@@ -2209,9 +2214,8 @@ namespace FastExpressionCompiler
                 var indexerProp = indexExpr.Indexer;
                 MethodInfo indexerPropGetter = null;
                 if (indexerProp != null)
-                    indexerPropGetter = indexerProp.GetMethod;
+                    indexerPropGetter = indexerProp.GetMethod; // todo: @wip where is the setter?
 
-                var p = parent | ParentFlags.IndexAccess;
                 if (indexerPropGetter == null)
                 {
                     for (var i = 0; i < indexArgCount; i++)
@@ -2751,7 +2755,6 @@ namespace FastExpressionCompiler
 #endif
                 if (!TryEmit(expr.Expression, paramExprs, il, ref closure, setup, parent))
                     return false;
-
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     return true;
                 else if (expr.NodeType == ExpressionType.TypeIs)
@@ -3645,6 +3648,8 @@ namespace FastExpressionCompiler
 #endif
                 var operandExpr = expr.Operand;
                 var resultVar = il.GetNextLocalVarIndex(expr.Type); // todo: @perf here is the opportunity to reuse the variable because is only needed in the local scope 
+                var isPost = nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign;
+                var opCode = nodeType == ExpressionType.PreIncrementAssign || nodeType == ExpressionType.PostIncrementAssign ? OpCodes.Add : OpCodes.Sub;
 
                 if (operandExpr is ParameterExpression p)
                 {
@@ -3671,12 +3676,12 @@ namespace FastExpressionCompiler
                             EmitLoadIndirectlyByRef(il, p.Type);
                     }
 
-                    if (nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+                    if (isPost)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
                     il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PreIncrementAssign ? OpCodes.Add : OpCodes.Sub);
-                    if (nodeType == ExpressionType.PreIncrementAssign || nodeType == ExpressionType.PreDecrementAssign)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+                    il.Emit(opCode);
+                    if (!isPost)
+                        EmitStoreAndLoadLocalVariable(il, resultVar);
 
                     if (localVarIndex != -1)
                         EmitStoreLocalVariable(il, localVarIndex); // store incremented value into the local value;
@@ -3696,29 +3701,87 @@ namespace FastExpressionCompiler
                     if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, parent | ParentFlags.DupMemberOwner))
                         return false;
 
-                    if (nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+                    if (isPost)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
                     il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PreIncrementAssign ? OpCodes.Add : OpCodes.Sub);
-                    if (nodeType == ExpressionType.PreIncrementAssign || nodeType == ExpressionType.PreDecrementAssign)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+                    il.Emit(opCode);
+                    if (!isPost)
+                        EmitStoreAndLoadLocalVariable(il, resultVar);
 
                     if (!EmitMemberAssign(il, m.Member))
                         return false;
                 }
-                else if (operandExpr is IndexExpression i)
+                else if (operandExpr is IndexExpression indexExpr)
                 {
-                    if (!TryEmitIndex(i, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess))
+                    // todo: @simplify could we move it to the TryEmitIndex method?
+                    var flags = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
+                    if (indexExpr.Object != null)
+                    {  
+                        // we still need to emit object if result is ignored, because at least we need to access its index
+                        if (!TryEmit(indexExpr.Object, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceAccess))
+                            return false;
+                        il.Emit(OpCodes.Dup); 
+                    }
+    #if SUPPORTS_ARGUMENT_PROVIDER
+                    var indexArgs = (IArgumentProvider)indexExpr;
+                    var indexArgCount = indexArgs.ArgumentCount;
+    #else
+                    var indexArgs = indexExpr.Arguments;
+                    var indexArgCount = indexArgs.Count;
+    #endif
+                    // handle a single argument for now
+                    if (indexArgCount != 1)
+                        return false; // todo: @feature multiple arguments indexing is not supported for assignment yet
+
+                    var indexArg = indexArgs.GetArgument(0);
+
+                    var indexerProp = indexExpr.Indexer;
+                    MethodInfo indexerPropGetter = null;
+                    if (indexerProp != null)
+                        indexerPropGetter = indexerProp.GetMethod;
+                    if (indexerPropGetter == null)
+                    {
+                        if (!TryEmit(indexArg, paramExprs, il, ref closure, setup, flags, -1))
+                            return false;
+                    }
+                    else
+                    {
+                        var indexerPropSetter = indexerProp.SetMethod;
+                        if (indexerPropSetter == null)
+                            return false; // there is no setter pairing the getter, so we won't be able to set after get, and let's fallback to System expression to handle it. 
+
+                        var getterPars = indexerPropGetter.GetParameters();
+                        if (getterPars.Length != 1)
+                            return false; // todo: @feature multiple arguments indexing is not supported for assignment yet
+
+                        if (!TryEmit(indexArg, paramExprs, il, ref closure, setup, flags, getterPars[0].ParameterType.IsByRef ? 0 : -1))
+                            return false;
+                    }
+
+                    // store the index so it can be used later for setting
+                    var indexVar = il.GetNextLocalVarIndex(indexArg.Type);
+                    EmitStoreAndLoadLocalVariable(il, indexVar);
+
+                    var ok = indexerPropGetter != null 
+                        ? EmitMethodCallOrVirtualCall(il, indexerPropGetter)
+                        : TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure); // one-dimensional array
+                    if (!ok)
                         return false;
-
-                    if (nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+                    
+                    if (isPost)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
                     il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PreIncrementAssign ? OpCodes.Add : OpCodes.Sub);
-                    if (nodeType == ExpressionType.PreIncrementAssign || nodeType == ExpressionType.PreDecrementAssign)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // save the non-incremented value for the later further use
+                    il.Emit(opCode);
+                    
+                    var assignmentResultVar = il.GetNextLocalVarIndex(expr.Type);
+                    EmitStoreLocalVariable(il, assignmentResultVar);
 
-                    if (!TryEmitIndexAssign(i, i.Object?.Type, expr.Type, il))
+                    // we don't need to load the index Object, because it's OpCodes.Dup above
+                    EmitLoadLocalVariable(il, indexVar);
+
+                    EmitLoadLocalVariable(il, assignmentResultVar);
+                        
+                    if (!TryEmitIndexSet(indexExpr, indexExpr.Object?.Type, expr.Type, il))
                         return false;
                 }
                 else
@@ -3947,13 +4010,13 @@ namespace FastExpressionCompiler
                             return false;
 
                         if ((parent & ParentFlags.IgnoreResult) != 0)
-                            return TryEmitIndexAssign(indexExpr, obj?.Type, expr.Type, il);
+                            return TryEmitIndexSet(indexExpr, obj?.Type, expr.Type, il);
 
                         var varIndex = il.GetNextLocalVarIndex(expr.Type); // store value in variable to return
                         il.Emit(OpCodes.Dup);
                         EmitStoreLocalVariable(il, varIndex);
 
-                        ok = TryEmitIndexAssign(indexExpr, obj?.Type, expr.Type, il);
+                        ok = TryEmitIndexSet(indexExpr, obj?.Type, expr.Type, il);
                         EmitLoadLocalVariable(il, varIndex);
                         return ok;
                     }
@@ -4032,7 +4095,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stobj, type);
             }
 
-            private static bool TryEmitIndexAssign(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
+            private static bool TryEmitIndexSet(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
             {
                 if (indexExpr.Indexer != null)
                     return EmitMemberAssign(il, indexExpr.Indexer);
@@ -5127,6 +5190,11 @@ namespace FastExpressionCompiler
             public static bool EmitMethodCallCheckForNull(ILGenerator il, MethodInfo method) =>
                 method != null && EmitMethodCall(il, method);
 
+            /// Same as EmitMethodCallOrVirtualCall which checks the method for null first, and returns false if it is null. 
+            [MethodImpl((MethodImplOptions)256)]
+            public static bool EmitMethodCallOrVirtualCallCheckForNull(ILGenerator il, MethodInfo method) =>
+                method != null && EmitMethodCallOrVirtualCall(il, method);
+
             /// Efficiently emit the int constant
             [MethodImpl((MethodImplOptions)256)]
             public static void EmitLoadConstantInt(ILGenerator il, int i)
@@ -5676,6 +5744,7 @@ namespace FastExpressionCompiler
             // var putInteger4Method    = ilGenTypeInfo.GetDeclaredMethod("PutInteger4");
         }
 
+        // todo: @perf add the map of the used local variables that can be reused, e.g. we are getting the variable used in the local scope but then we may return them into POOL and reuse (many of int variable can be reuses, say for indexes)
         /// <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
         public static int GetNextLocalVarIndex(this ILGenerator il, Type t) => _getNextLocalVarIndex(il, t);
 
