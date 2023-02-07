@@ -3946,118 +3946,14 @@ namespace FastExpressionCompiler
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
-                var flags = parent & ~ParentFlags.IgnoreResult;
                 switch (leftNodeType)
                 {
                     case ExpressionType.Parameter:
-                    {
-                        var leftParamExpr = (ParameterExpression)left;
-#if LIGHT_EXPRESSION
-                        var paramExprCount = paramExprs.ParameterCount;
-#else
-                        var paramExprCount = paramExprs.Count;
-#endif
-                        var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
-
-                        var paramIndex = paramExprCount - 1;
-                        while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), leftParamExpr)) --paramIndex;
-                        if (paramIndex != -1)
-                        {
-                            // shift parameter index by one, because the first one will be closure
-                            if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
-                                ++paramIndex;
-
-                            var isLeftByRef = leftParamExpr.IsByRef;
-                            if (isLeftByRef)
-                                EmitLoadArg(il, paramIndex);
-
-                            ok = arithmeticNodeType == nodeType
-                                ? TryEmit(right, paramExprs, il, ref closure, setup, flags)
-                                : TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
-
-                            if ((parent & ParentFlags.IgnoreResult) == 0)
-                                il.Emit(OpCodes.Dup); // duplicate value to assign and return
-                            if (isLeftByRef)
-                                EmitStoreIndirectlyByRef(il, leftParamExpr.Type);
-                            else
-                                il.Emit(OpCodes.Starg_S, paramIndex);
-                            return ok;
-                        }
-
-                        // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
-                        // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
-                        // if it's a local variable, then store the right value in it
-                        var leftVarIndex = closure.GetDefinedLocalVarOrDefault(leftParamExpr);
-                        if (leftVarIndex != -1)
-                        {
-                            // if (leftParamExpr.IsByRef)
-                            //     flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
-
-                            if (arithmeticNodeType != nodeType)
-                                ok = TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
-                            else
-                            {
-                                ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
-
-                                if (right is ParameterExpression rp && rp.IsByRef)
-                                    EmitLoadIndirectlyByRef(il, rp.Type);
-                                if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
-                                    il.Emit(OpCodes.Dup);
-                            }
-
-                            EmitStoreLocalVariable(il, leftVarIndex);
-
-                            // assigning the new value into the already closed variable - it enables the recursive nested lambda calls, see #353
-                            if (closure.NestedLambdaOrLambdas != null) 
-                            {
-                                if (closure.NestedLambdaOrLambdas is NestedLambdaInfo nestedLambdaInfo)
-                                    EmitStoreAssignedLeftVatIntoClosureArray(il, nestedLambdaInfo, leftParamExpr, leftVarIndex);
-                                else
-                                    foreach (var nl in (NestedLambdaInfo[])closure.NestedLambdaOrLambdas)
-                                        EmitStoreAssignedLeftVatIntoClosureArray(il, nl, leftParamExpr, leftVarIndex);
-                            }
-                            return ok;
-                        }
-
-                        // check that it is a captured parameter by closure
-                        var nonPassedParams = closure.NonPassedParameters;
-                        if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, leftParamExpr, nonPassedParams.Length))
-                            return false;
-
-                        il.Emit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
-
-                        if ((parent & ParentFlags.IgnoreResult) == 0)
-                        {
-                            if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
-                                return false;
-
-                            var valueVarIndex = il.GetNextLocalVarIndex(exprType); // store left value in variable
-                            EmitStoreLocalVariable(il, valueVarIndex);
-
-                            // load array field and param item index
-                            il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
-                            EmitLoadConstantInt(il, nonPassedParamIndex);
-                            EmitLoadLocalVariable(il, valueVarIndex);
-                            il.TryEmitBoxOf(exprType);
-                            il.Emit(OpCodes.Stelem_Ref); // put the variable into array
-                            EmitLoadLocalVariable(il, valueVarIndex); // todo: @perf what if we just dup the `valueVar`?
-                        }
-                        else
-                        {
-                            // load array field and param item index
-                            il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
-                            EmitLoadConstantInt(il, nonPassedParamIndex);
-
-                            if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
-                                return false;
-
-                            il.TryEmitBoxOf(exprType);
-                            il.Emit(OpCodes.Stelem_Ref); // put the variable into array
-                        }
-                        return true;
-                    }
+                        return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right, nodeType, exprType, paramExprs, il, ref closure, setup, parent);
+                    
                     case ExpressionType.MemberAccess:
                     {
+                        var flags = parent & ~ParentFlags.IgnoreResult;
                         var assignFromLocalVar = right.NodeType == ExpressionType.Try;
                         var resultLocalVarIndex = -1;
                         if (assignFromLocalVar)
@@ -4102,6 +3998,7 @@ namespace FastExpressionCompiler
                     }
                     case ExpressionType.Index:
                     {
+                        var flags = parent & ~ParentFlags.IgnoreResult;
                         var indexExpr = (IndexExpression)left;
 
                         var obj = indexExpr.Object;
