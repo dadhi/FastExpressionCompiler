@@ -3939,14 +3939,13 @@ namespace FastExpressionCompiler
                 bool ok = false;
                 var left = expr.Left;
                 var right = expr.Right;
-                var leftNodeType = expr.Left.NodeType;
                 var nodeType = expr.NodeType;
                 var exprType = expr.Type;
 
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
-                switch (leftNodeType)
+                switch (expr.Left.NodeType)
                 {
                     case ExpressionType.Parameter:
                         return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right, nodeType, exprType, paramExprs, il, ref closure, setup, parent);
@@ -3954,16 +3953,16 @@ namespace FastExpressionCompiler
                     case ExpressionType.MemberAccess:
                     {
                         var flags = parent & ~ParentFlags.IgnoreResult;
-                        var assignFromLocalVar = right.NodeType == ExpressionType.Try;
                         var resultLocalVarIndex = -1;
+                        var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
+                        var assignFromLocalVar = right.NodeType == ExpressionType.Try;
                         if (assignFromLocalVar)
                         {
-                            var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
                             if (arithmeticNodeType != nodeType)
                                 return false; // todo: @feature does not support ???Assign operations when the right operant is the Try expression, see AssignTests.
-                            resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
                             if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
                                 return false;
+                            resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
                             EmitStoreLocalVariable(il, resultLocalVarIndex);
                         }
 
@@ -3975,9 +3974,8 @@ namespace FastExpressionCompiler
 
                         if (assignFromLocalVar)
                             EmitLoadLocalVariable(il, resultLocalVarIndex);
-                        else 
+                        else
                         {
-                            var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
                             ok = arithmeticNodeType != nodeType
                                 ? TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags)
                                 : TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty);
