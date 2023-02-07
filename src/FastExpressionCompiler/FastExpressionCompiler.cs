@@ -1944,7 +1944,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.ExclusiveOr:
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
-                            return TryEmitArithmetic((BinaryExpression)expr, expr.NodeType, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
@@ -3825,6 +3825,7 @@ namespace FastExpressionCompiler
                 var right = expr.Right;
                 var leftNodeType = expr.Left.NodeType;
                 var nodeType = expr.NodeType;
+                var exprType = expr.Type;
 
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
@@ -3856,7 +3857,7 @@ namespace FastExpressionCompiler
 
                             ok = arithmeticNodeType == nodeType
                                 ? TryEmit(right, paramExprs, il, ref closure, setup, flags)
-                                : TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, flags);
+                                : TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
 
                             if ((parent & ParentFlags.IgnoreResult) == 0)
                                 il.Emit(OpCodes.Dup); // duplicate value to assign and return
@@ -3877,7 +3878,7 @@ namespace FastExpressionCompiler
                             //     flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
 
                             if (arithmeticNodeType != nodeType)
-                                ok = TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, flags);
+                                ok = TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
                             else
                             {
                                 ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
@@ -3965,16 +3966,11 @@ namespace FastExpressionCompiler
                         else 
                         {
                             var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
-                            if (arithmeticNodeType != nodeType)
-                            {
-                                if (!TryEmitArithmetic(expr, arithmeticNodeType, paramExprs, il, ref closure, setup, flags))
-                                    return false;
-                            }
-                            else
-                            {
-                                if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
-                                    return false;
-                            }
+                            ok = arithmeticNodeType != nodeType
+                                ? TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags)
+                                : TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty);
+                            if (!ok)
+                                return false;
                         }
 
                         var member = memberExpr.Member;
@@ -4789,22 +4785,22 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
+            private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType, 
 #if LIGHT_EXPRESSION
-            private static bool TryEmitArithmetic(BinaryExpression expr, ExpressionType exprNodeType, IParameterProvider paramExprs,
+                IParameterProvider paramExprs,
 #else
-            private static bool TryEmitArithmetic(BinaryExpression expr, ExpressionType exprNodeType, IReadOnlyList<PE> paramExprs,
+                IReadOnlyList<PE> paramExprs,
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var flags = (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall) | ParentFlags.Arithmetic;
                 var leftNoValueLabel = default(Label);
-                var leftExpr = expr.Left;
-                var leftType = leftExpr.Type;
+                var leftType = left.Type;
                 var leftIsNullable = leftType.IsNullable();
                 if (leftIsNullable)
                 {
                     leftNoValueLabel = il.DefineLabel();
-                    if (!TryEmit(leftExpr, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceCall))
+                    if (!TryEmit(left, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceCall))
                         return false;
 
                     if (!closure.LastEmitIsAddress)
@@ -4815,17 +4811,16 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Brfalse, leftNoValueLabel);
                     EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod());
                 }
-                else if (!TryEmit(leftExpr, paramExprs, il, ref closure, setup, flags))
+                else if (!TryEmit(left, paramExprs, il, ref closure, setup, flags))
                     return false;
 
                 var rightNoValueLabel = default(Label);
-                var rightExpr = expr.Right;
-                var rightType = rightExpr.Type;
+                var rightType = right.Type;
                 var rightIsNullable = rightType.IsNullable();
                 if (rightIsNullable)
                 {
                     rightNoValueLabel = il.DefineLabel();
-                    if (!TryEmit(rightExpr, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceCall))
+                    if (!TryEmit(right, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceCall))
                         return false;
 
                     if (!closure.LastEmitIsAddress)
@@ -4836,11 +4831,10 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Brfalse, rightNoValueLabel);
                     EmitMethodCall(il, rightType.FindNullableGetValueOrDefaultMethod());
                 }
-                else if (!TryEmit(rightExpr, paramExprs, il, ref closure, setup, flags))
+                else if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                     return false;
 
-                var exprType = expr.Type;
-                if (!TryEmitArithmeticOperation(leftType, rightType, exprNodeType, exprType, il))
+                if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
                     return false;
 
                 if (leftIsNullable || rightIsNullable) // todo: @clarify that the emitted code is correct
