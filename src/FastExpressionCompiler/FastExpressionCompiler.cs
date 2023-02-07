@@ -4799,8 +4799,8 @@ namespace FastExpressionCompiler
                 var flags = (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall) | ParentFlags.Arithmetic;
                 var leftNoValueLabel = default(Label);
                 var leftExpr = expr.Left;
-                var lefType = leftExpr.Type;
-                var leftIsNullable = lefType.IsNullable();
+                var leftType = leftExpr.Type;
+                var leftIsNullable = leftType.IsNullable();
                 if (leftIsNullable)
                 {
                     leftNoValueLabel = il.DefineLabel();
@@ -4808,12 +4808,12 @@ namespace FastExpressionCompiler
                         return false;
 
                     if (!closure.LastEmitIsAddress)
-                        EmitStoreAndLoadLocalVariableAddress(il, lefType);
+                        EmitStoreAndLoadLocalVariableAddress(il, leftType);
 
                     il.Emit(OpCodes.Dup);
-                    EmitMethodCall(il, lefType.FindNullableHasValueGetterMethod()); // todo: @check that the EmitMethodCall may return false
+                    EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod()); // todo: @check that the EmitMethodCall may return false
                     il.Emit(OpCodes.Brfalse, leftNoValueLabel);
-                    EmitMethodCall(il, lefType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(leftExpr, paramExprs, il, ref closure, setup, flags))
                     return false;
@@ -4840,7 +4840,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 var exprType = expr.Type;
-                if (!TryEmitArithmeticOperation(expr, exprNodeType, exprType, il))
+                if (!TryEmitArithmeticOperation(leftType, rightType, exprNodeType, exprType, il))
                     return false;
 
                 if (leftIsNullable || rightIsNullable) // todo: @clarify that the emitted code is correct
@@ -4874,7 +4874,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitArithmeticOperation(BinaryExpression expr, ExpressionType nodeType, Type exprType, ILGenerator il)
+            private static bool TryEmitArithmeticOperation(Type leftType, Type rightType, ExpressionType nodeType, Type exprType, ILGenerator il)
             {
                 if (!exprType.IsPrimitive)
                 {
@@ -4887,7 +4887,7 @@ namespace FastExpressionCompiler
                         if (exprType == typeof(string))
                         {
                             var paraType = typeof(string);
-                            if (expr.Left.Type != expr.Right.Type || expr.Left.Type != typeof(string))
+                            if (leftType != rightType || leftType != typeof(string))
                                 paraType = typeof(object);
 
                             var methods = typeof(string).GetMethods();
