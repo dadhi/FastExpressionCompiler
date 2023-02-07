@@ -4565,7 +4565,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitComparison(Expression exprLeft, Expression exprRight, ExpressionType expressionType, Type exprType,
+            private static bool TryEmitComparison(Expression left, Expression right, ExpressionType nodeType, Type exprType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -4573,48 +4573,48 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                var leftOpType = exprLeft.Type;
+                var leftOpType = left.Type;
                 var leftIsNullable = leftOpType.IsNullable();
-                var rightOpType = exprRight.Type;
+                var rightOpType = right.Type;
 
                 // if on member is `null` object then list its type to match other member
-                var rightIsNull = exprRight is ConstantExpression r && r.Value == null;
+                var rightIsNull = right is ConstantExpression r && r.Value == null;
                 if (rightIsNull && rightOpType == typeof(object))
                     rightOpType = leftOpType;
 
-                var leftIsNull = exprLeft is ConstantExpression l && l.Value == null;
+                var leftIsNull = left is ConstantExpression l && l.Value == null;
                 if (leftIsNull && leftOpType == typeof(object))
                     leftOpType = rightOpType;
 
                 var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
 
                 // short circuit the comparison with null on the right
-                var isEqualityOp = expressionType == ExpressionType.Equal || expressionType == ExpressionType.NotEqual;
+                var isEqualityOp = nodeType == ExpressionType.Equal || nodeType == ExpressionType.NotEqual;
                 if (isEqualityOp)
                 {
                     if (leftIsNullable && rightIsNull)
                     {
-                        if (!TryEmit(exprLeft, paramExprs, il, ref closure, setup, operandParent))
+                        if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
                             return false;
                         EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
                         EmitMethodCall(il, leftOpType.FindNullableHasValueGetterMethod());
-                        if (expressionType == ExpressionType.Equal)
+                        if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
                     if (leftIsNull && rightOpType.IsNullable())
                     {
-                        if (!TryEmit(exprRight, paramExprs, il, ref closure, setup, operandParent))
+                        if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
                             return false;
                         EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
                         EmitMethodCall(il, rightOpType.FindNullableHasValueGetterMethod());
-                        if (expressionType == ExpressionType.Equal)
+                        if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
 
-                if (!TryEmit(exprLeft, paramExprs, il, ref closure, setup, operandParent))
+                if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
                     return false;
 
                 int lVarIndex = -1, rVarIndex = -1;
@@ -4625,7 +4625,7 @@ namespace FastExpressionCompiler
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
 
-                if (!TryEmit(exprRight, paramExprs, il, ref closure, setup, operandParent))
+                if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
                     return false;
 
                 if (leftOpType != rightOpType && leftOpType.IsClass && rightOpType.IsClass &&
@@ -4634,7 +4634,7 @@ namespace FastExpressionCompiler
                     if (!isEqualityOp)
                         return false;
                     il.Emit(OpCodes.Ceq); // todo: @? test it, why it is not _objectEqualsMethod 
-                    if (expressionType == ExpressionType.NotEqual)
+                    if (nodeType == ExpressionType.NotEqual)
                         EmitEqualToZeroOrNull(il);
                     return il.EmitPopIfIgnoreResult(parent);
                 }
@@ -4649,12 +4649,12 @@ namespace FastExpressionCompiler
                 if (!leftOpType.IsPrimitive && !leftOpType.IsEnum)
                 {
                     var methodName
-                        = expressionType == ExpressionType.Equal ? "op_Equality"
-                        : expressionType == ExpressionType.NotEqual ? "op_Inequality"
-                        : expressionType == ExpressionType.GreaterThan ? "op_GreaterThan"
-                        : expressionType == ExpressionType.GreaterThanOrEqual ? "op_GreaterThanOrEqual"
-                        : expressionType == ExpressionType.LessThan ? "op_LessThan"
-                        : expressionType == ExpressionType.LessThanOrEqual ? "op_LessThanOrEqual"
+                        = nodeType == ExpressionType.Equal ? "op_Equality"
+                        : nodeType == ExpressionType.NotEqual ? "op_Inequality"
+                        : nodeType == ExpressionType.GreaterThan ? "op_GreaterThan"
+                        : nodeType == ExpressionType.GreaterThanOrEqual ? "op_GreaterThanOrEqual"
+                        : nodeType == ExpressionType.LessThan ? "op_LessThan"
+                        : nodeType == ExpressionType.LessThanOrEqual ? "op_LessThanOrEqual"
                         : null;
 
                     if (methodName == null)
@@ -4677,7 +4677,7 @@ namespace FastExpressionCompiler
                         return false; // todo: @unclear what is the alternative?
 
                     EmitMethodCall(il, _objectEqualsMethod);
-                    if (expressionType == ExpressionType.NotEqual) // invert result for not equal
+                    if (nodeType == ExpressionType.NotEqual) // invert result for not equal
                         EmitEqualToZeroOrNull(il);
 
                     if (leftIsNullable)
@@ -4687,7 +4687,7 @@ namespace FastExpressionCompiler
                 }
 
                 // handle primitives comparison
-                switch (expressionType)
+                switch (nodeType)
                 {
                     case ExpressionType.Equal:
                         il.Emit(OpCodes.Ceq);
@@ -4726,7 +4726,7 @@ namespace FastExpressionCompiler
             nullableCheck:
                 if (leftIsNullable)
                 {
-                    var leftNullableHasValueGetterMethod = exprLeft.Type.FindNullableHasValueGetterMethod();
+                    var leftNullableHasValueGetterMethod = left.Type.FindNullableHasValueGetterMethod();
 
                     EmitLoadLocalVariableAddress(il, lVarIndex);
                     EmitMethodCall(il, leftNullableHasValueGetterMethod);
@@ -4744,7 +4744,7 @@ namespace FastExpressionCompiler
                     if (isLiftedToNull)
                         EmitStoreAndLoadLocalVariable(il, rightHasValueVar = il.GetNextLocalVarIndex(typeof(bool)));
 
-                    switch (expressionType)
+                    switch (nodeType)
                     {
                         case ExpressionType.Equal:
                             il.Emit(OpCodes.Ceq); // compare both HasValue calls
