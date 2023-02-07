@@ -4874,7 +4874,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitArithmeticOperation(BinaryExpression expr, ExpressionType exprNodeType, Type exprType, ILGenerator il)
+            private static bool TryEmitArithmeticOperation(BinaryExpression expr, ExpressionType nodeType, Type exprType, ILGenerator il)
             {
                 if (!exprType.IsPrimitive)
                 {
@@ -4904,7 +4904,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            var methodName = exprNodeType.GetArithmeticBinaryOperatorMethodName();
+                            var methodName = nodeType.GetArithmeticBinaryOperatorMethodName();
                             if (methodName != null)
                             {
                                 var methods = exprType.GetMethods();
@@ -4921,7 +4921,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                var opCode = AssignToArithmeticOrSelf(exprNodeType) switch 
+                var opCode = AssignToArithmeticOrSelf(nodeType) switch 
                 {
                     ExpressionType.Add => OpCodes.Add,
                     ExpressionType.AddChecked => exprType.IsUnsigned() ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf,
@@ -4937,7 +4937,7 @@ namespace FastExpressionCompiler
                     ExpressionType.LeftShift => OpCodes.Shl,
                     ExpressionType.RightShift => exprType.IsUnsigned() ? OpCodes.Shr_Un : OpCodes.Shr,
                     ExpressionType.Power => OpCodes.Call,
-                    _ => throw new NotSupportedException("Unsupported arithmetic operation: " + exprNodeType)
+                    _ => throw new NotSupportedException("Unsupported arithmetic operation: " + nodeType)
                 };
 
                 if (opCode.Equals(OpCodes.Call))
