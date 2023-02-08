@@ -3979,7 +3979,7 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            private static bool TryEmitAssign(BinaryExpression expr, 
+            private static bool TryEmitAssignToIndex(IndexExpression left, Expression right, ExpressionType nodeType, Type exprType, 
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs, 
 #else
@@ -3988,59 +3988,63 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 bool ok = false;
-                var left = expr.Left;
-                var right = expr.Right;
-                var nodeType = expr.NodeType;
-                var exprType = expr.Type;
+                var flags = parent & ~ParentFlags.IgnoreResult;
 
+                var obj = left.Object;
+                if (obj != null && !TryEmit(obj, paramExprs, il, ref closure, setup, flags))
+                    return false;
+
+#if SUPPORTS_ARGUMENT_PROVIDER
+                var indexArgExprs = (IArgumentProvider)left;
+                var indexArgCount = indexArgExprs.ArgumentCount;
+#else
+                var indexArgExprs = left.Arguments;
+                var indexArgCount = indexArgExprs.Count;
+#endif
+                for (var i = 0; i < indexArgCount; i++)
+                    if (!TryEmit(indexArgExprs.GetArgument(i), paramExprs, il, ref closure, setup, flags))
+                        return false;
+
+                if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
+                    return false;
+
+                if ((parent & ParentFlags.IgnoreResult) != 0)
+                    return TryEmitIndexSet(left, obj?.Type, exprType, il);
+
+                var varIndex = il.GetNextLocalVarIndex(exprType); // store value in variable to return
+                il.Emit(OpCodes.Dup);
+                EmitStoreLocalVariable(il, varIndex);
+
+                ok = TryEmitIndexSet(left, obj?.Type, exprType, il);
+                EmitLoadLocalVariable(il, varIndex);
+                return ok;
+            }
+
+            private static bool TryEmitAssign(BinaryExpression expr, 
+#if LIGHT_EXPRESSION
+                IParameterProvider paramExprs, 
+#else
+                IReadOnlyList<PE> paramExprs,
+#endif
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
+            {
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
                 switch (expr.Left.NodeType)
                 {
                     case ExpressionType.Parameter:
-                        return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right, nodeType, exprType, paramExprs, il, ref closure, setup, parent);
+                        return TryEmitAssignToParameterOrVariable((ParameterExpression)expr.Left, expr.Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
                     
                     case ExpressionType.MemberAccess:
-                        return TryEmitAssignToMember((MemberExpression)left, right, nodeType, exprType, paramExprs, il, ref closure, setup, parent);
+                        return TryEmitAssignToMember((MemberExpression)expr.Left, expr.Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
                     
                     case ExpressionType.Index:
-                    {
-                        var flags = parent & ~ParentFlags.IgnoreResult;
-                        var indexExpr = (IndexExpression)left;
+                        return TryEmitAssignToIndex((IndexExpression)expr.Left, expr.Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
 
-                        var obj = indexExpr.Object;
-                        if (obj != null && !TryEmit(obj, paramExprs, il, ref closure, setup, flags))
-                            return false;
-
-#if SUPPORTS_ARGUMENT_PROVIDER
-                        var indexArgExprs = (IArgumentProvider)indexExpr;
-                        var indexArgCount = indexArgExprs.ArgumentCount;
-#else
-                        var indexArgExprs = indexExpr.Arguments;
-                        var indexArgCount = indexArgExprs.Count;
-#endif
-                        for (var i = 0; i < indexArgCount; i++)
-                            if (!TryEmit(indexArgExprs.GetArgument(i), paramExprs, il, ref closure, setup, flags))
-                                return false;
-
-                        if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
-                            return false;
-
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                            return TryEmitIndexSet(indexExpr, obj?.Type, exprType, il);
-
-                        var varIndex = il.GetNextLocalVarIndex(exprType); // store value in variable to return
-                        il.Emit(OpCodes.Dup);
-                        EmitStoreLocalVariable(il, varIndex);
-
-                        ok = TryEmitIndexSet(indexExpr, obj?.Type, exprType, il);
-                        EmitLoadLocalVariable(il, varIndex);
-                        return ok;
-                    }
                     default: // todo: @feature not yet support assignment targets
                         if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                            throw new NotSupportedExpressionException(NotSupported.Assign_Target, $"Assignment target `{nodeType}` is not supported");
+                            throw new NotSupportedExpressionException(NotSupported.Assign_Target, $"Assignment target `{expr.NodeType}` is not supported");
                         return false;
                 }
             }
