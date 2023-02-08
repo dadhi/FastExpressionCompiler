@@ -3928,6 +3928,57 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static bool TryEmitAssignToMember(MemberExpression left, Expression right, ExpressionType nodeType, Type exprType,
+#if LIGHT_EXPRESSION
+                IParameterProvider paramExprs, 
+#else
+                IReadOnlyList<PE> paramExprs,
+#endif
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
+            {
+                bool ok = false;
+                var flags = parent & ~ParentFlags.IgnoreResult;
+                var resultLocalVarIndex = -1;
+                var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
+                var assignFromLocalVar = right.NodeType == ExpressionType.Try;
+                if (assignFromLocalVar)
+                {
+                    if (arithmeticNodeType != nodeType)
+                        return false; // todo: @feature does not support ???Assign operations when the right operant is the Try expression, see AssignTests.
+                    if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
+                        return false;
+                    resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
+                    EmitStoreLocalVariable(il, resultLocalVarIndex);
+                }
+
+                var objExpr = left.Expression;
+                if (objExpr != null &&
+                    !TryEmit(objExpr, paramExprs, il, ref closure, setup, flags | ParentFlags.MemberAccess | ParentFlags.InstanceAccess))
+                    return false;
+
+                if (assignFromLocalVar)
+                    EmitLoadLocalVariable(il, resultLocalVarIndex);
+                else
+                {
+                    ok = arithmeticNodeType != nodeType
+                        ? TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags)
+                        : TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty);
+                    if (!ok)
+                        return false;
+                }
+
+                var member = left.Member;
+                if ((parent & ParentFlags.IgnoreResult) != 0)
+                    return EmitMemberAssign(il, member);
+
+                il.Emit(OpCodes.Dup);
+                var rightVarIndex = il.GetNextLocalVarIndex(exprType); // store right value in variable
+                EmitStoreLocalVariable(il, rightVarIndex);
+                ok = EmitMemberAssign(il, member);
+                EmitLoadLocalVariable(il, rightVarIndex);
+                return ok;
+            }
+
             private static bool TryEmitAssign(BinaryExpression expr, 
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs, 
@@ -3951,49 +4002,8 @@ namespace FastExpressionCompiler
                         return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right, nodeType, exprType, paramExprs, il, ref closure, setup, parent);
                     
                     case ExpressionType.MemberAccess:
-                    {
-                        var flags = parent & ~ParentFlags.IgnoreResult;
-                        var resultLocalVarIndex = -1;
-                        var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
-                        var assignFromLocalVar = right.NodeType == ExpressionType.Try;
-                        if (assignFromLocalVar)
-                        {
-                            if (arithmeticNodeType != nodeType)
-                                return false; // todo: @feature does not support ???Assign operations when the right operant is the Try expression, see AssignTests.
-                            if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
-                                return false;
-                            resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
-                            EmitStoreLocalVariable(il, resultLocalVarIndex);
-                        }
-
-                        var memberExpr = (MemberExpression)left;
-                        var objExpr = memberExpr.Expression;
-                        if (objExpr != null &&
-                            !TryEmit(objExpr, paramExprs, il, ref closure, setup, flags | ParentFlags.MemberAccess | ParentFlags.InstanceAccess))
-                            return false;
-
-                        if (assignFromLocalVar)
-                            EmitLoadLocalVariable(il, resultLocalVarIndex);
-                        else
-                        {
-                            ok = arithmeticNodeType != nodeType
-                                ? TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags)
-                                : TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty);
-                            if (!ok)
-                                return false;
-                        }
-
-                        var member = memberExpr.Member;
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                            return EmitMemberAssign(il, member);
-
-                        il.Emit(OpCodes.Dup);
-                        var rightVarIndex = il.GetNextLocalVarIndex(exprType); // store right value in variable
-                        EmitStoreLocalVariable(il, rightVarIndex);
-                        ok = EmitMemberAssign(il, member);
-                        EmitLoadLocalVariable(il, rightVarIndex);
-                        return ok;
-                    }
+                        return TryEmitAssignToMember((MemberExpression)left, right, nodeType, exprType, paramExprs, il, ref closure, setup, parent);
+                    
                     case ExpressionType.Index:
                     {
                         var flags = parent & ~ParentFlags.IgnoreResult;
