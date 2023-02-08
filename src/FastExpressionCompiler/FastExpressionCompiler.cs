@@ -3882,10 +3882,10 @@ namespace FastExpressionCompiler
                     if (closure.NestedLambdaOrLambdas != null) 
                     {
                         if (closure.NestedLambdaOrLambdas is NestedLambdaInfo nestedLambdaInfo)
-                            EmitStoreAssignedLeftVatIntoClosureArray(il, nestedLambdaInfo, left, leftVarIndex);
+                            EmitStoreAssignedLeftVarIntoClosureArray(il, nestedLambdaInfo, left, leftVarIndex);
                         else
                             foreach (var nl in (NestedLambdaInfo[])closure.NestedLambdaOrLambdas)
-                                EmitStoreAssignedLeftVatIntoClosureArray(il, nl, left, leftVarIndex);
+                                EmitStoreAssignedLeftVarIntoClosureArray(il, nl, left, leftVarIndex);
                     }
                     return ok;
                 }
@@ -4049,7 +4049,7 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static void EmitStoreAssignedLeftVatIntoClosureArray(ILGenerator il, NestedLambdaInfo nestedLambdaInfo, ParameterExpression assignedLeftVar, int assignedLeftVarIndex)
+            private static void EmitStoreAssignedLeftVarIntoClosureArray(ILGenerator il, NestedLambdaInfo nestedLambdaInfo, ParameterExpression assignedLeftVar, int assignedLeftVarIndex)
             {
                 if (nestedLambdaInfo.NonPassedParamsVarIndex == 0)
                     return;
