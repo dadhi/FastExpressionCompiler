@@ -13,8 +13,9 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
+            // new FastExpressionCompiler.IssueTests.Issue357_Invalid_program_exception().Run();
             
+            // new FastExpressionCompiler.LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run();
 
@@ -53,7 +54,7 @@ namespace FastExpressionCompiler.UnitTests
             var sw = Stopwatch.StartNew();
 
             Console.WriteLine();
-            Console.WriteLine("NET6: Running UnitTests and IssueTests in parallel...");
+            Console.WriteLine("NET 7: Running UnitTests and IssueTests in parallel...");
             Console.WriteLine();
 
             // todo: @perf try Parallel.ForEach
@@ -264,6 +265,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
 
+                // Run(new Issue357_Invalid_program_exception().Run);
+                
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

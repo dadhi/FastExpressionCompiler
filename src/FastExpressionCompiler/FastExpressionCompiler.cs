@@ -2809,13 +2809,14 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
             {
 #endif
-                // todo: @perf !!! put this whole thing in order to handle the hot path without heavy reflection calls
+                // todo: @perf refactor this whole thing in order to handle the hot path without heavy reflection calls
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
-                    return TryEmit(opExpr, paramExprs, il, ref closure, setup,
-                        parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1)
-                        && EmitMethodCallOrVirtualCall(il, method);
+                {
+                    var ok = TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1);
+                    return ok && EmitMethodCallOrVirtualCall(il, method);
+                }
 
                 var sourceType = opExpr.Type;
                 var targetType = expr.Type;
@@ -2952,10 +2953,10 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
                         EmitMethodCall(il, sourceType.FindNullableGetValueOrDefaultMethod());
 
-                        if (!TryEmitValueConvert(underlyingNullableTargetType, il,
-                            expr.NodeType == ExpressionType.ConvertChecked))
+                        if (!TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                         {
-                            var convertOpMethod = method ?? underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
+                            var convertOpMethod = method ?? 
+                                underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
                             if (convertOpMethod == null)
                                 return false; // nor conversion nor conversion operator is found
                             EmitMethodCall(il, convertOpMethod);
@@ -4609,7 +4610,7 @@ namespace FastExpressionCompiler
 
                 var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
 
-                // short circuit the comparison with null on the right
+                // short-circuit the comparison with null on the right
                 var isEqualityOp = nodeType == ExpressionType.Equal || nodeType == ExpressionType.NotEqual;
                 if (isEqualityOp)
                 {
@@ -5175,34 +5176,31 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitMethodCallOrVirtualCall(ILGenerator il, MethodInfo method)
             {
+                il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
                 // todo: @feature EmitCall is specifically for the varags method and not for normal C# conventions methods,
                 // for those you need to call Emit(OpCodes.Call|Callvirt, methodInfo).
                 // So for now the varargs methods are not supported yet.
-                var ok = (method.CallingConvention & CallingConventions.VarArgs) == 0;
-                il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
-                return ok;
+                return (method.CallingConvention & CallingConventions.VarArgs) == 0;
             }
 
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitVirtualMethodCall(ILGenerator il, MethodInfo method)
             {
+                il.Emit(OpCodes.Callvirt, method);
                 // todo: @feature EmitCall is specifically for the varags method and not for normal C# conventions methods,
                 // for those you need to call Emit(OpCodes.Call|Callvirt, methodInfo).
                 // So for now the varargs methods are not supported yet.
-                var ok = (method.CallingConvention & CallingConventions.VarArgs) == 0;
-                il.Emit(OpCodes.Callvirt, method);
-                return ok;
+                return (method.CallingConvention & CallingConventions.VarArgs) == 0;
             }
 
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitMethodCall(ILGenerator il, MethodInfo method)
             {
+                il.Emit(OpCodes.Call, method);
                 // todo: @feature EmitCall is specifically for the varags method and not for normal C# conventions methods,
                 // for those you need to call Emit(OpCodes.Call|Callvirt, methodInfo).
                 // So for now the varargs methods are not supported yet.
-                var ok = (method.CallingConvention & CallingConventions.VarArgs) == 0;
-                il.Emit(OpCodes.Call, method);
-                return ok;
+                return (method.CallingConvention & CallingConventions.VarArgs) == 0;
             }
 
             /// Same as EmitMethodCall which checks the method for null first, and returns false if it is null. 
@@ -6641,7 +6639,7 @@ namespace FastExpressionCompiler
                         var bNodeType = body.NodeType;
                         var isBodyExpression = bNodeType != ExpressionType.Block && bNodeType != ExpressionType.Try && bNodeType != ExpressionType.Loop;
                         if (isBodyExpression && x.ReturnType != typeof(void))
-                            sb.NewLineIdentCs(body, EnclosedIn.LambdaBody, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            sb.NewLineIdentCs(body, EnclosedIn.LambdaBody, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         else
                         {
                             sb.NewLine(lineIdent, identSpaces).Append('{');
