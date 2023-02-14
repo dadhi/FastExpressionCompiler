@@ -1,4 +1,4 @@
-#if !LIGHT_EXPRESSION
+#if !LIGHT_EXPRESSION && !NETFRAMEWORK // NET Core only because the lambda expression may not apply the implicit conversion to Nullable
 using System;
 using System.Linq;
 using System.Linq.Expressions;

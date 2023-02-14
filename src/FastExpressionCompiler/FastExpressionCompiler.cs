@@ -2952,16 +2952,16 @@ namespace FastExpressionCompiler
                         il.MarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
                         EmitMethodCall(il, sourceType.FindNullableGetValueOrDefaultMethod());
-                        if (method != null)
+                        if (method != null && method.ReturnType == targetType)
                         {
-                            Debug.Assert(method.ReturnType == targetType); // we dont need to create the nullable target type because the method should return the target type
                             EmitMethodCall(il, method);
                         }
                         else 
                         {
                             if (!TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                             {
-                                var convertOpMethod = underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
+                                var convertOpMethod = method ?? 
+                                    underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
                                 if (convertOpMethod == null)
                                     return false; // nor conversion nor conversion operator is found
                                 EmitMethodCall(il, convertOpMethod);
@@ -6909,11 +6909,14 @@ namespace FastExpressionCompiler
 
                                 case ExpressionType.Convert:
                                 case ExpressionType.ConvertChecked:
-                                    var diffTypes = e.Type != op.Type; // output convert only if it is required
-                                    if (diffTypes) sb.Append("((").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
+                                    if (e.Type == op.Type)
+                                        return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode); 
+                                    
+                                    var encloseInParens = enclosedIn != EnclosedIn.LambdaBody && enclosedIn != EnclosedIn.Return;
+                                    sb = encloseInParens ? sb.Append("((") : sb.Append('(');
+                                    sb.Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
                                     sb = op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-                                    if (diffTypes) sb.Append(')');
-                                    return sb;
+                                    return encloseInParens ? sb.Append(')') : sb;
 
                                 case ExpressionType.Decrement:
                                     return op.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(" - 1)");

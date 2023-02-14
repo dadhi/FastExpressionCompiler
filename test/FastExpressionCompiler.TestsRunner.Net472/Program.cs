@@ -239,8 +239,6 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
 
-                Run(new Issue357_Invalid_program_exception().Run);
-
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

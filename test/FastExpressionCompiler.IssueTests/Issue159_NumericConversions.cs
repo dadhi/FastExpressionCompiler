@@ -454,12 +454,18 @@ namespace FastExpressionCompiler.IssueTests
         public void ConvertNullableFloatToDecimal()
         {
             var p = Parameter(typeof(float?), "f");
-            var f = Lambda<Func<float?, decimal?>>(Convert(p, typeof(decimal?)), p);
+            var e = Lambda<Func<float?, decimal?>>(Convert(p, typeof(decimal?)), p);
+            e.PrintCSharp();
+            var @cs = (Func<float?, Decimal?>)((float? f) =>
+                (Decimal?)f);
+            Assert.AreEqual(42, cs(42));
 
-            //var fs = f.CompileSys();
-            //Assert.AreEqual(42, fs(42));
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual(42, fs(42));
 
-            var ff = f.CompileFast(true);
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
             Assert.AreEqual(42, ff(42));
         }
 

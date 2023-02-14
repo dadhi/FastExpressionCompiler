@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            // new FastExpressionCompiler.IssueTests.Issue159_NumericConversions().Run();
             // new FastExpressionCompiler.IssueTests.Issue357_Invalid_program_exception().Run();
             
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
@@ -22,9 +23,7 @@ namespace FastExpressionCompiler.UnitTests
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
             // new FastExpressionCompiler.IssueTests.EmitHacksTest().Run();
             // new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run();
-#if !NETFRAMEWORK
             // new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
-#endif
 
             // Console.WriteLine("Local variable usage:");
             // foreach (var t in FastExpressionCompiler.ILGeneratorHacks.LocalVarUsage.OrderByDescending(x => x.Value))
@@ -194,12 +193,11 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue251_Bad_code_gen_for_byRef_parameters().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters().Run);
-#if !NETFRAMEWORK
+      
                 Run(new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
 
                 Run(new EmitHacksTest().Run);
-#endif
                 Run(new Issue261_Loop_wih_conditions_fails().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run);
 
