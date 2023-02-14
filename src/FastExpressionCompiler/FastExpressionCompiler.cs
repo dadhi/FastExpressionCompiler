@@ -2952,17 +2952,22 @@ namespace FastExpressionCompiler
                         il.MarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
                         EmitMethodCall(il, sourceType.FindNullableGetValueOrDefaultMethod());
-
-                        if (!TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
+                        if (method != null)
                         {
-                            var convertOpMethod = method ?? 
-                                underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
-                            if (convertOpMethod == null)
-                                return false; // nor conversion nor conversion operator is found
-                            EmitMethodCall(il, convertOpMethod);
+                            Debug.Assert(method.ReturnType == targetType); // we dont need to create the nullable target type because the method should return the target type
+                            EmitMethodCall(il, method);
                         }
-
-                        il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                        else 
+                        {
+                            if (!TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
+                            {
+                                var convertOpMethod = underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
+                                if (convertOpMethod == null)
+                                    return false; // nor conversion nor conversion operator is found
+                                EmitMethodCall(il, convertOpMethod);
+                            }
+                            il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                        }
                         il.MarkLabel(labelDone);
                     }
                 }
