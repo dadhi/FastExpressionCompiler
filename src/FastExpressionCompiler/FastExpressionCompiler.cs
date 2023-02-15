@@ -607,6 +607,8 @@ namespace FastExpressionCompiler
             /// Tracks the stack of blocks where are we in emit phase
             private LiveCountArray<BlockInfo> _blockStack;
 
+            private Dictionary<ParameterExpression, Stack<Tuple<int, int>>> _peMap;
+
             /// Map of the links between Labels and Goto's
             internal LiveCountArray<LabelInfo> Labels;
             internal short CurrentInlinedLambdaInvokeIndex;
@@ -642,6 +644,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
+                _peMap = new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>();
             }
 
             /// <summary>Populates info directly with provided closure object and constants.
@@ -663,6 +666,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
+                _peMap = new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>();
             }
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
@@ -835,6 +839,7 @@ namespace FastExpressionCompiler
             {
                 ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExpr;
+                PushPeMap(blockVarExpr, _blockStack.Count - 1, 0);
             }
 
             public void PushBlockWithVars(ParameterExpression blockVarExpr, int varIndex)
@@ -842,6 +847,7 @@ namespace FastExpressionCompiler
                 ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExpr;
                 block.VarIndexes = new[] { varIndex };
+                PushPeMap(blockVarExpr, _blockStack.Count - 1, 0);
             }
 
             /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
@@ -850,7 +856,10 @@ namespace FastExpressionCompiler
                 ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExprs;
                 block.VarIndexes = localVarIndexes;
-            }
+
+                for (var j = 0; j < blockVarExprs.Count; j++)
+                    PushPeMap(blockVarExprs[j], _blockStack.Count - 1, j);
+             }
 
             public void PushBlockAndConstructLocalVars(IReadOnlyList<PE> blockVarExprs, ILGenerator il)
             {
@@ -861,39 +870,44 @@ namespace FastExpressionCompiler
                 PushBlockWithVars(blockVarExprs, localVars);
             }
 
-            public void PopBlock() => _blockStack.Pop();
+            private void PushPeMap(ParameterExpression expr, int index1, int index2)
+            {
+                if (_peMap.TryGetValue(expr, out var stack))
+                {
+                    if (stack.Count == 0 || stack.Peek().Item1 != index1)
+                        stack.Push(new(index1, index2));
+                }
+                else
+                {
+                    _peMap.Add(expr, new(new Tuple<int, int>[] { new(index1, index2) }));
+                }
+            }
+
+            public void PopBlock()
+            {
+                var varExpr = _blockStack.Items[_blockStack.Count - 1].VarExprs;
+                if (varExpr is ParameterExpression expr)
+                    _peMap[expr].Pop();
+                else if (varExpr is IReadOnlyList<PE> exprs)
+                    for (var j = 0; j < exprs.Count; j++)
+                        _peMap[exprs[j]].Pop();
+
+                _blockStack.Pop();
+            }
 
             public bool IsLocalVar(object varParamExpr)
             {
-                for (var i = _blockStack.Count - 1; i > -1; --i)
-                {
-                    var varExprObj = _blockStack.Items[i].VarExprs;
-                    if (ReferenceEquals(varExprObj, varParamExpr))
-                        return true;
-
-                    if (varExprObj is IReadOnlyList<PE> varExprs)
-                        for (var j = 0; j < varExprs.Count; j++)
-                            if (ReferenceEquals(varExprs[j], varParamExpr))
-                                return true;
-                }
-
-                return false;
+                return (varParamExpr is ParameterExpression expr)
+                       && _peMap.TryGetValue(expr, out var stack)
+                       && stack.Count > 0;
             }
 
             public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                for (var i = _blockStack.Count - 1; i > -1; --i)
+                if (_peMap.TryGetValue(varParamExpr, out var stack) && stack.Count > 0)
                 {
-                    ref var block = ref _blockStack.Items[i];
-                    var varExprObj = block.VarExprs;
-
-                    if (ReferenceEquals(varExprObj, varParamExpr))
-                        return block.VarIndexes[0];
-
-                    if (varExprObj is IReadOnlyList<PE> varExprs)
-                        for (var j = 0; j < varExprs.Count; j++)
-                            if (ReferenceEquals(varExprs[j], varParamExpr))
-                                return block.VarIndexes[j];
+                    var (index1, index2) = stack.Peek();
+                    return _blockStack.Items[index1].VarIndexes[index2];
                 }
                 return -1;
             }
