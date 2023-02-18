@@ -644,7 +644,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
-                _peMap = new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>();
+                _peMap = null; //new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>();
             }
 
             /// <summary>Populates info directly with provided closure object and constants.
@@ -666,7 +666,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
-                _peMap = new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>();
+                _peMap = null; //new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>();
             }
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
@@ -870,16 +870,22 @@ namespace FastExpressionCompiler
                 PushBlockWithVars(blockVarExprs, localVars);
             }
 
-            private void PushPeMap(ParameterExpression expr, int index1, int index2)
+            private void PushPeMap(ParameterExpression pe, int blockIndex, int varIndex)
             {
-                if (_peMap.TryGetValue(expr, out var stack))
+                if (_peMap == null)
+                    _peMap = new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>(
+#if NET5_OR_GREATER
+                        ReferenceEqualityComparer<ParameterExpression>.Instance
+#endif
+                    );
+                if (_peMap.TryGetValue(pe, out var stack))
                 {
-                    if (stack.Count == 0 || stack.Peek().Item1 != index1)
-                        stack.Push(new(index1, index2));
+                    if (stack.Count == 0 || stack.Peek().Item1 != blockIndex)
+                        stack.Push(new(blockIndex, varIndex));
                 }
                 else
                 {
-                    _peMap.Add(expr, new(new Tuple<int, int>[] { new(index1, index2) }));
+                    _peMap.Add(pe, new(new Tuple<int, int>[] { new(blockIndex, varIndex) }));
                 }
             }
 
@@ -897,14 +903,14 @@ namespace FastExpressionCompiler
 
             public bool IsLocalVar(object varParamExpr)
             {
-                return (varParamExpr is ParameterExpression expr)
-                       && _peMap.TryGetValue(expr, out var stack)
+                return _peMap != null && varParamExpr is ParameterExpression pe
+                       && _peMap.TryGetValue(pe, out var stack)
                        && stack.Count > 0;
             }
 
             public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                if (_peMap.TryGetValue(varParamExpr, out var stack) && stack.Count > 0)
+                if (_peMap != null && _peMap.TryGetValue(varParamExpr, out var stack) && stack.Count > 0)
                 {
                     var (index1, index2) = stack.Peek();
                     return _blockStack.Items[index1].VarIndexes[index2];
@@ -1416,7 +1422,7 @@ namespace FastExpressionCompiler
                             return true; // yeah, this is the real case
 
                         var varExprs = blockExpr.Variables;
-                        var varExprCount = varExprs?.Count ?? 0; // todo: @perf optimize for the empty and a single variable
+                        var varExprCount = varExprs?.Count ?? 0; // todo: @perf optimize for an empty and a single variable
                         if (varExprCount == 1)
                             closure.PushBlockWithVars(varExprs[0]);
                         else if (varExprCount != 0)
@@ -5885,8 +5891,8 @@ namespace FastExpressionCompiler
 
     public struct LiveCountArray<T>
     {
-        public int Count;
         public T[] Items;
+        public int Count;
 
         public LiveCountArray(T[] items, int count)
         {

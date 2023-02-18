@@ -13,10 +13,10 @@ namespace FastExpressionCompiler.UnitTests
         {
             RunAllTests();
 
+            new FastExpressionCompiler.LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
+            
             // new FastExpressionCompiler.IssueTests.Issue159_NumericConversions().Run();
             // new FastExpressionCompiler.IssueTests.Issue357_Invalid_program_exception().Run();
-            
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run();
 

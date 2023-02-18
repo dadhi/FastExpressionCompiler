@@ -1,5 +1,6 @@
 {
     "cSpell.words": [
+        "Behaviour",
         "Brfalse",
         "Brtrue",
         "Callvirt",
@@ -24,6 +25,7 @@
         "Ldsfld",
         "Ldstr",
         "Ldtoken",
+        "Ldvirtftn",
         "NETFRAMEWORK",
         "Newarr",
         "Newobj",
@@ -37,7 +39,9 @@
         "Stsfld",
         "typeparamref",
         "varags",
-        "varargs"
+        "varargs",
+        "Varpop",
+        "Varpush"
     ],
     "files.watcherExclude": {
         "**/target": true
