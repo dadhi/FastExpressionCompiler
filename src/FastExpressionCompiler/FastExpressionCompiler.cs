@@ -598,80 +598,6 @@ namespace FastExpressionCompiler
             public short InlinedLambdaInvokeIndex;
         }
 
-        internal struct BlockVarIndexesStack
-        {
-            const byte _deeperStartsAtLevel = 8;
-            ushort b0, b1, b2, b3, b4, b5, b6, b7;
-            int v0, v1, v2, v3, v4, v5, v6, v7;
-            // object _deeper;
-
-            public int Count;
-
-            public BlockVarIndexesStack(ushort blockIndex, int varIndex)
-            {
-                b0 = blockIndex; v0 = varIndex;
-                b1 = 0; b2 = 0; b3 = 0; b4 = 0; b5 = 0; b6 = 0; b7 = 0;
-                v1 = 0; v2 = 0; v3 = 0; v4 = 0; v5 = 0; v6 = 0; v7 = 0;
-                Count = 1;
-            }
-
-            public void Push(ushort blockIndex, int varIndex)
-            {
-                switch (Count++)
-                {
-                    case 0: b0 = blockIndex; v0 = varIndex; break;
-                    case 1: b1 = blockIndex; v1 = varIndex; break;
-                    case 2: b2 = blockIndex; v2 = varIndex; break;
-                    case 3: b3 = blockIndex; v3 = varIndex; break;
-                    case 4: b4 = blockIndex; v4 = varIndex; break;
-                    case 5: b5 = blockIndex; v5 = varIndex; break;
-                    case 6: b6 = blockIndex; v6 = varIndex; break;
-                    case 7: b7 = blockIndex; v7 = varIndex; break;
-                    default:
-                        Debug.Fail("Expecting the `deeper` parent stack created before accessing it here at level " + (Count - 1));
-                        break;
-                }
-            }
-
-            public bool Peek(out ushort blockIndex, out int varIndex)
-            {
-                switch (Count - 1)
-                {
-                    case 0: blockIndex = b0; varIndex = v0; break;
-                    case 1: blockIndex = b1; varIndex = v1; break;
-                    case 2: blockIndex = b2; varIndex = v2; break;
-                    case 3: blockIndex = b3; varIndex = v3; break;
-                    case 4: blockIndex = b4; varIndex = v4; break;
-                    case 5: blockIndex = b5; varIndex = v5; break;
-                    case 6: blockIndex = b6; varIndex = v6; break;
-                    case 7: blockIndex = b7; varIndex = v7; break;
-                    default:
-                        Debug.Fail("Expecting the `deeper` parent stack created before accessing it here at level " + (Count - 1));
-                        blockIndex = 0; varIndex = 0;
-                        return false;
-                }
-                return true;
-            }
-
-            public void Pop()
-            {
-                switch (--Count)
-                {
-                    case 0: b0 = 0; v0 = 0; break;
-                    case 1: b1 = 0; v1 = 0; break;
-                    case 2: b2 = 0; v2 = 0; break;
-                    case 3: b3 = 0; v3 = 0; break;
-                    case 4: b4 = 0; v4 = 0; break;
-                    case 5: b5 = 0; v5 = 0; break;
-                    case 6: b6 = 0; v6 = 0; break;
-                    case 7: b7 = 0; v7 = 0; break;
-                    default:
-                        Debug.Fail("Expecting the `deeper` parent stack created before accessing it here at level " + Count);
-                        break;
-                }
-            }
-        }
-
         /// Track the info required to build a closure object + some context information not directly related to closure.
         public struct ClosureInfo
         {
@@ -681,7 +607,7 @@ namespace FastExpressionCompiler
             /// Tracks the stack of blocks where are we in emit phase
             private LiveCountArray<BlockInfo> _blockStack;
 
-            private Dictionary<ParameterExpression, BlockVarIndexesStack> _peMap;
+            private Dictionary<ParameterExpression, Stack<Tuple<int, int>>> _peMap;
 
             /// Map of the links between Labels and Goto's
             internal LiveCountArray<LabelInfo> Labels;
@@ -718,7 +644,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
-                _peMap = null;
+                _peMap = null; //new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>();
             }
 
             /// <summary>Populates info directly with provided closure object and constants.
@@ -740,7 +666,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
-                _peMap = null;
+                _peMap = null; //new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>();
             }
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
@@ -913,7 +839,7 @@ namespace FastExpressionCompiler
             {
                 ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExpr;
-                PushPeMap(blockVarExpr, (ushort)(_blockStack.Count - 1), 0);
+                PushPeMap(blockVarExpr, _blockStack.Count - 1, 0);
             }
 
             public void PushBlockWithVars(ParameterExpression blockVarExpr, int varIndex)
@@ -921,7 +847,7 @@ namespace FastExpressionCompiler
                 ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExpr;
                 block.VarIndexes = new[] { varIndex };
-                PushPeMap(blockVarExpr, (ushort)(_blockStack.Count - 1), 0);
+                PushPeMap(blockVarExpr, _blockStack.Count - 1, 0);
             }
 
             /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
@@ -932,7 +858,7 @@ namespace FastExpressionCompiler
                 block.VarIndexes = localVarIndexes;
 
                 for (var j = 0; j < blockVarExprs.Count; j++)
-                    PushPeMap(blockVarExprs[j], (ushort)(_blockStack.Count - 1), j);
+                    PushPeMap(blockVarExprs[j], _blockStack.Count - 1, j);
              }
 
             public void PushBlockAndConstructLocalVars(IReadOnlyList<PE> blockVarExprs, ILGenerator il)
@@ -944,21 +870,23 @@ namespace FastExpressionCompiler
                 PushBlockWithVars(blockVarExprs, localVars);
             }
 
-            private void PushPeMap(ParameterExpression pe, ushort blockIndex, int varIndex)
+            private void PushPeMap(ParameterExpression pe, int blockIndex, int varIndex)
             {
                 if (_peMap == null)
-                    _peMap = new Dictionary<ParameterExpression, BlockVarIndexesStack>(
+                    _peMap = new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>(
 #if NET5_OR_GREATER
                         ReferenceEqualityComparer<ParameterExpression>.Instance
 #endif
                     );
                 if (_peMap.TryGetValue(pe, out var stack))
                 {
-                    if (stack.Peek(out var b, out _) && b != blockIndex)
-                        stack.Push(blockIndex, varIndex);
+                    if (stack.Count == 0 || stack.Peek().Item1 != blockIndex)
+                        stack.Push(new(blockIndex, varIndex));
                 }
                 else
-                    _peMap.Add(pe, new BlockVarIndexesStack(blockIndex, varIndex));
+                {
+                    _peMap.Add(pe, new(new Tuple<int, int>[] { new(blockIndex, varIndex) }));
+                }
             }
 
             public void PopBlock()
@@ -973,15 +901,22 @@ namespace FastExpressionCompiler
                 _blockStack.Pop();
             }
 
-            public bool IsLocalVar(object varParamExpr) =>
-                _peMap != null && varParamExpr is ParameterExpression pe
-                    && _peMap.TryGetValue(pe, out var stack) && stack.Count != 0;
+            public bool IsLocalVar(object varParamExpr)
+            {
+                return _peMap != null && varParamExpr is ParameterExpression pe
+                       && _peMap.TryGetValue(pe, out var stack)
+                       && stack.Count > 0;
+            }
 
-            public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr) =>
-                _peMap != null && _peMap.TryGetValue(varParamExpr, out var stack) && 
-                    stack.Peek(out var b, out var v)
-                ? _blockStack.Items[b].VarIndexes[v]
-                : -1;
+            public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
+            {
+                if (_peMap != null && _peMap.TryGetValue(varParamExpr, out var stack) && stack.Count > 0)
+                {
+                    var (index1, index2) = stack.Peek();
+                    return _blockStack.Items[index1].VarIndexes[index2];
+                }
+                return -1;
+            }
         }
 
         public static readonly ArrayClosure EmptyArrayClosure = new ArrayClosure(null);
@@ -5956,8 +5891,9 @@ namespace FastExpressionCompiler
 
     public struct LiveCountArray<T>
     {
-        public int Count;
         public T[] Items;
+        public int Count;
+
         public LiveCountArray(T[] items, int count)
         {
             Items = items;
