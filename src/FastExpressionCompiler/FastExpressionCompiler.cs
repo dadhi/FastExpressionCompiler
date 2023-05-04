@@ -5646,35 +5646,65 @@ namespace FastExpressionCompiler
         {
             if (returnType == typeof(void))
             {
-                switch (paramTypes.Length)
-                {
-                    case 0: return typeof(Action);
-                    case 1: return typeof(Action<>).MakeGenericType(paramTypes);
-                    case 2: return typeof(Action<,>).MakeGenericType(paramTypes);
-                    case 3: return typeof(Action<,,>).MakeGenericType(paramTypes);
-                    case 4: return typeof(Action<,,,>).MakeGenericType(paramTypes);
-                    case 5: return typeof(Action<,,,,>).MakeGenericType(paramTypes);
-                    case 6: return typeof(Action<,,,,,>).MakeGenericType(paramTypes);
-                    case 7: return typeof(Action<,,,,,,>).MakeGenericType(paramTypes);
-                    default:
-                        throw new NotSupportedException(
-                            $"Action with so many ({paramTypes.Length}) parameters is not supported!");
-                }
+                if (paramTypes.Length == 0)
+                    return typeof(Action);
+
+                return GetAction(paramTypes.Length).MakeGenericType(paramTypes);
             }
 
-            switch (paramTypes.Length)
+            Type funcType = GetFunc(paramTypes.Length);
+            Type[] typeParams = new Type[paramTypes.Length + 1];
+            Array.Copy(paramTypes, typeParams, paramTypes.Length);
+            typeParams[paramTypes.Length] = returnType;
+            return funcType.MakeGenericType(typeParams);
+
+            static Type GetAction(int length)
             {
-                case 0: return typeof(Func<>).MakeGenericType(returnType);
-                case 1: return typeof(Func<,>).MakeGenericType(paramTypes[0], returnType);
-                case 2: return typeof(Func<,,>).MakeGenericType(paramTypes[0], paramTypes[1], returnType);
-                case 3: return typeof(Func<,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], returnType);
-                case 4: return typeof(Func<,,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], paramTypes[3], returnType);
-                case 5: return typeof(Func<,,,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], paramTypes[3], paramTypes[4], returnType);
-                case 6: return typeof(Func<,,,,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], paramTypes[3], paramTypes[4], paramTypes[5], returnType);
-                case 7: return typeof(Func<,,,,,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], paramTypes[3], paramTypes[4], paramTypes[5], paramTypes[6], returnType);
-                default:
-                    throw new NotSupportedException(
-                        $"Func with so many ({paramTypes.Length}) parameters is not supported!");
+                return length switch
+                {
+                    1 => typeof(Action<>),
+                    2 => typeof(Action<,>),
+                    3 => typeof(Action<,,>),
+                    4 => typeof(Action<,,,>),
+                    5 => typeof(Action<,,,,>),
+                    6 => typeof(Action<,,,,,>),
+                    7 => typeof(Action<,,,,,,>),
+                    8 => typeof(Action<,,,,,,,>),
+                    9 => typeof(Action<,,,,,,,,>),
+                    10 => typeof(Action<,,,,,,,,,>),
+                    11 => typeof(Action<,,,,,,,,,,>),
+                    12 => typeof(Action<,,,,,,,,,,,>),
+                    13 => typeof(Action<,,,,,,,,,,,,>),
+                    14 => typeof(Action<,,,,,,,,,,,,,>),
+                    15 => typeof(Action<,,,,,,,,,,,,,,>),
+                    16 => typeof(Action<,,,,,,,,,,,,,,,>),
+                    _ => throw new NotSupportedException($"Action with so many ({length}) parameters is not supported!")
+                };
+            }
+
+            static Type GetFunc(int length)
+            {
+                return length switch
+                {
+                    0 => typeof(Func<>),
+                    1 => typeof(Func<,>),
+                    2 => typeof(Func<,,>),
+                    3 => typeof(Func<,,,>),
+                    4 => typeof(Func<,,,,>),
+                    5 => typeof(Func<,,,,,>),
+                    6 => typeof(Func<,,,,,,>),
+                    7 => typeof(Func<,,,,,,,>),
+                    8 => typeof(Func<,,,,,,,,>),
+                    9 => typeof(Func<,,,,,,,,,>),
+                    10 => typeof(Func<,,,,,,,,,,>),
+                    11 => typeof(Func<,,,,,,,,,,,>),
+                    12 => typeof(Func<,,,,,,,,,,,,>),
+                    13 => typeof(Func<,,,,,,,,,,,,,>),
+                    14 => typeof(Func<,,,,,,,,,,,,,,>),
+                    15 => typeof(Func<,,,,,,,,,,,,,,,>),
+                    16 => typeof(Func<,,,,,,,,,,,,,,,,>),
+                    _ => throw new NotSupportedException($"Func with so many ({length}) parameters is not supported!")
+                };  
             }
         }
 
