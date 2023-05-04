@@ -52,6 +52,7 @@
         <AssemblyName>$(Product)</AssemblyName>
         <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
         <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+        <IsTrimmable>true</IsTrimmable>
     </PropertyGroup>
     <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
         <PackageReference Include="System.ValueTuple" Version="4.5.0"/>
