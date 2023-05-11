@@ -1,6 +1,6 @@
 image:
   - Visual Studio 2022
-  # - Ubuntu # comment until the Ubuntu updated to support .NET 7.0
+  - Ubuntu
   - macOS
 
 version: 3.4.0-b{build}
