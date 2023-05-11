@@ -130,6 +130,25 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(new SS { Value = "a" }, expr3.CompileFast(ifFastFailedReturnNull: true)(new SS { Value = "a" }));
         }
 
+        [Test]
+        public void DateTimeTest()
+        {
+            var date = new DateTime(2010, 10, 23, 14, 56, 54);
+            var convertExpr = Convert(Constant(date), typeof(DateTime?));
+            var parameterExpr = Parameter(typeof(DateTime?), "x");
+            var lessThanOrEqualExpr = LessThanOrEqual(parameterExpr, convertExpr);
+            var lambda = Lambda<Func<DateTime?, bool>>(lessThanOrEqualExpr, parameterExpr);
+            
+            Func<DateTime?, bool> func = x => x <= date;
+
+            var fastCompiledResult = lambda.CompileFast()(null);
+            var compiledResult = lambda.Compile()(null);
+            var funcResult = func(null);
+
+            Assert.AreEqual(compiledResult, fastCompiledResult);
+            Assert.AreEqual(funcResult, fastCompiledResult);
+        }
+
         public struct SS: IDisposable
         {
             public string Value;

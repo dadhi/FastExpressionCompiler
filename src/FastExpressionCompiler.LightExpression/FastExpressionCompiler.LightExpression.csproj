@@ -56,6 +56,7 @@
             <AssemblyName>$(Product)</AssemblyName>
             <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
             <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+            <IsTrimmable>true</IsTrimmable>
 
             <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
         </PropertyGroup>

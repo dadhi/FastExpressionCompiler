@@ -116,6 +116,7 @@ namespace FastExpressionCompiler
     /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
     /// Partial to extend with your things when used as source file.</summary>
     // ReSharper disable once PartialTypeWithSinglePart
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
     public static partial class ExpressionCompiler
     {
         #region Expression.CompileFast overloads for Delegate, Func, and Action
@@ -861,6 +862,7 @@ namespace FastExpressionCompiler
                     PushPeMap(blockVarExprs[j], _blockStack.Count - 1, j);
              }
 
+            [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
             public void PushBlockAndConstructLocalVars(IReadOnlyList<PE> blockVarExprs, ILGenerator il)
             {
                 var localVars = new int[blockVarExprs.Count];
@@ -939,6 +941,7 @@ namespace FastExpressionCompiler
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         public sealed class DebugArrayClosure : ArrayClosure, IDelegateDebugInfo
         {
             public LambdaExpression Expression { get; internal set; }
@@ -1844,6 +1847,7 @@ namespace FastExpressionCompiler
         /// <summary>Supports emitting of selected expressions, e.g. lambdaExpr are not supported yet.
         /// When emitter find not supported expression it will return false from <see cref="TryEmit"/>, so I could fallback
         /// to normal and slow Expression.Compile.</summary>
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         public static class EmittingVisitor
         {
             private static readonly MethodInfo _getTypeFromHandleMethod =
@@ -5492,6 +5496,7 @@ namespace FastExpressionCompiler
                 _ => null
             };
 
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindMethod(this Type type, string methodName)
         {
             var methods = type.GetMethods();
@@ -5504,8 +5509,10 @@ namespace FastExpressionCompiler
         internal static MethodInfo DelegateTargetGetterMethod =
             typeof(Delegate).GetProperty(nameof(Delegate.Target)).GetMethod;
 
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) => type.GetMethod("Invoke");
 
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type)
         {
             var methods = type.GetMethods();
@@ -5519,10 +5526,13 @@ namespace FastExpressionCompiler
             return null;
         }
 
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindValueGetterMethod(this Type type) => type.GetProperty("Value").GetMethod;
 
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindNullableHasValueGetterMethod(this Type type) => type.GetProperty("HasValue").GetMethod;
 
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
             // conversion operators should be declared as static and public 
@@ -5544,6 +5554,7 @@ namespace FastExpressionCompiler
             return null;
         }
 
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static ConstructorInfo FindSingleParamConstructor(this Type type, Type paramType)
         {
             var ctors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -5646,35 +5657,65 @@ namespace FastExpressionCompiler
         {
             if (returnType == typeof(void))
             {
-                switch (paramTypes.Length)
-                {
-                    case 0: return typeof(Action);
-                    case 1: return typeof(Action<>).MakeGenericType(paramTypes);
-                    case 2: return typeof(Action<,>).MakeGenericType(paramTypes);
-                    case 3: return typeof(Action<,,>).MakeGenericType(paramTypes);
-                    case 4: return typeof(Action<,,,>).MakeGenericType(paramTypes);
-                    case 5: return typeof(Action<,,,,>).MakeGenericType(paramTypes);
-                    case 6: return typeof(Action<,,,,,>).MakeGenericType(paramTypes);
-                    case 7: return typeof(Action<,,,,,,>).MakeGenericType(paramTypes);
-                    default:
-                        throw new NotSupportedException(
-                            $"Action with so many ({paramTypes.Length}) parameters is not supported!");
-                }
+                if (paramTypes.Length == 0)
+                    return typeof(Action);
+
+                return GetAction(paramTypes.Length).MakeGenericType(paramTypes);
             }
 
-            switch (paramTypes.Length)
+            Type funcType = GetFunc(paramTypes.Length);
+            Type[] typeParams = new Type[paramTypes.Length + 1];
+            Array.Copy(paramTypes, typeParams, paramTypes.Length);
+            typeParams[paramTypes.Length] = returnType;
+            return funcType.MakeGenericType(typeParams);
+
+            static Type GetAction(int length)
             {
-                case 0: return typeof(Func<>).MakeGenericType(returnType);
-                case 1: return typeof(Func<,>).MakeGenericType(paramTypes[0], returnType);
-                case 2: return typeof(Func<,,>).MakeGenericType(paramTypes[0], paramTypes[1], returnType);
-                case 3: return typeof(Func<,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], returnType);
-                case 4: return typeof(Func<,,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], paramTypes[3], returnType);
-                case 5: return typeof(Func<,,,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], paramTypes[3], paramTypes[4], returnType);
-                case 6: return typeof(Func<,,,,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], paramTypes[3], paramTypes[4], paramTypes[5], returnType);
-                case 7: return typeof(Func<,,,,,,,>).MakeGenericType(paramTypes[0], paramTypes[1], paramTypes[2], paramTypes[3], paramTypes[4], paramTypes[5], paramTypes[6], returnType);
-                default:
-                    throw new NotSupportedException(
-                        $"Func with so many ({paramTypes.Length}) parameters is not supported!");
+                return length switch
+                {
+                    1 => typeof(Action<>),
+                    2 => typeof(Action<,>),
+                    3 => typeof(Action<,,>),
+                    4 => typeof(Action<,,,>),
+                    5 => typeof(Action<,,,,>),
+                    6 => typeof(Action<,,,,,>),
+                    7 => typeof(Action<,,,,,,>),
+                    8 => typeof(Action<,,,,,,,>),
+                    9 => typeof(Action<,,,,,,,,>),
+                    10 => typeof(Action<,,,,,,,,,>),
+                    11 => typeof(Action<,,,,,,,,,,>),
+                    12 => typeof(Action<,,,,,,,,,,,>),
+                    13 => typeof(Action<,,,,,,,,,,,,>),
+                    14 => typeof(Action<,,,,,,,,,,,,,>),
+                    15 => typeof(Action<,,,,,,,,,,,,,,>),
+                    16 => typeof(Action<,,,,,,,,,,,,,,,>),
+                    _ => throw new NotSupportedException($"Action with so many ({length}) parameters is not supported!")
+                };
+            }
+
+            static Type GetFunc(int length)
+            {
+                return length switch
+                {
+                    0 => typeof(Func<>),
+                    1 => typeof(Func<,>),
+                    2 => typeof(Func<,,>),
+                    3 => typeof(Func<,,,>),
+                    4 => typeof(Func<,,,,>),
+                    5 => typeof(Func<,,,,,>),
+                    6 => typeof(Func<,,,,,,>),
+                    7 => typeof(Func<,,,,,,,>),
+                    8 => typeof(Func<,,,,,,,,>),
+                    9 => typeof(Func<,,,,,,,,,>),
+                    10 => typeof(Func<,,,,,,,,,,>),
+                    11 => typeof(Func<,,,,,,,,,,,>),
+                    12 => typeof(Func<,,,,,,,,,,,,>),
+                    13 => typeof(Func<,,,,,,,,,,,,,>),
+                    14 => typeof(Func<,,,,,,,,,,,,,,>),
+                    15 => typeof(Func<,,,,,,,,,,,,,,,>),
+                    16 => typeof(Func<,,,,,,,,,,,,,,,,>),
+                    _ => throw new NotSupportedException($"Func with so many ({length}) parameters is not supported!")
+                };  
             }
         }
 
@@ -5693,6 +5734,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>Reflecting the internal methods to access the more performant for defining the local variable</summary>
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
     public static class ILGeneratorHacks
     {
         // The original ILGenerator methods we are trying to hack without allocating the `LocalBuilder`
@@ -5932,6 +5974,7 @@ namespace FastExpressionCompiler
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
     public static class ToExpressionPrinter
     {
         /// <summary>
@@ -6453,6 +6496,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>Converts the expression into the valid C# code representation</summary>
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
     public static class ToCSharpPrinter
     {
         /// <summary>Tries hard to convert the expression into the valid C# code</summary>
@@ -7323,6 +7367,7 @@ namespace FastExpressionCompiler
 
     }
 
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
     public static class CodePrinter
     {
         public static readonly Func<Type, string, string> PrintTypeStripOuterClasses = (type, name) =>
@@ -7799,4 +7844,23 @@ namespace FastExpressionCompiler
         public static IReadOnlyList<PE> ToReadOnlyList(this IReadOnlyList<PE> source) => source;
 #endif
     }
+
+    internal static class Trimming
+    {
+        public const string Message = "FastExpressionCompiler is not supported in trimming scenarios.";
+    }
 }
+
+#if !NET5_0_OR_GREATER
+namespace System.Diagnostics.CodeAnalysis
+{
+    internal sealed class RequiresUnreferencedCodeAttribute : Attribute
+    {
+        public string Message { get; }
+        public RequiresUnreferencedCodeAttribute(string message)
+        {
+            Message = message;
+        }
+    }
+}
+#endif
