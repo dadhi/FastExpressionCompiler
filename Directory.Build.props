@@ -3,11 +3,10 @@
         <Authors>Maksim Volkau</Authors>
         <Copyright>Copyright © 2016-2023 Maksim Volkau</Copyright>
         <NeutralLanguage>en-US</NeutralLanguage>
-    </PropertyGroup>
-    <PropertyGroup>
         <LangVersion>11</LangVersion>
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
         <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+        <NoWarn>IDE0251;IDE0079;</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <None Remove="**\*.orig" />
