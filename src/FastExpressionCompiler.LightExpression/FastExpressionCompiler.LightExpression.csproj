@@ -62,6 +62,7 @@
         </PropertyGroup>
         <ItemGroup>
             <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs"/>
+            <Compile Include="..\FastExpressionCompiler\ImTools.cs"/>
         </ItemGroup>
         <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
             <PackageReference Include="System.ValueTuple" Version="4.5.0"/>

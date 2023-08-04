@@ -33,11 +33,15 @@ THE SOFTWARE.
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression
 {
+    using FastExpressionCompiler.LightExpression.ImTools;
+    using static FastExpressionCompiler.LightExpression.ImTools.FHashMap;
     using static FastExpressionCompiler.LightExpression.Expression;
     using PE = FastExpressionCompiler.LightExpression.ParameterExpression;
 #else
 namespace FastExpressionCompiler
 {
+    using FastExpressionCompiler.ImTools;
+    using static FastExpressionCompiler.ImTools.FHashMap;
     using static System.Linq.Expressions.Expression;
     using PE = System.Linq.Expressions.ParameterExpression;
 #endif
@@ -645,7 +649,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
-                _peMap = null; //new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>();
+                _peMap = default;
             }
 
             /// <summary>Populates info directly with provided closure object and constants.
@@ -667,7 +671,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
-                _peMap = null; //new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>();
+                _peMap = default;
             }
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;

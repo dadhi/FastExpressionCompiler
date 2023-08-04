@@ -8,7 +8,11 @@ using System.Runtime.CompilerServices; // For [MethodImpl(AggressiveInlining)]
 using System.Runtime.InteropServices;
 #endif
 
+#if LIGHT_EXPRESSION
+namespace FastExpressionCompiler.LightExpression.ImTools;
+#else
 namespace FastExpressionCompiler.ImTools;
+#endif
 
 using static FHashMap;
 
