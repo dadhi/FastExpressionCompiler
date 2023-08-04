@@ -32,12 +32,6 @@ public static class FHashMap
     public static FHashMap<K, V, TEq, SingleArrayEntries<K, V, TEq>> New<K, V, TEq>(byte capacityBitShift = 0)
         where TEq : struct, IEq<K> => new(capacityBitShift);
 
-    // todo: @name a better name like NewMemEfficient or NewAddFocused?
-    /// <summary>Creates the map with the <see cref="ChunkedArrayEntries{K, V, TEq}"/> storage</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static FHashMap<K, V, TEq, ChunkedArrayEntries<K, V, TEq>> NewChunked<K, V, TEq>(byte capacityBitShift = 0)
-        where TEq : struct, IEq<K> => new(capacityBitShift);
-
     /// <summary>Holds a single entry consisting of key and value. 
     /// Value may be set or changed but the key is set in stone (by construction).</summary>
     [DebuggerDisplay("{Key.ToString()}->{Value}")]
@@ -337,114 +331,6 @@ public static class FHashMap
         {
             GetSurePresentEntryRef(index) = new Entry<K, V>(default(TEq).GetTombstone());
             --_entryCount;
-        }
-    }
-
-    // todo: @improve make it configurable
-    /// <summary>The capacity of chunk in bits for <see cref="ChunkedArrayEntries{K, V, TEq}"/></summary>
-    public const byte ChunkCapacityBitShift = 8; // 8 bits == 256
-    internal const int ChunkCapacity = 1 << ChunkCapacityBitShift;
-    internal const int ChunkCapacityMask = ChunkCapacity - 1;
-
-    // todo: @perf research on the similar growable indexed collection with append-to-end semantics
-    /// <summary>The array of array buckets, where bucket is the fixed size. 
-    /// It enables adding the new bucket without for the new entries without reallocating the existing data.
-    /// It may allow to drop the empty bucket as well, reclaiming the memory after remove.
-    /// The structure is similar to Hashed Array Tree (HAT)</summary>
-    public struct ChunkedArrayEntries<K, V, TEq> : IEntries<K, V, TEq> where TEq : struct, IEq<K>
-    {
-        int _entryCount;
-        Entry<K, V>[][] _entries;
-        /// <inheritdoc/>
-        public void Init(byte capacityBitShift) =>
-            _entries = new[] { new Entry<K, V>[(1 << capacityBitShift) & ChunkCapacityMask] };
-
-        /// <inheritdoc/>
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetCount() => _entryCount;
-
-        /// <inheritdoc/>
-        [MethodImpl((MethodImplOptions)256)]
-        public ref Entry<K, V> GetSurePresentEntryRef(int index)
-        {
-#if NET7_0_OR_GREATER
-                ref var entries = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_entries), index >>> ChunkCapacityBitShift);
-                return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(entries), index & ChunkCapacityMask);
-#else
-            return ref _entries[index >>> ChunkCapacityBitShift][index & ChunkCapacityMask];
-#endif
-        }
-
-        /// <inheritdoc/>
-        public ref V AddKeyAndGetValueRef(K key)
-        {
-            var index = _entryCount++;
-            var bucketIndex = index >>> ChunkCapacityBitShift;
-            if (bucketIndex == 0) // small count of element fit into a single array
-            {
-                if (index != 0)
-                {
-#if NET7_0_OR_GREATER
-                        ref var bucket = ref MemoryMarshal.GetArrayDataReference(_entries);
-#else
-                    ref var bucket = ref _entries[0];
-#endif
-                    if (index == bucket.Length)
-                        Array.Resize(ref bucket, index << 1);
-
-#if NET7_0_OR_GREATER
-                        ref var e = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(bucket), index);
-#else
-                    ref var e = ref bucket[index];
-#endif
-                    e = new Entry<K, V>(key);
-                    return ref e.Value;
-                }
-                {
-                    var bucket = new Entry<K, V>[MinEntriesCapacity];
-                    _entries = new[] { bucket };
-#if NET7_0_OR_GREATER
-                        ref var e = ref MemoryMarshal.GetArrayDataReference(bucket);
-#else
-                    ref var e = ref bucket[0];
-#endif
-                    e = new Entry<K, V>(key);
-                    return ref e.Value;
-                }
-            }
-
-            if ((index & ChunkCapacityMask) != 0)
-            {
-                ref var e = ref GetSurePresentEntryRef(index);
-                e = new Entry<K, V>(key);
-                return ref e.Value;
-            }
-            {
-                if (bucketIndex == _entries.Length)
-                    Array.Resize(ref _entries, bucketIndex << 1);
-#if NET7_0_OR_GREATER
-                    ref var bucket = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_entries), bucketIndex);
-#else
-                ref var bucket = ref _entries[bucketIndex];
-#endif
-                bucket = new Entry<K, V>[ChunkCapacity];
-#if NET7_0_OR_GREATER
-                    ref var e = ref MemoryMarshal.GetArrayDataReference(bucket);
-#else
-                ref var e = ref bucket[0];
-#endif
-                e = new Entry<K, V>(key);
-                return ref e.Value;
-            }
-        }
-
-        /// <summary>Tombstones the entry key</summary>
-        [MethodImpl((MethodImplOptions)256)]
-        public void TombstoneOrRemoveSurePresentEntry(int index)
-        {
-            GetSurePresentEntryRef(index) = new Entry<K, V>(default(TEq).GetTombstone());
-            --_entryCount;
-            // todo: @perf we may try to free the chunk if it is empty
         }
     }
 
