@@ -34,19 +34,32 @@ Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical c
   [Host]     : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
   DefaultJob : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
 
-
 |      Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |------------ |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
 | CompileFast |  61.89 us |  1.232 us |  2.543 us |  1.00 |    0.00 | 4.8828 | 2.4414 | 0.1221 |  14.95 KB |
 |  CompileSys | 572.79 us | 11.444 us | 21.212 us |  9.23 |    0.52 | 9.7656 | 4.8828 |      - |  30.28 KB |
+
+## v3.4
+
+BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
+11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+.NET SDK 7.0.306
+  [Host]     : .NET 7.0.9 (7.0.923.32018), X64 RyuJIT AVX2
+  DefaultJob : .NET 7.0.9 (7.0.923.32018), X64 RyuJIT AVX2
+
+|      Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+|------------ |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| CompileFast |  22.15 us |  0.194 us |  0.181 us |  22.16 us |  1.00 |    0.00 | 1.3428 | 1.3123 |   8.32 KB |        1.00 |
+|  CompileSys | 512.77 us | 10.250 us | 28.402 us | 499.13 us | 23.17 |    0.92 | 3.9063 | 2.9297 |  27.41 KB |        3.29 |
+
 */
         [MemoryDiagnoser]
         public class Compile
         {
-            private static readonly FastExpressionCompiler.LightExpression.LambdaExpression _lightExpr = 
-                FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails.CreateSerializeDictionaryExpression();
-            private static readonly System.Linq.Expressions.LambdaExpression _sysExpr = 
-                FastExpressionCompiler.IssueTests.Issue261_Loop_wih_conditions_fails.CreateSerializeDictionaryExpression();
+            private static readonly LightExpression.LambdaExpression _lightExpr =
+                LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails.CreateSerializeDictionaryExpression();
+            private static readonly LambdaExpression _sysExpr =
+                IssueTests.Issue261_Loop_wih_conditions_fails.CreateSerializeDictionaryExpression();
 
             [Benchmark(Baseline = true)]
             public object CompileFast() => LightExpression.ExpressionCompiler.CompileFast(_lightExpr);
