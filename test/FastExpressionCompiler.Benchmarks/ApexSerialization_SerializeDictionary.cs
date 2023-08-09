@@ -1,10 +1,5 @@
-﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
+﻿using System.Linq.Expressions;
 using BenchmarkDotNet.Attributes;
-using static System.Linq.Expressions.Expression;
-using L = FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.Benchmarks
 {
@@ -39,7 +34,7 @@ Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical c
 | CompileFast |  61.89 us |  1.232 us |  2.543 us |  1.00 |    0.00 | 4.8828 | 2.4414 | 0.1221 |  14.95 KB |
 |  CompileSys | 572.79 us | 11.444 us | 21.212 us |  9.23 |    0.52 | 9.7656 | 4.8828 |      - |  30.28 KB |
 
-## v3.4
+## v3.4.0
 
 BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores

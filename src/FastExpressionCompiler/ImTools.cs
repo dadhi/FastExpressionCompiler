@@ -150,8 +150,7 @@ public static class FHashMap
         }
     }
 
-    /// <summary>Converts the packed hashes and entries into the human readable info.
-    /// This also used for the debugging view of the <paramref name="map"/> and by the Verify... methods in tests.</summary>
+    /// <summary>Converts the packed hashes and entries into the human readable info for debugging visualization</summary>
     public static DebugHashItem<K, V>[] Explain<K, V, TEq, TEntries>(this FHashMap<K, V, TEq, TEntries> map)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
@@ -182,68 +181,6 @@ public static class FHashMap
 
         // binary reprsentation of the `int`
         static string toB(int x) => Convert.ToString(x, 2).PadLeft(32, '0');
-    }
-
-    /// <summary>Verifies that the hashes correspond to the keys stroed in the entries. May be called from the tests.</summary>
-    public static void VerifyHashesAndKeysEq<K, V, TEq, TEntries>(this FHashMap<K, V, TEq, TEntries> map, Action<bool> assertEq)
-        where TEq : struct, IEq<K>
-        where TEntries : struct, IEntries<K, V, TEq>
-    {
-        var exp = map.Explain();
-        foreach (var it in exp)
-            if (!it.IsEmpty)
-                assertEq(it.HEq);
-    }
-
-    /// <summary>Verifies that there is no duplicate keys stored in hashes -> entries. May be called from the tests.</summary>
-    public static void VerifyNoDuplicateKeys<K, V, TEq, TEntries>(this FHashMap<K, V, TEq, TEntries> map, Action<K> assertKey)
-        where TEq : struct, IEq<K>
-        where TEntries : struct, IEntries<K, V, TEq>
-    {
-        // Verify the indexes do no contains duplicate keys
-        var uniq = new Dictionary<K, int>(map.Count);
-        var hashes = map.PackedHashesAndIndexes;
-        var capacity = 1 << map.CapacityBitShift;
-        var indexMask = capacity - 1;
-        for (var i = 0; i < hashes.Length; i++)
-        {
-            var h = hashes[i];
-            if (h == 0)
-                continue;
-            var key = map.Entries.GetSurePresentEntryRef(h & indexMask).Key;
-            if (!uniq.TryGetValue(key, out _))
-                uniq.Add(key, 1);
-            else
-                assertKey(key);
-        }
-    }
-
-    /// <summary>Verifies that the probes are consistently increasing</summary>
-    public static void VerifyProbesAreFitRobinHood<K, V, TEq, TEntries>(this FHashMap<K, V, TEq, TEntries> map, Action<string> reportFail)
-        where TEq : struct, IEq<K>
-        where TEntries : struct, IEntries<K, V, TEq>
-    {
-        var hashes = map.PackedHashesAndIndexes;
-        var capacity = 1 << map.CapacityBitShift;
-        var indexMask = capacity - 1;
-        var prevProbes = -1;
-        for (var i = 0; i < hashes.Length; i++)
-        {
-            var h = hashes[i];
-            var probes = h >>> ProbeCountShift;
-            if (prevProbes != -1 && probes - prevProbes > 1)
-                reportFail($"Probes are not consequent: {prevProbes}, {probes} for {i}: p{probes}, {h & indexMask} -> {map.Entries.GetSurePresentEntryRef(h & indexMask).Key}");
-            prevProbes = probes;
-        }
-    }
-
-    /// <summary>Verifies that the map contains all passed keys. May be called from the tests.</summary>
-    public static void VerifyContainAllKeys<K, V, TEq, TEntries>(this FHashMap<K, V, TEq, TEntries> map, IEnumerable<K> expectedKeys, Action<bool, K> assertContainKey)
-        where TEq : struct, IEq<K>
-        where TEntries : struct, IEntries<K, V, TEq>
-    {
-        foreach (var key in expectedKeys)
-            assertContainKey(map.TryGetValue(key, out _), key);
     }
 
     [MethodImpl((MethodImplOptions)256)]
