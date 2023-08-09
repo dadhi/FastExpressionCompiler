@@ -14,7 +14,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Check_assignment_to_by_ref_float_parameter();
             // SimpleTest();
             // Test();
-            return 2; // todo: @wip update when fixed
+            return 1; // todo: @wip update when fixed
         }
 
         delegate void IncRefFloat(ref float x);

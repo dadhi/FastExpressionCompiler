@@ -612,7 +612,8 @@ namespace FastExpressionCompiler
             /// Tracks the stack of blocks where are we in emit phase
             private LiveCountArray<BlockInfo> _blockStack;
 
-            private Dictionary<ParameterExpression, Stack<Tuple<int, int>>> _peMap;
+            private FHashMap<ParameterExpression, Stack4<Stack4.Item<int, int>>, RefEq<ParameterExpression>,
+                FHashMap.SingleArrayEntries<ParameterExpression, Stack4<Stack4.Item<int, int>>, RefEq<ParameterExpression>>> _varInBlockMap;
 
             /// Map of the links between Labels and Goto's
             internal LiveCountArray<LabelInfo> Labels;
@@ -649,7 +650,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
-                _peMap = default;
+                _varInBlockMap = default;
             }
 
             /// <summary>Populates info directly with provided closure object and constants.
@@ -671,7 +672,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
-                _peMap = default;
+                _varInBlockMap = default;
             }
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
@@ -844,7 +845,7 @@ namespace FastExpressionCompiler
             {
                 ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExpr;
-                PushPeMap(blockVarExpr, _blockStack.Count - 1, 0);
+                PushVarInBlockMap(blockVarExpr, _blockStack.Count - 1, 0);
             }
 
             public void PushBlockWithVars(ParameterExpression blockVarExpr, int varIndex)
@@ -852,7 +853,7 @@ namespace FastExpressionCompiler
                 ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExpr;
                 block.VarIndexes = new[] { varIndex };
-                PushPeMap(blockVarExpr, _blockStack.Count - 1, 0);
+                PushVarInBlockMap(blockVarExpr, _blockStack.Count - 1, 0);
             }
 
             /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
@@ -863,8 +864,8 @@ namespace FastExpressionCompiler
                 block.VarIndexes = localVarIndexes;
 
                 for (var j = 0; j < blockVarExprs.Count; j++)
-                    PushPeMap(blockVarExprs[j], _blockStack.Count - 1, j);
-             }
+                    PushVarInBlockMap(blockVarExprs[j], _blockStack.Count - 1, j);
+            }
 
             [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
             public void PushBlockAndConstructLocalVars(IReadOnlyList<PE> blockVarExprs, ILGenerator il)
@@ -876,50 +877,66 @@ namespace FastExpressionCompiler
                 PushBlockWithVars(blockVarExprs, localVars);
             }
 
-            private void PushPeMap(ParameterExpression pe, int blockIndex, int varIndex)
+            private void PushVarInBlockMap(ParameterExpression pe, int blockIndex, int varIndex)
             {
-                if (_peMap == null)
-                    _peMap = new Dictionary<ParameterExpression, Stack<Tuple<int, int>>>(
-#if NET5_OR_GREATER
-                        ReferenceEqualityComparer<ParameterExpression>.Instance
-#endif
-                    );
-                if (_peMap.TryGetValue(pe, out var stack))
+                ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe);
+                if (blocks.Count == 0)
                 {
-                    if (stack.Count == 0 || stack.Peek().Item1 != blockIndex)
-                        stack.Push(new(blockIndex, varIndex));
+                    blocks.Push(new(blockIndex, varIndex));
+                    return;
                 }
-                else
-                {
-                    _peMap.Add(pe, new(new Tuple<int, int>[] { new(blockIndex, varIndex) }));
-                }
+
+                blocks.PeekSurePresentItem(out var it);
+                if (it.Key != blockIndex)
+                    blocks.Push(new(blockIndex, varIndex));
             }
 
             public void PopBlock()
             {
                 var varExpr = _blockStack.Items[_blockStack.Count - 1].VarExprs;
+
                 if (varExpr is ParameterExpression expr)
-                    _peMap[expr].Pop();
+                {
+                    var blockKey = _varInBlockMap.GetEntryIndex(expr);
+                    if (blockKey != -1)
+                        _varInBlockMap.GetSurePresentValueRef(blockKey).PopSurePresentItem();
+                }
                 else if (varExpr is IReadOnlyList<PE> exprs)
                     for (var j = 0; j < exprs.Count; j++)
-                        _peMap[exprs[j]].Pop();
+                    {
+                        var blockKey = _varInBlockMap.GetEntryIndex(exprs[j]);
+                        if (blockKey != -1)
+                            _varInBlockMap.GetSurePresentValueRef(blockKey).PopSurePresentItem();
+                    }
 
                 _blockStack.Pop();
             }
 
             public bool IsLocalVar(object varParamExpr)
             {
-                return _peMap != null && varParamExpr is ParameterExpression pe
-                       && _peMap.TryGetValue(pe, out var stack)
-                       && stack.Count > 0;
+                if (varParamExpr is ParameterExpression pe)
+                {
+                    var blockKey = _varInBlockMap.GetEntryIndex(pe);
+                    if (blockKey != -1)
+                    {
+                        ref var blocks = ref _varInBlockMap.GetSurePresentValueRef(blockKey);
+                        return blocks.Count != 0;
+                    }
+                }
+                return false;
             }
 
             public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                if (_peMap != null && _peMap.TryGetValue(varParamExpr, out var stack) && stack.Count > 0)
+                var blockKey = _varInBlockMap.GetEntryIndex(varParamExpr);
+                if (blockKey != -1)
                 {
-                    var (index1, index2) = stack.Peek();
-                    return _blockStack.Items[index1].VarIndexes[index2];
+                    ref var blocks = ref _varInBlockMap.GetSurePresentValueRef(blockKey);
+                    if (blocks.Count != 0)
+                    {
+                        blocks.PeekSurePresentItem(out var it);
+                        return _blockStack.Items[it.Key].VarIndexes[it.Value];
+                    }
                 }
                 return -1;
             }
@@ -1919,7 +1936,7 @@ namespace FastExpressionCompiler
                             return true;
 
                         case ExpressionType.Constant:
-                            return (parent & ParentFlags.IgnoreResult) != 0 || 
+                            return (parent & ParentFlags.IgnoreResult) != 0 ||
                                 TryEmitConstant(expr, il, ref closure, byRefIndex);
 
                         case ExpressionType.Call:
@@ -2228,7 +2245,7 @@ namespace FastExpressionCompiler
             {
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
                 if (indexExpr.Object != null)
-                {  
+                {
                     // we still need to emit object if result is ignored, because at least we need to access its index
                     if (!TryEmit(indexExpr.Object, paramExprs, il, ref closure, setup, p | ParentFlags.InstanceAccess))
                         return false;
@@ -2609,7 +2626,7 @@ namespace FastExpressionCompiler
                                 il.Emit(OpCodes.Ldind_Ref);
                             // else if ((parent & ParentFlags.Arithmetic) != 0)
                             // {
-                                // todo: @wip debugging #170/#346
+                            // todo: @wip debugging #170/#346
                             //     Console.WriteLine("TryEmitParameter parent: " + parent);
                             // }
                         }
@@ -2624,7 +2641,7 @@ namespace FastExpressionCompiler
                 if (varIndex != -1)
                 {
                     closure.LastEmitIsAddress = !isParamOrVarByRef &&
-                        (isArgByRef || 
+                        (isArgByRef ||
                             paramType.IsValueType &&
                             (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281, #265
                             (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
@@ -2984,11 +3001,11 @@ namespace FastExpressionCompiler
                         {
                             EmitMethodCall(il, method);
                         }
-                        else 
+                        else
                         {
                             if (!TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                             {
-                                var convertOpMethod = method ?? 
+                                var convertOpMethod = method ??
                                     underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
                                 if (convertOpMethod == null)
                                     return false; // nor conversion nor conversion operator is found
@@ -3751,19 +3768,19 @@ namespace FastExpressionCompiler
                     // todo: @simplify could we move it to the TryEmitIndex method?
                     var flags = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
                     if (indexExpr.Object != null)
-                    {  
+                    {
                         // we still need to emit object if result is ignored, because at least we need to access its index
                         if (!TryEmit(indexExpr.Object, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceAccess))
                             return false;
-                        il.Emit(OpCodes.Dup); 
+                        il.Emit(OpCodes.Dup);
                     }
-    #if SUPPORTS_ARGUMENT_PROVIDER
+#if SUPPORTS_ARGUMENT_PROVIDER
                     var indexArgs = (IArgumentProvider)indexExpr;
                     var indexArgCount = indexArgs.ArgumentCount;
-    #else
+#else
                     var indexArgs = indexExpr.Arguments;
                     var indexArgCount = indexArgs.Count;
-    #endif
+#endif
                     // handle a single argument for now
                     if (indexArgCount != 1)
                         return false; // todo: @feature multiple arguments indexing is not supported for assignment yet
@@ -3797,17 +3814,17 @@ namespace FastExpressionCompiler
                     var indexVar = il.GetNextLocalVarIndex(indexArg.Type);
                     EmitStoreAndLoadLocalVariable(il, indexVar);
 
-                    var ok = indexerPropGetter != null 
+                    var ok = indexerPropGetter != null
                         ? EmitMethodCallOrVirtualCall(il, indexerPropGetter)
                         : TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure); // one-dimensional array
                     if (!ok)
                         return false;
-                    
+
                     if (isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
                     il.Emit(OpCodes.Ldc_I4_1);
                     il.Emit(opCode);
-                    
+
                     var assignmentResultVar = il.GetNextLocalVarIndex(expr.Type);
                     EmitStoreLocalVariable(il, assignmentResultVar);
 
@@ -3815,7 +3832,7 @@ namespace FastExpressionCompiler
                     EmitLoadLocalVariable(il, indexVar);
 
                     EmitLoadLocalVariable(il, assignmentResultVar);
-                        
+
                     if (!TryEmitIndexSet(indexExpr, indexExpr.Object?.Type, expr.Type, il))
                         return false;
                 }
@@ -3913,7 +3930,7 @@ namespace FastExpressionCompiler
                     EmitStoreLocalVariable(il, leftVarIndex);
 
                     // assigning the new value into the already closed variable - it enables the recursive nested lambda calls, see #353
-                    if (closure.NestedLambdaOrLambdas != null) 
+                    if (closure.NestedLambdaOrLambdas != null)
                     {
                         if (closure.NestedLambdaOrLambdas is NestedLambdaInfo nestedLambdaInfo)
                             EmitStoreAssignedLeftVarIntoClosureArray(il, nestedLambdaInfo, left, leftVarIndex);
@@ -4013,7 +4030,7 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            private static bool TryEmitAssignToIndex(IndexExpression left, Expression right, ExpressionType nodeType, Type exprType, 
+            private static bool TryEmitAssignToIndex(IndexExpression left, Expression right, ExpressionType nodeType, Type exprType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs, 
 #else
@@ -4054,7 +4071,7 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            private static bool TryEmitAssign(BinaryExpression expr, 
+            private static bool TryEmitAssign(BinaryExpression expr,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs, 
 #else
@@ -4069,10 +4086,10 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Parameter:
                         return TryEmitAssignToParameterOrVariable((ParameterExpression)expr.Left, expr.Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
-                    
+
                     case ExpressionType.MemberAccess:
                         return TryEmitAssignToMember((MemberExpression)expr.Left, expr.Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
-                    
+
                     case ExpressionType.Index:
                         return TryEmitAssignToIndex((IndexExpression)expr.Left, expr.Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
 
@@ -4106,19 +4123,19 @@ namespace FastExpressionCompiler
                 var opCode = Type.GetTypeCode(type) switch
                 {
                     TypeCode.Boolean => OpCodes.Ldind_U1,
-                    TypeCode.Char    => OpCodes.Ldind_U1,
-                    TypeCode.Byte    => OpCodes.Ldind_U1,
-                    TypeCode.SByte   => OpCodes.Ldind_I1,
-                    TypeCode.Int16   => OpCodes.Ldind_I2,
-                    TypeCode.Int32   => OpCodes.Ldind_I4,
-                    TypeCode.Int64   => OpCodes.Ldind_I8,
-                    TypeCode.Double  => OpCodes.Ldind_R8,
-                    TypeCode.Single  => OpCodes.Ldind_R4,
-                    TypeCode.UInt16  => OpCodes.Ldind_U2,
-                    TypeCode.UInt32  => OpCodes.Ldind_U4,
-                    TypeCode.UInt64  => OpCodes.Ldobj,
-                    TypeCode.String  => OpCodes.Ldind_Ref,
-                    _                => type.IsValueType ? OpCodes.Ldobj : OpCodes.Ldind_Ref
+                    TypeCode.Char => OpCodes.Ldind_U1,
+                    TypeCode.Byte => OpCodes.Ldind_U1,
+                    TypeCode.SByte => OpCodes.Ldind_I1,
+                    TypeCode.Int16 => OpCodes.Ldind_I2,
+                    TypeCode.Int32 => OpCodes.Ldind_I4,
+                    TypeCode.Int64 => OpCodes.Ldind_I8,
+                    TypeCode.Double => OpCodes.Ldind_R8,
+                    TypeCode.Single => OpCodes.Ldind_R4,
+                    TypeCode.UInt16 => OpCodes.Ldind_U2,
+                    TypeCode.UInt32 => OpCodes.Ldind_U4,
+                    TypeCode.UInt64 => OpCodes.Ldobj,
+                    TypeCode.String => OpCodes.Ldind_Ref,
+                    _ => type.IsValueType ? OpCodes.Ldobj : OpCodes.Ldind_Ref
                 };
 
                 if (opCode.Equals(OpCodes.Ldobj))
@@ -4233,7 +4250,7 @@ namespace FastExpressionCompiler
                 var ok = true;
                 if (!objIsValueType)
                     ok = EmitMethodCallOrVirtualCall(il, method);
-                else if (!method.IsVirtual || 
+                else if (!method.IsVirtual ||
                     objExpr is ParameterExpression p && p.IsByRef ||
                     method.DeclaringType == objExpr.Type)
                     ok = EmitMethodCall(il, method);
@@ -4387,7 +4404,7 @@ namespace FastExpressionCompiler
                 // - create `NonPassedParameters` array for the non-passed parameters and variables
                 EmitLoadConstantInt(il, nestedNonPassedParams.Length); // load the length of array
                 il.Emit(OpCodes.Newarr, typeof(object));
-                
+
                 // we need to store the array in local variable, because we may assign to closed variable after the closure is passed to the lambda
                 var nonPassedParamsVarIndex = il.GetNextLocalVarIndex(typeof(object[]));
                 EmitStoreAndLoadLocalVariable(il, nonPassedParamsVarIndex);
@@ -4441,7 +4458,7 @@ namespace FastExpressionCompiler
                 }
 
                 // - emit the closure constructor call
-                var closureCtor = containsConstants 
+                var closureCtor = containsConstants
                     ? ArrayClosureWithNonPassedParamsConstructor
                     : ArrayClosureWithNonPassedParamsConstructorWithoutConstants;
                 il.Emit(OpCodes.Newobj, closureCtor);
@@ -4844,7 +4861,7 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
-            private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType, 
+            private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -4974,7 +4991,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                var opCode = AssignToArithmeticOrSelf(nodeType) switch 
+                var opCode = AssignToArithmeticOrSelf(nodeType) switch
                 {
                     ExpressionType.Add => OpCodes.Add,
                     ExpressionType.AddChecked => exprType.IsUnsigned() ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf,
@@ -5586,7 +5603,7 @@ namespace FastExpressionCompiler
         internal static bool TryGetIndexByReferenceEquals<T>(this T[] items, out int index, T item, int count)
         {
             for (var i = 0; (uint)i < count; ++i)
-                if (ReferenceEquals(items[i], item)) 
+                if (ReferenceEquals(items[i], item))
                 {
                     index = i;
                     return true;
@@ -5598,7 +5615,7 @@ namespace FastExpressionCompiler
         internal static bool TryGetIndexByReferenceEquals<T>(this IList<T> items, out int index, T item, int count)
         {
             for (var i = 0; (uint)i < count; ++i)
-                if (ReferenceEquals(items[i], item)) 
+                if (ReferenceEquals(items[i], item))
                 {
                     index = i;
                     return true;
@@ -5719,7 +5736,7 @@ namespace FastExpressionCompiler
                     15 => typeof(Func<,,,,,,,,,,,,,,,>),
                     16 => typeof(Func<,,,,,,,,,,,,,,,,>),
                     _ => throw new NotSupportedException($"Func with so many ({length}) parameters is not supported!")
-                };  
+                };
             }
         }
 
@@ -5840,7 +5857,7 @@ namespace FastExpressionCompiler
         // todo: @perf add the map of the used local variables that can be reused, e.g. we are getting the variable used in the local scope but then we may return them into POOL and reuse (many of int variable can be reuses, say for indexes)
         /// <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
         public static int GetNextLocalVarIndex(this ILGenerator il, Type t)
-        { 
+        {
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
             if (!LocalVarUsage.ContainsKey(t))
                 LocalVarUsage[t] = 1;
@@ -6978,8 +6995,8 @@ namespace FastExpressionCompiler
                                 case ExpressionType.Convert:
                                 case ExpressionType.ConvertChecked:
                                     if (e.Type == op.Type)
-                                        return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode); 
-                                    
+                                        return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+
                                     var encloseInParens = enclosedIn != EnclosedIn.LambdaBody && enclosedIn != EnclosedIn.Return;
                                     sb = encloseInParens ? sb.Append("((") : sb.Append('(');
                                     sb.Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
@@ -7795,12 +7812,12 @@ namespace FastExpressionCompiler
 
         internal static StringBuilder NewLineIdentCs(this StringBuilder sb, Expression expr,
             int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces, CodePrinter.ObjectToCode notRecognizedToCode) =>
-            expr?.ToCSharpString(sb.NewLineIdent(lineIdent), lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode) 
+            expr?.ToCSharpString(sb.NewLineIdent(lineIdent), lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode)
             ?? sb.Append("null");
 
         internal static StringBuilder NewLineIdentCs(this StringBuilder sb, Expression expr, ToCSharpPrinter.EnclosedIn enclosedIn,
             int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces, CodePrinter.ObjectToCode notRecognizedToCode) =>
-            expr?.ToCSharpString(sb.NewLineIdent(lineIdent), enclosedIn, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode) 
+            expr?.ToCSharpString(sb.NewLineIdent(lineIdent), enclosedIn, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode)
             ?? sb.Append("null");
 
         /// <summary>Helper method to find the number of lambdas in the C# `code` string</summary>

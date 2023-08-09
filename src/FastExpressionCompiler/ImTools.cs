@@ -16,6 +16,101 @@ namespace FastExpressionCompiler.ImTools;
 
 using static FHashMap;
 
+internal static class Stack4
+{
+    public sealed class HeapItems<TItem>
+    {
+        internal const int DefaultInitialCapacity = 4;
+
+        public TItem[] Items;
+        public HeapItems(int capacity = DefaultInitialCapacity) =>
+            Items = new TItem[capacity];
+
+        [MethodImpl((MethodImplOptions)256)]
+        public void Put(int index, in TItem item)
+        {
+            if (index >= Items.Length)
+                Array.Resize(ref Items, Items.Length << 1);
+            Items[index] = item;
+        }
+    }
+    [DebuggerDisplay("{Key.ToString()}->{Value}")]
+    public struct Item<K, V>
+    {
+        public K Key;
+        public V Value;
+        public Item(K key, V value)
+        {
+            Key = key;
+            Value = value;
+        }
+    }
+}
+
+internal struct Stack4<TItem>
+{
+    public ushort Count;
+
+    TItem _it0, _it1, _it2, _it3;
+
+    Stack4.HeapItems<TItem> _deepItems;
+
+    public void Push(in TItem item) =>
+        Put(Count++, item);
+
+    public void Put(ushort index, in TItem item)
+    {
+        switch (index)
+        {
+            case 0: _it0 = item; break;
+            case 1: _it1 = item; break;
+            case 2: _it2 = item; break;
+            case 3: _it3 = item; break;
+            default:
+                _deepItems ??= new Stack4.HeapItems<TItem>();
+                _deepItems.Put(index - 4, item);
+                break;
+        }
+    }
+
+    public void PeekSurePresentItem(out TItem item) =>
+        GetSurePresentItem((ushort)(Count - 1), out item);
+
+    public void GetSurePresentItem(ushort index, out TItem item)
+    {
+        Debug.Assert(Count != 0);
+        Debug.Assert(index < Count);
+        switch (index)
+        {
+            case 0: item = _it0; break;
+            case 1: item = _it1; break;
+            case 2: item = _it2; break;
+            case 3: item = _it3; break;
+            default:
+                Debug.Assert(_deepItems != null, $"Expecting a deeper parent stack created before accessing it here at level {index}");
+                item = _deepItems.Items[index - 4];
+                break;
+        }
+    }
+
+    public void PopSurePresentItem()
+    {
+        Debug.Assert(Count != 0);
+        var index = --Count;
+        switch (index)
+        {
+            case 0: _it0 = default; break;
+            case 1: _it1 = default; break;
+            case 2: _it2 = default; break;
+            case 3: _it3 = default; break;
+            default:
+                Debug.Assert(_deepItems != null, $"Expecting a deeper parent stack created before accessing it here at level {index}");
+                _deepItems.Put(index - 4, default);
+                break;
+        }
+    }
+}
+
 /// <summary>Configiration and the tools for the FHashMap map data structure</summary>
 public static class FHashMap
 {
@@ -268,7 +363,7 @@ public static class FHashMap
         /// <summary>Returns the actual number of the stored entries</summary>
         int GetCount();
 
-        /// <summary>Returns the reference to entry by its index, index should be valid</summary>
+        /// <summary>Returns the reference to entry by its index, index should map to the present/non-removed entry</summary>
         ref Entry<K, V> GetSurePresentEntryRef(int index);
 
         /// <summary>Adds the key at the "end" of entriesc- so the order of addition is preserved.</summary>
@@ -299,7 +394,7 @@ public static class FHashMap
         public ref Entry<K, V> GetSurePresentEntryRef(int index)
         {
 #if NET7_0_OR_GREATER
-                return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_entries), index);
+            return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_entries), index);
 #else
             return ref _entries[index];
 #endif
@@ -320,7 +415,7 @@ public static class FHashMap
                 Array.Resize(ref _entries, index << 1);
             }
 #if NET7_0_OR_GREATER
-                ref var e = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_entries), index);
+            ref var e = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_entries), index);
 #else
             ref var e = ref _entries[index];
 #endif
@@ -344,16 +439,11 @@ public static class FHashMap
         internal int MaxProbes;
         internal int[] Probes;
 
-        public ProbesTracker()
-        {
-            MaxProbes = 1;
-            Probes = new int[1];
-        }
-
         // will output something like
         // [Add] Probes abs max = 10, curr max = 6, all = [1: 180, 2: 103, 3: 59, 4: 23, 5: 3, 6: 1]; first 4 probes are 365 out of 369
         internal void DebugOutputProbes(string label)
         {
+            Probes ??= new int[1];
             Debug.Write($"[{label}] Probes abs max={MaxProbes}, curr max={Probes.Length}, all=[");
             var first4probes = 0;
             var allProbes = 0;
@@ -370,6 +460,7 @@ public static class FHashMap
 
         internal void DebugCollectAndOutputProbes(int probes, [CallerMemberName] string label = "")
         {
+            Probes ??= new int[1];
             if (probes > Probes.Length)
             {
                 if (probes > MaxProbes)
@@ -401,6 +492,7 @@ public static class FHashMap
 
         internal void RemoveProbes(int probes)
         {
+            Probes ??= new int[1];
             ref var p = ref Probes[probes - 1];
             --p;
             if (p == 0 && probes == Probes.Length)
@@ -439,8 +531,8 @@ public static class FHashMap
 // todo: @improve ? how/where to add SIMD to improve CPU utilization but not losing perf for smaller sizes
 /// <summary>
 /// Fast and less-allocating hash map without thread safety nets. Please measure it in your own use case before use.
-/// It is configurable in regard of hash calculation/equality via <typeparamref name="TEq"/> and 
-/// in regard of key-value storage via <typeparamref name="TEntries"/>
+/// It is configurable in regard of hash calculation/equality via `TEq` type paremeter and 
+/// in regard of key-value storage via `TEntries` type parameter.
 /// 
 /// Details:
 /// - Implemented as a struct so that the empty/default map does not allocate on heap
@@ -458,7 +550,7 @@ public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
     where TEntries : struct, IEntries<K, V, TEq>
 {
 #if DEBUG
-    ProbesTracker _dbg = new();
+    ProbesTracker _dbg;
 #endif
     private byte _capacityBitShift;
 
@@ -469,7 +561,10 @@ public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
     // |     |- The remaining middle bits of the original hash
     // |- 5 (MaxProbeBits) high bits of the Probe count, with the minimal value of b00001 indicating the non-empty slot.
     private int[] _packedHashesAndIndexes;
-    private readonly TEntries _entries;
+
+#pragma warning disable IDE0044 // it tries to make entries readonly but they should stay modifyable to prevent its defensive struct copying  
+    private TEntries _entries;
+#pragma warning restore IDE0044
 
     /// <summary>Capacity bits</summary>
     public int CapacityBitShift => _capacityBitShift;
@@ -499,46 +594,42 @@ public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
     [MethodImpl((MethodImplOptions)256)]
     public bool TryGetValue(K key, out V value)
     {
-        if (_packedHashesAndIndexes == null)
+        if (_packedHashesAndIndexes != null)
         {
-            value = default;
-            return false;
-        }
+            var hash = default(TEq).GetHashCode(key);
 
-        var hash = default(TEq).GetHashCode(key);
-
-        var indexMask = (1 << _capacityBitShift) - 1;
-        var hashMiddleMask = HashAndIndexMask & ~indexMask;
-        var hashMiddle = hash & hashMiddleMask;
-        var hashIndex = hash & indexMask;
+            var indexMask = (1 << _capacityBitShift) - 1;
+            var hashMiddleMask = HashAndIndexMask & ~indexMask;
+            var hashMiddle = hash & hashMiddleMask;
+            var hashIndex = hash & indexMask;
 
 #if NET7_0_OR_GREATER
             ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
 #else
-        var hashesAndIndexes = _packedHashesAndIndexes;
+            ref var hashesAndIndexes = ref _packedHashesAndIndexes;
 #endif
 
-        var h = GetHash(ref hashesAndIndexes, hashIndex);
+            var h = GetHash(ref hashesAndIndexes, hashIndex);
 
-        // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-        var probes = 1;
-        while ((h >>> ProbeCountShift) >= probes)
-        {
-            // 2. For the equal probes check for equality the hash middle part, and update the entry if the keys are equal too 
-            if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
+            // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
+            var probes = 1;
+            while ((h >>> ProbeCountShift) >= probes)
             {
-                ref var e = ref _entries.GetSurePresentEntryRef(h & indexMask);
-                if (default(TEq).Equals(e.Key, key))
+                // 2. For the equal probes check for equality the hash middle part, and update the entry if the keys are equal too 
+                if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
                 {
-                    value = e.Value;
-                    return true;
+                    ref var e = ref _entries.GetSurePresentEntryRef(h & indexMask);
+                    if (default(TEq).Equals(e.Key, key))
+                    {
+                        value = e.Value;
+                        return true;
+                    }
                 }
+
+                h = GetHash(ref hashesAndIndexes, ++hashIndex & indexMask);
+                ++probes;
             }
-
-            h = GetHash(ref hashesAndIndexes, ++hashIndex & indexMask);
-            ++probes;
         }
-
         value = default;
         return false;
     }
@@ -547,6 +638,61 @@ public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
     [MethodImpl((MethodImplOptions)256)]
     public V GetValueOrDefault(K key, V defaultValue = default) =>
         TryGetValue(key, out var value) ? value : defaultValue;
+
+    /// <summary>Find and return the index of the `key` in the `TEntries`. If not found return `-1`.
+    /// Then you may use method `GetSurePresentValueRef` to access and modify entry value in-place!
+    /// The approach differs from the `GetOrAddValueRef` because it does not add the new entry if the key is missing.</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public int GetEntryIndex(K key)
+    {
+        if (_packedHashesAndIndexes != null)
+        {
+            var hash = default(TEq).GetHashCode(key);
+
+            var indexMask = (1 << _capacityBitShift) - 1;
+            var hashMiddleMask = HashAndIndexMask & ~indexMask;
+            var hashMiddle = hash & hashMiddleMask;
+            var hashIndex = hash & indexMask;
+
+#if NET7_0_OR_GREATER
+        ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
+#else
+            var hashesAndIndexes = _packedHashesAndIndexes;
+#endif
+
+            var h = GetHash(ref hashesAndIndexes, hashIndex);
+
+            // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
+            var probes = 1;
+            while ((h >>> ProbeCountShift) >= probes)
+            {
+                // 2. For the equal probes check for equality the hash middle part, and update the entry if the keys are equal too 
+                if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
+                {
+                    ref var e = ref _entries.GetSurePresentEntryRef(h & indexMask);
+                    if (default(TEq).Equals(e.Key, key))
+                        return h & indexMask;
+                }
+
+                h = GetHash(ref hashesAndIndexes, ++hashIndex & indexMask);
+                ++probes;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>Allows to access and modify the present value in-place</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public ref V GetSurePresentValueRef(int index)
+    {
+        ref var e = ref _entries.GetSurePresentEntryRef(index);
+        return ref e.Value;
+    }
+
+    /// <summary>Returns true if the map contains the `key`</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public bool Contains(K key) => GetEntryIndex(key) != -1;
+
 
     /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
     [MethodImpl((MethodImplOptions)256)]
@@ -566,7 +712,7 @@ public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
         var hashIndex = hash & indexMask;
 
 #if NET7_0_OR_GREATER
-            ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
+        ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
 #else
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif

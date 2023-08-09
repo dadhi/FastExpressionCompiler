@@ -21,13 +21,13 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Check_ArrayAccess_AddAssign();
-            Check_ArrayAccess_PreIncrement();        
+            // Check_ArrayAccess_AddAssign(); // todo: @wip
+            Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_Add();
 
             Check_MemberAccess_AddAssign();
             Check_MemberAccess_PreIncrement();
-            
+
             return 4;
         }
 
@@ -49,7 +49,7 @@ namespace FastExpressionCompiler.IssueTests
             var a1 = new[] { 1, 2, 9 };
             @cs(a1);
             Assert.AreEqual(42, a1[2]);
-            
+
             var fs = e.CompileSys();
             fs.PrintIL();
 
@@ -82,7 +82,7 @@ namespace FastExpressionCompiler.IssueTests
             var a1 = new[] { 1, 2, 9 };
             @cs(a1);
             Assert.AreEqual(10, a1[2]);
-            
+
             var fs = e.CompileSys();
             fs.PrintIL();
 
@@ -115,7 +115,7 @@ namespace FastExpressionCompiler.IssueTests
             var a1 = new[] { 1, 9, 3 };
             @cs(a1);
             Assert.AreEqual(42, a1[1]);
-            
+
             var fs = e.CompileSys();
             fs.PrintIL();
 
@@ -153,7 +153,7 @@ namespace FastExpressionCompiler.IssueTests
             var b1 = new Box { Value = 9 };
             @cs(b1);
             Assert.AreEqual(42, b1.Value);
-            
+
             var fs = e.CompileSys();
             fs.PrintIL();
 
@@ -187,7 +187,7 @@ namespace FastExpressionCompiler.IssueTests
             var b1 = new Box { Value = 9 };
             @cs(b1);
             Assert.AreEqual(10, b1.Value);
-            
+
             var fs = e.CompileSys();
             fs.PrintIL();
 
