@@ -1,5 +1,6 @@
 $inputFiles = @(
     ".\src\FastExpressionCompiler\FastExpressionCompiler.cs",
+    ".\src\FastExpressionCompiler\ImTools.cs",
     ".\src\FastExpressionCompiler.LightExpression\Expression.cs",
     ".\src\FastExpressionCompiler.LightExpression\ExpressionVisitor.cs"
 )

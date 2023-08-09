@@ -74,7 +74,10 @@
         <file src="_._" target="lib\netstandard2.0\" />
 
         <file src="..\src\FastExpressionCompiler\FastExpressionCompiler.cs" target="contentFiles\cs\net45\FastExpressionCompiler" />
+        <file src="..\src\FastExpressionCompiler\ImTools.cs"                target="contentFiles\cs\net45\FastExpressionCompiler" />
+
         <file src="..\src\FastExpressionCompiler\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler" />
+        <file src="..\src\FastExpressionCompiler\ImTools.cs"                target="contentFiles\cs\netstandard2.0\FastExpressionCompiler" />
 
     </files>
 </package>

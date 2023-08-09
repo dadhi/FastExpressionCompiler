@@ -74,10 +74,12 @@
         <file src="_._" target="lib\netstandard2.0\" />
 
         <file src="..\src\FastExpressionCompiler\FastExpressionCompiler.cs"            target="contentFiles\cs\net45\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler\ImTools.cs"                           target="contentFiles\cs\net45\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\Expression.cs"        target="contentFiles\cs\net45\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\ExpressionVisitor.cs" target="contentFiles\cs\net45\FastExpressionCompiler.LightExpression" />
 
         <file src="..\src\FastExpressionCompiler\FastExpressionCompiler.cs"            target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler\ImTools.cs"                           target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\Expression.cs"        target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\ExpressionVisitor.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
 
