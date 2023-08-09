@@ -612,8 +612,8 @@ namespace FastExpressionCompiler
             /// Tracks the stack of blocks where are we in emit phase
             private LiveCountArray<BlockInfo> _blockStack;
 
-            private FHashMap<ParameterExpression, Stack4<Stack4.Item<int, int>>, RefEq<ParameterExpression>,
-                FHashMap.SingleArrayEntries<ParameterExpression, Stack4<Stack4.Item<int, int>>, RefEq<ParameterExpression>>> _varInBlockMap;
+            private FHashMap<ParameterExpression, Stack4<Stack4.Item<ushort, ushort>>, RefEq<ParameterExpression>,
+                FHashMap.SingleArrayEntries<ParameterExpression, Stack4<Stack4.Item<ushort, ushort>>, RefEq<ParameterExpression>>> _varInBlockMap;
 
             /// Map of the links between Labels and Goto's
             internal LiveCountArray<LabelInfo> Labels;
@@ -845,7 +845,7 @@ namespace FastExpressionCompiler
             {
                 ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExpr;
-                PushVarInBlockMap(blockVarExpr, _blockStack.Count - 1, 0);
+                PushVarInBlockMap(blockVarExpr, (ushort)(_blockStack.Count - 1), 0);
             }
 
             public void PushBlockWithVars(ParameterExpression blockVarExpr, int varIndex)
@@ -853,7 +853,7 @@ namespace FastExpressionCompiler
                 ref var block = ref _blockStack.PushSlot();
                 block.VarExprs = blockVarExpr;
                 block.VarIndexes = new[] { varIndex };
-                PushVarInBlockMap(blockVarExpr, _blockStack.Count - 1, 0);
+                PushVarInBlockMap(blockVarExpr, (ushort)(_blockStack.Count - 1), 0);
             }
 
             /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
@@ -863,8 +863,8 @@ namespace FastExpressionCompiler
                 block.VarExprs = blockVarExprs;
                 block.VarIndexes = localVarIndexes;
 
-                for (var j = 0; j < blockVarExprs.Count; j++)
-                    PushVarInBlockMap(blockVarExprs[j], _blockStack.Count - 1, j);
+                for (ushort j = 0; j < blockVarExprs.Count; j++)
+                    PushVarInBlockMap(blockVarExprs[j], (ushort)(_blockStack.Count - 1), j);
             }
 
             [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
@@ -877,7 +877,7 @@ namespace FastExpressionCompiler
                 PushBlockWithVars(blockVarExprs, localVars);
             }
 
-            private void PushVarInBlockMap(ParameterExpression pe, int blockIndex, int varIndex)
+            private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
                 ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe);
                 if (blocks.Count == 0)
