@@ -580,7 +580,7 @@ namespace FastExpressionCompiler
         private struct BlockInfo
         {
             public object VarExprs; // ParameterExpression  | IReadOnlyList<PE>
-            public int[] VarIndexes;
+            public int[] VarIndexes; // todo: @perf do we need them in addition to _varInBlockMap
         }
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -623,9 +623,10 @@ namespace FastExpressionCompiler
                 }
             }
             /// Tracks the use of the variables in the blocks stack per variable, to determine if variable is the local variable and when it's defined
-            private FHashMap<ParameterExpression, Stack4<BlockAndVarIndex>, RefEq<ParameterExpression>,
-                FHashMap.SingleArrayEntries<ParameterExpression, Stack4<BlockAndVarIndex>, RefEq<ParameterExpression>>> _varInBlockMap;
-            // private BlockAndVarIndex _var1Blocks, _var2Blocks;
+            private FHashMap<PE, Stack4<BlockAndVarIndex>, RefEq<PE>,
+                FHashMap.SingleArrayEntries<PE, Stack4<BlockAndVarIndex>, RefEq<PE>>> _varInBlockMap;
+            private PE _var1;
+            private Stack4<BlockAndVarIndex> _var1Blocks;
 
             /// Map of the links between Labels and Goto's
             internal LiveCountArray<LabelInfo> Labels;
@@ -642,7 +643,7 @@ namespace FastExpressionCompiler
 
             /// Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters. 
-            public ParameterExpression[] NonPassedParameters; // todo: @perf optimize for a single non passed parameter
+            public ParameterExpression[] NonPassedParameters; // todo: @wip replace with PE, @perf optimize for a single non passed parameter
 
             /// All nested lambda(s) `NestedLambdaInfo|NestedLambdaInfo[]` recursively nested in expression
             public object NestedLambdaOrLambdas;
@@ -660,9 +661,8 @@ namespace FastExpressionCompiler
 
                 LastEmitIsAddress = false;
                 CurrentInlinedLambdaInvokeIndex = -1;
-                Labels = new LiveCountArray<LabelInfo>();
-                _blockStack = new LiveCountArray<BlockInfo>();
-                _varInBlockMap = default;
+                Labels = new LiveCountArray<LabelInfo>();       // todo: @perf can we use Stack4 instead of LiveCountArray
+                _blockStack = new LiveCountArray<BlockInfo>();  // todo: @perf can we use Stack4 instead of LiveCountArray
             }
 
             /// <summary>Populates info directly with provided closure object and constants.
@@ -684,7 +684,6 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
                 _blockStack = new LiveCountArray<BlockInfo>();
-                _varInBlockMap = default;
             }
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
@@ -875,14 +874,15 @@ namespace FastExpressionCompiler
                 block.VarExprs = blockVarExprs;
                 block.VarIndexes = localVarIndexes;
 
+                var lastBlockIndex = (ushort)(_blockStack.Count - 1);
                 for (ushort j = 0; j < blockVarExprs.Count; j++)
-                    PushVarInBlockMap(blockVarExprs[j], (ushort)(_blockStack.Count - 1), j);
+                    PushVarInBlockMap(blockVarExprs[j], lastBlockIndex, j);
             }
 
             [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
             public void PushBlockAndConstructLocalVars(IReadOnlyList<PE> blockVarExprs, ILGenerator il)
             {
-                var localVars = new int[blockVarExprs.Count];
+                var localVars = new int[blockVarExprs.Count]; // todo: @perf do we always need to create an array on heap here?
                 for (var i = 0; i < localVars.Length; i++)
                     localVars[i] = il.GetNextLocalVarIndex(blockVarExprs[i].Type);
 
@@ -891,62 +891,82 @@ namespace FastExpressionCompiler
 
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
-                ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe);
-                if (blocks.Count == 0)
+                if (_var1 == null)
                 {
-                    blocks.Push(new(blockIndex, varIndex));
+                    _var1 = pe;
+                    _var1Blocks.Push(new(blockIndex, varIndex));
                     return;
                 }
 
-                blocks.PeekSurePresentItem(out var it);
-                if (it.BlockIndex != blockIndex)
+                if (ReferenceEquals(_var1, pe))
+                {
+                    if (_var1Blocks.Count == 0 || _var1Blocks.PeekSurePresentItem().BlockIndex != blockIndex)
+                        _var1Blocks.Push(new(blockIndex, varIndex));
+                    return;
+                }
+
+                ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe);
+                if (blocks.Count == 0 || blocks.PeekSurePresentItem().BlockIndex != blockIndex)
                     blocks.Push(new(blockIndex, varIndex));
             }
 
             public void PopBlock()
             {
                 var varExpr = _blockStack.Items[_blockStack.Count - 1].VarExprs;
-
-                if (varExpr is ParameterExpression expr)
-                {
-                    var blockKey = _varInBlockMap.GetEntryIndex(expr);
-                    if (blockKey != -1)
-                        _varInBlockMap.GetSurePresentValueRef(blockKey).PopSurePresentItem();
-                }
+                if (varExpr is PE expr)
+                    PopVarBlock(expr);
                 else if (varExpr is IReadOnlyList<PE> exprs)
-                    for (var j = 0; j < exprs.Count; j++)
-                    {
-                        var blockKey = _varInBlockMap.GetEntryIndex(exprs[j]);
-                        if (blockKey != -1)
-                            _varInBlockMap.GetSurePresentValueRef(blockKey).PopSurePresentItem();
-                    }
+                    for (var i = 0; i < exprs.Count; i++)
+                        PopVarBlock(exprs[i]);
 
                 _blockStack.Pop();
             }
 
-            public bool IsLocalVar(object varParamExpr)
+            public void PopVarBlock(PE varExpr)
             {
-                if (varParamExpr is ParameterExpression pe)
+                if (ReferenceEquals(_var1, varExpr))
+                    _var1Blocks.PopSurePresentItem();
+                else
                 {
-                    var blockKey = _varInBlockMap.GetEntryIndex(pe);
+                    var blockKey = _varInBlockMap.GetEntryIndex(varExpr);
                     if (blockKey != -1)
-                    {
-                        ref var blocks = ref _varInBlockMap.GetSurePresentValueRef(blockKey);
-                        return blocks.Count != 0;
-                    }
+                        _varInBlockMap.GetSurePresentValueRef(blockKey).PopSurePresentItem();
+                }
+            }
+
+            public bool IsLocalVar(object varParamObj)
+            {
+                if (varParamObj is PE varParamExpr)
+                {
+                    if (ReferenceEquals(_var1, varParamExpr))
+                        return _var1Blocks.Count != 0;
+
+                    var blockKey = _varInBlockMap.GetEntryIndex(varParamExpr);
+                    if (blockKey != -1)
+                        return _varInBlockMap.GetSurePresentValueRef(blockKey).Count != 0;
                 }
                 return false;
             }
 
             public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
+                if (ReferenceEquals(_var1, varParamExpr))
+                {
+                    if (_var1Blocks.Count != 0)
+                    {
+                        var it = _var1Blocks.PeekSurePresentItem();
+                        return _blockStack.Items[it.BlockIndex].VarIndexes[it.VarIndex];
+                    }
+                    return -1;
+                }
+
                 var blockKey = _varInBlockMap.GetEntryIndex(varParamExpr);
                 if (blockKey != -1)
                 {
                     ref var blocks = ref _varInBlockMap.GetSurePresentValueRef(blockKey);
                     if (blocks.Count != 0)
                     {
-                        blocks.PeekSurePresentItem(out var it);
+                        var it = blocks.PeekSurePresentItem();
                         return _blockStack.Items[it.BlockIndex].VarIndexes[it.VarIndex];
                     }
                 }
@@ -1188,9 +1208,9 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Constant:
 #if LIGHT_EXPRESSION
-                    // todo: @perf @simplify convert to intrinsic
-                    if (expr == NullConstant || expr == FalseConstant || expr == TrueConstant || expr is IntConstantExpression n)
-                        return true;
+                        // todo: @perf @simplify convert to intrinsic
+                        if (expr == NullConstant || expr == FalseConstant || expr == TrueConstant || expr is IntConstantExpression n)
+                            return true;
 #endif
                         var constantExpr = (ConstantExpression)expr;
                         var value = constantExpr.Value;
@@ -3878,7 +3898,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitAssignToParameterOrVariable(
                 ParameterExpression left, Expression right, ExpressionType nodeType, Type exprType,
 #if LIGHT_EXPRESSION
-                IParameterProvider paramExprs, 
+                IParameterProvider paramExprs,
 #else
                 IReadOnlyList<PE> paramExprs,
 #endif
@@ -3993,7 +4013,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitAssignToMember(MemberExpression left, Expression right, ExpressionType nodeType, Type exprType,
 #if LIGHT_EXPRESSION
-                IParameterProvider paramExprs, 
+                IParameterProvider paramExprs,
 #else
                 IReadOnlyList<PE> paramExprs,
 #endif
@@ -4044,7 +4064,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitAssignToIndex(IndexExpression left, Expression right, ExpressionType nodeType, Type exprType,
 #if LIGHT_EXPRESSION
-                IParameterProvider paramExprs, 
+                IParameterProvider paramExprs,
 #else
                 IReadOnlyList<PE> paramExprs,
 #endif
@@ -4085,7 +4105,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitAssign(BinaryExpression expr,
 #if LIGHT_EXPRESSION
-                IParameterProvider paramExprs, 
+                IParameterProvider paramExprs,
 #else
                 IReadOnlyList<PE> paramExprs,
 #endif

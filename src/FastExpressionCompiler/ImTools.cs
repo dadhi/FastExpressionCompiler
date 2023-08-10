@@ -36,8 +36,7 @@ internal static class Stack4
 
 internal struct Stack4<TItem>
 {
-
-    public ushort Count;
+    public int Count;
 
     TItem _it0, _it1, _it2, _it3;
 
@@ -48,7 +47,7 @@ internal struct Stack4<TItem>
         Put(Count++, item);
 
     [MethodImpl((MethodImplOptions)256)]
-    public void Put(ushort index, in TItem item)
+    public void Put(int index, in TItem item)
     {
         switch (index)
         {
@@ -64,24 +63,23 @@ internal struct Stack4<TItem>
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public void PeekSurePresentItem(out TItem item) =>
-        GetSurePresentItem((ushort)(Count - 1), out item);
+    public TItem PeekSurePresentItem() =>
+        GetSurePresentItem(Count - 1);
 
     [MethodImpl((MethodImplOptions)256)]
-    public void GetSurePresentItem(ushort index, out TItem item)
+    public TItem GetSurePresentItem(int index)
     {
         Debug.Assert(Count != 0);
         Debug.Assert(index < Count);
         switch (index)
         {
-            case 0: item = _it0; break;
-            case 1: item = _it1; break;
-            case 2: item = _it2; break;
-            case 3: item = _it3; break;
+            case 0: return _it0;
+            case 1: return _it1;
+            case 2: return _it2;
+            case 3: return _it3;
             default:
                 Debug.Assert(_deepItems != null, $"Expecting a deeper parent stack created before accessing it here at level {index}");
-                item = _deepItems.Items[index - 4];
-                break;
+                return _deepItems.Items[index - 4];
         }
     }
 
