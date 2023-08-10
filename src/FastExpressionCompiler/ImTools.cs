@@ -230,7 +230,7 @@ public static class FHashMap
 
         /// <inheritdoc />
         [MethodImpl((MethodImplOptions)256)]
-        public int GetHashCode(K key) => key.GetHashCode();
+        public int GetHashCode(K key) => RuntimeHelpers.GetHashCode(key);
     }
 
     // todo: @improve can we move the Entry into the type parameter to configure and possibly save the memory e.g. for the sets? 
