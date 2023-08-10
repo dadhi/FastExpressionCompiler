@@ -1,8 +1,6 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices; // For [MethodImpl(AggressiveInlining)]
+using System.Runtime.CompilerServices;
 
 #if NET7_0_OR_GREATER
 using System.Runtime.InteropServices;
@@ -49,6 +47,7 @@ internal static class Stack4
 
 internal struct Stack4<TItem>
 {
+
     public ushort Count;
 
     TItem _it0, _it1, _it2, _it3;
@@ -240,54 +239,6 @@ public static class FHashMap
         /// <inheritdoc />
         [MethodImpl((MethodImplOptions)256)]
         public int GetHashCode(K key) => key.GetHashCode();
-    }
-
-    /// <summary>Uses the integer itself as hash code and `==` for equality</summary>
-    public struct IntEq : IEq<int>
-    {
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetTombstone() => int.MinValue;
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public bool Equals(int x, int y) => x == y;
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetHashCode(int key) => key;
-    }
-
-    /// <summary>Uses Fibonacci hashing by multiplying the integer on the factor derived from the GoldenRatio</summary>
-    public struct GoldenIntEq : IEq<int>
-    {
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetTombstone() => int.MinValue;
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public bool Equals(int x, int y) => x == y;
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetHashCode(int key) => (int)(key * GoldenRatio32) >>> MaxProbeBits;
-    }
-
-    /// <summary>Compares the types faster via `==` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
-    public struct TypeEq : IEq<Type>
-    {
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public Type GetTombstone() => null;
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public bool Equals(Type x, Type y) => x == y;
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetHashCode(Type key) => RuntimeHelpers.GetHashCode(key);
     }
 
     // todo: @improve can we move the Entry into the type parameter to configure and possibly save the memory e.g. for the sets? 
@@ -482,7 +433,7 @@ public static class FHashMap
 /// </summary>
 [DebuggerTypeProxy(typeof(DebugProxy<,,,>))]
 [DebuggerDisplay("Count={Count}")]
-public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
+public struct FHashMap<K, V, TEq, TEntries>
     where TEq : struct, IEq<K>
     where TEntries : struct, IEntries<K, V, TEq>
 {
@@ -526,55 +477,6 @@ public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
         _entries = default;
         _entries.Init(capacityBitShift);
     }
-
-    /// <summary>Lookup for the key and get the associated value if the key is found</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public bool TryGetValue(K key, out V value)
-    {
-        if (_packedHashesAndIndexes != null)
-        {
-            var hash = default(TEq).GetHashCode(key);
-
-            var indexMask = (1 << _capacityBitShift) - 1;
-            var hashMiddleMask = HashAndIndexMask & ~indexMask;
-            var hashMiddle = hash & hashMiddleMask;
-            var hashIndex = hash & indexMask;
-
-#if NET7_0_OR_GREATER
-            ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
-#else
-            ref var hashesAndIndexes = ref _packedHashesAndIndexes;
-#endif
-
-            var h = GetHash(ref hashesAndIndexes, hashIndex);
-
-            // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-            var probes = 1;
-            while ((h >>> ProbeCountShift) >= probes)
-            {
-                // 2. For the equal probes check for equality the hash middle part, and update the entry if the keys are equal too 
-                if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
-                {
-                    ref var e = ref _entries.GetSurePresentEntryRef(h & indexMask);
-                    if (default(TEq).Equals(e.Key, key))
-                    {
-                        value = e.Value;
-                        return true;
-                    }
-                }
-
-                h = GetHash(ref hashesAndIndexes, ++hashIndex & indexMask);
-                ++probes;
-            }
-        }
-        value = default;
-        return false;
-    }
-
-    /// <summary>Lookup for the key and get the associated value or the default value if the key is not found</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public V GetValueOrDefault(K key, V defaultValue = default) =>
-        TryGetValue(key, out var value) ? value : defaultValue;
 
     /// <summary>Find and return the index of the `key` in the `TEntries`. If not found return `-1`.
     /// Then you may use method `GetSurePresentValueRef` to access and modify entry value in-place!
@@ -620,16 +522,8 @@ public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
 
     /// <summary>Allows to access and modify the present value in-place</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public ref V GetSurePresentValueRef(int index)
-    {
-        ref var e = ref _entries.GetSurePresentEntryRef(index);
-        return ref e.Value;
-    }
-
-    /// <summary>Returns true if the map contains the `key`</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public bool Contains(K key) => GetEntryIndex(key) != -1;
-
+    public ref V GetSurePresentValueRef(int index) =>
+        ref _entries.GetSurePresentEntryRef(index).Value;
 
     /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
     [MethodImpl((MethodImplOptions)256)]
@@ -701,72 +595,6 @@ public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
         return ref _entries.AddKeyAndGetValueRef(key);
     }
 
-    /// <summary>Same as `GetOrAddValueRef` but provides the value to add or override for the existing key</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public void AddOrUpdate(K key, in V value) =>
-        GetOrAddValueRef(key) = value;
-
-    /// <summary>Removes the hash and entry of the provided key or returns <see langword="false"/></summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public bool TryRemove(K key)
-    {
-        var hash = default(TEq).GetHashCode(key);
-
-        var indexMask = (1 << _capacityBitShift) - 1;
-        var hashMiddleMask = ~indexMask & HashAndIndexMask;
-        var hashMiddle = hash & hashMiddleMask;
-        var hashIndex = hash & indexMask;
-
-#if NET7_0_OR_GREATER
-            ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
-#else
-        var hashesAndIndexes = _packedHashesAndIndexes;
-#endif
-        ref var h = ref GetHashRef(ref hashesAndIndexes, hashIndex);
-
-        var removed = false;
-
-        // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-        var probes = 1;
-        while ((h >>> ProbeCountShift) >= probes)
-        {
-            // 2. For the equal probes check for equality the hash middle part, and update the entry if the keys are equal too 
-            if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
-            {
-                ref var e = ref _entries.GetSurePresentEntryRef(h & indexMask);
-                if (default(TEq).Equals(e.Key, key))
-                {
-                    _entries.TombstoneOrRemoveSurePresentEntry(h & indexMask);
-                    removed = true;
-                    h = 0;
-#if DEBUG
-                    _dbg.RemoveProbes(probes);
-#endif
-                    break;
-                }
-            }
-            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
-            ++probes;
-        }
-
-        if (!removed)
-            return false;
-
-        ref var emptied = ref h;
-        h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
-
-        // move the next hash into the emptied slot until the next hash is empty or ideally positioned (hash is 0 or probe is 1)
-        while ((h >>> ProbeCountShift) > 1)
-        {
-            emptied = (((h >>> ProbeCountShift) - 1) << ProbeCountShift) | (h & HashAndIndexMask); // decrease the probe count by one cause we moving the hash closer to the ideal index
-            h = 0;
-
-            emptied = ref h;
-            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
-        }
-        return true;
-    }
-
     internal int ResizeHashes(int indexMask)
     {
         if (indexMask == 0)
@@ -786,9 +614,9 @@ public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
         var newHashesAndIndexes = new int[oldCapacity << 1];
 
 #if NET7_0_OR_GREATER
-            ref var newHashes = ref MemoryMarshal.GetArrayDataReference(newHashesAndIndexes);
-            ref var oldHashes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
-            var oldHash = oldHashes;
+        ref var newHashes = ref MemoryMarshal.GetArrayDataReference(newHashesAndIndexes);
+        ref var oldHashes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
+        var oldHash = oldHashes;
 #else
         var newHashes = newHashesAndIndexes;
         var oldHashes = _packedHashesAndIndexes;
@@ -829,65 +657,5 @@ public struct FHashMap<K, V, TEq, TEntries> : IReadOnlyCollection<Entry<K, V>>
         ++_capacityBitShift;
         _packedHashesAndIndexes = newHashesAndIndexes;
         return newIndexMask;
-    }
-
-    /// <inheritdoc />
-    [MethodImpl((MethodImplOptions)256)]
-    public Enumerator GetEnumerator() => new(_entries); // prevents the boxing of the enumerator struct
-
-    /// <inheritdoc />
-    IEnumerator<Entry<K, V>> IEnumerable<Entry<K, V>>.GetEnumerator() => GetEnumerator();
-
-    /// <inheritdoc />
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-    /// <summary>Enumerator of the entries in the order of their addition to the map</summary>
-    public struct Enumerator : IEnumerator<Entry<K, V>>
-    {
-        private int _index;
-        private Entry<K, V> _current;
-        private readonly TEntries _entries;
-        private int _countIncludingRemoved;
-        internal Enumerator(TEntries entries)
-        {
-            _index = 0;
-            _current = default;
-            _entries = entries;
-            _countIncludingRemoved = entries.GetCount();
-        }
-
-        /// <summary>Move to the next entry in the order of their addition to the map</summary>
-        [MethodImpl((MethodImplOptions)256)]
-        public bool MoveNext()
-        {
-        skipRemoved:
-            if (_index < _countIncludingRemoved)
-            {
-                ref var e = ref _entries.GetSurePresentEntryRef(_index++);
-                if (!default(TEq).Equals(e.Key, default(TEq).GetTombstone()))
-                {
-                    _current = e;
-                    return true;
-                }
-                ++_countIncludingRemoved;
-                goto skipRemoved;
-            }
-            _current = default;
-            return false;
-        }
-
-        /// <inheritdoc />
-        public Entry<K, V> Current => _current;
-        object IEnumerator.Current => _current;
-
-        void IEnumerator.Reset()
-        {
-            _index = 0;
-            _countIncludingRemoved = _entries.GetCount();
-            _current = default;
-        }
-
-        /// <inheritdoc />
-        public void Dispose() { }
     }
 }

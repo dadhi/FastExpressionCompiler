@@ -507,7 +507,7 @@ namespace FastExpressionCompiler.IssueTests
             [FieldOffset(0)] public Guid Guid;
         }
 
-        public struct CustomProperty
+        public readonly struct CustomProperty
         {
             public CustomProperty(string key, Value value)
             {
@@ -1273,7 +1273,7 @@ namespace FastExpressionCompiler.IssueTests
                 {
 
                     // The block result will be assigned to `result[index0]` {
-                    tempResult = default(Issue261_Loop_wih_conditions_fails.ConstructorTests.Test);
+                    tempResult = default;
                     stream.ReserveSize((int)5);
 
                     if (stream.Read<byte>() == (byte)0)
@@ -1375,7 +1375,7 @@ namespace FastExpressionCompiler.IssueTests
 
             public T Read<T>(Stream outputStream)
             {
-                return typeof(T) == typeof(int) ? (T)(object)2 : default(T); // todo: @mock
+                return typeof(T) == typeof(int) ? (T)(object)2 : default; // todo: @mock
             }
 
             public void Write<T>(T value, Stream outputStream)
@@ -1520,7 +1520,7 @@ namespace FastExpressionCompiler.IssueTests
 
             public T Read<T>() where T : struct
             {
-                return typeof(T) == typeof(int) ? (T)(object)2 : default(T); // todo: @mock
+                return typeof(T) == typeof(int) ? (T)(object)2 : default; // todo: @mock
             }
 
             private static T Read2<T>() where T : struct
