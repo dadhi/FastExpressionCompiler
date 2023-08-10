@@ -610,7 +610,7 @@ namespace FastExpressionCompiler
             public bool LastEmitIsAddress;
 
             /// Tracks the stack of blocks where are we in emit phase
-            private LiveCountArray<BlockInfo> _blockStack;
+            private LiveCountArray<BlockInfo> _blockStack; // todo: @wip can we use the _varInBlockMap instead
 
             public struct BlockAndVarIndex
             {
