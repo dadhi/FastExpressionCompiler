@@ -612,8 +612,20 @@ namespace FastExpressionCompiler
             /// Tracks the stack of blocks where are we in emit phase
             private LiveCountArray<BlockInfo> _blockStack;
 
-            private FHashMap<ParameterExpression, Stack4<Stack4.Item<ushort, ushort>>, RefEq<ParameterExpression>,
-                FHashMap.SingleArrayEntries<ParameterExpression, Stack4<Stack4.Item<ushort, ushort>>, RefEq<ParameterExpression>>> _varInBlockMap;
+            public struct BlockAndVarIndex
+            {
+                public ushort BlockIndex;
+                public ushort VarIndex;
+                public BlockAndVarIndex(ushort blockIndex, ushort varIndex)
+                {
+                    BlockIndex = blockIndex;
+                    VarIndex = varIndex;
+                }
+            }
+            /// Tracks the use of the variables in the blocks stack per variable, to determine if variable is the local variable and when it's defined
+            private FHashMap<ParameterExpression, Stack4<BlockAndVarIndex>, RefEq<ParameterExpression>,
+                FHashMap.SingleArrayEntries<ParameterExpression, Stack4<BlockAndVarIndex>, RefEq<ParameterExpression>>> _varInBlockMap;
+            // private BlockAndVarIndex _var1Blocks, _var2Blocks;
 
             /// Map of the links between Labels and Goto's
             internal LiveCountArray<LabelInfo> Labels;
@@ -887,7 +899,7 @@ namespace FastExpressionCompiler
                 }
 
                 blocks.PeekSurePresentItem(out var it);
-                if (it.Key != blockIndex)
+                if (it.BlockIndex != blockIndex)
                     blocks.Push(new(blockIndex, varIndex));
             }
 
@@ -935,7 +947,7 @@ namespace FastExpressionCompiler
                     if (blocks.Count != 0)
                     {
                         blocks.PeekSurePresentItem(out var it);
-                        return _blockStack.Items[it.Key].VarIndexes[it.Value];
+                        return _blockStack.Items[it.BlockIndex].VarIndexes[it.VarIndex];
                     }
                 }
                 return -1;

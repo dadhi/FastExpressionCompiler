@@ -32,17 +32,6 @@ internal static class Stack4
             Items[index] = item;
         }
     }
-    [DebuggerDisplay("{Key.ToString()}->{Value}")]
-    public struct Item<K, V>
-    {
-        public K Key;
-        public V Value;
-        public Item(K key, V value)
-        {
-            Key = key;
-            Value = value;
-        }
-    }
 }
 
 internal struct Stack4<TItem>
@@ -54,9 +43,11 @@ internal struct Stack4<TItem>
 
     Stack4.HeapItems<TItem> _deepItems;
 
+    [MethodImpl((MethodImplOptions)256)]
     public void Push(in TItem item) =>
         Put(Count++, item);
 
+    [MethodImpl((MethodImplOptions)256)]
     public void Put(ushort index, in TItem item)
     {
         switch (index)
@@ -72,9 +63,11 @@ internal struct Stack4<TItem>
         }
     }
 
+    [MethodImpl((MethodImplOptions)256)]
     public void PeekSurePresentItem(out TItem item) =>
         GetSurePresentItem((ushort)(Count - 1), out item);
 
+    [MethodImpl((MethodImplOptions)256)]
     public void GetSurePresentItem(ushort index, out TItem item)
     {
         Debug.Assert(Count != 0);
@@ -92,6 +85,7 @@ internal struct Stack4<TItem>
         }
     }
 
+    [MethodImpl((MethodImplOptions)256)]
     public void PopSurePresentItem()
     {
         Debug.Assert(Count != 0);
