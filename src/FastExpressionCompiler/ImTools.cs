@@ -24,8 +24,9 @@ internal static class Stack4
         public HeapItems(int capacity = DefaultInitialCapacity) =>
             Items = new TItem[capacity];
 
+        // todo: @wip add Remove method to set the item to `default` tombstone
         [MethodImpl((MethodImplOptions)256)]
-        public void Put(int index, in TItem item)
+        public void Put(int index, in TItem item) // todo: @improve if we removing things by put the `default` value we may see if count is decreased twice so the array may be resized 
         {
             if (index >= Items.Length)
                 Array.Resize(ref Items, Items.Length << 1);
@@ -34,7 +35,7 @@ internal static class Stack4
     }
 }
 
-internal struct Stack4<TItem>
+internal struct Stack4<TItem> // todo: @wip rename to List4 to generalize the thing 
 {
     public int Count;
 
@@ -43,7 +44,7 @@ internal struct Stack4<TItem>
     Stack4.HeapItems<TItem> _deepItems;
 
     [MethodImpl((MethodImplOptions)256)]
-    public void Push(in TItem item) =>
+    public void PushLast(in TItem item) =>
         Put(Count++, item);
 
     [MethodImpl((MethodImplOptions)256)]
@@ -57,13 +58,13 @@ internal struct Stack4<TItem>
             case 3: _it3 = item; break;
             default:
                 _deepItems ??= new Stack4.HeapItems<TItem>();
-                _deepItems.Put(index - 4, item);
+                _deepItems.Put(index - 4, item); // todo: @wip move 4 to the constant in order to simplify of creation of Stack2 or Stack8
                 break;
         }
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public TItem PeekSurePresentItem() =>
+    public TItem PeekLastSurePresentItem() =>
         GetSurePresentItem(Count - 1);
 
     [MethodImpl((MethodImplOptions)256)]
@@ -84,7 +85,7 @@ internal struct Stack4<TItem>
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public void PopSurePresentItem()
+    public void PopLastSurePresentItem()
     {
         Debug.Assert(Count != 0);
         var index = --Count;
@@ -124,7 +125,7 @@ public static class FHashMap
 
     /// <summary>Holds a single entry consisting of key and value. 
     /// Value may be set or changed but the key is set in stone (by construction).</summary>
-    [DebuggerDisplay("{Key.ToString()}->{Value}")]
+    [DebuggerDisplay("{Key?.ToString()}->{Value}")]
     public struct Entry<K, V>
     {
         /// <summary>The readonly key</summary>
@@ -443,7 +444,7 @@ public struct FHashMap<K, V, TEq, TEntries>
     private int[] _packedHashesAndIndexes;
 
 #pragma warning disable IDE0044 // it tries to make entries readonly but they should stay modifyable to prevent its defensive struct copying  
-    private TEntries _entries;
+    internal TEntries _entries;
 #pragma warning restore IDE0044
 
     /// <summary>Capacity bits</summary>
