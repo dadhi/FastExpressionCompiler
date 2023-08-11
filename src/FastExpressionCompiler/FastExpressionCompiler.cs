@@ -577,12 +577,6 @@ namespace FastExpressionCompiler
                 Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
         }
 
-        private struct BlockInfo
-        {
-            public object VarExprs; // ParameterExpression  | IReadOnlyList<PE>
-            public int[] VarIndexes; // todo: @perf do we need them in addition to _varInBlockMap
-        }
-
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
         [Flags]
@@ -609,9 +603,10 @@ namespace FastExpressionCompiler
             /// <summary>Tracks that the last emit was an address</summary>
             public bool LastEmitIsAddress;
 
-            /// Tracks the stack of blocks where are we in emit phase
-            private LiveCountArray<BlockInfo> _blockStack; // todo: @wip can we use the _varInBlockMap instead
+            // Tracks the current block nesting count in the stack of blocks in Collect and Emit phase
+            private ushort _blockCount;
 
+            [DebuggerDisplay("Block:{BlockIndex}, Var:{VarIndex}")]
             public struct BlockAndVarIndex
             {
                 public ushort BlockIndex;
@@ -622,9 +617,11 @@ namespace FastExpressionCompiler
                     VarIndex = varIndex;
                 }
             }
-            /// Tracks the use of the variables in the blocks stack per variable, to determine if variable is the local variable and when it's defined
+            // Tracks the use of the variables in the blocks stack per variable, to determine if variable is the local variable and in what block it's defined
             private FHashMap<PE, Stack4<BlockAndVarIndex>, RefEq<PE>,
                 FHashMap.SingleArrayEntries<PE, Stack4<BlockAndVarIndex>, RefEq<PE>>> _varInBlockMap;
+            // _var1 and _var1Blocks help with preformance for the expression with the single variable to avoid allocating the things on heap with _varInBlockMap.
+            // Even when using the _varInBlockMap for multiple variables we don't duplicate _var1 into it and keep checking it directly.
             private PE _var1;
             private Stack4<BlockAndVarIndex> _var1Blocks;
 
@@ -661,8 +658,7 @@ namespace FastExpressionCompiler
 
                 LastEmitIsAddress = false;
                 CurrentInlinedLambdaInvokeIndex = -1;
-                Labels = new LiveCountArray<LabelInfo>();       // todo: @perf can we use Stack4 instead of LiveCountArray
-                _blockStack = new LiveCountArray<BlockInfo>();  // todo: @perf can we use Stack4 instead of LiveCountArray
+                Labels = new LiveCountArray<LabelInfo>(); // todo: @perf can we use Stack4 instead of LiveCountArray
             }
 
             /// <summary>Populates info directly with provided closure object and constants.
@@ -683,7 +679,6 @@ namespace FastExpressionCompiler
                 LastEmitIsAddress = false;
                 CurrentInlinedLambdaInvokeIndex = -1;
                 Labels = new LiveCountArray<LabelInfo>();
-                _blockStack = new LiveCountArray<BlockInfo>();
             }
 
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
@@ -851,42 +846,32 @@ namespace FastExpressionCompiler
                 return constItems;
             }
 
-            /// LocalVar maybe a `null` in a collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
-            public void PushBlockWithVars(ParameterExpression blockVarExpr)
-            {
-                ref var block = ref _blockStack.PushSlot();
-                block.VarExprs = blockVarExpr;
-                PushVarInBlockMap(blockVarExpr, (ushort)(_blockStack.Count - 1), 0);
-            }
+            /// Local variable index is not known in the collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
+            [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+            public void PushBlockWithVars(ParameterExpression blockVarExpr) =>
+                PushVarInBlockMap(blockVarExpr, _blockCount++, 0);
 
-            public void PushBlockWithVars(ParameterExpression blockVarExpr, int varIndex)
-            {
-                ref var block = ref _blockStack.PushSlot();
-                block.VarExprs = blockVarExpr;
-                block.VarIndexes = new[] { varIndex };
-                PushVarInBlockMap(blockVarExpr, (ushort)(_blockStack.Count - 1), 0);
-            }
+            [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+            public void PushBlockWithVars(ParameterExpression blockVarExpr, int varIndex) =>
+                PushVarInBlockMap(blockVarExpr, _blockCount++, (ushort)varIndex);
 
-            /// LocalVars maybe a `null` in collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
-            public void PushBlockWithVars(IReadOnlyList<PE> blockVarExprs, int[] localVarIndexes = null)
+            [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+            public void PushBlockWithVars(IReadOnlyList<PE> blockVarExprs)
             {
-                ref var block = ref _blockStack.PushSlot();
-                block.VarExprs = blockVarExprs;
-                block.VarIndexes = localVarIndexes;
-
-                var lastBlockIndex = (ushort)(_blockStack.Count - 1);
-                for (ushort j = 0; j < blockVarExprs.Count; j++)
-                    PushVarInBlockMap(blockVarExprs[j], lastBlockIndex, j);
+                for (var i = 0; i < blockVarExprs.Count; i++)
+                    PushVarInBlockMap(blockVarExprs[i], _blockCount, 0);
+                ++_blockCount;
             }
 
             [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
             public void PushBlockAndConstructLocalVars(IReadOnlyList<PE> blockVarExprs, ILGenerator il)
             {
-                var localVars = new int[blockVarExprs.Count]; // todo: @perf do we always need to create an array on heap here?
-                for (var i = 0; i < localVars.Length; i++)
-                    localVars[i] = il.GetNextLocalVarIndex(blockVarExprs[i].Type);
-
-                PushBlockWithVars(blockVarExprs, localVars);
+                for (var i = 0; i < blockVarExprs.Count; i++)
+                {
+                    var varExpr = blockVarExprs[i];
+                    PushVarInBlockMap(varExpr, _blockCount, (ushort)il.GetNextLocalVarIndex(varExpr.Type));
+                }
+                ++_blockCount;
             }
 
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
@@ -894,57 +879,50 @@ namespace FastExpressionCompiler
                 if (_var1 == null)
                 {
                     _var1 = pe;
-                    _var1Blocks.Push(new(blockIndex, varIndex));
+                    _var1Blocks.PushLast(new(blockIndex, varIndex));
                     return;
                 }
 
                 if (ReferenceEquals(_var1, pe))
                 {
-                    if (_var1Blocks.Count == 0 || _var1Blocks.PeekSurePresentItem().BlockIndex != blockIndex)
-                        _var1Blocks.Push(new(blockIndex, varIndex));
+                    if (_var1Blocks.Count == 0 || _var1Blocks.PeekLastSurePresentItem().BlockIndex != blockIndex)
+                        _var1Blocks.PushLast(new(blockIndex, varIndex));
                     return;
                 }
 
                 ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe);
-                if (blocks.Count == 0 || blocks.PeekSurePresentItem().BlockIndex != blockIndex)
-                    blocks.Push(new(blockIndex, varIndex));
+                if (blocks.Count == 0 || blocks.PeekLastSurePresentItem().BlockIndex != blockIndex)
+                    blocks.PushLast(new(blockIndex, varIndex));
             }
 
             public void PopBlock()
             {
-                var varExpr = _blockStack.Items[_blockStack.Count - 1].VarExprs;
-                if (varExpr is PE expr)
-                    PopVarBlock(expr);
-                else if (varExpr is IReadOnlyList<PE> exprs)
-                    for (var i = 0; i < exprs.Count; i++)
-                        PopVarBlock(exprs[i]);
+                Debug.Assert(_blockCount != 0);
+                if (_var1 != null)
+                {
+                    if (_var1Blocks.Count == _blockCount)
+                        _var1Blocks.PopLastSurePresentItem();
+                }
 
-                _blockStack.Pop();
+                var varCount = _varInBlockMap.Count;
+                for (var i = 0; i < varCount; ++i)
+                {
+                    ref var varEntry = ref _varInBlockMap._entries.GetSurePresentEntryRef(i); // todo: @perf maybe improved further by directly enumerating the array
+                    if (varEntry.Value.Count == _blockCount)
+                        varEntry.Value.PopLastSurePresentItem();
+                }
+
+                --_blockCount;
             }
 
-            public void PopVarBlock(PE varExpr)
+            public bool IsLocalVar(ParameterExpression varParamExpr)
             {
-                if (ReferenceEquals(_var1, varExpr))
-                    _var1Blocks.PopSurePresentItem();
-                else
-                {
-                    var blockKey = _varInBlockMap.GetEntryIndex(varExpr);
-                    if (blockKey != -1)
-                        _varInBlockMap.GetSurePresentValueRef(blockKey).PopSurePresentItem();
-                }
-            }
+                if (ReferenceEquals(_var1, varParamExpr))
+                    return _var1Blocks.Count != 0;
 
-            public bool IsLocalVar(object varParamObj)
-            {
-                if (varParamObj is PE varParamExpr)
-                {
-                    if (ReferenceEquals(_var1, varParamExpr))
-                        return _var1Blocks.Count != 0;
-
-                    var blockKey = _varInBlockMap.GetEntryIndex(varParamExpr);
-                    if (blockKey != -1)
-                        return _varInBlockMap.GetSurePresentValueRef(blockKey).Count != 0;
-                }
+                var blockKey = _varInBlockMap.GetEntryIndex(varParamExpr);
+                if (blockKey != -1)
+                    return _varInBlockMap.GetSurePresentValueRef(blockKey).Count != 0;
                 return false;
             }
 
@@ -952,23 +930,17 @@ namespace FastExpressionCompiler
             {
                 if (ReferenceEquals(_var1, varParamExpr))
                 {
-                    if (_var1Blocks.Count != 0)
-                    {
-                        var it = _var1Blocks.PeekSurePresentItem();
-                        return _blockStack.Items[it.BlockIndex].VarIndexes[it.VarIndex];
-                    }
-                    return -1;
+                    Debug.Assert(_var1Blocks.Count != 0);
+                    return _var1Blocks.PeekLastSurePresentItem().VarIndex;
+
                 }
 
                 var blockKey = _varInBlockMap.GetEntryIndex(varParamExpr);
                 if (blockKey != -1)
                 {
                     ref var blocks = ref _varInBlockMap.GetSurePresentValueRef(blockKey);
-                    if (blocks.Count != 0)
-                    {
-                        var it = blocks.PeekSurePresentItem();
-                        return _blockStack.Items[it.BlockIndex].VarIndexes[it.VarIndex];
-                    }
+                    Debug.Assert(blocks.Count != 0);
+                    return blocks.PeekLastSurePresentItem().VarIndex;
                 }
                 return -1;
             }
@@ -1228,12 +1200,13 @@ namespace FastExpressionCompiler
                             // if parameter is used BUT is not in passed parameters and not in local variables,
                             // it means parameter is provided by outer lambda and should be put in closure for current lambda
                             var p = paramCount - 1;
-                            while (p != -1 && !ReferenceEquals(paramExprs.GetParameter(p), expr)) --p;
-                            if (p == -1 && !closure.IsLocalVar(expr))
+                            var parExpr = (PE)expr;
+                            while (p != -1 && !ReferenceEquals(paramExprs.GetParameter(p), parExpr)) --p;
+                            if (p == -1 && !closure.IsLocalVar(parExpr))
                             {
                                 if (!isNestedLambda)
                                     return false;
-                                closure.AddNonPassedParam((ParameterExpression)expr);
+                                closure.AddNonPassedParam(parExpr);
                             }
                             return true;
                         }
@@ -5891,7 +5864,7 @@ namespace FastExpressionCompiler
         public static int GetNextLocalVarIndex(this ILGenerator il, Type t)
         {
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
-            if (!LocalVarUsage.ContainsKey(t))
+            if (!LocalVarUsage.ContainsKey(t)) // todo: @perf use FHashMap?
                 LocalVarUsage[t] = 1;
             else 
                 ++LocalVarUsage[t];
