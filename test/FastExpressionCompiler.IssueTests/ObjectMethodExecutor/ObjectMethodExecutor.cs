@@ -26,12 +26,7 @@ namespace Microsoft.Extensions.Internal
 
         private ObjectMethodExecutor(MethodInfo methodInfo, TypeInfo targetTypeInfo, object[] parameterDefaultValues)
         {
-            if (methodInfo == null)
-            {
-                throw new ArgumentNullException(nameof(methodInfo));
-            }
-
-            MethodInfo = methodInfo;
+            MethodInfo = methodInfo ?? throw new ArgumentNullException(nameof(methodInfo));
             MethodParameters = methodInfo.GetParameters();
             TargetTypeInfo = targetTypeInfo;
             MethodReturnType = methodInfo.ReturnType;
