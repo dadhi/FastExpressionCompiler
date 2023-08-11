@@ -64,10 +64,6 @@ internal struct Stack4<TItem> // todo: @wip rename to List4 to generalize the th
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public TItem PeekLastSurePresentItem() =>
-        GetSurePresentItem(Count - 1);
-
-    [MethodImpl((MethodImplOptions)256)]
     public TItem GetSurePresentItem(int index)
     {
         Debug.Assert(Count != 0);
@@ -83,6 +79,10 @@ internal struct Stack4<TItem> // todo: @wip rename to List4 to generalize the th
                 return _deepItems.Items[index - 4];
         }
     }
+
+    [MethodImpl((MethodImplOptions)256)]
+    public TItem PeekLastSurePresentItem() =>
+        GetSurePresentItem(Count - 1);
 
     [MethodImpl((MethodImplOptions)256)]
     public void PopLastSurePresentItem()
