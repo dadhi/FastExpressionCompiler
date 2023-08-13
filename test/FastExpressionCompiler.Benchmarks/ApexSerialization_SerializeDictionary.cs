@@ -54,6 +54,13 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 | CompileFast |  21.04 us | 0.391 us |  0.799 us |  20.78 us |  1.00 |    0.00 | 1.2512 | 1.2207 |   7.74 KB |        1.00 |
 |  CompileSys | 502.21 us | 9.973 us | 25.384 us | 492.00 us | 24.03 |    1.59 | 3.9063 | 2.9297 |  27.55 KB |        3.56 |
 
+## Labels mem cutoff
+
+|      Method |      Mean |    Error |   StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+|------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|----------:|------------:|
+| CompileFast |  21.31 us | 0.425 us | 0.767 us |  1.00 |    0.00 | 1.1597 | 1.0986 |   7.39 KB |        1.00 |
+|  CompileSys | 495.55 us | 9.369 us | 8.305 us | 22.87 |    0.83 | 3.9063 | 2.9297 |  27.41 KB |        3.71 |
+
 */
         [MemoryDiagnoser]
         public class Compile

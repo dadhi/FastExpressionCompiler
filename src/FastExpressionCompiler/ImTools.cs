@@ -14,28 +14,60 @@ namespace FastExpressionCompiler.ImTools;
 
 using static FHashMap;
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 internal static class Stack4
 {
     public sealed class HeapItems<TItem>
     {
-        internal const int DefaultInitialCapacity = 4;
-
         public TItem[] Items;
-        public HeapItems(int capacity = DefaultInitialCapacity) =>
+        public HeapItems(int capacity) =>
             Items = new TItem[capacity];
 
-        // todo: @wip add Remove method to set the item to `default` tombstone
         [MethodImpl((MethodImplOptions)256)]
-        public void Put(int index, in TItem item) // todo: @improve if we removing things by put the `default` value we may see if count is decreased twice so the array may be resized 
+        public void Put(int index, in TItem item)
         {
             if (index >= Items.Length)
                 Array.Resize(ref Items, Items.Length << 1);
             Items[index] = item;
         }
+
+        // todo: @improve Add explicit Remove method and think if count is decreased twice so the array may be resized
+        [MethodImpl((MethodImplOptions)256)]
+        public void PutDefault(int index)
+        {
+            if (index >= Items.Length)
+                Array.Resize(ref Items, Items.Length << 1);
+        }
     }
 }
 
-internal struct Stack4<TItem> // todo: @wip rename to List4 to generalize the thing 
+// here goes the LenseMan ;-)
+
+/// <summary>Processes the `TItem` by-ref with the some (optional) state `A` returning result `R`.
+/// The implementation of it supposesed to be struct so that the only method may be inlined</summary>
+public interface IGetRef<TItem, A, R>
+{
+    /// <summary>Process `it` with state `a` returning `R`</summary>
+    R Get(ref TItem it, in A a);
+}
+
+/// <summary>Processes the `TItem` by-ref with the some (optional) state `A`.
+/// The implementation of it supposesed to be struct so that the only method may be inlined</summary>
+public interface ISetRef<TItem, A>
+{
+    /// <summary>Process `it` with state `a`</summary>
+    void Set(ref TItem it, in A a);
+}
+
+#pragma warning disable IDE1006
+#pragma warning disable CS8981
+/// <summary>Represents a no value</summary>
+public readonly struct xo { }
+#pragma warning restore IDE1006
+#pragma warning restore CS8981
+
+public struct Stack4<TItem> // todo: @wip rename to List4 to generalize the thing 
 {
     public int Count;
 
@@ -43,9 +75,7 @@ internal struct Stack4<TItem> // todo: @wip rename to List4 to generalize the th
 
     Stack4.HeapItems<TItem> _deepItems;
 
-    [MethodImpl((MethodImplOptions)256)]
-    public void PushLast(in TItem item) =>
-        Put(Count++, item);
+    public TItem[] DebugDeepItems => _deepItems.Items; // todo: @note for debug/benchmarking only
 
     [MethodImpl((MethodImplOptions)256)]
     public void Put(int index, in TItem item)
@@ -57,8 +87,45 @@ internal struct Stack4<TItem> // todo: @wip rename to List4 to generalize the th
             case 2: _it2 = item; break;
             case 3: _it3 = item; break;
             default:
-                _deepItems ??= new Stack4.HeapItems<TItem>();
-                _deepItems.Put(index - 4, item); // todo: @wip move 4 to the constant in order to simplify of creation of Stack2 or Stack8
+                _deepItems ??= new Stack4.HeapItems<TItem>(4);
+                _deepItems.Put(index - 4, in item);
+                break;
+        }
+    }
+
+    [MethodImpl((MethodImplOptions)256)]
+    public void PushLast(in TItem item) =>
+        Put(Count++, item);
+
+    [MethodImpl((MethodImplOptions)256)]
+    public void PushLastDefault()
+    {
+        if (++Count >= 4)
+        {
+            if (_deepItems == null)
+                _deepItems = new Stack4.HeapItems<TItem>(4);
+            else
+                _deepItems.PutDefault(Count - 4);
+        }
+    }
+
+    [MethodImpl((MethodImplOptions)256)]
+    public void PushLastDefault<TSetRef, A>(in A a, TSetRef setter = default)
+        where TSetRef : struct, ISetRef<TItem, A>
+    {
+        var index = Count++;
+        switch (index)
+        {
+            case 0: setter.Set(ref _it0, in a); break;
+            case 1: setter.Set(ref _it1, in a); break;
+            case 2: setter.Set(ref _it2, in a); break;
+            case 3: setter.Set(ref _it3, in a); break;
+            default:
+                if (_deepItems == null)
+                    _deepItems = new Stack4.HeapItems<TItem>(4);
+                else
+                    _deepItems.PutDefault(index - 4);
+                setter.Set(ref _deepItems.Items[index - 4], in a);
                 break;
         }
     }
@@ -77,6 +144,24 @@ internal struct Stack4<TItem> // todo: @wip rename to List4 to generalize the th
             default:
                 Debug.Assert(_deepItems != null, $"Expecting a deeper parent stack created before accessing it here at level {index}");
                 return _deepItems.Items[index - 4];
+        }
+    }
+
+    [MethodImpl((MethodImplOptions)256)]
+    public R GetSurePresentItem<TGetRef, A, R>(int index, in A a, TGetRef getter = default)
+        where TGetRef : struct, IGetRef<TItem, A, R>
+    {
+        Debug.Assert(Count != 0);
+        Debug.Assert(index < Count);
+        switch (index)
+        {
+            case 0: return getter.Get(ref _it0, in a);
+            case 1: return getter.Get(ref _it1, in a);
+            case 2: return getter.Get(ref _it2, in a);
+            case 3: return getter.Get(ref _it3, in a);
+            default:
+                Debug.Assert(_deepItems != null, $"Expecting a deeper parent stack created before accessing it here at level {index}");
+                return getter.Get(ref _deepItems.Items[index - 4], in a);
         }
     }
 
