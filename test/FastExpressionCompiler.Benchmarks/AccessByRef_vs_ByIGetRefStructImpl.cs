@@ -19,14 +19,21 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 |-------------------- |---------:|----------:|----------:|------:|--------:|----------:|------------:|
 |         AccessByRef | 5.079 ns | 0.1242 ns | 0.1820 ns |  1.00 |    0.00 |         - |          NA |
 | ByIGetRefStructImpl | 5.034 ns | 0.1238 ns | 0.2325 ns |  0.99 |    0.05 |         - |          NA |
+
+## Still no inlining of the static local metods :(
+
+|                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Allocated | Alloc Ratio |
+|----------------------- |----------:|----------:|----------:|------:|--------:|----------:|------------:|
+|            AccessByRef |  4.900 ns | 0.1073 ns | 0.0952 ns |  1.00 |    0.00 |         - |          NA |
+| StaticMethodAsDelegate | 17.237 ns | 0.2382 ns | 0.1859 ns |  3.52 |    0.09 |         - |          NA |
 */
 
 [MemoryDiagnoser]
-public class CompareAccessByRefAndByIGetRefStructImpl
+public class AccessByRef_vs_ByIGetRefStructImpl
 {
     private readonly Stack4<LabelInfo> Labels;
 
-    public CompareAccessByRefAndByIGetRefStructImpl()
+    public AccessByRef_vs_ByIGetRefStructImpl()
     {
         for (var i = 0; i < 8; ++i)
             Labels.PushLastDefault();
@@ -42,12 +49,26 @@ public class CompareAccessByRefAndByIGetRefStructImpl
         }
     }
 
-    [Benchmark]
+    // [Benchmark]
     public void ByIGetRefStructImpl()
     {
         for (short i = 3; i < 8; ++i)
             Labels.GetSurePresentItem<SetInlinedLambdaInvokeIndex, short, xo>(i, i);
     }
+
+    // [Benchmark]
+    // public void StaticMethodAsDelegate()
+    // {
+    //     for (short i = 3; i < 8; ++i)
+    //         Labels.GetSurePresentItem(i, i, Handle);
+
+    //     [MethodImpl((MethodImplOptions)256)]
+    //     static xo Handle(ref LabelInfo it, in short n)
+    //     {
+    //         it.InlinedLambdaInvokeIndex = n;
+    //         return default;
+    //     }
+    // }
 
     public struct SetInlinedLambdaInvokeIndex : IHandleRef<LabelInfo, short, xo>
     {

@@ -2355,7 +2355,7 @@ namespace FastExpressionCompiler
             {
                 // For TryCatch get the variable for saving the result from the LabelInfo store the return expression result into the that variable.
                 // Emit OpCodes.Leave or OpCodes.Br to the special label with the result which should be marked after the label to jump over its default value
-               [MethodImpl((MethodImplOptions)256)]
+                [MethodImpl((MethodImplOptions)256)]
                 public xo Handle(ref LabelInfo it, in (ILGenerator il, Expression gotoValue, OpCode returnOpCode) a)
                 {
                     var varIndex = (short)(it.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1;
