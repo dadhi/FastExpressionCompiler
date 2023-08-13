@@ -49,10 +49,10 @@ public class CompareAccessByRefAndByIGetRefStructImpl
             Labels.GetSurePresentItem<SetInlinedLambdaInvokeIndex, short, xo>(i, i);
     }
 
-    public struct SetInlinedLambdaInvokeIndex : IGetRef<LabelInfo, short, xo>
+    public struct SetInlinedLambdaInvokeIndex : IHandleRef<LabelInfo, short, xo>
     {
         [MethodImpl((MethodImplOptions)256)]
-        public xo Get(ref LabelInfo it, in short n)
+        public xo Handle(ref LabelInfo it, in short n)
         {
             it.InlinedLambdaInvokeIndex = n;
             return default;

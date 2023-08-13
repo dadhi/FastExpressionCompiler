@@ -12,12 +12,13 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             RunAllTests();
-
             new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
-            
+
+            // new Issue261_Loop_wih_conditions_fails().Run();
+            // new Issue293_Recursive_Methods().Run();
+
             // new FastExpressionCompiler.IssueTests.Issue159_NumericConversions().Run();
             // new Issue357_Invalid_program_exception().Run();
-            // new Issue293_Recursive_Methods().Run();
             // new FastExpressionCompiler.LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run();
 
@@ -194,7 +195,7 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue251_Bad_code_gen_for_byRef_parameters().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters().Run);
-      
+
                 Run(new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
 
@@ -265,7 +266,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
 
                 Run(new Issue357_Invalid_program_exception().Run);
-                
+
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

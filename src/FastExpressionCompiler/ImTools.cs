@@ -1,3 +1,5 @@
+#define BENCHMARK
+
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -46,19 +48,12 @@ internal static class Stack4
 
 /// <summary>Processes the `TItem` by-ref with the some (optional) state `A` returning result `R`.
 /// The implementation of it supposesed to be struct so that the only method may be inlined</summary>
-public interface IGetRef<TItem, A, R>
+public interface IHandleRef<TItem, A, R>
 {
     /// <summary>Process `it` with state `a` returning `R`</summary>
-    R Get(ref TItem it, in A a);
+    R Handle(ref TItem it, in A a);
 }
 
-/// <summary>Processes the `TItem` by-ref with the some (optional) state `A`.
-/// The implementation of it supposesed to be struct so that the only method may be inlined</summary>
-public interface ISetRef<TItem, A>
-{
-    /// <summary>Process `it` with state `a`</summary>
-    void Set(ref TItem it, in A a);
-}
 
 #pragma warning disable IDE1006
 #pragma warning disable CS8981
@@ -67,7 +62,7 @@ public readonly struct xo { }
 #pragma warning restore IDE1006
 #pragma warning restore CS8981
 
-public struct Stack4<TItem> // todo: @wip rename to List4 to generalize the thing 
+public struct Stack4<TItem> // todo: @wip rename to List4 to generalize the thing
 {
     public int Count;
 
@@ -75,7 +70,9 @@ public struct Stack4<TItem> // todo: @wip rename to List4 to generalize the thin
 
     Stack4.HeapItems<TItem> _deepItems;
 
+#if BENCHMARK
     public TItem[] DebugDeepItems => _deepItems.Items; // todo: @note for debug/benchmarking only
+#endif
 
     [MethodImpl((MethodImplOptions)256)]
     public void Put(int index, in TItem item)
@@ -110,23 +107,22 @@ public struct Stack4<TItem> // todo: @wip rename to List4 to generalize the thin
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public void PushLastDefault<TSetRef, A>(in A a, TSetRef setter = default)
-        where TSetRef : struct, ISetRef<TItem, A>
+    public R PushLastDefault<THandleRef, A, R>(in A a, THandleRef setter = default)
+        where THandleRef : struct, IHandleRef<TItem, A, R>
     {
         var index = Count++;
         switch (index)
         {
-            case 0: setter.Set(ref _it0, in a); break;
-            case 1: setter.Set(ref _it1, in a); break;
-            case 2: setter.Set(ref _it2, in a); break;
-            case 3: setter.Set(ref _it3, in a); break;
+            case 0: return setter.Handle(ref _it0, in a);
+            case 1: return setter.Handle(ref _it1, in a);
+            case 2: return setter.Handle(ref _it2, in a);
+            case 3: return setter.Handle(ref _it3, in a);
             default:
                 if (_deepItems == null)
                     _deepItems = new Stack4.HeapItems<TItem>(4);
                 else
                     _deepItems.PutDefault(index - 4);
-                setter.Set(ref _deepItems.Items[index - 4], in a);
-                break;
+                return setter.Handle(ref _deepItems.Items[index - 4], in a);
         }
     }
 
@@ -149,19 +145,19 @@ public struct Stack4<TItem> // todo: @wip rename to List4 to generalize the thin
 
     [MethodImpl((MethodImplOptions)256)]
     public R GetSurePresentItem<TGetRef, A, R>(int index, in A a, TGetRef getter = default)
-        where TGetRef : struct, IGetRef<TItem, A, R>
+        where TGetRef : struct, IHandleRef<TItem, A, R>
     {
         Debug.Assert(Count != 0);
         Debug.Assert(index < Count);
         switch (index)
         {
-            case 0: return getter.Get(ref _it0, in a);
-            case 1: return getter.Get(ref _it1, in a);
-            case 2: return getter.Get(ref _it2, in a);
-            case 3: return getter.Get(ref _it3, in a);
+            case 0: return getter.Handle(ref _it0, in a);
+            case 1: return getter.Handle(ref _it1, in a);
+            case 2: return getter.Handle(ref _it2, in a);
+            case 3: return getter.Handle(ref _it3, in a);
             default:
                 Debug.Assert(_deepItems != null, $"Expecting a deeper parent stack created before accessing it here at level {index}");
-                return getter.Get(ref _deepItems.Items[index - 4], in a);
+                return getter.Handle(ref _deepItems.Items[index - 4], in a);
         }
     }
 
