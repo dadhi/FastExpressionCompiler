@@ -6,12 +6,15 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
+            // BenchmarkRunner.Run<CompareAccessByRefAndByIGetRefStructImpl>();
+
+            BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
+
             // BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
 
             // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
             // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
 
-            BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
             // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();
 
             // BenchmarkRunner.Run<ReflectionInvoke_vs_CallWithObjectArgsAndNestedLambda>();
