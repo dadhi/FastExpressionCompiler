@@ -20,6 +20,12 @@ using static FHashMap;
 
 internal static class Stack4
 {
+    // todo: @wip does not work for non-readonly fields CS88334
+    // public static ref TItem GetFirstItemRef<TItem>(this in Stack4<TItem> s) => ref s._it0;
+
+    // todo: @wip works but I need the writable field
+    public static ref readonly TItem GetFirstItemRef<TItem>(this in Stack4<TItem> s) => ref s._it0;
+
     public sealed class HeapItems<TItem>
     {
         public TItem[] Items;
@@ -54,6 +60,13 @@ public interface IHandleRef<TItem, A, R>
     R Handle(ref TItem it, in A a);
 }
 
+/// <summary></summary>
+public interface ICheckRef<TItem, A, R>
+{
+    /// <summary></summary>
+    bool Check(ref TItem it, in A a, out R r);
+}
+
 
 #pragma warning disable IDE1006
 #pragma warning disable CS8981
@@ -62,17 +75,18 @@ public readonly struct xo { }
 #pragma warning restore IDE1006
 #pragma warning restore CS8981
 
-public struct Stack4<TItem> // todo: @wip rename to List4 to generalize the thing
+public struct Stack4<TItem>
 {
     public int Count;
-
-    TItem _it0, _it1, _it2, _it3;
-
+    internal TItem _it0, _it1, _it2, _it3;
     Stack4.HeapItems<TItem> _deepItems;
 
 #if BENCHMARK
     public TItem[] DebugDeepItems => _deepItems.Items; // todo: @note for debug/benchmarking only
 #endif
+
+    // todo: @wip does not work, CS8170 
+    // public ref TItem GetFirstItemRef() => ref _it0;
 
     [MethodImpl((MethodImplOptions)256)]
     public void Put(int index, in TItem item)
@@ -144,26 +158,113 @@ public struct Stack4<TItem> // todo: @wip rename to List4 to generalize the thin
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public R GetSurePresentItem<TGetRef, A, R>(int index, in A a, TGetRef getter = default)
-        where TGetRef : struct, IHandleRef<TItem, A, R>
+    public R GetSurePresentItem<THandler, A, R>(int index, in A a, THandler handler = default)
+        where THandler : struct, IHandleRef<TItem, A, R>
     {
         Debug.Assert(Count != 0);
         Debug.Assert(index < Count);
         switch (index)
         {
-            case 0: return getter.Handle(ref _it0, in a);
-            case 1: return getter.Handle(ref _it1, in a);
-            case 2: return getter.Handle(ref _it2, in a);
-            case 3: return getter.Handle(ref _it3, in a);
+            case 0: return handler.Handle(ref _it0, in a);
+            case 1: return handler.Handle(ref _it1, in a);
+            case 2: return handler.Handle(ref _it2, in a);
+            case 3: return handler.Handle(ref _it3, in a);
             default:
                 Debug.Assert(_deepItems != null, $"Expecting a deeper parent stack created before accessing it here at level {index}");
-                return getter.Handle(ref _deepItems.Items[index - 4], in a);
+                return handler.Handle(ref _deepItems.Items[index - 4], in a);
         }
     }
 
     [MethodImpl((MethodImplOptions)256)]
     public TItem PeekLastSurePresentItem() =>
         GetSurePresentItem(Count - 1);
+
+    [MethodImpl((MethodImplOptions)256)]
+    public bool Find<TCheck, A, R>(in A a, out R r, TCheck check = default)
+        where TCheck : struct, ICheckRef<TItem, A, R>
+    {
+        switch (Count)
+        {
+            case 0: break;
+            case 1:
+                return check.Check(ref _it0, in a, out r);
+            case 2:
+                return
+                    check.Check(ref _it0, in a, out r) ||
+                    check.Check(ref _it1, in a, out r);
+            case 3:
+                return
+                    check.Check(ref _it0, in a, out r) ||
+                    check.Check(ref _it1, in a, out r) ||
+                    check.Check(ref _it2, in a, out r);
+            case 4:
+                return
+                    check.Check(ref _it0, in a, out r) ||
+                    check.Check(ref _it1, in a, out r) ||
+                    check.Check(ref _it2, in a, out r) ||
+                    check.Check(ref _it3, in a, out r);
+            default:
+                var items = _deepItems.Items;
+                var count = Count - 4;
+                for (var i = 0; i < count; ++i)
+                    if (check.Check(ref items[i], in a, out r))
+                        return true;
+                break;
+        }
+        r = default;
+        return false;
+    }
+
+    [MethodImpl((MethodImplOptions)256)]
+    public bool FindOrAdd<TCheck, TAdd, A, B, R>(in A a, in B b, out R r, TCheck check = default, TAdd add = default)
+        where TCheck : struct, ICheckRef<TItem, A, R>
+        where TAdd : struct, IHandleRef<TItem, B, R>
+    {
+        switch (Count)
+        {
+            case 0:
+                r = add.Handle(ref _it0, in b);
+                break;
+            case 1:
+                if (check.Check(ref _it0, in a, out r))
+                    return true;
+                r = add.Handle(ref _it1, in b);
+                break;
+            case 2:
+                if (check.Check(ref _it0, in a, out r) ||
+                    check.Check(ref _it1, in a, out r))
+                    return true;
+                r = add.Handle(ref _it2, in b);
+                break;
+            case 3:
+                if (check.Check(ref _it0, in a, out r) ||
+                    check.Check(ref _it1, in a, out r) ||
+                    check.Check(ref _it2, in a, out r))
+                    return true;
+                r = add.Handle(ref _it3, in b);
+                break;
+            case 4:
+                if (check.Check(ref _it0, in a, out r) ||
+                    check.Check(ref _it1, in a, out r) ||
+                    check.Check(ref _it2, in a, out r) ||
+                    check.Check(ref _it3, in a, out r))
+                    return true;
+                _deepItems = new Stack4.HeapItems<TItem>(4);
+                r = add.Handle(ref _deepItems.Items[0], in b);
+                break;
+            default:
+                var items = _deepItems.Items;
+                var count = Count - 4;
+                for (var i = 0; i < count; ++i)
+                    if (check.Check(ref items[i], in a, out r))
+                        return true;
+                _deepItems.PutDefault(count);
+                r = add.Handle(ref _deepItems.Items[count], in b);
+                break;
+        }
+        ++Count;
+        return false;
+    }
 
     [MethodImpl((MethodImplOptions)256)]
     public void PopLastSurePresentItem()
