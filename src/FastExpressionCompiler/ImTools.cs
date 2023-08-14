@@ -27,7 +27,7 @@ internal static class Stack4
             Items = new TItem[capacity];
 
         [MethodImpl((MethodImplOptions)256)]
-        public void Put(int index, in TItem item)
+        public void Add(int index, in TItem item)
         {
             if (index >= Items.Length)
                 Array.Resize(ref Items, Items.Length << 1);
@@ -36,14 +36,14 @@ internal static class Stack4
 
         // todo: @improve Add explicit Remove method and think if count is decreased twice so the array may be resized
         [MethodImpl((MethodImplOptions)256)]
-        public void PutDefault(int index)
+        public void AddDefault(int index)
         {
             if (index >= Items.Length)
                 Array.Resize(ref Items, Items.Length << 1);
         }
 
         [MethodImpl((MethodImplOptions)256)]
-        public ref TItem PutDefaultAndGetRef(int index)
+        public ref TItem AddDefaultAndGetRef(int index)
         {
             if (index >= Items.Length)
                 Array.Resize(ref Items, Items.Length << 1);
@@ -84,7 +84,7 @@ internal static class Stack4
             case 3: return ref source._it3;
             default:
                 if (source._deepItems != null)
-                    return ref source._deepItems.PutDefaultAndGetRef(index - 4);
+                    return ref source._deepItems.AddDefaultAndGetRef(index - 4);
                 source._deepItems = new HeapItems<TItem>(4);
                 return ref source._deepItems.Items[0];
         }
@@ -104,7 +104,7 @@ public struct Stack4<TItem>
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public void Put(int index, in TItem item)
+    public void PutOrAdd(int index, in TItem item)
     {
         switch (index)
         {
@@ -113,15 +113,20 @@ public struct Stack4<TItem>
             case 2: _it2 = item; break;
             case 3: _it3 = item; break;
             default:
-                _deepItems ??= new Stack4.HeapItems<TItem>(4);
-                _deepItems.Put(index - 4, in item);
+                if (_deepItems != null)
+                    _deepItems.Add(index - 4, in item);
+                else
+                {
+                    _deepItems = new Stack4.HeapItems<TItem>(4);
+                    _deepItems.Items[index - 4] = item;
+                }
                 break;
         }
     }
 
     [MethodImpl((MethodImplOptions)256)]
     public void PushLast(in TItem item) =>
-        Put(_count++, item);
+        PutOrAdd(_count++, item);
 
     [MethodImpl((MethodImplOptions)256)]
     public void PushLastDefault()
@@ -131,7 +136,7 @@ public struct Stack4<TItem>
             if (_deepItems == null)
                 _deepItems = new Stack4.HeapItems<TItem>(4);
             else
-                _deepItems.PutDefault(_count - 4);
+                _deepItems.AddDefault(_count - 4);
         }
     }
 
@@ -148,7 +153,7 @@ public struct Stack4<TItem>
             case 3: _it3 = default; break;
             default:
                 Debug.Assert(_deepItems != null, $"Expecting a deeper parent stack created before accessing it here at level {index}");
-                _deepItems.Put(index - 4, default);
+                _deepItems.Items[index - 4] = default;
                 break;
         }
     }
