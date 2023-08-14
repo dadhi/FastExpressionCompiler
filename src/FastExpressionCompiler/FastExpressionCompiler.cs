@@ -752,7 +752,9 @@ namespace FastExpressionCompiler
             public void AddLabel(LabelTarget labelTarget, short inlinedLambdaInvokeIndex = -1)
             {
                 // skip null labelTargets, e.g. it may be the case for LoopExpression.Continue
-                if (labelTarget != null && GetLabelOrInvokeIndexByTarget(labelTarget) == -1)
+                if (labelTarget == null)
+                    return;
+                if (GetLabelOrInvokeIndexByTarget(labelTarget) == -1)
                 {
                     LabelTargets.PushLast(labelTarget);
                     ref var label = ref Labels.PushLastDefaultAndGetRef();
