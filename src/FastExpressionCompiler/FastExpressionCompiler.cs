@@ -597,19 +597,6 @@ namespace FastExpressionCompiler
             public short InlinedLambdaInvokeIndex;
         }
 
-        internal struct HandleInlinedLambdaInvokeIndex : IHandleRef<LabelInfo, xo, short>, IHandleRef<LabelInfo, short, xo>
-        {
-            [MethodImpl((MethodImplOptions)256)]
-            public short Handle(ref LabelInfo it, in xo _) => it.InlinedLambdaInvokeIndex;
-
-            [MethodImpl((MethodImplOptions)256)]
-            public xo Handle(ref LabelInfo it, in short a)
-            {
-                it.InlinedLambdaInvokeIndex = a;
-                return default;
-            }
-        }
-
         /// Track the info required to build a closure object + some context information not directly related to closure.
         public struct ClosureInfo
         {
@@ -757,7 +744,7 @@ namespace FastExpressionCompiler
             {
                 var count = LabelTargets.Count;
                 for (var i = 0; i < count; ++i)
-                    if (LabelTargets.GetSurePresentItem(i) == labelTarget)
+                    if (LabelTargets.GetSurePresentItemRef(i) == labelTarget)
                         return i;
                 return -1;
             }
@@ -768,7 +755,8 @@ namespace FastExpressionCompiler
                 if (labelTarget != null && GetLabelOrInvokeIndexByTarget(labelTarget) == -1)
                 {
                     LabelTargets.PushLast(labelTarget);
-                    Labels.PushLastDefault<HandleInlinedLambdaInvokeIndex, short, xo>(inlinedLambdaInvokeIndex);
+                    ref var label = ref Labels.PushLastDefaultAndGetRef();
+                    label.InlinedLambdaInvokeIndex = inlinedLambdaInvokeIndex;
                 }
             }
 
@@ -784,41 +772,28 @@ namespace FastExpressionCompiler
                 return (short)index;
             }
 
-            struct HandleGetDefinedLabel : IHandleRef<LabelInfo, ILGenerator, Label>
+            public Label GetDefinedLabel(int index, ILGenerator il)
             {
-                [MethodImpl((MethodImplOptions)256)]
-                public Label Handle(ref LabelInfo it, in ILGenerator il)
+                ref var label = ref Labels.GetSurePresentItemRef(index);
+                if ((label.ReturnVariableIndexPlusOneAndIsDefined & 1) == 0)
                 {
-                    if ((it.ReturnVariableIndexPlusOneAndIsDefined & 1) == 0)
-                    {
-                        it.ReturnVariableIndexPlusOneAndIsDefined |= 1;
-                        it.Label = il.DefineLabel();
-                    }
-                    return it.Label;
+                    label.ReturnVariableIndexPlusOneAndIsDefined |= 1;
+                    label.Label = il.DefineLabel();
                 }
+                return label.Label;
             }
 
-            public Label GetDefinedLabel(int index, ILGenerator il) =>
-                Labels.GetSurePresentItem<HandleGetDefinedLabel, ILGenerator, Label>(index, il);
-
-            struct HandleTryMarkDefinedLabel : IHandleRef<LabelInfo, ILGenerator, xo>
+            public void TryMarkDefinedLabel(int index, ILGenerator il)
             {
-                [MethodImpl((MethodImplOptions)256)]
-                public xo Handle(ref LabelInfo it, in ILGenerator il)
+                ref var label = ref Labels.GetSurePresentItemRef(index);
+                if ((label.ReturnVariableIndexPlusOneAndIsDefined & 1) == 1)
+                    il.MarkLabel(label.Label);
+                else
                 {
-                    if ((it.ReturnVariableIndexPlusOneAndIsDefined & 1) == 1)
-                        il.MarkLabel(it.Label);
-                    else
-                    {
-                        it.ReturnVariableIndexPlusOneAndIsDefined |= 1;
-                        il.MarkLabel(it.Label = il.DefineLabel());
-                    }
-                    return default;
+                    label.ReturnVariableIndexPlusOneAndIsDefined |= 1;
+                    il.MarkLabel(label.Label = il.DefineLabel());
                 }
             }
-
-            public xo TryMarkDefinedLabel(int index, ILGenerator il) =>
-                Labels.GetSurePresentItem<HandleTryMarkDefinedLabel, ILGenerator, xo>(index, il);
 
             private static object GetLambdaObject(NestedLambdaInfo nestedLambda) =>
                 nestedLambda.ClosureInfo.NonPassedParameters.Length == 0 ||
@@ -2116,10 +2091,10 @@ namespace FastExpressionCompiler
                                                     var index = closure.GetLabelOrInvokeIndexByTarget(gt.Target);
                                                     if (index == -1)
                                                         return false;
-                                                    var invokeIndex = closure.Labels.GetSurePresentItem<HandleInlinedLambdaInvokeIndex, xo, short>(index, default);
+                                                    var invokeIndex = closure.Labels.GetSurePresentItemRef(index).InlinedLambdaInvokeIndex;
                                                     if (invokeIndex == -1)
                                                         return false;
-                                                    closure.Labels.GetSurePresentItem<HandleGotoValueLabel, (ILGenerator, Expression, OpCode), xo>(invokeIndex, (il, gtOrLabelValue, OpCodes.Br));
+                                                    HandleGotoValueLabel(ref closure.Labels, invokeIndex, il, gtOrLabelValue, OpCodes.Br);
                                                 }
                                                 else
                                                 {
@@ -2307,27 +2282,6 @@ namespace FastExpressionCompiler
                 return indexerPropGetter != null && EmitMethodCallOrVirtualCall(il, indexerPropGetter);
             }
 
-            struct HandleReturnLabel : IHandleRef<LabelInfo, (ILGenerator il, Expression defaultValue, ParentFlags parent), xo>
-            {
-                // Get the TryCatch variable from the LabelInfo - if it is not 0:
-                // first if label has the default value then store into this return variable the defaultValue which is currently on stack
-                // mark the associated TryCatch return label here and load the variable if parent does not ignore the result, otherwise don't load
-                public xo Handle(ref LabelInfo it, in (ILGenerator il, Expression defaultValue, ParentFlags parent) a)
-                {
-                    var returnVariableIndexPlusOne = it.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
-                    if (returnVariableIndexPlusOne != 0)
-                    {
-                        if (a.defaultValue != null)
-                            EmitStoreLocalVariable(a.il, returnVariableIndexPlusOne - 1);
-
-                        a.il.MarkLabel(it.ReturnLabel);
-                        if (!a.parent.IgnoresResult())
-                            EmitLoadLocalVariable(a.il, returnVariableIndexPlusOne - 1);
-                    }
-                    return default;
-                }
-            }
-
 #if LIGHT_EXPRESSION
             private static bool TryEmitLabel(LabelExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
                 CompilerFlags setup, ParentFlags parent)
@@ -2347,28 +2301,34 @@ namespace FastExpressionCompiler
                 if (defaultValue != null)
                     ok = TryEmit(defaultValue, paramExprs, il, ref closure, setup, parent);
 
-                closure.Labels.GetSurePresentItem<HandleReturnLabel, (ILGenerator, Expression, ParentFlags), xo>(index, (il, defaultValue, parent));
+                ref var label = ref closure.Labels.GetSurePresentItemRef(index);
+                var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
+                if (returnVariableIndexPlusOne != 0)
+                {
+                    if (defaultValue != null)
+                        EmitStoreLocalVariable(il, returnVariableIndexPlusOne - 1);
+
+                    il.MarkLabel(label.ReturnLabel);
+                    if (!parent.IgnoresResult())
+                        EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
+                }
                 return ok;
             }
 
-            struct HandleGotoValueLabel : IHandleRef<LabelInfo, (ILGenerator il, Expression gotoValue, OpCode returnOpCode), xo>
+            // For TryCatch get the variable for saving the result from the LabelInfo store the return expression result into the that variable.
+            // Emit OpCodes.Leave or OpCodes.Br to the special label with the result which should be marked after the label to jump over its default value
+            private static void HandleGotoValueLabel(ref Stack4<LabelInfo> labels, int i, ILGenerator il, Expression gotoValue, OpCode returnOpCode)
             {
-                // For TryCatch get the variable for saving the result from the LabelInfo store the return expression result into the that variable.
-                // Emit OpCodes.Leave or OpCodes.Br to the special label with the result which should be marked after the label to jump over its default value
-                [MethodImpl((MethodImplOptions)256)]
-                public xo Handle(ref LabelInfo it, in (ILGenerator il, Expression gotoValue, OpCode returnOpCode) a)
+                ref var label = ref labels.GetSurePresentItemRef(i);
+                var varIndex = (short)(label.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1;
+                if (varIndex == -1)
                 {
-                    var varIndex = (short)(it.ReturnVariableIndexPlusOneAndIsDefined >> 1) - 1;
-                    if (varIndex == -1)
-                    {
-                        varIndex = a.il.GetNextLocalVarIndex(a.gotoValue.Type);
-                        it.ReturnVariableIndexPlusOneAndIsDefined = (short)((varIndex + 1) << 1);
-                        it.ReturnLabel = a.il.DefineLabel();
-                    }
-                    EmitStoreLocalVariable(a.il, varIndex);
-                    a.il.Emit(a.returnOpCode, it.ReturnLabel);
-                    return default;
+                    varIndex = il.GetNextLocalVarIndex(gotoValue.Type);
+                    label.ReturnVariableIndexPlusOneAndIsDefined = (short)((varIndex + 1) << 1);
+                    label.ReturnLabel = il.DefineLabel();
                 }
+                EmitStoreLocalVariable(il, varIndex);
+                il.Emit(returnOpCode, label.ReturnLabel);
             }
 
 #if LIGHT_EXPRESSION
@@ -2409,7 +2369,7 @@ namespace FastExpressionCompiler
                         if ((parent & ParentFlags.TryCatch) != 0)
                         {
                             if (gotoValue != null)
-                                closure.Labels.GetSurePresentItem<HandleGotoValueLabel, (ILGenerator, Expression, OpCode), xo>(index, (il, gotoValue, OpCodes.Leave));
+                                HandleGotoValueLabel(ref closure.Labels, index, il, gotoValue, OpCodes.Leave);
                             else
                                 il.Emit(OpCodes.Leave, closure.GetDefinedLabel(index, il)); // if there is no return value just leave to the original label
                         }
@@ -2417,10 +2377,10 @@ namespace FastExpressionCompiler
                         {
                             if (gotoValue != null)
                             {
-                                var invokeIndex = closure.Labels.GetSurePresentItem<HandleInlinedLambdaInvokeIndex, xo, short>(index, default);
+                                var invokeIndex = closure.Labels.GetSurePresentItemRef(index).InlinedLambdaInvokeIndex;
                                 if (invokeIndex == -1)
                                     return false;
-                                closure.Labels.GetSurePresentItem<HandleGotoValueLabel, (ILGenerator, Expression, OpCode), xo>(invokeIndex, (il, gotoValue, OpCodes.Br));
+                                HandleGotoValueLabel(ref closure.Labels, invokeIndex, il, gotoValue, OpCodes.Br);
                             }
                         }
                         else
@@ -4499,21 +4459,6 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            struct HandleInvokeReturnLabel : IHandleRef<LabelInfo, ILGenerator, xo>
-            {
-                [MethodImpl((MethodImplOptions)256)]
-                public xo Handle(ref LabelInfo it, in ILGenerator il)
-                {
-                    var returnVariableIndexPlusOne = it.ReturnVariableIndexPlusOneAndIsDefined >> 1;
-                    if (returnVariableIndexPlusOne != 0)
-                    {
-                        il.MarkLabel(it.ReturnLabel);
-                        EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
-                    }
-                    return default;
-                }
-            }
-
 #if LIGHT_EXPRESSION
             private static bool TryEmitInvoke(InvocationExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
                 CompilerFlags setup, ParentFlags parent)
@@ -4575,7 +4520,15 @@ namespace FastExpressionCompiler
                         // find if the variable with the result is exist in the label infos
                         var li = closure.GetLabelOrInvokeIndexByTarget(expr);
                         if (li != -1)
-                            closure.Labels.GetSurePresentItem<HandleInvokeReturnLabel, ILGenerator, xo>(li, il);
+                        {
+                            ref var label = ref closure.Labels.GetSurePresentItemRef(li);
+                            var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >> 1;
+                            if (returnVariableIndexPlusOne != 0)
+                            {
+                                il.MarkLabel(label.ReturnLabel);
+                                EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
+                            }
+                        }
                     }
 
                     return true;

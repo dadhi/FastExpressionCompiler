@@ -39,22 +39,22 @@ public class AccessByRef_vs_ByIGetRefStructImpl
             Labels.PushLastDefault();
     }
 
-    [Benchmark(Baseline = true)]
-    public void AccessByRef()
-    {
-        for (short i = 3; i < 8; ++i)
-        {
-            ref var l = ref Labels.DebugDeepItems[i];
-            l.InlinedLambdaInvokeIndex = i;
-        }
-    }
+    // [Benchmark(Baseline = true)]
+    // public void AccessByRef()
+    // {
+    //     for (short i = 3; i < 8; ++i)
+    //     {
+    //         ref var l = ref Labels.DebugDeepItems[i];
+    //         l.InlinedLambdaInvokeIndex = i;
+    //     }
+    // }
 
     // [Benchmark]
-    public void ByIGetRefStructImpl()
-    {
-        for (short i = 3; i < 8; ++i)
-            Labels.GetSurePresentItem<SetInlinedLambdaInvokeIndex, short, xo>(i, i);
-    }
+    // public void ByIGetRefStructImpl()
+    // {
+    //     for (short i = 3; i < 8; ++i)
+    //         Labels.GetSurePresentItem<SetInlinedLambdaInvokeIndex, short, xo>(i, i);
+    // }
 
     // [Benchmark]
     // public void StaticMethodAsDelegate()
@@ -70,13 +70,13 @@ public class AccessByRef_vs_ByIGetRefStructImpl
     //     }
     // }
 
-    public struct SetInlinedLambdaInvokeIndex : IHandleRef<LabelInfo, short, xo>
-    {
-        [MethodImpl((MethodImplOptions)256)]
-        public xo Handle(ref LabelInfo it, in short n)
-        {
-            it.InlinedLambdaInvokeIndex = n;
-            return default;
-        }
-    }
+    // public struct SetInlinedLambdaInvokeIndex : IHandleRef<LabelInfo, short, xo>
+    // {
+    //     [MethodImpl((MethodImplOptions)256)]
+    //     public xo Handle(ref LabelInfo it, in short n)
+    //     {
+    //         it.InlinedLambdaInvokeIndex = n;
+    //         return default;
+    //     }
+    // }
 }
