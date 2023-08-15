@@ -191,7 +191,7 @@ public static class FHashMap
     public struct Entry<K, V>
     {
         /// <summary>The readonly key</summary>
-        public readonly K Key;
+        public K Key;
         /// <summary>The mutable value</summary>
         public V Value;
         /// <summary>Construct with the key and default value</summary>
@@ -303,17 +303,14 @@ public static class FHashMap
         /// <summary>Initializes the entries storage to the specified capacity via the number of <paramref name="capacityBitShift"/> bits in the capacity</summary>
         void Init(byte capacityBitShift);
 
-        /// <summary>Returns the actual number of the stored entries</summary>
-        int GetCount();
-
         /// <summary>Returns the reference to entry by its index, index should map to the present/non-removed entry</summary>
         ref Entry<K, V> GetSurePresentEntryRef(int index);
 
         /// <summary>Adds the key at the "end" of entriesc- so the order of addition is preserved.</summary>
-        ref V AddKeyAndGetValueRef(K key);
+        ref V AddKeyAndGetValueRef(K key, int count);
 
-        /// <summary>Marks the entry as removed `TEq.GetTombstone` or removes it and frees the memory if possible.</summary>
-        void TombstoneOrRemoveSurePresentEntry(int index);
+        /// <summary>@wip</summary>
+        ref V AddWithInitial4(K key4, in Entry<K, V> e0, in Entry<K, V> e1, in Entry<K, V> e2, in Entry<K, V> e3);
     }
 
     internal const int MinEntriesCapacity = 2;
@@ -321,16 +318,11 @@ public static class FHashMap
     /// <summary>Stores the entries in a single dynamically reallocated array</summary>
     public struct SingleArrayEntries<K, V, TEq> : IEntries<K, V, TEq> where TEq : struct, IEq<K>
     {
-        internal int _entryCount;
         internal Entry<K, V>[] _entries;
 
         /// <inheritdoc/>
         public void Init(byte capacityBitShift) =>
             _entries = new Entry<K, V>[1 << capacityBitShift];
-
-        /// <inheritdoc/>
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetCount() => _entryCount;
 
         /// <inheritdoc/>
         [MethodImpl((MethodImplOptions)256)]
@@ -345,35 +337,154 @@ public static class FHashMap
 
         /// <inheritdoc/>
         [MethodImpl((MethodImplOptions)256)]
-        public ref V AddKeyAndGetValueRef(K key)
+        public ref V AddKeyAndGetValueRef(K key, int count)
         {
-            var index = _entryCount;
-            if (index == 0)
-                _entries = new Entry<K, V>[MinEntriesCapacity];
-            else if (index == _entries.Length)
+            if (count == _entries.Length)
             {
 #if DEBUG
-                Debug.WriteLine($"[AllocateEntries] Resize entries: {index} -> {index << 1}");
+                Debug.WriteLine($"[AllocateEntries] Resize entries: {count} -> {count << 1}");
 #endif
-                Array.Resize(ref _entries, index << 1);
+                Array.Resize(ref _entries, count << 1);
             }
 #if NET7_0_OR_GREATER
-            ref var e = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_entries), index);
+            ref var e = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_entries), count);
 #else
-            ref var e = ref _entries[index];
+            ref var e = ref _entries[count];
 #endif
-            ++_entryCount;
             e = new Entry<K, V>(key);
             return ref e.Value;
         }
 
-        /// <summary>Tombstones the entry key</summary>
-        [MethodImpl((MethodImplOptions)256)]
-        public void TombstoneOrRemoveSurePresentEntry(int index)
+        /// <inheritdoc/>
+        public ref V AddWithInitial4(K key4, in Entry<K, V> e0, in Entry<K, V> e1, in Entry<K, V> e2, in Entry<K, V> e3)
         {
-            GetSurePresentEntryRef(index) = new Entry<K, V>(default(TEq).GetTombstone());
-            --_entryCount;
+            _entries = new Entry<K, V>[8];
+            _entries[0] = e0;
+            _entries[1] = e1;
+            _entries[2] = e2;
+            _entries[3] = e3;
+            ref var e4 = ref _entries[4];
+            e4.Key = key4;
+            return ref e4.Value;
         }
+    }
+
+    /// <summary>Finds the stored value by key. If found returns ref to the value it can be modified in place.</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref V TryGetValueRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
+        where TEq : struct, IEq<K>
+        where TEntries : struct, IEntries<K, V, TEq>
+    {
+        if (map._count > 4)
+            return ref map.TryGetValueRefByHash(key, out found);
+        switch (map._count)
+        {
+            case 1:
+                if (found = default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
+                break;
+            case 2:
+                if (found = default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
+                if (found = default(TEq).Equals(key, map._e1.Key)) return ref map._e1.Value;
+                break;
+            case 3:
+                if (found = default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
+                if (found = default(TEq).Equals(key, map._e1.Key)) return ref map._e1.Value;
+                if (found = default(TEq).Equals(key, map._e2.Key)) return ref map._e2.Value;
+                break;
+            case 4:
+                if (found = default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
+                if (found = default(TEq).Equals(key, map._e1.Key)) return ref map._e1.Value;
+                if (found = default(TEq).Equals(key, map._e2.Key)) return ref map._e2.Value;
+                if (found = default(TEq).Equals(key, map._e3.Key)) return ref map._e3.Value;
+                break;
+        }
+        found = false;
+        return ref FHashMap<K, V, TEq, TEntries>._missing.Value;
+    }
+
+    /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref V GetOrAddValueRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key)
+        where TEq : struct, IEq<K>
+        where TEntries : struct, IEntries<K, V, TEq>
+    {
+        if (map._count > 4)
+            return ref map.GetOrAddValueRefByHash(key);
+        switch (map._count)
+        {
+            case 0:
+                ++map._count;
+                map._e0.Key = key;
+                return ref map._e0.Value;
+
+            case 1:
+                if (default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
+                ++map._count;
+                map._e1.Key = key;
+                return ref map._e1.Value;
+
+            case 2:
+                if (default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
+                if (default(TEq).Equals(key, map._e1.Key)) return ref map._e1.Value;
+                ++map._count;
+                map._e2.Key = key;
+                return ref map._e2.Value;
+
+            case 3:
+                if (default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
+                if (default(TEq).Equals(key, map._e1.Key)) return ref map._e1.Value;
+                if (default(TEq).Equals(key, map._e2.Key)) return ref map._e2.Value;
+                ++map._count;
+                map._e3.Key = key;
+                return ref map._e3.Value;
+
+            default:
+                if (default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
+                if (default(TEq).Equals(key, map._e1.Key)) return ref map._e1.Value;
+                if (default(TEq).Equals(key, map._e2.Key)) return ref map._e2.Value;
+                if (default(TEq).Equals(key, map._e3.Key)) return ref map._e3.Value;
+
+                map._capacityBitShift = 4;
+                map._packedHashesAndIndexes = new int[1 << map._capacityBitShift];
+
+                map.AddInitialToHash(map._e0.Key, 0);
+                map.AddInitialToHash(map._e1.Key, 1);
+                map.AddInitialToHash(map._e2.Key, 2);
+                map.AddInitialToHash(map._e3.Key, 3);
+                map.AddInitialToHash(key, 4);
+
+                ++map._count;
+                ref var v5 = ref map._entries.AddWithInitial4(key, in map._e0, in map._e1, in map._e2, in map._e3);
+
+                // clear the fields when they being moved to entries
+                map._e0 = default;
+                map._e1 = default;
+                map._e2 = default;
+                map._e3 = default;
+
+                return ref v5;
+        }
+    }
+
+    ///<summary>Get the value ref by the entry index. Also the index corresponds to entry adding order.
+    ///Improtant: it does not checks the index bounds, so you need to check that the index is from 0 to map.Count-1</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref Entry<K, V> GetSurePresentEntryRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, int index)
+        where TEq : struct, IEq<K>
+        where TEntries : struct, IEntries<K, V, TEq>
+    {
+        Debug.Assert(index >= 0);
+        Debug.Assert(index < map._count);
+        if (map._count > 4)
+            return ref map._entries.GetSurePresentEntryRef(index);
+        switch (index)
+        {
+            case 0: return ref map._e0;
+            case 1: return ref map._e1;
+            case 2: return ref map._e2;
+            case 4: return ref map._e3;
+        }
+        return ref FHashMap<K, V, TEq, TEntries>._missing;
     }
 
 #if DEBUG
@@ -495,7 +606,10 @@ public struct FHashMap<K, V, TEq, TEntries>
 #if DEBUG
     ProbesTracker _dbg;
 #endif
-    private byte _capacityBitShift;
+    internal static Entry<K, V> _missing;
+
+    internal byte _capacityBitShift;
+    internal int _count;
 
     // The _packedHashesAndIndexes elements are of `Int32` with the bits split as following:
     // 00010|000...110|01101
@@ -503,11 +617,14 @@ public struct FHashMap<K, V, TEq, TEntries>
     // |     |         | This part of the erased hash is used to get the ideal index into the hashes array, so later this part of hash may be restored from the hash index and its probes.
     // |     |- The remaining middle bits of the original hash
     // |- 5 (MaxProbeBits) high bits of the Probe count, with the minimal value of b00001 indicating the non-empty slot.
-    private int[] _packedHashesAndIndexes;
+    internal int[] _packedHashesAndIndexes;
 
 #pragma warning disable IDE0044 // it tries to make entries readonly but they should stay modifyable to prevent its defensive struct copying  
     internal TEntries _entries;
 #pragma warning restore IDE0044
+
+    // todo: @wip first 4 on stack
+    internal Entry<K, V> _e0, _e1, _e2, _e3;
 
     /// <summary>Capacity bits</summary>
     public int CapacityBitShift => _capacityBitShift;
@@ -516,7 +633,7 @@ public struct FHashMap<K, V, TEq, TEntries>
     public int[] PackedHashesAndIndexes => _packedHashesAndIndexes;
 
     /// <summary>Number of entries in the map</summary>
-    public int Count => _entries.GetCount();
+    public int Count => _count;
 
     /// <summary>Access to the key-value entries</summary>
     public TEntries Entries => _entries;
@@ -533,66 +650,59 @@ public struct FHashMap<K, V, TEq, TEntries>
         _entries.Init(capacityBitShift);
     }
 
-    /// <summary>Find and return the index of the `key` in the `TEntries`. If not found return `-1`.
-    /// Then you may use method `GetSurePresentValueRef` to access and modify entry value in-place!
-    /// The approach differs from the `GetOrAddValueRef` because it does not add the new entry if the key is missing.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public int GetEntryIndex(K key)
+    internal ref V TryGetValueRefByHash(K key, out bool found)
     {
-        if (_packedHashesAndIndexes != null)
-        {
-            var hash = default(TEq).GetHashCode(key);
+        Debug.Assert(_packedHashesAndIndexes != null);
 
-            var indexMask = (1 << _capacityBitShift) - 1;
-            var hashMiddleMask = HashAndIndexMask & ~indexMask;
-            var hashMiddle = hash & hashMiddleMask;
-            var hashIndex = hash & indexMask;
+        var hash = default(TEq).GetHashCode(key);
+
+        var indexMask = (1 << _capacityBitShift) - 1;
+        var hashMiddleMask = HashAndIndexMask & ~indexMask;
+        var hashMiddle = hash & hashMiddleMask;
+        var hashIndex = hash & indexMask;
 
 #if NET7_0_OR_GREATER
         ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
 #else
-            var hashesAndIndexes = _packedHashesAndIndexes;
+        var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
 
-            var h = GetHash(ref hashesAndIndexes, hashIndex);
+        var h = GetHash(ref hashesAndIndexes, hashIndex);
 
-            // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-            var probes = 1;
-            while ((h >>> ProbeCountShift) >= probes)
+        // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
+        var probes = 1;
+        while ((h >>> ProbeCountShift) >= probes)
+        {
+            // 2. For the equal probes check for equality the hash middle part, and update the entry if the keys are equal too 
+            if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
             {
-                // 2. For the equal probes check for equality the hash middle part, and update the entry if the keys are equal too 
-                if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
+                ref var e = ref _entries.GetSurePresentEntryRef(h & indexMask);
+                if (default(TEq).Equals(e.Key, key))
                 {
-                    ref var e = ref _entries.GetSurePresentEntryRef(h & indexMask);
-                    if (default(TEq).Equals(e.Key, key))
-                        return h & indexMask;
+                    found = true;
+                    return ref e.Value;
                 }
-
-                h = GetHash(ref hashesAndIndexes, ++hashIndex & indexMask);
-                ++probes;
             }
-        }
-        return -1;
-    }
 
-    /// <summary>Allows to access and modify the present value in-place</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public ref V GetSurePresentValueRef(int index) =>
-        ref _entries.GetSurePresentEntryRef(index).Value;
+            h = GetHash(ref hashesAndIndexes, ++hashIndex & indexMask);
+            ++probes;
+        }
+
+        found = false;
+        return ref _missing.Value;
+    }
 
     /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public ref V GetOrAddValueRef(K key)
+    public ref V GetOrAddValueRefByHash(K key)
     {
-        var hash = default(TEq).GetHashCode(key);
-
-        var indexMask = (1 << _capacityBitShift) - 1;
-        var entryCount = _entries.GetCount();
-
         // if the free space is less than 1/8 of capacity (12.5%) then Resize
-        if (indexMask - entryCount <= (indexMask >>> MinFreeCapacityShift))
+        var indexMask = (1 << _capacityBitShift) - 1;
+        if (indexMask - _count <= (indexMask >>> MinFreeCapacityShift))
             indexMask = ResizeHashes(indexMask);
 
+        var hash = default(TEq).GetHashCode(key);
         var hashMiddleMask = HashAndIndexMask & ~indexMask;
         var hashMiddle = hash & hashMiddleMask;
         var hashIndex = hash & indexMask;
@@ -624,7 +734,7 @@ public struct FHashMap<K, V, TEq, TEntries>
 
         // 3. We did not find the hash and therefore the key, so insert the new entry
         var hRobinHooded = h;
-        h = (probes << ProbeCountShift) | hashMiddle | entryCount;
+        h = (probes << ProbeCountShift) | hashMiddle | _count;
 #if DEBUG
         _dbg.DebugCollectAndOutputProbes(probes, "Add");
 #endif
@@ -647,7 +757,56 @@ public struct FHashMap<K, V, TEq, TEntries>
                 probes = hRobinHooded >>> ProbeCountShift;
             }
         }
-        return ref _entries.AddKeyAndGetValueRef(key);
+
+        return ref _entries.AddKeyAndGetValueRef(key, _count++);
+    }
+
+    /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
+    public void AddInitialToHash(K key, int index)
+    {
+        var indexMask = (1 << _capacityBitShift) - 1;
+#if NET7_0_OR_GREATER
+        ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
+#else
+        var hashesAndIndexes = _packedHashesAndIndexes;
+#endif
+        var hash = default(TEq).GetHashCode(key);
+        var hashIndex = hash & indexMask;
+
+        // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
+        ref var h = ref GetHashRef(ref hashesAndIndexes, hashIndex);
+        var probes = 1;
+        while ((h >>> ProbeCountShift) >= probes)
+        {
+            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
+            ++probes;
+        }
+
+        // 3. We did not find the hash and therefore the key, so insert the new entry
+        var hRobinHooded = h;
+        h = (probes << ProbeCountShift) | (hash & HashAndIndexMask & ~indexMask) | index;
+#if DEBUG
+        _dbg.DebugCollectAndOutputProbes(probes, "Add");
+#endif
+        // 4. If the robin hooded hash is empty then we stop
+        // 5. Otherwise we steal the slot with the smaller probes
+        probes = hRobinHooded >>> ProbeCountShift;
+        while (hRobinHooded != 0)
+        {
+            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
+            if ((h >>> ProbeCountShift) < ++probes)
+            {
+#if DEBUG
+                if (h != 0)
+                    _dbg.RemoveProbes(h >>> ProbeCountShift);
+                _dbg.DebugCollectAndOutputProbes(probes, "Add-RH");
+#endif
+                var tmp = h;
+                h = (probes << ProbeCountShift) | (hRobinHooded & HashAndIndexMask);
+                hRobinHooded = tmp;
+                probes = hRobinHooded >>> ProbeCountShift;
+            }
+        }
     }
 
     internal int ResizeHashes(int indexMask)

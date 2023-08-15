@@ -621,10 +621,6 @@ namespace FastExpressionCompiler
             // Tracks the use of the variables in the blocks stack per variable, to determine if variable is the local variable and in what block it's defined
             private FHashMap<PE, Stack4<BlockAndVarIndex>, RefEq<PE>,
                 FHashMap.SingleArrayEntries<PE, Stack4<BlockAndVarIndex>, RefEq<PE>>> _varInBlockMap;
-            // _var1 and _var1Blocks help with preformance for the expression with the single variable to avoid allocating the things on heap with _varInBlockMap.
-            // Even when using the _varInBlockMap for multiple variables we don't duplicate _var1 into it and keep checking it directly.
-            private PE _var1;
-            private Stack4<BlockAndVarIndex> _var1Blocks;
 
             /// Map the Labels to their Targets
             internal Stack4<LabelInfo> Labels;
@@ -846,20 +842,6 @@ namespace FastExpressionCompiler
 
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
-                if (_var1 == null)
-                {
-                    _var1 = pe;
-                    _var1Blocks.PushLast(new(blockIndex, varIndex));
-                    return;
-                }
-
-                if (ReferenceEquals(_var1, pe))
-                {
-                    if (_var1Blocks.Count == 0 || _var1Blocks.PeekLastSurePresentItem().BlockIndex != blockIndex)
-                        _var1Blocks.PushLast(new(blockIndex, varIndex));
-                    return;
-                }
-
                 ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe);
                 if (blocks.Count == 0 || blocks.PeekLastSurePresentItem().BlockIndex != blockIndex)
                     blocks.PushLast(new(blockIndex, varIndex));
@@ -867,51 +849,27 @@ namespace FastExpressionCompiler
 
             public void PopBlock()
             {
-                Debug.Assert(_blockCount != 0);
-                if (_var1 != null)
-                {
-                    if (_var1Blocks.Count == _blockCount)
-                        _var1Blocks.PopLastSurePresentItem();
-                }
-
+                Debug.Assert(_blockCount > 0);
                 var varCount = _varInBlockMap.Count;
                 for (var i = 0; i < varCount; ++i)
                 {
-                    ref var varEntry = ref _varInBlockMap._entries.GetSurePresentEntryRef(i); // todo: @perf maybe improved further by directly enumerating the array
-                    if (varEntry.Value.Count == _blockCount)
-                        varEntry.Value.PopLastSurePresentItem();
+                    ref var varBlocks = ref _varInBlockMap.GetSurePresentEntryRef(i);
+                    if (varBlocks.Value.Count == _blockCount)
+                        varBlocks.Value.PopLastSurePresentItem();
                 }
-
                 --_blockCount;
             }
 
             public bool IsLocalVar(ParameterExpression varParamExpr)
             {
-                if (ReferenceEquals(_var1, varParamExpr))
-                    return _var1Blocks.Count != 0;
-
-                var blockKey = _varInBlockMap.GetEntryIndex(varParamExpr);
-                if (blockKey != -1)
-                    return _varInBlockMap.GetSurePresentValueRef(blockKey).Count != 0;
-                return false;
+                ref var blocks = ref _varInBlockMap.TryGetValueRef(varParamExpr, out var found);
+                return found & blocks.Count != 0;
             }
 
             public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                if (ReferenceEquals(_var1, varParamExpr))
-                {
-                    Debug.Assert(_var1Blocks.Count != 0);
-                    return _var1Blocks.PeekLastSurePresentItem().VarIndex;
-                }
-
-                var blockKey = _varInBlockMap.GetEntryIndex(varParamExpr);
-                if (blockKey != -1)
-                {
-                    ref var blocks = ref _varInBlockMap.GetSurePresentValueRef(blockKey);
-                    Debug.Assert(blocks.Count != 0);
-                    return blocks.PeekLastSurePresentItem().VarIndex;
-                }
-                return -1;
+                ref var blocks = ref _varInBlockMap.TryGetValueRef(varParamExpr, out var found);
+                return found ? blocks.PeekLastSurePresentItem().VarIndex : -1;
             }
         }
 
