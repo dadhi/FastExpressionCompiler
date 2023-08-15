@@ -95,7 +95,7 @@ public static class Stack4
 }
 
 public struct Stack4<TItem>
-{
+{   // todo: @wip what if someone stores somthing in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
     public static TItem Tombstone; // return the ref to Tombstone when nothing found
 
     internal int _count;
@@ -321,7 +321,7 @@ public static class FHashMap
     /// <summary>Stores the entries in a single dynamically reallocated array</summary>
     public struct SingleArrayEntries<K, V, TEq> : IEntries<K, V, TEq> where TEq : struct, IEq<K>
     {
-        int _entryCount;
+        internal int _entryCount;
         internal Entry<K, V>[] _entries;
 
         /// <inheritdoc/>
