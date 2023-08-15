@@ -5,9 +5,12 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text;
+using System.Runtime.InteropServices;
 
 using NUnit.Framework;
-using System.Runtime.InteropServices;
+
+using SysExpr = System.Linq.Expressions.Expression;
 
 #pragma warning disable CS0164, CS0649
 
