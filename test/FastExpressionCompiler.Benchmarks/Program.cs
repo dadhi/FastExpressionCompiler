@@ -6,9 +6,9 @@ namespace FastExpressionCompiler.Benchmarks
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<AccessByRef_vs_ByIGetRefStructImpl>();
+            // BenchmarkRunner.Run<AccessByRef_vs_ByIGetRefStructImpl>();
 
-            // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
+            BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
 
             // BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
 

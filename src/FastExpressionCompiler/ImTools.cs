@@ -18,9 +18,9 @@ using static FHashMap;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-internal static class Stack4
+public static class Stack4
 {
-    public sealed class HeapItems<TItem>
+    internal sealed class HeapItems<TItem>
     {
         public TItem[] Items;
         public HeapItems(int capacity) =>
@@ -73,6 +73,9 @@ internal static class Stack4
         ref source.GetSurePresentItemRef(source._count - 1);
 
     [MethodImpl((MethodImplOptions)256)]
+    public static ref TItem NotFound<TItem>(this ref Stack4<TItem> _) => ref Stack4<TItem>.Tombstone;
+
+    [MethodImpl((MethodImplOptions)256)]
     public static ref TItem PushLastDefaultAndGetRef<TItem>(this ref Stack4<TItem> source)
     {
         var index = source._count++;
@@ -93,6 +96,8 @@ internal static class Stack4
 
 public struct Stack4<TItem>
 {
+    public static TItem Tombstone; // return the ref to Tombstone when nothing found
+
     internal int _count;
     internal TItem _it0, _it1, _it2, _it3;
     internal Stack4.HeapItems<TItem> _deepItems;

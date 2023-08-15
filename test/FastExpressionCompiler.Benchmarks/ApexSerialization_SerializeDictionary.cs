@@ -58,8 +58,8 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 
 |      Method |      Mean |    Error |   StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
 |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|----------:|------------:|
-| CompileFast |  21.31 us | 0.425 us | 0.767 us |  1.00 |    0.00 | 1.1597 | 1.0986 |   7.39 KB |        1.00 |
-|  CompileSys | 495.55 us | 9.369 us | 8.305 us | 22.87 |    0.83 | 3.9063 | 2.9297 |  27.41 KB |        3.71 |
+| CompileFast |  21.10 us | 0.385 us | 0.861 us |  1.00 |    0.00 | 1.1902 | 1.1597 |   7.37 KB |        1.00 |
+|  CompileSys | 493.16 us | 4.150 us | 4.940 us | 23.26 |    0.80 | 3.9063 | 2.9297 |  27.55 KB |        3.74 |
 
 */
         [MemoryDiagnoser]
