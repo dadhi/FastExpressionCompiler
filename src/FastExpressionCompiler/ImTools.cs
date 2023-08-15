@@ -22,7 +22,7 @@ public static class Stack4
 {
     internal sealed class HeapItems<TItem>
     {
-        public TItem[] Items;
+        public TItem[] Items; // todo: @perf use MemoryMarshal.GetArrayDataReference and Unsafe.Add fo array navigation to avoid bounds check
         public HeapItems(int capacity) =>
             Items = new TItem[capacity];
 
