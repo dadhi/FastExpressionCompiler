@@ -8,7 +8,7 @@ namespace FastExpressionCompiler.Benchmarks
         {
             // BenchmarkRunner.Run<AccessByRef_vs_ByIGetRefStructImpl>();
 
-            BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
+            // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
 
             // BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
 
@@ -57,7 +57,7 @@ namespace FastExpressionCompiler.Benchmarks
 
             //BenchmarkRunner.Run<SimpleExpr_ParamPlusParam>();
 
-            // BenchmarkRunner.Run<Deserialize_Simple>();
+            BenchmarkRunner.Run<Deserialize_Simple>();
 
             // BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
             // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();

@@ -61,6 +61,13 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 | CompileFast |  21.10 us | 0.385 us | 0.861 us |  1.00 |    0.00 | 1.1902 | 1.1597 |   7.37 KB |        1.00 |
 |  CompileSys | 493.16 us | 4.150 us | 4.940 us | 23.26 |    0.80 | 3.9063 | 2.9297 |  27.55 KB |        3.74 |
 
+## FHashMap on stack
+
+|      Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+|------------ |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| CompileFast |  21.66 us |  0.422 us |  0.330 us |  21.71 us |  1.00 |    0.00 | 1.1902 | 1.1597 |    7.3 KB |        1.00 |
+|  CompileSys | 506.46 us | 10.053 us | 28.024 us | 495.90 us | 22.69 |    0.93 | 3.9063 | 2.9297 |  27.41 KB |        3.76 |
+
 */
         [MemoryDiagnoser]
         public class Compile

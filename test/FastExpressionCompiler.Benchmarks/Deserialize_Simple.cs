@@ -50,6 +50,13 @@ namespace FastExpressionCompiler.Benchmarks
     | Invoke_CompiledFast | 825.9 ns | 15.47 ns | 15.19 ns |  1.00 |    0.00 | 0.0954 |     - |     - |     400 B |
     |     Invoke_Compiled | 825.8 ns | 16.29 ns | 18.11 ns |  1.00 |    0.03 | 0.1011 |     - |     - |     424 B |
 
+    ## v3.4 Create+Compile
+
+    |       Method |        Mean |     Error |     StdDev |      Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+    |------------- |------------:|----------:|-----------:|------------:|------:|--------:|-------:|-------:|----------:|------------:|
+    | CompiledFast |    21.02 us |  0.399 us |   0.572 us |    20.93 us |  1.00 |    0.00 | 1.6479 | 1.6174 |  10.15 KB |        1.00 |
+    |     Compiled | 1,916.50 us | 39.887 us | 114.442 us | 1,865.06 us | 90.96 |    5.42 | 3.9063 |      - |  25.17 KB |        2.48 |
+
     */
     [MemoryDiagnoser]
     public class Deserialize_Simple
