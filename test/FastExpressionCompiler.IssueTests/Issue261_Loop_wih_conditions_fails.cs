@@ -981,6 +981,7 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
 
             var f = expr.CompileFast(true);
+            Assert.NotNull(f);
             f.PrintIL();
         }
 #endif
