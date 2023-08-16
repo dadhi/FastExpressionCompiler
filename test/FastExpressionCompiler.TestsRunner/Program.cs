@@ -11,10 +11,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // RunAllTests();
-            // new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
+            RunAllTests();
+            new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
 
-            new Issue261_Loop_wih_conditions_fails().Run();
+            // new Issue261_Loop_wih_conditions_fails().Run();
             // new Issue293_Recursive_Methods().Run();
 
             // new FastExpressionCompiler.IssueTests.Issue159_NumericConversions().Run();
