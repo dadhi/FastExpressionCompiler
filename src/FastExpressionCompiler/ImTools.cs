@@ -400,6 +400,8 @@ public static class FHashMap
                 map._packedHashesAndIndexes = new int[1 << MinHashesCapacityBitShift];
 
                 var indexMask = (1 << MinHashesCapacityBitShift) - 1;
+
+                // todo: @perf optimize by calculating the keys hashes and putting them into the span and iterating over them inside a single method
                 map.AddInitialHashWithoutResizing(map._e0.Key, 0, indexMask);
                 map.AddInitialHashWithoutResizing(map._e1.Key, 1, indexMask);
                 map.AddInitialHashWithoutResizing(map._e2.Key, 2, indexMask);
