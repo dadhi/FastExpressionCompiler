@@ -31,7 +31,7 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 [MemoryDiagnoser]
 public class AccessByRef_vs_ByIGetRefStructImpl
 {
-    private readonly Stack4<LabelInfo> Labels;
+    private readonly SmallList<LabelInfo> Labels;
 
     public AccessByRef_vs_ByIGetRefStructImpl()
     {

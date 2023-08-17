@@ -18,7 +18,7 @@ using static FHashMap;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-public static class Stack4
+public static class SmallList
 {
     internal sealed class HeapItems<TItem>
     {
@@ -68,7 +68,7 @@ public static class Stack4
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem GetSurePresentItemRef<TItem>(this ref Stack4<TItem> source, int index)
+    public static ref TItem GetSurePresentItemRef<TItem>(this ref SmallList<TItem> source, int index)
     {
         Debug.Assert(source.Count != 0);
         Debug.Assert(index < source.Count);
@@ -85,14 +85,14 @@ public static class Stack4
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem PeekLastSurePresentItem<TItem>(this ref Stack4<TItem> source) =>
+    public static ref TItem PeekLastSurePresentItem<TItem>(this ref SmallList<TItem> source) =>
         ref source.GetSurePresentItemRef(source._count - 1);
 
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem NotFound<TItem>(this ref Stack4<TItem> _) => ref Stack4<TItem>.Missing;
+    public static ref TItem NotFound<TItem>(this ref SmallList<TItem> _) => ref SmallList<TItem>.Missing;
 
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem PushLastDefaultAndGetRef<TItem>(this ref Stack4<TItem> source)
+    public static ref TItem PushLastDefaultAndGetRef<TItem>(this ref SmallList<TItem> source)
     {
         var index = source._count++;
         switch (index)
@@ -110,7 +110,7 @@ public static class Stack4
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public static int TryGetIndex<TItem, TEq>(this ref Stack4<TItem> source, TItem it, TEq eq = default)
+    public static int TryGetIndex<TItem, TEq>(this ref SmallList<TItem> source, TItem it, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         switch (source._count)
@@ -137,13 +137,13 @@ public static class Stack4
                 if (eq.Equals(it, source._it3)) return 3;
                 if (source._deepItems != null)
                 {
-                    var count = source._count - Stack4<TItem>.StackItemCount;
+                    var count = source._count - SmallList<TItem>.StackItemCount;
                     var items = source._deepItems.Items;
                     for (var i = 0; i < count; ++i)
                     {
                         ref var di = ref items[i]; // todo: @perf Marshall?
                         if (eq.Equals(it, di))
-                            return i + Stack4<TItem>.StackItemCount;
+                            return i + SmallList<TItem>.StackItemCount;
                     }
                 }
                 break;
@@ -152,7 +152,7 @@ public static class Stack4
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem GetOrPushLast<TItem, TEq>(this ref Stack4<TItem> source, TItem it, TEq eq = default)
+    public static ref TItem GetOrPushLast<TItem, TEq>(this ref SmallList<TItem> source, TItem it, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         switch (source._count)
@@ -192,7 +192,7 @@ public static class Stack4
                 // cannot move it to the HeapItems struct, because it won't allow you to return the `ref item` 
                 if (source._deepItems != null)
                 {
-                    var count = source._count - Stack4<TItem>.StackItemCount;
+                    var count = source._count - SmallList<TItem>.StackItemCount;
                     var items = source._deepItems.Items;
                     for (var i = 0; i < count; ++i)
                     {
@@ -205,14 +205,14 @@ public static class Stack4
                     return ref last;
                 }
 
-                source._count = Stack4<TItem>.StackItemCount + 1;
-                source._deepItems = new HeapItems<TItem>(Stack4<TItem>.StackItemCount);
+                source._count = SmallList<TItem>.StackItemCount + 1;
+                source._deepItems = new HeapItems<TItem>(SmallList<TItem>.StackItemCount);
                 return ref source._deepItems.Items[0];
         }
     }
 }
 
-public struct Stack4<TItem>
+public struct SmallList<TItem>
 {
     /// <summary>The number of entries stored inside the map itself without moving them to array on heap</summary>
     public const int StackItemCount = 4;
@@ -222,7 +222,7 @@ public struct Stack4<TItem>
 
     internal int _count;
     internal TItem _it0, _it1, _it2, _it3;
-    internal Stack4.HeapItems<TItem> _deepItems;
+    internal SmallList.HeapItems<TItem> _deepItems;
 
     // public CopyAndReuseArray(TItem[] items); // todo: @idea for the method
 
@@ -246,7 +246,7 @@ public struct Stack4<TItem>
                     _deepItems.Add(index - StackItemCount, in item);
                 else
                 {
-                    _deepItems = new Stack4.HeapItems<TItem>(StackItemCount);
+                    _deepItems = new SmallList.HeapItems<TItem>(StackItemCount);
                     _deepItems.Items[index - StackItemCount] = item;
                 }
                 break;
@@ -263,7 +263,7 @@ public struct Stack4<TItem>
         if (++_count >= StackItemCount)
         {
             if (_deepItems == null)
-                _deepItems = new Stack4.HeapItems<TItem>(4);
+                _deepItems = new SmallList.HeapItems<TItem>(4);
             else
                 _deepItems.AddDefault(_count - StackItemCount);
         }

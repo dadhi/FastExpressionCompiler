@@ -619,11 +619,11 @@ namespace FastExpressionCompiler
                 }
             }
             // Tracks the use of the variables in the blocks stack per variable, to determine if variable is the local variable and in what block it's defined
-            private FHashMap<PE, Stack4<BlockAndVarIndex>, RefEq<PE>,
-                FHashMap.SingleArrayEntries<PE, Stack4<BlockAndVarIndex>, RefEq<PE>>> _varInBlockMap;
+            private FHashMap<PE, SmallList<BlockAndVarIndex>, RefEq<PE>,
+                FHashMap.SingleArrayEntries<PE, SmallList<BlockAndVarIndex>, RefEq<PE>>> _varInBlockMap;
 
             /// Map the Labels to their Targets
-            internal Stack4<LabelInfo> Labels;
+            internal SmallList<LabelInfo> Labels;
             internal short CurrentInlinedLambdaInvokeIndex;
 
             public ClosureStatus Status;
@@ -637,7 +637,7 @@ namespace FastExpressionCompiler
 
             /// Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters. 
-            public Stack4<ParameterExpression> NonPassedParameters; // todo: @perf optimize for a single non passed parameter
+            public SmallList<ParameterExpression> NonPassedParameters; // todo: @perf optimize for a single non passed parameter
 
             /// All nested lambda(s) `NestedLambdaInfo|NestedLambdaInfo[]` recursively nested in expression
             public object NestedLambdaOrLambdas;
@@ -857,7 +857,7 @@ namespace FastExpressionCompiler
             }
         }
 
-        internal static ref LabelInfo GetLabelOrInvokeIndexByTarget(ref this Stack4<LabelInfo> labels, object labelTarget, out bool found)
+        internal static ref LabelInfo GetLabelOrInvokeIndexByTarget(ref this SmallList<LabelInfo> labels, object labelTarget, out bool found)
         {
             var count = labels.Count;
             for (var i = 0; i < count; ++i)
@@ -885,7 +885,7 @@ namespace FastExpressionCompiler
         }
 
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        public static ref LabelInfo TryMarkDefinedLabel(ref this Stack4<LabelInfo> labels, object target, ILGenerator il, out bool found)
+        public static ref LabelInfo TryMarkDefinedLabel(ref this SmallList<LabelInfo> labels, object target, ILGenerator il, out bool found)
         {
             ref var label = ref labels.GetLabelOrInvokeIndexByTarget(target, out found);
             if (found)
@@ -1527,13 +1527,13 @@ namespace FastExpressionCompiler
 
 #if LIGHT_EXPRESSION
         private static void PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure,
-            IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ref Stack4<ParameterExpression> nestedNonPassedParams)
+            IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.ParameterCount;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.ParameterCount;
 #else
         private static void PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure,
-            IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ref Stack4<ParameterExpression> nestedNonPassedParams)
+            IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.Count;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.Count;
