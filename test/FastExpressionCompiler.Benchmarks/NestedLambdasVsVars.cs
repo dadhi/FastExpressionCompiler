@@ -3,12 +3,14 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Diagnosers;
 using static System.Linq.Expressions.Expression;
 using L = FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.Benchmarks
 {
     [MemoryDiagnoser]
+    [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
     public class NestedLambdasVsVars
     {
         /*
@@ -36,9 +38,10 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 |          Expression_with_sub_expressions_Compiled | 652.33 us | 7.463 us | 6.616 us | 17.62 |    0.46 | 5.8594 | 2.9297 |      - |  27.51 KB |
 
 
-## Compilation
+## V2
 
-### V2
+### Compilation
+
 |                                                                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |----------------------------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
 |                           Expression_with_sub_expressions_CompiledFast |  78.27 us | 0.3404 us | 0.3184 us |  1.00 |    0.00 | 4.3945 | 2.1973 | 0.2441 |  20.42 KB |
@@ -46,17 +49,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  46.36 us | 0.3881 us | 0.3441 us |  0.59 |    0.01 | 2.7466 | 1.3428 | 0.1831 |  12.61 KB |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 864.08 us | 2.0120 us | 1.8820 us | 11.04 |    0.06 | 3.9063 | 1.9531 |      - |  20.96 KB |
 
-
-### V3
-|                                            Method |      Mean |     Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|-------------------------------------------------- |----------:|----------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |  32.37 us |  0.442 us | 0.413 us |  1.00 |    0.00 | 2.1973 | 1.0986 | 0.1831 |   9.03 KB |
-|          Expression_with_sub_expressions_Compiled | 637.97 us | 12.327 us | 9.624 us | 19.71 |    0.37 | 5.8594 | 2.9297 |      - |  26.31 KB |
-
-
-## Invocation
-
-### V2
+### Invocation
 |                                                                 Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 |----------------------------------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
 |                           Expression_with_sub_expressions_CompiledFast |    57.17 ns | 0.1766 ns | 0.1566 ns |  1.00 |    0.00 | 0.0627 |     - |     - |     296 B |
@@ -64,12 +57,36 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 | Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |    51.78 ns | 0.2234 ns | 0.2089 ns |  0.91 |    0.00 | 0.0593 |     - |     - |     280 B |
 |      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,644.84 ns | 5.2784 ns | 4.4077 ns | 28.77 |    0.10 | 0.0782 |     - |     - |     376 B |
 
+## V3
 
-### V3
+### Compilation
+
+|                                            Method |      Mean |     Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|-------------------------------------------------- |----------:|----------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |  32.37 us |  0.442 us | 0.413 us |  1.00 |    0.00 | 2.1973 | 1.0986 | 0.1831 |   9.03 KB |
+|          Expression_with_sub_expressions_Compiled | 637.97 us | 12.327 us | 9.624 us | 19.71 |    0.37 | 5.8594 | 2.9297 |      - |  26.31 KB |
+
+## Invocation
+
 |                                            Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 |-------------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
 | LightExpression_with_sub_expressions_CompiledFast |    13.40 ns |  0.190 ns |  0.158 ns |  1.00 |    0.00 | 0.0076 |     - |     - |      32 B |
 |          Expression_with_sub_expressions_Compiled | 1,083.09 ns | 21.502 ns | 30.142 ns | 80.91 |    3.16 | 0.0534 |     - |     - |     224 B |
+
+## Create+Compile
+
+BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
+11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+.NET SDK 7.0.307
+  [Host]     : .NET 7.0.10 (7.0.1023.36312), X64 RyuJIT AVX2
+  DefaultJob : .NET 7.0.10 (7.0.1023.36312), X64 RyuJIT AVX2
+
+|                                            Method |      Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 | CacheMisses/Op | BranchInstructions/Op | BranchMispredictions/Op |   Gen1 |   Gen2 | Allocated | Alloc Ratio |
+|-------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|---------------:|----------------------:|------------------------:|-------:|-------:|----------:|------------:|
+| LightExpression_with_sub_expressions_CompiledFast |  40.48 us |  1.821 us |  5.137 us |  1.00 |    0.00 | 1.7090 |            640 |                46,372 |                     454 | 1.4648 | 0.1221 |  10.67 KB |        1.00 |
+|          Expression_with_sub_expressions_Compiled | 793.63 us | 15.595 us | 23.815 us | 19.97 |    2.28 | 3.9063 |          1,855 |               894,256 |                  30,865 | 1.9531 |      - |  28.47 KB |        2.67 |
+
+
 */
         private Expression<Func<A>> _expr;//, _exprWithVars;
         private LightExpression.Expression<Func<A>> _lightExpr;
@@ -79,8 +96,8 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         [GlobalSetup]
         public void Init()
         {
-            _expr         = CreateExpression();
-            _lightExpr    = CreateLightExpression();
+            _expr = CreateExpression();
+            _lightExpr = CreateLightExpression();
 
             _exprCompiled = _expr.Compile();
             _exprCompiledFast = _expr.CompileFast(true);
@@ -91,17 +108,17 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         public object LightExpression_with_sub_expressions_CompiledFast()
         {
             //return CreateLightExpression();
-            // return LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression(), true);
+            return LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression(), true);
             // return LightExpression.ExpressionCompiler.CompileFast(_lightExpr, true);
-            return _lightExprCompiledFast();
+            // return _lightExprCompiledFast();
         }
 
         [Benchmark]
         public object Expression_with_sub_expressions_Compiled()
         {
-            // return CreateExpression().Compile();
+            return CreateExpression().Compile();
             // return _expr.Compile();
-            return _exprCompiled();
+            // return _exprCompiled();
         }
 
         //[Benchmark]
@@ -110,7 +127,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
         //{
         //    //return CreateExpression();
         //    //return CreateExpression().CompileFast(true);
-            //return _expr.CompileFast(true);
+        //return _expr.CompileFast(true);
         //    return _exprCompiledFast();
         //}
 
@@ -205,13 +222,13 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
                             Constant(2),
                             Lambda(
                                 New(typeof(D).GetConstructors()[0], new Expression[0]))),
-                        typeof(D))), 
+                        typeof(D))),
                     Assign(cVar, Convert(
                         Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
                             Constant(1),
                             Lambda(
                                 New(typeof(C).GetConstructors()[0], dVar))),
-                        typeof(C))), 
+                        typeof(C))),
                     Assign(bVar, Convert(
                         Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
                             Constant(0),
@@ -224,7 +241,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
             return fe;
         }
 
-        public class A 
+        public class A
         {
             public B B { get; }
             public C C { get; }

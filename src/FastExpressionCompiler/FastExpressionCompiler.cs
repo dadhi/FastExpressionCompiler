@@ -698,7 +698,7 @@ namespace FastExpressionCompiler
             public void AddNonPassedParam(ParameterExpression expr)
             {
                 Status |= ClosureStatus.HasClosure;
-                NonPassedParameters.GetRefOrAppend(expr, default(RefEq<ParameterExpression>));
+                NonPassedParameters.GetIndexOrAppend(expr, default(RefEq<ParameterExpression>));
             }
 
             public void AddNestedLambda(NestedLambdaInfo nestedLambdaInfo)
