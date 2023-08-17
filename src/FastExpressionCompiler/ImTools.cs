@@ -16,8 +16,7 @@ namespace FastExpressionCompiler.ImTools;
 
 using static FHashMap;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
+/// <summary>SmallList module he-he</summary>
 public static class SmallList
 {
     internal sealed class HeapItems<TItem>
@@ -27,7 +26,6 @@ public static class SmallList
         public TItem[] Items; // todo: @perf use MemoryMarshal.GetArrayDataReference and Unsafe.Add fo array navigation to avoid bounds check
         public HeapItems(int capacity) =>
             Items = new TItem[capacity];
-
 
         [MethodImpl((MethodImplOptions)256)]
         internal void Expand()
@@ -43,7 +41,7 @@ public static class SmallList
 
         // todo: @improve Add explicit Remove method and think if count is decreased twice so the array may be resized
         [MethodImpl((MethodImplOptions)256)]
-        public void AddDefault(int index)
+        public void AppendDefault(int index)
         {
             if (index >= Items.Length)
             {
@@ -53,20 +51,21 @@ public static class SmallList
         }
 
         [MethodImpl((MethodImplOptions)256)]
-        public void Add(int index, in TItem item)
+        public ref TItem AppendDefaultAndGetRef(int index)
         {
-            AddDefault(index);
-            Items[index] = item;
+            AppendDefault(index);
+            return ref Items[index];
         }
 
         [MethodImpl((MethodImplOptions)256)]
-        public ref TItem AddDefaultAndGetRef(int index)
+        public void Append(int index, in TItem item)
         {
-            AddDefault(index);
-            return ref Items[index];
+            AppendDefault(index);
+            Items[index] = item;
         }
     }
 
+    /// <summary>Returns surely present item ref by its index</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref TItem GetSurePresentItemRef<TItem>(this ref SmallList<TItem> source, int index)
     {
@@ -84,15 +83,18 @@ public static class SmallList
         }
     }
 
+    /// <summary>Returns last present item ref, assumes that the list is not empty!</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem PeekLastSurePresentItem<TItem>(this ref SmallList<TItem> source) =>
+    public static ref TItem GetLastSurePresentItem<TItem>(this ref SmallList<TItem> source) =>
         ref source.GetSurePresentItemRef(source._count - 1);
 
+    /// <summary>Returns the ref to tombstone indicating the missing item.</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref TItem NotFound<TItem>(this ref SmallList<TItem> _) => ref SmallList<TItem>.Missing;
 
+    /// <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem PushLastDefaultAndGetRef<TItem>(this ref SmallList<TItem> source)
+    public static ref TItem AppendDefaultAndGetRef<TItem>(this ref SmallList<TItem> source)
     {
         var index = source._count++;
         switch (index)
@@ -103,12 +105,13 @@ public static class SmallList
             case 3: return ref source._it3;
             default:
                 if (source._deepItems != null)
-                    return ref source._deepItems.AddDefaultAndGetRef(index - 4);
+                    return ref source._deepItems.AppendDefaultAndGetRef(index - 4);
                 source._deepItems = new HeapItems<TItem>(4);
                 return ref source._deepItems.Items[0];
         }
     }
 
+    /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static int TryGetIndex<TItem, TEq>(this ref SmallList<TItem> source, TItem it, TEq eq = default)
         where TEq : struct, IEq<TItem>
@@ -151,8 +154,9 @@ public static class SmallList
         return -1;
     }
 
+    /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem GetOrPushLast<TItem, TEq>(this ref SmallList<TItem> source, TItem it, TEq eq = default)
+    public static ref TItem GetRefOrAppend<TItem, TEq>(this ref SmallList<TItem> source, TItem it, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         switch (source._count)
@@ -200,7 +204,7 @@ public static class SmallList
                         if (eq.Equals(it, di))
                             return ref di;
                     }
-                    ref var last = ref source._deepItems.AddDefaultAndGetRef(count);
+                    ref var last = ref source._deepItems.AppendDefaultAndGetRef(count);
                     last = it;
                     return ref last;
                 }
@@ -212,13 +216,15 @@ public static class SmallList
     }
 }
 
+/// <summary>List with the number of first items (4) stored inside its struct and the rest in the growable array.
+/// Supports addition and removal (removel is without resize) only at the end of the list, aka Stack behavior</summary>
 public struct SmallList<TItem>
 {
     /// <summary>The number of entries stored inside the map itself without moving them to array on heap</summary>
     public const int StackItemCount = 4;
 
     // todo: @wip what if someone stores something in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
-    public static TItem Missing; // return the ref to Tombstone when nothing found
+    internal static TItem Missing; // return the ref to Tombstone when nothing found
 
     internal int _count;
     internal TItem _it0, _it1, _it2, _it3;
@@ -226,15 +232,18 @@ public struct SmallList<TItem>
 
     // public CopyAndReuseArray(TItem[] items); // todo: @idea for the method
 
+    /// <summary>Gets the number of items in the list</summary>
     public int Count
     {
         [MethodImpl((MethodImplOptions)256)]
         get => _count;
     }
 
+    /// <summary>Adds the item to the end of the list aka the Stack.Push</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void PutOrAdd(int index, in TItem item)
+    public void Append(in TItem item)
     {
+        var index = _count++;
         switch (index)
         {
             case 0: _it0 = item; break;
@@ -243,7 +252,7 @@ public struct SmallList<TItem>
             case 3: _it3 = item; break;
             default:
                 if (_deepItems != null)
-                    _deepItems.Add(index - StackItemCount, in item);
+                    _deepItems.Append(index - StackItemCount, in item);
                 else
                 {
                     _deepItems = new SmallList.HeapItems<TItem>(StackItemCount);
@@ -253,24 +262,22 @@ public struct SmallList<TItem>
         }
     }
 
+    /// <summary>Adds the default item to the end of the list aka the Stack.Push default</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void PushLast(in TItem item) =>
-        PutOrAdd(_count++, item);
-
-    [MethodImpl((MethodImplOptions)256)]
-    public void PushLastDefault()
+    public void AppendDefault()
     {
         if (++_count >= StackItemCount)
         {
             if (_deepItems == null)
                 _deepItems = new SmallList.HeapItems<TItem>(4);
             else
-                _deepItems.AddDefault(_count - StackItemCount);
+                _deepItems.AppendDefault(_count - StackItemCount);
         }
     }
 
+    /// <summary>Removes the last item from the list aka the Stack Pop. Assumes that the list is not empty!</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void PopLastSurePresentItem()
+    public void RemoveLastSurePresentItem()
     {
         Debug.Assert(Count != 0);
         var index = --_count;
@@ -287,7 +294,6 @@ public struct SmallList<TItem>
         }
     }
 }
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 /// <summary>Configiration and the tools for the FHashMap map data structure</summary>
 public static class FHashMap

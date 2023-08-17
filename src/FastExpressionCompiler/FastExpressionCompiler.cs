@@ -698,7 +698,7 @@ namespace FastExpressionCompiler
             public void AddNonPassedParam(ParameterExpression expr)
             {
                 Status |= ClosureStatus.HasClosure;
-                NonPassedParameters.GetOrPushLast(expr, default(RefEq<ParameterExpression>));
+                NonPassedParameters.GetRefOrAppend(expr, default(RefEq<ParameterExpression>));
             }
 
             public void AddNestedLambda(NestedLambdaInfo nestedLambdaInfo)
@@ -728,7 +728,7 @@ namespace FastExpressionCompiler
                 GetLabelOrInvokeIndexByTarget(ref Labels, labelTarget, out var found);
                 if (!found)
                 {
-                    ref var label = ref Labels.PushLastDefaultAndGetRef();
+                    ref var label = ref Labels.AppendDefaultAndGetRef();
                     label.Target = labelTarget;
                     label.InlinedLambdaInvokeIndex = inlinedLambdaInvokeIndex;
                 }
@@ -741,7 +741,7 @@ namespace FastExpressionCompiler
                     if (Labels.GetSurePresentItemRef(i).Target == e)
                         return (short)i;
 
-                ref var label = ref Labels.PushLastDefaultAndGetRef();
+                ref var label = ref Labels.AppendDefaultAndGetRef();
                 label.Target = e;
                 return (short)count;
             }
@@ -827,8 +827,8 @@ namespace FastExpressionCompiler
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
                 ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe);
-                if (blocks.Count == 0 || blocks.PeekLastSurePresentItem().BlockIndex != blockIndex)
-                    blocks.PushLast(new(blockIndex, varIndex));
+                if (blocks.Count == 0 || blocks.GetLastSurePresentItem().BlockIndex != blockIndex)
+                    blocks.Append(new(blockIndex, varIndex));
             }
 
             public void PopBlock()
@@ -839,7 +839,7 @@ namespace FastExpressionCompiler
                 {
                     ref var varBlocks = ref _varInBlockMap.GetSurePresentEntryRef(i);
                     if (varBlocks.Value.Count == _blockCount)
-                        varBlocks.Value.PopLastSurePresentItem();
+                        varBlocks.Value.RemoveLastSurePresentItem();
                 }
                 --_blockCount;
             }
@@ -853,7 +853,7 @@ namespace FastExpressionCompiler
             public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
                 ref var blocks = ref _varInBlockMap.TryGetValueRef(varParamExpr, out var found);
-                return found ? blocks.PeekLastSurePresentItem().VarIndex : -1;
+                return found ? blocks.GetLastSurePresentItem().VarIndex : -1;
             }
         }
 
