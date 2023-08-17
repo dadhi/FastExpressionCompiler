@@ -2586,7 +2586,7 @@ namespace FastExpressionCompiler
 
                 // the only possibility that we are here is because we are in the nested lambda,
                 // and it uses the parameter or variable from the outer lambda
-                var nonPassedParamIndex = closure.NonPassedParameters.TryFindIndex(paramExpr, default(RefEq<ParameterExpression>));
+                var nonPassedParamIndex = closure.NonPassedParameters.TryGetIndex(paramExpr, default(RefEq<ParameterExpression>));
                 if (nonPassedParamIndex == -1)
                     return false;
 
@@ -2633,7 +2633,7 @@ namespace FastExpressionCompiler
 
                 // the only possibility that we are here is because we are in the nested lambda,
                 // and it uses the parameter or variable from the outer lambda
-                var nonPassedParamIndex = closure.NonPassedParameters.TryFindIndex(paramExpr, default(RefEq<ParameterExpression>));
+                var nonPassedParamIndex = closure.NonPassedParameters.TryGetIndex(paramExpr, default(RefEq<ParameterExpression>));
                 if (nonPassedParamIndex == -1)
                     return false;
 
@@ -3867,7 +3867,7 @@ namespace FastExpressionCompiler
                 }
 
                 // check that it is a captured parameter by closure
-                var nonPassedParamIndex = closure.NonPassedParameters.TryFindIndex(left, default(RefEq<ParameterExpression>));
+                var nonPassedParamIndex = closure.NonPassedParameters.TryGetIndex(left, default(RefEq<ParameterExpression>));
                 if (nonPassedParamIndex == -1)
                     return false;
 
@@ -4029,7 +4029,7 @@ namespace FastExpressionCompiler
             {
                 if (nestedLambdaInfo.NonPassedParamsVarIndex == 0)
                     return;
-                var nonPassedParIndex = nestedLambdaInfo.ClosureInfo.NonPassedParameters.TryFindIndex(assignedLeftVar, default(RefEq<ParameterExpression>));
+                var nonPassedParIndex = nestedLambdaInfo.ClosureInfo.NonPassedParameters.TryGetIndex(assignedLeftVar, default(RefEq<ParameterExpression>));
                 if (nonPassedParIndex != -1)
                 {
                     EmitLoadLocalVariable(il, nestedLambdaInfo.NonPassedParamsVarIndex);
@@ -4364,7 +4364,7 @@ namespace FastExpressionCompiler
                         }
                         else // it's a parameter from the outer closure
                         {
-                            var outerNonPassedParamIndex = closure.NonPassedParameters.TryFindIndex(nestedParam, default(RefEq<ParameterExpression>));
+                            var outerNonPassedParamIndex = closure.NonPassedParameters.TryGetIndex(nestedParam, default(RefEq<ParameterExpression>));
                             if (outerNonPassedParamIndex == -1)
                                 return false; // impossible, better to throw?
 

@@ -22,9 +22,24 @@ public static class Stack4
 {
     internal sealed class HeapItems<TItem>
     {
+        public const int ForLoopCopyCount = 4;
+
         public TItem[] Items; // todo: @perf use MemoryMarshal.GetArrayDataReference and Unsafe.Add fo array navigation to avoid bounds check
         public HeapItems(int capacity) =>
             Items = new TItem[capacity];
+
+
+        [MethodImpl((MethodImplOptions)256)]
+        internal void Expand()
+        {
+            var newItems = new TItem[Items.Length << 1];
+            if (Items.Length > ForLoopCopyCount)
+                Array.Copy(Items, newItems, Items.Length);
+            else
+                for (var i = 0; i < Items.Length; ++i)
+                    newItems[i] = Items[i];
+            Items = newItems;
+        }
 
         // todo: @improve Add explicit Remove method and think if count is decreased twice so the array may be resized
         [MethodImpl((MethodImplOptions)256)]
@@ -32,8 +47,8 @@ public static class Stack4
         {
             if (index >= Items.Length)
             {
-                Debug.Assert(index < (Items.Length << 1)); // todo: @wip add more safety nets to avoid this check
-                Array.Resize(ref Items, Items.Length << 1);
+                Debug.Assert(index < (Items.Length << 1));
+                Expand();
             }
         }
 
@@ -48,7 +63,7 @@ public static class Stack4
         public ref TItem AddDefaultAndGetRef(int index)
         {
             AddDefault(index);
-            return ref Items[index]; // todo: @perf Marshall arts
+            return ref Items[index];
         }
     }
 
@@ -65,7 +80,7 @@ public static class Stack4
             case 3: return ref source._it3;
             default:
                 Debug.Assert(source._deepItems != null, $"Expecting deeper items are already existing on stack at index: {index}");
-                return ref source._deepItems.Items[index - 4]; // todo: @perf Marshall arts
+                return ref source._deepItems.Items[index - 4];
         }
     }
 
@@ -95,7 +110,7 @@ public static class Stack4
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public static int TryFindIndex<TItem, TEq>(this ref Stack4<TItem> source, TItem it, TEq eq = default)
+    public static int TryGetIndex<TItem, TEq>(this ref Stack4<TItem> source, TItem it, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         switch (source._count)
@@ -122,13 +137,13 @@ public static class Stack4
                 if (eq.Equals(it, source._it3)) return 3;
                 if (source._deepItems != null)
                 {
-                    var count = source._count - 4;
+                    var count = source._count - Stack4<TItem>.StackItemCount;
                     var items = source._deepItems.Items;
                     for (var i = 0; i < count; ++i)
                     {
-                        ref var di = ref items[i]; // todo: @perf marshall
+                        ref var di = ref items[i]; // todo: @perf Marshall?
                         if (eq.Equals(it, di))
-                            return i + 4;
+                            return i + Stack4<TItem>.StackItemCount;
                     }
                 }
                 break;
@@ -174,13 +189,14 @@ public static class Stack4
                 if (eq.Equals(it, source._it2)) return ref source._it2;
                 if (eq.Equals(it, source._it3)) return ref source._it3;
 
+                // cannot move it to the HeapItems struct, because it won't allow you to return the `ref item` 
                 if (source._deepItems != null)
                 {
-                    var count = source._count - 4;
+                    var count = source._count - Stack4<TItem>.StackItemCount;
                     var items = source._deepItems.Items;
                     for (var i = 0; i < count; ++i)
                     {
-                        ref var di = ref items[i]; // todo: @perf marshall
+                        ref var di = ref items[i]; // todo: @perf Marshall?
                         if (eq.Equals(it, di))
                             return ref di;
                     }
@@ -189,15 +205,19 @@ public static class Stack4
                     return ref last;
                 }
 
-                source._count = 5;
-                source._deepItems = new HeapItems<TItem>(4);
+                source._count = Stack4<TItem>.StackItemCount + 1;
+                source._deepItems = new HeapItems<TItem>(Stack4<TItem>.StackItemCount);
                 return ref source._deepItems.Items[0];
         }
     }
 }
 
 public struct Stack4<TItem>
-{   // todo: @wip what if someone stores something in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
+{
+    /// <summary>The number of entries stored inside the map itself without moving them to array on heap</summary>
+    public const int StackItemCount = 4;
+
+    // todo: @wip what if someone stores something in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
     public static TItem Missing; // return the ref to Tombstone when nothing found
 
     internal int _count;
@@ -223,11 +243,11 @@ public struct Stack4<TItem>
             case 3: _it3 = item; break;
             default:
                 if (_deepItems != null)
-                    _deepItems.Add(index - 4, in item);
+                    _deepItems.Add(index - StackItemCount, in item);
                 else
                 {
-                    _deepItems = new Stack4.HeapItems<TItem>(4);
-                    _deepItems.Items[index - 4] = item;
+                    _deepItems = new Stack4.HeapItems<TItem>(StackItemCount);
+                    _deepItems.Items[index - StackItemCount] = item;
                 }
                 break;
         }
@@ -240,12 +260,12 @@ public struct Stack4<TItem>
     [MethodImpl((MethodImplOptions)256)]
     public void PushLastDefault()
     {
-        if (++_count >= 4)
+        if (++_count >= StackItemCount)
         {
             if (_deepItems == null)
                 _deepItems = new Stack4.HeapItems<TItem>(4);
             else
-                _deepItems.AddDefault(_count - 4);
+                _deepItems.AddDefault(_count - StackItemCount);
         }
     }
 
@@ -262,7 +282,7 @@ public struct Stack4<TItem>
             case 3: _it3 = default; break;
             default:
                 Debug.Assert(_deepItems != null, $"Expecting a deeper parent stack created before accessing it here at level {index}");
-                _deepItems.Items[index - 4] = default;
+                _deepItems.Items[index - StackItemCount] = default;
                 break;
         }
     }
@@ -284,8 +304,8 @@ public static class FHashMap
     internal const byte ProbeCountShift = 32 - MaxProbeBits;
     internal const int HashAndIndexMask = ~(MaxProbeCount << ProbeCountShift);
 
-    /// <summary></summary>
-    public const int EntriesOnStackCount = 4;
+    /// <summary>The number of entries stored inside the map itself without moving them to array on heap</summary>
+    public const int StackEntriesCount = 4;
 
     /// <summary>Creates the map with the <see cref="SingleArrayEntries{K, V, TEq}"/> storage</summary>
     [MethodImpl((MethodImplOptions)256)]
@@ -431,7 +451,7 @@ public static class FHashMap
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
-        if (map._count > EntriesOnStackCount)
+        if (map._count > StackEntriesCount)
             return ref map.TryGetValueRefByHash(key, out found);
         switch (map._count)
         {
@@ -464,7 +484,7 @@ public static class FHashMap
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
-        if (map._count > EntriesOnStackCount)
+        if (map._count > StackEntriesCount)
             return ref map.GetOrAddValueRefByHash(key);
         switch (map._count)
         {
@@ -510,7 +530,7 @@ public static class FHashMap
                 map.AddInitialHashWithoutResizing(map._e1.Key, 1, indexMask);
                 map.AddInitialHashWithoutResizing(map._e2.Key, 2, indexMask);
                 map.AddInitialHashWithoutResizing(map._e3.Key, 3, indexMask);
-                map.AddInitialHashWithoutResizing(key, EntriesOnStackCount, indexMask);
+                map.AddInitialHashWithoutResizing(key, StackEntriesCount, indexMask);
 
                 map._count = 5;
                 map._entries.Init(2);
@@ -527,7 +547,7 @@ public static class FHashMap
     {
         Debug.Assert(index >= 0);
         Debug.Assert(index < map._count);
-        if (index >= EntriesOnStackCount)
+        if (index >= StackEntriesCount)
             return ref map._entries.GetSurePresentEntryRef(index - 4);
         switch (index)
         {
@@ -639,7 +659,7 @@ public static class FHashMap
             }
         }
 
-        return ref map._entries.AddKeyAndGetValueRef(key, (map._count++) - EntriesOnStackCount);
+        return ref map._entries.AddKeyAndGetValueRef(key, (map._count++) - StackEntriesCount);
     }
 }
 
