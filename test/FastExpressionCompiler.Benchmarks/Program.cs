@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.Benchmarks
             //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
             //BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
 
-            //BenchmarkRunner.Run<ArrayCopy_vs_ManualForLoop>();
+            BenchmarkRunner.Run<ArrayCopy_vs_ArrayResize_vs_ForLoop>();
 
             //var a = new NestedLambdasVsVars();
             //a.Init();
@@ -57,7 +57,7 @@ namespace FastExpressionCompiler.Benchmarks
 
             //BenchmarkRunner.Run<SimpleExpr_ParamPlusParam>();
 
-            BenchmarkRunner.Run<Deserialize_Simple>();
+            // BenchmarkRunner.Run<Deserialize_Simple>();
 
             // BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
             // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
