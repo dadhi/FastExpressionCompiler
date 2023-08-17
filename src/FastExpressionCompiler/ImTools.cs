@@ -26,28 +26,29 @@ public static class Stack4
         public HeapItems(int capacity) =>
             Items = new TItem[capacity];
 
-        [MethodImpl((MethodImplOptions)256)]
-        public void Add(int index, in TItem item)
-        {
-            if (index >= Items.Length)
-                Array.Resize(ref Items, Items.Length << 1);
-            Items[index] = item;
-        }
-
         // todo: @improve Add explicit Remove method and think if count is decreased twice so the array may be resized
         [MethodImpl((MethodImplOptions)256)]
         public void AddDefault(int index)
         {
             if (index >= Items.Length)
+            {
+                Debug.Assert(index < (Items.Length << 1)); // todo: @wip add more safety nets to avoid this check
                 Array.Resize(ref Items, Items.Length << 1);
+            }
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public void Add(int index, in TItem item)
+        {
+            AddDefault(index);
+            Items[index] = item;
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public ref TItem AddDefaultAndGetRef(int index)
         {
-            if (index >= Items.Length)
-                Array.Resize(ref Items, Items.Length << 1);
-            return ref Items[index];
+            AddDefault(index);
+            return ref Items[index]; // todo: @perf Marshall arts
         }
     }
 
@@ -64,7 +65,7 @@ public static class Stack4
             case 3: return ref source._it3;
             default:
                 Debug.Assert(source._deepItems != null, $"Expecting deeper items are already existing on stack at index: {index}");
-                return ref source._deepItems.Items[index - 4];
+                return ref source._deepItems.Items[index - 4]; // todo: @perf Marshall arts
         }
     }
 
@@ -73,7 +74,7 @@ public static class Stack4
         ref source.GetSurePresentItemRef(source._count - 1);
 
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem NotFound<TItem>(this ref Stack4<TItem> _) => ref Stack4<TItem>.Tombstone;
+    public static ref TItem NotFound<TItem>(this ref Stack4<TItem> _) => ref Stack4<TItem>.Missing;
 
     [MethodImpl((MethodImplOptions)256)]
     public static ref TItem PushLastDefaultAndGetRef<TItem>(this ref Stack4<TItem> source)
@@ -92,15 +93,118 @@ public static class Stack4
                 return ref source._deepItems.Items[0];
         }
     }
+
+    [MethodImpl((MethodImplOptions)256)]
+    public static int TryFindIndex<TItem, TEq>(this ref Stack4<TItem> source, TItem it, TEq eq = default)
+        where TEq : struct, IEq<TItem>
+    {
+        switch (source._count)
+        {
+            case 1:
+                if (eq.Equals(it, source._it0)) return 0;
+                break;
+
+            case 2:
+                if (eq.Equals(it, source._it0)) return 0;
+                if (eq.Equals(it, source._it1)) return 1;
+                break;
+
+            case 3:
+                if (eq.Equals(it, source._it0)) return 0;
+                if (eq.Equals(it, source._it1)) return 1;
+                if (eq.Equals(it, source._it2)) return 2;
+                break;
+
+            default:
+                if (eq.Equals(it, source._it0)) return 0;
+                if (eq.Equals(it, source._it1)) return 1;
+                if (eq.Equals(it, source._it2)) return 2;
+                if (eq.Equals(it, source._it3)) return 3;
+                if (source._deepItems != null)
+                {
+                    var count = source._count - 4;
+                    var items = source._deepItems.Items;
+                    for (var i = 0; i < count; ++i)
+                    {
+                        ref var di = ref items[i]; // todo: @perf marshall
+                        if (eq.Equals(it, di))
+                            return i + 4;
+                    }
+                }
+                break;
+        }
+        return -1;
+    }
+
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref TItem GetOrPushLast<TItem, TEq>(this ref Stack4<TItem> source, TItem it, TEq eq = default)
+        where TEq : struct, IEq<TItem>
+    {
+        switch (source._count)
+        {
+            case 0:
+                source._count = 1;
+                source._it0 = it;
+                return ref source._it0;
+
+            case 1:
+                if (eq.Equals(it, source._it0)) return ref source._it0;
+                source._count = 2;
+                source._it1 = it;
+                return ref source._it1;
+
+            case 2:
+                if (eq.Equals(it, source._it0)) return ref source._it0;
+                if (eq.Equals(it, source._it1)) return ref source._it1;
+                source._count = 3;
+                source._it2 = it;
+                return ref source._it2;
+
+            case 3:
+                if (eq.Equals(it, source._it0)) return ref source._it0;
+                if (eq.Equals(it, source._it1)) return ref source._it1;
+                if (eq.Equals(it, source._it2)) return ref source._it2;
+                source._count = 4;
+                source._it3 = it;
+                return ref source._it3;
+
+            default:
+                if (eq.Equals(it, source._it0)) return ref source._it0;
+                if (eq.Equals(it, source._it1)) return ref source._it1;
+                if (eq.Equals(it, source._it2)) return ref source._it2;
+                if (eq.Equals(it, source._it3)) return ref source._it3;
+
+                if (source._deepItems != null)
+                {
+                    var count = source._count - 4;
+                    var items = source._deepItems.Items;
+                    for (var i = 0; i < count; ++i)
+                    {
+                        ref var di = ref items[i]; // todo: @perf marshall
+                        if (eq.Equals(it, di))
+                            return ref di;
+                    }
+                    ref var last = ref source._deepItems.AddDefaultAndGetRef(count);
+                    last = it;
+                    return ref last;
+                }
+
+                source._count = 5;
+                source._deepItems = new HeapItems<TItem>(4);
+                return ref source._deepItems.Items[0];
+        }
+    }
 }
 
 public struct Stack4<TItem>
-{   // todo: @wip what if someone stores somthing in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
-    public static TItem Tombstone; // return the ref to Tombstone when nothing found
+{   // todo: @wip what if someone stores something in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
+    public static TItem Missing; // return the ref to Tombstone when nothing found
 
     internal int _count;
     internal TItem _it0, _it1, _it2, _it3;
     internal Stack4.HeapItems<TItem> _deepItems;
+
+    // public CopyAndReuseArray(TItem[] items); // todo: @idea for the method
 
     public int Count
     {

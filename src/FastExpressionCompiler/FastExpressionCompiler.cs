@@ -637,7 +637,7 @@ namespace FastExpressionCompiler
 
             /// Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters. 
-            public ParameterExpression[] NonPassedParameters; // todo: @wip replace with PE, @perf optimize for a single non passed parameter
+            public Stack4<ParameterExpression> NonPassedParameters; // todo: @perf optimize for a single non passed parameter
 
             /// All nested lambda(s) `NestedLambdaInfo|NestedLambdaInfo[]` recursively nested in expression
             public object NestedLambdaOrLambdas;
@@ -648,9 +648,8 @@ namespace FastExpressionCompiler
                 Status = status;
 
                 Constants = new LiveCountArray<object>();
-                ConstantUsageThenVarIndex = new LiveCountArray<short>();
+                ConstantUsageThenVarIndex = new LiveCountArray<short>(); // todo: @pwerf how to replace with Stack4?
 
-                NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdaOrLambdas = null;
 
                 LastEmitIsAddress = false;
@@ -669,7 +668,6 @@ namespace FastExpressionCompiler
                 ConstantUsageThenVarIndex = new LiveCountArray<short>(
                     constValues == null ? Tools.Empty<short>() : constUsage ?? new short[constValues.Length]);
 
-                NonPassedParameters = Tools.Empty<ParameterExpression>();
                 NestedLambdaOrLambdas = null;
 
                 LastEmitIsAddress = false;
@@ -700,21 +698,7 @@ namespace FastExpressionCompiler
             public void AddNonPassedParam(ParameterExpression expr)
             {
                 Status |= ClosureStatus.HasClosure;
-
-                if (NonPassedParameters.Length == 0)
-                {
-                    NonPassedParameters = new[] { expr }; // todo: @perf optimize for a single non passed parameter
-                    return;
-                }
-
-                var nonPassedParams = NonPassedParameters;
-                var count = nonPassedParams.Length;
-                for (var i = 0; i < count; ++i)
-                    if (ReferenceEquals(nonPassedParams[i], expr))
-                        return;
-
-                Array.Resize(ref NonPassedParameters, count + 1);
-                NonPassedParameters[count] = expr;
+                NonPassedParameters.GetOrPushLast(expr, default(RefEq<ParameterExpression>));
             }
 
             public void AddNestedLambda(NestedLambdaInfo nestedLambdaInfo)
@@ -763,7 +747,7 @@ namespace FastExpressionCompiler
             }
 
             private static object GetLambdaObject(NestedLambdaInfo nestedLambda) =>
-                nestedLambda.ClosureInfo.NonPassedParameters.Length == 0 ||
+                nestedLambda.ClosureInfo.NonPassedParameters.Count == 0 ||
                 nestedLambda.ClosureInfo.ContainsConstantsOrNestedLambdas() == false
                 ? nestedLambda.Lambda
                 : new NestedLambdaWithConstantsAndNestedLambdas(
@@ -1291,11 +1275,11 @@ namespace FastExpressionCompiler
                                 {
                                     closure.AddNestedLambda(foundLambdaInfo);
                                     var foundLambdaNonPassedParams = foundLambdaInfo.ClosureInfo.NonPassedParameters;
-                                    if (foundLambdaNonPassedParams.Length != 0)
+                                    if (foundLambdaNonPassedParams.Count != 0)
 #if LIGHT_EXPRESSION
-                                        PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, foundLambdaNonPassedParams);
+                                        PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, ref foundLambdaNonPassedParams);
 #else
-                                        PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, foundLambdaNonPassedParams);
+                                        PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, ref foundLambdaNonPassedParams);
 #endif
                                 }
                                 return 0;
@@ -1312,11 +1296,11 @@ namespace FastExpressionCompiler
 
                         closure.AddNestedLambda(nestedLambdaInfo);
                         var nestedNonPassedParams = nestedLambdaInfo.ClosureInfo.NonPassedParameters; // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
-                        if (nestedNonPassedParams.Length != 0)
+                        if (nestedNonPassedParams.Count != 0)
 #if LIGHT_EXPRESSION
-                            PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, nestedNonPassedParams);
+                            PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, ref nestedNonPassedParams);
 #else
-                            PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, nestedNonPassedParams);
+                            PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, ref nestedNonPassedParams);
 #endif
                         return 0;
 
@@ -1543,13 +1527,13 @@ namespace FastExpressionCompiler
 
 #if LIGHT_EXPRESSION
         private static void PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure,
-            IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ParameterExpression[] nestedNonPassedParams)
+            IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ref Stack4<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.ParameterCount;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.ParameterCount;
 #else
         private static void PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure,
-            IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ParameterExpression[] nestedNonPassedParams)
+            IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ref Stack4<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.Count;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.Count;
@@ -1557,9 +1541,9 @@ namespace FastExpressionCompiler
             // If nested non passed parameter is not matched with any outer passed parameter,
             // then ensure it goes to outer non passed parameter.
             // But check that having a non-passed parameter in root expression is invalid.
-            for (var i = 0; i < nestedNonPassedParams.Length; i++)
+            for (var i = 0; i < nestedNonPassedParams.Count; i++)
             {
-                var nestedNonPassedParam = nestedNonPassedParams[i];
+                var nestedNonPassedParam = nestedNonPassedParams.GetSurePresentItemRef(i);
 
                 var isInNestedLambda = false;
                 if (nestedLambdaParamExprCount != 0)
@@ -1650,7 +1634,7 @@ namespace FastExpressionCompiler
                     return false;
 
             ArrayClosure nestedLambdaClosure = null;
-            if (nestedClosureInfo.NonPassedParameters.Length == 0)
+            if (nestedClosureInfo.NonPassedParameters.Count == 0)
                 nestedLambdaClosure = (nestedClosureInfo.Status & ClosureStatus.HasClosure) == 0
                     ? EmptyArrayClosure
                     : new ArrayClosure(nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas());
@@ -2602,8 +2586,8 @@ namespace FastExpressionCompiler
 
                 // the only possibility that we are here is because we are in the nested lambda,
                 // and it uses the parameter or variable from the outer lambda
-                var nonPassedParams = closure.NonPassedParameters;
-                if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, paramExpr, nonPassedParams.Length))
+                var nonPassedParamIndex = closure.NonPassedParameters.TryFindIndex(paramExpr, default(RefEq<ParameterExpression>));
+                if (nonPassedParamIndex == -1)
                     return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
@@ -2649,8 +2633,8 @@ namespace FastExpressionCompiler
 
                 // the only possibility that we are here is because we are in the nested lambda,
                 // and it uses the parameter or variable from the outer lambda
-                var nonPassedParams = closure.NonPassedParameters;
-                if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, paramExpr, nonPassedParams.Length))
+                var nonPassedParamIndex = closure.NonPassedParameters.TryFindIndex(paramExpr, default(RefEq<ParameterExpression>));
+                if (nonPassedParamIndex == -1)
                     return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
@@ -3883,8 +3867,8 @@ namespace FastExpressionCompiler
                 }
 
                 // check that it is a captured parameter by closure
-                var nonPassedParams = closure.NonPassedParameters;
-                if (!nonPassedParams.TryGetIndexByReferenceEquals(out var nonPassedParamIndex, left, nonPassedParams.Length))
+                var nonPassedParamIndex = closure.NonPassedParameters.TryFindIndex(left, default(RefEq<ParameterExpression>));
+                if (nonPassedParamIndex == -1)
                     return false;
 
                 il.Emit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
@@ -4045,8 +4029,8 @@ namespace FastExpressionCompiler
             {
                 if (nestedLambdaInfo.NonPassedParamsVarIndex == 0)
                     return;
-                var nonPassedPars = nestedLambdaInfo.ClosureInfo.NonPassedParameters;
-                if (nonPassedPars.TryGetIndexByReferenceEquals(out var nonPassedParIndex, assignedLeftVar, nonPassedPars.Length))
+                var nonPassedParIndex = nestedLambdaInfo.ClosureInfo.NonPassedParameters.TryFindIndex(assignedLeftVar, default(RefEq<ParameterExpression>));
+                if (nonPassedParIndex != -1)
                 {
                     EmitLoadLocalVariable(il, nestedLambdaInfo.NonPassedParamsVarIndex);
                     EmitLoadConstantInt(il, nonPassedParIndex);
@@ -4326,8 +4310,7 @@ namespace FastExpressionCompiler
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
                 ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
-                var nestedNonPassedParams = nestedClosureInfo.NonPassedParameters;
-                if (nestedNonPassedParams.Length == 0)
+                if (nestedClosureInfo.NonPassedParameters.Count == 0)
                     return true;
 
                 //-------------------------------------------------------------------
@@ -4343,7 +4326,7 @@ namespace FastExpressionCompiler
                 }
 
                 // - create `NonPassedParameters` array for the non-passed parameters and variables
-                EmitLoadConstantInt(il, nestedNonPassedParams.Length); // load the length of array
+                EmitLoadConstantInt(il, nestedClosureInfo.NonPassedParameters.Count); // load the length of array
                 il.Emit(OpCodes.Newarr, typeof(object));
 
                 // we need to store the array in local variable, because we may assign to closed variable after the closure is passed to the lambda
@@ -4352,15 +4335,13 @@ namespace FastExpressionCompiler
                 nestedLambdaInfo.NonPassedParamsVarIndex = (short)nonPassedParamsVarIndex;
 
                 // - populate the `NonPassedParameters` array
-                var outerNonPassedParams = closure.NonPassedParameters;
-                for (var nestedParamIndex = 0; nestedParamIndex < nestedNonPassedParams.Length; ++nestedParamIndex)
+                for (var nestedParamIndex = 0; nestedParamIndex < nestedClosureInfo.NonPassedParameters.Count; ++nestedParamIndex)
                 {
-                    var nestedParam = nestedNonPassedParams[nestedParamIndex];
-
                     // Duplicate nested array on stack to store the item, and load index to where to store
                     il.Emit(OpCodes.Dup);
                     EmitLoadConstantInt(il, nestedParamIndex);
 
+                    var nestedParam = nestedClosureInfo.NonPassedParameters.GetSurePresentItemRef(nestedParamIndex);
                     var outerParamIndex = outerParamExprCount - 1;
                     while (outerParamIndex != -1 && !ReferenceEquals(outerParamExprs.GetParameter(outerParamIndex), nestedParam))
                         --outerParamIndex;
@@ -4372,7 +4353,7 @@ namespace FastExpressionCompiler
                     }
                     else // load parameter from outer closure or from the local variables
                     {
-                        if (outerNonPassedParams.Length == 0)
+                        if (closure.NonPassedParameters.Count == 0)
                             return false; // impossible, better to throw?
 
                         var outerLocalVarIndex = closure.GetDefinedLocalVarOrDefault(nestedParam);
@@ -4383,7 +4364,8 @@ namespace FastExpressionCompiler
                         }
                         else // it's a parameter from the outer closure
                         {
-                            if (!outerNonPassedParams.TryGetIndexByReferenceEquals(out var outerNonPassedParamIndex, nestedParam, outerNonPassedParams.Length))
+                            var outerNonPassedParamIndex = closure.NonPassedParameters.TryFindIndex(nestedParam, default(RefEq<ParameterExpression>));
+                            if (outerNonPassedParamIndex == -1)
                                 return false; // impossible, better to throw?
 
                             // Load the parameter from outer closure `Items` array
