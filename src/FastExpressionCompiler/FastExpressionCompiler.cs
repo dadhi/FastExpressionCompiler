@@ -648,7 +648,7 @@ namespace FastExpressionCompiler
                 Status = status;
 
                 Constants = new LiveCountArray<object>();
-                ConstantUsageThenVarIndex = new LiveCountArray<short>(); // todo: @perf how to replace with Stack4?
+                ConstantUsageThenVarIndex = new LiveCountArray<short>(); // todo: @perf how to replace with Stack4/2?
 
                 NestedLambdaOrLambdas = null;
 
@@ -860,7 +860,7 @@ namespace FastExpressionCompiler
         internal static ref LabelInfo GetLabelOrInvokeIndexByTarget(ref this SmallList4<LabelInfo> labels, object labelTarget, out bool found)
         {
             var count = labels.Count;
-            for (var i = 0; i < count; ++i)
+            for (var i = 0; i < count; ++i) // todo: @perf make this loop into the SmallList method to avoid index check on each item
             {
                 ref var label = ref labels.GetSurePresentItemRef(i);
                 if (label.Target == labelTarget)
@@ -1154,7 +1154,7 @@ namespace FastExpressionCompiler
                             if (p == -1 && !closure.IsLocalVar(parExpr))
                             {
                                 if (!isNestedLambda)
-                                    return 2;
+                                    return 2; // todo: @imrpove add named error codes
                                 closure.AddNonPassedParam(parExpr);
                             }
                             return 0;
@@ -5904,6 +5904,7 @@ namespace FastExpressionCompiler
 
         public LiveCountArray() : this(Tools.Empty<T>(), 0) { }
 
+        [MethodImpl((MethodImplOptions)256)]
         public ref T PushSlot()
         {
             if (++Count > Items.Length)
@@ -5911,6 +5912,7 @@ namespace FastExpressionCompiler
             return ref Items[Count - 1];
         }
 
+        [MethodImpl((MethodImplOptions)256)]
         public void PushSlot(T item)
         {
             if (++Count > Items.Length)

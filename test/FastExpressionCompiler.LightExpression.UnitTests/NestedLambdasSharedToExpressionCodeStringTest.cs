@@ -23,9 +23,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var s = e.ToExpressionString();
             e.PrintCSharp();
             StringAssert.Contains("new Expression[17];", s);
+
+            var f = e.CompileFast(true);
+            Assert.IsNotNull(f);
         }
 
-        private LightExpression.Expression<Func<A>> CreateExpression()
+        private Expression<Func<A>> CreateExpression()
         {
             var test = Constant(new NestedLambdasSharedToExpressionCodeStringTest());
             var getOrAddMethod = test.Type.GetMethod(nameof(GetOrAdd));
