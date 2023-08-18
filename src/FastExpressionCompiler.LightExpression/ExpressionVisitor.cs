@@ -30,6 +30,7 @@ THE SOFTWARE.
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using FastExpressionCompiler.LightExpression.ImTools;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #nullable disable
@@ -60,6 +61,14 @@ namespace FastExpressionCompiler.LightExpression
             }
 
             return newNodes ?? nodes;
+        }
+
+        public IReadOnlyList<Expression> Visit(SmallList2<Expression> nodes)
+        {
+            var newNodes = new Expression[nodes.Count];
+            for (var i = 0; i < nodes.Count; ++i)
+                newNodes[i] = Visit(nodes.GetSurePresentItemRef(i));
+            return newNodes;
         }
 
         public IReadOnlyList<T> VisitAndConvert<T>(IReadOnlyList<T> nodes) where T : Expression

@@ -619,11 +619,11 @@ namespace FastExpressionCompiler
                 }
             }
             // Tracks the use of the variables in the blocks stack per variable, to determine if variable is the local variable and in what block it's defined
-            private FHashMap<PE, SmallList<BlockAndVarIndex>, RefEq<PE>,
-                FHashMap.SingleArrayEntries<PE, SmallList<BlockAndVarIndex>, RefEq<PE>>> _varInBlockMap;
+            private FHashMap<PE, SmallList4<BlockAndVarIndex>, RefEq<PE>,
+                FHashMap.SingleArrayEntries<PE, SmallList4<BlockAndVarIndex>, RefEq<PE>>> _varInBlockMap;
 
             /// Map the Labels to their Targets
-            internal SmallList<LabelInfo> Labels;
+            internal SmallList4<LabelInfo> Labels;
             internal short CurrentInlinedLambdaInvokeIndex;
 
             public ClosureStatus Status;
@@ -637,7 +637,7 @@ namespace FastExpressionCompiler
 
             /// Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters. 
-            public SmallList<ParameterExpression> NonPassedParameters; // todo: @perf optimize for a single non passed parameter
+            public SmallList2<ParameterExpression> NonPassedParameters;
 
             /// All nested lambda(s) `NestedLambdaInfo|NestedLambdaInfo[]` recursively nested in expression
             public object NestedLambdaOrLambdas;
@@ -648,7 +648,7 @@ namespace FastExpressionCompiler
                 Status = status;
 
                 Constants = new LiveCountArray<object>();
-                ConstantUsageThenVarIndex = new LiveCountArray<short>(); // todo: @pwerf how to replace with Stack4?
+                ConstantUsageThenVarIndex = new LiveCountArray<short>(); // todo: @perf how to replace with Stack4?
 
                 NestedLambdaOrLambdas = null;
 
@@ -857,7 +857,7 @@ namespace FastExpressionCompiler
             }
         }
 
-        internal static ref LabelInfo GetLabelOrInvokeIndexByTarget(ref this SmallList<LabelInfo> labels, object labelTarget, out bool found)
+        internal static ref LabelInfo GetLabelOrInvokeIndexByTarget(ref this SmallList4<LabelInfo> labels, object labelTarget, out bool found)
         {
             var count = labels.Count;
             for (var i = 0; i < count; ++i)
@@ -878,19 +878,10 @@ namespace FastExpressionCompiler
         {
             if ((label.ReturnVariableIndexPlusOneAndIsDefined & 1) == 0)
             {
-                label.ReturnVariableIndexPlusOneAndIsDefined |= 1;
                 label.Label = il.DefineLabel();
+                label.ReturnVariableIndexPlusOneAndIsDefined |= 1;
             }
             return label.Label;
-        }
-
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        public static ref LabelInfo TryMarkDefinedLabel(ref this SmallList<LabelInfo> labels, object target, ILGenerator il, out bool found)
-        {
-            ref var label = ref labels.GetLabelOrInvokeIndexByTarget(target, out found);
-            if (found)
-                il.MarkLabel(label.GetOrDefineLabel(il));
-            return ref label;
         }
 
         public static readonly ArrayClosure EmptyArrayClosure = new ArrayClosure(null);
@@ -1105,16 +1096,19 @@ namespace FastExpressionCompiler
 
         /// <summary>Wraps the call to `TryCollectRound` for the compatibility and provide the root place to check the returned error code</summary>
         [MethodImpl((MethodImplOptions)256)]
-        public static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr, 
+        public static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr,
 #if LIGHT_EXPRESSION
             IParameterProvider paramExprs, // `paramExprs` are required for nested lambda compilation
 #else
             IReadOnlyList<PE> paramExprs,
 #endif
-            bool isNestedLambda, ref ClosureInfo rootClosure, CompilerFlags flags) =>
-            TryCollectRound(ref closure, expr, paramExprs, isNestedLambda, ref rootClosure, flags) == 0;
+            bool isNestedLambda, ref ClosureInfo rootClosure, CompilerFlags flags)
+        {
+            var error = TryCollectRound(ref closure, expr, paramExprs, isNestedLambda, ref rootClosure, flags);
+            return error == 0; // exposed here for debugging to set a breakpoint
+        }
 
-        public static int TryCollectRound(ref ClosureInfo closure, Expression expr, 
+        public static int TryCollectRound(ref ClosureInfo closure, Expression expr,
 #if LIGHT_EXPRESSION
             IParameterProvider paramExprs,
 #else
@@ -1334,11 +1328,12 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                                 var pars = (IParameterProvider)la;
                                 var paramCount = paramExprs.ParameterCount;
+                                SmallList2<Expression> exprs = default;
 #else
                                 var pars = la.Parameters;
                                 var paramCount = paramExprs.Count;
+                                var exprs = new Expression[argCount + 1]; // todo: @perf @alloc @wip optimize with SmallList
 #endif
-                                var exprs = new Expression[argCount + 1];
                                 List<ParameterExpression> vars = null;
                                 for (var i = 0; i < argCount; i++)
                                 {
@@ -1352,7 +1347,7 @@ namespace FastExpressionCompiler
                                         // if we found the same parameter let's move the non-found (new) parameters into the separate `vars` list
                                         if (vars == null)
                                         {
-                                            vars = new List<ParameterExpression>();
+                                            vars = new List<ParameterExpression>(); // todo: @perf use the GrowableList
                                             for (var k = 0; k < i; k++)
                                                 vars.Add(pars.GetParameter(k));
                                         }
@@ -1360,10 +1355,19 @@ namespace FastExpressionCompiler
                                     else if (vars != null)
                                         vars.Add(p);
 
+#if LIGHT_EXPRESSION
+                                    exprs.Append(Assign(p, invokeArgs.GetArgument(i)));
+#else
                                     exprs[i] = Assign(p, invokeArgs.GetArgument(i));
+#endif
                                 }
+#if LIGHT_EXPRESSION
+                                exprs.Append(la.Body);
+                                expr = Block(vars ?? pars.ToReadOnlyList(), in exprs);
+#else
                                 exprs[argCount] = la.Body;
                                 expr = Block(vars ?? pars.ToReadOnlyList(), exprs);
+#endif
                                 if ((error = TryCollectRound(ref closure, expr, paramExprs, isNestedLambda, ref rootClosure, flags)) != 0)
                                     return error;
 
@@ -1527,13 +1531,13 @@ namespace FastExpressionCompiler
 
 #if LIGHT_EXPRESSION
         private static void PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure,
-            IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
+            IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ref SmallList2<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.ParameterCount;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.ParameterCount;
 #else
         private static void PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure,
-            IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
+            IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ref SmallList2<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.Count;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.Count;
@@ -2170,19 +2174,29 @@ namespace FastExpressionCompiler
                 var loopBodyLabel = il.DefineLabel();
                 il.MarkLabel(loopBodyLabel);
 
-                var ok = true;
                 if (loopExpr.ContinueLabel != null)
-                    closure.Labels.TryMarkDefinedLabel(loopExpr.ContinueLabel, il, out ok);
+                {
+                    ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(loopExpr.ContinueLabel, out var foundLabel);
+                    if (!foundLabel)
+                        return false;
+                    il.MarkLabel(labelInfo.GetOrDefineLabel(il));
+                }
 
-                if (ok && !TryEmit(loopExpr.Body, paramExprs, il, ref closure, setup, parent))
+                if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, setup, parent))
                     return false;
 
                 // If loop hasn't exited, jump back to start of its body:
                 il.Emit(OpCodes.Br, loopBodyLabel);
 
-                if (ok & loopExpr.BreakLabel != null)
-                    closure.Labels.TryMarkDefinedLabel(loopExpr.BreakLabel, il, out ok);
-                return ok;
+                if (loopExpr.BreakLabel != null)
+                {
+                    ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(loopExpr.BreakLabel, out var foundLabel);
+                    if (!foundLabel)
+                        return false;
+                    il.MarkLabel(labelInfo.GetOrDefineLabel(il));
+                }
+
+                return true;
             }
 
 #if LIGHT_EXPRESSION
@@ -2244,40 +2258,41 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                ref var label = ref closure.Labels.TryMarkDefinedLabel(expr.Target, il, out var ok);
-                if (!ok)
+                ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(expr.Target, out var foundLabel);
+                if (!foundLabel)
                     return false;
+                il.MarkLabel(labelInfo.GetOrDefineLabel(il));
 
                 var defaultValue = expr.DefaultValue;
-                if (defaultValue != null)
-                    ok = TryEmit(defaultValue, paramExprs, il, ref closure, setup, parent);
+                if (defaultValue != null && !TryEmit(defaultValue, paramExprs, il, ref closure, setup, parent))
+                    return false;
 
-                var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
+                var returnVariableIndexPlusOne = labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
                 if (returnVariableIndexPlusOne != 0)
                 {
                     if (defaultValue != null)
                         EmitStoreLocalVariable(il, returnVariableIndexPlusOne - 1);
 
-                    il.MarkLabel(label.ReturnLabel);
+                    il.MarkLabel(labelInfo.ReturnLabel);
                     if (!parent.IgnoresResult())
                         EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
                 }
-                return ok;
+                return foundLabel;
             }
 
             // For TryCatch get the variable for saving the result from the LabelInfo store the return expression result into the that variable.
             // Emit OpCodes.Leave or OpCodes.Br to the special label with the result which should be marked after the label to jump over its default value
-            private static void EmitGotoToReturnLabel(ref LabelInfo label, ILGenerator il, Expression gotoValue, OpCode returnOpCode)
+            private static void EmitGotoToReturnLabel(ref LabelInfo labelInfo, ILGenerator il, Expression gotoValue, OpCode returnOpCode)
             {
-                var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
+                var returnVariableIndexPlusOne = labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
                 if (returnVariableIndexPlusOne == 0)
                 {
                     returnVariableIndexPlusOne = il.GetNextLocalVarIndex(gotoValue.Type) + 1;
-                    label.ReturnVariableIndexPlusOneAndIsDefined = (short)(returnVariableIndexPlusOne << 1);
-                    label.ReturnLabel = il.DefineLabel();
+                    labelInfo.ReturnVariableIndexPlusOneAndIsDefined = (short)(returnVariableIndexPlusOne << 1);
+                    labelInfo.ReturnLabel = il.DefineLabel();
                 }
                 EmitStoreLocalVariable(il, returnVariableIndexPlusOne - 1);
-                il.Emit(returnOpCode, label.ReturnLabel);
+                il.Emit(returnOpCode, labelInfo.ReturnLabel);
             }
 
 #if LIGHT_EXPRESSION
@@ -2288,7 +2303,7 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                ref var label = ref closure.Labels.GetLabelOrInvokeIndexByTarget(expr.Target, out var labelFound);
+                ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(expr.Target, out var labelFound);
                 if (!labelFound)
                 {
                     if ((closure.Status & ClosureStatus.ToBeCollected) == 0)
@@ -2304,28 +2319,28 @@ namespace FastExpressionCompiler
                 {
                     case GotoExpressionKind.Break:
                     case GotoExpressionKind.Continue:
-                        il.Emit(OpCodes.Br, label.GetOrDefineLabel(il));
+                        il.Emit(OpCodes.Br, labelInfo.GetOrDefineLabel(il));
                         return true;
 
                     case GotoExpressionKind.Goto:
                         if (gotoValue != null)
                             goto case GotoExpressionKind.Return;
-                        il.Emit(OpCodes.Br, label.GetOrDefineLabel(il));
+                        il.Emit(OpCodes.Br, labelInfo.GetOrDefineLabel(il));
                         return true;
 
                     case GotoExpressionKind.Return:
                         if ((parent & ParentFlags.TryCatch) != 0)
                         {
                             if (gotoValue != null)
-                                EmitGotoToReturnLabel(ref label, il, gotoValue, OpCodes.Leave);
+                                EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, OpCodes.Leave);
                             else
-                                il.Emit(OpCodes.Leave, label.GetOrDefineLabel(il)); // if there is no return value just leave to the original label
+                                il.Emit(OpCodes.Leave, labelInfo.GetOrDefineLabel(il)); // if there is no return value just leave to the original label
                         }
                         else if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
                         {
                             if (gotoValue != null)
                             {
-                                var invokeIndex = label.InlinedLambdaInvokeIndex;
+                                var invokeIndex = labelInfo.InlinedLambdaInvokeIndex;
                                 if (invokeIndex == -1)
                                     return false;
                                 EmitGotoToReturnLabel(ref closure.Labels.GetSurePresentItemRef(invokeIndex), il, gotoValue, OpCodes.Br);
@@ -5520,6 +5535,7 @@ namespace FastExpressionCompiler
 
         internal static IList<T> AsList<T>(this IEnumerable<T> source) =>
             source == null ? Empty<T>() : source as IList<T> ?? source.ToList();
+
         // todo: @perf optimize using marshal arts, e.g. `ref MemoryMarshal.GetArrayDataReference(arr)` and `ref Unsafe.Add<T (ref T source, nuint elementOffset);`
         internal static bool TryGetIndexByReferenceEquals<T>(this T[] items, out int index, T item, int count)
         {
@@ -7727,6 +7743,20 @@ namespace FastExpressionCompiler
                 return sb.Append(" new ").Append(typeof(T).ToCode(true)).Append("[0]");
             for (var i = 0; i < exprs.Count; i++)
                 (i > 0 ? sb.Append(", ") : sb).NewLineIdentExpr(exprs[i],
+                    paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+            return sb;
+        }
+
+        // todo: @improve figure how to avoid the duplication with the method above IReadOnlyList<T> exprs
+        internal static StringBuilder NewLineIdentArgumentExprs<T>(this StringBuilder sb, SmallList2<T> exprs,
+            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
+            int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces, CodePrinter.ObjectToCode notRecognizedToCode)
+            where T : Expression
+        {
+            if (exprs.Count == 0)
+                return sb.Append(" new ").Append(typeof(T).ToCode(true)).Append("[0]");
+            for (var i = 0; i < exprs.Count; i++)
+                (i > 0 ? sb.Append(", ") : sb).NewLineIdentExpr(exprs.GetSurePresentItemRef(i),
                     paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
             return sb;
         }

@@ -10,7 +10,7 @@ using L = FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.Benchmarks
 {
     [MemoryDiagnoser]
-    [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
+    // [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
     public class NestedLambdasVsVars
     {
         /*
@@ -85,7 +85,6 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 |-------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|---------------:|----------------------:|------------------------:|-------:|-------:|----------:|------------:|
 | LightExpression_with_sub_expressions_CompiledFast |  40.48 us |  1.821 us |  5.137 us |  1.00 |    0.00 | 1.7090 |            640 |                46,372 |                     454 | 1.4648 | 0.1221 |  10.67 KB |        1.00 |
 |          Expression_with_sub_expressions_Compiled | 793.63 us | 15.595 us | 23.815 us | 19.97 |    2.28 | 3.9063 |          1,855 |               894,256 |                  30,865 | 1.9531 |      - |  28.47 KB |        2.67 |
-
 
 */
         private Expression<Func<A>> _expr;//, _exprWithVars;
