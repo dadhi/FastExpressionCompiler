@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0"/>
+        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.3.4"/>
     </ItemGroup>
 
     <ItemGroup>
