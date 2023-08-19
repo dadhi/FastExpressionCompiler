@@ -656,17 +656,14 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
             }
 
-            /// <summary>Populates info directly with provided closure object and constants.
-            /// If provided, the <paramref name="constUsage"/> is the const variable indexes,
-            /// should be the size of <paramref name="constValues"/>
-            /// </summary>
-            public ClosureInfo(ClosureStatus status, object[] constValues, short[] constUsage = null)
+            /// <summary>Populates info directly with provided closure object and constants.</summary>
+            public ClosureInfo(ClosureStatus status, object[] constValues)
             {
                 Status = status;
 
                 Constants = new LiveCountArray<object>(constValues ?? Tools.Empty<object>());
                 ConstantUsageThenVarIndex = new LiveCountArray<short>(
-                    constValues == null ? Tools.Empty<short>() : constUsage ?? new short[constValues.Length]);
+                    constValues == null ? Tools.Empty<short>() : new short[constValues.Length]);
 
                 NestedLambdaOrLambdas = null;
 
