@@ -411,7 +411,16 @@ public struct SmallList2<TItem>
     internal TItem _it0, _it1;
     internal TItem[] _rest;
 
-    /// <summary>Good staff</summary>
+    /// <summary>Good stuff</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void InitCount(int count)
+    {
+        _count = count;
+        if (count > StackItemCount)
+            _rest = new TItem[count - StackItemCount];
+    }
+
+    /// <summary>Good stiff</summary>
     [MethodImpl((MethodImplOptions)256)]
     public void Init(TItem it0)
     {
@@ -419,7 +428,7 @@ public struct SmallList2<TItem>
         _it0 = it0;
     }
 
-    /// <summary>Good staff</summary>
+    /// <summary>Good steff</summary>
     [MethodImpl((MethodImplOptions)256)]
     public void Init(TItem it0, TItem it1)
     {
@@ -438,7 +447,7 @@ public struct SmallList2<TItem>
         _rest = rest;
     }
 
-    /// <summary>Good staff</summary>
+    /// <summary>Good styff</summary>
     public void Init(params TItem[] items)
     {
         switch (items.Length)

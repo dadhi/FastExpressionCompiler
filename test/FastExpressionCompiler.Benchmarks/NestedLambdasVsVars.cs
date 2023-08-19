@@ -86,6 +86,13 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 | LightExpression_with_sub_expressions_CompiledFast |  40.48 us |  1.821 us |  5.137 us |  1.00 |    0.00 | 1.7090 |            640 |                46,372 |                     454 | 1.4648 | 0.1221 |  10.67 KB |        1.00 |
 |          Expression_with_sub_expressions_Compiled | 793.63 us | 15.595 us | 23.815 us | 19.97 |    2.28 | 3.9063 |          1,855 |               894,256 |                  30,865 | 1.9531 |      - |  28.47 KB |        2.67 |
 
+## SmallList2 ConstantUsage thingy
+
+|                                            Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+|-------------------------------------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| LightExpression_with_sub_expressions_CompiledFast |  22.57 us |  0.442 us |  0.862 us |  22.26 us |  1.00 |    0.00 | 1.7090 | 1.6785 |  10.52 KB |        1.00 |
+|          Expression_with_sub_expressions_Compiled | 517.53 us | 10.254 us | 27.546 us | 503.49 us | 22.95 |    1.36 | 3.9063 | 2.9297 |  28.91 KB |        2.75 |
+
 */
         private Expression<Func<A>> _expr;//, _exprWithVars;
         private LightExpression.Expression<Func<A>> _lightExpr;

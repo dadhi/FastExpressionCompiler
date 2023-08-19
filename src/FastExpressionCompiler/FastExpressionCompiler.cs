@@ -633,7 +633,7 @@ namespace FastExpressionCompiler
 
             /// Constant usage count and variable index.
             /// It is a separate collection from the Constants because we directly convert later into the closure array
-            public LiveCountArray<short> ConstantUsageThenVarIndex;
+            public SmallList2<short> ConstantUsageThenVarIndex;
 
             /// Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters. 
@@ -648,7 +648,6 @@ namespace FastExpressionCompiler
                 Status = status;
 
                 Constants = new LiveCountArray<object>();
-                ConstantUsageThenVarIndex = new LiveCountArray<short>(); // todo: @perf how to replace with Stack4/2?
 
                 NestedLambdaOrLambdas = null;
 
@@ -662,8 +661,8 @@ namespace FastExpressionCompiler
                 Status = status;
 
                 Constants = new LiveCountArray<object>(constValues ?? Tools.Empty<object>());
-                ConstantUsageThenVarIndex = new LiveCountArray<short>(
-                    constValues == null ? Tools.Empty<short>() : new short[constValues.Length]);
+                if (constValues != null)
+                    ConstantUsageThenVarIndex.InitCount(constValues.Length);
 
                 NestedLambdaOrLambdas = null;
 
@@ -683,11 +682,11 @@ namespace FastExpressionCompiler
                 if (constIndex == -1)
                 {
                     Constants.PushSlot(value);
-                    ConstantUsageThenVarIndex.PushSlot(1);
+                    ConstantUsageThenVarIndex.Append(1);
                 }
                 else
                 {
-                    ++ConstantUsageThenVarIndex.Items[constIndex];
+                    ++ConstantUsageThenVarIndex.GetSurePresentItemRef(constIndex);
                 }
                 return true; // here for fluency, don't delete
             }
@@ -3051,7 +3050,7 @@ namespace FastExpressionCompiler
                     if (!closure.Constants.Items.TryGetIndexByReferenceEquals(out var constIndex, constValue, closure.Constants.Count))
                         return false;
 
-                    var varIndex = closure.ConstantUsageThenVarIndex.Items[constIndex] - 1;
+                    var varIndex = closure.ConstantUsageThenVarIndex[constIndex] - 1;
                     if (varIndex > 0)
                         EmitLoadLocalVariable(il, varIndex);
                     else
@@ -3207,12 +3206,12 @@ namespace FastExpressionCompiler
 
                 var constItems = closure.Constants.Items; // todo: @perf why do we getting when non constants is stored but just a nested lambda is present?
                 var constCount = closure.Constants.Count;
-                var constUsage = closure.ConstantUsageThenVarIndex.Items;
 
                 short varIndex;
                 for (var i = 0; i < constCount; i++)
                 {
-                    if (constUsage[i] > 1) // todo: @perf should we proceed to do this or simplify and remove the usages for the closure info?
+                    ref var constUsage = ref closure.ConstantUsageThenVarIndex.GetSurePresentItemRef(i);
+                    if (constUsage > 1) // todo: @perf should we proceed to do this or simplify and remove the usages for the closure info?
                     {
                         EmitLoadClosureArrayItem(il, i);
                         var varType = constItems[i].GetType();
@@ -3220,7 +3219,7 @@ namespace FastExpressionCompiler
                             il.Emit(OpCodes.Unbox_Any, varType);
 
                         varIndex = (short)il.GetNextLocalVarIndex(varType);
-                        constUsage[i] = (short)(varIndex + 1); // to distinguish from the default 1
+                        constUsage = (short)(varIndex + 1); // to distinguish from the default 1
                         EmitStoreLocalVariable(il, varIndex);
                     }
                 }
