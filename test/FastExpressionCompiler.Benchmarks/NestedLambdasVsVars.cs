@@ -14,15 +14,49 @@ namespace FastExpressionCompiler.Benchmarks
     public class NestedLambdasVsVars
     {
         /*
-## The results
+## Compilation
+
+### V2
+
+|                                                                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|----------------------------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+|                           Expression_with_sub_expressions_CompiledFast |  78.27 us | 0.3404 us | 0.3184 us |  1.00 |    0.00 | 4.3945 | 2.1973 | 0.2441 |  20.42 KB |
+|                               Expression_with_sub_expressions_Compiled | 640.89 us | 4.6905 us | 4.3875 us |  8.19 |    0.08 | 5.8594 | 2.9297 |      - |  27.04 KB |
+| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  46.36 us | 0.3881 us | 0.3441 us |  0.59 |    0.01 | 2.7466 | 1.3428 | 0.1831 |  12.61 KB |
+|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 864.08 us | 2.0120 us | 1.8820 us | 11.04 |    0.06 | 3.9063 | 1.9531 |      - |  20.96 KB |
+
+### V3
+
+|                                            Method |      Mean |     Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+|-------------------------------------------------- |----------:|----------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |  32.37 us |  0.442 us | 0.413 us |  1.00 |    0.00 | 2.1973 | 1.0986 | 0.1831 |   9.03 KB |
+|          Expression_with_sub_expressions_Compiled | 637.97 us | 12.327 us | 9.624 us | 19.71 |    0.37 | 5.8594 | 2.9297 |      - |  26.31 KB |
+
+## Invocation
+
+### V2
+
+|                                                                 Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|----------------------------------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+|                           Expression_with_sub_expressions_CompiledFast |    57.17 ns | 0.1766 ns | 0.1566 ns |  1.00 |    0.00 | 0.0627 |     - |     - |     296 B |
+|                               Expression_with_sub_expressions_Compiled | 1,083.94 ns | 2.6288 ns | 2.4590 ns | 18.96 |    0.07 | 0.0458 |     - |     - |     224 B |
+| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |    51.78 ns | 0.2234 ns | 0.2089 ns |  0.91 |    0.00 | 0.0593 |     - |     - |     280 B |
+|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,644.84 ns | 5.2784 ns | 4.4077 ns | 28.77 |    0.10 | 0.0782 |     - |     - |     376 B |
+
+### V3
+
+|                                            Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|-------------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
+| LightExpression_with_sub_expressions_CompiledFast |    13.40 ns |  0.190 ns |  0.158 ns |  1.00 |    0.00 | 0.0076 |     - |     - |      32 B |
+|          Expression_with_sub_expressions_Compiled | 1,083.09 ns | 21.502 ns | 30.142 ns | 80.91 |    3.16 | 0.0534 |     - |     - |     224 B |
+
+## Create+Compile
 
 BenchmarkDotNet=v0.12.0, OS=Windows 10.0.18362
 Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
 .NET Core SDK=3.1.100
   [Host]     : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
   DefaultJob : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
-
-## Creation and Compilation
 
 ### V2
 |                                            Method |      Mean |    Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
@@ -37,43 +71,7 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
 | LightExpression_with_sub_expressions_CompiledFast |  37.16 us | 0.720 us | 0.829 us |  1.00 |    0.00 | 2.3804 | 1.1597 | 0.1831 |   9.81 KB |
 |          Expression_with_sub_expressions_Compiled | 652.33 us | 7.463 us | 6.616 us | 17.62 |    0.46 | 5.8594 | 2.9297 |      - |  27.51 KB |
 
-
-## V2
-
-### Compilation
-
-|                                                                 Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|----------------------------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                           Expression_with_sub_expressions_CompiledFast |  78.27 us | 0.3404 us | 0.3184 us |  1.00 |    0.00 | 4.3945 | 2.1973 | 0.2441 |  20.42 KB |
-|                               Expression_with_sub_expressions_Compiled | 640.89 us | 4.6905 us | 4.3875 us |  8.19 |    0.08 | 5.8594 | 2.9297 |      - |  27.04 KB |
-| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |  46.36 us | 0.3881 us | 0.3441 us |  0.59 |    0.01 | 2.7466 | 1.3428 | 0.1831 |  12.61 KB |
-|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 864.08 us | 2.0120 us | 1.8820 us | 11.04 |    0.06 | 3.9063 | 1.9531 |      - |  20.96 KB |
-
-### Invocation
-|                                                                 Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|----------------------------------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-|                           Expression_with_sub_expressions_CompiledFast |    57.17 ns | 0.1766 ns | 0.1566 ns |  1.00 |    0.00 | 0.0627 |     - |     - |     296 B |
-|                               Expression_with_sub_expressions_Compiled | 1,083.94 ns | 2.6288 ns | 2.4590 ns | 18.96 |    0.07 | 0.0458 |     - |     - |     224 B |
-| Expression_with_sub_expressions_assigned_to_vars_in_block_CompiledFast |    51.78 ns | 0.2234 ns | 0.2089 ns |  0.91 |    0.00 | 0.0593 |     - |     - |     280 B |
-|      Expression_with_sub_expressions_assigned_to_vars_in_block_Compile | 1,644.84 ns | 5.2784 ns | 4.4077 ns | 28.77 |    0.10 | 0.0782 |     - |     - |     376 B |
-
-## V3
-
-### Compilation
-
-|                                            Method |      Mean |     Error |   StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|-------------------------------------------------- |----------:|----------:|---------:|------:|--------:|-------:|-------:|-------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |  32.37 us |  0.442 us | 0.413 us |  1.00 |    0.00 | 2.1973 | 1.0986 | 0.1831 |   9.03 KB |
-|          Expression_with_sub_expressions_Compiled | 637.97 us | 12.327 us | 9.624 us | 19.71 |    0.37 | 5.8594 | 2.9297 |      - |  26.31 KB |
-
-## Invocation
-
-|                                            Method |        Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|-------------------------------------------------- |------------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-| LightExpression_with_sub_expressions_CompiledFast |    13.40 ns |  0.190 ns |  0.158 ns |  1.00 |    0.00 | 0.0076 |     - |     - |      32 B |
-|          Expression_with_sub_expressions_Compiled | 1,083.09 ns | 21.502 ns | 30.142 ns | 80.91 |    3.16 | 0.0534 |     - |     - |     224 B |
-
-## Create+Compile
+### V3.4.0
 
 BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
@@ -86,7 +84,7 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 | LightExpression_with_sub_expressions_CompiledFast |  40.48 us |  1.821 us |  5.137 us |  1.00 |    0.00 | 1.7090 |            640 |                46,372 |                     454 | 1.4648 | 0.1221 |  10.67 KB |        1.00 |
 |          Expression_with_sub_expressions_Compiled | 793.63 us | 15.595 us | 23.815 us | 19.97 |    2.28 | 3.9063 |          1,855 |               894,256 |                  30,865 | 1.9531 |      - |  28.47 KB |        2.67 |
 
-## SmallList2 ConstantUsage thingy
+#### SmallList2 ConstantUsage thingy
 
 |                                            Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
 |-------------------------------------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|

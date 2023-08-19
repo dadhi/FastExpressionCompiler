@@ -14,8 +14,9 @@ namespace FastExpressionCompiler.UnitTests
             RunAllTests();
             new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
 
-            // new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run();
+            // new Nested_lambdas_assigned_to_vars().Run();
 
+            // new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run();
             // new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
             // new LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
             // new LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();

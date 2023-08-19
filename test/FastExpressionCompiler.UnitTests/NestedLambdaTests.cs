@@ -18,8 +18,8 @@ namespace FastExpressionCompiler.UnitTests
             Nested_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda();
             Given_composed_expr_with_closure_over_parameters_in_nested_lambda_should_work();
             Given_composed_expr_with_closure_over_parameters_used_in_2_levels_of_nested_lambda();
-            Given_composed_expr_with_closure_over_2_parameters_used_in_2_levels_of_nested_lambda();
-            Given_composed_expr_with_closure_over_2_same_parameters_used_in_2_levels_of_nested_lambda();
+            Given_composed_expr_with_closure_over_2_parameters_used_in_2_levels_of_nested_lambda(); // todo: @wip
+            Given_composed_expr_with_closure_over_2_same_parameters_used_in_2_levels_of_nested_lambda(); // todo: @wip
             Two_same_nested_lambdas_should_compile_once();
             Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda();
 

@@ -15,7 +15,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_shared_sub_expressions();
+            Test_shared_sub_expressions(); // todo: @wip
             Test_shared_sub_expressions_assigned_to_vars();
             return 2;
         }
@@ -23,9 +23,34 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Test_shared_sub_expressions()
         {
-            var expr = CreateExpression();
+            var e = CreateExpression();
+            e.PrintCSharp();
+            var @cs = (Func<A>)(() =>
+                new A(
+                    ((B)default(Nested_lambdas_assigned_to_vars)/*Please provide the non-default value for the constant!*/.GetOrAdd(
+                        0,
+                        (Func<B>)(() =>
+                                new B(
+                                    ((C)default(Nested_lambdas_assigned_to_vars)/*Please provide the non-default value for the constant!*/.GetOrAdd(
+                                        1,
+                                        (Func<C>)(() =>
+                                                new C(((D)default(Nested_lambdas_assigned_to_vars)/*Please provide the non-default value for the constant!*/.GetOrAdd(
+                                                    2,
+                                                    (Func<D>)(() =>
+                                                            new D()))))))),
+                                    ((D)default(Nested_lambdas_assigned_to_vars)/*Please provide the non-default value for the constant!*/.GetOrAdd(
+                                        2,
+                                        (Func<D>)(() =>
+                                                new D()))))))),
+                    ((C)default(Nested_lambdas_assigned_to_vars)/*Please provide the non-default value for the constant!*/.GetOrAdd(
+                        1,
+                        (Func<C>)(() =>
+                                new C(((D)default(Nested_lambdas_assigned_to_vars)/*Please provide the non-default value for the constant!*/.GetOrAdd(
+                                    2,
+                                    (Func<D>)(() =>
+                                            new D())))))))));
 
-            var f = expr.CompileFast(true);
+            var f = e.CompileFast(true);
 
             Assert.IsNotNull(f);
             Assert.IsNotNull(f());

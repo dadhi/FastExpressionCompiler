@@ -498,10 +498,12 @@ namespace FastExpressionCompiler
                         if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags))
                             return null;
                 }
-                else if (((NestedLambdaInfo)nestedLambdaOrLambdas).Lambda == null &&
-                    !TryCompileNestedLambda((NestedLambdaInfo)nestedLambdaOrLambdas, flags))
-                    return null;
-
+                else 
+                { 
+                    var nestedLambda = (NestedLambdaInfo)nestedLambdaOrLambdas;
+                    if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags))
+                        return null;
+                }
             ArrayClosure closure;
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
                 closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
@@ -712,7 +714,7 @@ namespace FastExpressionCompiler
                 {
                     var nestedLambdas = (NestedLambdaInfo[])nestedLambdaOrLambdas;
                     var count = nestedLambdas.Length;
-                    Array.Resize(ref nestedLambdas, count + 1);
+                    Array.Resize(ref nestedLambdas, count + 1); // todo: @wip @copying each time, why not double the size, it is the array of references after all
                     nestedLambdas[count] = nestedLambdaInfo;
                     NestedLambdaOrLambdas = nestedLambdas;
                 }
@@ -746,7 +748,7 @@ namespace FastExpressionCompiler
 
             private static object GetLambdaObject(NestedLambdaInfo nestedLambda) =>
                 nestedLambda.ClosureInfo.NonPassedParameters.Count == 0 ||
-                nestedLambda.ClosureInfo.ContainsConstantsOrNestedLambdas() == false
+                !nestedLambda.ClosureInfo.ContainsConstantsOrNestedLambdas()
                 ? nestedLambda.Lambda
                 : new NestedLambdaWithConstantsAndNestedLambdas(
                     nestedLambda.Lambda, nestedLambda.ClosureInfo.GetArrayOfConstantsAndNestedLambdas());
@@ -775,7 +777,7 @@ namespace FastExpressionCompiler
                 if (nestedLambdaOrLambdas == null)
                 {
                     if (constItems.Length != constCount)
-                        Array.Resize(ref constItems, constCount);
+                        Array.Resize(ref constItems, constCount); // todo: @wip what if we avoid Resize because it copies stuff?
                     return constItems;
                 }
 
@@ -784,7 +786,7 @@ namespace FastExpressionCompiler
                 var constPlusLambdaCount = constCount + lambdaCount;
 
                 if (constItems.Length != constPlusLambdaCount)
-                    Array.Resize(ref constItems, constPlusLambdaCount);
+                    Array.Resize(ref constItems, constPlusLambdaCount); // todo: @wip replace with Copy (Expand), OR! can we copy to the lambdas array?
 
                 if (nestedLambdas == null)
                     constItems[constCount] = GetLambdaObject((NestedLambdaInfo)nestedLambdaOrLambdas);
@@ -989,13 +991,15 @@ namespace FastExpressionCompiler
                 ClosureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
                 Lambda = null;
             }
-            internal bool IsTheSameLambda(LambdaExpression lambda) => // todo: @unclear parameters or is comparing the body is enough?
+            /// <summary>Compares 2 lambda expressions for equality</summary>
+            public bool HasTheSameLambdaExpression(LambdaExpression lambda) => // todo: @unclear parameters or is comparing the body is enough?
                 ReferenceEquals(LambdaExpression, lambda) ||
                 ReferenceEquals(LambdaExpression.Body, lambda.Body)
 #if LIGHT_EXPRESSION
                 && LambdaExpression.ParameterCount == lambda.ParameterCount
 #endif
                 ;
+            public override string ToString() => $"Lambda: {(Lambda != null ? "compiled" : "null")}, Expr: {LambdaExpression.ToString()}";
         }
 
         internal static class CurryClosureFuncs
@@ -1259,25 +1263,22 @@ namespace FastExpressionCompiler
 
                         // Look for the already collected lambdas and if we have the same lambda, start from the root
                         var nestedLambdaOrLambdas = rootClosure.NestedLambdaOrLambdas;
-                        if (nestedLambdaOrLambdas != null)
+                        if (nestedLambdaOrLambdas != null &&
+                            FindAlreadyCollectedNestedLambdaInfoInLambdas(nestedLambdaOrLambdas, nestedLambdaExpr, out var foundInLambda))
                         {
-                            var foundLambdaInfo = FindAlreadyCollectedNestedLambdaInfoInLambdas(nestedLambdaOrLambdas, nestedLambdaExpr, out var foundInLambdas);
-                            if (foundLambdaInfo != null)
+                            // if the lambda is not found on the same level, then add it
+                            if (foundInLambda != closure.NestedLambdaOrLambdas) // todo: @wip will be true only for some recursive functions where NestedLambdaOrLambdas is the Lambda
                             {
-                                // if the lambda is not found on the same level, then add it
-                                if (foundInLambdas != closure.NestedLambdaOrLambdas)
-                                {
-                                    closure.AddNestedLambda(foundLambdaInfo);
-                                    ref var foundLambdaNonPassedParams = ref foundLambdaInfo.ClosureInfo.NonPassedParameters;
-                                    if (foundLambdaNonPassedParams.Count != 0)
+                                closure.AddNestedLambda(foundInLambda);
+                                ref var foundLambdaNonPassedParams = ref foundInLambda.ClosureInfo.NonPassedParameters;
+                                if (foundLambdaNonPassedParams.Count != 0)
 #if LIGHT_EXPRESSION
-                                        PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, ref foundLambdaNonPassedParams);
+                                    PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, ref foundLambdaNonPassedParams);
 #else
-                                        PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, ref foundLambdaNonPassedParams);
+                                    PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, ref foundLambdaNonPassedParams);
 #endif
-                                }
-                                return 0;
                             }
+                            return 0;
                         }
 
                         var nestedLambdaInfo = new NestedLambdaInfo(nestedLambdaExpr);
@@ -1564,39 +1565,44 @@ namespace FastExpressionCompiler
             }
         }
 
-        private static NestedLambdaInfo FindAlreadyCollectedNestedLambdaInfo(
-            NestedLambdaInfo nestedLambda, LambdaExpression nestedLambdaExpr, out object foundInLambdaOrLambdas)
-        {
-            if (nestedLambda.IsTheSameLambda(nestedLambdaExpr))
-            {
-                foundInLambdaOrLambdas = nestedLambda;
-                return nestedLambda;
-            }
-
-            var deeperNestedLambdaOrLambdas = nestedLambda.ClosureInfo.NestedLambdaOrLambdas;
-            if (deeperNestedLambdaOrLambdas != null)
-                return FindAlreadyCollectedNestedLambdaInfoInLambdas(deeperNestedLambdaOrLambdas, nestedLambdaExpr, out foundInLambdaOrLambdas);
-
-            foundInLambdaOrLambdas = null;
-            return null;
-        }
-
-        private static NestedLambdaInfo FindAlreadyCollectedNestedLambdaInfoInLambdas(
-            object nestedLambdaOrLambdas, LambdaExpression nestedLambdaExpr, out object foundInLambdaOrLambdas)
+        private static bool FindAlreadyCollectedNestedLambdaInfoInLambdas(
+            object nestedLambdaOrLambdas, LambdaExpression nestedLambdaExpr, out NestedLambdaInfo foundInLambda)
         {
             if (nestedLambdaOrLambdas is NestedLambdaInfo nestedLambda)
-                return FindAlreadyCollectedNestedLambdaInfo(nestedLambda, nestedLambdaExpr, out foundInLambdaOrLambdas);
+            {
+                if (nestedLambda.HasTheSameLambdaExpression(nestedLambdaExpr))
+                {
+                    foundInLambda = nestedLambda;
+                    return true;
+                }
+
+                var deeperNestedLambdaOrLambdas = nestedLambda.ClosureInfo.NestedLambdaOrLambdas;
+                if (deeperNestedLambdaOrLambdas != null)
+                    return FindAlreadyCollectedNestedLambdaInfoInLambdas(deeperNestedLambdaOrLambdas, nestedLambdaExpr, out foundInLambda);
+
+                foundInLambda = null;
+                return false;
+            }
 
             var nestedLambdas = (NestedLambdaInfo[])nestedLambdaOrLambdas;
             for (var i = 0; i < nestedLambdas.Length; i++)
             {
-                var found = FindAlreadyCollectedNestedLambdaInfo(nestedLambdas[i], nestedLambdaExpr, out foundInLambdaOrLambdas);
-                if (found != null)
-                    return found;
+                nestedLambda = nestedLambdas[i];
+
+                if (nestedLambda.HasTheSameLambdaExpression(nestedLambdaExpr))
+                {
+                    foundInLambda = nestedLambda;
+                    return true;
+                }
+
+                var deeperNestedLambdaOrLambdas = nestedLambda.ClosureInfo.NestedLambdaOrLambdas;
+                if (deeperNestedLambdaOrLambdas != null &&
+                    FindAlreadyCollectedNestedLambdaInfoInLambdas(deeperNestedLambdaOrLambdas, nestedLambdaExpr, out foundInLambda))
+                    return true;
             }
 
-            foundInLambdaOrLambdas = null;
-            return null;
+            foundInLambda = null;
+            return false;
         }
 
         private static bool TryCompileNestedLambda(NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup)
@@ -1625,13 +1631,18 @@ namespace FastExpressionCompiler
             if (nestedLambdaNestedLambdaOrLambdas != null)
                 if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdaNestedLambdas)
                 {
-                    foreach (var nestedLambdaNestedLambda in nestedLambdaNestedLambdas)
-                        if (nestedLambdaInfo.Lambda == null && !TryCompileNestedLambda(nestedLambdaNestedLambda, setup))
+                    foreach (var nestedLambdaInNestedLambda in nestedLambdaNestedLambdas)
+                        if (nestedLambdaInNestedLambda.Lambda == null &&
+                            !TryCompileNestedLambda(nestedLambdaInNestedLambda, setup))
                             return false;
                 }
-                else if (((NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas).Lambda == null &&
-                    !TryCompileNestedLambda((NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas, setup))
-                    return false;
+                else
+                {
+                    var nestedLambdaInNestedLambda = (NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas;
+                    if (nestedLambdaInNestedLambda.Lambda == null &&
+                        !TryCompileNestedLambda(nestedLambdaInNestedLambda, setup))
+                        return false;
+                }
 
             ArrayClosure nestedLambdaClosure = null;
             if (nestedClosureInfo.NonPassedParameters.Count == 0)
@@ -4297,7 +4308,7 @@ namespace FastExpressionCompiler
                 var nestedLambdaInfo = outerNestedLambdaOrLambdas as NestedLambdaInfo;
                 if (nestedLambdaInfo != null)
                 {
-                    if (!nestedLambdaInfo.IsTheSameLambda(lambdaExpr))
+                    if (!nestedLambdaInfo.HasTheSameLambdaExpression(lambdaExpr))
                         return false;
                 }
                 else
@@ -4306,7 +4317,7 @@ namespace FastExpressionCompiler
                     for (var i = 0; i < outerNestedLambdas.Length && nestedLambdaInfo == null; ++i)
                     {
                         var outer = outerNestedLambdas[i];
-                        if (outer.IsTheSameLambda(lambdaExpr))
+                        if (outer.HasTheSameLambdaExpression(lambdaExpr))
                         {
                             nestedLambdaInfo = outer;
                             nestedLambdaInClosureIndex += i;

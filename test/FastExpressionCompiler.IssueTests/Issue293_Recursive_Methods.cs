@@ -38,10 +38,10 @@ namespace FastExpressionCompiler.IssueTests
 
         public Expression<Func<T, T>> MakeFactorialExpressionWithTheTrick<T>()
         {
-            var nParam = Expression.Parameter(typeof(T), "n");
-            var methodVar  = Expression.Variable(typeof(Func<T, T>),   "fac");
-            var methodsVar = Expression.Variable(typeof(Func<T, T>[]), "facs");
-            var one = Expression.Constant(1, typeof(T));
+            var nParam = Parameter(typeof(T), "n");
+            var methodVar  = Variable(typeof(Func<T, T>),   "fac");
+            var methodsVar = Variable(typeof(Func<T, T>[]), "facs");
+            var one = Constant(1, typeof(T));
 
             // This does not work:
             // Func<int, int> rec = null;
@@ -56,7 +56,8 @@ namespace FastExpressionCompiler.IssueTests
             return Expression.Lambda<Func<T, T>>(
                 Expression.Block(
                     new[] { methodsVar, methodVar },
-                    Expression.Assign(methodsVar, Expression.NewArrayBounds(typeof(Func<T, T>), Expression.Constant(1))),
+                    Expression.Assign(
+                        methodsVar, Expression.NewArrayBounds(typeof(Func<T, T>), Expression.Constant(1))),
                     Expression.Assign(
                         methodVar,
                         Expression.Lambda<Func<T, T>>(
