@@ -485,6 +485,8 @@ namespace FastExpressionCompiler
         {
 #endif
             var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
+
+            // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo, flags))
                 return null;
 
@@ -1090,7 +1092,8 @@ namespace FastExpressionCompiler
             value is Delegate || type.IsArray ||
             !type.IsPrimitive && !type.IsEnum && value is string == false && value is Type == false && value is decimal == false;
 
-        /// <summary>Wraps the call to `TryCollectRound` for the compatibility and provide the root place to check the returned error code</summary>
+        /// <summary>Wraps the call to `TryCollectRound` for the compatibility and provide the root place to check the returned error code.
+        /// Imprtant: The method collects the info from the nested lambdas up-front and de-duplicates the lambdas as well.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr,
 #if LIGHT_EXPRESSION
@@ -1251,6 +1254,7 @@ namespace FastExpressionCompiler
                             ref closure, (ListInitExpression)expr, paramExprs, isNestedLambda, ref rootClosure, flags);
 
                     case ExpressionType.Lambda:
+                        // The method collects the info from the nested lambdas up-front and de-duplicates the lambdas as well.
                         var nestedLambdaExpr = (LambdaExpression)expr;
 
                         // Look for the already collected lambdas and if we have the same lambda, start from the root
