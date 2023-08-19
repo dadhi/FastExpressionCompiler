@@ -50,10 +50,15 @@ namespace FastExpressionCompiler.IssueTests
                                     (Func<D>)(() =>
                                             new D())))))))));
 
-            var f = e.CompileFast(true);
-
+            var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
             Assert.IsNotNull(f());
+
+            var d = f.TryGetDebugInfo();
+
+            // should be 6 and 3: B - 1, C - 2, D - 3, B - 1, C - 1, D - 1
+            Assert.AreEqual(5, d.NestedLambdaCount);
+            Assert.AreEqual(4, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]
