@@ -1254,21 +1254,21 @@ namespace FastExpressionCompiler
                             ref closure, (ListInitExpression)expr, paramExprs, isNestedLambda, ref rootClosure, flags);
 
                     case ExpressionType.Lambda:
-                        // The method collects the info from the nested lambdas up-front and de-duplicates the lambdas as well.
+                        // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
                         var nestedLambdaExpr = (LambdaExpression)expr;
 
                         // Look for the already collected lambdas and if we have the same lambda, start from the root
                         var nestedLambdaOrLambdas = rootClosure.NestedLambdaOrLambdas;
                         if (nestedLambdaOrLambdas != null)
                         {
-                            var foundLambdaInfo = FindAlreadyCollectedNestedLambdaInfo(nestedLambdaOrLambdas, nestedLambdaExpr, out var foundInLambdas);
+                            var foundLambdaInfo = FindAlreadyCollectedNestedLambdaInfoInLambdas(nestedLambdaOrLambdas, nestedLambdaExpr, out var foundInLambdas);
                             if (foundLambdaInfo != null)
                             {
                                 // if the lambda is not found on the same level, then add it
                                 if (foundInLambdas != closure.NestedLambdaOrLambdas)
                                 {
                                     closure.AddNestedLambda(foundLambdaInfo);
-                                    var foundLambdaNonPassedParams = foundLambdaInfo.ClosureInfo.NonPassedParameters;
+                                    ref var foundLambdaNonPassedParams = ref foundLambdaInfo.ClosureInfo.NonPassedParameters;
                                     if (foundLambdaNonPassedParams.Count != 0)
 #if LIGHT_EXPRESSION
                                         PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, ref foundLambdaNonPassedParams);
@@ -1289,7 +1289,7 @@ namespace FastExpressionCompiler
                             return error;
 
                         closure.AddNestedLambda(nestedLambdaInfo);
-                        var nestedNonPassedParams = nestedLambdaInfo.ClosureInfo.NonPassedParameters; // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
+                        ref var nestedNonPassedParams = ref nestedLambdaInfo.ClosureInfo.NonPassedParameters; // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
                         if (nestedNonPassedParams.Count != 0)
 #if LIGHT_EXPRESSION
                             PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, ref nestedNonPassedParams);
@@ -1575,17 +1575,13 @@ namespace FastExpressionCompiler
 
             var deeperNestedLambdaOrLambdas = nestedLambda.ClosureInfo.NestedLambdaOrLambdas;
             if (deeperNestedLambdaOrLambdas != null)
-            {
-                var foundDeeperNestedLambdaOrLambdas = FindAlreadyCollectedNestedLambdaInfo(deeperNestedLambdaOrLambdas, nestedLambdaExpr, out foundInLambdaOrLambdas);
-                if (foundDeeperNestedLambdaOrLambdas != null)
-                    return foundDeeperNestedLambdaOrLambdas;
-            }
+                return FindAlreadyCollectedNestedLambdaInfoInLambdas(deeperNestedLambdaOrLambdas, nestedLambdaExpr, out foundInLambdaOrLambdas);
 
             foundInLambdaOrLambdas = null;
             return null;
         }
 
-        private static NestedLambdaInfo FindAlreadyCollectedNestedLambdaInfo(
+        private static NestedLambdaInfo FindAlreadyCollectedNestedLambdaInfoInLambdas(
             object nestedLambdaOrLambdas, LambdaExpression nestedLambdaExpr, out object foundInLambdaOrLambdas)
         {
             if (nestedLambdaOrLambdas is NestedLambdaInfo nestedLambda)
