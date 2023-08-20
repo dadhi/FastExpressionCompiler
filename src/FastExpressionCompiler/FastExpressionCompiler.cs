@@ -544,7 +544,7 @@ namespace FastExpressionCompiler
         }
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
-        private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][];
+        private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
 
 #if LIGHT_EXPRESSION
         private static Type[] RentOrNewClosureTypeToParamTypes(IParameterProvider paramExprs)
@@ -5649,7 +5649,7 @@ namespace FastExpressionCompiler
             }
 
             Type funcType = GetFunc(paramTypes.Length);
-            Type[] typeParams = new Type[paramTypes.Length + 1];
+            Type[] typeParams = new Type[paramTypes.Length + 1]; // todo: @perf could we Rent the array?
             Array.Copy(paramTypes, typeParams, paramTypes.Length);
             typeParams[paramTypes.Length] = returnType;
             return funcType.MakeGenericType(typeParams);

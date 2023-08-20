@@ -15,9 +15,11 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_shared_sub_expressions(); // todo: @wip
+            Test_shared_sub_expressions();
             Test_shared_sub_expressions_assigned_to_vars();
-            return 2;
+            Test_shared_sub_expressions_with_3_dublicate_D();
+            Test_shared_sub_expressions_with_non_passed_params_in_closure();
+            return 4;
         }
 
         [Test]
@@ -66,6 +68,54 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Test_shared_sub_expressions_with_3_dublicate_D()
+        {
+            var e = CreateExpressionWith3DinA();
+            e.PrintCSharp();
+
+            var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            Assert.IsNotNull(f);
+            Assert.IsNotNull(f());
+
+            var d = f.TryGetDebugInfo();
+
+            // 1, 1 - compiling D in A
+            // 2, 2 - compiling B in A
+            // 3, 3 - compiling C in B in A
+            // 4    - trying to compile D in C in B in A - but already compiled
+            // 5    - trying to compile D in B - but already compiled
+            // 6    - trying to compile C in A - but already compiled
+            Assert.AreEqual(6, d.NestedLambdaCount);
+            Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
+        }
+
+        [Test]
+        public void Test_shared_sub_expressions_with_non_passed_params_in_closure()
+        {
+            var e = CreateExpressionWithNonPassedParamsInClosure();
+            e.PrintCSharp();
+
+            var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            Assert.IsNotNull(f);
+
+            var a = f(new Name("d1"), new Name("c1"), new Name("b1"));
+            Assert.AreEqual("d1", a.D1.Name.Value);
+            Assert.AreEqual("c1", a.C1.Name.Value);
+            Assert.AreEqual("b1", a.B1.Name.Value);
+
+            var d = f.TryGetDebugInfo();
+
+            // 1, 1 - compiling D in A
+            // 2, 2 - compiling B in A
+            // 3, 3 - compiling C in B in A
+            // 4    - trying to compile D in C in B in A - but already compiled
+            // 5    - trying to compile D in B - but already compiled
+            // 6    - trying to compile C in A - but already compiled
+            Assert.AreEqual(6, d.NestedLambdaCount);
+            Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
+        }
+
+        [Test]
         public void Test_shared_sub_expressions_assigned_to_vars()
         {
             var expr = CreateExpressionWithVars();
@@ -107,6 +157,73 @@ namespace FastExpressionCompiler.IssueTests
 
             var fe = Lambda<Func<A>>(
                 New(typeof(A).GetConstructors()[0], b, c));
+
+            return fe;
+        }
+
+        private Expression<Func<A1>> CreateExpressionWith3DinA()
+        {
+            var test = Constant(new Nested_lambdas_assigned_to_vars());
+
+            var d = Convert(
+                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                    Constant(2),
+                    Lambda(
+                        New(typeof(D).GetConstructors()[0], new Expression[0]))),
+                typeof(D));
+
+            var c = Convert(
+                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                    Constant(1),
+                    Lambda(
+                        New(typeof(C).GetConstructors()[0], d))),
+                typeof(C));
+
+            var b = Convert(
+                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                    Constant(0),
+                    Lambda(
+                        New(typeof(B).GetConstructors()[0], c, d))),
+                typeof(B));
+
+            var fe = Lambda<Func<A1>>(
+                New(typeof(A1).GetConstructors()[0], d, b, c));
+
+            return fe;
+        }
+
+        private Expression<Func<Name, Name, Name, A2>> CreateExpressionWithNonPassedParamsInClosure()
+        {
+            var test = Constant(new Nested_lambdas_assigned_to_vars());
+
+            var b1Name = Parameter(typeof(Name), "b1Name");
+            var c1Name = Parameter(typeof(Name), "c1Name");
+            var d1Name = Parameter(typeof(Name), "d1Name");
+
+            var d1 = Convert(
+                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                    Constant(2),
+                    Lambda(
+                        New(typeof(D1).GetConstructors()[0], d1Name))),
+                typeof(D1));
+
+            var c1 = Convert(
+                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                    Constant(1),
+                    Lambda(
+                        New(typeof(C1).GetConstructors()[0], d1, c1Name))),
+                typeof(C1));
+
+            var b1 = Convert(
+                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                    Constant(0),
+                    Lambda(
+                        New(typeof(B1).GetConstructors()[0], c1, b1Name, d1))),
+                typeof(B1));
+
+            var fe = Lambda<Func<Name, Name, Name, A2>>(
+                New(typeof(A2).GetConstructors()[0], d1, c1, b1),
+                d1Name, c1Name, b1Name);
 
             return fe;
         }
@@ -158,6 +275,20 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
+        public class A1
+        {
+            public B B { get; }
+            public C C { get; }
+            public D D { get; }
+
+            public A1(D d, B b, C c)
+            {
+                B = b;
+                C = c;
+                D = d;
+            }
+        }
+
         public class B
         {
             public C C { get; }
@@ -182,6 +313,55 @@ namespace FastExpressionCompiler.IssueTests
 
         public class D
         {
+        }
+
+        public class Name
+        {
+            public string Value { get; }
+            public Name(string value) => Value = value;
+        }
+
+        public class D1
+        {
+            public Name Name { get; }
+            public D1(Name name) => Name = name;
+        }
+
+        public class C1
+        {
+            public Name Name { get; }
+            public D1 D1 { get; }
+            public C1(D1 d1, Name name)
+            {
+                D1 = d1;
+                Name = name;
+            }
+        }
+
+        public class B1
+        {
+            public Name Name { get; }
+            public C1 C1 { get; }
+            public D1 D1 { get; }
+            public B1(C1 c1, Name name, D1 d1)
+            {
+                C1 = c1;
+                D1 = d1;
+                Name = name;
+            }
+        }
+
+        public class A2
+        {
+            public B1 B1 { get; }
+            public C1 C1 { get; }
+            public D1 D1 { get; }
+            public A2(D1 d1, C1 c1, B1 b1)
+            {
+                B1 = b1;
+                C1 = c1;
+                D1 = d1;
+            }
         }
     }
 }
