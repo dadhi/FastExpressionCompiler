@@ -56,9 +56,13 @@ namespace FastExpressionCompiler.IssueTests
 
             var d = f.TryGetDebugInfo();
 
-            // should be 6 and 3: B - 1, C - 2, D - 3, B - 1, C - 1, D - 1
+            // 1, 1 - compiling B in A
+            // 2, 2 - compiling C in B in A
+            // 3, 3 - compiling D in C in B in A
+            // 4    - trying to compile D in B - but already compiled
+            // 5    - trying to compile C in A - but already compiled
             Assert.AreEqual(5, d.NestedLambdaCount);
-            Assert.AreEqual(4, d.NestedLambdaCompiledTimesCount);
+            Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]

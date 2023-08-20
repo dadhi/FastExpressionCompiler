@@ -1279,26 +1279,23 @@ namespace FastExpressionCompiler
                         var nestedLambdaExpr = (LambdaExpression)expr;
 
                         // Look for the already collected lambdas and if we have the same lambda, start from the root
-                        var nestedLambdaOrLambdas = rootClosure.NestedLambdaOrLambdas;
-                        if (nestedLambdaOrLambdas != null &&
-                            FindAlreadyCollectedNestedLambdaInfoInLambdas(nestedLambdaOrLambdas, nestedLambdaExpr, out var foundInLambda))
+                        var rootNestedLambdaOrLambdas = rootClosure.NestedLambdaOrLambdas;
+                        if (rootNestedLambdaOrLambdas != null &&
+                            FindAlreadyCollectedNestedLambdaInfoInLambdas(rootNestedLambdaOrLambdas, nestedLambdaExpr, out var foundLambda))
                         {
-                            // if the lambda is not found on the same level, then add it
-                            if (foundInLambda != closure.NestedLambdaOrLambdas) // todo: @wip will be true only for some recursive functions where NestedLambdaOrLambdas is the Lambda
-                            {
-                                closure.AddNestedLambda(foundInLambda);
-                                ref var foundLambdaNonPassedParams = ref foundInLambda.ClosureInfo.NonPassedParameters;
-                                if (foundLambdaNonPassedParams.Count != 0)
+                            closure.AddNestedLambda(foundLambda);
+                            ref var foundLambdaNonPassedParams = ref foundLambda.ClosureInfo.NonPassedParameters;
+                            if (foundLambdaNonPassedParams.Count != 0)
 #if LIGHT_EXPRESSION
-                                    PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, ref foundLambdaNonPassedParams);
+                                PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, ref foundLambdaNonPassedParams);
 #else
-                                    PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, ref foundLambdaNonPassedParams);
+                                PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, ref foundLambdaNonPassedParams);
 #endif
-                            }
                             return 0;
                         }
 
                         var nestedLambdaInfo = new NestedLambdaInfo(nestedLambdaExpr);
+                        closure.AddNestedLambda(nestedLambdaInfo); // immediately add the lambda to the closure to be able to track the collected lambdas from the neighbor branches
 #if LIGHT_EXPRESSION
                         if ((error = TryCollectRound(ref nestedLambdaInfo.ClosureInfo, nestedLambdaExpr.Body, nestedLambdaExpr, true, ref rootClosure, flags)) != 0)
 #else
@@ -1306,7 +1303,6 @@ namespace FastExpressionCompiler
 #endif
                             return error;
 
-                        closure.AddNestedLambda(nestedLambdaInfo);
                         ref var nestedNonPassedParams = ref nestedLambdaInfo.ClosureInfo.NonPassedParameters; // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
                         if (nestedNonPassedParams.Count != 0)
 #if LIGHT_EXPRESSION
@@ -3276,9 +3272,8 @@ namespace FastExpressionCompiler
                         var nestedLambdas = (NestedLambdaInfo[])nestedLambdaOrLambdas;
                         for (var i = 0; i < nestedLambdas.Length; i++)
                         {
-                            EmitLoadClosureArrayItem(il, constCount + i);
-                            // store the nested lambda in the local variable and save the var index
                             var lambdaInfo = nestedLambdas[i];
+                            EmitLoadClosureArrayItem(il, constCount + i);
                             lambdaInfo.LambdaVarIndex = varIndex = (short)il.GetNextLocalVarIndex(lambdaInfo.Lambda.GetType());
                             EmitStoreLocalVariable(il, varIndex);
                         }
@@ -4330,7 +4325,6 @@ namespace FastExpressionCompiler
                 // First, find in closed compiled lambdas the one corresponding to the current lambda expression.
                 // Situation with not found lambda is not possible/exceptional,
                 // it means that we somehow skipped the lambda expression while collecting closure info.
-                var nestedLambdaInClosureIndex = closure.Constants.Count;
                 var outerNestedLambdaOrLambdas = closure.NestedLambdaOrLambdas;
                 var nestedLambdaInfo = outerNestedLambdaOrLambdas as NestedLambdaInfo;
                 if (nestedLambdaInfo != null)
@@ -4347,7 +4341,6 @@ namespace FastExpressionCompiler
                         if (outer.HasTheSameLambdaExpression(lambdaExpr))
                         {
                             nestedLambdaInfo = outer;
-                            nestedLambdaInClosureIndex += i;
                             break;
                         }
                     }
