@@ -198,6 +198,7 @@ public static class SmallList
                     }
                 }
                 AppendDefaultAndGetRef(ref source._rest, restCount, SmallList4<TItem>.StackItemCount) = item;
+                ++source._count;
                 return -1;
         }
     }
@@ -305,6 +306,7 @@ public static class SmallList
                     }
                 }
                 AppendDefaultAndGetRef(ref source._rest, restCount, SmallList2<TItem>.StackItemCount) = item;
+                ++source._count;
                 return -1;
         }
     }
