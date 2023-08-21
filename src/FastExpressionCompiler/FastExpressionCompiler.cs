@@ -499,6 +499,7 @@ namespace FastExpressionCompiler
             uint nestedLambdaCount = 0; // lower 16 bits is lambda count, upper 16 bits is compiled lambda count
             var nestedLambdaOrLambdas = closureInfo.NestedLambdaOrLambdas; // todo: @perf @mem can we pool a single nested lambda info?
             if (nestedLambdaOrLambdas != null)
+            {
                 if (nestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdas)
                 {
                     foreach (var nestedLambda in nestedLambdas)
@@ -515,6 +516,7 @@ namespace FastExpressionCompiler
                     if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags, ref nestedLambdaCount))
                         return null;
                 }
+            }
             ArrayClosure closure;
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
                 closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
@@ -621,6 +623,7 @@ namespace FastExpressionCompiler
             // Tracks the current block nesting count in the stack of blocks in Collect and Emit phase
             private ushort _blockCount;
 
+            // todo: @simplify @remove replace with uint
             [DebuggerDisplay("Block:{BlockIndex}, Var:{VarIndex}")]
             public struct BlockAndVarIndex
             {
@@ -1639,6 +1642,7 @@ namespace FastExpressionCompiler
             ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
             var nestedLambdaNestedLambdaOrLambdas = nestedClosureInfo.NestedLambdaOrLambdas;
             if (nestedLambdaNestedLambdaOrLambdas != null)
+            {
                 if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdaNestedLambdas)
                 {
                     foreach (var nestedLambdaInNestedLambda in nestedLambdaNestedLambdas)
@@ -1657,7 +1661,7 @@ namespace FastExpressionCompiler
                         !TryCompileNestedLambda(nestedLambdaInNestedLambda, setup, ref nestedLambdaCount))
                         return false;
                 }
-
+            }
             ArrayClosure nestedLambdaClosure = null;
             if (nestedClosureInfo.NonPassedParameters.Count == 0)
                 nestedLambdaClosure = (nestedClosureInfo.Status & ClosureStatus.HasClosure) == 0
