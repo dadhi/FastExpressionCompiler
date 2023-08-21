@@ -125,7 +125,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var d = f.TryGetDebugInfo();
 
-            Assert.AreEqual(1, d.NestedLambdaCount);
+            Assert.AreEqual(2, d.NestedLambdaCount);
             Assert.AreEqual(1, d.NestedLambdaCompiledTimesCount);
         }
 
