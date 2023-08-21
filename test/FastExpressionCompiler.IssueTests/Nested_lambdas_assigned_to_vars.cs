@@ -19,7 +19,8 @@ namespace FastExpressionCompiler.IssueTests
             Test_shared_sub_expressions_assigned_to_vars();
             Test_shared_sub_expressions_with_3_dublicate_D();
             Test_shared_sub_expressions_with_non_passed_params_in_closure();
-            return 4;
+            Test_2_shared_lambdas_on_the_same_level();
+            return 5;
         }
 
         [Test]
@@ -105,14 +106,27 @@ namespace FastExpressionCompiler.IssueTests
 
             var d = f.TryGetDebugInfo();
 
-            // 1, 1 - compiling D in A
-            // 2, 2 - compiling B in A
-            // 3, 3 - compiling C in B in A
-            // 4    - trying to compile D in C in B in A - but already compiled
-            // 5    - trying to compile D in B - but already compiled
-            // 6    - trying to compile C in A - but already compiled
             Assert.AreEqual(6, d.NestedLambdaCount);
             Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
+        }
+
+        [Test]
+        public void Test_2_shared_lambdas_on_the_same_level()
+        {
+            var e = CreateExpressionWith2SharedLambdasOnTheSameLevels();
+            e.PrintCSharp();
+
+            var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            Assert.IsNotNull(f);
+
+            var dd = f();
+            Assert.IsNotNull(dd);
+            Assert.AreSame(dd.D1, dd.D2);
+
+            var d = f.TryGetDebugInfo();
+
+            Assert.AreEqual(1, d.NestedLambdaCount);
+            Assert.AreEqual(1, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]
@@ -228,6 +242,23 @@ namespace FastExpressionCompiler.IssueTests
             return fe;
         }
 
+        private Expression<Func<DD>> CreateExpressionWith2SharedLambdasOnTheSameLevels()
+        {
+            var test = Constant(new Nested_lambdas_assigned_to_vars());
+
+            var d = Convert(
+                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                    Constant(2),
+                    Lambda(
+                        New(typeof(D).GetConstructors()[0]))),
+                typeof(D));
+
+            var fe = Lambda<Func<DD>>(
+                New(typeof(DD).GetConstructors()[0], d, d));
+
+            return fe;
+        }
+
         private Expression<Func<A>> CreateExpressionWithVars()
         {
             var test = Constant(new Nested_lambdas_assigned_to_vars());
@@ -313,6 +344,16 @@ namespace FastExpressionCompiler.IssueTests
 
         public class D
         {
+        }
+
+        public class DD
+        {
+            public D D1, D2;
+            public DD(D d1, D d2)
+            {
+                D1 = d1;
+                D2 = d2;
+            }
         }
 
         public class Name
