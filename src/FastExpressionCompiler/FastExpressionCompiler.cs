@@ -1280,9 +1280,9 @@ namespace FastExpressionCompiler
                         var nestedLambdaExpr = (LambdaExpression)expr;
 
 #if LIGHT_EXPRESSION // todo: @simplify can we do better?
-                        var nestedExprParams = (IParameterProvider)nestedLambdaExpr;
+                        var nestedParamExprs = (IParameterProvider)nestedLambdaExpr;
 #else
-                        var nestedExprParams = nestedLambdaExpr.Parameters;
+                        var nestedParamExprs = nestedLambdaExpr.Parameters;
 #endif
                         // Look for the already collected lambdas and if we have the same lambda, start from the root
                         NestedLambdaInfo nestedLambdaInfo;
@@ -1296,16 +1296,16 @@ namespace FastExpressionCompiler
                         {
                             nestedLambdaInfo = new NestedLambdaInfo(nestedLambdaExpr);
                             closure.AddNestedLambda(nestedLambdaInfo); // immediately add the lambda to the closure to be able to track the collected lambdas from the neighbor branches
-                            if ((error = TryCollectRound(ref nestedLambdaInfo.ClosureInfo, nestedLambdaExpr.Body, nestedExprParams, true, ref rootClosure, flags)) != 0)
+                            if ((error = TryCollectRound(ref nestedLambdaInfo.ClosureInfo, nestedLambdaExpr.Body, nestedParamExprs, true, ref rootClosure, flags)) != 0)
                                 return error;
                         }
 
                         // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
                         ref var nestedNonPassedParams = ref nestedLambdaInfo.ClosureInfo.NonPassedParameters;
                         if (nestedNonPassedParams.Count != 0)
-                            PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedExprParams, ref nestedNonPassedParams);
+                            PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedParamExprs, ref nestedNonPassedParams);
 
-                        return 0; // NO_ERROR
+                        return 0; // SUCCESS // todo: @wip to constant
 
                     case ExpressionType.Invoke:
                         {
@@ -2171,7 +2171,7 @@ namespace FastExpressionCompiler
                 var ctor = newExpr.Constructor;
                 if (argCount > 0)
                 {
-                    var args = ctor.GetParameters();
+                    var args = ctor.GetParameters(); // todo: @perf move into loop
                     for (var i = 0; i < argCount; ++i)
                         if (!TryEmit(argExprs.GetArgument(i),
                             paramExprs, il, ref closure, setup, parent, args[i].ParameterType.IsByRef ? i : -1))
