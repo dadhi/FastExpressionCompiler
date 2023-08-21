@@ -508,7 +508,7 @@ namespace FastExpressionCompiler
                             return null;
                     }
                 }
-                else 
+                else
                 {
                     ++nestedLambdaCount;
                     var nestedLambda = (NestedLambdaInfo)nestedLambdaOrLambdas;
@@ -1275,42 +1275,37 @@ namespace FastExpressionCompiler
                             ref closure, (ListInitExpression)expr, paramExprs, isNestedLambda, ref rootClosure, flags);
 
                     case ExpressionType.Lambda:
-                        // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
+                        // Here we look if the lambda is already stored in the nested lambdas tree (Collected+Compiled),
+                        // or if not found it Collects+Compiles the nested lambda here and adds to the nested lambda tree.
                         var nestedLambdaExpr = (LambdaExpression)expr;
 
+#if LIGHT_EXPRESSION // todo: @simplify can we do better?
+                        var nestedExprParams = (IParameterProvider)nestedLambdaExpr;
+#else
+                        var nestedExprParams = nestedLambdaExpr.Parameters;
+#endif
                         // Look for the already collected lambdas and if we have the same lambda, start from the root
+                        NestedLambdaInfo nestedLambdaInfo;
                         var rootNestedLambdaOrLambdas = rootClosure.NestedLambdaOrLambdas;
                         if (rootNestedLambdaOrLambdas != null &&
-                            FindAlreadyCollectedNestedLambdaInfoInLambdas(rootNestedLambdaOrLambdas, nestedLambdaExpr, out var foundLambda))
+                            FindAlreadyCollectedNestedLambdaInfoInLambdas(rootNestedLambdaOrLambdas, nestedLambdaExpr, out nestedLambdaInfo))
                         {
-                            closure.AddNestedLambda(foundLambda);
-                            ref var foundLambdaNonPassedParams = ref foundLambda.ClosureInfo.NonPassedParameters;
-                            if (foundLambdaNonPassedParams.Count != 0)
-#if LIGHT_EXPRESSION
-                                PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, ref foundLambdaNonPassedParams);
-#else
-                                PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, ref foundLambdaNonPassedParams);
-#endif
-                            return 0;
+                            closure.AddNestedLambda(nestedLambdaInfo);
+                        }
+                        else
+                        {
+                            nestedLambdaInfo = new NestedLambdaInfo(nestedLambdaExpr);
+                            closure.AddNestedLambda(nestedLambdaInfo); // immediately add the lambda to the closure to be able to track the collected lambdas from the neighbor branches
+                            if ((error = TryCollectRound(ref nestedLambdaInfo.ClosureInfo, nestedLambdaExpr.Body, nestedExprParams, true, ref rootClosure, flags)) != 0)
+                                return error;
                         }
 
-                        var nestedLambdaInfo = new NestedLambdaInfo(nestedLambdaExpr);
-                        closure.AddNestedLambda(nestedLambdaInfo); // immediately add the lambda to the closure to be able to track the collected lambdas from the neighbor branches
-#if LIGHT_EXPRESSION
-                        if ((error = TryCollectRound(ref nestedLambdaInfo.ClosureInfo, nestedLambdaExpr.Body, nestedLambdaExpr, true, ref rootClosure, flags)) != 0)
-#else
-                        if ((error = TryCollectRound(ref nestedLambdaInfo.ClosureInfo, nestedLambdaExpr.Body, nestedLambdaExpr.Parameters, true, ref rootClosure, flags)) != 0)
-#endif
-                            return error;
-
-                        ref var nestedNonPassedParams = ref nestedLambdaInfo.ClosureInfo.NonPassedParameters; // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
+                        // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
+                        ref var nestedNonPassedParams = ref nestedLambdaInfo.ClosureInfo.NonPassedParameters;
                         if (nestedNonPassedParams.Count != 0)
-#if LIGHT_EXPRESSION
-                            PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr, ref nestedNonPassedParams);
-#else
-                            PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedLambdaExpr.Parameters, ref nestedNonPassedParams);
-#endif
-                        return 0;
+                            PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedExprParams, ref nestedNonPassedParams);
+
+                        return 0; // NO_ERROR
 
                     case ExpressionType.Invoke:
                         {

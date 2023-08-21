@@ -70,6 +70,12 @@ namespace FastExpressionCompiler.Benchmarks
 
         static Expression<Func<Test, bool>> _expression = t => t.A.Any(e => e.Value != null);
 
+/*
+|        Method |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+|-------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| CompileSystem | 111.985 us | 2.0430 us | 1.8111 us | 15.30 |    0.46 | 1.4648 | 1.2207 |  10.04 KB |        3.15 |
+|   CompileFast |   7.286 us | 0.1417 us | 0.1891 us |  1.00 |    0.00 | 0.5188 | 0.4883 |   3.19 KB |        1.00 |
+*/
         [MemoryDiagnoser]
         public class Compile
         {

@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.Benchmarks
 
             // BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
 
-            // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
+            BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
             // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
 
             // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();
@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.Benchmarks
 
             //BenchmarkRunner.Run<FEC_vs_ManualEmit_vs_Activator>();
 
-            BenchmarkRunner.Run<MultipleNestedLambdaExprVsExprSharing>();
+            // BenchmarkRunner.Run<MultipleNestedLambdaExprVsExprSharing>();
 
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Compile>();
             //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Execute>();
