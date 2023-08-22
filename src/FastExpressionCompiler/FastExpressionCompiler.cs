@@ -1303,7 +1303,6 @@ namespace FastExpressionCompiler
                                 return error;
                         }
 
-                        // todo: @bug ? currently it propagates variables used by the nested lambda but defined in current lambda
                         ref var nestedNonPassedParams = ref nestedLambdaInfo.ClosureInfo.NonPassedParameters;
                         if (nestedNonPassedParams.Count != 0)
                             PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedParamExprs, ref nestedNonPassedParams);
