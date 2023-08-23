@@ -668,6 +668,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
             }
 
+            [MethodImpl((MethodImplOptions)256)]
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count > 0 || NestedLambdaOrLambdas != null;
 
             public bool AddConstantOrIncrementUsageCount(object value)
@@ -1288,7 +1289,7 @@ namespace FastExpressionCompiler
 
                         if (nestedLambdaInfo.Lambda != null)
                             return 0;
-                        if (!TryCompileNestedLambda(nestedLambdaInfo, flags))
+                        if (!TryCompileNestedLambda(ref nestedLambdaInfo.ClosureInfo, nestedLambdaInfo, flags))
                             return 102;
 
                         return 0; // SUCCESS // todo: @wip to constant
@@ -1599,7 +1600,7 @@ namespace FastExpressionCompiler
             return false;
         }
 
-        private static bool TryCompileNestedLambda(NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup)
+        private static bool TryCompileNestedLambda(ref ClosureInfo nestedClosureInfo, NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
@@ -1621,7 +1622,6 @@ namespace FastExpressionCompiler
 #else
             var nestedLambdaParamExprs = nestedLambdaExpr.Parameters;
 #endif
-            ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
             var nestedLambdaNestedLambdaOrLambdas = nestedClosureInfo.NestedLambdaOrLambdas;
 
             ArrayClosure nestedLambdaClosure = null;
