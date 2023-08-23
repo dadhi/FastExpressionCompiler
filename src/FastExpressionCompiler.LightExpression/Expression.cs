@@ -64,9 +64,9 @@ namespace FastExpressionCompiler.LightExpression
         /// constant and the nested lambdas. Beside that the labels, block and try-catch information is also collected
         /// for the next IL-emitting stage. The information regarding the currently traversed lambda expression
         /// is accumulated in the `closure` structure. The `rootClosure` hold the first lambda expression info
-        /// for any nested lambda expression, which is indicated by `isNestedLambda`.</summary>
+        /// for any nested lambda expression, which is indicated by `nestedLambda`.</summary>
         public virtual bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) => false;
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) => false;
         /// <summary>The second FEC state to emit the actual IL op-codes based on the information collected by the first traversal
         /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
         public virtual bool TryEmit(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
@@ -2320,8 +2320,8 @@ namespace FastExpressionCompiler.LightExpression
         public override bool IsIntrinsic => true;
 
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Operand, paramExprs, isNestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Operand, paramExprs, nestedLambda, ref rootClosure, config);
 
         public override bool TryEmit(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
@@ -2847,7 +2847,7 @@ namespace FastExpressionCompiler.LightExpression
         internal NoArgsNewClassIntrinsicExpression(ConstructorInfo constructor) : base(constructor) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) => true;
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) => true;
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -2871,8 +2871,8 @@ namespace FastExpressionCompiler.LightExpression
         internal NoByRefOneArgNewIntrinsicExpression(ConstructorInfo constructor, object arg) : base(constructor, arg) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument, paramExprs, isNestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument, paramExprs, nestedLambda, ref rootClosure, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -2901,9 +2901,9 @@ namespace FastExpressionCompiler.LightExpression
         internal NoByRefTwoArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1) : base(constructor, a0, a1) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -2938,10 +2938,10 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, isNestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootClosure, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -2978,11 +2978,11 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, isNestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootClosure, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -3022,12 +3022,12 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3, a4) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, isNestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, nestedLambda, ref rootClosure, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -3070,13 +3070,13 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3, a4, a5) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument5, paramExprs, isNestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument5, paramExprs, nestedLambda, ref rootClosure, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -3121,14 +3121,14 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3, a4, a5, a6) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument5, paramExprs, isNestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument6, paramExprs, isNestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument5, paramExprs, nestedLambda, ref rootClosure, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument6, paramExprs, nestedLambda, ref rootClosure, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -3160,11 +3160,11 @@ namespace FastExpressionCompiler.LightExpression
         internal NoByRefManyArgsNewIntrinsicExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : base(constructor, arguments) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            bool isNestedLambda, ref ClosureInfo rootClosure)
+            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure)
         {
             var args = Args;
             for (var i = 0; i < args.Count; i++)
-                if (!ExpressionCompiler.TryCollectBoundConstants(ref closure, args[i], paramExprs, isNestedLambda, ref rootClosure, config))
+                if (!ExpressionCompiler.TryCollectBoundConstants(ref closure, args[i], paramExprs, nestedLambda, ref rootClosure, config))
                     return false;
             return true;
         }
