@@ -2842,7 +2842,6 @@ namespace FastExpressionCompiler.LightExpression
         internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) => SysExpr.New(Type);
     }
 
-
     public sealed class NoArgsNewClassIntrinsicExpression : NewExpression
     {
         internal NoArgsNewClassIntrinsicExpression(ConstructorInfo constructor) : base(constructor) { }

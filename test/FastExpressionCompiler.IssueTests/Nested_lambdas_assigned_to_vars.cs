@@ -57,15 +57,15 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNotNull(f);
             Assert.IsNotNull(f());
 
-            var d = f.TryGetDebugInfo();
+            // var d = f.TryGetDebugInfo();
 
             // 1, 1 - compiling B in A
             // 2, 2 - compiling C in B in A
             // 3, 3 - compiling D in C in B in A
             // 4    - trying to compile D in B - but already compiled
             // 5    - trying to compile C in A - but already compiled
-            Assert.AreEqual(5, d.NestedLambdaCount);
-            Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
+            // Assert.AreEqual(5, d.NestedLambdaCount);
+            // Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]
@@ -78,7 +78,7 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNotNull(f);
             Assert.IsNotNull(f());
 
-            var d = f.TryGetDebugInfo();
+            // var d = f.TryGetDebugInfo();
 
             // 1, 1 - compiling D in A
             // 2, 2 - compiling B in A
@@ -86,8 +86,8 @@ namespace FastExpressionCompiler.IssueTests
             // 4    - trying to compile D in C in B in A - but already compiled
             // 5    - trying to compile D in B - but already compiled
             // 6    - trying to compile C in A - but already compiled
-            Assert.AreEqual(6, d.NestedLambdaCount);
-            Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
+            // Assert.AreEqual(6, d.NestedLambdaCount);
+            // Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]
@@ -104,10 +104,9 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual("c1", a.C1.Name.Value);
             Assert.AreEqual("b1", a.B1.Name.Value);
 
-            var d = f.TryGetDebugInfo();
-
-            Assert.AreEqual(6, d.NestedLambdaCount);
-            Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
+            // var d = f.TryGetDebugInfo();
+            // Assert.AreEqual(6, d.NestedLambdaCount);
+            // Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]
@@ -123,10 +122,9 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNotNull(dd);
             Assert.AreSame(dd.D1, dd.D2);
 
-            var d = f.TryGetDebugInfo();
-
-            Assert.AreEqual(2, d.NestedLambdaCount);
-            Assert.AreEqual(1, d.NestedLambdaCompiledTimesCount);
+            // var d = f.TryGetDebugInfo();
+            // Assert.AreEqual(2, d.NestedLambdaCount);
+            // Assert.AreEqual(1, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]

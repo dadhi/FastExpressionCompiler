@@ -116,11 +116,11 @@ namespace FastExpressionCompiler
         /// <summary>The equivalent C# code of the lambda expression</summary>
         string CSharpString { get; }
 
-        /// <summary>Total nested lambda counting</summary>
-        ushort NestedLambdaCount { get; }
+        // /// <summary>Total nested lambda counting</summary>
+        // ushort NestedLambdaCount { get; }
 
-        /// <summary>Nested lambda compiled counting, should be less or equal to `NestedLambdaCount` so that the same lambda compiled only once.</summary>
-        ushort NestedLambdaCompiledTimesCount { get; }
+        // /// <summary>Nested lambda compiled counting, should be less or equal to `NestedLambdaCount` so that the same lambda compiled only once.</summary>
+        // ushort NestedLambdaCompiledTimesCount { get; }
     }
 
     /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
@@ -496,27 +496,25 @@ namespace FastExpressionCompiler
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, false, ref closureInfo, flags))
                 return null;
 
-            uint nestedLambdaCount = 0; // lower 16 bits is lambda count, upper 16 bits is compiled lambda count
             var nestedLambdaOrLambdas = closureInfo.NestedLambdaOrLambdas; // todo: @perf @mem can we pool a single nested lambda info?
-            if (nestedLambdaOrLambdas != null)
-            {
-                if (nestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdas)
-                {
-                    foreach (var nestedLambda in nestedLambdas)
-                    {
-                        ++nestedLambdaCount;
-                        if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags, ref nestedLambdaCount))
-                            return null;
-                    }
-                }
-                else
-                {
-                    ++nestedLambdaCount;
-                    var nestedLambda = (NestedLambdaInfo)nestedLambdaOrLambdas;
-                    if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags, ref nestedLambdaCount))
-                        return null;
-                }
-            }
+            // if (nestedLambdaOrLambdas != null)
+            // {
+            //     if (nestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdas)
+            //     {
+            //         foreach (var nestedLambda in nestedLambdas)
+            //         {
+            //             if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags))
+            //                 return null;
+            //         }
+            //     }
+            //     else
+            //     {
+            //         var nestedLambda = (NestedLambdaInfo)nestedLambdaOrLambdas;
+            //         if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags))
+            //             return null;
+            //     }
+            // }
+
             ArrayClosure closure;
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
                 closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
@@ -526,7 +524,7 @@ namespace FastExpressionCompiler
             {   // todo: @feature add the debug info to the nested lambdas!
                 var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
                 var constantsAndNestedLambdas = (closureInfo.Status & ClosureStatus.HasClosure) == 0 ? null : closureInfo.GetArrayOfConstantsAndNestedLambdas();
-                closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr, nestedLambdaCount);
+                closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
             }
 
             var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
@@ -927,19 +925,12 @@ namespace FastExpressionCompiler
 
             private readonly Lazy<string> _csharpString;
             public string CSharpString => _csharpString.Value;
-
-            public ushort NestedLambdaCount { get; }
-
-            public ushort NestedLambdaCompiledTimesCount { get; }
-
-            public DebugArrayClosure(object[] constantsAndNestedLambdas, LambdaExpression expr, uint nestedLambdaCount)
+            public DebugArrayClosure(object[] constantsAndNestedLambdas, LambdaExpression expr)
                 : base(constantsAndNestedLambdas)
             {
                 Expression = expr;
                 _expressionString = new Lazy<string>(() => Expression?.ToExpressionString() ?? "<expression is not available>");
                 _csharpString = new Lazy<string>(() => Expression?.ToCSharpString() ?? "<expression is not available>");
-                NestedLambdaCount = (ushort)(nestedLambdaCount);
-                NestedLambdaCompiledTimesCount = (ushort)(nestedLambdaCount >>> 16);
             }
         }
 
@@ -995,22 +986,27 @@ namespace FastExpressionCompiler
         {
             /// <summary>The lambda expression</summary>
             public readonly LambdaExpression LambdaExpression;
+
             /// <summary>The lambda expression closure info</summary>
             public ClosureInfo ClosureInfo;
+
             /// <summary>Compiled lambda</summary>
             public object Lambda;
+
             /// <summary>Index of the compiled lambda in the parent lambda closure array</summary>
             public short LambdaVarIndex;
+
             /// <summary>Index of the variable which store the non-passed variables array before passing it to the closure constructor.
             /// It used to assign the closed variables from the outside of the nested lambda</summary>
             public short NonPassedParamsVarIndex;
+
             /// <summary>Constructor</summary>
             public NestedLambdaInfo(LambdaExpression lambdaExpression)
             {
                 LambdaExpression = lambdaExpression;
                 ClosureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
-                Lambda = null;
             }
+
             /// <summary>Compares 2 lambda expressions for equality</summary>
             public bool HasTheSameLambdaExpression(LambdaExpression lambda) => // todo: @unclear parameters or is comparing the body is enough?
                 ReferenceEquals(LambdaExpression, lambda) ||
@@ -1306,6 +1302,11 @@ namespace FastExpressionCompiler
                         ref var nestedNonPassedParams = ref nestedLambdaInfo.ClosureInfo.NonPassedParameters;
                         if (nestedNonPassedParams.Count != 0)
                             PropagateNonPassedParamsToOuterLambda(ref closure, paramExprs, nestedParamExprs, ref nestedNonPassedParams);
+
+                        if (nestedLambdaInfo.Lambda != null)
+                            return 0;
+                        if (!TryCompileNestedLambda(nestedLambdaInfo, flags))
+                            return 102;
 
                         return 0; // SUCCESS // todo: @wip to constant
 
@@ -1615,12 +1616,11 @@ namespace FastExpressionCompiler
             return false;
         }
 
-        private static bool TryCompileNestedLambda(NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup, ref uint nestedLambdaCount)
+        private static bool TryCompileNestedLambda(NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
             // 3. Add the compiled lambda to closure of outer lambda for later invocation
-            nestedLambdaCount = (((nestedLambdaCount >>> 16) + 1) << 16) | (nestedLambdaCount & ushort.MaxValue);
 
             var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
             var nestedReturnType = nestedLambdaExpr.ReturnType;
@@ -1640,27 +1640,26 @@ namespace FastExpressionCompiler
 #endif
             ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
             var nestedLambdaNestedLambdaOrLambdas = nestedClosureInfo.NestedLambdaOrLambdas;
-            if (nestedLambdaNestedLambdaOrLambdas != null)
-            {
-                if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdaNestedLambdas)
-                {
-                    foreach (var nestedLambdaInNestedLambda in nestedLambdaNestedLambdas)
-                    {
-                        ++nestedLambdaCount;
-                        if (nestedLambdaInNestedLambda.Lambda == null &&
-                            !TryCompileNestedLambda(nestedLambdaInNestedLambda, setup, ref nestedLambdaCount))
-                            return false;
-                    }
-                }
-                else
-                {
-                    ++nestedLambdaCount;
-                    var nestedLambdaInNestedLambda = (NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas;
-                    if (nestedLambdaInNestedLambda.Lambda == null &&
-                        !TryCompileNestedLambda(nestedLambdaInNestedLambda, setup, ref nestedLambdaCount))
-                        return false;
-                }
-            }
+            // if (nestedLambdaNestedLambdaOrLambdas != null)
+            // {
+            //     if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdaNestedLambdas)
+            //     {
+            //         foreach (var nestedLambdaInNestedLambda in nestedLambdaNestedLambdas)
+            //         {
+            //             if (nestedLambdaInNestedLambda.Lambda == null &&
+            //                 !TryCompileNestedLambda(nestedLambdaInNestedLambda, setup))
+            //                 return false;
+            //         }
+            //     }
+            //     else
+            //     {
+            //         var nestedLambdaInNestedLambda = (NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas;
+            //         if (nestedLambdaInNestedLambda.Lambda == null &&
+            //             !TryCompileNestedLambda(nestedLambdaInNestedLambda, setup))
+            //             return false;
+            //     }
+            // }
+
             ArrayClosure nestedLambdaClosure = null;
             if (nestedClosureInfo.NonPassedParameters.Count == 0)
                 nestedLambdaClosure = (nestedClosureInfo.Status & ClosureStatus.HasClosure) == 0
