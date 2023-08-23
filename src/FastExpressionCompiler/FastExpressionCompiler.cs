@@ -497,23 +497,6 @@ namespace FastExpressionCompiler
                 return null;
 
             var nestedLambdaOrLambdas = closureInfo.NestedLambdaOrLambdas; // todo: @perf @mem can we pool a single nested lambda info?
-            // if (nestedLambdaOrLambdas != null)
-            // {
-            //     if (nestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdas)
-            //     {
-            //         foreach (var nestedLambda in nestedLambdas)
-            //         {
-            //             if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags))
-            //                 return null;
-            //         }
-            //     }
-            //     else
-            //     {
-            //         var nestedLambda = (NestedLambdaInfo)nestedLambdaOrLambdas;
-            //         if (nestedLambda.Lambda == null && !TryCompileNestedLambda(nestedLambda, flags))
-            //             return null;
-            //     }
-            // }
 
             ArrayClosure closure;
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
@@ -1640,25 +1623,6 @@ namespace FastExpressionCompiler
 #endif
             ref var nestedClosureInfo = ref nestedLambdaInfo.ClosureInfo;
             var nestedLambdaNestedLambdaOrLambdas = nestedClosureInfo.NestedLambdaOrLambdas;
-            // if (nestedLambdaNestedLambdaOrLambdas != null)
-            // {
-            //     if (nestedLambdaNestedLambdaOrLambdas is NestedLambdaInfo[] nestedLambdaNestedLambdas)
-            //     {
-            //         foreach (var nestedLambdaInNestedLambda in nestedLambdaNestedLambdas)
-            //         {
-            //             if (nestedLambdaInNestedLambda.Lambda == null &&
-            //                 !TryCompileNestedLambda(nestedLambdaInNestedLambda, setup))
-            //                 return false;
-            //         }
-            //     }
-            //     else
-            //     {
-            //         var nestedLambdaInNestedLambda = (NestedLambdaInfo)nestedLambdaNestedLambdaOrLambdas;
-            //         if (nestedLambdaInNestedLambda.Lambda == null &&
-            //             !TryCompileNestedLambda(nestedLambdaInNestedLambda, setup))
-            //             return false;
-            //     }
-            // }
 
             ArrayClosure nestedLambdaClosure = null;
             if (nestedClosureInfo.NonPassedParameters.Count == 0)
