@@ -120,7 +120,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var dd = f();
             Assert.IsNotNull(dd);
-            // Assert.AreSame(dd.D1, dd.D2);
+            Assert.AreSame(dd.D1, dd.D2);
 
             // var d = f.TryGetDebugInfo();
             // Assert.AreEqual(2, d.NestedLambdaCount);
@@ -140,6 +140,9 @@ namespace FastExpressionCompiler.IssueTests
 
         public readonly object[] _objects = new object[3];
         public object GetOrAdd(int i, Func<object> getValue) =>
+            _objects[i] ?? (_objects[i] = getValue());
+
+        public object GetOrPut(int i, Func<object> getValue) =>
             _objects[i] = getValue();
 
         private Expression<Func<A>> CreateExpression()
@@ -213,21 +216,21 @@ namespace FastExpressionCompiler.IssueTests
             var d1Name = Parameter(typeof(Name), "d1Name");
 
             var d1 = Convert(
-                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                Call(test, test.Type.GetMethod(nameof(GetOrPut)),
                     Constant(2),
                     Lambda(
                         New(typeof(D1).GetConstructors()[0], d1Name))),
                 typeof(D1));
 
             var c1 = Convert(
-                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                Call(test, test.Type.GetMethod(nameof(GetOrPut)),
                     Constant(1),
                     Lambda(
                         New(typeof(C1).GetConstructors()[0], d1, c1Name))),
                 typeof(C1));
 
             var b1 = Convert(
-                Call(test, test.Type.GetMethod(nameof(GetOrAdd)),
+                Call(test, test.Type.GetMethod(nameof(GetOrPut)),
                     Constant(0),
                     Lambda(
                         New(typeof(B1).GetConstructors()[0], c1, b1Name, d1))),
