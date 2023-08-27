@@ -15,10 +15,56 @@ namespace FastExpressionCompiler.ImTools;
 
 using static FHashMap;
 
+public struct LiveCountArray<T>
+{
+    public T[] Items;
+    public int Count;
+
+    public LiveCountArray(T[] items, int count)
+    {
+        Items = items;
+        Count = count;
+    }
+
+    public LiveCountArray(T[] items) : this(items, items.Length) { }
+
+    public LiveCountArray() : this(Tools.Empty<T>(), 0) { }
+
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T PushSlot()
+    {
+        if (++Count > Items.Length)
+            Items = Expand(Items);
+        return ref Items[Count - 1];
+    }
+
+    [MethodImpl((MethodImplOptions)256)]
+    public void PushSlot(T item)
+    {
+        if (++Count > Items.Length)
+            Items = Expand(Items);
+        Items[Count - 1] = item;
+    }
+
+    public void Pop() => --Count;
+
+    public static T[] Expand(T[] items)
+    {
+        if (items.Length == 0)
+            return new T[4];
+
+        var count = items.Length;
+        var newItems = new T[count << 1]; // count x 2
+        Array.Copy(items, 0, newItems, 0, count);
+        return newItems;
+    }
+}
+
 /// <summary>SmallList module he-he</summary>
 public static class SmallList
 {
     internal const int ForLoopCopyCount = 4;
+    internal const int InitialCapacity = 4;
 
     [MethodImpl((MethodImplOptions)256)]
     internal static void Expand<TItem>(ref TItem[] items)
@@ -35,7 +81,7 @@ public static class SmallList
     /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`! 
     /// `items` should be not null</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem AppendDefaultToNotNullItemsAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity)
+    public static ref TItem AppendDefaultToNotNullItemsAndGetRef<TItem>(ref TItem[] items, int index)
     {
         Debug.Assert(index <= items.Length);
         if (index == items.Length)
@@ -46,7 +92,7 @@ public static class SmallList
     /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`! 
     /// `items` may be null</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem AppendDefaultAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity)
+    public static ref TItem AppendDefaultAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity = InitialCapacity)
     {
         if (items == null)
         {
