@@ -517,7 +517,15 @@ namespace FastExpressionCompiler
             var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
             // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
-            var il = method.GetILGenerator(64);
+            var ilStream = Interlocked.Exchange(ref ILGeneratorHacks.ILStreamPooled, null);
+            ILGenerator il;
+            if (ilStream != null && ilStream.Length > 16)
+            {
+                il = method.GetILGenerator(16); // minimal possible size
+                ILGeneratorHacks.ILStreamField.SetValue(il, ilStream);
+            }
+            else
+                il = method.GetILGenerator();
 
             if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo, ref nestedLambdas);
@@ -527,7 +535,12 @@ namespace FastExpressionCompiler
                 return null;
             il.Emit(OpCodes.Ret);
 
-            return method.CreateDelegate(delegateType, closure);
+            var delegat = method.CreateDelegate(delegateType, closure);
+
+            ilStream = (byte[])ILGeneratorHacks.ILStreamField.GetValue(il);
+            Interlocked.Exchange(ref ILGeneratorHacks.ILStreamPooled, ilStream);
+
+            return delegat;
         }
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
@@ -1596,7 +1609,16 @@ namespace FastExpressionCompiler
             var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
 
             var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
-            var il = method.GetILGenerator();
+
+            var ilStream = Interlocked.Exchange(ref ILGeneratorHacks.ILStreamPooled, null);
+            ILGenerator il;
+            if (ilStream != null && ilStream.Length > 16)
+            {
+                il = method.GetILGenerator(16); // minimal possible size
+                ILGeneratorHacks.ILStreamField.SetValue(il, ilStream);
+            }
+            else
+                il = method.GetILGenerator();
 
             var containsConstantsOrNestedLambdas = nestedClosureInfo.ContainsConstantsOrNestedLambdas();
             if (containsConstantsOrNestedLambdas & ((nestedClosureInfo.Status & ClosureStatus.HasClosure) != 0))
@@ -1617,6 +1639,10 @@ namespace FastExpressionCompiler
                 nestedLambdaInfo.Lambda = new NestedLambdaWithConstantsAndNestedLambdas(nestedLambdaInfo.Lambda, nestedConstsAndLambdas);
 
             ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+
+            ilStream = (byte[])ILGeneratorHacks.ILStreamField.GetValue(il);
+            Interlocked.Exchange(ref ILGeneratorHacks.ILStreamPooled, ilStream);
+
             return true;
         }
 
@@ -5637,6 +5663,11 @@ namespace FastExpressionCompiler
             return localBuilder;
         }
         */
+
+        internal static readonly FieldInfo ILStreamField = 
+            typeof(ILGenerator).GetField("m_ILStream", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        internal static byte[] ILStreamPooled = null;
 
         private static readonly Func<ILGenerator, Type, int> _getNextLocalVarIndex;
 
