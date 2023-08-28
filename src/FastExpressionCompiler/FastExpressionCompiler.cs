@@ -117,7 +117,7 @@ namespace FastExpressionCompiler
         string CSharpString { get; }
 
         // /// <summary>Total nested lambda counting</summary>
-        // ushort NestedLambdaCount { get; }
+        // ushort NestedLambdaCount { get; } // todo: @wip count nested lambdas and expressions
 
         // /// <summary>Nested lambda compiled counting, should be less or equal to `NestedLambdaCount` so that the same lambda compiled only once.</summary>
         // ushort NestedLambdaCompiledTimesCount { get; }
@@ -516,7 +516,8 @@ namespace FastExpressionCompiler
 
             var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
-            var il = method.GetILGenerator(64); // todo: @perf may calculate it based on the number constants and nested lambdas * 32
+            // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
+            var il = method.GetILGenerator(64);
 
             if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo, ref nestedLambdas);
@@ -590,7 +591,7 @@ namespace FastExpressionCompiler
 
             /// <summary>Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters.</summary>
-            public SmallList2<ParameterExpression> NonPassedParameters;
+            public SmallList<ParameterExpression> NonPassedParameters;
 
             /// <summary>The nested lambdas and their info</summary>
             public SmallList<NestedLambdaInfo> NestedLambdas;
@@ -680,7 +681,7 @@ namespace FastExpressionCompiler
 
             /// <summary>Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters.</summary>
-            public SmallList2<ParameterExpression> NonPassedParameters;
+            public SmallList<ParameterExpression> NonPassedParameters;
 
             /// <summary>The nested lambdas and their info</summary>
             public SmallList<NestedLambdaInfo> NestedLambdas;
@@ -1497,13 +1498,13 @@ namespace FastExpressionCompiler
 
 #if LIGHT_EXPRESSION
         private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo nestedLambda,
-            IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ref SmallList2<ParameterExpression> nestedNonPassedParams)
+            IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.ParameterCount;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.ParameterCount;
 #else
         private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo nestedLambda,
-            IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ref SmallList2<ParameterExpression> nestedNonPassedParams)
+            IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.Count;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.Count;
@@ -2750,17 +2751,25 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
             {
 #endif
-                // todo: @perf!!! refactor this whole thing in order to handle the hot path without heavy reflection calls
+                // todo: @perf! refactor this whole thing in order to handle the hot path without heavy reflection calls
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
-                {
-                    var ok = TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1);
-                    return ok && EmitMethodCallOrVirtualCall(il, method);
-                }
+                    return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1) 
+                        && EmitMethodCallOrVirtualCall(il, method);
 
                 var sourceType = opExpr.Type;
                 var targetType = expr.Type;
+
+                // if (sourceType == typeof(object))
+                // {
+                    // todo: @wip @perf for this case because it is bvery heavy used for the runtime conversion from the object to the concrete type
+                    // if (!targetType.IsValueType)
+                    //     il.Emit(OpCodes.Unbox_Any, targetType);
+                    // else
+                        // il.Emit(OpCodes.Castclass, targetType);
+                    // return il.EmitPopIfIgnoreResult(parent);
+                // }
 
                 // quick path for ignored result & conversion which can't cause exception: just do nothing
                 if (targetType.IsAssignableFrom(sourceType) && (parent & ParentFlags.IgnoreResult) != 0)
@@ -2799,7 +2808,7 @@ namespace FastExpressionCompiler
                 if (underlyingNullableSourceType == null && !sourceType.IsPrimitive)
                 {
                     var actualTargetType = underlyingNullableTargetType ?? targetType;
-                    var convertOpMethod = method ?? sourceType.FindConvertOperator(sourceType, actualTargetType); // todo: @perf @wip omit the call for Object source type, and may cache the result methods for other types
+                    var convertOpMethod = method ?? sourceType.FindConvertOperator(sourceType, actualTargetType);
                     if (convertOpMethod != null)
                     {
                         EmitMethodCall(il, convertOpMethod);
@@ -5411,6 +5420,8 @@ namespace FastExpressionCompiler
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
+            if (type == typeof(object))
+                return null;
             // conversion operators should be declared as static and public 
             var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public);
             for (var i = 0; i < methods.Length; i++)
