@@ -84,17 +84,55 @@ public static class SmallList
         return ref items[index];
     }
 
+    /// <summary>Returns surely present item ref by its index</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref TItem GetSurePresentItemRef<TItem>(this ref SmallList<TItem> source, int index) =>
+        ref source.Items[index];
+
     // todo: @perf add the not null variant
     /// <summary>Appends the new default item to the list and returns ref to it for write or read</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem Append<TItem>(ref this SmallList<TItem> list, int initialCapacity = InitialCapacity) =>
-        ref AppendDefaultAndGetRef(ref list.Items, list.Count++, initialCapacity);
+    public static ref TItem Append<TItem>(ref this SmallList<TItem> source, int initialCapacity = InitialCapacity) =>
+        ref AppendDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity);
 
     /// <summary>Appends the new item to the list</summary>
     // todo: @perf add the not null variant
     [MethodImpl((MethodImplOptions)256)]
-    public static void Append<TItem>(ref this SmallList<TItem> list, in TItem item, int initialCapacity = InitialCapacity) =>
-        AppendDefaultAndGetRef(ref list.Items, list.Count++, initialCapacity) = item;
+    public static void Append<TItem>(ref this SmallList<TItem> source, in TItem item, int initialCapacity = InitialCapacity) =>
+        AppendDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity) = item;
+
+    /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static int TryGetIndex<TItem, TEq>(this ref SmallList<TItem> source, TItem it, TEq eq = default)
+        where TEq : struct, IEq<TItem>
+    {
+        var count = source.Count;
+        var items = source.Items;
+        for (var i = 0; i < count; ++i)
+        {
+            ref var di = ref items[i]; // todo: @perf Marshall?
+            if (eq.Equals(it, di))
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList<TItem> source, in TItem item, TEq eq)
+        where TEq : struct, IEq<TItem>
+    {
+        var count = source.Count;
+        var items = source.Items;
+        for (var i = 0; i < count; ++i)
+        {
+            ref var di = ref items[i]; // todo: @perf Marshall?
+            if (eq.Equals(item, di))
+                return i;
+        }
+        source.Append() = item;
+        return -1;
+    }
 
     /// <summary>Returns surely present item ref by its index</summary>
     [MethodImpl((MethodImplOptions)256)]
@@ -184,7 +222,7 @@ public static class SmallList
 
     /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList4<TItem> source, TItem item, TEq eq)
+    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList4<TItem> source, in TItem item, TEq eq)
         where TEq : struct, IEq<TItem>
     {
         switch (source._count)
