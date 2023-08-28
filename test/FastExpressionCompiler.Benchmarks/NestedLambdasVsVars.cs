@@ -103,6 +103,13 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 | LightExpression_with_sub_expressions_CompiledFast |  18.82 us |  0.373 us |  0.894 us |  18.53 us |  1.00 |    0.00 | 1.4648 | 1.3428 |   9.02 KB |        1.00 |
 |          Expression_with_sub_expressions_Compiled | 508.95 us | 10.150 us | 24.320 us | 498.55 us | 27.09 |    1.65 | 3.9063 | 2.9297 |  28.47 KB |        3.15 |
 
+### Removed ClosureInfo from the LambdaInfo
+
+|                                            Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+|-------------------------------------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| LightExpression_with_sub_expressions_CompiledFast |  20.96 us |  0.417 us |  1.098 us |  20.67 us |  1.00 |    0.00 | 1.2817 | 1.2512 |   7.99 KB |        1.00 |
+|          Expression_with_sub_expressions_Compiled | 584.61 us | 25.681 us | 71.163 us | 554.55 us | 28.18 |    4.04 | 3.9063 | 2.9297 |  28.47 KB |        3.56 |
+
 */
         private Expression<Func<A>> _expr;//, _exprWithVars;
         private LightExpression.Expression<Func<A>> _lightExpr;
