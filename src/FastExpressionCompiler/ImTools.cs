@@ -15,15 +15,39 @@ namespace FastExpressionCompiler.ImTools;
 
 using static FHashMap;
 
+/// <summary>Wrapper for the array and count</summary>
+public struct SmallList<T>
+{
+    /// <summary>Array of items</summary>
+    public T[] Items;
+    /// <summary>The count of used items</summary>
+    public int Count;
+
+    /// <summary>Creating this stuff</summary>
+    public SmallList(T[] items, int count)
+    {
+        Items = items;
+        Count = count;
+    }
+
+    /// <summary>Creates the wrapper out of the items</summary>
+    public SmallList(T[] items) : this(items, items.Length) { }
+
+    /// <summary>Popping candy</summary>
+    public void Pop() => --Count;
+}
+
 /// <summary>SmallList module he-he</summary>
 public static class SmallList
 {
     internal const int ForLoopCopyCount = 4;
+    internal const int InitialCapacity = 4;
 
     [MethodImpl((MethodImplOptions)256)]
     internal static void Expand<TItem>(ref TItem[] items)
     {
-        var newItems = new TItem[items.Length << 1]; // have fun to guess the new length, haha ;-P
+        // `| 1` is for the case when the length is 0
+        var newItems = new TItem[(items.Length << 1) | 1]; // have fun to guess the new length, haha ;-P
         if (items.Length > ForLoopCopyCount)
             Array.Copy(items, newItems, items.Length);
         else
@@ -35,7 +59,7 @@ public static class SmallList
     /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`! 
     /// `items` should be not null</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem AppendDefaultToNotNullItemsAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity)
+    public static ref TItem AppendDefaultToNotNullItemsAndGetRef<TItem>(ref TItem[] items, int index)
     {
         Debug.Assert(index <= items.Length);
         if (index == items.Length)
@@ -43,10 +67,9 @@ public static class SmallList
         return ref items[index];
     }
 
-    /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`! 
-    /// `items` may be null</summary>
+    /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`, `items` may be null</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem AppendDefaultAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity)
+    public static ref TItem AppendDefaultAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity = InitialCapacity)
     {
         if (items == null)
         {
@@ -59,6 +82,56 @@ public static class SmallList
         if (index == items.Length)
             Expand(ref items);
         return ref items[index];
+    }
+
+    /// <summary>Returns surely present item ref by its index</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref TItem GetSurePresentItemRef<TItem>(this ref SmallList<TItem> source, int index) =>
+        ref source.Items[index];
+
+    // todo: @perf add the not null variant
+    /// <summary>Appends the new default item to the list and returns ref to it for write or read</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref TItem Append<TItem>(ref this SmallList<TItem> source, int initialCapacity = InitialCapacity) =>
+        ref AppendDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity);
+
+    /// <summary>Appends the new item to the list</summary>
+    // todo: @perf add the not null variant
+    [MethodImpl((MethodImplOptions)256)]
+    public static void Append<TItem>(ref this SmallList<TItem> source, in TItem item, int initialCapacity = InitialCapacity) =>
+        AppendDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity) = item;
+
+    /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static int TryGetIndex<TItem, TEq>(this ref SmallList<TItem> source, TItem it, TEq eq = default)
+        where TEq : struct, IEq<TItem>
+    {
+        var count = source.Count;
+        var items = source.Items;
+        for (var i = 0; i < count; ++i)
+        {
+            ref var di = ref items[i]; // todo: @perf Marshall?
+            if (eq.Equals(it, di))
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList<TItem> source, in TItem item, TEq eq)
+        where TEq : struct, IEq<TItem>
+    {
+        var count = source.Count;
+        var items = source.Items;
+        for (var i = 0; i < count; ++i)
+        {
+            ref var di = ref items[i]; // todo: @perf Marshall?
+            if (eq.Equals(item, di))
+                return i;
+        }
+        source.Append() = item;
+        return -1;
     }
 
     /// <summary>Returns surely present item ref by its index</summary>
@@ -149,7 +222,7 @@ public static class SmallList
 
     /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList4<TItem> source, TItem item, TEq eq)
+    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList4<TItem> source, in TItem item, TEq eq)
         where TEq : struct, IEq<TItem>
     {
         switch (source._count)

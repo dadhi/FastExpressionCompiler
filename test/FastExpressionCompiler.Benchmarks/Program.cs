@@ -8,11 +8,11 @@ namespace FastExpressionCompiler.Benchmarks
         {
             // BenchmarkRunner.Run<AccessByRef_vs_ByIGetRefStructImpl>();
 
-            // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
+            BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
 
             // BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
 
-            BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
+            // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
             // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
 
             // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();
@@ -32,6 +32,7 @@ namespace FastExpressionCompiler.Benchmarks
             //a.LightExpression_with_sub_expressions_CompiledFast();
             //a.Expression_with_sub_expressions_CompiledFast();
             //a.Expression_with_sub_expressions_Compiled();
+
             // BenchmarkRunner.Run<NestedLambdasVsVars>();
 
             // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
