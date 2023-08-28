@@ -35,9 +35,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
-using SysExpr = System.Linq.Expressions.Expression;
-using FastExpressionCompiler.LightExpression.ImTools;
 using System.Linq;
+using SysExpr = System.Linq.Expressions.Expression;
+
+using FastExpressionCompiler.LightExpression.ImTools;
 
 namespace FastExpressionCompiler.LightExpression
 {
@@ -63,10 +64,9 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>The first FEC stage of expression traversal where closure information is collected including the 
         /// constant and the nested lambdas. Beside that the labels, block and try-catch information is also collected
         /// for the next IL-emitting stage. The information regarding the currently traversed lambda expression
-        /// is accumulated in the `closure` structure. The `rootClosure` hold the first lambda expression info
-        /// for any nested lambda expression, which is indicated by `nestedLambda`.</summary>
+        /// is accumulated in the `closure` structure.</summary>
         public virtual bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) => false;
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => false;
         /// <summary>The second FEC state to emit the actual IL op-codes based on the information collected by the first traversal
         /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
         public virtual bool TryEmit(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
@@ -80,11 +80,11 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Converts the LightExpression to the System Expression to enable fallback to the System Compile</summary>
         public SysExpr ToExpression()
         {
-            var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
+            var exprsConverted = new SmallList<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
             return ToExpression(ref exprsConverted);
         }
 
-        internal SysExpr ToExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        internal SysExpr ToExpression(ref SmallList<LightAndSysExpr> exprsConverted)
         {
             var i = exprsConverted.Count - 1;
             while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].LightExpr, this)) --i;
@@ -93,13 +93,13 @@ namespace FastExpressionCompiler.LightExpression
 
             var sysExpr = CreateSysExpression(ref exprsConverted);
 
-            ref var item = ref exprsConverted.PushSlot();
+            ref var item = ref exprsConverted.Append();
             item.LightExpr = this;
             item.SysExpr = sysExpr;
             return sysExpr;
         }
 
-        internal abstract SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions);
+        internal abstract SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions);
 
         /// <summary>Converts to Expression and outputs its as string</summary>
         public override string ToString() => this.ToCSharpString(
@@ -110,7 +110,7 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Reduces the Expression to simple ones</summary>
         public virtual Expression Reduce() => this;
 
-        internal static SysExpr[] ToExpressions(IReadOnlyList<Expression> exprs, ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        internal static SysExpr[] ToExpressions(IReadOnlyList<Expression> exprs, ref SmallList<LightAndSysExpr> exprsConverted)
         {
             if (exprs.Count == 0)
                 return Tools.Empty<SysExpr>();
@@ -2219,7 +2219,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitUnary(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
         {
             switch (NodeType)
             {
@@ -2320,8 +2320,8 @@ namespace FastExpressionCompiler.LightExpression
         public override bool IsIntrinsic => true;
 
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Operand, paramExprs, nestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Operand, paramExprs, nestedLambda, ref rootNestedLambdas, config);
 
         public override bool TryEmit(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
@@ -2373,7 +2373,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBinary(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
     }
 
@@ -2410,7 +2410,7 @@ namespace FastExpressionCompiler.LightExpression
         internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
             NodeType = nodeType;
 
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
         {
             if (NodeType == ExpressionType.Equal ||
                 NodeType == ExpressionType.NotEqual)
@@ -2452,7 +2452,7 @@ namespace FastExpressionCompiler.LightExpression
         public override ExpressionType NodeType { get; }
         public override Type Type => typeof(bool?);
         internal LiftedToNullBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), true, null);
     }
 
@@ -2464,7 +2464,7 @@ namespace FastExpressionCompiler.LightExpression
         internal CoalesceBinaryExpression(Expression left, Expression right, Type type) : base(left, right) =>
             Type = type;
 
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Coalesce(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
     }
 
@@ -2477,7 +2477,7 @@ namespace FastExpressionCompiler.LightExpression
             : base(left, right, right.Type) =>
             Conversion = conversion;
 
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Coalesce(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), Conversion.ToLambdaExpression());
     }
 
@@ -2514,7 +2514,7 @@ namespace FastExpressionCompiler.LightExpression
             LiftToNull = liftToNull;
         }
 
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), LiftToNull, Method, Conversion.ToLambdaExpression());
     }
 
@@ -2559,13 +2559,13 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitListInit(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
             SysExpr.ListInit(
                 (System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref convertedExpressions),
                 ToElementInits(Initializers, ref convertedExpressions));
 
         internal static System.Linq.Expressions.ElementInit[] ToElementInits(IReadOnlyList<ElementInit> elemInits,
-            ref LiveCountArray<LightAndSysExpr> exprsConverted)
+            ref SmallList<LightAndSysExpr> exprsConverted)
         {
             if (elemInits.Count == 0)
                 return Tools.Empty<System.Linq.Expressions.ElementInit>();
@@ -2592,7 +2592,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTypeBinary(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             NodeType switch
             {
                 ExpressionType.TypeIs =>
@@ -2617,12 +2617,12 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMemberInit(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.MemberInit((System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref exprsConverted),
                 BindingsToExpressions(Bindings, ref exprsConverted));
 
         internal static System.Linq.Expressions.MemberBinding[] BindingsToExpressions(
-            IReadOnlyList<MemberBinding> ms, ref LiveCountArray<LightAndSysExpr> exprsConverted)
+            IReadOnlyList<MemberBinding> ms, ref SmallList<LightAndSysExpr> exprsConverted)
         {
             if (ms.Count == 0)
                 return Tools.Empty<System.Linq.Expressions.MemberBinding>();
@@ -2725,11 +2725,11 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitParameter(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Parameter(IsByRef ? Type.MakeByRefType() : Type, Name);
 
         internal static System.Linq.Expressions.ParameterExpression[] ToParameterExpressions(
-            IReadOnlyList<ParameterExpression> ps, ref LiveCountArray<LightAndSysExpr> exprsConverted)
+            IReadOnlyList<ParameterExpression> ps, ref SmallList<LightAndSysExpr> exprsConverted)
         {
             if (ps == null || ps.Count == 0)
                 return Tools.Empty<System.Linq.Expressions.ParameterExpression>();
@@ -2769,7 +2769,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> _) => SysExpr.Constant(Value, Type);
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> _) => SysExpr.Constant(Value, Type);
 
         /// <summary>I want to see the actual Value not the default one</summary>
         public override string ToString() => $"Constant({Value}, typeof({Type.ToCode()}))";
@@ -2830,7 +2830,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNew(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.New(Constructor, ToExpressions(Arguments, ref exprsConverted));
     }
 
@@ -2839,7 +2839,7 @@ namespace FastExpressionCompiler.LightExpression
         public override Type Type { get; }
         internal NewValueTypeExpression(Type type) : base(null) => Type = type;
 
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) => SysExpr.New(Type);
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) => SysExpr.New(Type);
     }
 
     public sealed class NoArgsNewClassIntrinsicExpression : NewExpression
@@ -2847,7 +2847,7 @@ namespace FastExpressionCompiler.LightExpression
         internal NoArgsNewClassIntrinsicExpression(ConstructorInfo constructor) : base(constructor) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) => true;
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => true;
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -2871,8 +2871,8 @@ namespace FastExpressionCompiler.LightExpression
         internal NoByRefOneArgNewIntrinsicExpression(ConstructorInfo constructor, object arg) : base(constructor, arg) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument, paramExprs, nestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument, paramExprs, nestedLambda, ref rootNestedLambdas, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -2901,9 +2901,9 @@ namespace FastExpressionCompiler.LightExpression
         internal NoByRefTwoArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1) : base(constructor, a0, a1) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -2938,10 +2938,10 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -2978,11 +2978,11 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -3022,12 +3022,12 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3, a4) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, nestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -3070,13 +3070,13 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3, a4, a5) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument5, paramExprs, nestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument5, paramExprs, nestedLambda, ref rootNestedLambdas, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -3121,14 +3121,14 @@ namespace FastExpressionCompiler.LightExpression
             : base(constructor, a0, a1, a2, a3, a4, a5, a6) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure) =>
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument5, paramExprs, nestedLambda, ref rootClosure, config) &&
-            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument6, paramExprs, nestedLambda, ref rootClosure, config);
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument5, paramExprs, nestedLambda, ref rootNestedLambdas, config) &&
+            ExpressionCompiler.TryCollectBoundConstants(ref closure, Argument6, paramExprs, nestedLambda, ref rootNestedLambdas, config);
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
@@ -3160,11 +3160,11 @@ namespace FastExpressionCompiler.LightExpression
         internal NoByRefManyArgsNewIntrinsicExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : base(constructor, arguments) { }
         public override bool IsIntrinsic => true;
         public override bool TryCollectBoundConstants(CompilerFlags config, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref ClosureInfo rootClosure)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var args = Args;
             for (var i = 0; i < args.Count; i++)
-                if (!ExpressionCompiler.TryCollectBoundConstants(ref closure, args[i], paramExprs, nestedLambda, ref rootClosure, config))
+                if (!ExpressionCompiler.TryCollectBoundConstants(ref closure, args[i], paramExprs, nestedLambda, ref rootNestedLambdas, config))
                     return false;
             return true;
         }
@@ -3191,7 +3191,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
         {
             var elemType = Type.GetElementType();
             var exprs = ToExpressions(Expressions, ref exprsConverted);
@@ -3325,7 +3325,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMethodCall(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
         {
             var expr = SysExpr.Call(Object?.ToExpression(ref exprsConverted), Method, ToExpressions(Arguments, ref exprsConverted));
             return Type == Method.ReturnType ? expr : SysExpr.Convert(expr, Type); // insert the safe-guard convert
@@ -3548,7 +3548,7 @@ namespace FastExpressionCompiler.LightExpression
         public PropertyInfo PropertyInfo => (PropertyInfo)Member;
         internal PropertyExpression(PropertyInfo property) : base(property) { }
 
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Property(Expression?.ToExpression(ref exprsConverted), PropertyInfo);
     }
 
@@ -3565,7 +3565,7 @@ namespace FastExpressionCompiler.LightExpression
         public FieldInfo FieldInfo => (FieldInfo)Member;
         internal FieldExpression(FieldInfo field) : base(field) { }
 
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Field(Expression?.ToExpression(ref exprsConverted), FieldInfo);
     }
 
@@ -3583,7 +3583,7 @@ namespace FastExpressionCompiler.LightExpression
         public abstract MemberBindingType BindingType { get; }
         internal MemberBinding(MemberInfo member) => Member = member;
 
-        internal abstract System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted);
+        internal abstract System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted);
     }
 
     public sealed class MemberAssignment : MemberBinding
@@ -3592,7 +3592,7 @@ namespace FastExpressionCompiler.LightExpression
         public override MemberBindingType BindingType => MemberBindingType.Assignment;
         internal MemberAssignment(MemberInfo member, Expression expression) : base(member) => Expression = expression;
 
-        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Bind(Member, Expression.ToExpression(ref exprsConverted));
     }
 
@@ -3604,7 +3604,7 @@ namespace FastExpressionCompiler.LightExpression
             Bindings = bindings;
 
         private static System.Linq.Expressions.MemberBinding[] ToMemberBindings(IReadOnlyList<MemberBinding> items,
-            ref LiveCountArray<LightAndSysExpr> exprsConverted)
+            ref SmallList<LightAndSysExpr> exprsConverted)
         {
             if (items.Count == 0)
                 return Tools.Empty<System.Linq.Expressions.MemberBinding>();
@@ -3615,7 +3615,7 @@ namespace FastExpressionCompiler.LightExpression
             return result;
         }
 
-        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.MemberBind(Member, ToMemberBindings(Bindings, ref exprsConverted));
     }
 
@@ -3626,7 +3626,7 @@ namespace FastExpressionCompiler.LightExpression
         internal MemberListBinding(MemberInfo member, IReadOnlyList<ElementInit> initializers) : base(member) =>
             Initializers = initializers;
 
-        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.ListBind(Member, ListInitExpression.ToElementInits(Initializers, ref exprsConverted));
     }
 
@@ -3641,7 +3641,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted)
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
         {
             var expr = SysExpr.Invoke(Expression.ToExpression(ref exprsConverted), ToExpressions(Arguments, ref exprsConverted));
             return Expression is LambdaExpression ? expr
@@ -3801,7 +3801,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDefault(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             Type == typeof(void) ? SysExpr.Empty() : SysExpr.Default(Type);
     }
 
@@ -3821,7 +3821,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConditional(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Condition(Test.ToExpression(ref exprsConverted), IfTrue.ToExpression(ref exprsConverted), IfFalse.ToExpression(ref exprsConverted), Type);
     }
 
@@ -3864,7 +3864,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitIndex(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeIndex(Object.ToExpression(ref exprsConverted), Indexer, ToExpressions(Arguments, ref exprsConverted));
     }
 
@@ -3922,7 +3922,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Block(Type,
                 ParameterExpression.ToParameterExpressions(Variables, ref exprsConverted),
                 ToExpressions(Expressions.CopyToArray(), ref exprsConverted));
@@ -3988,7 +3988,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLoop(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             BreakLabel == null
             ? SysExpr.Loop(Body.ToExpression(ref exprsConverted)) :
             ContinueLabel == null
@@ -4014,7 +4014,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTry(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             Finally == null ?
                 SysExpr.TryCatch(Body.ToExpression(ref exprsConverted),
                     ToCatchBlocks(_handlers, ref exprsConverted)) :
@@ -4025,14 +4025,14 @@ namespace FastExpressionCompiler.LightExpression
                     Finally.ToExpression(ref exprsConverted), ToCatchBlocks(_handlers, ref exprsConverted));
 
         private static System.Linq.Expressions.CatchBlock ToCatchBlock(
-            ref CatchBlock cb, ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+            ref CatchBlock cb, ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeCatchBlock(cb.Test,
                 (System.Linq.Expressions.ParameterExpression)cb.Variable?.ToExpression(ref exprsConverted),
                 cb.Body.ToExpression(ref exprsConverted),
                 cb.Filter?.ToExpression(ref exprsConverted));
 
         private static System.Linq.Expressions.CatchBlock[] ToCatchBlocks(
-            CatchBlock[] hs, ref LiveCountArray<LightAndSysExpr> exprsConverted)
+            CatchBlock[] hs, ref SmallList<LightAndSysExpr> exprsConverted)
         {
             if (hs == null)
                 return Tools.Empty<System.Linq.Expressions.CatchBlock>();
@@ -4075,7 +4075,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLabel(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             DefaultValue == null
                 ? SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted))
                 : SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted), DefaultValue.ToExpression(ref exprsConverted));
@@ -4093,7 +4093,7 @@ namespace FastExpressionCompiler.LightExpression
         public virtual Type Type => typeof(void);
         public virtual string Name => null;
 
-        internal System.Linq.Expressions.LabelTarget ToSystemLabelTarget(ref LiveCountArray<LightAndSysExpr> converted)
+        internal System.Linq.Expressions.LabelTarget ToSystemLabelTarget(ref SmallList<LightAndSysExpr> converted)
         {
             var i = converted.Count - 1;
             while (i != -1 && !ReferenceEquals(converted.Items[i].LightExpr, this)) --i;
@@ -4104,7 +4104,7 @@ namespace FastExpressionCompiler.LightExpression
                 ? SysExpr.Label(Type)
                 : SysExpr.Label(Type, Name);
 
-            ref var item = ref converted.PushSlot();
+            ref var item = ref converted.Append();
             item.LightExpr = this;
             item.SysExpr = sysItem;
             return sysItem;
@@ -4142,7 +4142,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitGoto(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeGoto(Kind, Target.ToSystemLabelTarget(ref exprsConverted), Value?.ToExpression(ref exprsConverted), Type);
     }
 
@@ -4278,16 +4278,16 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitSwitch(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Switch(SwitchValue.ToExpression(ref exprsConverted),
                 DefaultBody.ToExpression(ref exprsConverted), Comparison,
                 ToSwitchCaseExpressions(_cases, ref exprsConverted));
 
-        internal static System.Linq.Expressions.SwitchCase ToSwitchCase(ref SwitchCase sw, ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal static System.Linq.Expressions.SwitchCase ToSwitchCase(ref SwitchCase sw, ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.SwitchCase(sw.Body.ToExpression(ref exprsConverted), ToExpressions(sw.TestValues, ref exprsConverted));
 
         internal static System.Linq.Expressions.SwitchCase[] ToSwitchCaseExpressions(
-            SwitchCase[] switchCases, ref LiveCountArray<LightAndSysExpr> exprsConverted)
+            SwitchCase[] switchCases, ref SmallList<LightAndSysExpr> exprsConverted)
         {
             if (switchCases.Length == 0)
                 return Tools.Empty<System.Linq.Expressions.SwitchCase>();
@@ -4322,7 +4322,7 @@ namespace FastExpressionCompiler.LightExpression
         public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
             (System.Linq.Expressions.LambdaExpression)ToExpression();
 
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Lambda(Type, Body.ToExpression(ref exprsConverted), ParameterExpression.ToParameterExpressions(Parameters, ref exprsConverted));
     }
 
@@ -4494,7 +4494,7 @@ namespace FastExpressionCompiler.LightExpression
 #endif
         public new System.Linq.Expressions.Expression<TDelegate> ToLambdaExpression()
         {
-            var exprsConverted = new LiveCountArray<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
+            var exprsConverted = new SmallList<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
             return SysExpr.Lambda<TDelegate>(Body.ToExpression(ref exprsConverted),
                 ParameterExpression.ToParameterExpressions(Parameters, ref exprsConverted));
         }
@@ -4652,7 +4652,7 @@ namespace FastExpressionCompiler.LightExpression
             Arguments = arguments;
         }
 
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> exprsConverted) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.MakeDynamic(DelegateType, Binder, ToExpressions(Arguments, ref exprsConverted));
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDynamic(this);
@@ -4669,7 +4669,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitRuntimeVariables(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
             SysExpr.RuntimeVariables(ParameterExpression.ToParameterExpressions(Variables, ref convertedExpressions));
     }
 
@@ -4713,7 +4713,7 @@ namespace FastExpressionCompiler.LightExpression
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDebugInfo(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref LiveCountArray<LightAndSysExpr> convertedExpressions) =>
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
             SysExpr.DebugInfo(SysExpr.SymbolDocument(Document.FileName), StartLine, StartColumn, EndLine, EndColumn);
     }
 
