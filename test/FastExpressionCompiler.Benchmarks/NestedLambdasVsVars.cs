@@ -110,7 +110,7 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 | LightExpression_with_sub_expressions_CompiledFast |  20.96 us |  0.417 us |  1.098 us |  20.67 us |  1.00 |    0.00 | 1.2817 | 1.2512 |   7.99 KB |        1.00 |
 |          Expression_with_sub_expressions_Compiled | 584.61 us | 25.681 us | 71.163 us | 554.55 us | 28.18 |    4.04 | 3.9063 | 2.9297 |  28.47 KB |        3.56 |
 
-### Optimize the convert from objct to avoid calling GetMethods
+### Optimize the convert from object to avoid calling GetMethods
 
 |                                            Method |      Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
 |-------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|

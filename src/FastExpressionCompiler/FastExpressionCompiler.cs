@@ -3016,7 +3016,8 @@ namespace FastExpressionCompiler
                     exprType = constType;
                 if (considerClosure && IsClosureBoundConstant(constValue, constType))
                 {
-                    if (!closure.Constants.Items.TryGetIndexByReferenceEquals(out var constIndex, constValue, closure.Constants.Count))
+                    var constIndex = closure.Constants.TryGetIndex(constValue, default(RefEq<object>));
+                    if (constIndex == -1)
                         return false;
 
                     var varIndex = closure.ConstantUsageThenVarIndex[constIndex] - 1;
@@ -5361,11 +5362,11 @@ namespace FastExpressionCompiler
 
         [MethodImpl((MethodImplOptions)256)]
         internal static bool IsNullable(this Type type) =>
-            type.IsValueType && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+            (type.IsValueType & type.IsGenericType) && type.GetGenericTypeDefinition() == typeof(Nullable<>);
 
         [MethodImpl((MethodImplOptions)256)]
         internal static Type GetUnderlyingNullableTypeOrNull(this Type type) =>
-            type.IsValueType && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>) ? type.GetGenericArguments()[0] : null;
+            (type.IsValueType & type.IsGenericType) && type.GetGenericTypeDefinition() == typeof(Nullable<>) ? type.GetGenericArguments()[0] : null;
 
         public static string GetArithmeticBinaryOperatorMethodName(this ExpressionType nodeType) =>
             nodeType switch
@@ -5420,7 +5421,7 @@ namespace FastExpressionCompiler
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
-            if (type == typeof(object))
+            if (sourceType == typeof(object) | targetType == typeof(object))
                 return null;
             // conversion operators should be declared as static and public 
             var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public);
@@ -5465,19 +5466,6 @@ namespace FastExpressionCompiler
 
         internal static IList<T> AsList<T>(this IEnumerable<T> source) =>
             source == null ? Empty<T>() : source as IList<T> ?? source.ToList();
-
-        // todo: @perf optimize using marshal arts, e.g. `ref MemoryMarshal.GetArrayDataReference(arr)` and `ref Unsafe.Add<T (ref T source, nuint elementOffset);`
-        internal static bool TryGetIndexByReferenceEquals<T>(this T[] items, out int index, T item, int count)
-        {
-            for (var i = 0; (uint)i < count; ++i)
-                if (ReferenceEquals(items[i], item))
-                {
-                    index = i;
-                    return true;
-                }
-            index = -1;
-            return false;
-        }
 
         internal static bool TryGetIndexByReferenceEquals<T>(this IList<T> items, out int index, T item, int count)
         {
