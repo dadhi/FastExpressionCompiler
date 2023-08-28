@@ -15,49 +15,26 @@ namespace FastExpressionCompiler.ImTools;
 
 using static FHashMap;
 
-public struct LiveCountArray<T>
+/// <summary>Wrapper for the array and count</summary>
+public struct SmallList<T>
 {
+    /// <summary>Array of items</summary>
     public T[] Items;
+    /// <summary>The count of used items</summary>
     public int Count;
 
-    public LiveCountArray(T[] items, int count)
+    /// <summary>Creating this stuff</summary>
+    public SmallList(T[] items, int count)
     {
         Items = items;
         Count = count;
     }
 
-    public LiveCountArray(T[] items) : this(items, items.Length) { }
+    /// <summary>Creates the wrapper out of the items</summary>
+    public SmallList(T[] items) : this(items, items.Length) { }
 
-    public LiveCountArray() : this(Tools.Empty<T>(), 0) { }
-
-    [MethodImpl((MethodImplOptions)256)]
-    public ref T PushSlot()
-    {
-        if (++Count > Items.Length)
-            Items = Expand(Items);
-        return ref Items[Count - 1];
-    }
-
-    [MethodImpl((MethodImplOptions)256)]
-    public void PushSlot(T item)
-    {
-        if (++Count > Items.Length)
-            Items = Expand(Items);
-        Items[Count - 1] = item;
-    }
-
+    /// <summary>Popping candy</summary>
     public void Pop() => --Count;
-
-    public static T[] Expand(T[] items)
-    {
-        if (items.Length == 0)
-            return new T[4];
-
-        var count = items.Length;
-        var newItems = new T[count << 1]; // count x 2
-        Array.Copy(items, 0, newItems, 0, count);
-        return newItems;
-    }
 }
 
 /// <summary>SmallList module he-he</summary>
@@ -69,7 +46,8 @@ public static class SmallList
     [MethodImpl((MethodImplOptions)256)]
     internal static void Expand<TItem>(ref TItem[] items)
     {
-        var newItems = new TItem[items.Length << 1]; // have fun to guess the new length, haha ;-P
+        // `| 1` is for the case when the length is 0
+        var newItems = new TItem[(items.Length << 1) | 1]; // have fun to guess the new length, haha ;-P
         if (items.Length > ForLoopCopyCount)
             Array.Copy(items, newItems, items.Length);
         else
@@ -89,8 +67,7 @@ public static class SmallList
         return ref items[index];
     }
 
-    /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`! 
-    /// `items` may be null</summary>
+    /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`, `items` may be null</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref TItem AppendDefaultAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity = InitialCapacity)
     {
@@ -106,6 +83,18 @@ public static class SmallList
             Expand(ref items);
         return ref items[index];
     }
+
+    // todo: @perf add the not null variant
+    /// <summary>Appends the new default item to the list and returns ref to it for write or read</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref TItem Append<TItem>(ref this SmallList<TItem> list, int initialCapacity = InitialCapacity) =>
+        ref AppendDefaultAndGetRef(ref list.Items, list.Count++, initialCapacity);
+
+    /// <summary>Appends the new item to the list</summary>
+    // todo: @perf add the not null variant
+    [MethodImpl((MethodImplOptions)256)]
+    public static void Append<TItem>(ref this SmallList<TItem> list, in TItem item, int initialCapacity = InitialCapacity) =>
+        AppendDefaultAndGetRef(ref list.Items, list.Count++, initialCapacity) = item;
 
     /// <summary>Returns surely present item ref by its index</summary>
     [MethodImpl((MethodImplOptions)256)]
