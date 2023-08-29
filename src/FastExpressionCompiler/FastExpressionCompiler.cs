@@ -6559,14 +6559,16 @@ namespace FastExpressionCompiler
                         var body = x.Body;
                         var bNodeType = body.NodeType;
                         var isBodyExpression = bNodeType != ExpressionType.Block && bNodeType != ExpressionType.Try && bNodeType != ExpressionType.Loop;
-                        if (isBodyExpression && x.ReturnType != typeof(void))
+                        var ignoresResult = x.ReturnType == typeof(void);
+                        if (isBodyExpression & !ignoresResult)
                             sb.NewLineIdentCs(body, EnclosedIn.LambdaBody, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         else
                         {
                             sb.NewLine(lineIdent, identSpaces).Append('{');
                             // Body handles `;` itself
                             if (body is BlockExpression bb)
-                                bb.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode, inTheLastBlock: true);
+                                bb.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode, 
+                                    inTheLastBlock: true, containerIgnoresResult: ignoresResult);
                             else
                             {
                                 sb.NewLineIdentCs(body, EnclosedIn.LambdaBody, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
@@ -7043,7 +7045,9 @@ namespace FastExpressionCompiler
 
         private static StringBuilder BlockToCSharpString(this BlockExpression b, StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
-            CodePrinter.ObjectToCode notRecognizedToCode = null, bool inTheLastBlock = false, BinaryExpression blockResultAssignment = null)
+            CodePrinter.ObjectToCode notRecognizedToCode = null, bool inTheLastBlock = false, BinaryExpression blockResultAssignment = null,
+            bool containerIgnoresResult = false // in case of the container is lambda which is the Action/void delegate and ignores result, we don't need the `return` - it will be invalid c#
+        )
         {
             var vars = b.Variables.AsList();
             var exprs = b.Expressions.AsList();
@@ -7152,7 +7156,7 @@ namespace FastExpressionCompiler
                     blockResultAssignment.Left.ToCSharpString(sb, EnclosedIn.Block, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(", ");
                 }
             }
-            else if (inTheLastBlock && b.Type != typeof(void))
+            else if (inTheLastBlock & !containerIgnoresResult & b.Type != typeof(void))
                 sb.Append("return ");
 
             if (lastExpr is ConditionalExpression ||

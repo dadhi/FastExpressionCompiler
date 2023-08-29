@@ -39,12 +39,12 @@ namespace FastExpressionCompiler.IssueTests
         {
             var a = Parameter(typeof(int[]), "a");
             var e = Lambda<Action<int[]>>(
-                Block(//typeof(void), // todo: do we need the `typeof(void)` here and the `null` for vars? 
+                Block( 
                     Assign(ArrayAccess(a, Constant(2)), Constant(33))
                 ),
                 a
             );
-            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            e.PrintCSharp();
             var @cs = (Action<int[]>)((int[] a) =>
             {
                 a[2] = 33;
@@ -73,9 +73,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var a = Parameter(typeof(int[]), "a");
             var e = Lambda<Action<int[]>>(
-                Block(typeof(void), // todo: do we need the `typeof(void)` here and the `null` for vars? 
-                    AddAssign(ArrayAccess(a, Constant(2)), Constant(33))
-                ),
+                Block(AddAssign(ArrayAccess(a, Constant(2)), Constant(33))),
                 a
             );
             e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
@@ -111,7 +109,7 @@ namespace FastExpressionCompiler.IssueTests
                 ),
                 a
             );
-            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            e.PrintCSharp();
             var @cs = (Func<int[], int>)((int[] a) =>
             {
                 return a[2] += 33;
@@ -146,7 +144,7 @@ namespace FastExpressionCompiler.IssueTests
                 ),
                 a
             );
-            e.PrintCSharp(); // todo: @fix output of non-void block in the void lambda/Action
+            e.PrintCSharp();
             var @cs = (Action<int[]>)((int[] a) =>
             {
                 ++a[2];
@@ -174,7 +172,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var a = Parameter(typeof(int[]), "a");
             var e = Lambda<Action<int[]>>(
-                Block(typeof(void), // todo: do we need the `typeof(void)` here and the `null` for vars? 
+                Block(typeof(void),
                     Assign(ArrayAccess(a, Constant(1)), Add(ArrayAccess(a, Constant(1)), Constant(33)))
                 ),
                 a
@@ -212,7 +210,7 @@ namespace FastExpressionCompiler.IssueTests
             var b = Parameter(typeof(Box), "b");
             var bValueField = typeof(Box).GetField(nameof(Box.Value));
             var e = Lambda<Action<Box>>(
-                Block(typeof(void), // todo: do we need the `typeof(void)` here and the `null` for vars? 
+                Block(typeof(void), 
                     AddAssign(Field(b, bValueField), Constant(33))
                 ),
                 b
