@@ -1978,6 +1978,7 @@ namespace FastExpressionCompiler
 
                                 // handle the all statements in block excluding the last one
                                 if (statementCount > 1)
+                                {
                                     for (var i = 0; i < statementCount - 1; i++)
                                     {
                                         var stExpr = statementExprs[i];
@@ -2025,6 +2026,7 @@ namespace FastExpressionCompiler
                                         if (!TryEmit(stExpr, paramExprs, il, ref closure, setup, parent | ParentFlags.IgnoreResult))
                                             return false;
                                     }
+                                }
 
                                 if (blockVarCount == 0)
                                     continue; // OMG! no recursion, continue with the last expression
@@ -3824,9 +3826,8 @@ namespace FastExpressionCompiler
 
                     // assigning the new value into the already closed variable - it enables the recursive nested lambda calls, see #353
                     var nestedLambdasCount = closure.NestedLambdas.Count;
-                    if (nestedLambdasCount != 0)
-                        for (var i = 0; i < nestedLambdasCount; ++i)
-                            EmitStoreAssignedLeftVarIntoClosureArray(il, closure.NestedLambdas.Items[i], left, leftVarIndex);
+                    for (var i = 0; i < nestedLambdasCount; ++i)
+                        EmitStoreAssignedLeftVarIntoClosureArray(il, closure.NestedLambdas.Items[i], left, leftVarIndex);
                     return ok;
                 }
 
@@ -3912,10 +3913,10 @@ namespace FastExpressionCompiler
                     return EmitMemberAssign(il, member);
 
                 il.Emit(OpCodes.Dup);
-                var rightVarIndex = il.GetNextLocalVarIndex(exprType); // store right value in variable
-                EmitStoreLocalVariable(il, rightVarIndex);
+                var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable
+                EmitStoreLocalVariable(il, resultVarIndex);
                 ok = EmitMemberAssign(il, member);
-                EmitLoadLocalVariable(il, rightVarIndex);
+                EmitLoadLocalVariable(il, resultVarIndex);
                 return ok;
             }
 
@@ -3929,9 +3930,22 @@ namespace FastExpressionCompiler
             {
                 bool ok = false;
                 var flags = parent & ~ParentFlags.IgnoreResult;
+                var resultLocalVarIndex = -1;
+                var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
+                var assignFromLocalVar = right.NodeType == ExpressionType.Try;
+                if (assignFromLocalVar)
+                {
+                    if (arithmeticNodeType != nodeType)
+                        return false; // todo: @feature does not support Assign operations when the right operant is the Try expression, see AssignTests.
+                    if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
+                        return false;
+                    resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
+                    EmitStoreLocalVariable(il, resultLocalVarIndex);
+                }
 
-                var obj = left.Object;
-                if (obj != null && !TryEmit(obj, paramExprs, il, ref closure, setup, flags))
+                var objExpr = left.Object;
+                if (objExpr != null &&
+                    !TryEmit(objExpr, paramExprs, il, ref closure, setup, flags | ParentFlags.IndexAccess | ParentFlags.InstanceAccess))
                     return false;
 
 #if SUPPORTS_ARGUMENT_PROVIDER
@@ -3945,18 +3959,25 @@ namespace FastExpressionCompiler
                     if (!TryEmit(indexArgExprs.GetArgument(i), paramExprs, il, ref closure, setup, flags))
                         return false;
 
-                if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
-                    return false;
-
+                if (assignFromLocalVar)
+                    EmitLoadLocalVariable(il, resultLocalVarIndex);
+                else
+                {
+                    ok = arithmeticNodeType != nodeType
+                        ? TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags)
+                        : TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty);
+                    if (!ok)
+                        return false;
+                }
                 if ((parent & ParentFlags.IgnoreResult) != 0)
-                    return TryEmitIndexSet(left, obj?.Type, exprType, il);
+                    return TryEmitIndexSet(left, objExpr?.Type, exprType, il);
 
-                var varIndex = il.GetNextLocalVarIndex(exprType); // store value in variable to return
                 il.Emit(OpCodes.Dup);
-                EmitStoreLocalVariable(il, varIndex);
+                var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
+                EmitStoreLocalVariable(il, resultVarIndex);
 
-                ok = TryEmitIndexSet(left, obj?.Type, exprType, il);
-                EmitLoadLocalVariable(il, varIndex);
+                ok = TryEmitIndexSet(left, objExpr?.Type, exprType, il);
+                EmitLoadLocalVariable(il, resultVarIndex);
                 return ok;
             }
 
@@ -3994,14 +4015,13 @@ namespace FastExpressionCompiler
                 if (nestedLambdaInfo.NonPassedParamsVarIndex == 0)
                     return;
                 var nonPassedParIndex = nestedLambdaInfo.NonPassedParameters.TryGetIndex(assignedLeftVar, default(RefEq<ParameterExpression>));
-                if (nonPassedParIndex != -1)
-                {
-                    EmitLoadLocalVariable(il, nestedLambdaInfo.NonPassedParamsVarIndex);
-                    EmitLoadConstantInt(il, nonPassedParIndex);
-                    EmitLoadLocalVariable(il, assignedLeftVarIndex);
-                    il.TryEmitBoxOf(assignedLeftVar.Type);
-                    il.Emit(OpCodes.Stelem_Ref); // put the variable into non-passed parameters (variables) array
-                }
+                if (nonPassedParIndex == -1)
+                    return;
+                EmitLoadLocalVariable(il, nestedLambdaInfo.NonPassedParamsVarIndex);
+                EmitLoadConstantInt(il, nonPassedParIndex);
+                EmitLoadLocalVariable(il, assignedLeftVarIndex);
+                il.TryEmitBoxOf(assignedLeftVar.Type);
+                il.Emit(OpCodes.Stelem_Ref); // put the variable into non-passed parameters (variables) array
             }
 
             private static void EmitLoadIndirectlyByRef(ILGenerator il, Type type)

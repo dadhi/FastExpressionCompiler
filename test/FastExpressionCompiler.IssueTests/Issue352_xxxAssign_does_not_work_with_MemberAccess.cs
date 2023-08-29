@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Check_ArrayAccess_AddAssign(); // todo: @wip
+            Check_ArrayAccess_AddAssign();
 
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_Add();
