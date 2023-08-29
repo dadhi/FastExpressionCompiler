@@ -59,11 +59,11 @@ In addition, the memory consumption taken by the compilation will be much smalle
 **Updated to .NET 6**
 
 ```ini
-BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
-Intel Core i5-8350U CPU 1.70GHz (Kaby Lake R), 1 CPU, 8 logical and 4 physical cores
-.NET Core SDK=6.0.201
-  [Host]     : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
-  DefaultJob : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
+BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.2134/22H2/2022Update/SunValley2)
+11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+.NET SDK 7.0.307
+  [Host]     : .NET 7.0.10 (7.0.1023.36312), X64 RyuJIT AVX2
+  DefaultJob : .NET 7.0.10 (7.0.1023.36312), X64 RyuJIT AVX2
 ```
 
 ### Hoisted expression with the constructor and two arguments in closure
@@ -76,11 +76,10 @@ Expression<Func<X>> e = () => new X(a, b);
 
 Compiling expression:
 
-|      Method |       Mean |     Error |     StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|------------ |-----------:|----------:|-----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|     Compile | 272.904 us | 5.4074 us | 11.8694 us | 50.84 |    3.34 | 1.4648 | 0.4883 |      - |   4.49 KB |
-| CompileFast |   5.379 us | 0.1063 us |  0.2048 us |  1.00 |    0.00 | 0.4959 | 0.2441 | 0.0381 |   1.52 KB |
-
+|      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 |   Gen2 | Allocated | Alloc Ratio |
+|------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|------------:|
+|     Compile | 129.471 us | 1.6304 us | 1.3615 us | 36.68 |    1.59 | 0.7324 | 0.4883 |      - |   4.52 KB |        3.03 |
+| CompileFast |   3.539 us | 0.0689 us | 0.1151 us |  1.00 |    0.00 | 0.2365 | 0.2289 | 0.0076 |   1.49 KB |        1.00 |
 
 Invoking the compiled delegate (comparing to the direct constructor call):
 
@@ -101,10 +100,11 @@ Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy
 
 Compiling expression:
 
-|      Method |      Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|------------ |----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|     Compile | 641.72 us | 12.785 us | 26.117 us | 28.87 |    1.78 | 3.9063 | 1.9531 |      - |  12.05 KB |
-| CompileFast |  22.31 us |  0.444 us |  0.876 us |  1.00 |    0.00 | 1.7700 | 0.8850 | 0.1221 |   5.45 KB |
+|      Method |      Mean |    Error |   StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+|------------ |----------:|---------:|---------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+|     Compile | 401.40 us | 7.509 us | 5.863 us | 400.79 us | 35.56 |    1.14 | 1.9531 | 0.9766 |  12.11 KB |        2.66 |
+| CompileFast |  11.47 us | 0.228 us | 0.509 us |  11.28 us |  1.00 |    0.00 | 0.7324 | 0.7172 |   4.55 KB |        1.00 |
+
 
 Invoking compiled delegate comparing to direct method call:
 
@@ -177,13 +177,12 @@ Creating the expression:
 
 Creating and compiling:
 
-|                                                Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|------------------------------------------------------ |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                          CreateExpression_and_Compile | 541.65 us | 16.585 us | 47.048 us | 520.79 us | 33.98 |    3.97 | 1.9531 | 0.9766 |      - |   7.26 KB |
-|                      CreateExpression_and_CompileFast |  23.51 us |  0.724 us |  2.102 us |  23.08 us |  1.47 |    0.17 | 1.2207 | 0.6104 | 0.0305 |   3.79 KB |
-|                 CreateLightExpression_and_CompileFast |  16.03 us |  0.430 us |  1.227 us |  15.50 us |  1.00 |    0.00 | 0.9155 | 0.4578 | 0.0305 |   2.84 KB |
-| CreateLightExpression_and_CompileFast_with_intrinsics |  13.94 us |  0.629 us |  1.845 us |  13.37 us |  0.88 |    0.13 | 0.8545 | 0.4272 | 0.0305 |   2.64 KB |
-
+|                                               Method |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+|----------------------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+|                         CreateExpression_and_Compile | 174.412 us | 3.4771 us | 7.5590 us | 37.06 |    2.23 | 0.9766 | 0.4883 |   7.18 KB |        2.93 |
+|                     CreateExpression_and_CompileFast |   6.395 us | 0.1265 us | 0.2314 us |  1.36 |    0.07 | 0.5341 | 0.5264 |    3.3 KB |        1.34 |
+|                CreateLightExpression_and_CompileFast |   4.703 us | 0.0931 us | 0.1336 us |  1.00 |    0.00 | 0.3967 | 0.3891 |   2.45 KB |        1.00 |
+| CreateLightExpression_and_CompileFast_with_intrinsic |   4.430 us | 0.0627 us | 0.0490 us |  0.94 |    0.03 | 0.3891 | 0.3738 |   2.38 KB |        0.97 |
 
 ## Difference between FastExpressionCompiler and FastExpressionCompiler.LightExpression
 

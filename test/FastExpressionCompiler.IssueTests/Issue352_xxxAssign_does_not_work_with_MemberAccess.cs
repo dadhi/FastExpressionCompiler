@@ -21,14 +21,15 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Check_ArrayAccess_AddAssign(); // todo: @wip
-            Check_ArrayAccess_PreIncrement();
-            Check_ArrayAccess_Add();
+            Check_ArrayAccess_AddAssign(); // todo: @wip
 
-            Check_MemberAccess_AddAssign();
-            Check_MemberAccess_PreIncrement();
+            // Check_ArrayAccess_PreIncrement();
+            // Check_ArrayAccess_Add();
 
-            return 4;
+            // Check_MemberAccess_AddAssign();
+            // Check_MemberAccess_PreIncrement();
+
+            return 5;
         }
 
         [Test]

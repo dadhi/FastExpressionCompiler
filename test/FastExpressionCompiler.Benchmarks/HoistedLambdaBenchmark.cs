@@ -77,11 +77,24 @@ namespace FastExpressionCompiler.Benchmarks
             [Host]     : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
             DefaultJob : .NET Core 6.0.3 (CoreCLR 6.0.322.12309, CoreFX 6.0.322.12309), X64 RyuJIT
 
-
             |      Method |       Mean |     Error |     StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
             |------------ |-----------:|----------:|-----------:|------:|--------:|-------:|-------:|-------:|----------:|
             |     Compile | 272.904 us | 5.4074 us | 11.8694 us | 50.84 |    3.34 | 1.4648 | 0.4883 |      - |   4.49 KB |
             | CompileFast |   5.379 us | 0.1063 us |  0.2048 us |  1.00 |    0.00 | 0.4959 | 0.2441 | 0.0381 |   1.52 KB |
+
+            ## v4.0.0
+
+            BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.2134/22H2/2022Update/SunValley2)
+            11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+            .NET SDK 7.0.307
+            [Host]     : .NET 7.0.10 (7.0.1023.36312), X64 RyuJIT AVX2
+            DefaultJob : .NET 7.0.10 (7.0.1023.36312), X64 RyuJIT AVX2
+
+            |      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 |   Gen2 | Allocated | Alloc Ratio |
+            |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|------------:|
+            |     Compile | 129.471 us | 1.6304 us | 1.3615 us | 36.68 |    1.59 | 0.7324 | 0.4883 |      - |   4.52 KB |        3.03 |
+            | CompileFast |   3.539 us | 0.0689 us | 0.1151 us |  1.00 |    0.00 | 0.2365 | 0.2289 | 0.0076 |   1.49 KB |        1.00 |
+
             */
 
             [Benchmark]

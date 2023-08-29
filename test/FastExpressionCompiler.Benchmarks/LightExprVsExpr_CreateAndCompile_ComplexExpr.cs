@@ -90,7 +90,6 @@ namespace FastExpressionCompiler.Benchmarks
         |      CreateExpression_and_CompileFast |  16.02 us | 0.261 us | 0.232 us |  1.32 |    0.03 | 1.0376 | 0.5188 | 0.0305 |   6.53 KB |
         | CreateLightExpression_and_CompileFast |  12.07 us | 0.228 us | 0.272 us |  1.00 |    0.00 | 0.9003 | 0.4425 | 0.0305 |   5.58 KB |
 
-
         ## v3.3.1
 
         |                                               Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
@@ -99,6 +98,15 @@ namespace FastExpressionCompiler.Benchmarks
         |                     CreateExpression_and_CompileFast |  23.51 us |  0.724 us |  2.102 us |  23.08 us |  1.47 |    0.17 | 1.2207 | 0.6104 | 0.0305 |   3.79 KB |
         |                CreateLightExpression_and_CompileFast |  16.03 us |  0.430 us |  1.227 us |  15.50 us |  1.00 |    0.00 | 0.9155 | 0.4578 | 0.0305 |   2.84 KB |
         | CreateLightExpression_and_CompileFast_with_intrinsic |  13.94 us |  0.629 us |  1.845 us |  13.37 us |  0.88 |    0.13 | 0.8545 | 0.4272 | 0.0305 |   2.64 KB |
+
+        ## v4.0.0
+
+        |                                               Method |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+        |----------------------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+        |                         CreateExpression_and_Compile | 174.412 us | 3.4771 us | 7.5590 us | 37.06 |    2.23 | 0.9766 | 0.4883 |   7.18 KB |        2.93 |
+        |                     CreateExpression_and_CompileFast |   6.395 us | 0.1265 us | 0.2314 us |  1.36 |    0.07 | 0.5341 | 0.5264 |    3.3 KB |        1.34 |
+        |                CreateLightExpression_and_CompileFast |   4.703 us | 0.0931 us | 0.1336 us |  1.00 |    0.00 | 0.3967 | 0.3891 |   2.45 KB |        1.00 |
+        | CreateLightExpression_and_CompileFast_with_intrinsic |   4.430 us | 0.0627 us | 0.0490 us |  0.94 |    0.03 | 0.3891 | 0.3738 |   2.38 KB |        0.97 |
 
         */
 

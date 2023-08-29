@@ -83,6 +83,19 @@ namespace FastExpressionCompiler.Benchmarks
             |     Compile | 641.72 us | 12.785 us | 26.117 us | 28.87 |    1.78 | 3.9063 | 1.9531 |      - |  12.05 KB |
             | CompileFast |  22.31 us |  0.444 us |  0.876 us |  1.00 |    0.00 | 1.7700 | 0.8850 | 0.1221 |   5.45 KB |
 
+            ## v4.0.0
+
+            BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.2134/22H2/2022Update/SunValley2)
+            11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+            .NET SDK 7.0.307
+            [Host]     : .NET 7.0.10 (7.0.1023.36312), X64 RyuJIT AVX2
+            DefaultJob : .NET 7.0.10 (7.0.1023.36312), X64 RyuJIT AVX2
+
+            |      Method |      Mean |    Error |   StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|---------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            |     Compile | 401.40 us | 7.509 us | 5.863 us | 400.79 us | 35.56 |    1.14 | 1.9531 | 0.9766 |  12.11 KB |        2.66 |
+            | CompileFast |  11.47 us | 0.228 us | 0.509 us |  11.28 us |  1.00 |    0.00 | 0.7324 | 0.7172 |   4.55 KB |        1.00 |
+
             */
             [Benchmark]
             public Func<X> Compile() => _hoistedExpr.Compile();

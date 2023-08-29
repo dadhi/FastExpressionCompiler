@@ -11,8 +11,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            RunAllTests();
             new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
+
+            RunAllTests();
 
             // new LightExpression.IssueTests.Nested_lambdas_assigned_to_vars().Run();
             // new HoistedLambdaExprTests().Run();
@@ -273,7 +274,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
 
                 Run(new Issue357_Invalid_program_exception().Run);
-                
+
                 Run(new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");

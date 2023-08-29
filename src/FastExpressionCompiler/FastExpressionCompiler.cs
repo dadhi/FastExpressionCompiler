@@ -517,7 +517,7 @@ namespace FastExpressionCompiler
             var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
             // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
-            var il = method.GetILGenerator(64);
+            var il = method.GetILGenerator();
 
             if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo, ref nestedLambdas);
