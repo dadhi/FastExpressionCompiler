@@ -2755,7 +2755,7 @@ namespace FastExpressionCompiler
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
-                    return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1) 
+                    return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1)
                         && EmitMethodCallOrVirtualCall(il, method);
 
                 var sourceType = opExpr.Type;
@@ -2763,12 +2763,12 @@ namespace FastExpressionCompiler
 
                 // if (sourceType == typeof(object))
                 // {
-                    // todo: @wip @perf for this case because it is bvery heavy used for the runtime conversion from the object to the concrete type
-                    // if (!targetType.IsValueType)
-                    //     il.Emit(OpCodes.Unbox_Any, targetType);
-                    // else
-                        // il.Emit(OpCodes.Castclass, targetType);
-                    // return il.EmitPopIfIgnoreResult(parent);
+                // todo: @wip @perf for this case because it is bvery heavy used for the runtime conversion from the object to the concrete type
+                // if (!targetType.IsValueType)
+                //     il.Emit(OpCodes.Unbox_Any, targetType);
+                // else
+                // il.Emit(OpCodes.Castclass, targetType);
+                // return il.EmitPopIfIgnoreResult(parent);
                 // }
 
                 // quick path for ignored result & conversion which can't cause exception: just do nothing
@@ -3482,19 +3482,22 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool EmitPropertyAssign(ILGenerator il, PropertyInfo prop)
+            {
+                var method = prop.SetMethod;
+                return method != null && EmitMethodCallOrVirtualCall(il, method);
+            }
+
             private static bool EmitMemberAssign(ILGenerator il, MemberInfo member)
             {
                 if (member is PropertyInfo prop)
-                {
-                    var method = prop.SetMethod;
-                    return method != null && EmitMethodCallOrVirtualCall(il, method);
-                }
+                    return EmitPropertyAssign(il, prop);
                 if (member is FieldInfo field)
                 {
                     il.Emit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
                     return true;
                 }
-
                 return false;
             }
 
@@ -3660,7 +3663,7 @@ namespace FastExpressionCompiler
                 }
                 else if (operandExpr is IndexExpression indexExpr)
                 {
-                    // todo: @simplify could we move it to the TryEmitIndex method?
+                    // todo: @wip @simplify could we move it to the TryEmitIndex method? #352
                     var flags = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
                     if (indexExpr.Object != null)
                     {
@@ -3728,7 +3731,7 @@ namespace FastExpressionCompiler
 
                     EmitLoadLocalVariable(il, assignmentResultVar);
 
-                    if (!TryEmitIndexSet(indexExpr, indexExpr.Object?.Type, expr.Type, il))
+                    if (!TryEmitIndexSet(indexArgCount, indexerProp, indexExpr.Object?.Type, expr.Type, il))
                         return false;
                 }
                 else
@@ -3869,118 +3872,6 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitAssignToMember(MemberExpression left, Expression right, ExpressionType nodeType, Type exprType,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
-                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
-            {
-                bool ok = false;
-                var flags = parent & ~ParentFlags.IgnoreResult;
-                var resultLocalVarIndex = -1;
-                var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
-                var assignFromLocalVar = right.NodeType == ExpressionType.Try;
-                if (assignFromLocalVar)
-                {
-                    if (arithmeticNodeType != nodeType)
-                        return false; // todo: @feature does not support ???Assign operations when the right operant is the Try expression, see AssignTests.
-                    if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
-                        return false;
-                    resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
-                    EmitStoreLocalVariable(il, resultLocalVarIndex);
-                }
-
-                var objExpr = left.Expression;
-                if (objExpr != null &&
-                    !TryEmit(objExpr, paramExprs, il, ref closure, setup, flags | ParentFlags.MemberAccess | ParentFlags.InstanceAccess))
-                    return false;
-
-                if (assignFromLocalVar)
-                    EmitLoadLocalVariable(il, resultLocalVarIndex);
-                else
-                {
-                    ok = arithmeticNodeType != nodeType
-                        ? TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags)
-                        : TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty);
-                    if (!ok)
-                        return false;
-                }
-
-                var member = left.Member;
-                if ((parent & ParentFlags.IgnoreResult) != 0)
-                    return EmitMemberAssign(il, member);
-
-                il.Emit(OpCodes.Dup);
-                var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable
-                EmitStoreLocalVariable(il, resultVarIndex);
-                ok = EmitMemberAssign(il, member);
-                EmitLoadLocalVariable(il, resultVarIndex);
-                return ok;
-            }
-
-            private static bool TryEmitAssignToIndex(IndexExpression left, Expression right, ExpressionType nodeType, Type exprType,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
-                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
-            {
-                bool ok = false;
-                var flags = parent & ~ParentFlags.IgnoreResult;
-                var resultLocalVarIndex = -1;
-                var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
-                var assignFromLocalVar = right.NodeType == ExpressionType.Try;
-                if (assignFromLocalVar)
-                {
-                    if (arithmeticNodeType != nodeType)
-                        return false; // todo: @feature does not support Assign operations when the right operant is the Try expression, see AssignTests.
-                    if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
-                        return false;
-                    resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
-                    EmitStoreLocalVariable(il, resultLocalVarIndex);
-                }
-
-                var objExpr = left.Object;
-                if (objExpr != null &&
-                    !TryEmit(objExpr, paramExprs, il, ref closure, setup, flags | ParentFlags.IndexAccess | ParentFlags.InstanceAccess))
-                    return false;
-
-#if SUPPORTS_ARGUMENT_PROVIDER
-                var indexArgExprs = (IArgumentProvider)left;
-                var indexArgCount = indexArgExprs.ArgumentCount;
-#else
-                var indexArgExprs = left.Arguments;
-                var indexArgCount = indexArgExprs.Count;
-#endif
-                for (var i = 0; i < indexArgCount; i++)
-                    if (!TryEmit(indexArgExprs.GetArgument(i), paramExprs, il, ref closure, setup, flags))
-                        return false;
-
-                if (assignFromLocalVar)
-                    EmitLoadLocalVariable(il, resultLocalVarIndex);
-                else
-                {
-                    ok = arithmeticNodeType != nodeType
-                        ? TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags)
-                        : TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty);
-                    if (!ok)
-                        return false;
-                }
-                if ((parent & ParentFlags.IgnoreResult) != 0)
-                    return TryEmitIndexSet(left, objExpr?.Type, exprType, il);
-
-                il.Emit(OpCodes.Dup);
-                var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
-                EmitStoreLocalVariable(il, resultVarIndex);
-
-                ok = TryEmitIndexSet(left, objExpr?.Type, exprType, il);
-                EmitLoadLocalVariable(il, resultVarIndex);
-                return ok;
-            }
-
             private static bool TryEmitAssign(BinaryExpression expr,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
@@ -3998,10 +3889,85 @@ namespace FastExpressionCompiler
                         return TryEmitAssignToParameterOrVariable((ParameterExpression)expr.Left, expr.Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
 
                     case ExpressionType.MemberAccess:
-                        return TryEmitAssignToMember((MemberExpression)expr.Left, expr.Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
-
                     case ExpressionType.Index:
-                        return TryEmitAssignToIndex((IndexExpression)expr.Left, expr.Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
+                        var nodeType = expr.NodeType;
+                        var exprType = expr.Type;
+                        var left = expr.Left;
+                        var right = expr.Right;
+
+                        bool ok = false;
+                        var flags = parent & ~ParentFlags.IgnoreResult;
+                        var resultLocalVarIndex = -1;
+                        var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
+                        var assignFromLocalVar = right.NodeType == ExpressionType.Try;
+                        if (assignFromLocalVar)
+                        {
+                            if (arithmeticNodeType != nodeType)
+                                return false; // todo: @feature does not support Assign operations when the right operant is the Try expression, see AssignTests.
+                            if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
+                                return false;
+                            resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
+                            EmitStoreLocalVariable(il, resultLocalVarIndex);
+                        }
+
+                        var indexLeft = left as IndexExpression;
+                        var membrLeft = left as MemberExpression;
+                        var objExpr = indexLeft != null ? indexLeft.Object : membrLeft.Expression;
+                        if (objExpr != null)
+                        {
+                            var objFlags = indexLeft != null ? flags | ParentFlags.IndexAccess : flags | ParentFlags.MemberAccess;
+                            if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags | ParentFlags.InstanceAccess))
+                                return false;
+                        }
+
+                        var indexArgCount = 0;
+                        if (indexLeft != null)
+                        {
+#if SUPPORTS_ARGUMENT_PROVIDER
+                            var indexArgExprs = (IArgumentProvider)indexLeft;
+                            indexArgCount = indexArgExprs.ArgumentCount;
+#else
+                            var indexArgExprs = indexLeft.Arguments;
+                            indexArgCount = indexArgExprs.Count;
+#endif
+                            for (var i = 0; i < indexArgCount; ++i)
+                                if (!TryEmit(indexArgExprs.GetArgument(i), paramExprs, il, ref closure, setup, flags))
+                                    return false;
+                        }
+
+                        if (assignFromLocalVar)
+                            EmitLoadLocalVariable(il, resultLocalVarIndex);
+                        else if (arithmeticNodeType != nodeType)
+                        {
+                            if (!TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags))
+                                return false;
+                        }
+                        else if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
+                            return false;
+
+                        if (indexLeft != null)
+                        {
+                            if ((parent & ParentFlags.IgnoreResult) != 0)
+                                return TryEmitIndexSet(indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType, il);
+
+                            il.Emit(OpCodes.Dup);
+                            var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
+                            EmitStoreLocalVariable(il, resultVarIndex);
+                            ok = TryEmitIndexSet(indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType, il);
+                            EmitLoadLocalVariable(il, resultVarIndex);
+                        }
+                        else
+                        {
+                            if ((parent & ParentFlags.IgnoreResult) != 0)
+                                return EmitMemberAssign(il, membrLeft.Member);
+
+                            il.Emit(OpCodes.Dup);
+                            var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
+                            EmitStoreLocalVariable(il, resultVarIndex);
+                            ok = EmitMemberAssign(il, membrLeft.Member);
+                            EmitLoadLocalVariable(il, resultVarIndex);
+                        }
+                        return ok;
 
                     default: // todo: @feature not yet support assignment targets
                         if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
@@ -4077,12 +4043,12 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Stobj, type);
             }
 
-            private static bool TryEmitIndexSet(IndexExpression indexExpr, Type instType, Type elementType, ILGenerator il)
+            private static bool TryEmitIndexSet(int indexArgCount, PropertyInfo indexer, Type instType, Type elementType, ILGenerator il)
             {
-                if (indexExpr.Indexer != null)
-                    return EmitMemberAssign(il, indexExpr.Indexer);
+                if (indexer != null)
+                    return EmitPropertyAssign(il, indexer);
 
-                if (indexExpr.Arguments.Count == 1) // one dimensional array
+                if (indexArgCount == 1) // one dimensional array
                 {
                     if (!elementType.IsValueType)
                     {
@@ -6567,7 +6533,7 @@ namespace FastExpressionCompiler
                             sb.NewLine(lineIdent, identSpaces).Append('{');
                             // Body handles `;` itself
                             if (body is BlockExpression bb)
-                                bb.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode, 
+                                bb.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode,
                                     inTheLastBlock: true, containerIgnoresResult: ignoresResult);
                             else
                             {
