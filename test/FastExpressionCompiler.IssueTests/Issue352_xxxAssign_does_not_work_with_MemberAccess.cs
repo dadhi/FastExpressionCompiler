@@ -21,7 +21,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Check_ArrayAccess_AddAssign();
+            Check_ArrayAccess_Assign_InAction();
+            Check_ArrayAccess_AddAssign_InAction();
+            Check_ArrayAccess_AddAssign_ReturnResultInFunction();
 
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_Add();
@@ -29,11 +31,45 @@ namespace FastExpressionCompiler.IssueTests
             Check_MemberAccess_AddAssign();
             Check_MemberAccess_PreIncrement();
 
-            return 5;
+            return 7;
         }
 
         [Test]
-        public void Check_ArrayAccess_AddAssign()
+        public void Check_ArrayAccess_Assign_InAction()
+        {
+            var a = Parameter(typeof(int[]), "a");
+            var e = Lambda<Action<int[]>>(
+                Block(//typeof(void), // todo: do we need the `typeof(void)` here and the `null` for vars? 
+                    Assign(ArrayAccess(a, Constant(2)), Constant(33))
+                ),
+                a
+            );
+            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            var @cs = (Action<int[]>)((int[] a) =>
+            {
+                a[2] = 33;
+            });
+            var a1 = new[] { 1, 2, 9 };
+            @cs(a1);
+            Assert.AreEqual(33, a1[2]);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            var a2 = new[] { 1, 2, 9 };
+            fs(a2);
+            Assert.AreEqual(33, a2[2]);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            var a3 = new[] { 1, 2, 9 };
+            ff(a3);
+            Assert.AreEqual(33, a3[2]);
+        }
+
+        [Test]
+        public void Check_ArrayAccess_AddAssign_InAction()
         {
             var a = Parameter(typeof(int[]), "a");
             var e = Lambda<Action<int[]>>(
@@ -66,6 +102,41 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Check_ArrayAccess_AddAssign_ReturnResultInFunction()
+        {
+            var a = Parameter(typeof(int[]), "a");
+            var e = Lambda<Func<int[], int>>(
+                Block(typeof(int),
+                    AddAssign(ArrayAccess(a, Constant(2)), Constant(33))
+                ),
+                a
+            );
+            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            var @cs = (Func<int[], int>)((int[] a) =>
+            {
+                return a[2] += 33;
+            });
+            var a1 = new[] { 1, 2, 9 };
+            @cs(a1);
+            Assert.AreEqual(42, a1[2]);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            var a2 = new[] { 1, 2, 9 };
+            var res = fs(a2);
+            Assert.AreEqual(42, res);
+            Assert.AreEqual(res, a2[2]);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            res = ff(a2);
+            Assert.AreEqual(75, res);
+            Assert.AreEqual(res, a2[2]);
+        }
+
+        [Test]
         public void Check_ArrayAccess_PreIncrement()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -75,7 +146,7 @@ namespace FastExpressionCompiler.IssueTests
                 ),
                 a
             );
-            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            e.PrintCSharp(); // todo: @fix output of non-void block in the void lambda/Action
             var @cs = (Action<int[]>)((int[] a) =>
             {
                 ++a[2];
