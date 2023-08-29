@@ -416,8 +416,7 @@ namespace FastExpressionCompiler
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = method.GetILGenerator();
-            var expectNoNestedLambdas = new SmallList<NestedLambdaInfo>();
-            EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo, ref expectNoNestedLambdas);
+            EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
 
             var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(lambdaExpr.Body,
@@ -520,7 +519,7 @@ namespace FastExpressionCompiler
             var il = method.GetILGenerator();
 
             if (closure.ConstantsAndNestedLambdas != null)
-                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo, ref nestedLambdas);
+                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
 
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
@@ -1599,7 +1598,7 @@ namespace FastExpressionCompiler
 
             var containsConstantsOrNestedLambdas = nestedClosureInfo.ContainsConstantsOrNestedLambdas();
             if (containsConstantsOrNestedLambdas & ((nestedClosureInfo.Status & ClosureStatus.HasClosure) != 0))
-                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo, ref nestedLambdaInfo.NestedLambdas);
+                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo);
 
             var parent = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(nestedLambdaBody, nestedLambdaParamExprs, il, ref nestedClosureInfo, setup, parent))
@@ -3164,7 +3163,7 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Ldelem_Ref);
             }
 
-            internal static void EmitLoadConstantsAndNestedLambdasIntoVars(ILGenerator il, ref ClosureInfo closure, ref SmallList<NestedLambdaInfo> nestedLambdas)
+            internal static void EmitLoadConstantsAndNestedLambdasIntoVars(ILGenerator il, ref ClosureInfo closure)
             {
                 // todo: @perf load the field to `var` only if the constants are more than 1
                 // Load constants array field from Closure and store it into the variable
@@ -3192,12 +3191,13 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                var nestedLambdasCount = nestedLambdas.Count;
+                var nestedLambdasCount = closure.NestedLambdas.Count;
                 if (nestedLambdasCount != 0)
                 {
+                    var nestedLambdas = closure.NestedLambdas.Items;
                     for (var i = 0; i < nestedLambdasCount; i++)
                     {
-                        var lambdaInfo = nestedLambdas.Items[i];
+                        var lambdaInfo = nestedLambdas[i];
                         EmitLoadClosureArrayItem(il, constCount + i);
                         lambdaInfo.LambdaVarIndex = varIndex = (short)il.GetNextLocalVarIndex(lambdaInfo.GetLambdaType());
                         EmitStoreLocalVariable(il, varIndex);
