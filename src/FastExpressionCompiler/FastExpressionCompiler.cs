@@ -606,8 +606,7 @@ namespace FastExpressionCompiler
             public NestedLambdaInfo(LambdaExpression lambdaExpression) => LambdaExpression = lambdaExpression;
 
             /// <summary>Returns the type of lambda</summary>
-            public Type GetLambdaType() =>
-                Lambda is NestedLambdaWithConstantsAndNestedLambdas n ? n.NestedLambda.GetType() : Lambda.GetType();
+            public Type GetLambdaType() => (Lambda is NestedLambdaWithConstantsAndNestedLambdas n ? n.NestedLambda : Lambda).GetType();
 
             /// <summary>Compares 2 lambda expressions for equality</summary>
             public bool HasTheSameLambdaExpression(LambdaExpression lambda) => // todo: @unclear parameters or is comparing the body is enough?
