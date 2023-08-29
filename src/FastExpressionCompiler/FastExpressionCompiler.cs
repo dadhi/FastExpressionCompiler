@@ -583,18 +583,18 @@ namespace FastExpressionCompiler
         /// <summary>Collects the lambda info for the compilation</summary>
         public sealed class NestedLambdaInfo
         {
+            /// <summary>Compiled lambda</summary>
+            public object Lambda; // todo: @perf can we use the NestedLambdaInfo itself instead of NestedLambdaWithConstantsAndNestedLambdas and avoid duplication in memory?
+
+            /// <summary>The nested lambdas and their info</summary>
+            public SmallList<NestedLambdaInfo> NestedLambdas;
+
             /// <summary>The lambda expression</summary>
             public LambdaExpression LambdaExpression;
-
-            /// <summary>Compiled lambda</summary>
-            public object Lambda;
 
             /// <summary>Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters.</summary>
             public SmallList<ParameterExpression> NonPassedParameters;
-
-            /// <summary>The nested lambdas and their info</summary>
-            public SmallList<NestedLambdaInfo> NestedLambdas;
 
             /// <summary>Index of the compiled lambda in the parent lambda closure array</summary>
             public short LambdaVarIndex;
