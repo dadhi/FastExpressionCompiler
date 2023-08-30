@@ -4769,7 +4769,7 @@ namespace FastExpressionCompiler
                 if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
                     return false;
 
-                if (leftIsNullable || rightIsNullable) // todo: @clarify that the emitted code is correct
+                if (leftIsNullable | rightIsNullable) // todo: @clarify that the emitted code is correct
                 {
                     var valueLabel = il.DefineLabel();
                     il.Emit(OpCodes.Br, valueLabel);
@@ -4800,6 +4800,22 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static MethodInfo _stringStringConcatMethod, _stringObjectConcatMethod;
+            private static MethodInfo GetStringConcatMethod(Type paraType)
+            {
+                var methods = typeof(string).GetMethods();
+                for (var i = 0; i < methods.Length; i++)
+                {
+                    var m = methods[i];
+                    if (m.IsStatic && m.Name == "Concat" &&
+                        m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == paraType)
+                    {
+                        return m;
+                    }
+                }
+                return null;
+            }
+
             private static bool TryEmitArithmeticOperation(Type leftType, Type rightType, ExpressionType nodeType, Type exprType, ILGenerator il)
             {
                 if (!exprType.IsPrimitive)
@@ -4811,23 +4827,9 @@ namespace FastExpressionCompiler
                     {
                         MethodInfo method = null;
                         if (exprType == typeof(string))
-                        {
-                            var paraType = typeof(string);
-                            if (leftType != rightType || leftType != typeof(string))
-                                paraType = typeof(object);
-
-                            var methods = typeof(string).GetMethods();
-                            for (var i = 0; i < methods.Length; i++)
-                            {
-                                var m = methods[i];
-                                if (m.IsStatic && m.Name == "Concat" &&
-                                    m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == paraType)
-                                {
-                                    method = m;
-                                    break;
-                                }
-                            }
-                        }
+                            method = leftType != rightType || leftType != typeof(string)
+                                ? _stringObjectConcatMethod ?? (_stringObjectConcatMethod = GetStringConcatMethod(typeof(object)))
+                                : _stringStringConcatMethod ?? (_stringStringConcatMethod = GetStringConcatMethod(typeof(string)));
                         else
                         {
                             var methodName = nodeType.GetArithmeticBinaryOperatorMethodName();
@@ -5417,7 +5419,7 @@ namespace FastExpressionCompiler
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindNullableHasValueGetterMethod(this Type type) => type.GetProperty("HasValue").GetMethod;
 
-        private static FHashMap<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>, 
+        private static FHashMap<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>,
             FHashMap.SingleArrayEntries<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>>> _convertOperatorMethods;
 
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
