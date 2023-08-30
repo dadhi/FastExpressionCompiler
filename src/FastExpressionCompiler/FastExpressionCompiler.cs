@@ -4809,9 +4809,21 @@ namespace FastExpressionCompiler
                     var m = methods[i];
                     if (m.IsStatic && m.Name == "Concat" &&
                         m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == paraType)
-                    {
                         return m;
-                    }
+                }
+                return null;
+            }
+
+            private static MethodInfo GetArithmeticBinaryOperatorMethod(Type type, string methodName)
+            {
+                if (methodName == null)
+                    return null;
+                var methods = type.GetMethods();
+                for (var i = 0; i < methods.Length; i++)
+                {
+                    var m = methods[i];
+                    if (m.IsSpecialName && m.IsStatic && m.Name == methodName)
+                        return m;
                 }
                 return null;
             }
@@ -4825,25 +4837,11 @@ namespace FastExpressionCompiler
 
                     if (!exprType.IsPrimitive)
                     {
-                        MethodInfo method = null;
-                        if (exprType == typeof(string))
-                            method = leftType != rightType || leftType != typeof(string)
+                        var method = exprType != typeof(string)
+                            ? GetArithmeticBinaryOperatorMethod(exprType, nodeType.GetArithmeticBinaryOperatorMethodName())
+                            : leftType != rightType || leftType != typeof(string)
                                 ? _stringObjectConcatMethod ?? (_stringObjectConcatMethod = GetStringConcatMethod(typeof(object)))
                                 : _stringStringConcatMethod ?? (_stringStringConcatMethod = GetStringConcatMethod(typeof(string)));
-                        else
-                        {
-                            var methodName = nodeType.GetArithmeticBinaryOperatorMethodName();
-                            if (methodName != null)
-                            {
-                                var methods = exprType.GetMethods();
-                                for (var i = 0; method == null && i < methods.Length; i++)
-                                {
-                                    var m = methods[i];
-                                    if (m.IsSpecialName && m.IsStatic && m.Name == methodName)
-                                        method = m;
-                                }
-                            }
-                        }
 
                         return method != null && EmitMethodCallOrVirtualCall(il, method);
                     }
