@@ -770,20 +770,53 @@ public static class FHashMap
         public int GetHashCode(K key) => RuntimeHelpers.GetHashCode(key);
     }
 
-    /// <summary>Compares the types faster via `==` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
-    public struct TypeEq : IEq<Type>
+    /// <summary>Compares via `ReferenceEquals` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
+    public struct RefEq<A, B> : IEq<(A, B)>
+        where A : class
+        where B : class
     {
         /// <inheritdoc />
         [MethodImpl((MethodImplOptions)256)]
-        public Type GetTombstone() => null;
+        public (A, B) GetTombstone() => (null, null);
 
         /// <inheritdoc />
         [MethodImpl((MethodImplOptions)256)]
-        public bool Equals(Type x, Type y) => x == y;
+        public bool Equals((A, B) x, (A, B) y) =>
+            ReferenceEquals(x.Item1, y.Item1) && ReferenceEquals(x.Item2, y.Item2);
 
         /// <inheritdoc />
         [MethodImpl((MethodImplOptions)256)]
-        public int GetHashCode(Type key) => RuntimeHelpers.GetHashCode(key);
+        public int GetHashCode((A, B) key) =>
+            Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item1), RuntimeHelpers.GetHashCode(key.Item2));
+    }
+
+    /// <summary>Compares via `ReferenceEquals` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
+    public struct RefEq<A, B, C> : IEq<(A, B, C)>
+        where A : class
+        where B : class
+        where C : class
+    {
+        /// <inheritdoc />
+        [MethodImpl((MethodImplOptions)256)]
+        public (A, B, C) GetTombstone() => (null, null, null);
+
+        /// <inheritdoc />
+        [MethodImpl((MethodImplOptions)256)]
+        public bool Equals((A, B, C) x, (A, B, C) y) =>
+            ReferenceEquals(x.Item1, y.Item1) && ReferenceEquals(x.Item2, y.Item2) && ReferenceEquals(x.Item3, y.Item3);
+
+        /// <inheritdoc />
+        [MethodImpl((MethodImplOptions)256)]
+        public int GetHashCode((A, B, C) key) =>
+            Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item1), Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item2), RuntimeHelpers.GetHashCode(key.Item3)));
+    }
+
+    /// <summary>Combines the hashes of 2 keys</summary>
+    internal static class Hasher
+    {
+        /// <summary>Combines the hashes of 2 keys</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static int Combine(int h1, int h2) => unchecked((h1 * (int)0xA5555529) + h2);
     }
 
     // todo: @improve can we move the Entry into the type parameter to configure and possibly save the memory e.g. for the sets? 
