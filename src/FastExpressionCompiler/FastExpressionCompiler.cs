@@ -3208,12 +3208,17 @@ namespace FastExpressionCompiler
                 }
             }
 
+            private static ConstructorInfo _decimalIntCtor, _decimalLongCtor;
+            private static FieldInfo _decimalZero, _decimalOne;
+
             private static void EmitDecimalConstant(decimal value, ILGenerator il)
             {
                 if (value == 0 || value == 1)
                 {
                     // emit Decimal.Zero or Decimal.One instead of new Decimal(0) or new Decimal(1)
-                    var field = value == 0 ? typeof(Decimal).GetField(nameof(Decimal.Zero)) : typeof(Decimal).GetField(nameof(Decimal.One));
+                    var field = value == 0 ?
+                        _decimalZero ?? (_decimalZero = typeof(Decimal).GetField(nameof(Decimal.Zero))) :
+                        _decimalOne ?? (_decimalOne = typeof(Decimal).GetField(nameof(Decimal.One)));
                     il.Emit(OpCodes.Ldsfld, field);
                     return;
                 }
@@ -3224,14 +3229,14 @@ namespace FastExpressionCompiler
                     if (value >= int.MinValue && value <= int.MaxValue)
                     {
                         EmitLoadConstantInt(il, decimal.ToInt32(value));
-                        il.Emit(OpCodes.Newobj, typeof(decimal).FindSingleParamConstructor(typeof(int)));
+                        il.Emit(OpCodes.Newobj, _decimalIntCtor ?? (_decimalIntCtor = typeof(decimal).FindSingleParamConstructor(typeof(int))));
                         return;
                     }
 
                     if (value >= long.MinValue && value <= long.MaxValue)
                     {
                         il.Emit(OpCodes.Ldc_I8, decimal.ToInt64(value));
-                        il.Emit(OpCodes.Newobj, typeof(decimal).FindSingleParamConstructor(typeof(long)));
+                        il.Emit(OpCodes.Newobj, _decimalLongCtor ?? (_decimalLongCtor = typeof(decimal).FindSingleParamConstructor(typeof(long))));
                         return;
                     }
                 }
@@ -5384,7 +5389,7 @@ namespace FastExpressionCompiler
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) => type.GetMethod("Invoke");
 
-        private static FHashMap<Type, MethodInfo, TypeEq, FHashMap.SingleArrayEntries<Type, MethodInfo, TypeEq>> _getValueOrDefaultMethods;
+        private static FHashMap<Type, MethodInfo, RefEq<Type>, FHashMap.SingleArrayEntries<Type, MethodInfo, RefEq<Type>>> _getValueOrDefaultMethods;
 
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type)
@@ -5412,11 +5417,20 @@ namespace FastExpressionCompiler
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindNullableHasValueGetterMethod(this Type type) => type.GetProperty("HasValue").GetMethod;
 
+        private static FHashMap<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>, 
+            FHashMap.SingleArrayEntries<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>>> _convertOperatorMethods;
+
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
             if (sourceType == typeof(object) | targetType == typeof(object))
                 return null;
+
+            // caching the result to avoid searching and allocating through the methods
+            ref var method = ref _convertOperatorMethods.GetOrAddValueRef((type, sourceType, targetType), out var found);
+            if (found)
+                return method;
+
             // conversion operators should be declared as static and public 
             var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public);
             for (var i = 0; i < methods.Length; i++)
@@ -5429,7 +5443,10 @@ namespace FastExpressionCompiler
                     if (n.Length == 11 &&
                         n[2] == '_' && n[5] == 'p' && n[6] == 'l' && n[7] == 'i' && n[8] == 'c' && n[9] == 'i' && n[10] == 't' &&
                         m.GetParameters()[0].ParameterType == sourceType)
+                    {
+                        method = m;
                         return m;
+                    }
                 }
             }
 
