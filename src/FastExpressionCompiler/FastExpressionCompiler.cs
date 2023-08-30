@@ -813,9 +813,10 @@ namespace FastExpressionCompiler
                 ++_blockCount;
             }
 
+            [MethodImpl((MethodImplOptions)256)]
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
-                ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe);
+                ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe, out var found);
                 if (blocks.Count == 0 || blocks.GetLastSurePresentItem().BlockIndex != blockIndex)
                     blocks.Append(new(blockIndex, varIndex));
             }
@@ -5383,18 +5384,26 @@ namespace FastExpressionCompiler
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) => type.GetMethod("Invoke");
 
+        private static FHashMap<Type, MethodInfo, TypeEq, FHashMap.SingleArrayEntries<Type, MethodInfo, TypeEq>> _getValueOrDefaultMethods;
+
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type)
         {
+            ref var method = ref _getValueOrDefaultMethods.GetOrAddValueRef(type, out var found);
+            if (found)
+                return method;
+
             var methods = type.GetMethods();
             for (var i = 0; i < methods.Length; i++)
             {
                 var m = methods[i];
                 if (m.GetParameters().Length == 0 && m.Name == "GetValueOrDefault")
+                {
+                    method = m;
                     return m;
+                }
             }
-
-            return null;
+            return null; // the null will be cached as well by adding the default value at the first line
         }
 
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
