@@ -770,6 +770,22 @@ public static class FHashMap
         public int GetHashCode(K key) => RuntimeHelpers.GetHashCode(key);
     }
 
+    /// <summary>Compares the types faster via `==` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
+    public struct TypeEq : IEq<Type>
+    {
+        /// <inheritdoc />
+        [MethodImpl((MethodImplOptions)256)]
+        public Type GetTombstone() => null;
+
+        /// <inheritdoc />
+        [MethodImpl((MethodImplOptions)256)]
+        public bool Equals(Type x, Type y) => x == y;
+
+        /// <inheritdoc />
+        [MethodImpl((MethodImplOptions)256)]
+        public int GetHashCode(Type key) => RuntimeHelpers.GetHashCode(key);
+    }
+
     // todo: @improve can we move the Entry into the type parameter to configure and possibly save the memory e.g. for the sets? 
     /// <summary>Abstraction to configure your own entries data structure. Check the derivitives for the examples</summary>
     public interface IEntries<K, V, TEq> where TEq : IEq<K>
@@ -857,21 +873,24 @@ public static class FHashMap
 
     /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V GetOrAddValueRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key)
+    public static ref V GetOrAddValueRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
         if (map._count > StackEntriesCount)
-            return ref map.GetOrAddValueRefByHash(key);
+            return ref map.GetOrAddValueRefByHash(key, out found);
+        found = true;
         switch (map._count)
         {
             case 0:
+                found = false;
                 map._count = 1;
                 map._e0.Key = key;
                 return ref map._e0.Value;
 
             case 1:
                 if (default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
+                found = false;
                 map._count = 2;
                 map._e1.Key = key;
                 return ref map._e1.Value;
@@ -879,6 +898,7 @@ public static class FHashMap
             case 2:
                 if (default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
                 if (default(TEq).Equals(key, map._e1.Key)) return ref map._e1.Value;
+                found = false;
                 map._count = 3;
                 map._e2.Key = key;
                 return ref map._e2.Value;
@@ -887,6 +907,7 @@ public static class FHashMap
                 if (default(TEq).Equals(key, map._e0.Key)) return ref map._e0.Value;
                 if (default(TEq).Equals(key, map._e1.Key)) return ref map._e1.Value;
                 if (default(TEq).Equals(key, map._e2.Key)) return ref map._e2.Value;
+                found = false;
                 map._count = 4;
                 map._e3.Key = key;
                 return ref map._e3.Value;
@@ -896,6 +917,7 @@ public static class FHashMap
                 if (default(TEq).Equals(key, map._e1.Key)) return ref map._e1.Value;
                 if (default(TEq).Equals(key, map._e2.Key)) return ref map._e2.Value;
                 if (default(TEq).Equals(key, map._e3.Key)) return ref map._e3.Value;
+                found = false;
 
                 map._capacityBitShift = MinHashesCapacityBitShift;
                 map._packedHashesAndIndexes = new int[1 << MinHashesCapacityBitShift];
@@ -913,6 +935,147 @@ public static class FHashMap
                 map._entries.Init(2);
                 return ref map._entries.AddKeyAndGetValueRef(key, 0);
         }
+    }
+
+    private static void AddInitialHashWithoutResizing<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, int index, int indexMask)
+        where TEq : struct, IEq<K>
+        where TEntries : struct, IEntries<K, V, TEq>
+    {
+#if NET7_0_OR_GREATER
+        ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(map._packedHashesAndIndexes);
+#else
+        var hashesAndIndexes = map._packedHashesAndIndexes;
+#endif
+        var hash = default(TEq).GetHashCode(key);
+        var hashIndex = hash & indexMask;
+
+        // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
+        ref var h = ref GetHashRef(ref hashesAndIndexes, hashIndex);
+        var probes = 1;
+        while ((h >>> ProbeCountShift) >= probes)
+        {
+            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
+            ++probes;
+        }
+
+        // 3. We did not find the hash and therefore the key, so insert the new entry
+        var hRobinHooded = h;
+        h = (probes << ProbeCountShift) | (hash & HashAndIndexMask & ~indexMask) | index;
+
+        // 4. If the robin hooded hash is empty then we stop
+        // 5. Otherwise we steal the slot with the smaller probes
+        probes = hRobinHooded >>> ProbeCountShift;
+        while (hRobinHooded != 0)
+        {
+            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
+            if ((h >>> ProbeCountShift) < ++probes)
+            {
+                var tmp = h;
+                h = (probes << ProbeCountShift) | (hRobinHooded & HashAndIndexMask);
+                hRobinHooded = tmp;
+                probes = hRobinHooded >>> ProbeCountShift;
+            }
+        }
+    }
+
+    /// <summary>Adds the sure absent key entry. 
+    /// Provides the performance in scenarios where you look for present key, and using it, and if ABSENT then add the new one.
+    /// So this method optimized NOT to look for the present item for the second time in SEQUENCE</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref V AddSureAbsentDefaultAndGetRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key)
+        where TEq : struct, IEq<K>
+        where TEntries : struct, IEntries<K, V, TEq>
+    {
+        if (map._count > StackEntriesCount)
+            return ref map.AddSureAbsentDefaultAndGetRefByHash(key);
+        switch (map._count)
+        {
+            case 0:
+                map._count = 1;
+                map._e0.Key = key;
+                return ref map._e0.Value;
+
+            case 1:
+                map._count = 2;
+                map._e1.Key = key;
+                return ref map._e1.Value;
+
+            case 2:
+                map._count = 3;
+                map._e2.Key = key;
+                return ref map._e2.Value;
+
+            case 3:
+                map._count = 4;
+                map._e3.Key = key;
+                return ref map._e3.Value;
+
+            default:
+                map._capacityBitShift = MinHashesCapacityBitShift;
+                map._packedHashesAndIndexes = new int[1 << MinHashesCapacityBitShift];
+
+                var indexMask = (1 << MinHashesCapacityBitShift) - 1;
+
+                map.AddInitialHashWithoutResizing(map._e0.Key, 0, indexMask);
+                map.AddInitialHashWithoutResizing(map._e1.Key, 1, indexMask);
+                map.AddInitialHashWithoutResizing(map._e2.Key, 2, indexMask);
+                map.AddInitialHashWithoutResizing(map._e3.Key, 3, indexMask);
+                map.AddInitialHashWithoutResizing(key, StackEntriesCount, indexMask);
+
+                map._count = 5;
+                map._entries.Init(2);
+                return ref map._entries.AddKeyAndGetValueRef(key, 0);
+        }
+    }
+
+    [MethodImpl((MethodImplOptions)256)]
+    private static ref V AddSureAbsentDefaultAndGetRefByHash<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key)
+        where TEq : struct, IEq<K>
+        where TEntries : struct, IEntries<K, V, TEq>
+    {
+        // if the free space is less than 1/8 of capacity (12.5%) then Resize
+        var indexMask = (1 << map._capacityBitShift) - 1;
+        if (indexMask - map._count <= (indexMask >>> MinFreeCapacityShift))
+            indexMask = map.ResizeHashes(indexMask);
+
+        var hash = default(TEq).GetHashCode(key);
+        var hashIndex = hash & indexMask;
+
+#if NET7_0_OR_GREATER
+        ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(map._packedHashesAndIndexes);
+#else
+        var hashesAndIndexes = map._packedHashesAndIndexes;
+#endif
+        ref var h = ref GetHashRef(ref hashesAndIndexes, hashIndex);
+
+        // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
+        var probes = 1;
+        while ((h >>> ProbeCountShift) >= probes)
+        {
+            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
+            ++probes;
+        }
+
+        // 3. We did not find the hash and therefore the key, so insert the new entry
+        var hRobinHooded = h;
+        h = (probes << ProbeCountShift) | (hash & HashAndIndexMask & ~indexMask) | map._count;
+
+        // 4. If the robin hooded hash is empty then we stop
+        // 5. Otherwise we steal the slot with the smaller probes
+        probes = hRobinHooded >>> ProbeCountShift;
+        while (hRobinHooded != 0)
+        {
+            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
+            if ((h >>> ProbeCountShift) < ++probes)
+            {
+                var tmp = h;
+                h = (probes << ProbeCountShift) | (hRobinHooded & HashAndIndexMask);
+                hRobinHooded = tmp;
+                probes = hRobinHooded >>> ProbeCountShift;
+            }
+        }
+
+        return ref map._entries.AddKeyAndGetValueRef(key, (map._count++) - StackEntriesCount);
     }
 
     ///<summary>Get the value ref by the entry index. Also the index corresponds to entry adding order.
@@ -979,9 +1142,8 @@ public static class FHashMap
         return ref FHashMap<K, V, TEq, TEntries>._missing.Value;
     }
 
-    /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    internal static ref V GetOrAddValueRefByHash<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key)
+    private static ref V GetOrAddValueRefByHash<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
@@ -1011,7 +1173,10 @@ public static class FHashMap
             {
                 ref var e = ref map.GetSurePresentEntryRef(h & indexMask);
                 if (default(TEq).Equals(e.Key, key))
+                {
+                    found = true;
                     return ref e.Value;
+                }
             }
             h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
             ++probes;
@@ -1035,7 +1200,7 @@ public static class FHashMap
                 probes = hRobinHooded >>> ProbeCountShift;
             }
         }
-
+        found = false;
         return ref map._entries.AddKeyAndGetValueRef(key, (map._count++) - StackEntriesCount);
     }
 }
@@ -1101,46 +1266,6 @@ public struct FHashMap<K, V, TEq, TEntries>
         _packedHashesAndIndexes = new int[1 << capacityBitShift];
         _entries = default;
         _entries.Init(capacityBitShift);
-    }
-
-    /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
-    internal void AddInitialHashWithoutResizing(K key, int index, int indexMask)
-    {
-#if NET7_0_OR_GREATER
-        ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
-#else
-        var hashesAndIndexes = _packedHashesAndIndexes;
-#endif
-        var hash = default(TEq).GetHashCode(key);
-        var hashIndex = hash & indexMask;
-
-        // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-        ref var h = ref GetHashRef(ref hashesAndIndexes, hashIndex);
-        var probes = 1;
-        while ((h >>> ProbeCountShift) >= probes)
-        {
-            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
-            ++probes;
-        }
-
-        // 3. We did not find the hash and therefore the key, so insert the new entry
-        var hRobinHooded = h;
-        h = (probes << ProbeCountShift) | (hash & HashAndIndexMask & ~indexMask) | index;
-
-        // 4. If the robin hooded hash is empty then we stop
-        // 5. Otherwise we steal the slot with the smaller probes
-        probes = hRobinHooded >>> ProbeCountShift;
-        while (hRobinHooded != 0)
-        {
-            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
-            if ((h >>> ProbeCountShift) < ++probes)
-            {
-                var tmp = h;
-                h = (probes << ProbeCountShift) | (hRobinHooded & HashAndIndexMask);
-                hRobinHooded = tmp;
-                probes = hRobinHooded >>> ProbeCountShift;
-            }
-        }
     }
 
     internal int ResizeHashes(int indexMask)
