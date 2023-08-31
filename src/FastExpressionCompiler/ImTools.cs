@@ -1274,7 +1274,7 @@ public struct FHashMap<K, V, TEq, TEntries>
     internal TEntries _entries;
 #pragma warning restore IDE0044
 
-    // todo: @wip first 4 on stack
+    // todo: @improve how to configure how much we store on stack
     internal Entry<K, V> _e0, _e1, _e2, _e3;
 
     /// <summary>Capacity bits</summary>

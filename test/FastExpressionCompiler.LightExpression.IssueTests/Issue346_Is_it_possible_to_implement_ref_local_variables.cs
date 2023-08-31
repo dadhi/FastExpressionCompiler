@@ -25,13 +25,13 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             // void (ref float x) => x += 1;
             var p = Parameter(typeof(float).MakeByRefType(), "x");
             var e = Lambda<IncRefFloat>(
-                Block(typeof(void),
+                Block(
                     // PreIncrementAssign(n)
                     AddAssign(p, Constant(1.0f))
                 ),
                 p
             );
-            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            e.PrintCSharp();
 
             var s = e.CompileSys();
             s.PrintIL();
@@ -55,7 +55,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var a = Parameter(typeof(int[]), "a");
             var n = Variable(typeof(int).MakeByRefType(), "n");
             var e = Lambda<Action<int[]>>(
-                Block(typeof(void), new[] { n }, // todo: @wip C# output should work without specifying `typeof(void)`
+                Block(new[] { n },
                     Assign(n, ArrayAccess(a, Constant(0))),
                     // PreIncrementAssign(n)
                     AddAssign(n, Constant(1))
@@ -63,7 +63,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 a
             );
 
-            e.PrintCSharp(); // todo: @wip fix output of non-void block in the void lambda/Action
+            e.PrintCSharp();
             // var @cs = (Action<int[]>)((int[] a) =>
             // {
             //     ref int n = ref a[0];

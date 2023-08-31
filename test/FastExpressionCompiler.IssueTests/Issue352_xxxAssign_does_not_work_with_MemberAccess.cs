@@ -29,6 +29,7 @@ namespace FastExpressionCompiler.IssueTests
             Check_ArrayAccess_Add();
 
             Check_MemberAccess_AddAssign();
+            // Check_MemberAccess_AddAssign_ToNewExpression();
             Check_MemberAccess_PreIncrement();
 
             return 7;
@@ -39,7 +40,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var a = Parameter(typeof(int[]), "a");
             var e = Lambda<Action<int[]>>(
-                Block( 
+                Block(
                     Assign(ArrayAccess(a, Constant(2)), Constant(33))
                 ),
                 a
@@ -76,7 +77,7 @@ namespace FastExpressionCompiler.IssueTests
                 Block(AddAssign(ArrayAccess(a, Constant(2)), Constant(33))),
                 a
             );
-            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            e.PrintCSharp();
             var @cs = (Action<int[]>)((int[] a) =>
             {
                 a[2] += 33;
@@ -177,7 +178,7 @@ namespace FastExpressionCompiler.IssueTests
                 ),
                 a
             );
-            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            e.PrintCSharp();
             var @cs = (Action<int[]>)((int[] a) =>
             {
                 a[1] = a[1] + 33;
@@ -202,6 +203,15 @@ namespace FastExpressionCompiler.IssueTests
         class Box
         {
             public int Value;
+
+            public Box() { }
+
+            public static int CtorCalls = 0;
+            public Box(int value)
+            {
+                ++CtorCalls;
+                Value = value;
+            }
         }
 
         [Test]
@@ -210,12 +220,12 @@ namespace FastExpressionCompiler.IssueTests
             var b = Parameter(typeof(Box), "b");
             var bValueField = typeof(Box).GetField(nameof(Box.Value));
             var e = Lambda<Action<Box>>(
-                Block(typeof(void), 
+                Block(typeof(void),
                     AddAssign(Field(b, bValueField), Constant(33))
                 ),
                 b
             );
-            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            e.PrintCSharp();
             var @cs = (Action<Box>)((Box b) =>
             {
                 b.Value += 33;
@@ -239,6 +249,39 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Check_MemberAccess_AddAssign_ToNewExpression()
+        {
+            var bCtor = typeof(Box).GetConstructor(new[] { typeof(int) });
+            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+
+            var e = Lambda<Func<int>>(
+                Block(
+                    AddAssign(Field(New(bCtor, Constant(42)), bValueField), Constant(33))
+                )
+            );
+            e.PrintCSharp();
+            var @cs = (Func<int>)(() =>
+            {
+                return new Box(42).Value += 33;
+            });
+            var a = @cs();
+            Assert.AreEqual(42 + 33, a);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            var x = fs();
+            Assert.AreEqual(42 + 33, x);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            var y = ff();
+            Assert.AreEqual(42 + 33, y);
+            // Assert.AreEqual(3, Box.CtorCalls); // todo: @wip @fixme
+        }
+
+        [Test]
         public void Check_MemberAccess_PreIncrement()
         {
             var b = Parameter(typeof(Box), "b");
@@ -249,7 +292,7 @@ namespace FastExpressionCompiler.IssueTests
                 ),
                 b
             );
-            e.PrintCSharp(); // fix output of non-void block in the void lambda/Action
+            e.PrintCSharp();
             var @cs = (Action<Box>)((Box b) =>
             {
                 ++b.Value;
