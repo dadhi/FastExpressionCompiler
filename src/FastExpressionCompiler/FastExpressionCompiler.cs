@@ -3812,7 +3812,7 @@ namespace FastExpressionCompiler
 
                 // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                 // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
-                // if it's a local variable, then store the right value in it
+                // if it's a local variable, then store the right value in it.
                 var leftVarIndex = closure.GetDefinedLocalVarOrDefault(left);
                 if (leftVarIndex != -1)
                 {
@@ -3886,21 +3886,21 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
+                var nodeType = expr.NodeType;
+                var exprType = expr.Type;
+                var left = expr.Left;
+                var right = expr.Right;
+
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
                 switch (expr.Left.NodeType)
                 {
                     case ExpressionType.Parameter:
-                        return TryEmitAssignToParameterOrVariable((ParameterExpression)expr.Left, expr.Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
+                        return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right, nodeType, exprType, paramExprs, il, ref closure, setup, parent);
 
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
-                        var nodeType = expr.NodeType;
-                        var exprType = expr.Type;
-                        var left = expr.Left;
-                        var right = expr.Right;
-
                         bool ok = false;
                         var flags = parent & ~ParentFlags.IgnoreResult;
                         var resultLocalVarIndex = -1;
@@ -4025,7 +4025,6 @@ namespace FastExpressionCompiler
                     il.Emit(opCode);
             }
 
-            // todo: @simplify convert to switch expression
             // todo: @fix check that it is applied only for the ValueType OR make applied to the ReferenceType the same way as EmitLoadIndirectlyByRef
             private static void EmitStoreIndirectlyByRef(ILGenerator il, Type type)
             {
@@ -4739,7 +4738,7 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariableAddress(il, leftType);
 
                     il.Emit(OpCodes.Dup);
-                    EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod()); // todo: @check that the EmitMethodCall may return false
+                    EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod());
                     il.Emit(OpCodes.Brfalse, leftNoValueLabel);
                     EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod());
                 }
@@ -4814,7 +4813,7 @@ namespace FastExpressionCompiler
                 return null;
             }
 
-            private static MethodInfo GetArithmeticBinaryOperatorMethod(Type type, string methodName)
+            private static MethodInfo FindStaticOperatorMethod(Type type, string methodName)
             {
                 if (methodName == null)
                     return null;
@@ -4838,7 +4837,7 @@ namespace FastExpressionCompiler
                     if (!exprType.IsPrimitive)
                     {
                         var method = exprType != typeof(string)
-                            ? GetArithmeticBinaryOperatorMethod(exprType, nodeType.GetArithmeticBinaryOperatorMethodName())
+                            ? FindStaticOperatorMethod(exprType, nodeType.GetArithmeticBinaryOperatorMethodName())
                             : leftType != rightType || leftType != typeof(string)
                                 ? _stringObjectConcatMethod ?? (_stringObjectConcatMethod = GetStringConcatMethod(typeof(object)))
                                 : _stringStringConcatMethod ?? (_stringStringConcatMethod = GetStringConcatMethod(typeof(string)));
