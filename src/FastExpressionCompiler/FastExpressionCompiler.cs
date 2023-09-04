@@ -648,21 +648,10 @@ namespace FastExpressionCompiler
             // Tracks the current block nesting count in the stack of blocks in Collect and Emit phase
             private ushort _blockCount;
 
-            // todo: @wip @simplify @remove replace with uint
-            [DebuggerDisplay("Block:{BlockIndex}, Var:{VarIndex}")]
-            public struct BlockAndVarIndex
-            {
-                public ushort BlockIndex;
-                public ushort VarIndex;
-                public BlockAndVarIndex(ushort blockIndex, ushort varIndex)
-                {
-                    BlockIndex = blockIndex;
-                    VarIndex = varIndex;
-                }
-            }
-            // Tracks the use of the variables in the blocks stack per variable, to determine if variable is the local variable and in what block it's defined
-            private FHashMap<PE, SmallList4<BlockAndVarIndex>, RefEq<PE>,
-                FHashMap.SingleArrayEntries<PE, SmallList4<BlockAndVarIndex>, RefEq<PE>>> _varInBlockMap;
+            /// <summary>Tracks the use of the variables in the blocks stack per variable, 
+            /// (uint) contains (ushort) BlockIndex in the upper bits and (ushort) VarIndex in the lower bits.
+            /// to determine if variable is the local variable and in what block it's defined</summary>
+            private FHashMap<PE, SmallList4<uint>, RefEq<PE>, FHashMap.SingleArrayEntries<PE, SmallList4<uint>, RefEq<PE>>> _varInBlockMap;
 
             /// Map the Labels to their Targets
             internal SmallList4<LabelInfo> Labels;
@@ -817,8 +806,8 @@ namespace FastExpressionCompiler
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
                 ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe, out var found);
-                if (blocks.Count == 0 || blocks.GetLastSurePresentItem().BlockIndex != blockIndex)
-                    blocks.Append(new(blockIndex, varIndex));
+                if (blocks.Count == 0 || blocks.GetLastSurePresentItem() >>> 16 != blockIndex)
+                    blocks.Append((uint)(blockIndex << 16) | varIndex);
             }
 
             public void PopBlock()
@@ -845,7 +834,7 @@ namespace FastExpressionCompiler
             public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
                 ref var blocks = ref _varInBlockMap.TryGetValueRef(varParamExpr, out var found);
-                return found ? blocks.GetLastSurePresentItem().VarIndex : -1;
+                return found ? (int)(blocks.GetLastSurePresentItem() & ushort.MaxValue) : -1;
             }
         }
 
