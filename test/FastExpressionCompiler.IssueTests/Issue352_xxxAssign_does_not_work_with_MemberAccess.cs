@@ -31,6 +31,7 @@ namespace FastExpressionCompiler.IssueTests
             // Check_MemberAccess_AddAssign();
             // Check_MemberAccess_AddAssign_ToNewExpression();
             // Check_MemberAccess_PreIncrementAssign();
+            // Check_MemberAccess_PreIncrementAssign_Nullable();
             Check_MemberAccess_PreDecrementAssign_ToNewExpression();
 
             return 9;
@@ -170,6 +171,39 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Check_ArrayAccess_PreIncrement_Nullable()
+        {
+            var a = Parameter(typeof(int[]), "a");
+            var e = Lambda<Action<int[]>>(
+                Block(typeof(void),
+                    PreIncrementAssign(ArrayAccess(a, Constant(2)))
+                ),
+                a
+            );
+            e.PrintCSharp();
+            var @cs = (Action<int[]>)((int[] a) =>
+            {
+                ++a[2];
+            });
+            var a1 = new[] { 1, 2, 9 };
+            @cs(a1);
+            Assert.AreEqual(10, a1[2]);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            var a2 = new[] { 1, 2, 9 };
+            fs(a2);
+            Assert.AreEqual(10, a2[2]);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            ff(a2);
+            Assert.AreEqual(11, a2[2]);
+        }
+
+        [Test]
         public void Check_ArrayAccess_Add()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -204,6 +238,7 @@ namespace FastExpressionCompiler.IssueTests
         class Box
         {
             public int Value;
+            public int? NullableValue;
 
             public Box() { }
 
@@ -315,6 +350,40 @@ namespace FastExpressionCompiler.IssueTests
 
             ff(box);
             Assert.AreEqual(11, box.Value);
+        }
+
+        // [Test] // todo: @fixme
+        public void Check_MemberAccess_PreIncrementAssign_Nullable()
+        {
+            var b = Parameter(typeof(Box), "b");
+            var bValueField = typeof(Box).GetField(nameof(Box.NullableValue));
+            var e = Lambda<Action<Box>>(
+                Block(typeof(void),
+                    PreIncrementAssign(Field(b, bValueField))
+                ),
+                b
+            );
+            e.PrintCSharp();
+            var @cs = (Action<Box>)((Box b) =>
+            {
+                ++b.NullableValue;
+            });
+            var b1 = new Box { NullableValue = 9 };
+            @cs(b1);
+            Assert.AreEqual(10, b1.NullableValue);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            var box = new Box { NullableValue = 9 };
+            fs(box);
+            Assert.AreEqual(10, box.NullableValue);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            ff(box);
+            Assert.AreEqual(11, box.NullableValue);
         }
 
         [Test]
