@@ -3584,15 +3584,14 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
+            private static bool TryEmitIncDecAssign(UnaryExpression expr, ExpressionType nodeType,
 #if LIGHT_EXPRESSION
-            private static bool TryEmitIncDecAssign(UnaryExpression expr, ExpressionType nodeType, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
-            {
+                IParameterProvider paramExprs,
 #else
-            private static bool TryEmitIncDecAssign(UnaryExpression expr, ExpressionType nodeType, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
-            {
+                IReadOnlyList<PE> paramExprs,
 #endif
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
+            {
                 var operandExpr = expr.Operand;
                 var resultVar = il.GetNextLocalVarIndex(expr.Type); // todo: @perf here is the opportunity to reuse the variable because is only needed in the local scope 
                 var isPost = nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign;
@@ -4138,13 +4137,13 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
+            public static bool TryEmitMemberAccess(MemberExpression expr,
 #if LIGHT_EXPRESSION
-            public static bool TryEmitMemberAccess(MemberExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
+                IParameterProvider paramExprs, 
 #else
-            public static bool TryEmitMemberAccess(MemberExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
+                IReadOnlyList<PE> paramExprs,
 #endif
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
             {
                 if (expr.Member is PropertyInfo prop)
                 {

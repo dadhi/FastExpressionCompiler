@@ -21,18 +21,19 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Check_ArrayAccess_Assign_InAction();
-            Check_ArrayAccess_AddAssign_InAction();
-            Check_ArrayAccess_AddAssign_ReturnResultInFunction();
+            // Check_ArrayAccess_Assign_InAction();
+            // Check_ArrayAccess_AddAssign_InAction();
+            // Check_ArrayAccess_AddAssign_ReturnResultInFunction();
 
-            Check_ArrayAccess_PreIncrement();
-            Check_ArrayAccess_Add();
+            // Check_ArrayAccess_PreIncrement();
+            // Check_ArrayAccess_Add();
 
-            Check_MemberAccess_AddAssign();
+            // Check_MemberAccess_AddAssign();
             // Check_MemberAccess_AddAssign_ToNewExpression();
-            Check_MemberAccess_PreIncrement();
+            // Check_MemberAccess_PreIncrementAssign();
+            Check_MemberAccess_PreDecrementAssign_ToNewExpression();
 
-            return 7;
+            return 9;
         }
 
         [Test]
@@ -251,6 +252,7 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Check_MemberAccess_AddAssign_ToNewExpression()
         {
+            Box.CtorCalls = 0;
             var bCtor = typeof(Box).GetConstructor(new[] { typeof(int) });
             var bValueField = typeof(Box).GetField(nameof(Box.Value));
 
@@ -282,7 +284,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Check_MemberAccess_PreIncrement()
+        public void Check_MemberAccess_PreIncrementAssign()
         {
             var b = Parameter(typeof(Box), "b");
             var bValueField = typeof(Box).GetField(nameof(Box.Value));
@@ -313,6 +315,40 @@ namespace FastExpressionCompiler.IssueTests
 
             ff(box);
             Assert.AreEqual(11, box.Value);
+        }
+
+        [Test]
+        public void Check_MemberAccess_PreDecrementAssign_ToNewExpression()
+        {
+            Box.CtorCalls = 0; // assuming that the tests are not running in parallel
+            var bCtor = typeof(Box).GetConstructor(new[] { typeof(int) });
+            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+
+            var e = Lambda<Func<int>>(
+                Block(
+                    PreDecrementAssign(Field(New(bCtor, Constant(42)), bValueField))
+                )
+            );
+            e.PrintCSharp();
+            var @cs = (Func<int>)(() =>
+            {
+                return --new Box(42).Value;
+            });
+            var a = @cs();
+            Assert.AreEqual(41, a);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            var x = fs();
+            Assert.AreEqual(41, x);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            var y = ff();
+            Assert.AreEqual(41, y);
+            Assert.AreEqual(3, Box.CtorCalls);
         }
     }
 }

@@ -255,3 +255,6 @@ BenchmarkDotNet.Artifacts/
 ApiKey.txt
 
 FastExpressionCompiler.Internal/
+
+# Scala Metals in VSCode
+metals.*

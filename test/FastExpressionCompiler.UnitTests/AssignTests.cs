@@ -234,7 +234,7 @@ namespace FastExpressionCompiler.UnitTests
             // {
             //     TryCatchTest assigntests_trycatchtest__58225482 = default;
             //     assigntests_trycatchtest__58225482 = new TryCatchTest();
-            //     assigntests_trycatchtest__58225482.NestedTest = try
+            //     assigntests_trycatchtest__58225482.NestedTest = try // todo: @imrpove @printer, is not a valid C#
             //     {
             //         TryCatchNestedTest assigntests_trycatchnestedtest__54267293 = default;
             //         assigntests_trycatchnestedtest__54267293 = new TryCatchNestedTest();
