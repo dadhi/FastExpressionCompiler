@@ -27,6 +27,9 @@ THE SOFTWARE.
 
 // #define LIGHT_EXPRESSION
 // #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
+#if DEBUG
+#define DEMIT
+#endif
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
@@ -524,7 +527,7 @@ namespace FastExpressionCompiler
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
             if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
                 return null;
-            il.Emit(OpCodes.Ret);
+            il.Demit(OpCodes.Ret);
 
             return method.CreateDelegate(delegateType, closure);
         }
@@ -1916,7 +1919,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.PreIncrementAssign:
                         case ExpressionType.PostDecrementAssign:
                         case ExpressionType.PreDecrementAssign:
-                            return TryEmitIncDecAssign((UnaryExpression)expr, expr.NodeType, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitIncrementDecrementAssign((UnaryExpression)expr, expr.NodeType, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.AddAssign:
                         case ExpressionType.AddAssignChecked:
@@ -3271,7 +3274,7 @@ namespace FastExpressionCompiler
             {
                 var locVarIndex = il.GetNextLocalVarIndex(exprType);
                 EmitLoadLocalVariableAddress(il, locVarIndex);
-                il.Emit(OpCodes.Initobj, exprType);
+                il.Demit(OpCodes.Initobj, exprType);
                 return locVarIndex;
             }
 
@@ -3480,23 +3483,24 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            private static bool EmitPropertyAssign(ILGenerator il, PropertyInfo prop)
+            private static bool TryEmitPropertyAssign(ILGenerator il, PropertyInfo prop)
             {
                 var method = prop.SetMethod;
                 return method != null && EmitMethodCallOrVirtualCall(il, method);
             }
 
-            private static bool EmitMemberAssign(ILGenerator il, MemberInfo member)
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool EmitFieldAssign(ILGenerator il, FieldInfo field)
             {
-                if (member is PropertyInfo prop)
-                    return EmitPropertyAssign(il, prop);
-                if (member is FieldInfo field)
-                {
-                    il.Emit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
-                    return true;
-                }
-                return false;
+                il.Demit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
+                return true;
             }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool EmitMemberAssign(ILGenerator il, MemberInfo member) =>
+                member is PropertyInfo pr ? TryEmitPropertyAssign(il, pr) :
+                member is FieldInfo field ? EmitFieldAssign(il, field) :
+                false;
 
 #if LIGHT_EXPRESSION
             private static bool TryEmitListInit(ListInitExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
@@ -3584,7 +3588,7 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            private static bool TryEmitIncDecAssign(UnaryExpression expr, ExpressionType nodeType,
+            private static bool TryEmitIncrementDecrementAssign(UnaryExpression expr, ExpressionType nodeType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -3593,9 +3597,18 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var operandExpr = expr.Operand;
-                var resultVar = il.GetNextLocalVarIndex(expr.Type); // todo: @perf here is the opportunity to reuse the variable because is only needed in the local scope 
-                var isPost = nodeType == ExpressionType.PostIncrementAssign || nodeType == ExpressionType.PostDecrementAssign;
-                var opCode = nodeType == ExpressionType.PreIncrementAssign || nodeType == ExpressionType.PostIncrementAssign ? OpCodes.Add : OpCodes.Sub;
+                var exprType = expr.Type;
+
+                // we need the result variable and the time of Post/Pre when to store it only if the result is not ignored, otherwise don't bother
+                var resultVar = -1;
+                var isPost = false;
+                if (!parent.IgnoresResult())
+                {
+                    resultVar = il.GetNextLocalVarIndex(expr.Type);
+                    isPost = nodeType == ExpressionType.PostIncrementAssign | nodeType == ExpressionType.PostDecrementAssign;
+                }
+
+                var opCode = nodeType == ExpressionType.PreIncrementAssign | nodeType == ExpressionType.PostIncrementAssign ? OpCodes.Add : OpCodes.Sub;
 
                 if (operandExpr is ParameterExpression p)
                 {
@@ -3622,11 +3635,13 @@ namespace FastExpressionCompiler
                             EmitLoadIndirectlyByRef(il, p.Type);
                     }
 
-                    if (isPost)
+                    if (resultVar != -1 & isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
+
                     il.Emit(OpCodes.Ldc_I4_1);
                     il.Emit(opCode);
-                    if (!isPost)
+
+                    if (resultVar != -1 & !isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar);
 
                     if (localVarIndex != -1)
@@ -3644,18 +3659,53 @@ namespace FastExpressionCompiler
                 }
                 else if (operandExpr is MemberExpression m)
                 {
-                    if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, parent | ParentFlags.DupMemberOwner))
+                    var arithmFlags = (parent & ~ParentFlags.IgnoreResult) | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner;
+                    var leftNullValueLabel = default(Label);
+                    var leftType = m.Type;
+                    var leftIsNullable = leftType.IsNullable();
+                    if (leftIsNullable)
+                    {
+                        leftNullValueLabel = il.DefineLabel();
+                        if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags | ParentFlags.InstanceCall))
+                            return false;
+
+                        if (!closure.LastEmitIsAddress)
+                            EmitStoreAndLoadLocalVariableAddress(il, leftType);
+
+                        il.Demit(OpCodes.Dup);
+                        EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod());
+                        il.Demit(OpCodes.Brfalse, leftNullValueLabel);
+                        EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod());
+                    }
+                    else if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags & ~ParentFlags.InstanceCall))
                         return false;
 
-                    if (isPost)
+                    if (resultVar != -1 & isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
-                    il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(opCode);
-                    if (!isPost)
+
+                    // adding/substracting one
+                    il.Demit(OpCodes.Ldc_I4_1);
+                    il.Demit(opCode);
+
+                    if (resultVar != -1 & !isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar);
+
+                    if (leftIsNullable)
+                        il.Demit(OpCodes.Newobj, leftType.GetConstructors()[0]);
 
                     if (!EmitMemberAssign(il, m.Member))
                         return false;
+
+                    if (leftIsNullable)
+                    {
+                        var skipPopLeftDuppedInstance = il.DefineLabel();
+                        il.Demit(OpCodes.Br_S, skipPopLeftDuppedInstance);
+                        il.DmarkLabel(leftNullValueLabel); // jump here if nullable `!HasValue`
+                        il.Demit(OpCodes.Pop); // pop the dupped field address
+                        if (m.Expression != null)
+                            il.Demit(OpCodes.Pop); // pop the dupped instance address
+                        il.DmarkLabel(skipPopLeftDuppedInstance);
+                    }
                 }
                 else if (operandExpr is IndexExpression indexExpr)
                 {
@@ -3714,7 +3764,7 @@ namespace FastExpressionCompiler
                     if (!ok)
                         return false;
 
-                    if (isPost)
+                    if (resultVar != -1 & isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
                     il.Emit(OpCodes.Ldc_I4_1);
                     il.Emit(opCode);
@@ -3733,8 +3783,8 @@ namespace FastExpressionCompiler
                 else
                     return false; // not_supported_expression
 
-                if ((parent & ParentFlags.IgnoreResult) == 0)
-                    EmitLoadLocalVariable(il, resultVar); // todo: @perf here is the opportunity to reuse the variable because is only needed in the local scope
+                if (resultVar != -1)
+                    EmitLoadLocalVariable(il, resultVar);
                 return true;
             }
 
@@ -4041,7 +4091,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitIndexSet(int indexArgCount, PropertyInfo indexer, Type instType, Type elementType, ILGenerator il)
             {
                 if (indexer != null)
-                    return EmitPropertyAssign(il, indexer);
+                    return TryEmitPropertyAssign(il, indexer);
 
                 if (indexArgCount == 1) // one dimensional array
                 {
@@ -4139,7 +4189,7 @@ namespace FastExpressionCompiler
 
             public static bool TryEmitMemberAccess(MemberExpression expr,
 #if LIGHT_EXPRESSION
-                IParameterProvider paramExprs, 
+                IParameterProvider paramExprs,
 #else
                 IReadOnlyList<PE> paramExprs,
 #endif
@@ -4183,30 +4233,30 @@ namespace FastExpressionCompiler
                             return false;
 
                         if ((parent & ParentFlags.DupMemberOwner) != 0)
-                            il.Emit(OpCodes.Dup);
+                            il.Demit(OpCodes.Dup);
 
                         // #248 indicates that expression is argument passed by ref to Call
                         var isByAddress = byRefIndex != -1;
                         if (field.FieldType.IsValueType &&
-                            (parent & ParentFlags.InstanceAccess) != 0 &&
+                            (parent & ParentFlags.InstanceAccess) != 0 &
                                 // #302 - if the field is used as an index or
                                 // #333 - if the field is access from the just constructed object `new Widget().DodgyValue`
                                 (parent & (ParentFlags.IndexAccess | ParentFlags.Ctor)) == 0)
                             isByAddress = true;
 
                         closure.LastEmitIsAddress = isByAddress;
-                        il.Emit(isByAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                        il.Demit(isByAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
                     }
                     else if (field.IsLiteral)
                     {
                         var fieldValue = field.GetValue(null);
                         if (fieldValue != null)
                             return TryEmitConstant(false, null, field.FieldType, fieldValue, il, ref closure);
-                        il.Emit(OpCodes.Ldnull);
+                        il.Demit(OpCodes.Ldnull);
                     }
                     else
                     {
-                        il.Emit(OpCodes.Ldsfld, field);
+                        il.Demit(OpCodes.Ldsfld, field);
                     }
                     return true;
                 }
@@ -4773,8 +4823,8 @@ namespace FastExpressionCompiler
 
                     if (exprType.IsNullable())
                     {
-                        var endL = il.DefineLabel();
                         EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
+                        var endL = il.DefineLabel();
                         il.Emit(OpCodes.Br_S, endL);
                         il.MarkLabel(valueLabel);
                         il.Emit(OpCodes.Newobj, exprType.GetConstructors()[0]);
@@ -5063,15 +5113,15 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             public static void EmitEqualToZeroOrNull(ILGenerator il)
             {
-                il.Emit(OpCodes.Ldc_I4_0); // OpCodes.Not does not work here because it is a bitwise operation
-                il.Emit(OpCodes.Ceq);
+                il.Demit(OpCodes.Ldc_I4_0); // OpCodes.Not does not work here because it is a bitwise operation
+                il.Demit(OpCodes.Ceq);
             }
 
             /// Get the advantage of the optimized specialized EmitCall method
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitMethodCallOrVirtualCall(ILGenerator il, MethodInfo method)
             {
-                il.Emit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
+                il.Demit(method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method);
                 // todo: @feature EmitCall is specifically for the varags method and not for normal C# conventions methods,
                 // for those you need to call Emit(OpCodes.Call|Callvirt, methodInfo).
                 // So for now the varargs methods are not supported yet.
@@ -5081,7 +5131,7 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitVirtualMethodCall(ILGenerator il, MethodInfo method)
             {
-                il.Emit(OpCodes.Callvirt, method);
+                il.Demit(OpCodes.Callvirt, method);
                 // todo: @feature EmitCall is specifically for the varags method and not for normal C# conventions methods,
                 // for those you need to call Emit(OpCodes.Call|Callvirt, methodInfo).
                 // So for now the varargs methods are not supported yet.
@@ -5091,7 +5141,7 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitMethodCall(ILGenerator il, MethodInfo method)
             {
-                il.Emit(OpCodes.Call, method);
+                il.Demit(OpCodes.Call, method);
                 // todo: @feature EmitCall is specifically for the varags method and not for normal C# conventions methods,
                 // for those you need to call Emit(OpCodes.Call|Callvirt, methodInfo).
                 // So for now the varargs methods are not supported yet.
@@ -5137,26 +5187,26 @@ namespace FastExpressionCompiler
             private static void EmitLoadLocalVariableAddress(ILGenerator il, int location)
             {
                 if ((uint)location <= byte.MaxValue)
-                    il.Emit(OpCodes.Ldloca_S, (byte)location);
+                    il.Demit(OpCodes.Ldloca_S, (byte)location);
                 else
-                    il.Emit(OpCodes.Ldloca, (short)location);
+                    il.Demit(OpCodes.Ldloca, (short)location);
             }
 
             [MethodImpl((MethodImplOptions)256)]
             private static bool EmitLoadLocalVariable(ILGenerator il, int location)
             {
                 if (location == 0)
-                    il.Emit(OpCodes.Ldloc_0);
+                    il.Demit(OpCodes.Ldloc_0);
                 else if (location == 1)
-                    il.Emit(OpCodes.Ldloc_1);
+                    il.Demit(OpCodes.Ldloc_1);
                 else if (location == 2)
-                    il.Emit(OpCodes.Ldloc_2);
+                    il.Demit(OpCodes.Ldloc_2);
                 else if (location == 3)
-                    il.Emit(OpCodes.Ldloc_3);
+                    il.Demit(OpCodes.Ldloc_3);
                 else if ((uint)location <= byte.MaxValue)
-                    il.Emit(OpCodes.Ldloc_S, (byte)location);
+                    il.Demit(OpCodes.Ldloc_S, (byte)location);
                 else
-                    il.Emit(OpCodes.Ldloc, (short)location);
+                    il.Demit(OpCodes.Ldloc, (short)location);
                 return true;
             }
 
@@ -5182,33 +5232,33 @@ namespace FastExpressionCompiler
             {
                 if (location == 0)
                 {
-                    il.Emit(OpCodes.Stloc_0);
-                    il.Emit(OpCodes.Ldloc_0);
+                    il.Demit(OpCodes.Stloc_0);
+                    il.Demit(OpCodes.Ldloc_0);
                 }
                 else if (location == 1)
                 {
-                    il.Emit(OpCodes.Stloc_1);
-                    il.Emit(OpCodes.Ldloc_1);
+                    il.Demit(OpCodes.Stloc_1);
+                    il.Demit(OpCodes.Ldloc_1);
                 }
                 else if (location == 2)
                 {
-                    il.Emit(OpCodes.Stloc_2);
-                    il.Emit(OpCodes.Ldloc_2);
+                    il.Demit(OpCodes.Stloc_2);
+                    il.Demit(OpCodes.Ldloc_2);
                 }
                 else if (location == 3)
                 {
-                    il.Emit(OpCodes.Stloc_3);
-                    il.Emit(OpCodes.Ldloc_3);
+                    il.Demit(OpCodes.Stloc_3);
+                    il.Demit(OpCodes.Ldloc_3);
                 }
                 else if ((uint)location <= byte.MaxValue)
                 {
-                    il.Emit(OpCodes.Stloc_S, (byte)location);
-                    il.Emit(OpCodes.Ldloc_S, (byte)location);
+                    il.Demit(OpCodes.Stloc_S, (byte)location);
+                    il.Demit(OpCodes.Ldloc_S, (byte)location);
                 }
                 else
                 {
-                    il.Emit(OpCodes.Stloc, (short)location);
-                    il.Emit(OpCodes.Ldloc, (short)location);
+                    il.Demit(OpCodes.Stloc, (short)location);
+                    il.Demit(OpCodes.Ldloc, (short)location);
                 }
             }
 
@@ -5247,8 +5297,8 @@ namespace FastExpressionCompiler
                     // m_ILStream[m_length++] = (byte)OpCodes.Ldloca_S.Value;
                     // m_ILStream[m_length++] = (byte)0; // we may no need it 
                     //
-                    il.Emit(OpCodes.Stloc_0);
-                    il.Emit(OpCodes.Ldloca_S, (byte)0);
+                    il.Demit(OpCodes.Stloc_0);
+                    il.Demit(OpCodes.Ldloca_S, (byte)0);
                 }
                 else if (location == 1)
                 {
@@ -5265,29 +5315,29 @@ namespace FastExpressionCompiler
                     // }
                     // else
                     // {
-                    il.Emit(OpCodes.Stloc_1);
-                    il.Emit(OpCodes.Ldloca_S, (byte)1);
+                    il.Demit(OpCodes.Stloc_1);
+                    il.Demit(OpCodes.Ldloca_S, (byte)1);
                     // }
                 }
                 else if (location == 2)
                 {
-                    il.Emit(OpCodes.Stloc_2);
-                    il.Emit(OpCodes.Ldloca_S, (byte)2);
+                    il.Demit(OpCodes.Stloc_2);
+                    il.Demit(OpCodes.Ldloca_S, (byte)2);
                 }
                 else if (location == 3)
                 {
-                    il.Emit(OpCodes.Stloc_3);
-                    il.Emit(OpCodes.Ldloca_S, (byte)3);
+                    il.Demit(OpCodes.Stloc_3);
+                    il.Demit(OpCodes.Ldloca_S, (byte)3);
                 }
                 else if ((uint)location <= byte.MaxValue)
                 {
-                    il.Emit(OpCodes.Stloc_S, (byte)location);
-                    il.Emit(OpCodes.Ldloca_S, (byte)location);
+                    il.Demit(OpCodes.Stloc_S, (byte)location);
+                    il.Demit(OpCodes.Ldloca_S, (byte)location);
                 }
                 else
                 {
-                    il.Emit(OpCodes.Stloc, (short)location);
-                    il.Emit(OpCodes.Ldloca, (short)location);
+                    il.Demit(OpCodes.Stloc, (short)location);
+                    il.Demit(OpCodes.Ldloca, (short)location);
                 }
 
                 return location;
@@ -5297,26 +5347,26 @@ namespace FastExpressionCompiler
             private static void EmitLoadArg(ILGenerator il, int paramIndex)
             {
                 if (paramIndex == 0)
-                    il.Emit(OpCodes.Ldarg_0);
+                    il.Demit(OpCodes.Ldarg_0);
                 else if (paramIndex == 1)
-                    il.Emit(OpCodes.Ldarg_1);
+                    il.Demit(OpCodes.Ldarg_1);
                 else if (paramIndex == 2)
-                    il.Emit(OpCodes.Ldarg_2);
+                    il.Demit(OpCodes.Ldarg_2);
                 else if (paramIndex == 3)
-                    il.Emit(OpCodes.Ldarg_3);
+                    il.Demit(OpCodes.Ldarg_3);
                 else if ((uint)paramIndex <= byte.MaxValue)
-                    il.Emit(OpCodes.Ldarg_S, (byte)paramIndex);
+                    il.Demit(OpCodes.Ldarg_S, (byte)paramIndex);
                 else
-                    il.Emit(OpCodes.Ldarg, (short)paramIndex);
+                    il.Demit(OpCodes.Ldarg, (short)paramIndex);
             }
 
             [MethodImpl((MethodImplOptions)256)]
             private static void EmitLoadArgAddress(ILGenerator il, int paramIndex)
             {
                 if ((uint)paramIndex <= byte.MaxValue)
-                    il.Emit(OpCodes.Ldarga_S, (byte)paramIndex);
+                    il.Demit(OpCodes.Ldarga_S, (byte)paramIndex);
                 else
-                    il.Emit(OpCodes.Ldarga, (short)paramIndex);
+                    il.Demit(OpCodes.Ldarga, (short)paramIndex);
             }
         }
     }
@@ -5607,6 +5657,101 @@ namespace FastExpressionCompiler
         }
 
         public static T GetFirst<T>(this T[] source) => source.Length == 0 ? default : source[0];
+    }
+
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+    internal static class ILGeneratorTools
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode)
+        {
+            il.Emit(opcode);
+#if DEMIT
+            Debug.WriteLine($"{opcode}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, Type value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, FieldInfo value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, MethodInfo value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, ConstructorInfo value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, Label value,
+#if NETCOREAPP
+            [CallerArgumentExpression("value")]
+#endif
+            string valueName = null
+        )
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {valueName ?? value.ToString()}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DmarkLabel(this ILGenerator il, in Label value,
+#if NETCOREAPP
+            [CallerArgumentExpression("value")]
+#endif
+            string valueName = null
+        )
+        {
+            il.MarkLabel(value);
+#if DEMIT
+            Debug.Write($"{valueName ?? value.ToString()}: ");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, byte value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, short value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
     }
 
     /// <summary>Reflecting the internal methods to access the more performant for defining the local variable</summary>

@@ -21,20 +21,20 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Check_ArrayAccess_Assign_InAction();
-            // Check_ArrayAccess_AddAssign_InAction();
-            // Check_ArrayAccess_AddAssign_ReturnResultInFunction();
+            Check_ArrayAccess_Assign_InAction();
+            Check_ArrayAccess_AddAssign_InAction();
+            Check_ArrayAccess_AddAssign_ReturnResultInFunction();
 
-            // Check_ArrayAccess_PreIncrement();
-            // Check_ArrayAccess_Add();
+            Check_ArrayAccess_PreIncrement();
+            Check_ArrayAccess_Add();
 
-            // Check_MemberAccess_AddAssign();
-            // Check_MemberAccess_AddAssign_ToNewExpression();
-            // Check_MemberAccess_PreIncrementAssign();
-            // Check_MemberAccess_PreIncrementAssign_Nullable();
+            Check_MemberAccess_AddAssign();
+            // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
+            Check_MemberAccess_PreIncrementAssign();
+            Check_MemberAccess_PreIncrementAssign_Nullable();
             Check_MemberAccess_PreDecrementAssign_ToNewExpression();
 
-            return 9;
+            return 10;
         }
 
         [Test]
@@ -352,7 +352,7 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(11, box.Value);
         }
 
-        // [Test] // todo: @fixme
+        [Test]
         public void Check_MemberAccess_PreIncrementAssign_Nullable()
         {
             var b = Parameter(typeof(Box), "b");
@@ -368,22 +368,52 @@ namespace FastExpressionCompiler.IssueTests
             {
                 ++b.NullableValue;
             });
-            var b1 = new Box { NullableValue = 9 };
+            var b1 = new Box { NullableValue = null };
+            var b2 = new Box { NullableValue = 41 };
             @cs(b1);
-            Assert.AreEqual(10, b1.NullableValue);
+            @cs(b2);
+            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(42, b2.NullableValue);
 
             var fs = e.CompileSys();
             fs.PrintIL();
+            /*
+            0    ldarg.1 <-- load the Box argument on stack
+            1    stloc.0
+            2    ldloc.0 <-- on stack
+            3    ldloc.0 <-- todo: @perf twice on stack or do Dup instead?
+            4    ldfld Box.NullableValue
+            9    stloc.1 <-- store and pop, so the ldloc.0 is again on top
+            10   ldloca.s 1 <-- load the address of field variable, not the address of field
+            12   call Nullable`1.get_HasValue <-- if does not have value, then jump to 35
+            17   brfalse.s 35
+            19   ldloca.s 1 <-- load the address of field variable
+            21   call Nullable`1.GetValueOrDefault <-- get it value on stack
+            26   ldc.i4.1 <-- load 1 on stack
+            27   add <-- add 1 to value
+            28   newobj Nullable`1..ctor <-- create new Nullable with the added value
+            33   br.s 36 <-- jump to 36 storing the value in the field
+            35   ldloc.1 <-- todo: @perf load the field variable not the address and store it in NullableValue, why if we may just jump to return?
+            36   stfld Box.NullableValue
+            41   ret
+            */
 
-            var box = new Box { NullableValue = 9 };
-            fs(box);
-            Assert.AreEqual(10, box.NullableValue);
+            b1 = new Box { NullableValue = null };
+            b2 = new Box { NullableValue = 41 };
+            fs(b1);
+            fs(b2);
+            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(42, b2.NullableValue);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
-            ff(box);
-            Assert.AreEqual(11, box.NullableValue);
+            b1 = new Box { NullableValue = null };
+            b2 = new Box { NullableValue = 41 };
+            ff(b1);
+            ff(b2);
+            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(42, b2.NullableValue);
         }
 
         [Test]
