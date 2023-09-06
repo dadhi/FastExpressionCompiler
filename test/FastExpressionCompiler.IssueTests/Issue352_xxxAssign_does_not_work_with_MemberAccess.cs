@@ -257,6 +257,21 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
+        struct Val
+        {
+            public int Value;
+            public int? NullableValue;
+
+            public Val() { }
+
+            public static int CtorCalls = 0;
+            public Val(int value)
+            {
+                ++CtorCalls;
+                Value = value;
+            }
+        }
+
         [Test]
         public void Check_MemberAccess_AddAssign()
         {
@@ -348,15 +363,16 @@ namespace FastExpressionCompiler.IssueTests
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            var box = new Box { Value = 9 };
-            fs(box);
-            Assert.AreEqual(10, box.Value);
+            b1 = new Box { Value = 9 };
+            fs(b1);
+            Assert.AreEqual(10, b1.Value);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
-            ff(box);
-            Assert.AreEqual(11, box.Value);
+            b1 = new Box { Value = 9 };
+            ff(b1);
+            Assert.AreEqual(10, b1.Value);
         }
 
         [Test]
