@@ -32,14 +32,16 @@ namespace FastExpressionCompiler.IssueTests
             // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
 
             Check_MemberAccess_PreIncrementAssign();
+            Check_MemberAccess_PreIncrementAssign_Returning();
+            Check_MemberAccess_PostIncrementAssign_Returning();
+
             Check_MemberAccess_PreDecrementAssign_ToNewExpression();
 
             Check_MemberAccess_PreIncrementAssign_Nullable();
+            Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
+            Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
 
-            Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNonNullable();
-            Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNonNullable();
-
-            return 12;
+            return 13;
         }
 
         [Test]
@@ -358,6 +360,81 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Check_MemberAccess_PreIncrementAssign_Returning()
+        {
+            var b = Parameter(typeof(Box), "b");
+            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+            var e = Lambda<Func<Box, int>>(
+                Block(PreIncrementAssign(Field(b, bValueField))),
+                b
+            );
+            e.PrintCSharp();
+            var @cs = (Func<Box, int>)((Box b) =>
+            {
+                return ++b.Value;
+            });
+
+            var b1 = new Box { Value = 9 };
+            var x1 = @cs(b1);
+            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, x1);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            b1 = new Box { Value = 9 };
+            x1 = fs(b1);
+            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, x1);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            b1 = new Box { Value = 9 };
+            x1 = ff(b1);
+            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, x1);
+        }
+
+        [Test]
+        public void Check_MemberAccess_PostIncrementAssign_Returning()
+        {
+            var b = Parameter(typeof(Box), "b");
+            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+            var e = Lambda<Func<Box, int>>(
+                Block(PostIncrementAssign(Field(b, bValueField))),
+                b
+            );
+            e.PrintCSharp();
+
+            var @cs = (Func<Box, int>)((Box b) =>
+            {
+                return b.Value++;
+            });
+
+            var b1 = new Box { Value = 9 };
+            var x1 = @cs(b1);
+            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(9, x1);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            b1 = new Box { Value = 9 };
+            x1 = fs(b1);
+            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(9, x1);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            b1 = new Box { Value = 9 };
+            x1 = ff(b1);
+            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(9, x1);
+        }
+
+        [Test]
         public void Check_MemberAccess_PreIncrementAssign_Nullable()
         {
             var b = Parameter(typeof(Box), "b");
@@ -422,7 +499,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNonNullable()
+        public void Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable()
         {
             var b = Parameter(typeof(Box), "b");
             var bValueField = typeof(Box).GetField(nameof(Box.NullableValue));
@@ -472,7 +549,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNonNullable()
+        public void Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable()
         {
             var b = Parameter(typeof(Box), "b");
             var bValueField = typeof(Box).GetField(nameof(Box.NullableValue));

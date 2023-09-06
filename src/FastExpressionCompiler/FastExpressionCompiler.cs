@@ -3695,7 +3695,7 @@ namespace FastExpressionCompiler
                             return false;
 
                         if (resultVar != -1 & isPost)
-                            resultVar = EmitStoreAndLoadLocalVariable(il, leftType);
+                            EmitStoreAndLoadLocalVariable(il, resultVar);
                     }
 
                     // adding/substracting one
