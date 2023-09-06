@@ -3659,7 +3659,11 @@ namespace FastExpressionCompiler
                 }
                 else if (operandExpr is MemberExpression m)
                 {
-                    var arithmFlags = (parent & ~ParentFlags.IgnoreResult) | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner;
+                    // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
+                    // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
+                    var arithmFlags =
+                        (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall)
+                        | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner;
 
                     var exprTypeIsNullable = exprType.IsNullable();
 
@@ -3669,40 +3673,48 @@ namespace FastExpressionCompiler
                     if (leftIsNullable)
                     {
                         leftNullValueLabel = il.DefineLabel();
-                        if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags | ParentFlags.InstanceCall))
+                        if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags))
                             return false;
 
-                        if (!closure.LastEmitIsAddress)
-                            EmitStoreAndLoadLocalVariableAddress(il, leftType);
-
-                        if (resultVar != -1 & isPost & exprTypeIsNullable)
-                        {
-                            il.Demit(OpCodes.Dup);
-                            EmitStoreLocalVariable(il, resultVar);
-                        }
+                        // Should not the address because the InstanceCall was specifically removed for the arithmFlags
+                        Debug.Assert(!closure.LastEmitIsAddress);
+                        var fieldValueVar = resultVar != -1 & isPost & exprTypeIsNullable ? resultVar : il.GetNextLocalVarIndex(leftType);
+                        EmitStoreAndLoadLocalVariableAddress(il, fieldValueVar);
 
                         il.Demit(OpCodes.Dup);
                         EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod());
                         il.Demit(OpCodes.Brfalse, leftNullValueLabel);
                         EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod());
-                    }
-                    else if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags & ~ParentFlags.InstanceCall))
-                        return false;
 
-                    if (resultVar != -1 & isPost & !exprTypeIsNullable)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
+                        if (resultVar != -1 & isPost & !exprTypeIsNullable)
+                            EmitStoreAndLoadLocalVariable(il, resultVar);
+                    }
+                    else
+                    {
+                        if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags))
+                            return false;
+
+                        if (resultVar != -1 & isPost)
+                            resultVar = EmitStoreAndLoadLocalVariable(il, leftType);
+                    }
 
                     // adding/substracting one
                     il.Demit(OpCodes.Ldc_I4_1);
                     il.Demit(opCode);
 
-                    if (resultVar != -1 & !isPost & !exprTypeIsNullable)
-                        EmitStoreAndLoadLocalVariable(il, resultVar);
-
                     if (leftIsNullable)
                     {
+                        if (resultVar != -1 & !isPost & !exprTypeIsNullable)
+                            EmitStoreAndLoadLocalVariable(il, resultVar);
+
                         il.Demit(OpCodes.Newobj, leftType.GetConstructors()[0]);
+
                         if (resultVar != -1 & !isPost & exprTypeIsNullable)
+                            EmitStoreAndLoadLocalVariable(il, resultVar);
+                    }
+                    else
+                    {
+                        if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
                     }
 
@@ -3768,8 +3780,7 @@ namespace FastExpressionCompiler
                     }
 
                     // store the index so it can be used later for setting
-                    var indexVar = il.GetNextLocalVarIndex(indexArg.Type);
-                    EmitStoreAndLoadLocalVariable(il, indexVar);
+                    var indexVar = EmitStoreAndLoadLocalVariable(il, indexArg.Type);
 
                     var ok = indexerPropGetter != null
                         ? EmitMethodCallOrVirtualCall(il, indexerPropGetter)
@@ -4253,7 +4264,7 @@ namespace FastExpressionCompiler
                         if (field.FieldType.IsValueType &&
                             (parent & ParentFlags.InstanceAccess) != 0 &
                                 // #302 - if the field is used as an index or
-                                // #333 - if the field is access from the just constructed object `new Widget().DodgyValue`
+                                // #333 - if the field is accessed from the just constructed object `new Widget().DodgyValue`
                                 (parent & (ParentFlags.IndexAccess | ParentFlags.Ctor)) == 0)
                             isByAddress = true;
 
@@ -5275,8 +5286,15 @@ namespace FastExpressionCompiler
                 }
             }
 
+            private static int EmitStoreAndLoadLocalVariable(ILGenerator il, Type t)
+            {
+                var location = il.GetNextLocalVarIndex(t);
+                EmitStoreAndLoadLocalVariable(il, location);
+                return location;
+            }
+
             [MethodImpl((MethodImplOptions)256)]
-            private static int EmitStoreAndLoadLocalVariableAddress(ILGenerator il, Type type)
+            private static void EmitStoreAndLoadLocalVariableAddress(ILGenerator il, int location)
             {
                 // #if DEBUG
                 // var ilLengthField = typeof(ILGenerator).GetField("m_length", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -5289,7 +5307,6 @@ namespace FastExpressionCompiler
                 // var ilMaxMidStack    = (int)ilMaxMidStackField.GetValue(il);
                 // var ilMaxMidStackCur = (int)ilMaxMidStackCurField.GetValue(il);
                 // #endif
-                var location = il.GetNextLocalVarIndex(type);
                 if (location == 0)
                 {
                     // todo: @perf
@@ -5352,7 +5369,12 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Stloc, (short)location);
                     il.Demit(OpCodes.Ldloca, (short)location);
                 }
+            }
 
+            private static int EmitStoreAndLoadLocalVariableAddress(ILGenerator il, Type type)
+            {
+                var location = il.GetNextLocalVarIndex(type);
+                EmitStoreAndLoadLocalVariableAddress(il, location);
                 return location;
             }
 
@@ -5867,8 +5889,9 @@ namespace FastExpressionCompiler
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
         public static readonly Dictionary<Type, int> LocalVarUsage = new Dictionary<Type, int>(); 
 #endif
-        // todo: @perf add the map of the used local variables that can be reused, e.g. we are getting the variable used in the local scope but then we may return them into POOL and reuse (many of int variable can be reuses, say for indexes)
+        // todo: @perf @wip add the map of the used local variables that can be reused, e.g. we are getting the variable used in the local scope but then we may return them into POOL and reuse (many of int variable can be reuses, say for indexes)
         /// <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
+        [MethodImpl((MethodImplOptions)256)]
         public static int GetNextLocalVarIndex(this ILGenerator il, Type t)
         {
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE

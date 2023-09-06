@@ -21,24 +21,25 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Check_ArrayAccess_Assign_InAction();
-            // Check_ArrayAccess_AddAssign_InAction();
-            // Check_ArrayAccess_AddAssign_ReturnResultInFunction();
+            Check_ArrayAccess_Assign_InAction();
+            Check_ArrayAccess_AddAssign_InAction();
+            Check_ArrayAccess_AddAssign_ReturnResultInFunction();
 
-            // Check_ArrayAccess_PreIncrement();
-            // Check_ArrayAccess_Add();
+            Check_ArrayAccess_PreIncrement();
+            Check_ArrayAccess_Add();
 
-            // Check_MemberAccess_AddAssign();
-            // // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
+            Check_MemberAccess_AddAssign();
+            // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
 
-            // Check_MemberAccess_PreIncrementAssign();
-            // Check_MemberAccess_PreDecrementAssign_ToNewExpression();
+            Check_MemberAccess_PreIncrementAssign();
+            Check_MemberAccess_PreDecrementAssign_ToNewExpression();
 
-            // Check_MemberAccess_PreIncrementAssign_Nullable();
+            Check_MemberAccess_PreIncrementAssign_Nullable();
 
             Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNonNullable();
+            Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNonNullable();
 
-            return 11;
+            return 12;
         }
 
         [Test]
@@ -468,6 +469,56 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(null, x1);
             Assert.AreEqual(42, b2.NullableValue);
             Assert.AreEqual(42, x2);
+        }
+
+        [Test]
+        public void Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNonNullable()
+        {
+            var b = Parameter(typeof(Box), "b");
+            var bValueField = typeof(Box).GetField(nameof(Box.NullableValue));
+            var e = Lambda<Func<Box, int?>>(
+                Block(PostIncrementAssign(Field(b, bValueField))),
+                b
+            );
+            e.PrintCSharp();
+            var @cs = (Func<Box, int?>)((Box b) =>
+            {
+                return b.NullableValue++;
+            });
+            var b1 = new Box { NullableValue = null };
+            var b2 = new Box { NullableValue = 41 };
+            var x1 = @cs(b1);
+            var x2 = @cs(b2);
+            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(null, x1);
+            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(41, x2);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            /*
+            */
+
+            b1 = new Box { NullableValue = null };
+            b2 = new Box { NullableValue = 41 };
+            x1 = fs(b1);
+            x2 = fs(b2);
+            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(null, x1);
+            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(41, x2);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            b1 = new Box { NullableValue = null };
+            b2 = new Box { NullableValue = 41 };
+            x1 = ff(b1);
+            x2 = ff(b2);
+            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(null, x1);
+            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(41, x2);
         }
 
         [Test]
