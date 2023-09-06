@@ -3660,6 +3660,9 @@ namespace FastExpressionCompiler
                 else if (operandExpr is MemberExpression m)
                 {
                     var arithmFlags = (parent & ~ParentFlags.IgnoreResult) | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner;
+
+                    var exprTypeIsNullable = exprType.IsNullable();
+
                     var leftNullValueLabel = default(Label);
                     var leftType = m.Type;
                     var leftIsNullable = leftType.IsNullable();
@@ -3672,6 +3675,12 @@ namespace FastExpressionCompiler
                         if (!closure.LastEmitIsAddress)
                             EmitStoreAndLoadLocalVariableAddress(il, leftType);
 
+                        if (resultVar != -1 & isPost & exprTypeIsNullable)
+                        {
+                            il.Demit(OpCodes.Dup);
+                            EmitStoreLocalVariable(il, resultVar);
+                        }
+
                         il.Demit(OpCodes.Dup);
                         EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod());
                         il.Demit(OpCodes.Brfalse, leftNullValueLabel);
@@ -3680,18 +3689,22 @@ namespace FastExpressionCompiler
                     else if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags & ~ParentFlags.InstanceCall))
                         return false;
 
-                    if (resultVar != -1 & isPost)
+                    if (resultVar != -1 & isPost & !exprTypeIsNullable)
                         EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
 
                     // adding/substracting one
                     il.Demit(OpCodes.Ldc_I4_1);
                     il.Demit(opCode);
 
-                    if (resultVar != -1 & !isPost)
+                    if (resultVar != -1 & !isPost & !exprTypeIsNullable)
                         EmitStoreAndLoadLocalVariable(il, resultVar);
 
                     if (leftIsNullable)
+                    {
                         il.Demit(OpCodes.Newobj, leftType.GetConstructors()[0]);
+                        if (resultVar != -1 & !isPost & exprTypeIsNullable)
+                            EmitStoreAndLoadLocalVariable(il, resultVar);
+                    }
 
                     if (!EmitMemberAssign(il, m.Member))
                         return false;
@@ -4207,7 +4220,7 @@ namespace FastExpressionCompiler
                             return false;
 
                         if ((parent & ParentFlags.DupMemberOwner) != 0)
-                            il.Emit(OpCodes.Dup);
+                            il.Demit(OpCodes.Dup);
 
                         // Value type special treatment to load address of value instance in order to access a field or call a method.
                         // Parameter should be excluded because it already loads an address via `LDARGA`, and you don't need to.
@@ -4226,10 +4239,10 @@ namespace FastExpressionCompiler
                     var instanceExpr = expr.Expression;
                     if (instanceExpr != null)
                     {
-                        var p = (parent | ParentFlags.MemberAccess | ParentFlags.InstanceAccess)
+                        var p = (parent | ParentFlags.InstanceAccess | ParentFlags.MemberAccess)
                             & ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner;
 
-                        if (!TryEmit(instanceExpr, paramExprs, il, ref closure, setup, p, -1))
+                        if (!TryEmit(instanceExpr, paramExprs, il, ref closure, setup, p))
                             return false;
 
                         if ((parent & ParentFlags.DupMemberOwner) != 0)
@@ -5214,17 +5227,17 @@ namespace FastExpressionCompiler
             private static void EmitStoreLocalVariable(ILGenerator il, int location)
             {
                 if (location == 0)
-                    il.Emit(OpCodes.Stloc_0);
+                    il.Demit(OpCodes.Stloc_0);
                 else if (location == 1)
-                    il.Emit(OpCodes.Stloc_1);
+                    il.Demit(OpCodes.Stloc_1);
                 else if (location == 2)
-                    il.Emit(OpCodes.Stloc_2);
+                    il.Demit(OpCodes.Stloc_2);
                 else if (location == 3)
-                    il.Emit(OpCodes.Stloc_3);
+                    il.Demit(OpCodes.Stloc_3);
                 else if ((uint)location <= byte.MaxValue)
-                    il.Emit(OpCodes.Stloc_S, (byte)location);
+                    il.Demit(OpCodes.Stloc_S, (byte)location);
                 else
-                    il.Emit(OpCodes.Stloc, (short)location);
+                    il.Demit(OpCodes.Stloc, (short)location);
             }
 
             [MethodImpl((MethodImplOptions)256)]
