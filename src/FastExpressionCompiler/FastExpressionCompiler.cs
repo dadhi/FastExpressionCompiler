@@ -5811,6 +5811,51 @@ namespace FastExpressionCompiler
             Debug.WriteLine($"{opcode} {value}");
 #endif
         }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, int value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, long value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, float value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, double value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, string value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
     }
 
     /// <summary>Reflecting the internal methods to access the more performant for defining the local variable</summary>
