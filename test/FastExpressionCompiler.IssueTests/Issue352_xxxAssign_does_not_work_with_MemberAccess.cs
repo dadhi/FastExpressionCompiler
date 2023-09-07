@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -23,6 +24,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
 
+            Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Returning();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign();
 
             Check_MemberAccess_PreIncrementAssign();
@@ -470,18 +472,6 @@ namespace FastExpressionCompiler.IssueTests
                 ++v.Value;
             });
 
-            /* Designed IL from the sharplab.io:
-
-            IL_0000: ldarg.1
-            IL_0001: ldflda int32 Val::Value
-            IL_0006: dup
-            IL_0007: ldind.i4
-            IL_0008: ldc.i4.1
-            IL_0009: add
-            IL_000a: stind.i4
-            IL_000b: ret
-            */
-
             var v1 = new Val { Value = 9 };
             @cs(ref v1);
             Assert.AreEqual(10, v1.Value);
@@ -497,9 +487,72 @@ namespace FastExpressionCompiler.IssueTests
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldflda,
+                OpCodes.Dup,
+                OpCodes.Ldind_I4,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stind_I4,
+                OpCodes.Ret
+            );
+
             v1 = new Val { Value = 9 };
             ff(ref v1);
             Assert.AreEqual(10, v1.Value);
+        }
+
+        delegate int RefValReturning(ref Val v);
+
+        [Test]
+        public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Returning()
+        {
+            var v = Parameter(typeof(Val).MakeByRefType(), "v");
+            var vValueField = typeof(Val).GetField(nameof(Val.Value));
+            var e = Lambda<RefValReturning>(
+                Block(PreIncrementAssign(Field(v, vValueField))),
+                v
+            );
+            e.PrintCSharp();
+            var @cs = (RefValReturning)((ref Val v) =>
+            {
+                return ++v.Value;
+            });
+
+            var v1 = new Val { Value = 9 };
+            var x1 = @cs(ref v1);
+            Assert.AreEqual(10, v1.Value);
+            Assert.AreEqual(10, x1);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            v1 = new Val { Value = 9 };
+            x1 = fs(ref v1);
+            Assert.AreEqual(9, v1.Value); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(10, x1);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldflda,
+                OpCodes.Dup,
+                OpCodes.Ldind_I4,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Stind_I4,
+                OpCodes.Ldloc_0,
+                OpCodes.Ret
+            );
+
+            v1 = new Val { Value = 9 };
+            x1 = ff(ref v1);
+            Assert.AreEqual(10, v1.Value);
+            Assert.AreEqual(10, x1);
         }
 
         [Test]
