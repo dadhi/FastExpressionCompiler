@@ -3679,8 +3679,11 @@ namespace FastExpressionCompiler
                         if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags))
                             return false;
 
+                        // if the field is the load by address, then we need to load its value from the ref in order to do arithmetic operation on it 
+                        if (closure.LastEmitIsAddress)
+                            EmitLoadIndirectlyByRef(il, leftType);
+
                         // Should not the address because the InstanceCall was specifically removed for the arithmFlags
-                        Debug.Assert(!closure.LastEmitIsAddress);
                         var fieldValueVar = resultVar != -1 & isPost & exprTypeIsNullable ? resultVar : il.GetNextLocalVarIndex(leftType);
                         EmitStoreAndLoadLocalVariableAddress(il, fieldValueVar);
 
@@ -3735,9 +3738,12 @@ namespace FastExpressionCompiler
                         var skipPopLeftDuppedInstance = il.DefineLabel();
                         il.Demit(OpCodes.Br_S, skipPopLeftDuppedInstance);
                         il.DmarkLabel(leftNullValueLabel); // jump here if nullable `!HasValue`
-                        il.Demit(OpCodes.Pop); // pop the dupped field address
-                        if (m.Expression != null)
-                            il.Demit(OpCodes.Pop); // pop the dupped instance address
+                        il.Demit(OpCodes.Pop);             // pop the dupped field variable address used to call the Nullable methods
+
+                        // pop the dupped instance address or the field address
+                        if (m.Expression != null | closure.LastEmitIsAddress)
+                            il.Demit(OpCodes.Pop);
+
                         il.DmarkLabel(skipPopLeftDuppedInstance);
                     }
                 }
@@ -4073,52 +4079,60 @@ namespace FastExpressionCompiler
             {
                 if (type.IsEnum)
                     type = Enum.GetUnderlyingType(type);
-
-                var opCode = Type.GetTypeCode(type) switch
+                switch (Type.GetTypeCode(type))
                 {
-                    TypeCode.Boolean => OpCodes.Ldind_U1,
-                    TypeCode.Char => OpCodes.Ldind_U1,
-                    TypeCode.Byte => OpCodes.Ldind_U1,
-                    TypeCode.SByte => OpCodes.Ldind_I1,
-                    TypeCode.Int16 => OpCodes.Ldind_I2,
-                    TypeCode.Int32 => OpCodes.Ldind_I4,
-                    TypeCode.Int64 => OpCodes.Ldind_I8,
-                    TypeCode.Double => OpCodes.Ldind_R8,
-                    TypeCode.Single => OpCodes.Ldind_R4,
-                    TypeCode.UInt16 => OpCodes.Ldind_U2,
-                    TypeCode.UInt32 => OpCodes.Ldind_U4,
-                    TypeCode.UInt64 => OpCodes.Ldobj,
-                    TypeCode.String => OpCodes.Ldind_Ref,
-                    _ => type.IsValueType ? OpCodes.Ldobj : OpCodes.Ldind_Ref
-                };
-
-                if (opCode.Equals(OpCodes.Ldobj))
-                    il.Demit(opCode, type);
-                else
-                    il.Demit(opCode);
+                    case TypeCode.Boolean: il.Demit(OpCodes.Ldind_U1); break;
+                    case TypeCode.Char: il.Demit(OpCodes.Ldind_U1); break;
+                    case TypeCode.Byte: il.Demit(OpCodes.Ldind_U1); break;
+                    case TypeCode.SByte: il.Demit(OpCodes.Ldind_I1); break;
+                    case TypeCode.Int16: il.Demit(OpCodes.Ldind_I2); break;
+                    case TypeCode.Int32: il.Demit(OpCodes.Ldind_I4); break;
+                    case TypeCode.Int64: il.Demit(OpCodes.Ldind_I8); break;
+                    case TypeCode.Double: il.Demit(OpCodes.Ldind_R8); break;
+                    case TypeCode.Single: il.Demit(OpCodes.Ldind_R4); break;
+                    case TypeCode.UInt16: il.Demit(OpCodes.Ldind_U2); break;
+                    case TypeCode.UInt32: il.Demit(OpCodes.Ldind_U4); break;
+                    case TypeCode.UInt64: il.Demit(OpCodes.Ldobj, type); break;
+                    case TypeCode.String: il.Demit(OpCodes.Ldind_Ref); break;
+                    default:
+                        if (type == typeof(IntPtr) || type == typeof(UIntPtr))
+                            il.Demit(OpCodes.Ldind_I);
+                        else if (type.IsValueType)
+                            il.Demit(OpCodes.Ldobj, type);
+                        else
+                            il.Demit(OpCodes.Ldind_Ref);
+                        break;
+                }
             }
 
-            // todo: @fix check that it is applied only for the ValueType OR make applied to the ReferenceType the same way as EmitLoadIndirectlyByRef
             private static void EmitStoreIndirectlyByRef(ILGenerator il, Type type)
             {
-                if (type == typeof(int) || type == typeof(uint))
-                    il.Demit(OpCodes.Stind_I4);
-                else if (type == typeof(byte))
-                    il.Demit(OpCodes.Stind_I1);
-                else if (type == typeof(short) || type == typeof(ushort))
-                    il.Demit(OpCodes.Stind_I2);
-                else if (type == typeof(long) || type == typeof(ulong))
-                    il.Demit(OpCodes.Stind_I8);
-                else if (type == typeof(float))
-                    il.Demit(OpCodes.Stind_R4);
-                else if (type == typeof(double))
-                    il.Demit(OpCodes.Stind_R8);
-                else if (type == typeof(object))
-                    il.Demit(OpCodes.Stind_Ref);
-                else if (type == typeof(IntPtr) || type == typeof(UIntPtr))
-                    il.Demit(OpCodes.Stind_I);
-                else
-                    il.Demit(OpCodes.Stobj, type);
+                if (type.IsEnum)
+                    type = Enum.GetUnderlyingType(type);
+                switch (Type.GetTypeCode(type))
+                {
+                    case TypeCode.Boolean: il.Demit(OpCodes.Stind_I1); break;
+                    case TypeCode.Char: il.Demit(OpCodes.Stind_I1); break;
+                    case TypeCode.Byte: il.Demit(OpCodes.Stind_I1); break;
+                    case TypeCode.SByte: il.Demit(OpCodes.Stind_I1); break;
+                    case TypeCode.Int16: il.Demit(OpCodes.Stind_I2); break;
+                    case TypeCode.Int32: il.Demit(OpCodes.Stind_I4); break;
+                    case TypeCode.Int64: il.Demit(OpCodes.Stind_I8); break;
+                    case TypeCode.Double: il.Demit(OpCodes.Stind_R8); break;
+                    case TypeCode.Single: il.Demit(OpCodes.Stind_R4); break;
+                    case TypeCode.String: il.Demit(OpCodes.Stind_Ref); break;
+                    case TypeCode.UInt16: il.Demit(OpCodes.Stind_I2); break;
+                    case TypeCode.UInt32: il.Demit(OpCodes.Stind_I4); break;
+                    case TypeCode.UInt64: il.Demit(OpCodes.Stind_I8); break;
+                    default:
+                        if (type == typeof(IntPtr) || type == typeof(UIntPtr))
+                            il.Demit(OpCodes.Stind_I);
+                        else if (type.IsValueType)
+                            il.Demit(OpCodes.Stobj, type);
+                        else
+                            il.Demit(OpCodes.Stind_Ref);
+                        break;
+                }
             }
 
             private static bool TryEmitIndexSet(int indexArgCount, PropertyInfo indexer, Type instType, Type elementType, ILGenerator il)

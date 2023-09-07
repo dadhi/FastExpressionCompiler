@@ -24,6 +24,8 @@ namespace FastExpressionCompiler.IssueTests
         {
             // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
 
+            Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable();
+
             Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Returning();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Returning();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign();
@@ -502,6 +504,70 @@ namespace FastExpressionCompiler.IssueTests
             v1 = new Val { Value = 9 };
             ff(ref v1);
             Assert.AreEqual(10, v1.Value);
+        }
+
+        [Test]
+        public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable()
+        {
+            var v = Parameter(typeof(Val).MakeByRefType(), "v");
+            var vValueField = typeof(Val).GetField(nameof(Val.NullableValue));
+            var e = Lambda<RefVal>(
+                Block(PreIncrementAssign(Field(v, vValueField))),
+                v
+            );
+            e.PrintCSharp();
+            var @cs = (RefVal)((ref Val v) =>
+            {
+                ++v.NullableValue;
+            });
+
+            var v1 = new Val { NullableValue = null };
+            var v2 = new Val { NullableValue = 9 };
+            @cs(ref v1);
+            @cs(ref v2);
+            Assert.AreEqual(null, v1.NullableValue);
+            Assert.AreEqual(10, v2.NullableValue);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            v1 = new Val { NullableValue = null };
+            v2 = new Val { NullableValue = 9 };
+            fs(ref v1);
+            fs(ref v2);
+            Assert.AreEqual(null, v1.NullableValue);
+            Assert.AreEqual(9, v2.NullableValue); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldflda,
+                OpCodes.Dup,
+                OpCodes.Ldobj,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloca_S,
+                OpCodes.Dup,
+                OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
+                OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
+                OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Newobj,
+                OpCodes.Stobj,      // Stores the nullable value to the address of the field
+                OpCodes.Br_S,       // jump to Ret op-code
+                OpCodes.Pop,        // Pops the Ldloca_S Dup-ped
+                OpCodes.Pop,        // Pops the Ldflda Dup-ped
+                OpCodes.Ret
+            );
+
+            v1 = new Val { NullableValue = null };
+            v2 = new Val { NullableValue = 9 };
+            ff(ref v1);
+            ff(ref v2);
+            Assert.AreEqual(null, v1.NullableValue);
+            Assert.AreEqual(10, v2.NullableValue);
         }
 
         delegate int RefValReturning(ref Val v);
