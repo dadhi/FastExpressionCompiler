@@ -3683,8 +3683,9 @@ namespace FastExpressionCompiler
                         if (closure.LastEmitIsAddress)
                             EmitLoadIndirectlyByRef(il, leftType);
 
-                        // Should not the address because the InstanceCall was specifically removed for the arithmFlags
-                        var fieldValueVar = resultVar != -1 & isPost & exprTypeIsNullable ? resultVar : il.GetNextLocalVarIndex(leftType);
+                        // Reuse the result variable for the field,
+                        // so we may return the original value of field if nullable is `null` and we jump to the return
+                        var fieldValueVar = resultVar != -1 & exprTypeIsNullable ? resultVar : il.GetNextLocalVarIndex(leftType);
                         EmitStoreAndLoadLocalVariableAddress(il, fieldValueVar);
 
                         il.Demit(OpCodes.Dup);
@@ -4142,30 +4143,31 @@ namespace FastExpressionCompiler
 
                 if (indexArgCount == 1) // one dimensional array
                 {
+                    // todo: @improve @perf convert to switch the same as EmitStoreIndirectlyByRef
                     if (!elementType.IsValueType)
                     {
-                        il.Emit(OpCodes.Stelem_Ref);
+                        il.Demit(OpCodes.Stelem_Ref);
                         return true;
                     }
 
                     if (elementType == typeof(Int32))
-                        il.Emit(OpCodes.Stelem_I4);
+                        il.Demit(OpCodes.Stelem_I4);
                     else if (elementType == typeof(Int64))
-                        il.Emit(OpCodes.Stelem_I8);
+                        il.Demit(OpCodes.Stelem_I8);
                     else if (elementType == typeof(Int16))
-                        il.Emit(OpCodes.Stelem_I2);
+                        il.Demit(OpCodes.Stelem_I2);
                     else if (elementType == typeof(SByte))
-                        il.Emit(OpCodes.Stelem_I1);
+                        il.Demit(OpCodes.Stelem_I1);
                     else if (elementType == typeof(Single))
-                        il.Emit(OpCodes.Stelem_R4);
+                        il.Demit(OpCodes.Stelem_R4);
                     else if (elementType == typeof(Double))
-                        il.Emit(OpCodes.Stelem_R8);
+                        il.Demit(OpCodes.Stelem_R8);
                     else if (elementType == typeof(IntPtr))
-                        il.Emit(OpCodes.Stelem_I);
+                        il.Demit(OpCodes.Stelem_I);
                     else if (elementType == typeof(UIntPtr))
-                        il.Emit(OpCodes.Stelem_I);
+                        il.Demit(OpCodes.Stelem_I);
                     else
-                        il.Emit(OpCodes.Stelem, elementType);
+                        il.Demit(OpCodes.Stelem, elementType);
                     return true;
                 }
 
