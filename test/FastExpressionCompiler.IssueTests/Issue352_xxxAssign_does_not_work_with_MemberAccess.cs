@@ -22,6 +22,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Check_MemberAccess_PlusOneAssign();
             // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
 
             Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
@@ -33,6 +34,7 @@ namespace FastExpressionCompiler.IssueTests
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign();
 
             Check_MemberAccess_PreIncrementAssign();
+
             Check_MemberAccess_PreIncrementAssign_Returning();
             Check_MemberAccess_PostIncrementAssign_Returning();
 
@@ -356,9 +358,60 @@ namespace FastExpressionCompiler.IssueTests
             var b = Parameter(typeof(Box), "b");
             var bValueField = typeof(Box).GetField(nameof(Box.Value));
             var e = Lambda<Action<Box>>(
-                Block(typeof(void),
-                    PreIncrementAssign(Field(b, bValueField))
-                ),
+                Block(PreIncrementAssign(Field(b, bValueField))),
+                b
+            );
+            e.PrintCSharp();
+            var @cs = (Action<Box>)((Box b) =>
+            {
+                ++b.Value;
+            });
+            var b1 = new Box { Value = 9 };
+            @cs(b1);
+            Assert.AreEqual(10, b1.Value);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            /*
+                // for comparison how FEC may optimize it:
+                OpCodes.Ldarg_1,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldfld,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stfld,
+                OpCodes.Ret
+            */
+            b1 = new Box { Value = 9 };
+            fs(b1);
+            Assert.AreEqual(10, b1.Value);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Dup,
+                OpCodes.Ldfld,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stfld,
+                OpCodes.Ret
+            );
+
+            b1 = new Box { Value = 9 };
+            ff(b1);
+            Assert.AreEqual(10, b1.Value);
+        }
+
+        [Test]
+        public void Check_MemberAccess_PlusOneAssign()
+        {
+            var b = Parameter(typeof(Box), "b");
+            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+            var e = Lambda<Action<Box>>(
+                Block(AddAssign(Field(b, bValueField), Constant(1))),
                 b
             );
             e.PrintCSharp();
@@ -379,6 +432,15 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_1,// todo: @wip OpCodes.Dup,
+                OpCodes.Ldfld,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stfld,
+                OpCodes.Ret
+            );
 
             b1 = new Box { Value = 9 };
             ff(b1);
