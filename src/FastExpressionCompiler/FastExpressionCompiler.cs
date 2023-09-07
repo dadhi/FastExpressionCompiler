@@ -1757,8 +1757,10 @@ namespace FastExpressionCompiler
             IndexAccess = 1 << 10,
             /// Invoking the inlined lambda (the default System.Expression behavior)
             InlinedLambdaInvoke = 1 << 11,
-            /// Indicates that the expression is part of ref local initialization eg `ref var x = ref foo()`
-            RefAssignment = 1 << 12
+            /// <summary>Indicates that member or index or variable is being assinged directly or inderectly `foo.Bar += 1` </summary>
+            Assignment = 1 << 12,
+            /// Indicates that the expression is part of ref local initialization e.g. `ref var x = ref foo()`
+            RefAssignment = 1 << 13
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -2489,11 +2491,12 @@ namespace FastExpressionCompiler
                     if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
-                    closure.LastEmitIsAddress = !isParamOrVarByRef &&
-                        (isArgByRef ||
-                            paramType.IsValueType &&
-                            (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281, #265
-                            (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
+                    //  means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
+                    var valueTypeParamCallOrMemberAccess = paramType.IsValueType &
+                        (parent & ParentFlags.IndexAccess) == 0 &  // but the parameter is not used as an index #281, #265
+                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0; // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
+
+                    closure.LastEmitIsAddress = !isParamOrVarByRef & (isArgByRef | valueTypeParamCallOrMemberAccess);
 
                     if (closure.LastEmitIsAddress)
                         EmitLoadArgAddress(il, paramIndex);
@@ -2507,13 +2510,13 @@ namespace FastExpressionCompiler
                         {
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
                             // this means the parameter is the argument to the method call and not the instance in the method call or member access
-                            if (!isArgByRef && (parent & ParentFlags.Call) != 0 && (parent & ParentFlags.InstanceAccess) == 0 ||
-                                (parent & ParentFlags.Arithmetic) != 0)
+                            if (!isArgByRef & (parent & ParentFlags.Call) != 0 & (parent & ParentFlags.InstanceAccess) == 0 ||
+                                (parent & ParentFlags.Arithmetic) != 0 & (parent & ParentFlags.MemberAccess) == 0)
                                 EmitLoadIndirectlyByRef(il, paramType);
                         }
                         else
                         {
-                            if (!isArgByRef && (parent & ParentFlags.Call) != 0 ||
+                            if (!isArgByRef & (parent & ParentFlags.Call) != 0 ||
                                 (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess)) != 0)
                                 il.Emit(OpCodes.Ldind_Ref);
                             // else if ((parent & ParentFlags.Arithmetic) != 0)
@@ -3663,7 +3666,7 @@ namespace FastExpressionCompiler
                     // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
                     var arithmFlags =
                         (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall)
-                        | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner;
+                        | ParentFlags.Assignment | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner;
 
                     var exprTypeIsNullable = exprType.IsNullable();
 
@@ -3694,6 +3697,10 @@ namespace FastExpressionCompiler
                         if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags))
                             return false;
 
+                        // if the field is the load by address, then we need to load its value from the ref in order to do arithmetic operation on it 
+                        if (closure.LastEmitIsAddress)
+                            EmitLoadIndirectlyByRef(il, leftType);
+
                         if (resultVar != -1 & isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
                     }
@@ -3718,7 +3725,9 @@ namespace FastExpressionCompiler
                             EmitStoreAndLoadLocalVariable(il, resultVar);
                     }
 
-                    if (!EmitMemberAssign(il, m.Member))
+                    if (closure.LastEmitIsAddress)
+                        EmitStoreIndirectlyByRef(il, leftType);
+                    else if (!EmitMemberAssign(il, m.Member))
                         return false;
 
                     if (leftIsNullable)
@@ -4084,32 +4093,32 @@ namespace FastExpressionCompiler
                 };
 
                 if (opCode.Equals(OpCodes.Ldobj))
-                    il.Emit(opCode, type);
+                    il.Demit(opCode, type);
                 else
-                    il.Emit(opCode);
+                    il.Demit(opCode);
             }
 
             // todo: @fix check that it is applied only for the ValueType OR make applied to the ReferenceType the same way as EmitLoadIndirectlyByRef
             private static void EmitStoreIndirectlyByRef(ILGenerator il, Type type)
             {
                 if (type == typeof(int) || type == typeof(uint))
-                    il.Emit(OpCodes.Stind_I4);
+                    il.Demit(OpCodes.Stind_I4);
                 else if (type == typeof(byte))
-                    il.Emit(OpCodes.Stind_I1);
+                    il.Demit(OpCodes.Stind_I1);
                 else if (type == typeof(short) || type == typeof(ushort))
-                    il.Emit(OpCodes.Stind_I2);
+                    il.Demit(OpCodes.Stind_I2);
                 else if (type == typeof(long) || type == typeof(ulong))
-                    il.Emit(OpCodes.Stind_I8);
+                    il.Demit(OpCodes.Stind_I8);
                 else if (type == typeof(float))
-                    il.Emit(OpCodes.Stind_R4);
+                    il.Demit(OpCodes.Stind_R4);
                 else if (type == typeof(double))
-                    il.Emit(OpCodes.Stind_R8);
+                    il.Demit(OpCodes.Stind_R8);
                 else if (type == typeof(object))
-                    il.Emit(OpCodes.Stind_Ref);
+                    il.Demit(OpCodes.Stind_Ref);
                 else if (type == typeof(IntPtr) || type == typeof(UIntPtr))
-                    il.Emit(OpCodes.Stind_I);
+                    il.Demit(OpCodes.Stind_I);
                 else
-                    il.Emit(OpCodes.Stobj, type);
+                    il.Demit(OpCodes.Stobj, type);
             }
 
             private static bool TryEmitIndexSet(int indexArgCount, PropertyInfo indexer, Type instType, Type elementType, ILGenerator il)
@@ -4256,20 +4265,35 @@ namespace FastExpressionCompiler
                         if (!TryEmit(instanceExpr, paramExprs, il, ref closure, setup, p))
                             return false;
 
-                        if ((parent & ParentFlags.DupMemberOwner) != 0)
-                            il.Demit(OpCodes.Dup);
-
                         // #248 indicates that expression is argument passed by ref to Call
                         var isByAddress = byRefIndex != -1;
-                        if (field.FieldType.IsValueType &&
-                            (parent & ParentFlags.InstanceAccess) != 0 &
-                                // #302 - if the field is used as an index or
-                                // #333 - if the field is accessed from the just constructed object `new Widget().DodgyValue`
-                                (parent & (ParentFlags.IndexAccess | ParentFlags.Ctor)) == 0)
+
+                        // we are assigning to the field of ValueType so we need it address `val.Bar += 1`, #352
+                        if ((parent & ParentFlags.Assignment) != 0 && instanceExpr.Type.IsValueType)
+                            isByAddress = true;
+                        else
+                            // if the field is not used as an index, #302
+                            // or if the field is not accessed from the just constructed object `new Widget().DodgyValue`, #333
+                            if (((parent & ParentFlags.InstanceAccess) != 0 &
+                                (parent & (ParentFlags.IndexAccess | ParentFlags.Ctor)) == 0) && field.FieldType.IsValueType)
                             isByAddress = true;
 
+                        // we don't need to duplicate the instance if we are working with the field address to save to it directly,
+                        // so the field address should be Dupped instead for loading and then storing by-ref for assignment (see below).
+                        // (don't forget to Pop if the assignment should be skipped for nullable with `null` value)
+                        if ((parent & ParentFlags.DupMemberOwner) != 0 &
+                            (!isByAddress | (parent & ParentFlags.Assignment) == 0))
+                            il.Demit(OpCodes.Dup);
+
                         closure.LastEmitIsAddress = isByAddress;
-                        il.Demit(isByAddress ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                        if (!isByAddress)
+                            il.Demit(OpCodes.Ldfld, field);
+                        else
+                        {
+                            il.Demit(OpCodes.Ldflda, field);
+                            if ((parent & ParentFlags.Assignment) != 0)
+                                il.Demit(OpCodes.Dup);
+                        }
                     }
                     else if (field.IsLiteral)
                     {

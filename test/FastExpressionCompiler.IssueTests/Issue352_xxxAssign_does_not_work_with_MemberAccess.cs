@@ -21,15 +21,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Check_ArrayAccess_Assign_InAction();
-            Check_ArrayAccess_AddAssign_InAction();
-            Check_ArrayAccess_AddAssign_ReturnResultInFunction();
-
-            Check_ArrayAccess_PreIncrement();
-            Check_ArrayAccess_Add();
-
-            Check_MemberAccess_AddAssign();
             // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
+
+            Check_Ref_ValueType_MemberAccess_PreIncrementAssign();
 
             Check_MemberAccess_PreIncrementAssign();
             Check_MemberAccess_PreIncrementAssign_Returning();
@@ -41,7 +35,16 @@ namespace FastExpressionCompiler.IssueTests
             Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
             Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
 
-            return 13;
+            Check_MemberAccess_AddAssign();
+
+            Check_ArrayAccess_Assign_InAction();
+            Check_ArrayAccess_AddAssign_InAction();
+            Check_ArrayAccess_AddAssign_ReturnResultInFunction();
+
+            Check_ArrayAccess_PreIncrement();
+            Check_ArrayAccess_Add();
+
+            return 14;
         }
 
         [Test]
@@ -448,6 +451,55 @@ namespace FastExpressionCompiler.IssueTests
             x1 = ff(b1);
             Assert.AreEqual(10, b1.Value);
             Assert.AreEqual(9, x1);
+        }
+
+        delegate void RefVal(ref Val v);
+
+        [Test]
+        public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign()
+        {
+            var v = Parameter(typeof(Val).MakeByRefType(), "v");
+            var vValueField = typeof(Val).GetField(nameof(Val.Value));
+            var e = Lambda<RefVal>(
+                Block(PreIncrementAssign(Field(v, vValueField))),
+                v
+            );
+            e.PrintCSharp();
+            var @cs = (RefVal)((ref Val v) =>
+            {
+                ++v.Value;
+            });
+
+            /* Designed IL from the sharplab.io:
+
+            IL_0000: ldarg.1
+            IL_0001: ldflda int32 Val::Value
+            IL_0006: dup
+            IL_0007: ldind.i4
+            IL_0008: ldc.i4.1
+            IL_0009: add
+            IL_000a: stind.i4
+            IL_000b: ret
+            */
+
+            var v1 = new Val { Value = 9 };
+            @cs(ref v1);
+            Assert.AreEqual(10, v1.Value);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            v1 = new Val { Value = 9 };
+            fs(ref v1);
+            // Assert.AreEqual(10, v1.Value); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v1.Value); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            v1 = new Val { Value = 9 };
+            ff(ref v1);
+            Assert.AreEqual(10, v1.Value);
         }
 
         [Test]
