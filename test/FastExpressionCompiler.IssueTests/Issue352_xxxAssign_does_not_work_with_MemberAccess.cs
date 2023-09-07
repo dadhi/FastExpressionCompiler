@@ -610,6 +610,25 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Dup,
+                OpCodes.Ldfld,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloca_S,
+                OpCodes.Dup,
+                OpCodes.Call,
+                OpCodes.Brfalse,
+                OpCodes.Call,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Newobj,
+                OpCodes.Stfld,
+                OpCodes.Br_S,
+                OpCodes.Pop,
+                OpCodes.Pop,
+                OpCodes.Ret
+            );
 
             b1 = new Box { NullableValue = null };
             b2 = new Box { NullableValue = 41 };
