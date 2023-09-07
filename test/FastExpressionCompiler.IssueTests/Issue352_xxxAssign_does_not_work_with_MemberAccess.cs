@@ -24,6 +24,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
 
+            Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Returning();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Returning();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign();
 
@@ -46,7 +47,7 @@ namespace FastExpressionCompiler.IssueTests
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_Add();
 
-            return 14;
+            return 16;
         }
 
         [Test]
@@ -553,6 +554,56 @@ namespace FastExpressionCompiler.IssueTests
             x1 = ff(ref v1);
             Assert.AreEqual(10, v1.Value);
             Assert.AreEqual(10, x1);
+        }
+
+        [Test]
+        public void Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Returning()
+        {
+            var v = Parameter(typeof(Val).MakeByRefType(), "v");
+            var vValueField = typeof(Val).GetField(nameof(Val.Value));
+            var e = Lambda<RefValReturning>(
+                Block(PostIncrementAssign(Field(v, vValueField))),
+                v
+            );
+            e.PrintCSharp();
+            var @cs = (RefValReturning)((ref Val v) =>
+            {
+                return v.Value++;
+            });
+
+            var v1 = new Val { Value = 9 };
+            var x1 = @cs(ref v1);
+            Assert.AreEqual(10, v1.Value);
+            Assert.AreEqual(9, x1);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            v1 = new Val { Value = 9 };
+            x1 = fs(ref v1);
+            Assert.AreEqual(9, v1.Value); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, x1);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldflda,
+                OpCodes.Dup,
+                OpCodes.Ldind_I4,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stind_I4,
+                OpCodes.Ldloc_0,
+                OpCodes.Ret
+            );
+
+            v1 = new Val { Value = 9 };
+            x1 = ff(ref v1);
+            Assert.AreEqual(10, v1.Value);
+            Assert.AreEqual(9, x1);
         }
 
         [Test]
