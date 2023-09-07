@@ -434,7 +434,7 @@ namespace FastExpressionCompiler.IssueTests
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
-                OpCodes.Ldarg_1,// todo: @wip OpCodes.Dup,
+                OpCodes.Dup,
                 OpCodes.Ldfld,
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,

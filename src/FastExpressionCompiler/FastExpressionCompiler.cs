@@ -3974,17 +3974,25 @@ namespace FastExpressionCompiler
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
                 // somewhere inside the block, so we shouldn't return with the result
-                switch (expr.Left.NodeType)
+                switch (left.NodeType)
                 {
                     case ExpressionType.Parameter:
                         return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right, nodeType, exprType, paramExprs, il, ref closure, setup, parent);
 
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
+                        var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
+
+                        // todo: @wip redirect to IncrementDecrementAssign in order to make it consistent
+                        if (left.NodeType == ExpressionType.MemberAccess & arithmeticNodeType == ExpressionType.Add)
+                        {
+                            if (right is ConstantExpression rc && rc.Value is int i && i == 1)
+                                return TryEmitIncrementDecrementAssign(Increment(left), ExpressionType.PreIncrementAssign, paramExprs, il, ref closure, setup, parent);
+                        }
+
                         bool ok = false;
                         var flags = parent & ~ParentFlags.IgnoreResult;
                         var resultLocalVarIndex = -1;
-                        var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
                         var assignFromLocalVar = right.NodeType == ExpressionType.Try;
                         if (assignFromLocalVar)
                         {
@@ -4970,9 +4978,9 @@ namespace FastExpressionCompiler
                 };
 
                 if (opCode.Equals(OpCodes.Call))
-                    il.Emit(OpCodes.Call, typeof(Math).FindMethod("Pow"));
+                    il.Demit(OpCodes.Call, typeof(Math).FindMethod("Pow"));
                 else
-                    il.Emit(opCode);
+                    il.Demit(opCode);
                 return true;
             }
 
