@@ -2976,17 +2976,17 @@ namespace FastExpressionCompiler
                 // todo: @perf @simplify convert to intrinsic?
                 if (expr == NullConstant)
                 {
-                    il.Emit(OpCodes.Ldnull);
+                    il.Demit(OpCodes.Ldnull);
                     return true;
                 }
                 if (expr == FalseConstant)
                 {
-                    il.Emit(OpCodes.Ldc_I4_0);
+                    il.Demit(OpCodes.Ldc_I4_0);
                     return true;
                 }
                 if (expr == TrueConstant)
                 {
-                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Demit(OpCodes.Ldc_I4_1);
                     return true;
                 }
                 if (expr is IntConstantExpression n)
@@ -3001,7 +3001,7 @@ namespace FastExpressionCompiler
                     return TryEmitConstant(closure.ContainsConstantsOrNestedLambdas(), expr.Type, constValue.GetType(), constValue, il, ref closure, byRefIndex);
                 if (expr.Type.IsValueType)
                     return EmitLoadLocalVariable(il, InitValueTypeVariable(il, expr.Type)); // yep, this is a proper way to emit the Nullable null
-                il.Emit(OpCodes.Ldnull);
+                il.Demit(OpCodes.Ldnull);
                 return true;
             }
 
@@ -3027,7 +3027,7 @@ namespace FastExpressionCompiler
                         EmitLoadClosureArrayItem(il, constIndex);
                         if (exprType.IsValueType)
                         {
-                            il.Emit(OpCodes.Unbox_Any, exprType);
+                            il.Demit(OpCodes.Unbox_Any, exprType);
                             if (byRefIndex != -1)
                                 EmitStoreAndLoadLocalVariableAddress(il, exprType);
                         }
@@ -3037,7 +3037,7 @@ namespace FastExpressionCompiler
                             // The cast probably required only for Full CLR starting from NET45, 
                             // e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`.
                             // .NET Core does not seem to care about verifiability and it's faster without the explicit cast.
-                            il.Emit(OpCodes.Castclass, exprType);
+                            il.Demit(OpCodes.Castclass, exprType);
                         }
 #endif
                     }
@@ -3046,12 +3046,12 @@ namespace FastExpressionCompiler
                 {
                     if (constValue is string s)
                     {
-                        il.Emit(OpCodes.Ldstr, s);
+                        il.Demit(OpCodes.Ldstr, s);
                         return true;
                     }
                     if (constValue is Type t)
                     {
-                        il.Emit(OpCodes.Ldtoken, t);
+                        il.Demit(OpCodes.Ldtoken, t);
                         return EmitMethodCall(il, _getTypeFromHandleMethod);
                     }
                     if (!TryEmitPrimitiveOrEnumOrDecimalConstant(il, constValue, constType))
@@ -3059,7 +3059,7 @@ namespace FastExpressionCompiler
                 }
 
                 if (exprType.IsValueType && exprType.IsNullable())
-                    il.Emit(OpCodes.Newobj, exprType.GetConstructors().GetFirst());
+                    il.Demit(OpCodes.Newobj, exprType.GetConstructors().GetFirst());
                 else if (exprType == typeof(object))
                     return il.TryEmitBoxOf(constType); // using normal type for Enum instead of underlying type
                 return true;
@@ -3073,7 +3073,7 @@ namespace FastExpressionCompiler
                 switch (Type.GetTypeCode(constType))
                 {
                     case TypeCode.Boolean:
-                        il.Emit((bool)constValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0); // todo: @perf check for LightExpression
+                        il.Demit((bool)constValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0); // todo: @perf check for LightExpression
                         break;
                     case TypeCode.Char:
                         EmitLoadConstantInt(il, (char)constValue);
@@ -3091,13 +3091,13 @@ namespace FastExpressionCompiler
                         EmitLoadConstantInt(il, (int)constValue);
                         break;
                     case TypeCode.Int64:
-                        il.Emit(OpCodes.Ldc_I8, (long)constValue);
+                        il.Demit(OpCodes.Ldc_I8, (long)constValue);
                         break;
                     case TypeCode.Double:
-                        il.Emit(OpCodes.Ldc_R8, (double)constValue);
+                        il.Demit(OpCodes.Ldc_R8, (double)constValue);
                         break;
                     case TypeCode.Single:
-                        il.Emit(OpCodes.Ldc_R4, (float)constValue);
+                        il.Demit(OpCodes.Ldc_R4, (float)constValue);
                         break;
                     case TypeCode.UInt16:
                         EmitLoadConstantInt(il, (ushort)constValue);
@@ -3111,7 +3111,7 @@ namespace FastExpressionCompiler
                     case TypeCode.UInt64:
                         unchecked
                         {
-                            il.Emit(OpCodes.Ldc_I8, (long)(ulong)constValue);
+                            il.Demit(OpCodes.Ldc_I8, (long)(ulong)constValue);
                         }
                         break;
                     case TypeCode.Decimal:
@@ -3121,14 +3121,14 @@ namespace FastExpressionCompiler
                     default:
                         if (constType == typeof(IntPtr))
                         {
-                            il.Emit(OpCodes.Ldc_I8, ((IntPtr)constValue).ToInt64());
+                            il.Demit(OpCodes.Ldc_I8, ((IntPtr)constValue).ToInt64());
                             break;
                         }
                         else if (constType == typeof(UIntPtr))
                         {
                             unchecked
                             {
-                                il.Emit(OpCodes.Ldc_I8, (long)((UIntPtr)constValue).ToUInt64());
+                                il.Demit(OpCodes.Ldc_I8, (long)((UIntPtr)constValue).ToUInt64());
                             }
                             break;
                         }
@@ -3143,14 +3143,14 @@ namespace FastExpressionCompiler
                 if (type == typeof(int) || type == typeof(char) || type == typeof(short) ||
                     type == typeof(byte) || type == typeof(ushort) || type == typeof(sbyte) ||
                     type == typeof(uint))
-                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Demit(OpCodes.Ldc_I4_1);
                 else if (type == typeof(long) || type == typeof(ulong) ||
                          type == typeof(IntPtr) || type == typeof(UIntPtr))
-                    il.Emit(OpCodes.Ldc_I8, (long)1);
+                    il.Demit(OpCodes.Ldc_I8, (long)1);
                 else if (type == typeof(float))
-                    il.Emit(OpCodes.Ldc_R4, 1f);
+                    il.Demit(OpCodes.Ldc_R4, 1f);
                 else if (type == typeof(double))
-                    il.Emit(OpCodes.Ldc_R8, 1d);
+                    il.Demit(OpCodes.Ldc_R8, 1d);
                 else
                     return false;
                 return true;
@@ -3159,17 +3159,17 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             private static void EmitLoadClosureArrayItem(ILGenerator il, int i)
             {
-                il.Emit(OpCodes.Ldloc_0);// SHOULD BE always at 0 location; load array field variable on the stack
+                il.Demit(OpCodes.Ldloc_0);// SHOULD BE always at 0 location; load array field variable on the stack
                 EmitLoadConstantInt(il, i);
-                il.Emit(OpCodes.Ldelem_Ref);
+                il.Demit(OpCodes.Ldelem_Ref);
             }
 
             internal static void EmitLoadConstantsAndNestedLambdasIntoVars(ILGenerator il, ref ClosureInfo closure)
             {
                 // todo: @perf load the field to `var` only if the constants are more than 1
                 // Load constants array field from Closure and store it into the variable
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldfld, ArrayClosureArrayField);
+                il.Demit(OpCodes.Ldarg_0);
+                il.Demit(OpCodes.Ldfld, ArrayClosureArrayField);
                 EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[]))); // always does Stloc_0
                 // important that the constant will contain the nested lambdas as well in the same array after the actual constants, so the Count indicates where the constants end
                 var constItems = closure.Constants.Items; // todo: @perf why do we getting when non constants is stored but just a nested lambda is present?
@@ -3184,7 +3184,7 @@ namespace FastExpressionCompiler
                         EmitLoadClosureArrayItem(il, i);
                         var varType = constItems[i].GetType();
                         if (varType.IsValueType)
-                            il.Emit(OpCodes.Unbox_Any, varType);
+                            il.Demit(OpCodes.Unbox_Any, varType);
 
                         varIndex = (short)il.GetNextLocalVarIndex(varType);
                         constUsage = (short)(varIndex + 1); // to distinguish from the default 1
@@ -3217,7 +3217,7 @@ namespace FastExpressionCompiler
                     var field = value == 0 ?
                         _decimalZero ?? (_decimalZero = typeof(Decimal).GetField(nameof(Decimal.Zero))) :
                         _decimalOne ?? (_decimalOne = typeof(Decimal).GetField(nameof(Decimal.One)));
-                    il.Emit(OpCodes.Ldsfld, field);
+                    il.Demit(OpCodes.Ldsfld, field);
                     return;
                 }
 
@@ -3227,27 +3227,27 @@ namespace FastExpressionCompiler
                     if (value >= int.MinValue && value <= int.MaxValue)
                     {
                         EmitLoadConstantInt(il, decimal.ToInt32(value));
-                        il.Emit(OpCodes.Newobj, _decimalIntCtor ?? (_decimalIntCtor = typeof(decimal).FindSingleParamConstructor(typeof(int))));
+                        il.Demit(OpCodes.Newobj, _decimalIntCtor ?? (_decimalIntCtor = typeof(decimal).FindSingleParamConstructor(typeof(int))));
                         return;
                     }
 
                     if (value >= long.MinValue && value <= long.MaxValue)
                     {
-                        il.Emit(OpCodes.Ldc_I8, decimal.ToInt64(value));
-                        il.Emit(OpCodes.Newobj, _decimalLongCtor ?? (_decimalLongCtor = typeof(decimal).FindSingleParamConstructor(typeof(long))));
+                        il.Demit(OpCodes.Ldc_I8, decimal.ToInt64(value));
+                        il.Demit(OpCodes.Newobj, _decimalLongCtor ?? (_decimalLongCtor = typeof(decimal).FindSingleParamConstructor(typeof(long))));
                         return;
                     }
                 }
 
                 if (value == decimal.MinValue)
                 {
-                    il.Emit(OpCodes.Ldsfld, typeof(decimal).GetField(nameof(decimal.MinValue)));
+                    il.Demit(OpCodes.Ldsfld, typeof(decimal).GetField(nameof(decimal.MinValue)));
                     return;
                 }
 
                 if (value == decimal.MaxValue)
                 {
-                    il.Emit(OpCodes.Ldsfld, typeof(decimal).GetField(nameof(decimal.MaxValue)));
+                    il.Demit(OpCodes.Ldsfld, typeof(decimal).GetField(nameof(decimal.MaxValue)));
                     return;
                 }
 
@@ -3259,10 +3259,10 @@ namespace FastExpressionCompiler
                 EmitLoadConstantInt(il, parts[1]);
                 EmitLoadConstantInt(il, parts[2]);
 
-                il.Emit(sign ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                il.Demit(sign ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                 EmitLoadConstantInt(il, scale);
-                il.Emit(OpCodes.Conv_U1);
-                il.Emit(OpCodes.Newobj, _decimalCtor.Value);
+                il.Demit(OpCodes.Conv_U1);
+                il.Demit(OpCodes.Newobj, _decimalCtor.Value);
             }
 
             private static readonly Lazy<ConstructorInfo> _decimalCtor = new Lazy<ConstructorInfo>(() =>
@@ -3709,9 +3709,37 @@ namespace FastExpressionCompiler
                             EmitStoreAndLoadLocalVariable(il, resultVar);
                     }
 
-                    // adding/substracting one
-                    il.Demit(OpCodes.Ldc_I4_1);
-                    il.Demit(opCode);
+                    if (rightOrNull == null)
+                    {
+                        // Increment/Decrement one
+                        il.Demit(OpCodes.Ldc_I4_1);
+                        il.Demit(opCode);
+                    }
+                    else
+                    {
+                        var rightNoValueLabel = default(Label);
+                        var rightType = rightOrNull.Type;
+                        var rightIsNullable = rightType.IsNullable();
+                        if (rightIsNullable)
+                        {
+                            rightNoValueLabel = il.DefineLabel();
+                            if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, arithmFlags))
+                                return false;
+
+                            if (!closure.LastEmitIsAddress)
+                                EmitStoreAndLoadLocalVariableAddress(il, rightType);
+
+                            il.Emit(OpCodes.Dup);
+                            EmitMethodCall(il, rightType.FindNullableHasValueGetterMethod());
+                            il.Emit(OpCodes.Brfalse, rightNoValueLabel);
+                            EmitMethodCall(il, rightType.FindNullableGetValueOrDefaultMethod());
+                        }
+                        else if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, arithmFlags))
+                            return false;
+
+                        if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
+                            return false;
+                    }
 
                     if (leftIsNullable)
                     {
@@ -3848,7 +3876,7 @@ namespace FastExpressionCompiler
             };
 
             private static bool TryEmitAssignToParameterOrVariable(
-                ParameterExpression left, Expression right, ExpressionType nodeType, Type exprType,
+                ParameterExpression left, Expression right, ExpressionType nodeType, ExpressionType arithmNodeType, Type exprType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -3863,7 +3891,6 @@ namespace FastExpressionCompiler
 #endif
                 bool ok = false;
                 var flags = parent & ~ParentFlags.IgnoreResult;
-                var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
 
                 var paramIndex = paramExprCount - 1;
                 while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), left)) --paramIndex;
@@ -3877,9 +3904,9 @@ namespace FastExpressionCompiler
                     if (isLeftByRef)
                         EmitLoadArg(il, paramIndex);
 
-                    ok = arithmeticNodeType == nodeType
+                    ok = arithmNodeType == nodeType
                         ? TryEmit(right, paramExprs, il, ref closure, setup, flags)
-                        : TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
+                        : TryEmitArithmetic(left, right, arithmNodeType, exprType, paramExprs, il, ref closure, setup, flags);
 
                     if ((parent & ParentFlags.IgnoreResult) == 0)
                         il.Emit(OpCodes.Dup); // duplicate value to assign and return
@@ -3899,8 +3926,8 @@ namespace FastExpressionCompiler
                     // if (leftParamExpr.IsByRef)
                     //     flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
 
-                    if (arithmeticNodeType != nodeType)
-                        ok = TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
+                    if (arithmNodeType != nodeType)
+                        ok = TryEmitArithmetic(left, right, arithmNodeType, exprType, paramExprs, il, ref closure, setup, flags);
                     else
                     {
                         ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
@@ -3966,10 +3993,11 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                var nodeType = expr.NodeType;
                 var exprType = expr.Type;
                 var left = expr.Left;
                 var right = expr.Right;
+                var nodeType = expr.NodeType;
+                var arithmNodeType = AssignToArithmeticOrSelf(nodeType);
 
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
@@ -3977,19 +4005,15 @@ namespace FastExpressionCompiler
                 switch (left.NodeType)
                 {
                     case ExpressionType.Parameter:
-                        return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right, nodeType, exprType, paramExprs, il, ref closure, setup, parent);
+                        return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
+                            nodeType, arithmNodeType, exprType, paramExprs, il, ref closure, setup, parent);
 
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
-                        var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
-
                         // todo: @wip redirect to IncrementDecrementAssign in order to make it consistent
-                        if (left.NodeType == ExpressionType.MemberAccess & arithmeticNodeType == ExpressionType.Add)
-                        {
-                            if (right is ConstantExpression rc && rc.Value is int i && i == 1)
-                                return TryEmitIncrementDecrementAssign(left, right, exprType, ExpressionType.PreIncrementAssign,
-                                    paramExprs, il, ref closure, setup, parent);
-                        }
+                        if (left.NodeType == ExpressionType.MemberAccess & arithmNodeType != nodeType & right.NodeType != ExpressionType.Try)
+                            return TryEmitIncrementDecrementAssign(
+                                left, right, exprType, arithmNodeType, paramExprs, il, ref closure, setup, parent);
 
                         bool ok = false;
                         var flags = parent & ~ParentFlags.IgnoreResult;
@@ -3997,7 +4021,7 @@ namespace FastExpressionCompiler
                         var assignFromLocalVar = right.NodeType == ExpressionType.Try;
                         if (assignFromLocalVar)
                         {
-                            if (arithmeticNodeType != nodeType)
+                            if (arithmNodeType != nodeType)
                                 return false; // todo: @feature does not support Assign operations when the right operant is the Try expression, see AssignTests.
                             if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
                                 return false;
@@ -4032,9 +4056,9 @@ namespace FastExpressionCompiler
 
                         if (assignFromLocalVar)
                             EmitLoadLocalVariable(il, resultLocalVarIndex);
-                        else if (arithmeticNodeType != nodeType)
+                        else if (arithmNodeType != nodeType)
                         {
-                            if (!TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags))
+                            if (!TryEmitArithmetic(left, right, arithmNodeType, exprType, paramExprs, il, ref closure, setup, flags))
                                 return false;
                         }
                         else if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
@@ -5237,21 +5261,21 @@ namespace FastExpressionCompiler
             {
                 switch (i)
                 {
-                    case -1: il.Emit(OpCodes.Ldc_I4_M1); break;
-                    case 0: il.Emit(OpCodes.Ldc_I4_0); break;
-                    case 1: il.Emit(OpCodes.Ldc_I4_1); break;
-                    case 2: il.Emit(OpCodes.Ldc_I4_2); break;
-                    case 3: il.Emit(OpCodes.Ldc_I4_3); break;
-                    case 4: il.Emit(OpCodes.Ldc_I4_4); break;
-                    case 5: il.Emit(OpCodes.Ldc_I4_5); break;
-                    case 6: il.Emit(OpCodes.Ldc_I4_6); break;
-                    case 7: il.Emit(OpCodes.Ldc_I4_7); break;
-                    case 8: il.Emit(OpCodes.Ldc_I4_8); break;
+                    case -1: il.Demit(OpCodes.Ldc_I4_M1); break;
+                    case 0: il.Demit(OpCodes.Ldc_I4_0); break;
+                    case 1: il.Demit(OpCodes.Ldc_I4_1); break;
+                    case 2: il.Demit(OpCodes.Ldc_I4_2); break;
+                    case 3: il.Demit(OpCodes.Ldc_I4_3); break;
+                    case 4: il.Demit(OpCodes.Ldc_I4_4); break;
+                    case 5: il.Demit(OpCodes.Ldc_I4_5); break;
+                    case 6: il.Demit(OpCodes.Ldc_I4_6); break;
+                    case 7: il.Demit(OpCodes.Ldc_I4_7); break;
+                    case 8: il.Demit(OpCodes.Ldc_I4_8); break;
                     default:
                         if (i > -129 && i < 128)
-                            il.Emit(OpCodes.Ldc_I4_S, (sbyte)i);
+                            il.Demit(OpCodes.Ldc_I4_S, (sbyte)i);
                         else
-                            il.Emit(OpCodes.Ldc_I4, i);
+                            il.Demit(OpCodes.Ldc_I4, i);
                         break;
                 }
             }
@@ -5821,6 +5845,15 @@ namespace FastExpressionCompiler
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, byte value)
+        {
+            il.Emit(opcode, value);
+#if DEMIT
+            Debug.WriteLine($"{opcode} {value}");
+#endif
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, in OpCode opcode, sbyte value)
         {
             il.Emit(opcode, value);
 #if DEMIT

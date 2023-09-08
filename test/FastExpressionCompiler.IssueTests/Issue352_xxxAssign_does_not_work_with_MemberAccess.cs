@@ -23,6 +23,8 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Check_MemberAccess_PlusOneAssign();
+            Check_MemberAccess_AddAssign();
+
             // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
 
             Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
@@ -43,8 +45,6 @@ namespace FastExpressionCompiler.IssueTests
             Check_MemberAccess_PreIncrementAssign_Nullable();
             Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
             Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
-
-            Check_MemberAccess_AddAssign();
 
             Check_ArrayAccess_Assign_InAction();
             Check_ArrayAccess_AddAssign_InAction();
@@ -290,9 +290,7 @@ namespace FastExpressionCompiler.IssueTests
             var b = Parameter(typeof(Box), "b");
             var bValueField = typeof(Box).GetField(nameof(Box.Value));
             var e = Lambda<Action<Box>>(
-                Block(typeof(void),
-                    AddAssign(Field(b, bValueField), Constant(33))
-                ),
+                Block(AddAssign(Field(b, bValueField), Constant(33))),
                 b
             );
             e.PrintCSharp();
