@@ -1921,7 +1921,8 @@ namespace FastExpressionCompiler
                         case ExpressionType.PreIncrementAssign:
                         case ExpressionType.PostDecrementAssign:
                         case ExpressionType.PreDecrementAssign:
-                            return TryEmitIncrementDecrementAssign((UnaryExpression)expr, expr.NodeType, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitIncrementDecrementAssign(
+                                ((UnaryExpression)expr).Operand, null, expr.Type, expr.NodeType, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.AddAssign:
                         case ExpressionType.AddAssignChecked:
@@ -3591,7 +3592,9 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            private static bool TryEmitIncrementDecrementAssign(UnaryExpression expr, ExpressionType nodeType,
+            // todo: @wip rename to TryEmitArithmethicAssign, `++`, `--`, `+=`, `-=`, etc.
+            private static bool TryEmitIncrementDecrementAssign(Expression left, Expression rightOrNull,
+                Type exprType, ExpressionType nodeType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -3599,21 +3602,18 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                var operandExpr = expr.Operand;
-                var exprType = expr.Type;
-
                 // we need the result variable and the time of Post/Pre when to store it only if the result is not ignored, otherwise don't bother
                 var resultVar = -1;
                 var isPost = false;
                 if (!parent.IgnoresResult())
                 {
-                    resultVar = il.GetNextLocalVarIndex(expr.Type);
+                    resultVar = il.GetNextLocalVarIndex(exprType);
                     isPost = nodeType == ExpressionType.PostIncrementAssign | nodeType == ExpressionType.PostDecrementAssign;
                 }
 
                 var opCode = nodeType == ExpressionType.PreIncrementAssign | nodeType == ExpressionType.PostIncrementAssign ? OpCodes.Add : OpCodes.Sub;
 
-                if (operandExpr is ParameterExpression p)
+                if (left is ParameterExpression p)
                 {
 #if LIGHT_EXPRESSION
                     var paramExprCount = paramExprs.ParameterCount;
@@ -3651,16 +3651,16 @@ namespace FastExpressionCompiler
                         EmitStoreLocalVariable(il, localVarIndex); // store incremented value into the local value;
                     else if (p.IsByRef)
                     {
-                        var incrementedVar = il.GetNextLocalVarIndex(expr.Type);
+                        var incrementedVar = il.GetNextLocalVarIndex(exprType);
                         EmitStoreLocalVariable(il, incrementedVar);
                         EmitLoadArg(il, paramIndex);
                         EmitLoadLocalVariable(il, incrementedVar);
-                        EmitStoreIndirectlyByRef(il, expr.Type);
+                        EmitStoreIndirectlyByRef(il, exprType);
                     }
                     else
                         il.Emit(OpCodes.Starg_S, paramIndex);
                 }
-                else if (operandExpr is MemberExpression m)
+                else if (left is MemberExpression m)
                 {
                     // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
                     // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
@@ -3748,7 +3748,7 @@ namespace FastExpressionCompiler
                         il.DmarkLabel(skipPopLeftDuppedInstance);
                     }
                 }
-                else if (operandExpr is IndexExpression indexExpr)
+                else if (left is IndexExpression indexExpr)
                 {
                     // todo: @wip @simplify could we move it to the TryEmitIndex method? #352
                     var flags = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
@@ -3809,7 +3809,7 @@ namespace FastExpressionCompiler
                     il.Emit(OpCodes.Ldc_I4_1);
                     il.Emit(opCode);
 
-                    var assignmentResultVar = il.GetNextLocalVarIndex(expr.Type);
+                    var assignmentResultVar = il.GetNextLocalVarIndex(exprType);
                     EmitStoreLocalVariable(il, assignmentResultVar);
 
                     // we don't need to load the index Object, because it's OpCodes.Dup above
@@ -3817,7 +3817,7 @@ namespace FastExpressionCompiler
 
                     EmitLoadLocalVariable(il, assignmentResultVar);
 
-                    if (!TryEmitIndexSet(indexArgCount, indexerProp, indexExpr.Object?.Type, expr.Type, il))
+                    if (!TryEmitIndexSet(indexArgCount, indexerProp, indexExpr.Object?.Type, exprType, il))
                         return false;
                 }
                 else
@@ -3987,7 +3987,8 @@ namespace FastExpressionCompiler
                         if (left.NodeType == ExpressionType.MemberAccess & arithmeticNodeType == ExpressionType.Add)
                         {
                             if (right is ConstantExpression rc && rc.Value is int i && i == 1)
-                                return TryEmitIncrementDecrementAssign(Increment(left), ExpressionType.PreIncrementAssign, paramExprs, il, ref closure, setup, parent);
+                                return TryEmitIncrementDecrementAssign(left, right, exprType, ExpressionType.PreIncrementAssign,
+                                    paramExprs, il, ref closure, setup, parent);
                         }
 
                         bool ok = false;
