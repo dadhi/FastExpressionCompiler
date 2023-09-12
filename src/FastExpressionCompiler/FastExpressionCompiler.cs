@@ -2109,7 +2109,7 @@ namespace FastExpressionCompiler
                 }
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (ctor != null)
-                    il.Emit(OpCodes.Newobj, ctor);
+                    il.Demit(OpCodes.Newobj, ctor);
                 else if (newExpr.Type.IsValueType)
                     EmitLoadLocalVariable(il, InitValueTypeVariable(il, newExpr.Type));
                 else
@@ -2127,28 +2127,28 @@ namespace FastExpressionCompiler
             {
                 // Mark the start of the loop body:
                 var loopBodyLabel = il.DefineLabel();
-                il.MarkLabel(loopBodyLabel);
+                il.DmarkLabel(loopBodyLabel);
 
                 if (loopExpr.ContinueLabel != null)
                 {
                     ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(loopExpr.ContinueLabel, out var foundLabel);
                     if (!foundLabel)
                         return false;
-                    il.MarkLabel(labelInfo.GetOrDefineLabel(il));
+                    il.DmarkLabel(labelInfo.GetOrDefineLabel(il));
                 }
 
                 if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, setup, parent))
                     return false;
 
                 // If loop hasn't exited, jump back to start of its body:
-                il.Emit(OpCodes.Br, loopBodyLabel);
+                il.Demit(OpCodes.Br, loopBodyLabel);
 
                 if (loopExpr.BreakLabel != null)
                 {
                     ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(loopExpr.BreakLabel, out var foundLabel);
                     if (!foundLabel)
                         return false;
-                    il.MarkLabel(labelInfo.GetOrDefineLabel(il));
+                    il.DmarkLabel(labelInfo.GetOrDefineLabel(il));
                 }
 
                 return true;
@@ -3302,14 +3302,14 @@ namespace FastExpressionCompiler
                     var elemType = expr.Type.GetElementType();
                     if (elemType == null)
                         return false;
-                    il.Emit(OpCodes.Newarr, elemType);
+                    il.Demit(OpCodes.Newarr, elemType);
                 }
                 else
                 {
                     for (var i = 0; i < boundCount; i++)
                         if (!TryEmit(bounds.GetArgument(i), paramExprs, il, ref closure, setup, parent))
                             return false;
-                    il.Emit(OpCodes.Newobj, expr.Type.GetTypeInfo().DeclaredConstructors.GetFirst());
+                    il.Demit(OpCodes.Newobj, expr.Type.GetTypeInfo().DeclaredConstructors.GetFirst());
                 }
                 return true;
             }
@@ -3339,25 +3339,26 @@ namespace FastExpressionCompiler
                 var elemCount = elems.Count;
 #endif
                 EmitLoadConstantInt(il, elemCount); // emit the length of the array calculated from the number of initializer elements
-                il.Emit(OpCodes.Newarr, elemType);
+                il.Demit(OpCodes.Newarr, elemType);
 
                 var isElemOfValueType = elemType.IsValueType;
                 for (var i = 0; i < elemCount; i++)
                 {
-                    il.Emit(OpCodes.Dup);
+                    il.Demit(OpCodes.Dup);
                     EmitLoadConstantInt(il, i);
                     if (isElemOfValueType) // loading element address for later copying of value into it.
                     {
-                        il.Emit(OpCodes.Ldelema, elemType);
+                        il.Demit(OpCodes.Ldelema, elemType);
                         if (!TryEmit(elems.GetArgument(i), paramExprs, il, ref closure, setup, parent))
                             return false;
-                        il.Emit(OpCodes.Stobj, elemType); // store element of value type by array element address
+                        // todo: @wip should we use `EmitStoreIndirectlyByRef`?
+                        il.Demit(OpCodes.Stobj, elemType); // store element of value type by array element address
                     }
                     else
                     {
                         if (!TryEmit(elems.GetArgument(i), paramExprs, il, ref closure, setup, parent))
                             return false;
-                        il.Emit(OpCodes.Stelem_Ref);
+                        il.Demit(OpCodes.Stelem_Ref);
                     }
                 }
                 return true;
@@ -4306,12 +4307,12 @@ namespace FastExpressionCompiler
                     ok = EmitMethodCall(il, method);
                 else
                 {
-                    il.Emit(OpCodes.Constrained, objExpr.Type);
+                    il.Demit(OpCodes.Constrained, objExpr.Type);
                     ok = EmitVirtualMethodCall(il, method);
                 }
 
                 if (parent.IgnoresResult() && method.ReturnType != typeof(void))
-                    il.Emit(OpCodes.Pop);
+                    il.Demit(OpCodes.Pop);
 
                 closure.LastEmitIsAddress = false;
                 return ok;

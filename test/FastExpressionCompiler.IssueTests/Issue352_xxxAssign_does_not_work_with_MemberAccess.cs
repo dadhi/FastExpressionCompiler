@@ -22,9 +22,10 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
+            // Check_MemberAccess_AddAssign_ToNewExpression();
 
-            Check_MemberAccess_AddAssign_StaticMember();
+            // Check_MemberAccess_AddAssign_StaticMember();
+            Check_MemberAccess_AddAssign_StaticProp();
 
             Check_MemberAccess_AddAssign();
             Check_MemberAccess_PlusOneAssign();
@@ -48,7 +49,7 @@ namespace FastExpressionCompiler.IssueTests
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_Add();
 
-            return 22;
+            return 24;
         }
 
         [Test]
@@ -252,6 +253,7 @@ namespace FastExpressionCompiler.IssueTests
         class Box
         {
             public static int StaticValue;
+            public static int StaticProp { get; set; }
             public int Value;
             public int? NullableValue;
 
@@ -316,6 +318,44 @@ namespace FastExpressionCompiler.IssueTests
             Box.StaticValue = 0;
             ff();
             Assert.AreEqual(33, Box.StaticValue);
+        }
+
+        [Test]
+        public void Check_MemberAccess_AddAssign_StaticProp()
+        {
+            var bValueField = typeof(Box).GetProperty(nameof(Box.StaticProp));
+            var e = Lambda<Action>(
+                Block(AddAssign(Property(null, bValueField), Constant(33)))
+            );
+            e.PrintCSharp();
+            var @cs = (Action)(() =>
+            {
+                Box.StaticProp += 33;
+            });
+            Box.StaticProp = 0;
+            @cs();
+            Assert.AreEqual(33, Box.StaticProp);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            Box.StaticProp = 0;
+            fs();
+            Assert.AreEqual(33, Box.StaticProp);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Call,       // Box.get_StaticProp
+                OpCodes.Ldc_I4_S,   // 33
+                OpCodes.Add,
+                OpCodes.Call,       // Box.set_StaticProp
+                OpCodes.Ret
+            );
+
+            Box.StaticProp = 0;
+            ff();
+            Assert.AreEqual(33, Box.StaticProp);
         }
 
         [Test]
@@ -436,30 +476,33 @@ namespace FastExpressionCompiler.IssueTests
             var bValueField = typeof(Box).GetField(nameof(Box.Value));
 
             var e = Lambda<Func<int>>(
-                Block(
-                    AddAssign(Field(New(bCtor, Constant(42)), bValueField), Constant(33))
-                )
+                Block(AddAssign(Field(New(bCtor, Constant(42)), bValueField), Constant(33)))
             );
             e.PrintCSharp();
+            Box.CtorCalls = 0;
             var @cs = (Func<int>)(() =>
             {
                 return new Box(42).Value += 33;
             });
             var a = @cs();
             Assert.AreEqual(42 + 33, a);
+            Assert.AreEqual(1, Box.CtorCalls);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
+            Box.CtorCalls = 0;
             var x = fs();
             Assert.AreEqual(42 + 33, x);
+            Assert.AreEqual(1, Box.CtorCalls);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
+            Box.CtorCalls = 0;
             var y = ff();
             Assert.AreEqual(42 + 33, y);
-            // Assert.AreEqual(3, Box.CtorCalls); // todo: @wip @fixme
+            Assert.AreEqual(1, Box.CtorCalls);
         }
 
         [Test]
