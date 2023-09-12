@@ -3944,7 +3944,7 @@ namespace FastExpressionCompiler
             };
 
             private static bool TryEmitAssignToParameterOrVariable(
-                ParameterExpression left, Expression right, ExpressionType nodeType, ExpressionType arithmNodeType, Type exprType,
+                ParameterExpression left, Expression right, ExpressionType nodeType, ExpressionType arithmeticNodeType, Type exprType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -3972,9 +3972,9 @@ namespace FastExpressionCompiler
                     if (isLeftByRef)
                         EmitLoadArg(il, paramIndex);
 
-                    ok = arithmNodeType == nodeType
+                    ok = arithmeticNodeType == nodeType
                         ? TryEmit(right, paramExprs, il, ref closure, setup, flags)
-                        : TryEmitArithmetic(left, right, arithmNodeType, exprType, paramExprs, il, ref closure, setup, flags);
+                        : TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
 
                     if ((parent & ParentFlags.IgnoreResult) == 0)
                         il.Emit(OpCodes.Dup); // duplicate value to assign and return
@@ -3994,8 +3994,8 @@ namespace FastExpressionCompiler
                     // if (leftParamExpr.IsByRef)
                     //     flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
 
-                    if (arithmNodeType != nodeType)
-                        ok = TryEmitArithmetic(left, right, arithmNodeType, exprType, paramExprs, il, ref closure, setup, flags);
+                    if (arithmeticNodeType != nodeType)
+                        ok = TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
                     else
                     {
                         ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
@@ -4065,7 +4065,7 @@ namespace FastExpressionCompiler
                 var left = expr.Left;
                 var right = expr.Right;
                 var nodeType = expr.NodeType;
-                var arithmNodeType = AssignToArithmeticOrSelf(nodeType);
+                var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
 
                 // if this assignment is part of a single body-less expression or the result of a block
                 // we should put its result to the evaluation stack before the return, otherwise we are
@@ -4074,20 +4074,20 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Parameter:
                         return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
-                            nodeType, arithmNodeType, exprType, paramExprs, il, ref closure, setup, parent);
+                            nodeType, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, parent);
 
                     case ExpressionType.MemberAccess:
                         return TryEmitPossiblyArithmeticOperationThenAssign(
-                            left, right, exprType, arithmNodeType, paramExprs, il, ref closure, setup, parent);
+                            left, right, exprType, arithmeticNodeType, paramExprs, il, ref closure, setup, parent);
 
                     case ExpressionType.Index:
                         bool ok = false;
                         var flags = parent & ~ParentFlags.IgnoreResult;
                         var resultLocalVarIndex = -1;
-                        var assignFromLocalVar = right.NodeType == ExpressionType.Try;
-                        if (assignFromLocalVar)
+                        var rightIsTryBlock = right.NodeType == ExpressionType.Try;
+                        if (rightIsTryBlock)
                         {
-                            if (arithmNodeType != nodeType)
+                            if (arithmeticNodeType != nodeType)
                                 return false; // todo: @feature does not support Assign operations when the right operant is the Try expression, see AssignTests.
                             if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
                                 return false;
@@ -4095,9 +4095,8 @@ namespace FastExpressionCompiler
                             EmitStoreLocalVariable(il, resultLocalVarIndex);
                         }
 
-                        var indexLeft = left as IndexExpression;
-                        var membrLeft = left as MemberExpression;
-                        var objExpr = indexLeft != null ? indexLeft.Object : membrLeft.Expression;
+                        var indexLeft = (IndexExpression)left;
+                        var objExpr = indexLeft.Object;
                         if (objExpr != null)
                         {
                             var objFlags = indexLeft != null ? flags | ParentFlags.IndexAccess : flags | ParentFlags.MemberAccess;
@@ -4106,52 +4105,35 @@ namespace FastExpressionCompiler
                         }
 
                         var indexArgCount = 0;
-                        if (indexLeft != null)
-                        {
 #if SUPPORTS_ARGUMENT_PROVIDER
-                            var indexArgExprs = (IArgumentProvider)indexLeft;
-                            indexArgCount = indexArgExprs.ArgumentCount;
+                        var indexArgExprs = (IArgumentProvider)indexLeft;
+                        indexArgCount = indexArgExprs.ArgumentCount;
 #else
-                            var indexArgExprs = indexLeft.Arguments;
-                            indexArgCount = indexArgExprs.Count;
+                        var indexArgExprs = indexLeft.Arguments;
+                        indexArgCount = indexArgExprs.Count;
 #endif
-                            for (var i = 0; i < indexArgCount; ++i)
-                                if (!TryEmit(indexArgExprs.GetArgument(i), paramExprs, il, ref closure, setup, flags))
-                                    return false;
-                        }
+                        for (var i = 0; i < indexArgCount; ++i)
+                            if (!TryEmit(indexArgExprs.GetArgument(i), paramExprs, il, ref closure, setup, flags))
+                                return false;
 
-                        if (assignFromLocalVar)
+                        if (rightIsTryBlock)
                             EmitLoadLocalVariable(il, resultLocalVarIndex);
-                        else if (arithmNodeType != nodeType)
+                        else if (arithmeticNodeType != nodeType)
                         {
-                            if (!TryEmitArithmetic(left, right, arithmNodeType, exprType, paramExprs, il, ref closure, setup, flags))
+                            if (!TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags))
                                 return false;
                         }
                         else if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
                             return false;
 
-                        if (indexLeft != null)
-                        {
-                            if ((parent & ParentFlags.IgnoreResult) != 0)
-                                return TryEmitIndexSet(indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType, il);
+                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                            return TryEmitIndexSet(indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType, il);
 
-                            il.Emit(OpCodes.Dup);
-                            var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
-                            EmitStoreLocalVariable(il, resultVarIndex);
-                            ok = TryEmitIndexSet(indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType, il);
-                            EmitLoadLocalVariable(il, resultVarIndex);
-                        }
-                        else
-                        {
-                            if ((parent & ParentFlags.IgnoreResult) != 0)
-                                return EmitMemberAssign(il, membrLeft.Member);
-
-                            il.Emit(OpCodes.Dup);
-                            var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
-                            EmitStoreLocalVariable(il, resultVarIndex);
-                            ok = EmitMemberAssign(il, membrLeft.Member);
-                            EmitLoadLocalVariable(il, resultVarIndex);
-                        }
+                        il.Emit(OpCodes.Dup);
+                        var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
+                        EmitStoreLocalVariable(il, resultVarIndex);
+                        ok = TryEmitIndexSet(indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType, il);
+                        EmitLoadLocalVariable(il, resultVarIndex);
                         return ok;
 
                     default: // todo: @feature not yet support assignment targets
@@ -4919,7 +4901,7 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
-            private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
+            private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType arithmeticNodeType, Type exprType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -4968,7 +4950,7 @@ namespace FastExpressionCompiler
                 else if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                     return false;
 
-                if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
+                if (!TryEmitArithmeticOperation(leftType, rightType, arithmeticNodeType, exprType, il))
                     return false;
 
                 if (leftIsNullable | rightIsNullable) // todo: @clarify that the emitted code is correct
@@ -5030,7 +5012,7 @@ namespace FastExpressionCompiler
                 return null;
             }
 
-            private static bool TryEmitArithmeticOperation(Type leftType, Type rightType, ExpressionType nodeType, Type exprType, ILGenerator il)
+            private static bool TryEmitArithmeticOperation(Type leftType, Type rightType, ExpressionType arithmeticNodeType, Type exprType, ILGenerator il)
             {
                 if (!exprType.IsPrimitive)
                 {
@@ -5040,7 +5022,7 @@ namespace FastExpressionCompiler
                     if (!exprType.IsPrimitive)
                     {
                         var method = exprType != typeof(string)
-                            ? FindStaticOperatorMethod(exprType, nodeType.GetArithmeticBinaryOperatorMethodName())
+                            ? FindStaticOperatorMethod(exprType, arithmeticNodeType.GetArithmeticBinaryOperatorMethodName())
                             : leftType != rightType || leftType != typeof(string)
                                 ? _stringObjectConcatMethod ?? (_stringObjectConcatMethod = GetStringConcatMethod(typeof(object)))
                                 : _stringStringConcatMethod ?? (_stringStringConcatMethod = GetStringConcatMethod(typeof(string)));
@@ -5049,7 +5031,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                var opCode = AssignToArithmeticOrSelf(nodeType) switch
+                var opCode = arithmeticNodeType switch
                 {
                     ExpressionType.Add => OpCodes.Add,
                     ExpressionType.AddChecked => exprType.IsUnsigned() ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf,
@@ -5065,7 +5047,7 @@ namespace FastExpressionCompiler
                     ExpressionType.LeftShift => OpCodes.Shl,
                     ExpressionType.RightShift => exprType.IsUnsigned() ? OpCodes.Shr_Un : OpCodes.Shr,
                     ExpressionType.Power => OpCodes.Call,
-                    _ => throw new NotSupportedException("Unsupported arithmetic operation: " + nodeType)
+                    _ => throw new NotSupportedException("Unsupported arithmetic operation: " + arithmeticNodeType)
                 };
 
                 if (opCode.Equals(OpCodes.Call))
