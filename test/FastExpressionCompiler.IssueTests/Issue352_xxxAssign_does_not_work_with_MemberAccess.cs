@@ -22,16 +22,18 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // Check_MemberAccess_AddAssign_ToNewExpression();
-            // Check_MemberAccess_AddAssign_StaticMember();
-            // Check_MemberAccess_AddAssign_StaticProp();
-            // Check_MemberAccess_AddAssign();
-            // Check_MemberAccess_PlusOneAssign();
-            // Check_MemberAccess_AddAssign_NullablePlusNullable();
+            Check_MemberAccess_AddAssign_ToNewExpression();
+            Check_MemberAccess_AddAssign_StaticMember();
+            Check_MemberAccess_AddAssign_StaticProp();
+            Check_MemberAccess_AddAssign();
+            Check_MemberAccess_PlusOneAssign();
+            Check_MemberAccess_AddAssign_NullablePlusNullable();
             Check_MemberAccess_AddAssign_NullablePlusNullable_Prop();
             Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
+            Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable_Prop();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable();
+            Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_Prop();
             Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Returning();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Returning();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign();
@@ -48,7 +50,7 @@ namespace FastExpressionCompiler.IssueTests
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_Add();
 
-            return 25;
+            return 27;
         }
 
         [Test]
@@ -270,8 +272,9 @@ namespace FastExpressionCompiler.IssueTests
 
         struct Val
         {
-            public int Value;
-            public int? NullableValue;
+            public int Field;
+            public int? NullableField;
+            public int? NullableProp { get; set; }
 
             public Val() { }
 
@@ -279,7 +282,7 @@ namespace FastExpressionCompiler.IssueTests
             public Val(int value)
             {
                 ++CtorCalls;
-                Value = value;
+                Field = value;
             }
         }
 
@@ -750,28 +753,28 @@ namespace FastExpressionCompiler.IssueTests
         public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
-            var vValueField = typeof(Val).GetField(nameof(Val.Value));
+            var vField = typeof(Val).GetField(nameof(Val.Field));
             var e = Lambda<RefVal>(
-                Block(PreIncrementAssign(Field(v, vValueField))),
+                Block(PreIncrementAssign(Field(v, vField))),
                 v
             );
             e.PrintCSharp();
             var @cs = (RefVal)((ref Val v) =>
             {
-                ++v.Value;
+                ++v.Field;
             });
 
-            var v1 = new Val { Value = 9 };
+            var v1 = new Val { Field = 9 };
             @cs(ref v1);
-            Assert.AreEqual(10, v1.Value);
+            Assert.AreEqual(10, v1.Field);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            v1 = new Val { Value = 9 };
+            v1 = new Val { Field = 9 };
             fs(ref v1);
             // Assert.AreEqual(10, v1.Value); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
-            Assert.AreEqual(9, v1.Value); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v1.Field); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -787,42 +790,42 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            v1 = new Val { Value = 9 };
+            v1 = new Val { Field = 9 };
             ff(ref v1);
-            Assert.AreEqual(10, v1.Value);
+            Assert.AreEqual(10, v1.Field);
         }
 
         [Test]
         public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
-            var vValueField = typeof(Val).GetField(nameof(Val.NullableValue));
+            var vField = typeof(Val).GetField(nameof(Val.NullableField));
             var e = Lambda<RefVal>(
-                Block(PreIncrementAssign(Field(v, vValueField))),
+                Block(PreIncrementAssign(Field(v, vField))),
                 v
             );
             e.PrintCSharp();
             var @cs = (RefVal)((ref Val v) =>
             {
-                ++v.NullableValue;
+                ++v.NullableField;
             });
 
-            var v1 = new Val { NullableValue = null };
-            var v2 = new Val { NullableValue = 9 };
+            var v1 = new Val { NullableField = null };
+            var v2 = new Val { NullableField = 9 };
             @cs(ref v1);
             @cs(ref v2);
-            Assert.AreEqual(null, v1.NullableValue);
-            Assert.AreEqual(10, v2.NullableValue);
+            Assert.AreEqual(null, v1.NullableField);
+            Assert.AreEqual(10, v2.NullableField);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            v1 = new Val { NullableValue = null };
-            v2 = new Val { NullableValue = 9 };
+            v1 = new Val { NullableField = null };
+            v2 = new Val { NullableField = 9 };
             fs(ref v1);
             fs(ref v2);
-            Assert.AreEqual(null, v1.NullableValue);
-            Assert.AreEqual(9, v2.NullableValue); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(null, v1.NullableField);
+            Assert.AreEqual(9, v2.NullableField); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -847,12 +850,74 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            v1 = new Val { NullableValue = null };
-            v2 = new Val { NullableValue = 9 };
+            v1 = new Val { NullableField = null };
+            v2 = new Val { NullableField = 9 };
             ff(ref v1);
             ff(ref v2);
-            Assert.AreEqual(null, v1.NullableValue);
-            Assert.AreEqual(10, v2.NullableValue);
+            Assert.AreEqual(null, v1.NullableField);
+            Assert.AreEqual(10, v2.NullableField);
+        }
+
+        [Test]
+        public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_Prop()
+        {
+            var v = Parameter(typeof(Val).MakeByRefType(), "v");
+            var vProp = typeof(Val).GetProperty(nameof(Val.NullableProp));
+            var e = Lambda<RefVal>(
+                Block(PreIncrementAssign(Property(v, vProp))),
+                v
+            );
+            e.PrintCSharp();
+            var @cs = (RefVal)((ref Val v) =>
+            {
+                ++v.NullableProp;
+            });
+
+            var v1 = new Val { NullableProp = null };
+            var v2 = new Val { NullableProp = 9 };
+            @cs(ref v1);
+            @cs(ref v2);
+            Assert.AreEqual(null, v1.NullableProp);
+            Assert.AreEqual(10, v2.NullableProp);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            v1 = new Val { NullableProp = null };
+            v2 = new Val { NullableProp = 9 };
+            fs(ref v1);
+            fs(ref v2);
+            Assert.AreEqual(null, v1.NullableProp);
+            Assert.AreEqual(9, v2.NullableProp); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Dup,
+                OpCodes.Call,       // Val.get_NullableProp
+                OpCodes.Stloc_0,
+                OpCodes.Ldloca_S,
+                OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
+                OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
+                OpCodes.Ldloca_S,
+                OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Newobj,
+                OpCodes.Call,       // Val.set_NullableProp
+                OpCodes.Br_S,       // jump to Ret op-code
+                OpCodes.Pop,        // Pops the Dup-ped Val argument
+                OpCodes.Ret
+            );
+
+            v1 = new Val { NullableProp = null };
+            v2 = new Val { NullableProp = 9 };
+            ff(ref v1);
+            ff(ref v2);
+            Assert.AreEqual(null, v1.NullableProp);
+            Assert.AreEqual(10, v2.NullableProp);
         }
 
         delegate int? RefValReturningNullable(ref Val v);
@@ -861,36 +926,36 @@ namespace FastExpressionCompiler.IssueTests
         public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
-            var vValueField = typeof(Val).GetField(nameof(Val.NullableValue));
+            var vField = typeof(Val).GetField(nameof(Val.NullableField));
             var e = Lambda<RefValReturningNullable>(
-                Block(PreIncrementAssign(Field(v, vValueField))),
+                Block(PreIncrementAssign(Field(v, vField))),
                 v
             );
             e.PrintCSharp();
             var @cs = (RefValReturningNullable)((ref Val v) =>
             {
-                return ++v.NullableValue;
+                return ++v.NullableField;
             });
 
-            var v1 = new Val { NullableValue = null };
-            var v2 = new Val { NullableValue = 9 };
+            var v1 = new Val { NullableField = null };
+            var v2 = new Val { NullableField = 9 };
             var x1 = @cs(ref v1);
             var x2 = @cs(ref v2);
-            Assert.AreEqual(null, v1.NullableValue);
+            Assert.AreEqual(null, v1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(10, v2.NullableValue);
+            Assert.AreEqual(10, v2.NullableField);
             Assert.AreEqual(10, x2);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            v1 = new Val { NullableValue = null };
-            v2 = new Val { NullableValue = 9 };
+            v1 = new Val { NullableField = null };
+            v2 = new Val { NullableField = 9 };
             x1 = fs(ref v1);
             x2 = fs(ref v2);
-            Assert.AreEqual(null, v1.NullableValue);
+            Assert.AreEqual(null, v1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(9, v2.NullableValue); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v2.NullableField); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Assert.AreEqual(10, x2);
 
             var ff = e.CompileFast(true);
@@ -918,13 +983,83 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            v1 = new Val { NullableValue = null };
-            v2 = new Val { NullableValue = 9 };
+            v1 = new Val { NullableField = null };
+            v2 = new Val { NullableField = 9 };
             x1 = ff(ref v1);
             x2 = ff(ref v2);
-            Assert.AreEqual(null, v1.NullableValue);
+            Assert.AreEqual(null, v1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(10, v2.NullableValue);
+            Assert.AreEqual(10, v2.NullableField);
+            Assert.AreEqual(10, x2);
+        }
+
+        [Test]
+        public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable_Prop()
+        {
+            var v = Parameter(typeof(Val).MakeByRefType(), "v");
+            var vProp = typeof(Val).GetProperty(nameof(Val.NullableProp));
+            var e = Lambda<RefValReturningNullable>(
+                Block(PreIncrementAssign(Property(v, vProp))),
+                v
+            );
+            e.PrintCSharp();
+            var @cs = (RefValReturningNullable)((ref Val v) =>
+            {
+                return ++v.NullableProp;
+            });
+
+            var v1 = new Val { NullableProp = null };
+            var v2 = new Val { NullableProp = 9 };
+            var x1 = @cs(ref v1);
+            var x2 = @cs(ref v2);
+            Assert.AreEqual(null, v1.NullableProp);
+            Assert.AreEqual(null, x1);
+            Assert.AreEqual(10, v2.NullableProp);
+            Assert.AreEqual(10, x2);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            v1 = new Val { NullableProp = null };
+            v2 = new Val { NullableProp = 9 };
+            x1 = fs(ref v1);
+            x2 = fs(ref v2);
+            Assert.AreEqual(null, v1.NullableProp);
+            Assert.AreEqual(null, x1);
+            Assert.AreEqual(9, v2.NullableProp); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(10, x2);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Dup,
+                OpCodes.Call,       // Val.get_NullableProp
+                OpCodes.Stloc_0,    // we are using a single variable to store the field and to store the result
+                OpCodes.Ldloca_S,   // 0
+                OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
+                OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
+                OpCodes.Ldloca_S,   // 0
+                OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Newobj,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Call,       // Val.set_NullableProp
+                OpCodes.Br_S,       // jump to Ret op-code
+                OpCodes.Pop,        // Pops the Val arg Dupped
+                OpCodes.Ldloc_0,
+                OpCodes.Ret
+            );
+
+            v1 = new Val { NullableProp = null };
+            v2 = new Val { NullableProp = 9 };
+            x1 = ff(ref v1);
+            x2 = ff(ref v2);
+            Assert.AreEqual(null, v1.NullableProp);
+            Assert.AreEqual(null, x1);
+            Assert.AreEqual(10, v2.NullableProp);
             Assert.AreEqual(10, x2);
         }
 
@@ -932,36 +1067,36 @@ namespace FastExpressionCompiler.IssueTests
         public void Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
-            var vValueField = typeof(Val).GetField(nameof(Val.NullableValue));
+            var vField = typeof(Val).GetField(nameof(Val.NullableField));
             var e = Lambda<RefValReturningNullable>(
-                Block(PostIncrementAssign(Field(v, vValueField))),
+                Block(PostIncrementAssign(Field(v, vField))),
                 v
             );
             e.PrintCSharp();
             var @cs = (RefValReturningNullable)((ref Val v) =>
             {
-                return v.NullableValue++;
+                return v.NullableField++;
             });
 
-            var v1 = new Val { NullableValue = null };
-            var v2 = new Val { NullableValue = 9 };
+            var v1 = new Val { NullableField = null };
+            var v2 = new Val { NullableField = 9 };
             var x1 = @cs(ref v1);
             var x2 = @cs(ref v2);
-            Assert.AreEqual(null, v1.NullableValue);
+            Assert.AreEqual(null, v1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(10, v2.NullableValue);
+            Assert.AreEqual(10, v2.NullableField);
             Assert.AreEqual(9, x2);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            v1 = new Val { NullableValue = null };
-            v2 = new Val { NullableValue = 9 };
+            v1 = new Val { NullableField = null };
+            v2 = new Val { NullableField = 9 };
             x1 = fs(ref v1);
             x2 = fs(ref v2);
-            Assert.AreEqual(null, v1.NullableValue);
+            Assert.AreEqual(null, v1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(9, v2.NullableValue); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v2.NullableField); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Assert.AreEqual(9, x2);
 
             var ff = e.CompileFast(true);
@@ -987,13 +1122,13 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            v1 = new Val { NullableValue = null };
-            v2 = new Val { NullableValue = 9 };
+            v1 = new Val { NullableField = null };
+            v2 = new Val { NullableField = 9 };
             x1 = ff(ref v1);
             x2 = ff(ref v2);
-            Assert.AreEqual(null, v1.NullableValue);
+            Assert.AreEqual(null, v1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(10, v2.NullableValue);
+            Assert.AreEqual(10, v2.NullableField);
             Assert.AreEqual(9, x2);
         }
 
@@ -1003,28 +1138,28 @@ namespace FastExpressionCompiler.IssueTests
         public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Returning()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
-            var vValueField = typeof(Val).GetField(nameof(Val.Value));
+            var vField = typeof(Val).GetField(nameof(Val.Field));
             var e = Lambda<RefValReturning>(
-                Block(PreIncrementAssign(Field(v, vValueField))),
+                Block(PreIncrementAssign(Field(v, vField))),
                 v
             );
             e.PrintCSharp();
             var @cs = (RefValReturning)((ref Val v) =>
             {
-                return ++v.Value;
+                return ++v.Field;
             });
 
-            var v1 = new Val { Value = 9 };
+            var v1 = new Val { Field = 9 };
             var x1 = @cs(ref v1);
-            Assert.AreEqual(10, v1.Value);
+            Assert.AreEqual(10, v1.Field);
             Assert.AreEqual(10, x1);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            v1 = new Val { Value = 9 };
+            v1 = new Val { Field = 9 };
             x1 = fs(ref v1);
-            Assert.AreEqual(9, v1.Value); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v1.Field); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Assert.AreEqual(10, x1);
 
             var ff = e.CompileFast(true);
@@ -1043,9 +1178,9 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            v1 = new Val { Value = 9 };
+            v1 = new Val { Field = 9 };
             x1 = ff(ref v1);
-            Assert.AreEqual(10, v1.Value);
+            Assert.AreEqual(10, v1.Field);
             Assert.AreEqual(10, x1);
         }
 
@@ -1053,28 +1188,28 @@ namespace FastExpressionCompiler.IssueTests
         public void Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Returning()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
-            var vValueField = typeof(Val).GetField(nameof(Val.Value));
+            var vField = typeof(Val).GetField(nameof(Val.Field));
             var e = Lambda<RefValReturning>(
-                Block(PostIncrementAssign(Field(v, vValueField))),
+                Block(PostIncrementAssign(Field(v, vField))),
                 v
             );
             e.PrintCSharp();
             var @cs = (RefValReturning)((ref Val v) =>
             {
-                return v.Value++;
+                return v.Field++;
             });
 
-            var v1 = new Val { Value = 9 };
+            var v1 = new Val { Field = 9 };
             var x1 = @cs(ref v1);
-            Assert.AreEqual(10, v1.Value);
+            Assert.AreEqual(10, v1.Field);
             Assert.AreEqual(9, x1);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            v1 = new Val { Value = 9 };
+            v1 = new Val { Field = 9 };
             x1 = fs(ref v1);
-            Assert.AreEqual(9, v1.Value); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v1.Field); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Assert.AreEqual(9, x1);
 
             var ff = e.CompileFast(true);
@@ -1093,9 +1228,9 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            v1 = new Val { Value = 9 };
+            v1 = new Val { Field = 9 };
             x1 = ff(ref v1);
-            Assert.AreEqual(10, v1.Value);
+            Assert.AreEqual(10, v1.Field);
             Assert.AreEqual(9, x1);
         }
 
