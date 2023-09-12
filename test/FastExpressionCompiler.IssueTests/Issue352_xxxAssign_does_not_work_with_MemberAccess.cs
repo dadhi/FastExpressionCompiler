@@ -23,13 +23,12 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             // Check_MemberAccess_AddAssign_ToNewExpression();
-
             // Check_MemberAccess_AddAssign_StaticMember();
-            Check_MemberAccess_AddAssign_StaticProp();
-
-            Check_MemberAccess_AddAssign();
-            Check_MemberAccess_PlusOneAssign();
-            Check_MemberAccess_AddAssign_NullablePlusNullable();
+            // Check_MemberAccess_AddAssign_StaticProp();
+            // Check_MemberAccess_AddAssign();
+            // Check_MemberAccess_PlusOneAssign();
+            // Check_MemberAccess_AddAssign_NullablePlusNullable();
+            Check_MemberAccess_AddAssign_NullablePlusNullable_Prop();
             Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable();
@@ -49,7 +48,7 @@ namespace FastExpressionCompiler.IssueTests
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_Add();
 
-            return 24;
+            return 25;
         }
 
         [Test]
@@ -252,10 +251,12 @@ namespace FastExpressionCompiler.IssueTests
 
         class Box
         {
-            public static int StaticValue;
+            public static int StaticField;
             public static int StaticProp { get; set; }
-            public int Value;
-            public int? NullableValue;
+            public int Field;
+            public int Prop { get; set; }
+            public int? NullableField;
+            public int? NullableProp { get; set; }
 
             public Box() { }
 
@@ -263,7 +264,7 @@ namespace FastExpressionCompiler.IssueTests
             public Box(int value)
             {
                 ++CtorCalls;
-                Value = value;
+                Field = value;
             }
         }
 
@@ -285,25 +286,25 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Check_MemberAccess_AddAssign_StaticMember()
         {
-            var bValueField = typeof(Box).GetField(nameof(Box.StaticValue));
+            var bField = typeof(Box).GetField(nameof(Box.StaticField));
             var e = Lambda<Action>(
-                Block(AddAssign(Field(null, bValueField), Constant(33)))
+                Block(AddAssign(Field(null, bField), Constant(33)))
             );
             e.PrintCSharp();
             var @cs = (Action)(() =>
             {
-                Box.StaticValue += 33;
+                Box.StaticField += 33;
             });
-            Box.StaticValue = 0;
+            Box.StaticField = 0;
             @cs();
-            Assert.AreEqual(33, Box.StaticValue);
+            Assert.AreEqual(33, Box.StaticField);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            Box.StaticValue = 0;
+            Box.StaticField = 0;
             fs();
-            Assert.AreEqual(33, Box.StaticValue);
+            Assert.AreEqual(33, Box.StaticField);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -315,17 +316,17 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            Box.StaticValue = 0;
+            Box.StaticField = 0;
             ff();
-            Assert.AreEqual(33, Box.StaticValue);
+            Assert.AreEqual(33, Box.StaticField);
         }
 
         [Test]
         public void Check_MemberAccess_AddAssign_StaticProp()
         {
-            var bValueField = typeof(Box).GetProperty(nameof(Box.StaticProp));
+            var bField = typeof(Box).GetProperty(nameof(Box.StaticProp));
             var e = Lambda<Action>(
-                Block(AddAssign(Property(null, bValueField), Constant(33)))
+                Block(AddAssign(Property(null, bField), Constant(33)))
             );
             e.PrintCSharp();
             var @cs = (Action)(() =>
@@ -362,26 +363,26 @@ namespace FastExpressionCompiler.IssueTests
         public void Check_MemberAccess_AddAssign()
         {
             var b = Parameter(typeof(Box), "b");
-            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+            var bField = typeof(Box).GetField(nameof(Box.Field));
             var e = Lambda<Action<Box>>(
-                Block(AddAssign(Field(b, bValueField), Constant(33))),
+                Block(AddAssign(Field(b, bField), Constant(33))),
                 b
             );
             e.PrintCSharp();
             var @cs = (Action<Box>)((Box b) =>
             {
-                b.Value += 33;
+                b.Field += 33;
             });
-            var b1 = new Box { Value = 9 };
+            var b1 = new Box { Field = 9 };
             @cs(b1);
-            Assert.AreEqual(42, b1.Value);
+            Assert.AreEqual(42, b1.Field);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            b1 = new Box { Value = 9 };
+            b1 = new Box { Field = 9 };
             fs(b1);
-            Assert.AreEqual(42, b1.Value);
+            Assert.AreEqual(42, b1.Field);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -395,42 +396,42 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            b1 = new Box { Value = 9 };
+            b1 = new Box { Field = 9 };
             ff(b1);
-            Assert.AreEqual(42, b1.Value);
+            Assert.AreEqual(42, b1.Field);
         }
 
         [Test]
         public void Check_MemberAccess_AddAssign_NullablePlusNullable()
         {
             var b = Parameter(typeof(Box), "b");
-            var bValueField = typeof(Box).GetField(nameof(Box.NullableValue));
+            var bField = typeof(Box).GetField(nameof(Box.NullableField));
             var e = Lambda<Action<Box>>(
-                Block(AddAssign(Field(b, bValueField), Constant((int?)33, typeof(int?)))),
+                Block(AddAssign(Field(b, bField), Constant((int?)33, typeof(int?)))),
                 b
             );
             e.PrintCSharp();
             var @cs = (Action<Box>)((Box b) =>
             {
-                b.NullableValue += (int?)33;
+                b.NullableField += (int?)33;
             });
 
-            var b1 = new Box { NullableValue = null };
-            var b2 = new Box { NullableValue = 9 };
+            var b1 = new Box { NullableField = null };
+            var b2 = new Box { NullableField = 9 };
             @cs(b1);
             @cs(b2);
-            Assert.AreEqual(null, b1.NullableValue);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
+            Assert.AreEqual(42, b2.NullableField);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            b1 = new Box { NullableValue = null };
-            b2 = new Box { NullableValue = 9 };
+            b1 = new Box { NullableField = null };
+            b2 = new Box { NullableField = 9 };
             fs(b1);
             fs(b2);
-            Assert.AreEqual(null, b1.NullableValue);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
+            Assert.AreEqual(42, b2.NullableField);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -460,12 +461,80 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            b1 = new Box { NullableValue = null };
-            b2 = new Box { NullableValue = 9 };
+            b1 = new Box { NullableField = null };
+            b2 = new Box { NullableField = 9 };
             ff(b1);
             ff(b2);
-            Assert.AreEqual(null, b1.NullableValue);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
+            Assert.AreEqual(42, b2.NullableField);
+        }
+
+        [Test]
+        public void Check_MemberAccess_AddAssign_NullablePlusNullable_Prop()
+        {
+            var b = Parameter(typeof(Box), "b");
+            var bProp = typeof(Box).GetProperty(nameof(Box.NullableProp));
+            var e = Lambda<Action<Box>>(
+                Block(AddAssign(Property(b, bProp), Constant((int?)33, typeof(int?)))),
+                b
+            );
+            e.PrintCSharp();
+            var @cs = (Action<Box>)((Box b) =>
+            {
+                b.NullableProp += (int?)33;
+            });
+
+            var b1 = new Box { NullableProp = null };
+            var b2 = new Box { NullableProp = 9 };
+            @cs(b1);
+            @cs(b2);
+            Assert.AreEqual(null, b1.NullableProp);
+            Assert.AreEqual(42, b2.NullableProp);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            b1 = new Box { NullableProp = null };
+            b2 = new Box { NullableProp = 9 };
+            fs(b1);
+            fs(b2);
+            Assert.AreEqual(null, b1.NullableProp);
+            Assert.AreEqual(42, b2.NullableProp);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Dup,
+                OpCodes.Call,       // Box.get_NullableProp
+                OpCodes.Stloc_0,
+                OpCodes.Ldc_I4_S,   // 33
+                OpCodes.Newobj,     // Nullable`1..ctor
+                OpCodes.Stloc_1,
+                OpCodes.Ldloca_S,   // 0
+                OpCodes.Call,       // Nullable`1.get_HasValue
+                OpCodes.Ldloca_S,   // 1
+                OpCodes.Call,       // Nullable`1.get_HasValue
+                OpCodes.And,
+                OpCodes.Brfalse,    // --> Pop
+                OpCodes.Ldloca_S,   // 0
+                OpCodes.Call,       // Nullable`1.GetValueOrDefault
+                OpCodes.Ldloca_S,   // 1
+                OpCodes.Call,       // Nullable`1.GetValueOrDefault
+                OpCodes.Add,
+                OpCodes.Newobj,     // Nullable`1..ctor
+                OpCodes.Call,       // Box.set_NullableProp
+                OpCodes.Br_S,       // --> Ret
+                OpCodes.Pop,
+                OpCodes.Ret
+            );
+
+            b1 = new Box { NullableProp = null };
+            b2 = new Box { NullableProp = 9 };
+            ff(b1);
+            ff(b2);
+            Assert.AreEqual(null, b1.NullableProp);
+            Assert.AreEqual(42, b2.NullableProp);
         }
 
         [Test]
@@ -473,16 +542,16 @@ namespace FastExpressionCompiler.IssueTests
         {
             Box.CtorCalls = 0;
             var bCtor = typeof(Box).GetConstructor(new[] { typeof(int) });
-            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+            var bField = typeof(Box).GetField(nameof(Box.Field));
 
             var e = Lambda<Func<int>>(
-                Block(AddAssign(Field(New(bCtor, Constant(42)), bValueField), Constant(33)))
+                Block(AddAssign(Field(New(bCtor, Constant(42)), bField), Constant(33)))
             );
             e.PrintCSharp();
             Box.CtorCalls = 0;
             var @cs = (Func<int>)(() =>
             {
-                return new Box(42).Value += 33;
+                return new Box(42).Field += 33;
             });
             var a = @cs();
             Assert.AreEqual(42 + 33, a);
@@ -509,19 +578,19 @@ namespace FastExpressionCompiler.IssueTests
         public void Check_MemberAccess_PreIncrementAssign()
         {
             var b = Parameter(typeof(Box), "b");
-            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+            var bField = typeof(Box).GetField(nameof(Box.Field));
             var e = Lambda<Action<Box>>(
-                Block(PreIncrementAssign(Field(b, bValueField))),
+                Block(PreIncrementAssign(Field(b, bField))),
                 b
             );
             e.PrintCSharp();
             var @cs = (Action<Box>)((Box b) =>
             {
-                ++b.Value;
+                ++b.Field;
             });
-            var b1 = new Box { Value = 9 };
+            var b1 = new Box { Field = 9 };
             @cs(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -537,9 +606,9 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Stfld,
                 OpCodes.Ret
             */
-            b1 = new Box { Value = 9 };
+            b1 = new Box { Field = 9 };
             fs(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -553,35 +622,35 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            b1 = new Box { Value = 9 };
+            b1 = new Box { Field = 9 };
             ff(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
         }
 
         [Test]
         public void Check_MemberAccess_PlusOneAssign()
         {
             var b = Parameter(typeof(Box), "b");
-            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+            var bField = typeof(Box).GetField(nameof(Box.Field));
             var e = Lambda<Action<Box>>(
-                Block(AddAssign(Field(b, bValueField), Constant(1))),
+                Block(AddAssign(Field(b, bField), Constant(1))),
                 b
             );
             e.PrintCSharp();
             var @cs = (Action<Box>)((Box b) =>
             {
-                ++b.Value;
+                ++b.Field;
             });
-            var b1 = new Box { Value = 9 };
+            var b1 = new Box { Field = 9 };
             @cs(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            b1 = new Box { Value = 9 };
+            b1 = new Box { Field = 9 };
             fs(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -595,45 +664,45 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            b1 = new Box { Value = 9 };
+            b1 = new Box { Field = 9 };
             ff(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
         }
 
         [Test]
         public void Check_MemberAccess_PreIncrementAssign_Returning()
         {
             var b = Parameter(typeof(Box), "b");
-            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+            var bField = typeof(Box).GetField(nameof(Box.Field));
             var e = Lambda<Func<Box, int>>(
-                Block(PreIncrementAssign(Field(b, bValueField))),
+                Block(PreIncrementAssign(Field(b, bField))),
                 b
             );
             e.PrintCSharp();
             var @cs = (Func<Box, int>)((Box b) =>
             {
-                return ++b.Value;
+                return ++b.Field;
             });
 
-            var b1 = new Box { Value = 9 };
+            var b1 = new Box { Field = 9 };
             var x1 = @cs(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
             Assert.AreEqual(10, x1);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            b1 = new Box { Value = 9 };
+            b1 = new Box { Field = 9 };
             x1 = fs(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
             Assert.AreEqual(10, x1);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
-            b1 = new Box { Value = 9 };
+            b1 = new Box { Field = 9 };
             x1 = ff(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
             Assert.AreEqual(10, x1);
         }
 
@@ -641,37 +710,37 @@ namespace FastExpressionCompiler.IssueTests
         public void Check_MemberAccess_PostIncrementAssign_Returning()
         {
             var b = Parameter(typeof(Box), "b");
-            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+            var bField = typeof(Box).GetField(nameof(Box.Field));
             var e = Lambda<Func<Box, int>>(
-                Block(PostIncrementAssign(Field(b, bValueField))),
+                Block(PostIncrementAssign(Field(b, bField))),
                 b
             );
             e.PrintCSharp();
 
             var @cs = (Func<Box, int>)((Box b) =>
             {
-                return b.Value++;
+                return b.Field++;
             });
 
-            var b1 = new Box { Value = 9 };
+            var b1 = new Box { Field = 9 };
             var x1 = @cs(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
             Assert.AreEqual(9, x1);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            b1 = new Box { Value = 9 };
+            b1 = new Box { Field = 9 };
             x1 = fs(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
             Assert.AreEqual(9, x1);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
-            b1 = new Box { Value = 9 };
+            b1 = new Box { Field = 9 };
             x1 = ff(b1);
-            Assert.AreEqual(10, b1.Value);
+            Assert.AreEqual(10, b1.Field);
             Assert.AreEqual(9, x1);
         }
 
@@ -1034,24 +1103,24 @@ namespace FastExpressionCompiler.IssueTests
         public void Check_MemberAccess_PreIncrementAssign_Nullable()
         {
             var b = Parameter(typeof(Box), "b");
-            var bValueField = typeof(Box).GetField(nameof(Box.NullableValue));
+            var bField = typeof(Box).GetField(nameof(Box.NullableField));
             var e = Lambda<Action<Box>>(
                 Block(typeof(void),
-                    PreIncrementAssign(Field(b, bValueField))
+                    PreIncrementAssign(Field(b, bField))
                 ),
                 b
             );
             e.PrintCSharp();
             var @cs = (Action<Box>)((Box b) =>
             {
-                ++b.NullableValue;
+                ++b.NullableField;
             });
-            var b1 = new Box { NullableValue = null };
-            var b2 = new Box { NullableValue = 41 };
+            var b1 = new Box { NullableField = null };
+            var b2 = new Box { NullableField = 41 };
             @cs(b1);
             @cs(b2);
-            Assert.AreEqual(null, b1.NullableValue);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
+            Assert.AreEqual(42, b2.NullableField);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1076,12 +1145,12 @@ namespace FastExpressionCompiler.IssueTests
             41   ret
             */
 
-            b1 = new Box { NullableValue = null };
-            b2 = new Box { NullableValue = 41 };
+            b1 = new Box { NullableField = null };
+            b2 = new Box { NullableField = 41 };
             fs(b1);
             fs(b2);
-            Assert.AreEqual(null, b1.NullableValue);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
+            Assert.AreEqual(42, b2.NullableField);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1104,35 +1173,35 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            b1 = new Box { NullableValue = null };
-            b2 = new Box { NullableValue = 41 };
+            b1 = new Box { NullableField = null };
+            b2 = new Box { NullableField = 41 };
             ff(b1);
             ff(b2);
-            Assert.AreEqual(null, b1.NullableValue);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
+            Assert.AreEqual(42, b2.NullableField);
         }
 
         [Test]
         public void Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable()
         {
             var b = Parameter(typeof(Box), "b");
-            var bValueField = typeof(Box).GetField(nameof(Box.NullableValue));
+            var bField = typeof(Box).GetField(nameof(Box.NullableField));
             var e = Lambda<Func<Box, int?>>(
-                Block(PreIncrementAssign(Field(b, bValueField))),
+                Block(PreIncrementAssign(Field(b, bField))),
                 b
             );
             e.PrintCSharp();
             var @cs = (Func<Box, int?>)((Box b) =>
             {
-                return ++b.NullableValue;
+                return ++b.NullableField;
             });
-            var b1 = new Box { NullableValue = null };
-            var b2 = new Box { NullableValue = 41 };
+            var b1 = new Box { NullableField = null };
+            var b2 = new Box { NullableField = 41 };
             var x1 = @cs(b1);
             var x2 = @cs(b2);
-            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(42, b2.NullableField);
             Assert.AreEqual(42, x2);
 
             var fs = e.CompileSys();
@@ -1140,13 +1209,13 @@ namespace FastExpressionCompiler.IssueTests
             /*
             */
 
-            b1 = new Box { NullableValue = null };
-            b2 = new Box { NullableValue = 41 };
+            b1 = new Box { NullableField = null };
+            b2 = new Box { NullableField = 41 };
             x1 = fs(b1);
             x2 = fs(b2);
-            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(42, b2.NullableField);
             Assert.AreEqual(42, x2);
 
             var ff = e.CompileFast(true);
@@ -1173,13 +1242,13 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            b1 = new Box { NullableValue = null };
-            b2 = new Box { NullableValue = 41 };
+            b1 = new Box { NullableField = null };
+            b2 = new Box { NullableField = 41 };
             x1 = ff(b1);
             x2 = ff(b2);
-            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(42, b2.NullableField);
             Assert.AreEqual(42, x2);
         }
 
@@ -1187,47 +1256,47 @@ namespace FastExpressionCompiler.IssueTests
         public void Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable()
         {
             var b = Parameter(typeof(Box), "b");
-            var bValueField = typeof(Box).GetField(nameof(Box.NullableValue));
+            var bField = typeof(Box).GetField(nameof(Box.NullableField));
             var e = Lambda<Func<Box, int?>>(
-                Block(PostIncrementAssign(Field(b, bValueField))),
+                Block(PostIncrementAssign(Field(b, bField))),
                 b
             );
             e.PrintCSharp();
             var @cs = (Func<Box, int?>)((Box b) =>
             {
-                return b.NullableValue++;
+                return b.NullableField++;
             });
-            var b1 = new Box { NullableValue = null };
-            var b2 = new Box { NullableValue = 41 };
+            var b1 = new Box { NullableField = null };
+            var b2 = new Box { NullableField = 41 };
             var x1 = @cs(b1);
             var x2 = @cs(b2);
-            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(42, b2.NullableField);
             Assert.AreEqual(41, x2);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            b1 = new Box { NullableValue = null };
-            b2 = new Box { NullableValue = 41 };
+            b1 = new Box { NullableField = null };
+            b2 = new Box { NullableField = 41 };
             x1 = fs(b1);
             x2 = fs(b2);
-            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(42, b2.NullableField);
             Assert.AreEqual(41, x2);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
-            b1 = new Box { NullableValue = null };
-            b2 = new Box { NullableValue = 41 };
+            b1 = new Box { NullableField = null };
+            b2 = new Box { NullableField = 41 };
             x1 = ff(b1);
             x2 = ff(b2);
-            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(null, b1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableValue);
+            Assert.AreEqual(42, b2.NullableField);
             Assert.AreEqual(41, x2);
         }
 
@@ -1236,17 +1305,17 @@ namespace FastExpressionCompiler.IssueTests
         {
             Box.CtorCalls = 0; // assuming that the tests are not running in parallel
             var bCtor = typeof(Box).GetConstructor(new[] { typeof(int) });
-            var bValueField = typeof(Box).GetField(nameof(Box.Value));
+            var bField = typeof(Box).GetField(nameof(Box.Field));
 
             var e = Lambda<Func<int>>(
                 Block(
-                    PreDecrementAssign(Field(New(bCtor, Constant(42)), bValueField))
+                    PreDecrementAssign(Field(New(bCtor, Constant(42)), bField))
                 )
             );
             e.PrintCSharp();
             var @cs = (Func<int>)(() =>
             {
-                return --new Box(42).Value;
+                return --new Box(42).Field;
             });
             var a = @cs();
             Assert.AreEqual(41, a);
