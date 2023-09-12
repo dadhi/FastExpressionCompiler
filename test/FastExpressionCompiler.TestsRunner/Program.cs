@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             new LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
-            new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
+            // new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
             // new Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
 
             RunAllTests();

@@ -3664,19 +3664,43 @@ namespace FastExpressionCompiler
                 {
                     // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
                     // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
-                    var arithmFlags =
-                        (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall)
-                        | ParentFlags.Assignment | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner;
+                    var operandFlags = (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall) | ParentFlags.Assignment;
+
+                    var leftIsByAddress = false;
+                    if (nodeType == ExpressionType.Assign)
+                    {
+                        var objExpr = leftMemberExpr.Expression;
+                        if (objExpr != null && 
+                            !TryEmit(objExpr, paramExprs, il, ref closure, setup, operandFlags | ParentFlags.InstanceAccess | ParentFlags.MemberAccess))
+                            return false;
+
+                        var rightType = rightOrNull.Type;
+                        if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, operandFlags))
+                            return false;
+                        if (closure.LastEmitIsAddress)
+                            EmitLoadIndirectlyByRef(il, rightType);
+
+                        if (resultVar != -1)
+                            EmitStoreAndLoadLocalVariable(il, resultVar);
+
+                        if (!EmitMemberAssign(il, leftMemberExpr.Member))
+                            return false;
+                        
+                        if (resultVar != -1)
+                            EmitLoadLocalVariable(il, resultVar);
+                        return true;
+                    }
+
+                    operandFlags |= ParentFlags.Arithmetic | ParentFlags.DupMemberOwner;
 
                     var leftOrRightNullableAreNullLabel = default(Label);
                     var leftType = leftMemberExpr.Type;
                     var leftIsNullable = leftType.IsNullable();
                     var leftNullableVar = -1;
 
-                    if (!TryEmitMemberAccess(leftMemberExpr, paramExprs, il, ref closure, setup, arithmFlags))
+                    if (!TryEmitMemberAccess(leftMemberExpr, paramExprs, il, ref closure, setup, operandFlags))
                         return false;
-                    var leftIsByAddress = closure.LastEmitIsAddress;
-                    if (leftIsByAddress)
+                    if (leftIsByAddress = closure.LastEmitIsAddress)
                         EmitLoadIndirectlyByRef(il, leftType); // if the field is loaded by ref, it need to be loaded from the ref in order to do arithmetic operation on it
 
                     if (!leftIsNullable)
@@ -3693,7 +3717,7 @@ namespace FastExpressionCompiler
                         else
                         {
                             var rightType = rightOrNull.Type;
-                            if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, arithmFlags))
+                            if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, operandFlags))
                                 return false;
                             if (closure.LastEmitIsAddress)
                                 EmitLoadIndirectlyByRef(il, rightType);
@@ -3740,7 +3764,7 @@ namespace FastExpressionCompiler
                         {
                             // emit the right expression immediatly after the left and then just process their results
                             var rightType = rightOrNull.Type;
-                            if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, arithmFlags))
+                            if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, operandFlags))
                                 return false;
                             if (closure.LastEmitIsAddress)
                                 EmitLoadIndirectlyByRef(il, rightType);
@@ -4045,7 +4069,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
                         // todo: @wip redirect to IncrementDecrementAssign in order to make it consistent
-                        if (left.NodeType == ExpressionType.MemberAccess & arithmNodeType != nodeType & right.NodeType != ExpressionType.Try)
+                        if (left.NodeType == ExpressionType.MemberAccess & right.NodeType != ExpressionType.Try)
                             return TryEmitIncrementDecrementAssign(
                                 left, right, exprType, arithmNodeType, paramExprs, il, ref closure, setup, parent);
 
