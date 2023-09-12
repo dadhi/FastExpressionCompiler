@@ -506,12 +506,17 @@ namespace FastExpressionCompiler.IssueTests
                 Convert(p, typeof(Enum3)),
                 to);
 
-            var expr = Lambda<Func<Enum3?, Enum3>>(body, p);
+            var e = Lambda<Func<Enum3?, Enum3>>(body, p);
 
-            var compiled = expr.CompileFast(true);
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual(Enum3.Value2, fs(Enum3.Value2));
+            Assert.Throws<InvalidOperationException>(() => fs(null));
 
-            Assert.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
-            Assert.Throws<InvalidOperationException>(() => compiled(null));
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(Enum3.Value2, ff(Enum3.Value2));
+            Assert.Throws<InvalidOperationException>(() => ff(null));
         }
 
         [Test]

@@ -22,10 +22,11 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Check_MemberAccess_PlusOneAssign();
-            Check_MemberAccess_AddAssign();
-
             // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
+
+            Check_MemberAccess_AddAssign_NullablePlusNullable();
+            Check_MemberAccess_AddAssign();
+            Check_MemberAccess_PlusOneAssign();
 
             Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
@@ -49,7 +50,6 @@ namespace FastExpressionCompiler.IssueTests
             Check_ArrayAccess_Assign_InAction();
             Check_ArrayAccess_AddAssign_InAction();
             Check_ArrayAccess_AddAssign_ReturnResultInFunction();
-
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_Add();
 
@@ -305,15 +305,93 @@ namespace FastExpressionCompiler.IssueTests
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            var box = new Box { Value = 9 };
-            fs(box);
-            Assert.AreEqual(42, box.Value);
+            b1 = new Box { Value = 9 };
+            fs(b1);
+            Assert.AreEqual(42, b1.Value);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Dup,
+                OpCodes.Ldfld,
+                OpCodes.Ldc_I4_S,   // 33
+                OpCodes.Add,
+                OpCodes.Stfld,
+                OpCodes.Ret
+            );
 
-            ff(box);
-            Assert.AreEqual(75, box.Value);
+            b1 = new Box { Value = 9 };
+            ff(b1);
+            Assert.AreEqual(42, b1.Value);
+        }
+
+        [Test]
+        public void Check_MemberAccess_AddAssign_NullablePlusNullable()
+        {
+            var b = Parameter(typeof(Box), "b");
+            var bValueField = typeof(Box).GetField(nameof(Box.NullableValue));
+            var e = Lambda<Action<Box>>(
+                Block(AddAssign(Field(b, bValueField), Constant((int?)33, typeof(int?)))),
+                b
+            );
+            e.PrintCSharp();
+            var @cs = (Action<Box>)((Box b) =>
+            {
+                b.NullableValue += (int?)33;
+            });
+
+            var b1 = new Box { NullableValue = null };
+            var b2 = new Box { NullableValue = 9 };
+            @cs(b1);
+            @cs(b2);
+            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(42, b2.NullableValue);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            b1 = new Box { NullableValue = null };
+            b2 = new Box { NullableValue = 9 };
+            fs(b1);
+            fs(b2);
+            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(42, b2.NullableValue);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Dup,
+                OpCodes.Ldfld,
+                OpCodes.Stloc_0,
+                OpCodes.Ldc_I4_S,   // 33
+                OpCodes.Newobj,     // Nullable`1..ctor
+                OpCodes.Stloc_1,
+                OpCodes.Ldloca_S,   // 0
+                OpCodes.Call,       // Nullable`1.get_HasValue
+                OpCodes.Ldloca_S,   // 1
+                OpCodes.Call,       // Nullable`1.get_HasValue
+                OpCodes.And,
+                OpCodes.Brfalse,    // --> Pop
+                OpCodes.Ldloca_S,   // 0
+                OpCodes.Call,       // Nullable`1.GetValueOrDefault
+                OpCodes.Ldloca_S,   // 1
+                OpCodes.Call,       // Nullable`1.GetValueOrDefault
+                OpCodes.Add,
+                OpCodes.Newobj,     // Nullable`1..ctor
+                OpCodes.Stfld,      // Box.NullableValue
+                OpCodes.Br_S,       // --> Ret
+                OpCodes.Pop,
+                OpCodes.Ret
+            );
+
+            b1 = new Box { NullableValue = null };
+            b2 = new Box { NullableValue = 9 };
+            ff(b1);
+            ff(b2);
+            Assert.AreEqual(null, b1.NullableValue);
+            Assert.AreEqual(42, b2.NullableValue);
         }
 
         [Test]
@@ -610,16 +688,15 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldobj,
                 OpCodes.Stloc_0,
                 OpCodes.Ldloca_S,
-                OpCodes.Dup,
                 OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
                 OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
+                OpCodes.Ldloca_S,
                 OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Newobj,
                 OpCodes.Stobj,      // Stores the nullable value to the address of the field
                 OpCodes.Br_S,       // jump to Ret op-code
-                OpCodes.Pop,        // Pops the Ldloca_S Dup-ped
                 OpCodes.Pop,        // Pops the Ldflda Dup-ped
                 OpCodes.Ret
             );
@@ -678,10 +755,10 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Dup,
                 OpCodes.Ldobj,
                 OpCodes.Stloc_0,    // we are using a single variable to store the field and to store the result
-                OpCodes.Ldloca_S,
-                OpCodes.Dup,
+                OpCodes.Ldloca_S,   // 0
                 OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
                 OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
+                OpCodes.Ldloca_S,   // 0
                 OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
@@ -690,7 +767,6 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldloc_0,
                 OpCodes.Stobj,      // Stores the nullable value to the address of the field
                 OpCodes.Br_S,       // jump to Ret op-code
-                OpCodes.Pop,        // Pops the Ldloca_S Dup-ped
                 OpCodes.Pop,        // Pops the Ldflda Dup-ped
                 OpCodes.Ldloc_0,
                 OpCodes.Ret
@@ -750,17 +826,16 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Dup,
                 OpCodes.Ldobj,
                 OpCodes.Stloc_0,    // we are using a single variable to store the field and to store the result
-                OpCodes.Ldloca_S,
-                OpCodes.Dup,
+                OpCodes.Ldloca_S,   // 0
                 OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
                 OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
+                OpCodes.Ldloca_S,   // 0
                 OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Newobj,
                 OpCodes.Stobj,      // Stores the nullable value to the address of the field
                 OpCodes.Br_S,       // jump to Ret op-code
-                OpCodes.Pop,        // Pops the Ldloca_S Dup-ped
                 OpCodes.Pop,        // Pops the Ldflda Dup-ped
                 OpCodes.Ldloc_0,
                 OpCodes.Ret
@@ -939,16 +1014,15 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldfld,
                 OpCodes.Stloc_0,
                 OpCodes.Ldloca_S,
-                OpCodes.Dup,
                 OpCodes.Call,
                 OpCodes.Brfalse,
+                OpCodes.Ldloca_S,
                 OpCodes.Call,
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Newobj,
                 OpCodes.Stfld,
                 OpCodes.Br_S,
-                OpCodes.Pop,
                 OpCodes.Pop,
                 OpCodes.Ret
             );
@@ -1006,9 +1080,9 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldfld,
                 OpCodes.Stloc_0,
                 OpCodes.Ldloca_S,
-                OpCodes.Dup,
                 OpCodes.Call,
                 OpCodes.Brfalse,
+                OpCodes.Ldloca_S,
                 OpCodes.Call,
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
@@ -1016,8 +1090,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0,
                 OpCodes.Stfld,
-                OpCodes.Br_S,
-                OpCodes.Pop,
+                OpCodes.Br_S, // <-- jump to Ldloc_0 op-code
                 OpCodes.Pop,
                 OpCodes.Ldloc_0,
                 OpCodes.Ret
@@ -1058,8 +1131,6 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            /*
-            */
 
             b1 = new Box { NullableValue = null };
             b2 = new Box { NullableValue = 41 };

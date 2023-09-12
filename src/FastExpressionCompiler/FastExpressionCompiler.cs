@@ -2334,11 +2334,11 @@ namespace FastExpressionCompiler
                 if (leftType.IsValueType) // Nullable -> It's the only ValueType comparable to null
                 {
                     var varIndex = EmitStoreAndLoadLocalVariableAddress(il, leftType);
-                    EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod());
+                    EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
 
                     il.Emit(OpCodes.Brfalse, labelFalse);
                     EmitLoadLocalVariableAddress(il, varIndex);
-                    EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il, leftType.GetNullableGetValueOrDefaultMethod());
 
                     il.Emit(OpCodes.Br, labelDone);
                     il.MarkLabel(labelFalse);
@@ -2762,7 +2762,7 @@ namespace FastExpressionCompiler
 
                 // if (sourceType == typeof(object))
                 // {
-                // todo: @wip @perf for this case because it is bvery heavy used for the runtime conversion from the object to the concrete type
+                // todo: @wip @perf for this case because it is a very heavy used for the runtime conversion from the object to the concrete type
                 // if (!targetType.IsValueType)
                 //     il.Emit(OpCodes.Unbox_Any, targetType);
                 // else
@@ -2885,7 +2885,7 @@ namespace FastExpressionCompiler
                     else
                     {
                         var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                        EmitMethodCall(il, sourceType.FindNullableHasValueGetterMethod());
+                        EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
 
                         var labelSourceHasValue = il.DefineLabel();
                         il.Emit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
@@ -2900,7 +2900,7 @@ namespace FastExpressionCompiler
                         // if source nullable has a value:
                         il.MarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
-                        EmitMethodCall(il, sourceType.FindNullableGetValueOrDefaultMethod());
+                        EmitMethodCall(il, sourceType.GetNullableGetValueOrDefaultMethod());
                         if (method != null && method.ReturnType == targetType)
                         {
                             EmitMethodCall(il, method);
@@ -3582,7 +3582,7 @@ namespace FastExpressionCompiler
                         ok = EmitMethodCall(il, method);
                     else
                     {
-                        il.Emit(OpCodes.Constrained, exprType); // todo: @check it is a value type so... can we de-virtualize the call?
+                        il.Emit(OpCodes.Constrained, exprType); // todo: @clarify it is a value type so... can we de-virtualize the call?
                         ok = EmitVirtualMethodCall(il, method);
                     }
                 }
@@ -3593,8 +3593,8 @@ namespace FastExpressionCompiler
             }
 
             // todo: @wip rename to TryEmitArithmethicAssign, `++`, `--`, `+=`, `-=`, etc.
-            private static bool TryEmitIncrementDecrementAssign(Expression left, Expression rightOrNull,
-                Type exprType, ExpressionType nodeType,
+            private static bool TryEmitIncrementDecrementAssign(
+                Expression left, Expression rightOrNull, Type exprType, ExpressionType nodeType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -3611,7 +3611,7 @@ namespace FastExpressionCompiler
                     isPost = nodeType == ExpressionType.PostIncrementAssign | nodeType == ExpressionType.PostDecrementAssign;
                 }
 
-                var opCode = nodeType == ExpressionType.PreIncrementAssign | nodeType == ExpressionType.PostIncrementAssign ? OpCodes.Add : OpCodes.Sub;
+                var incrementDecrementOpCode = nodeType == ExpressionType.PreIncrementAssign | nodeType == ExpressionType.PostIncrementAssign ? OpCodes.Add : OpCodes.Sub;
 
                 if (left is ParameterExpression p)
                 {
@@ -3642,7 +3642,7 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
 
                     il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(opCode);
+                    il.Emit(incrementDecrementOpCode);
 
                     if (resultVar != -1 & !isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -3660,7 +3660,7 @@ namespace FastExpressionCompiler
                     else
                         il.Emit(OpCodes.Starg_S, paramIndex);
                 }
-                else if (left is MemberExpression m)
+                else if (left is MemberExpression leftMemberExpr)
                 {
                     // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
                     // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
@@ -3668,112 +3668,146 @@ namespace FastExpressionCompiler
                         (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall)
                         | ParentFlags.Assignment | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner;
 
-                    var exprTypeIsNullable = exprType.IsNullable();
-
-                    var leftNullValueLabel = default(Label);
-                    var leftType = m.Type;
+                    var leftOrRightNullableAreNullLabel = default(Label);
+                    var leftType = leftMemberExpr.Type;
                     var leftIsNullable = leftType.IsNullable();
-                    if (leftIsNullable)
+                    var leftNullableVar = -1;
+
+                    if (!TryEmitMemberAccess(leftMemberExpr, paramExprs, il, ref closure, setup, arithmFlags))
+                        return false;
+                    var leftIsByAddress = closure.LastEmitIsAddress;
+                    if (leftIsByAddress)
+                        EmitLoadIndirectlyByRef(il, leftType); // if the field is loaded by ref, it need to be loaded from the ref in order to do arithmetic operation on it
+
+                    if (!leftIsNullable)
                     {
-                        leftNullValueLabel = il.DefineLabel();
-                        if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags))
-                            return false;
-
-                        // if the field is the load by address, then we need to load its value from the ref in order to do arithmetic operation on it 
-                        if (closure.LastEmitIsAddress)
-                            EmitLoadIndirectlyByRef(il, leftType);
-
-                        // Reuse the result variable for the field,
-                        // so we may return the original value of field if nullable is `null` and we jump to the return
-                        var fieldValueVar = resultVar != -1 & exprTypeIsNullable ? resultVar : il.GetNextLocalVarIndex(leftType);
-                        EmitStoreAndLoadLocalVariableAddress(il, fieldValueVar);
-
-                        il.Demit(OpCodes.Dup);
-                        EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod());
-                        il.Demit(OpCodes.Brfalse, leftNullValueLabel);
-                        EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod());
-
-                        if (resultVar != -1 & isPost & !exprTypeIsNullable)
-                            EmitStoreAndLoadLocalVariable(il, resultVar);
-                    }
-                    else
-                    {
-                        if (!TryEmitMemberAccess(m, paramExprs, il, ref closure, setup, arithmFlags))
-                            return false;
-
-                        // if the field is the load by address, then we need to load its value from the ref in order to do arithmetic operation on it 
-                        if (closure.LastEmitIsAddress)
-                            EmitLoadIndirectlyByRef(il, leftType);
-
-                        if (resultVar != -1 & isPost)
-                            EmitStoreAndLoadLocalVariable(il, resultVar);
-                    }
-
-                    if (rightOrNull == null)
-                    {
-                        // Increment/Decrement one
-                        il.Demit(OpCodes.Ldc_I4_1);
-                        il.Demit(opCode);
-                    }
-                    else
-                    {
-                        var rightNoValueLabel = default(Label);
-                        var rightType = rightOrNull.Type;
-                        var rightIsNullable = rightType.IsNullable();
-                        if (rightIsNullable)
+                        if (rightOrNull == null)
                         {
-                            rightNoValueLabel = il.DefineLabel();
+                            if (resultVar != -1 & isPost)
+                                EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value before doing any operation on it
+                            il.Demit(OpCodes.Ldc_I4_1); // Plus or Minus 1
+                            il.Demit(incrementDecrementOpCode);
+                            if (resultVar != -1 & !isPost)
+                                EmitStoreAndLoadLocalVariable(il, resultVar);
+                        }
+                        else
+                        {
+                            var rightType = rightOrNull.Type;
                             if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, arithmFlags))
                                 return false;
+                            if (closure.LastEmitIsAddress)
+                                EmitLoadIndirectlyByRef(il, rightType);
 
-                            if (!closure.LastEmitIsAddress)
-                                EmitStoreAndLoadLocalVariableAddress(il, rightType);
+                            var rightIsNullable = rightType.IsNullable();
+                            if (rightIsNullable) // todo: @perf @clarify is it even possible to have left non-nullable and right nullable
+                            {
+                                var rightVar = EmitStoreAndLoadLocalVariableAddress(il, rightType);
+                                il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
 
-                            il.Emit(OpCodes.Dup);
-                            EmitMethodCall(il, rightType.FindNullableHasValueGetterMethod());
-                            il.Emit(OpCodes.Brfalse, rightNoValueLabel);
-                            EmitMethodCall(il, rightType.FindNullableGetValueOrDefaultMethod());
+                                il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
+
+                                EmitLoadLocalVariableAddress(il, rightVar);
+                                il.Demit(OpCodes.Call, rightType.GetNullableGetValueOrDefaultMethod()); // unwrap right operand
+                            }
+
+                            if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
+                                return false;
+                            if (resultVar != -1)
+                                EmitStoreAndLoadLocalVariable(il, resultVar);
                         }
-                        else if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, arithmFlags))
-                            return false;
-
-                        if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
-                            return false;
                     }
-
-                    if (leftIsNullable)
+                    else // if `leftIsNullable == true`
                     {
-                        if (resultVar != -1 & !isPost & !exprTypeIsNullable)
-                            EmitStoreAndLoadLocalVariable(il, resultVar);
+                        // Reuse the result variable for the field,
+                        // so it may be returned as the original value of field if nullable is `null` and we jump to the return
+                        leftNullableVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(leftType);
+                        EmitStoreLocalVariable(il, leftNullableVar);
 
-                        il.Demit(OpCodes.Newobj, leftType.GetConstructors()[0]);
+                        if (rightOrNull == null)
+                        {
+                            EmitLoadLocalVariableAddress(il, leftNullableVar);
+                            il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
 
-                        if (resultVar != -1 & !isPost & exprTypeIsNullable)
-                            EmitStoreAndLoadLocalVariable(il, resultVar);
-                    }
-                    else
-                    {
+                            il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
+
+                            EmitLoadLocalVariableAddress(il, leftNullableVar);
+                            il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());
+
+                            il.Demit(OpCodes.Ldc_I4_1);
+                            il.Demit(incrementDecrementOpCode);
+                        }
+                        else
+                        {
+                            // emit the right expression immediatly after the left and then just process their results
+                            var rightType = rightOrNull.Type;
+                            if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, arithmFlags))
+                                return false;
+                            if (closure.LastEmitIsAddress)
+                                EmitLoadIndirectlyByRef(il, rightType);
+
+                            var rightVar = EmitStoreLocalVariable(il, rightType);
+
+                            var rightIsNullable = rightType.IsNullable();
+                            if (!rightIsNullable) // todo: @perf @clarify if it is possible to have left nullable and right non-nullable
+                            {
+                                EmitLoadLocalVariableAddress(il, leftNullableVar);
+                                il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
+
+                                il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
+
+                                EmitLoadLocalVariableAddress(il, leftNullableVar);
+                                il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());
+
+                                EmitLoadLocalVariable(il, rightVar);
+                            }
+                            else
+                            {
+                                EmitLoadLocalVariableAddress(il, leftNullableVar);
+                                il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
+
+                                EmitLoadLocalVariableAddress(il, rightVar);
+                                il.Demit(OpCodes.Call, rightType.GetNullableHasValueGetterMethod());
+                                il.Demit(OpCodes.And);
+                                il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
+
+                                EmitLoadLocalVariableAddress(il, leftNullableVar);
+                                il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());  // unwrap left operand
+
+                                EmitLoadLocalVariableAddress(il, rightVar);
+                                il.Demit(OpCodes.Call, rightType.GetNullableGetValueOrDefaultMethod()); // unwrap right operand
+                            }
+
+                            if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
+                                return false;
+                        }
+
+                        il.Demit(OpCodes.Newobj, leftType.GetNullableConstructor()); // wrap the result back into the nullable
                         if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
                     }
 
-                    if (closure.LastEmitIsAddress)
+                    if (leftIsByAddress)
                         EmitStoreIndirectlyByRef(il, leftType);
-                    else if (!EmitMemberAssign(il, m.Member))
+                    else if (!EmitMemberAssign(il, leftMemberExpr.Member))
                         return false;
 
                     if (leftIsNullable)
                     {
-                        var skipPopLeftDuppedInstance = il.DefineLabel();
-                        il.Demit(OpCodes.Br_S, skipPopLeftDuppedInstance);
-                        il.DmarkLabel(leftNullValueLabel); // jump here if nullable `!HasValue`
-                        il.Demit(OpCodes.Pop);             // pop the dupped field variable address used to call the Nullable methods
+                        // todo: @perf @simplify avoid the Dup and the Pop for this case
+                        if (leftIsByAddress | leftMemberExpr.Expression != null)
+                        {
+                            var skipPopLeftDuppedInstance = il.DefineLabel();
+                            il.Demit(OpCodes.Br_S, skipPopLeftDuppedInstance);
+                            il.DmarkLabel(leftOrRightNullableAreNullLabel); // jump here if nullables are null after checking them with `!HasValue`
 
-                        // pop the dupped instance address or the field address
-                        if (m.Expression != null | closure.LastEmitIsAddress)
-                            il.Demit(OpCodes.Pop);
+                            il.Demit(OpCodes.Pop); // pop the dupped instance address or the field address
 
-                        il.DmarkLabel(skipPopLeftDuppedInstance);
+                            il.DmarkLabel(skipPopLeftDuppedInstance);
+                        }
+                        else
+                        {
+                            il.DmarkLabel(leftOrRightNullableAreNullLabel); // jump here if nullables are null after checking them with `!HasValue`
+                        }
                     }
                 }
                 else if (left is IndexExpression indexExpr)
@@ -3835,7 +3869,7 @@ namespace FastExpressionCompiler
                     if (resultVar != -1 & isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
                     il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(opCode);
+                    il.Emit(incrementDecrementOpCode);
 
                     var assignmentResultVar = il.GetNextLocalVarIndex(exprType);
                     EmitStoreLocalVariable(il, assignmentResultVar);
@@ -4661,7 +4695,7 @@ namespace FastExpressionCompiler
                         if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
                             return false;
                         EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
-                        EmitMethodCall(il, leftOpType.FindNullableHasValueGetterMethod());
+                        EmitMethodCall(il, leftOpType.GetNullableHasValueGetterMethod());
                         if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
                         return il.EmitPopIfIgnoreResult(parent);
@@ -4671,7 +4705,7 @@ namespace FastExpressionCompiler
                         if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
                             return false;
                         EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
-                        EmitMethodCall(il, rightOpType.FindNullableHasValueGetterMethod());
+                        EmitMethodCall(il, rightOpType.GetNullableHasValueGetterMethod());
                         if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
                         return il.EmitPopIfIgnoreResult(parent);
@@ -4685,7 +4719,7 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
-                    EmitMethodCall(il, leftOpType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il, leftOpType.GetNullableGetValueOrDefaultMethod());
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
 
@@ -4706,7 +4740,7 @@ namespace FastExpressionCompiler
                 if (rightOpType.IsNullable())
                 {
                     rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
-                    EmitMethodCall(il, rightOpType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il, rightOpType.GetNullableGetValueOrDefaultMethod());
                     rightOpType = Nullable.GetUnderlyingType(rightOpType);
                 }
 
@@ -4790,7 +4824,7 @@ namespace FastExpressionCompiler
             nullableCheck:
                 if (leftIsNullable)
                 {
-                    var leftNullableHasValueGetterMethod = left.Type.FindNullableHasValueGetterMethod();
+                    var leftNullableHasValueGetterMethod = left.Type.GetNullableHasValueGetterMethod();
 
                     EmitLoadLocalVariableAddress(il, lVarIndex);
                     EmitMethodCall(il, leftNullableHasValueGetterMethod);
@@ -4875,9 +4909,9 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariableAddress(il, leftType);
 
                     il.Emit(OpCodes.Dup);
-                    EmitMethodCall(il, leftType.FindNullableHasValueGetterMethod());
+                    EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
                     il.Emit(OpCodes.Brfalse, leftNoValueLabel);
-                    EmitMethodCall(il, leftType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il, leftType.GetNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(left, paramExprs, il, ref closure, setup, flags))
                     return false;
@@ -4895,9 +4929,9 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariableAddress(il, rightType);
 
                     il.Emit(OpCodes.Dup);
-                    EmitMethodCall(il, rightType.FindNullableHasValueGetterMethod());
+                    EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
                     il.Emit(OpCodes.Brfalse, rightNoValueLabel);
-                    EmitMethodCall(il, rightType.FindNullableGetValueOrDefaultMethod());
+                    EmitMethodCall(il, rightType.GetNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                     return false;
@@ -4924,7 +4958,7 @@ namespace FastExpressionCompiler
                         var endL = il.DefineLabel();
                         il.Emit(OpCodes.Br_S, endL);
                         il.MarkLabel(valueLabel);
-                        il.Emit(OpCodes.Newobj, exprType.GetConstructors()[0]);
+                        il.Emit(OpCodes.Newobj, exprType.GetNullableConstructor());
                         il.MarkLabel(endL);
                     }
                     else
@@ -5132,7 +5166,7 @@ namespace FastExpressionCompiler
                 {
                     if (!closure.LastEmitIsAddress)
                         EmitStoreAndLoadLocalVariableAddress(il, nullOfValueType);
-                    EmitMethodCall(il, nullOfValueType.FindNullableHasValueGetterMethod());
+                    EmitMethodCall(il, nullOfValueType.GetNullableHasValueGetterMethod());
                 }
 
                 var labelIfFalse = il.DefineLabel();
@@ -5322,6 +5356,14 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Stloc_S, (byte)location);
                 else
                     il.Demit(OpCodes.Stloc, (short)location);
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static int EmitStoreLocalVariable(ILGenerator il, Type type)
+            {
+                var location = il.GetNextLocalVarIndex(type);
+                EmitStoreLocalVariable(il, location);
+                return location;
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -5536,33 +5578,62 @@ namespace FastExpressionCompiler
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) => type.GetMethod("Invoke");
 
-        private static FHashMap<Type, MethodInfo, RefEq<Type>, FHashMap.SingleArrayEntries<Type, MethodInfo, RefEq<Type>>> _getValueOrDefaultMethods;
+        internal struct NullableMethods
+        {
+            public MethodInfo HasValueGetterMethod;
+            public MethodInfo GetValueOrDefaultMethod;
+            public ConstructorInfo Constructor;
+        }
+
+        private static FHashMap<Type, NullableMethods, RefEq<Type>,
+            FHashMap.SingleArrayEntries<Type, NullableMethods, RefEq<Type>>> _nullableMethods;
 
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        internal static MethodInfo FindNullableGetValueOrDefaultMethod(this Type type)
+        internal static MethodInfo GetNullableHasValueGetterMethod(this Type type)
         {
-            ref var method = ref _getValueOrDefaultMethods.GetOrAddValueRef(type, out var found);
-            if (found)
-                return method;
-
-            var methods = type.GetMethods();
-            for (var i = 0; i < methods.Length; i++)
-            {
-                var m = methods[i];
-                if (m.GetParameters().Length == 0 && m.Name == "GetValueOrDefault")
-                {
-                    method = m;
-                    return m;
-                }
-            }
-            return null; // the null will be cached as well by adding the default value at the first line
+            ref var methods = ref _nullableMethods.GetOrAddValueRef(type, out var found);
+            if (!found)
+                FindAndSetNullableMethods(type, ref methods);
+            return methods.HasValueGetterMethod;
         }
 
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        internal static MethodInfo FindValueGetterMethod(this Type type) => type.GetProperty("Value").GetMethod;
+        internal static MethodInfo GetNullableGetValueOrDefaultMethod(this Type type)
+        {
+            ref var methods = ref _nullableMethods.GetOrAddValueRef(type, out var found);
+            if (!found)
+                FindAndSetNullableMethods(type, ref methods);
+            return methods.GetValueOrDefaultMethod;
+        }
 
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        internal static MethodInfo FindNullableHasValueGetterMethod(this Type type) => type.GetProperty("HasValue").GetMethod;
+        internal static ConstructorInfo GetNullableConstructor(this Type type)
+        {
+            ref var methods = ref _nullableMethods.GetOrAddValueRef(type, out var found);
+            if (!found)
+                FindAndSetNullableMethods(type, ref methods);
+            return methods.Constructor;
+        }
+
+        internal static void FindAndSetNullableMethods(this Type type, ref NullableMethods methods)
+        {
+            var ms = type.GetMethods();
+            for (var i = 0; i < ms.Length; i++)
+            {
+                var m = ms[i];
+                if (m.Name == "GetValueOrDefault")
+                {
+                    methods.GetValueOrDefaultMethod = m;
+                    break;
+                }
+            }
+            methods.HasValueGetterMethod = type.GetProperty("HasValue").GetMethod;
+            methods.Constructor = type.GetConstructors()[0];
+        }
+
+        // Keeping this method separate from the `_nullableMethods` because it used separate from others in conversion scenarios where `Value` may throw the `InvalidOperationException`
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+        internal static MethodInfo FindValueGetterMethod(this Type type) => type.GetProperty("Value").GetMethod;
 
         private static FHashMap<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>,
             FHashMap.SingleArrayEntries<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>>> _convertOperatorMethods;
