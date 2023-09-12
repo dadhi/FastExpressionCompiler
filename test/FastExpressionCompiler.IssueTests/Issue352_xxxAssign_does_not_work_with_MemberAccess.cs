@@ -24,36 +24,31 @@ namespace FastExpressionCompiler.IssueTests
         {
             // Check_MemberAccess_AddAssign_ToNewExpression(); // todo: @wip @fixme
 
-            Check_MemberAccess_AddAssign_NullablePlusNullable();
+            Check_MemberAccess_AddAssign_StaticMember();
+
             Check_MemberAccess_AddAssign();
             Check_MemberAccess_PlusOneAssign();
-
+            Check_MemberAccess_AddAssign_NullablePlusNullable();
             Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable();
-
             Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Returning();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Returning();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign();
-
             Check_MemberAccess_PreIncrementAssign();
-
             Check_MemberAccess_PreIncrementAssign_Returning();
             Check_MemberAccess_PostIncrementAssign_Returning();
-
             Check_MemberAccess_PreDecrementAssign_ToNewExpression();
-
             Check_MemberAccess_PreIncrementAssign_Nullable();
             Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
             Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
-
             Check_ArrayAccess_Assign_InAction();
             Check_ArrayAccess_AddAssign_InAction();
             Check_ArrayAccess_AddAssign_ReturnResultInFunction();
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_Add();
 
-            return 19;
+            return 22;
         }
 
         [Test]
@@ -256,6 +251,7 @@ namespace FastExpressionCompiler.IssueTests
 
         class Box
         {
+            public static int StaticValue;
             public int Value;
             public int? NullableValue;
 
@@ -282,6 +278,44 @@ namespace FastExpressionCompiler.IssueTests
                 ++CtorCalls;
                 Value = value;
             }
+        }
+
+        [Test]
+        public void Check_MemberAccess_AddAssign_StaticMember()
+        {
+            var bValueField = typeof(Box).GetField(nameof(Box.StaticValue));
+            var e = Lambda<Action>(
+                Block(AddAssign(Field(null, bValueField), Constant(33)))
+            );
+            e.PrintCSharp();
+            var @cs = (Action)(() =>
+            {
+                Box.StaticValue += 33;
+            });
+            Box.StaticValue = 0;
+            @cs();
+            Assert.AreEqual(33, Box.StaticValue);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            Box.StaticValue = 0;
+            fs();
+            Assert.AreEqual(33, Box.StaticValue);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldsfld,
+                OpCodes.Ldc_I4_S, // 33
+                OpCodes.Add,
+                OpCodes.Stsfld,
+                OpCodes.Ret
+            );
+
+            Box.StaticValue = 0;
+            ff();
+            Assert.AreEqual(33, Box.StaticValue);
         }
 
         [Test]
