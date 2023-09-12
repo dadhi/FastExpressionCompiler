@@ -253,11 +253,17 @@ namespace FastExpressionCompiler.UnitTests
             // }
             // });
 
-            var func = assignExpr.CompileFast(true);
+            var fs = assignExpr.CompileSys();
+            fs.PrintIL();
+            var tryCatch = fs();
+            Assert.IsNotNull(tryCatch);
+            Assert.IsNotNull(tryCatch.NestedTest);
+            Assert.AreEqual("Value", tryCatch.NestedTest.Nested);
 
-            Assert.IsNotNull(func);
-
-            var tryCatch = func();
+            var ff = assignExpr.CompileFast(true);
+            ff.PrintIL();
+            Assert.IsNotNull(ff);
+            tryCatch = ff();
             Assert.IsNotNull(tryCatch);
             Assert.IsNotNull(tryCatch.NestedTest);
             Assert.AreEqual("Value", tryCatch.NestedTest.Nested);

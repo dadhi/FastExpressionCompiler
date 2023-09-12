@@ -1921,7 +1921,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.PreIncrementAssign:
                         case ExpressionType.PostDecrementAssign:
                         case ExpressionType.PreDecrementAssign:
-                            return TryEmitIncrementDecrementAssign(
+                            return TryEmitPossiblyArithmeticOperationThenAssign(
                                 ((UnaryExpression)expr).Operand, null, expr.Type, expr.NodeType, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.AddAssign:
@@ -3593,7 +3593,7 @@ namespace FastExpressionCompiler
             }
 
             // todo: @wip rename to TryEmitArithmethicAssign, `++`, `--`, `+=`, `-=`, etc.
-            private static bool TryEmitIncrementDecrementAssign(
+            private static bool TryEmitPossiblyArithmeticOperationThenAssign(
                 Expression left, Expression rightOrNull, Type exprType, ExpressionType nodeType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
@@ -3669,8 +3669,10 @@ namespace FastExpressionCompiler
                     var leftIsByAddress = false;
                     if (nodeType == ExpressionType.Assign)
                     {
+                        Debug.Assert(rightOrNull != null);
+                        var rightIsTryBlock = rightOrNull.NodeType == ExpressionType.Try;
                         var objExpr = leftMemberExpr.Expression;
-                        if (objExpr != null && 
+                        if (!rightIsTryBlock & objExpr != null &&
                             !TryEmit(objExpr, paramExprs, il, ref closure, setup, operandFlags | ParentFlags.InstanceAccess | ParentFlags.MemberAccess))
                             return false;
 
@@ -3680,12 +3682,20 @@ namespace FastExpressionCompiler
                         if (closure.LastEmitIsAddress)
                             EmitLoadIndirectlyByRef(il, rightType);
 
-                        if (resultVar != -1)
+                        if (rightIsTryBlock & objExpr != null)
+                        {
+                            var rightVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(rightType);
+                            EmitStoreLocalVariable(il, rightVar);
+                            if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, operandFlags | ParentFlags.InstanceAccess | ParentFlags.MemberAccess))
+                                return false;
+                            EmitLoadLocalVariable(il, rightVar);
+                        }
+                        else if (resultVar != -1)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
 
                         if (!EmitMemberAssign(il, leftMemberExpr.Member))
                             return false;
-                        
+
                         if (resultVar != -1)
                             EmitLoadLocalVariable(il, resultVar);
                         return true;
@@ -4067,12 +4077,10 @@ namespace FastExpressionCompiler
                             nodeType, arithmNodeType, exprType, paramExprs, il, ref closure, setup, parent);
 
                     case ExpressionType.MemberAccess:
-                    case ExpressionType.Index:
-                        // todo: @wip redirect to IncrementDecrementAssign in order to make it consistent
-                        if (left.NodeType == ExpressionType.MemberAccess & right.NodeType != ExpressionType.Try)
-                            return TryEmitIncrementDecrementAssign(
-                                left, right, exprType, arithmNodeType, paramExprs, il, ref closure, setup, parent);
+                        return TryEmitPossiblyArithmeticOperationThenAssign(
+                            left, right, exprType, arithmNodeType, paramExprs, il, ref closure, setup, parent);
 
+                    case ExpressionType.Index:
                         bool ok = false;
                         var flags = parent & ~ParentFlags.IgnoreResult;
                         var resultLocalVarIndex = -1;
