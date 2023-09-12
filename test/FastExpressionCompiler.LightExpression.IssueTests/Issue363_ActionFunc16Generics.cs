@@ -8,9 +8,21 @@ using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
 {
     [TestFixture]
-    internal class Issue363_ActionFunc16Generics
+    public class Issue363_ActionFunc16Generics : ITest
     {
         public static readonly object[] TestCases = Enumerable.Range(0, 16).Cast<object>().ToArray();
+
+        public int Run()
+        {
+            Supports_16_Func_Params();
+            Supports_16_Action_Params();
+            foreach (var testCase in TestCases)
+            {
+                Can_Create_Func((int)testCase);
+                Can_Create_Action((int)testCase);
+            }
+            return 4;
+        }
 
         [Test]
         public void Supports_16_Func_Params()
@@ -96,6 +108,5 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             Assert.AreEqual(paramCount, list.Sum());
         }
-
     }
 }

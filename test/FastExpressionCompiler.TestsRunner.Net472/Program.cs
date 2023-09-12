@@ -238,6 +238,8 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
+                
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run);
 
                 Run(new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run);
 
