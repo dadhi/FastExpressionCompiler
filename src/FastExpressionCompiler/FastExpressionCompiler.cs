@@ -3428,7 +3428,7 @@ namespace FastExpressionCompiler
                         il.Emit(OpCodes.Dup); // duplicate member owner on stack
 
                     if (!TryEmit(((MemberAssignment)binding).Expression, paramExprs, il, ref closure, setup, parent) ||
-                        !EmitMemberAssign(il, binding.Member))
+                        !EmitMemberSet(il, binding.Member))
                         return false;
                 }
 
@@ -3438,23 +3438,23 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            private static bool TryEmitPropertyAssign(ILGenerator il, PropertyInfo prop)
+            private static bool TryEmitPropertySet(ILGenerator il, PropertyInfo prop)
             {
                 var method = prop.SetMethod;
                 return method != null && EmitMethodCallOrVirtualCall(il, method);
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            private static bool EmitFieldAssign(ILGenerator il, FieldInfo field)
+            private static bool EmitFieldSet(ILGenerator il, FieldInfo field)
             {
                 il.Demit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
                 return true;
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            private static bool EmitMemberAssign(ILGenerator il, MemberInfo member) =>
-                member is PropertyInfo pr ? TryEmitPropertyAssign(il, pr) :
-                member is FieldInfo field ? EmitFieldAssign(il, field) :
+            private static bool EmitMemberSet(ILGenerator il, MemberInfo member) =>
+                member is PropertyInfo pr ? TryEmitPropertySet(il, pr) :
+                member is FieldInfo field ? EmitFieldSet(il, field) :
                 false;
 
 #if LIGHT_EXPRESSION
@@ -3644,7 +3644,7 @@ namespace FastExpressionCompiler
                         else if (resultVar != -1)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
 
-                        if (!EmitMemberAssign(il, leftMemberExpr.Member))
+                        if (!EmitMemberSet(il, leftMemberExpr.Member))
                             return false;
 
                         if (resultVar != -1)
@@ -3773,7 +3773,7 @@ namespace FastExpressionCompiler
 
                     if (leftIsByAddress)
                         EmitStoreIndirectlyByRef(il, leftType);
-                    else if (!EmitMemberAssign(il, leftMemberExpr.Member))
+                    else if (!EmitMemberSet(il, leftMemberExpr.Member))
                         return false;
 
                     if (leftIsNullable)
@@ -3864,7 +3864,10 @@ namespace FastExpressionCompiler
 
                     EmitLoadLocalVariable(il, assignmentResultVar);
 
-                    if (!TryEmitArrayIndexSet(il, indexArgCount, indexerProp, indexExpr.Object?.Type, exprType))
+                    ok = indexerProp != null ? TryEmitPropertySet(il, indexerProp)
+                        : indexArgCount == 1 ? TryEmitArrayIndexSet(il, exprType) // one-dimensional array
+                        : EmitMethodCallOrVirtualCallCheckForNull(il, indexExpr.Object?.Type?.FindMethod("Set")); // multi-dimensional array
+                    if (!ok)
                         return false;
                 }
                 else
@@ -4048,20 +4051,16 @@ namespace FastExpressionCompiler
 
                         var indexLeft = (IndexExpression)left;
                         var objExpr = indexLeft.Object;
-                        if (objExpr != null)
-                        {
-                            var objFlags = indexLeft != null ? flags | ParentFlags.IndexAccess : flags | ParentFlags.MemberAccess;
-                            if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags | ParentFlags.InstanceAccess))
-                                return false;
-                        }
+                        if (objExpr != null
+                            && !TryEmit(objExpr, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceAccess | ParentFlags.IndexAccess))
+                            return false;
 
-                        var indexArgCount = 0;
 #if SUPPORTS_ARGUMENT_PROVIDER
                         var indexArgExprs = (IArgumentProvider)indexLeft;
-                        indexArgCount = indexArgExprs.ArgumentCount;
+                        var indexArgCount = indexArgExprs.ArgumentCount;
 #else
                         var indexArgExprs = indexLeft.Arguments;
-                        indexArgCount = indexArgExprs.Count;
+                        var indexArgCount = indexArgExprs.Count;
 #endif
                         for (var i = 0; i < indexArgCount; ++i)
                             if (!TryEmit(indexArgExprs.GetArgument(i), paramExprs, il, ref closure, setup, flags))
@@ -4077,14 +4076,22 @@ namespace FastExpressionCompiler
                         else if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
                             return false;
 
-                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                            return TryEmitArrayIndexSet(il, indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType);
+                        var resultVar = -1;
+                        if (!parent.IgnoresResult())
+                        {
+                            resultVar = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
+                            il.Emit(OpCodes.Dup);
+                            EmitStoreLocalVariable(il, resultVar);
+                        }
 
-                        il.Emit(OpCodes.Dup);
-                        var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
-                        EmitStoreLocalVariable(il, resultVarIndex);
-                        ok = TryEmitArrayIndexSet(il, indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType);
-                        EmitLoadLocalVariable(il, resultVarIndex);
+                        var indexerProp = indexLeft.Indexer;
+                        ok = indexerProp != null ? TryEmitPropertySet(il, indexerProp)
+                            : indexArgCount == 1 ? TryEmitArrayIndexSet(il, exprType) // one-dimensional array
+                            : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type?.FindMethod("Set")); // multi-dimensional array
+
+                        if (resultVar != -1)
+                            EmitLoadLocalVariable(il, resultVar);
+
                         return ok;
 
                     default: // todo: @feature not yet support assignment targets
@@ -4211,42 +4218,33 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitArrayIndexSet(ILGenerator il, int indexArgCount, PropertyInfo indexerProp, Type instType, Type elementType)
+            private static bool TryEmitArrayIndexSet(ILGenerator il, Type elementType)
             {
-                if (indexerProp != null)
-                    return TryEmitPropertyAssign(il, indexerProp);
-
-                if (indexArgCount == 1) // one-dimensional array
+                if (!elementType.IsValueType)
                 {
-                    if (!elementType.IsValueType)
-                    {
-                        il.Demit(OpCodes.Stelem_Ref);
-                        return true;
-                    }
-
-                    if (elementType == typeof(Int32))
-                        il.Demit(OpCodes.Stelem_I4);
-                    else if (elementType == typeof(Int64))
-                        il.Demit(OpCodes.Stelem_I8);
-                    else if (elementType == typeof(Int16))
-                        il.Demit(OpCodes.Stelem_I2);
-                    else if (elementType == typeof(SByte))
-                        il.Demit(OpCodes.Stelem_I1);
-                    else if (elementType == typeof(Single))
-                        il.Demit(OpCodes.Stelem_R4);
-                    else if (elementType == typeof(Double))
-                        il.Demit(OpCodes.Stelem_R8);
-                    else if (elementType == typeof(IntPtr))
-                        il.Demit(OpCodes.Stelem_I);
-                    else if (elementType == typeof(UIntPtr))
-                        il.Demit(OpCodes.Stelem_I);
-                    else
-                        il.Demit(OpCodes.Stelem, elementType);
+                    il.Demit(OpCodes.Stelem_Ref);
                     return true;
                 }
 
-                var setter = instType?.FindMethod("Set"); // multi-imensional array
-                return setter != null && EmitMethodCallOrVirtualCall(il, setter);
+                if (elementType == typeof(Int32))
+                    il.Demit(OpCodes.Stelem_I4);
+                else if (elementType == typeof(Int64))
+                    il.Demit(OpCodes.Stelem_I8);
+                else if (elementType == typeof(Int16))
+                    il.Demit(OpCodes.Stelem_I2);
+                else if (elementType == typeof(SByte))
+                    il.Demit(OpCodes.Stelem_I1);
+                else if (elementType == typeof(Single))
+                    il.Demit(OpCodes.Stelem_R4);
+                else if (elementType == typeof(Double))
+                    il.Demit(OpCodes.Stelem_R8);
+                else if (elementType == typeof(IntPtr))
+                    il.Demit(OpCodes.Stelem_I);
+                else if (elementType == typeof(UIntPtr))
+                    il.Demit(OpCodes.Stelem_I);
+                else
+                    il.Demit(OpCodes.Stelem, elementType);
+                return true;
             }
 
 #if LIGHT_EXPRESSION
