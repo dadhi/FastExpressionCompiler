@@ -2163,12 +2163,13 @@ namespace FastExpressionCompiler
 #endif
             {
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
-                if (indexExpr.Object != null)
-                {
-                    // we still need to emit object if result is ignored, because at least we need to access its index
-                    if (!TryEmit(indexExpr.Object, paramExprs, il, ref closure, setup, p | ParentFlags.InstanceAccess))
-                        return false;
-                }
+
+                // we still need to emit object if result is ignored, because at least we need to access its index
+                var objExpr = indexExpr.Object;
+                if (objExpr != null &&
+                    !TryEmit(objExpr, paramExprs, il, ref closure, setup, p | ParentFlags.InstanceAccess))
+                    return false;
+
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var indexArgs = (IArgumentProvider)indexExpr;
                 var indexArgCount = indexArgs.ArgumentCount;
@@ -2177,32 +2178,25 @@ namespace FastExpressionCompiler
                 var indexArgCount = indexArgs.Count;
 #endif
                 var indexerProp = indexExpr.Indexer;
-                MethodInfo indexerPropGetter = null;
-                if (indexerProp != null)
-                    indexerPropGetter = indexerProp.GetMethod; // todo: @wip where is the setter?
-
-                if (indexerPropGetter == null)
+                if (indexerProp == null)
                 {
                     for (var i = 0; i < indexArgCount; i++)
                         if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, p, -1))
                             return false;
+
+                    if (indexArgCount == 1) // one-dimensional array
+                        return TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure);
+
+                    var getMethod = objExpr?.Type.FindMethod("Get"); // multi-dimensional array
+                    return getMethod != null && EmitMethodCallOrVirtualCall(il, getMethod);
                 }
-                else
-                {
-                    var types = indexerPropGetter.GetParameters();
-                    for (var i = 0; i < indexArgCount; i++)
-                        if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, p, types[i].ParameterType.IsByRef ? i : -1))
-                            return false;
-                }
 
-                if (indexerPropGetter != null)
-                    return EmitMethodCallOrVirtualCall(il, indexerPropGetter);
-
-                if (indexArgCount == 1) // one-dimensional array
-                    return TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure);
-
-                indexerPropGetter = indexExpr.Object?.Type.FindMethod("Get"); // multi-dimensional array
-                return indexerPropGetter != null && EmitMethodCallOrVirtualCall(il, indexerPropGetter);
+                var indexerPropGetter = indexerProp.GetMethod;
+                var types = indexerPropGetter.GetParameters();
+                for (var i = 0; i < indexArgCount; i++)
+                    if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, p, types[i].ParameterType.IsByRef ? i : -1))
+                        return false;
+                return EmitMethodCallOrVirtualCall(il, indexerPropGetter);
             }
 
 #if LIGHT_EXPRESSION
@@ -3351,7 +3345,6 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Ldelema, elemType);
                         if (!TryEmit(elems.GetArgument(i), paramExprs, il, ref closure, setup, parent))
                             return false;
-                        // todo: @wip should we use `EmitStoreIndirectlyByRef`?
                         il.Demit(OpCodes.Stobj, elemType); // store element of value type by array element address
                     }
                     else
@@ -4218,14 +4211,13 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static bool TryEmitIndexSet(int indexArgCount, PropertyInfo indexer, Type instType, Type elementType, ILGenerator il)
+            private static bool TryEmitIndexSet(int indexArgCount, PropertyInfo indexerProp, Type instType, Type elementType, ILGenerator il)
             {
-                if (indexer != null)
-                    return TryEmitPropertyAssign(il, indexer);
+                if (indexerProp != null)
+                    return TryEmitPropertyAssign(il, indexerProp);
 
                 if (indexArgCount == 1) // one dimensional array
                 {
-                    // todo: @improve @perf convert to switch the same as EmitStoreIndirectlyByRef
                     if (!elementType.IsValueType)
                     {
                         il.Demit(OpCodes.Stelem_Ref);
@@ -4253,8 +4245,8 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                var setter = instType?.FindMethod("Set");
-                return setter != null && EmitMethodCallOrVirtualCall(il, setter); // multi dimensional array
+                var setter = instType?.FindMethod("Set"); // multi dimensional array
+                return setter != null && EmitMethodCallOrVirtualCall(il, setter);
             }
 
 #if LIGHT_EXPRESSION
