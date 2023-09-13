@@ -1842,7 +1842,7 @@ namespace FastExpressionCompiler
                             var arrIndexExpr = (BinaryExpression)expr;
                             return TryEmit(arrIndexExpr.Left, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess)
                                 && TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess) // #265
-                                && TryEmitArrayIndex(expr.Type, il, parent, ref closure);
+                                && TryEmitArrayIndexGet(il, expr.Type, ref closure, parent);
 
                         case ExpressionType.ArrayLength:
                             if (!TryEmit(((UnaryExpression)expr).Operand, paramExprs, il, ref closure, setup, parent))
@@ -2185,7 +2185,7 @@ namespace FastExpressionCompiler
                             return false;
 
                     if (indexArgCount == 1) // one-dimensional array
-                        return TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure);
+                        return TryEmitArrayIndexGet(il, indexExpr.Type, ref closure, parent);
 
                     var getMethod = objExpr?.Type.FindMethod("Get"); // multi-dimensional array
                     return getMethod != null && EmitMethodCallOrVirtualCall(il, getMethod);
@@ -3357,49 +3357,6 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitArrayIndex(Type type, ILGenerator il, ParentFlags parent, ref ClosureInfo closure)
-            {
-                if (!type.IsValueType)
-                {
-                    il.Emit(OpCodes.Ldelem_Ref);
-                    return true;
-                }
-
-                // access the value type by address when it is used later for the member access or as instance in the method call
-                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.RefAssignment)) != 0)
-                {
-                    il.Emit(OpCodes.Ldelema, type);
-                    closure.LastEmitIsAddress = true;
-                    return true;
-                }
-                // todo: @perf @simplify convert to switch on TypeCode
-                if (type == typeof(Int32))
-                    il.Emit(OpCodes.Ldelem_I4);
-                else if (type == typeof(Int64))
-                    il.Emit(OpCodes.Ldelem_I8);
-                else if (type == typeof(Int16))
-                    il.Emit(OpCodes.Ldelem_I2);
-                else if (type == typeof(SByte))
-                    il.Emit(OpCodes.Ldelem_I1);
-                else if (type == typeof(Single))
-                    il.Emit(OpCodes.Ldelem_R4);
-                else if (type == typeof(Double))
-                    il.Emit(OpCodes.Ldelem_R8);
-                else if (type == typeof(IntPtr))
-                    il.Emit(OpCodes.Ldelem_I);
-                else if (type == typeof(UIntPtr))
-                    il.Emit(OpCodes.Ldelem_I);
-                else if (type == typeof(Byte))
-                    il.Emit(OpCodes.Ldelem_U1);
-                else if (type == typeof(UInt16))
-                    il.Emit(OpCodes.Ldelem_U2);
-                else if (type == typeof(UInt32))
-                    il.Emit(OpCodes.Ldelem_U4);
-                else
-                    il.Emit(OpCodes.Ldelem, type);
-                return true;
-            }
-
 #if LIGHT_EXPRESSION
             private static bool EmitMemberInit(MemberInitExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
                 CompilerFlags setup, ParentFlags parent)
@@ -3890,7 +3847,7 @@ namespace FastExpressionCompiler
 
                     var ok = indexerPropGetter != null
                         ? EmitMethodCallOrVirtualCall(il, indexerPropGetter)
-                        : TryEmitArrayIndex(indexExpr.Type, il, parent, ref closure); // one-dimensional array
+                        : TryEmitArrayIndexGet(il, indexExpr.Type, ref closure, parent); // one-dimensional array
                     if (!ok)
                         return false;
 
@@ -3907,7 +3864,7 @@ namespace FastExpressionCompiler
 
                     EmitLoadLocalVariable(il, assignmentResultVar);
 
-                    if (!TryEmitIndexSet(indexArgCount, indexerProp, indexExpr.Object?.Type, exprType, il))
+                    if (!TryEmitArrayIndexSet(il, indexArgCount, indexerProp, indexExpr.Object?.Type, exprType))
                         return false;
                 }
                 else
@@ -4121,12 +4078,12 @@ namespace FastExpressionCompiler
                             return false;
 
                         if ((parent & ParentFlags.IgnoreResult) != 0)
-                            return TryEmitIndexSet(indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType, il);
+                            return TryEmitArrayIndexSet(il, indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType);
 
                         il.Emit(OpCodes.Dup);
                         var resultVarIndex = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
                         EmitStoreLocalVariable(il, resultVarIndex);
-                        ok = TryEmitIndexSet(indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType, il);
+                        ok = TryEmitArrayIndexSet(il, indexArgCount, indexLeft.Indexer, objExpr?.Type, exprType);
                         EmitLoadLocalVariable(il, resultVarIndex);
                         return ok;
 
@@ -4211,12 +4168,55 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static bool TryEmitIndexSet(int indexArgCount, PropertyInfo indexerProp, Type instType, Type elementType, ILGenerator il)
+            private static bool TryEmitArrayIndexGet(ILGenerator il, Type type, ref ClosureInfo closure, ParentFlags parent)
+            {
+                if (!type.IsValueType)
+                {
+                    il.Demit(OpCodes.Ldelem_Ref);
+                    return true;
+                }
+
+                // access the value type by address when it is used later for the member access or as instance in the method call
+                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.RefAssignment)) != 0)
+                {
+                    il.Demit(OpCodes.Ldelema, type);
+                    closure.LastEmitIsAddress = true;
+                    return true;
+                }
+                // todo: @perf @simplify convert to switch on TypeCode
+                if (type == typeof(Int32))
+                    il.Demit(OpCodes.Ldelem_I4);
+                else if (type == typeof(Int64))
+                    il.Demit(OpCodes.Ldelem_I8);
+                else if (type == typeof(Int16))
+                    il.Demit(OpCodes.Ldelem_I2);
+                else if (type == typeof(SByte))
+                    il.Demit(OpCodes.Ldelem_I1);
+                else if (type == typeof(Single))
+                    il.Demit(OpCodes.Ldelem_R4);
+                else if (type == typeof(Double))
+                    il.Demit(OpCodes.Ldelem_R8);
+                else if (type == typeof(IntPtr))
+                    il.Demit(OpCodes.Ldelem_I);
+                else if (type == typeof(UIntPtr))
+                    il.Demit(OpCodes.Ldelem_I);
+                else if (type == typeof(Byte))
+                    il.Demit(OpCodes.Ldelem_U1);
+                else if (type == typeof(UInt16))
+                    il.Demit(OpCodes.Ldelem_U2);
+                else if (type == typeof(UInt32))
+                    il.Demit(OpCodes.Ldelem_U4);
+                else
+                    il.Demit(OpCodes.Ldelem, type);
+                return true;
+            }
+
+            private static bool TryEmitArrayIndexSet(ILGenerator il, int indexArgCount, PropertyInfo indexerProp, Type instType, Type elementType)
             {
                 if (indexerProp != null)
                     return TryEmitPropertyAssign(il, indexerProp);
 
-                if (indexArgCount == 1) // one dimensional array
+                if (indexArgCount == 1) // one-dimensional array
                 {
                     if (!elementType.IsValueType)
                     {
@@ -4245,7 +4245,7 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                var setter = instType?.FindMethod("Set"); // multi dimensional array
+                var setter = instType?.FindMethod("Set"); // multi-imensional array
                 return setter != null && EmitMethodCallOrVirtualCall(il, setter);
             }
 
