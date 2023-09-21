@@ -24,9 +24,9 @@ namespace FastExpressionCompiler.UnitTests
             Target_type_implicit_operator();
             Source_type_implicit_operator();
             Target_type_explicit_operator();
-            return 5;
+            return 6;
 #else
-            return 2;
+            return 3;
 #endif
         }
 
