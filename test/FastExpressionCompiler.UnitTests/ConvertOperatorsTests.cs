@@ -16,9 +16,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
-#if LIGHT_EXPRESSION
             Convert_Func_to_Custom_delegate_should_work();
-#endif
             Target_type_explicit_operator_in_action();
             Generic_converter_should_work();
 
@@ -67,8 +65,9 @@ namespace FastExpressionCompiler.UnitTests
         }
 #endif
 
-#if LIGHT_EXPRESSION
         public delegate string GetString();
+
+#if LIGHT_EXPRESSION
 
         [Test]
         public void Convert_Func_to_Custom_delegate_should_work()
@@ -89,6 +88,38 @@ namespace FastExpressionCompiler.UnitTests
                 OpCodes.Ldarg_1,
                 OpCodes.Ldftn, // Func`1.Invoke
                 OpCodes.Newobj, // GetString
+                OpCodes.Ret
+            );
+
+            getString = ff(() => "hey");
+            Assert.AreEqual("hey", getString());
+        }
+#else
+        [Test]
+        public void Convert_Func_to_Custom_delegate_should_work()
+        {
+            Expression<Func<Func<string>, GetString>> e = p => (GetString)p.Invoke;
+
+            e.PrintCSharp();
+            var @cs = (Func<Func<string>, GetString>)((Func<string> fs) =>
+                (GetString)fs.Invoke);
+            var getString = @cs(() => "hey");
+            Assert.AreEqual("hey", getString());
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldfld,      // ArrayClosure.ConstantsAndNestedLambdas
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Ldelem_Ref,
+                OpCodes.Ldtoken,    // GetString
+                OpCodes.Call,       // Type.GetTypeFromHandle
+                OpCodes.Ldarg_1,
+                OpCodes.Callvirt,   // MethodInfo.CreateDelegate
+                OpCodes.Castclass,  // GetString
                 OpCodes.Ret
             );
 
