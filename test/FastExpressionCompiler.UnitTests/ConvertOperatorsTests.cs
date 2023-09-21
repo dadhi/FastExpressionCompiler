@@ -109,7 +109,7 @@ namespace FastExpressionCompiler.UnitTests
             var ff = e.CompileFast(true);
             ff.PrintIL();
             ff.AssertOpCodes(
-                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_0,
                 OpCodes.Ldfld,      // ArrayClosure.ConstantsAndNestedLambdas
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0,
