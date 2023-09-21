@@ -6730,11 +6730,30 @@ namespace FastExpressionCompiler
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null) =>
             e.ToCSharpString(sb, EnclosedIn.Whatever, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
-        internal enum EnclosedIn { Whatever = 0, IfTest, Block, RefAssignment, LambdaBody, Return }
+        /// <summary>Indicates the expression container</summary>
+        public enum EnclosedIn
+        {
+            /// <summary>Does not matter for the output - the default value</summary>
+            Whatever = 0,
+            /// <summary>The test part of the If expression</summary>
+            IfTest,
+            /// <summary>The block</summary>
+            Block,
+            /// <summary>RefAssignment</summary>
+            RefAssignment,
+            /// <summary>The lambda</summary>
+            LambdaBody,
+            /// <summary>Return expression</summary>
+            Return
+        }
 
         internal static StringBuilder ToCSharpString(this Expression e, StringBuilder sb, EnclosedIn enclosedIn,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null)
         {
+#if LIGHT_EXPRESSION
+            if (e.IsCustomToCSharpString)
+                return e.CustomToCSharpString(sb, enclosedIn, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+#endif
             switch (e.NodeType)
             {
                 case ExpressionType.Constant:

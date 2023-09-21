@@ -65,10 +65,16 @@ namespace FastExpressionCompiler.LightExpression
         /// Returns `0` if everything is fine and positive error code for error.</summary>
         public virtual int TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
+
         /// <summary>The second FEC state to emit the actual IL op-codes based on the information collected by the first traversal
         /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
         public virtual bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
+
+        public virtual bool IsCustomToCSharpString => false;
+        public virtual StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, 
+            CodePrinter.ObjectToCode notRecognizedToCode = null) => sb;
 
 #if SUPPORTS_VISITOR
         protected internal abstract Expression Accept(ExpressionVisitor visitor);
@@ -2341,6 +2347,22 @@ namespace FastExpressionCompiler.LightExpression
             il.Demit(OpCodes.Ldftn, Operand.Type.FindDelegateInvokeMethod());
             il.Demit(OpCodes.Newobj, Type.GetConstructors()[0]);
             return true;
+        }
+
+        public override bool IsCustomToCSharpString => true;
+        public override StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, 
+            CodePrinter.ObjectToCode notRecognizedToCode = null)
+        {
+            var encloseInParens = enclosedIn != ToCSharpPrinter.EnclosedIn.LambdaBody && enclosedIn != ToCSharpPrinter.EnclosedIn.Return;
+            sb = encloseInParens ? sb.Append("((") : sb.Append('(');
+
+            sb.Append(Type.ToCode(stripNamespace, printType)).Append(')');
+            sb = Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+
+            sb.Append(".Invoke"); // Hey, this is the CUSTOM part of the output.
+
+            return encloseInParens ? sb.Append(')') : sb;
         }
     }
 

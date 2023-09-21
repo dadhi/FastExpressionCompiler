@@ -78,6 +78,10 @@ namespace FastExpressionCompiler.UnitTests
                 TryConvertDelegateIntrinsic<GetString>(p),
                 p);
             e.PrintCSharp();
+            var @cs = (Func<Func<string>, GetString>)((Func<string> fs) =>
+                (GetString)fs.Invoke);
+            var getString = @cs(() => "hey");
+            Assert.AreEqual("hey", getString());
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -88,7 +92,7 @@ namespace FastExpressionCompiler.UnitTests
                 OpCodes.Ret
             );
 
-            var getString = ff(() => "hey");
+            getString = ff(() => "hey");
             Assert.AreEqual("hey", getString());
         }
 #endif
