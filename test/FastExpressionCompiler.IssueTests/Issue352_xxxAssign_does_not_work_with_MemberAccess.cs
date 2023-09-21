@@ -22,6 +22,15 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Check_IndexerAccess_Assign_InAction();
+            Check_ArrayAccess_Assign_InAction();
+
+            Check_ArrayAccess_AddAssign_PlusOne();
+            Check_ArrayAccess_PreIncrement();
+            Check_ArrayAccess_AddAssign_InAction();
+            Check_ArrayAccess_AddAssign_ReturnResultInFunction();
+            Check_ArrayAccess_Add();
+
             Check_MemberAccess_AddAssign_ToNewExpression();
             Check_MemberAccess_AddAssign_StaticMember();
             Check_MemberAccess_AddAssign_StaticProp();
@@ -44,11 +53,6 @@ namespace FastExpressionCompiler.IssueTests
             Check_MemberAccess_PreIncrementAssign_Nullable();
             Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
             Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
-            Check_ArrayAccess_Assign_InAction();
-            Check_ArrayAccess_AddAssign_InAction();
-            Check_ArrayAccess_AddAssign_ReturnResultInFunction();
-            Check_ArrayAccess_PreIncrement();
-            Check_ArrayAccess_Add();
 
             return 27;
         }
@@ -58,9 +62,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var a = Parameter(typeof(int[]), "a");
             var e = Lambda<Action<int[]>>(
-                Block(
-                    Assign(ArrayAccess(a, Constant(2)), Constant(33))
-                ),
+                Block(Assign(ArrayAccess(a, Constant(2)), Constant(33))),
                 a
             );
             e.PrintCSharp();
@@ -74,17 +76,76 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = e.CompileSys();
             fs.PrintIL();
-
-            var a2 = new[] { 1, 2, 9 };
-            fs(a2);
-            Assert.AreEqual(33, a2[2]);
+            a1 = new[] { 1, 2, 9 };
+            fs(a1);
+            Assert.AreEqual(33, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldc_I4_2,
+                OpCodes.Ldc_I4_S, // 33
+                OpCodes.Stelem_I4,
+                OpCodes.Ret
+            );
+            a1 = new[] { 1, 2, 9 };
+            ff(a1);
+            Assert.AreEqual(33, a1[2]);
+        }
 
-            var a3 = new[] { 1, 2, 9 };
-            ff(a3);
-            Assert.AreEqual(33, a3[2]);
+        public class Arr
+        {
+            public int Elem;
+            public int this[string s, int i]
+            {
+                get => s == "a" ? i < 0 ? -1 : 1 : i < 0 ? -2 : 2;
+                set
+                {
+                    if (s == "a")
+                        Elem = value;
+                    else
+                        Elem = -value;
+                }
+            }
+        }
+
+        [Test]
+        public void Check_IndexerAccess_Assign_InAction()
+        {
+            var a = Parameter(typeof(Arr), "a");
+            var e = Lambda<Action<Arr>>(
+                Block(Assign(Property(a, "Item", Constant("b"), Constant(2)), Constant(33))),
+                a);
+
+            e.PrintCSharp();
+            var @cs = (Action<Arr>)((Arr a) =>
+            {
+                a["b", 2] = 33;
+            });
+            var a1 = new Arr { Elem = 9 };
+            @cs(a1);
+            Assert.AreEqual(-33, a1.Elem);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            a1 = new Arr { Elem = 9 };
+            fs(a1);
+            Assert.AreEqual(-33, a1.Elem);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldstr,      // "b"
+                OpCodes.Ldc_I4_2,
+                OpCodes.Ldc_I4_S,   // 33
+                OpCodes.Call,       // Arr.set_Item
+                OpCodes.Ret
+            );
+            a1 = new Arr { Elem = 9 };
+            ff(a1);
+            Assert.AreEqual(-33, a1.Elem);
         }
 
         [Test]
@@ -158,9 +219,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var a = Parameter(typeof(int[]), "a");
             var e = Lambda<Action<int[]>>(
-                Block(typeof(void),
-                    PreIncrementAssign(ArrayAccess(a, Constant(2)))
-                ),
+                Block(PreIncrementAssign(ArrayAccess(a, Constant(2)))),
                 a
             );
             e.PrintCSharp();
@@ -175,15 +234,48 @@ namespace FastExpressionCompiler.IssueTests
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            var a2 = new[] { 1, 2, 9 };
-            fs(a2);
-            Assert.AreEqual(10, a2[2]);
+            a1 = new[] { 1, 2, 9 };
+            fs(a1);
+            Assert.AreEqual(10, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
-            ff(a2);
-            Assert.AreEqual(11, a2[2]);
+            a1 = new[] { 1, 2, 9 };
+            ff(a1);
+            Assert.AreEqual(10, a1[2]);
+        }
+
+        [Test]
+        public void Check_ArrayAccess_AddAssign_PlusOne()
+        {
+            var a = Parameter(typeof(int[]), "a");
+            var e = Lambda<Action<int[]>>(
+                Block(AddAssign(ArrayAccess(a, Constant(2)), Constant(1))),
+                a
+            );
+            e.PrintCSharp();
+            var @cs = (Action<int[]>)((int[] a) =>
+            {
+                ++a[2];
+            });
+            var a1 = new[] { 1, 2, 9 };
+            @cs(a1);
+            Assert.AreEqual(10, a1[2]);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            a1 = new[] { 1, 2, 9 };
+            fs(a1);
+            Assert.AreEqual(10, a1[2]);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            a1 = new[] { 1, 2, 9 };
+            ff(a1);
+            Assert.AreEqual(10, a1[2]);
         }
 
         [Test]

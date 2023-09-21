@@ -448,6 +448,26 @@ namespace FastExpressionCompiler.LightExpression
         public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
             new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments.AsReadOnlyList());
 
+        public static IndexExpression Property(Expression instance, string propertyName, params Expression[] arguments)
+        {
+            Debug.Assert(instance != null); // because otherwise there is no way to get type to find the indexer by name
+            foreach (var indexer in instance.Type.GetProperties())
+                if (indexer.Name == propertyName)
+                {
+                     var indexerParams = indexer.GetIndexParameters();
+                     if (indexerParams.Length == arguments.Length)
+                     {
+                        var mismatch = false;
+                        for (var p = 0; !mismatch && p < indexerParams.Length; ++p)
+                            mismatch = indexerParams[p].ParameterType != arguments[p].Type;
+                        if (!mismatch)
+                            return new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments);
+                     }
+                }
+            throw new ArgumentException($"Indexer property '{propertyName}' is not found in '{instance.Type}' with the argument types '{arguments.Select(a => a.Type).ToCode(null)}]", 
+                nameof(propertyName));
+        }
+
         public static MemberExpression PropertyOrField(Expression expression, string memberName) =>
             expression.Type.FindProperty(memberName) != null
                 ? Property(expression, expression.Type.FindProperty(memberName)
