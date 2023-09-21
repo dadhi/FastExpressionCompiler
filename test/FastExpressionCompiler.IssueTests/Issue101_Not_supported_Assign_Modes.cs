@@ -131,7 +131,7 @@ namespace FastExpressionCompiler.IssueTests
                 Block(new[] { eVar },
                     Call(Constant(a), a.GetType().GetTypeInfo().GetDeclaredMethod("Invoke")),
                     PreIncrementAssign(eVar)
-                    //PreIncrementAssign(eVar),
+                    //PreIncrementAssign(eVar), // todo: @wip
                     //PreIncrementAssign(eVar)
                 );
 

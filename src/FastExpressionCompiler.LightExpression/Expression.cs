@@ -515,6 +515,17 @@ namespace FastExpressionCompiler.LightExpression
         public static UnaryExpression Convert<T>(Expression expression) =>
             new TypedConvertUnaryExpression<T>(expression);
 
+        public static UnaryExpression TryConvertDelegateIntrinsic(Expression expression, Type type) =>
+            type != expression.Type &&
+            typeof(Delegate).IsAssignableFrom(type) && typeof(Delegate).IsAssignableFrom(expression.Type)
+                ? new ConvertDelegateIntrinsicExpression(expression, type)
+                : Convert(expression, type);
+
+        public static UnaryExpression TryConvertDelegateIntrinsic<D>(Expression expression) where D : Delegate =>
+            typeof(D) != expression.Type && typeof(Delegate).IsAssignableFrom(expression.Type)
+                ? new ConvertDelegateIntrinsicExpression(expression, typeof(D))
+                : Convert(expression, typeof(D));
+
         public static UnaryExpression TryConvertIntrinsic(Expression expression, Type type) =>
             !type.IsValueType && (!expression.Type.IsValueType || type == typeof(object))
                 ? new ConvertIntrinsicExpression(expression, type)
@@ -858,7 +869,7 @@ namespace FastExpressionCompiler.LightExpression
             Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
 
         [MethodImpl((MethodImplOptions)256)]
-        private static Type GetDelegateReturnType(Type delegateType) => delegateType.GetMethod("Invoke").ReturnType;
+        private static Type GetDelegateReturnType(Type delegateType) => delegateType.FindDelegateInvokeMethod().ReturnType;
 
         /// <summary>Creates a BinaryExpression that represents applying an array index operator to an array of rank one.</summary>
         /// <param name="array">A Expression to set the Left property equal to.</param>
@@ -2309,6 +2320,30 @@ namespace FastExpressionCompiler.LightExpression
             Method = method;
     }
 
+    public class ConvertDelegateIntrinsicExpression : UnaryExpression
+    {
+        public sealed override ExpressionType NodeType => ExpressionType.Convert;
+        public override Type Type { get; }
+        internal ConvertDelegateIntrinsicExpression(Expression operand, Type targetDelegateType) : base(operand) =>
+            Type = targetDelegateType;
+
+        public override bool IsIntrinsic => true;
+
+        public override int TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            ExpressionCompiler.TryCollectInfo(ref closure, Operand, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+
+        public override bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+        {
+            if (!EmittingVisitor.TryEmit(Operand, paramExprs, il, ref closure, flags, parent, byRefIndex))
+                return false;
+            il.Demit(OpCodes.Ldftn, Operand.Type.FindDelegateInvokeMethod());
+            il.Demit(OpCodes.Newobj, Type.GetConstructors()[0]);
+            return true;
+        }
+    }
+
     public class ConvertIntrinsicExpression<T> : UnaryExpression where T : class
     {
         public sealed override ExpressionType NodeType => ExpressionType.Convert;
@@ -2330,13 +2365,13 @@ namespace FastExpressionCompiler.LightExpression
             {
                 var operandType = Operand.Type;
                 if (operandType.IsValueType)
-                    il.Emit(OpCodes.Box, operandType);
+                    il.Demit(OpCodes.Box, operandType);
             }
 #if NETFRAMEWORK
             else
                 // The cast is required only for Full CLR starting from NET45, e.g.
                 // .NET Core does not seem to care about verifiability and it's faster without the explicit cast
-                il.Emit(OpCodes.Castclass, Type);
+                il.Demit(OpCodes.Castclass, Type);
 #endif
             return true;
         }
@@ -2849,7 +2884,7 @@ namespace FastExpressionCompiler.LightExpression
         public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
-            il.Emit(OpCodes.Newobj, Constructor);
+            il.Demit(OpCodes.Newobj, Constructor);
             return true;
         }
     }
@@ -2875,7 +2910,7 @@ namespace FastExpressionCompiler.LightExpression
             ILGenerator il, ParentFlags parent, int byRefIndex = -1)
         {
             var ok = EmittingVisitor.TryEmit(Argument, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
-            il.Emit(OpCodes.Newobj, Constructor);
+            il.Demit(OpCodes.Newobj, Constructor);
             return ok;
         }
     }
@@ -2912,7 +2947,7 @@ namespace FastExpressionCompiler.LightExpression
             var ok =
                 EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1);
-            il.Emit(OpCodes.Newobj, Constructor);
+            il.Demit(OpCodes.Newobj, Constructor);
             return ok;
         }
     }
@@ -2954,7 +2989,7 @@ namespace FastExpressionCompiler.LightExpression
                 EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1);
-            il.Emit(OpCodes.Newobj, Constructor);
+            il.Demit(OpCodes.Newobj, Constructor);
             return ok;
         }
     }
@@ -2999,7 +3034,7 @@ namespace FastExpressionCompiler.LightExpression
                 EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1);
-            il.Emit(OpCodes.Newobj, Constructor);
+            il.Demit(OpCodes.Newobj, Constructor);
             return ok;
         }
     }
@@ -3048,7 +3083,7 @@ namespace FastExpressionCompiler.LightExpression
                 EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, f, -1);
-            il.Emit(OpCodes.Newobj, Constructor);
+            il.Demit(OpCodes.Newobj, Constructor);
             return ok;
         }
     }
@@ -3101,7 +3136,7 @@ namespace FastExpressionCompiler.LightExpression
                 EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument5, paramExprs, il, ref closure, setup, f, -1);
-            il.Emit(OpCodes.Newobj, Constructor);
+            il.Demit(OpCodes.Newobj, Constructor);
             return ok;
         }
     }
@@ -3157,7 +3192,7 @@ namespace FastExpressionCompiler.LightExpression
                 EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument5, paramExprs, il, ref closure, setup, f, -1) &&
                 EmittingVisitor.TryEmit(Argument6, paramExprs, il, ref closure, setup, f, -1);
-            il.Emit(OpCodes.Newobj, Constructor);
+            il.Demit(OpCodes.Newobj, Constructor);
             return ok;
         }
     }
@@ -3193,7 +3228,7 @@ namespace FastExpressionCompiler.LightExpression
             for (var i = 0; i < args.Count; i++)
                 if (!EmittingVisitor.TryEmit(args[i], paramExprs, il, ref closure, setup, f, -1))
                     return false;
-            il.Emit(OpCodes.Newobj, Constructor);
+            il.Demit(OpCodes.Newobj, Constructor);
             return true;
         }
     }
@@ -3672,7 +3707,7 @@ namespace FastExpressionCompiler.LightExpression
         internal NotNullExpressionInvocationExpression(Expression expression) => Expression = expression;
     }
 
-    /// Implies that the Type may be different from the `expression` return type
+    /// <summary>Implies that the Type may be different from the `expression` return type</summary>
     public sealed class TypedInvocationExpression : NotNullExpressionInvocationExpression
     {
         public override Type Type { get; }

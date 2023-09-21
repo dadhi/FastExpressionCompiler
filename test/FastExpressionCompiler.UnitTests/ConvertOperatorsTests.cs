@@ -1,5 +1,6 @@
 ﻿using System;
 using NUnit.Framework;
+using System.Reflection.Emit;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -15,6 +16,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+#if LIGHT_EXPRESSION
+            Convert_Func_to_Custom_delegate_should_work();
+#endif
             Target_type_explicit_operator_in_action();
             Generic_converter_should_work();
 
@@ -33,7 +37,7 @@ namespace FastExpressionCompiler.UnitTests
         public void Target_type_implicit_operator()
         {
             Expression<Func<string, X>> expr = s => s;
-            
+
             var f = expr.CompileFast(true);
             var x = f("hey");
 
@@ -60,6 +64,32 @@ namespace FastExpressionCompiler.UnitTests
             var y = f("hey");
 
             Assert.AreEqual("X:hey", y.S);
+        }
+#endif
+
+#if LIGHT_EXPRESSION
+        public delegate string GetString();
+
+        [Test]
+        public void Convert_Func_to_Custom_delegate_should_work()
+        {
+            var p = Parameter(typeof(Func<string>), "fs");
+            var e = Lambda<Func<Func<string>, GetString>>(
+                TryConvertDelegateIntrinsic<GetString>(p),
+                p);
+            e.PrintCSharp();
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldftn, // Func`1.Invoke
+                OpCodes.Newobj, // GetString
+                OpCodes.Ret
+            );
+
+            var getString = ff(() => "hey");
+            Assert.AreEqual("hey", getString());
         }
 #endif
 
