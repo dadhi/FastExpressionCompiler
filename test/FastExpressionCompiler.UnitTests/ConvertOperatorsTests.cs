@@ -108,20 +108,23 @@ namespace FastExpressionCompiler.UnitTests
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            // ff.AssertOpCodes(
-            //     OpCodes.Ldarg_0,
-            //     OpCodes.Ldfld,      // ArrayClosure.ConstantsAndNestedLambdas
-            //     OpCodes.Stloc_0,
-            //     OpCodes.Ldloc_0,
-            //     OpCodes.Ldc_I4_0,
-            //     OpCodes.Ldelem_Ref,
-            //     OpCodes.Ldtoken,    // GetString
-            //     OpCodes.Call,       // Type.GetTypeFromHandle
-            //     OpCodes.Ldarg_1,
-            //     OpCodes.Callvirt,   // MethodInfo.CreateDelegate
-            //     OpCodes.Castclass,  // GetString
-            //     OpCodes.Ret
-            // );
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_0,
+                OpCodes.Ldfld,      // ArrayClosure.ConstantsAndNestedLambdas
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Ldelem_Ref,
+#if NET472_OR_GREATER
+                OpCodes.Castclass,
+#endif
+                OpCodes.Ldtoken,    // GetString
+                OpCodes.Call,       // Type.GetTypeFromHandle
+                OpCodes.Ldarg_1,
+                OpCodes.Callvirt,   // MethodInfo.CreateDelegate
+                OpCodes.Castclass,  // GetString
+                OpCodes.Ret
+            );
 
             getString = ff(() => "hey");
             Assert.AreEqual("hey", getString());

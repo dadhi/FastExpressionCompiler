@@ -22,14 +22,15 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Check_IndexerAccess_Assign_InAction();
-            Check_ArrayAccess_Assign_InAction();
-
             Check_ArrayAccess_AddAssign_PlusOne();
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_AddAssign_InAction();
             Check_ArrayAccess_AddAssign_ReturnResultInFunction();
             Check_ArrayAccess_Add();
+
+            Check_MultiArrayAccess_Assign_InAction();
+            Check_IndexerAccess_Assign_InAction();
+            Check_ArrayAccess_Assign_InAction();
 
             Check_MemberAccess_AddAssign_ToNewExpression();
             Check_MemberAccess_AddAssign_StaticMember();
@@ -92,6 +93,44 @@ namespace FastExpressionCompiler.IssueTests
             a1 = new[] { 1, 2, 9 };
             ff(a1);
             Assert.AreEqual(33, a1[2]);
+        }
+
+        [Test]
+        public void Check_MultiArrayAccess_Assign_InAction()
+        {
+            var a = Parameter(typeof(int[,]), "a");
+            var e = Lambda<Action<int[,]>>(
+                Block(Assign(ArrayAccess(a, Constant(1), Constant(2)), Constant(33))),
+                a
+            );
+            e.PrintCSharp();
+            var @cs = (Action<int[,]>)((int[,] a) =>
+            {
+                a[1, 2] = 33;
+            });
+            var a1 = new[,] {{ 1, 2, 9 }, { 3, 4, 5 }};
+            @cs(a1);
+            Assert.AreEqual(33, a1[1, 2]);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            a1 = new[,] {{ 1, 2, 9 }, { 3, 4, 5 }};
+            fs(a1);
+            Assert.AreEqual(33, a1[1, 2]);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Ldc_I4_2,
+                OpCodes.Ldc_I4_S, // 33
+                OpCodes.Call,     // Array.Set
+                OpCodes.Ret
+            );
+            a1 = new[,] {{ 1, 2, 9 }, { 3, 4, 5 }};
+            ff(a1);
+            Assert.AreEqual(33, a1[1, 2]);
         }
 
         public class Arr
