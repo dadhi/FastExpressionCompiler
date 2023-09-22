@@ -21,8 +21,15 @@ namespace FastExpressionCompiler
         public static void AssertOpCodes(this Delegate @delegate, params OpCode[] expectedCodes) =>
             AssertOpCodes(@delegate.Method, expectedCodes);
 
-        public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes) =>
-            CollectionAssert.AreEqual(expectedCodes, method.GetOpCodes(), "Unexpected IL OpCodes...");
+        public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes)
+        {
+            var actualCodes = method.GetOpCodes();
+            var sb = new StringBuilder();
+            var n = 0;
+            foreach (var code in actualCodes)
+                sb.Append(n++).Append(": ").AppendLine(code.ToString());
+            CollectionAssert.AreEqual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual are: " + sb);
+        }
 
         static private readonly Func<Type, string, string> _stripOuterTypes = (t, s) => s.Substring(s.LastIndexOf('.') + 1);
 
