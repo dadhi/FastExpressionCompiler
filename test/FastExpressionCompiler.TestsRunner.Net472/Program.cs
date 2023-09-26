@@ -29,7 +29,12 @@ namespace FastExpressionCompiler.UnitTests
                 catch (Exception ex)
                 {
                     failed = true;
-                    Console.WriteLine($"ERROR: Tests `{testsName}` failed with '{ex}'");
+                    Console.WriteLine($"""
+                    --------------------------------------------
+                    ERROR: Tests `{testsName}` failed with
+                    {ex}
+                    --------------------------------------------
+                    """);
                 }
             }
 

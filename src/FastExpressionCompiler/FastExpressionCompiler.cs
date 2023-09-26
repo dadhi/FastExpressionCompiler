@@ -1124,11 +1124,10 @@ namespace FastExpressionCompiler
 
 #if SUPPORTS_ARGUMENT_PROVIDER
                             var callArgs = (IArgumentProvider)callExpr;
-                            var argCount = callArgs.ArgumentCount;
 #else
                             var callArgs = callExpr.Arguments;
-                            var argCount = callArgs.Count;
 #endif
+                            var argCount = callArgs.GetCount();
                             if (argCount == 0)
                             {
                                 if (callObjectExpr != null)
@@ -1163,11 +1162,10 @@ namespace FastExpressionCompiler
                             var newExpr = (NewExpression)expr;
 #if SUPPORTS_ARGUMENT_PROVIDER
                             var ctorArgs = (IArgumentProvider)newExpr;
-                            var argCount = ctorArgs.ArgumentCount;
 #else
                             var ctorArgs = newExpr.Arguments;
-                            var argCount = ctorArgs.Count;
 #endif
+                            var argCount = ctorArgs.GetCount();
                             if (argCount == 0)
                                 return 0;
                             var lastArgIndex = argCount - 1;
@@ -1263,11 +1261,10 @@ namespace FastExpressionCompiler
                             var invokeExpr = (InvocationExpression)expr;
 #if SUPPORTS_ARGUMENT_PROVIDER
                             var invokeArgs = (IArgumentProvider)invokeExpr;
-                            var argCount = invokeArgs.ArgumentCount;
 #else
                             var invokeArgs = invokeExpr.Arguments;
-                            var argCount = invokeArgs.Count;
 #endif
+                            var argCount = invokeArgs.GetCount();
                             var invokedExpr = invokeExpr.Expression;
                             if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression la)
                             {
@@ -1397,11 +1394,10 @@ namespace FastExpressionCompiler
                         var indexExpr = (IndexExpression)expr;
 #if SUPPORTS_ARGUMENT_PROVIDER
                         var indexArgs = (IArgumentProvider)indexExpr;
-                        var indexArgCount = indexArgs.ArgumentCount;
 #else
                         var indexArgs = indexExpr.Arguments;
-                        var indexArgCount = indexArgs.Count;
 #endif
+                        var indexArgCount = indexArgs.GetCount();
                         for (var i = 0; i < indexArgCount; i++)
                             if ((error = TryCollectInfo(ref closure, indexArgs.GetArgument(i), paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0)
                                 return error;
@@ -1769,7 +1765,7 @@ namespace FastExpressionCompiler
         internal static bool EmitPopIfIgnoreResult(this ILGenerator il, ParentFlags parent)
         {
             if ((parent & ParentFlags.IgnoreResult) != 0)
-                il.Emit(OpCodes.Pop);
+                il.Demit(OpCodes.Pop);
             return true;
         }
 
@@ -1777,7 +1773,7 @@ namespace FastExpressionCompiler
         internal static bool TryEmitBoxOf(this ILGenerator il, Type sourceType)
         {
             if (sourceType.IsValueType)
-                il.Emit(OpCodes.Box, sourceType);
+                il.Demit(OpCodes.Box, sourceType);
             return true;
         }
 
@@ -1859,7 +1855,7 @@ namespace FastExpressionCompiler
                             return TryEmitMethodCall(expr, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.MemberAccess:
-                            return TryEmitMemberAccess((MemberExpression)expr, paramExprs, il, ref closure, setup, parent, byRefIndex);
+                            return TryEmitMemberGet((MemberExpression)expr, paramExprs, il, ref closure, setup, parent, byRefIndex);
 
                         case ExpressionType.New:
                             return TryEmitNew(expr, paramExprs, il, ref closure, setup, parent);
@@ -2055,7 +2051,7 @@ namespace FastExpressionCompiler
                             return true;
 
                         case ExpressionType.Index:
-                            return TryEmitIndex((IndexExpression)expr, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitIndexGet((IndexExpression)expr, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Goto:
                             return TryEmitGoto((GotoExpression)expr, paramExprs, il, ref closure, setup, parent);
@@ -2093,11 +2089,10 @@ namespace FastExpressionCompiler
                 var newExpr = (NewExpression)expr;
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var argExprs = (IArgumentProvider)newExpr;
-                var argCount = argExprs.ArgumentCount;
 #else
                 var argExprs = newExpr.Arguments;
-                var argCount = argExprs.Count;
 #endif
+                var argCount = argExprs.GetCount();
                 var ctor = newExpr.Constructor;
                 if (argCount > 0)
                 {
@@ -2154,17 +2149,17 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            // similar code is used by the TryEmitPossiblyArithmeticOperationThenAssign, so don't forget to modify it as well
+            private static bool TryEmitIndexGet(IndexExpression indexExpr,
 #if LIGHT_EXPRESSION
-            private static bool TryEmitIndex(IndexExpression indexExpr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
+                IParameterProvider paramExprs,
 #else
-            private static bool TryEmitIndex(IndexExpression indexExpr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
+                IReadOnlyList<PE> paramExprs,
 #endif
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
 
-                // we still need to emit object if result is ignored, because at least we need to access its index
                 var objExpr = indexExpr.Object;
                 if (objExpr != null &&
                     !TryEmit(objExpr, paramExprs, il, ref closure, setup, p | ParentFlags.InstanceAccess))
@@ -2172,31 +2167,20 @@ namespace FastExpressionCompiler
 
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var indexArgs = (IArgumentProvider)indexExpr;
-                var indexArgCount = indexArgs.ArgumentCount;
 #else
                 var indexArgs = indexExpr.Arguments;
-                var indexArgCount = indexArgs.Count;
 #endif
-                var indexerProp = indexExpr.Indexer;
-                if (indexerProp == null)
-                {
-                    for (var i = 0; i < indexArgCount; i++)
-                        if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, p, -1))
-                            return false;
-
-                    if (indexArgCount == 1) // one-dimensional array
-                        return TryEmitArrayIndexGet(il, indexExpr.Type, ref closure, parent);
-
-                    var getMethod = objExpr?.Type.FindMethod("Get"); // multi-dimensional array
-                    return getMethod != null && EmitMethodCallOrVirtualCall(il, getMethod);
-                }
-
-                var indexerPropGetter = indexerProp.GetMethod;
-                var types = indexerPropGetter.GetParameters();
+                var indexArgCount = indexArgs.GetCount();
                 for (var i = 0; i < indexArgCount; i++)
-                    if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, p, types[i].ParameterType.IsByRef ? i : -1))
+                    if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, p, -1))
                         return false;
-                return EmitMethodCallOrVirtualCall(il, indexerPropGetter);
+
+                var indexerProp = indexExpr.Indexer;
+                return indexerProp != null
+                    ? EmitMethodCallOrVirtualCallCheckForNull(il, indexerProp.GetMethod)
+                    : indexArgCount == 1
+                        ? TryEmitArrayIndexGet(il, indexExpr.Type, ref closure, parent) // one-dimensional array
+                        : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
             }
 
 #if LIGHT_EXPRESSION
@@ -2312,7 +2296,7 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                var labelFalse = il.DefineLabel();
+                var labelFalse = il.DefineLabel(); // todo: @perf define only if needed
                 var labelDone = il.DefineLabel();
 
                 var left = exprObj.Left;
@@ -2330,22 +2314,22 @@ namespace FastExpressionCompiler
                     var varIndex = EmitStoreAndLoadLocalVariableAddress(il, leftType);
                     EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
 
-                    il.Emit(OpCodes.Brfalse, labelFalse);
+                    il.Demit(OpCodes.Brfalse, labelFalse);
                     EmitLoadLocalVariableAddress(il, varIndex);
                     EmitMethodCall(il, leftType.GetNullableGetValueOrDefaultMethod());
 
-                    il.Emit(OpCodes.Br, labelDone);
-                    il.MarkLabel(labelFalse);
+                    il.Demit(OpCodes.Br, labelDone);
+                    il.DmarkLabel(labelFalse);
                     if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                         return false;
 
-                    il.MarkLabel(labelDone);
+                    il.DmarkLabel(labelDone);
                 }
                 else
                 {
-                    il.Emit(OpCodes.Dup);                // duplicate left, if it's not null, after the branch this value will be on the top of the stack
-                    il.Emit(OpCodes.Brtrue, labelFalse); // automates the chain of the Ldnull, Ceq, Brfalse
-                    il.Emit(OpCodes.Pop);                // left is null, pop its value from the stack
+                    il.Demit(OpCodes.Dup);                // duplicate left, if it's not null, after the branch this value will be on the top of the stack
+                    il.Demit(OpCodes.Brtrue, labelFalse); // automates the chain of the Ldnull, Ceq, Brfalse
+                    il.Demit(OpCodes.Pop);                // left is null, pop its value from the stack
 
                     if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                         return false;
@@ -2354,13 +2338,13 @@ namespace FastExpressionCompiler
                         il.TryEmitBoxOf(right.Type);
 
                     if (left.Type == exprObj.Type)
-                        il.MarkLabel(labelFalse);
+                        il.DmarkLabel(labelFalse);
                     else
                     {
-                        il.Emit(OpCodes.Br, labelDone);
-                        il.MarkLabel(labelFalse); // todo: @bug? should we insert the boxing for the Nullable value type before the Castclass
-                        il.Emit(OpCodes.Castclass, exprObj.Type);
-                        il.MarkLabel(labelDone);
+                        il.Demit(OpCodes.Br, labelDone);
+                        il.DmarkLabel(labelFalse); // todo: @bug? should we insert the boxing for the Nullable value type before the Castclass
+                        il.Demit(OpCodes.Castclass, exprObj.Type);
+                        il.DmarkLabel(labelDone);
                     }
                 }
                 return il.EmitPopIfIgnoreResult(parent);
@@ -2464,17 +2448,15 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            public static bool TryEmitParameter(ParameterExpression paramExpr, 
 #if LIGHT_EXPRESSION
-            public static bool TryEmitParameter(ParameterExpression paramExpr, IParameterProvider paramExprs,
-                ILGenerator il, ref ClosureInfo closure, ParentFlags parent, int byRefIndex = -1)
-            {
-                var paramExprCount = paramExprs.ParameterCount;
+                IParameterProvider paramExprs,
 #else
-            public static bool TryEmitParameter(ParameterExpression paramExpr, IReadOnlyList<PE> paramExprs,
+                IReadOnlyList<PE> paramExprs,
+#endif
                 ILGenerator il, ref ClosureInfo closure, ParentFlags parent, int byRefIndex = -1)
             {
-                var paramExprCount = paramExprs.Count;
-#endif
+                var paramExprCount = paramExprs.GetCount();
                 var paramType = paramExpr.Type;
                 var isParamOrVarByRef = paramExpr.IsByRef;
                 var isArgByRef = byRefIndex != -1;
@@ -2487,9 +2469,11 @@ namespace FastExpressionCompiler
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     //  means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
-                    var valueTypeParamCallOrMemberAccess = paramType.IsValueType &
-                        (parent & ParentFlags.IndexAccess) == 0 &  // but the parameter is not used as an index #281, #265
-                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0; // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
+                    var valueTypeParamCallOrMemberAccess = paramType.IsValueType &&
+                        // but the parameter is not used as an index #281, #265 (excluding the case when the index is on the left assignment part #352)
+                        ((parent & ParentFlags.IndexAccess) == 0 | (parent & ParentFlags.Assignment) != 0) &
+                        // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
+                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0;
 
                     closure.LastEmitIsAddress = !isParamOrVarByRef & (isArgByRef | valueTypeParamCallOrMemberAccess);
 
@@ -2513,7 +2497,7 @@ namespace FastExpressionCompiler
                         {
                             if (!isArgByRef & (parent & ParentFlags.Call) != 0 ||
                                 (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess)) != 0)
-                                il.Emit(OpCodes.Ldind_Ref);
+                                il.Demit(OpCodes.Ldind_Ref);
                             // else if ((parent & ParentFlags.Arithmetic) != 0)
                             // {
                             // todo: @wip debugging #170/#346
@@ -2556,15 +2540,15 @@ namespace FastExpressionCompiler
                     return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                il.Demit(OpCodes.Ldarg_0);
+                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
-                il.Emit(OpCodes.Ldelem_Ref);
+                il.Demit(OpCodes.Ldelem_Ref);
 
                 // source type is object, NonPassedParams is object array
                 if (paramType.IsValueType)
                 {
-                    il.Emit(OpCodes.Unbox_Any, paramType);
+                    il.Demit(OpCodes.Unbox_Any, paramType);
                     if ((parent & (ParentFlags.InstanceAccess | ParentFlags.IndexAccess)) != 0) // the condition fixes the #353, because we don't want to load the address of arithmetic operand
                         EmitStoreAndLoadLocalVariableAddress(il, paramType); // fixes #347
                 }
@@ -3381,11 +3365,10 @@ namespace FastExpressionCompiler
                 {
 #if SUPPORTS_ARGUMENT_PROVIDER
                     var argExprs = (IArgumentProvider)newExpr;
-                    var argCount = argExprs.ArgumentCount;
 #else
                     var argExprs = newExpr.Arguments;
-                    var argCount = argExprs.Count;
 #endif
+                    var argCount = argExprs.GetCount();
                     if (argCount > 0)
                     {
                         var args = newExpr.Constructor.GetParameters();
@@ -3473,11 +3456,10 @@ namespace FastExpressionCompiler
                 var exprType = newExpr.Type;
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var argExprs = (IArgumentProvider)newExpr;
-                var argCount = argExprs.ArgumentCount;
 #else
                 var argExprs = newExpr.Arguments;
-                var argCount = argExprs.Count;
 #endif
+                var argCount = argExprs.GetCount();
                 if (argCount > 0)
                 {
                     var args = newExpr.Constructor.GetParameters();
@@ -3564,176 +3546,257 @@ namespace FastExpressionCompiler
 
                 var incrementDecrementOpCode = nodeType == ExpressionType.PreIncrementAssign | nodeType == ExpressionType.PostIncrementAssign ? OpCodes.Add : OpCodes.Sub;
 
-                if (left is ParameterExpression p)
+                switch (left.NodeType)
                 {
+                    case ExpressionType.Parameter:
+                        var p = (ParameterExpression)left;
 #if LIGHT_EXPRESSION
-                    var paramExprCount = paramExprs.ParameterCount;
+                        var paramExprCount = paramExprs.ParameterCount;
 #else
-                    var paramExprCount = paramExprs.Count;
+                        var paramExprCount = paramExprs.Count;
 #endif
-                    var paramIndex = -1;
-                    var localVarIndex = closure.GetDefinedLocalVarOrDefault(p);
-                    if (localVarIndex != -1)
-                        EmitLoadLocalVariable(il, localVarIndex); // todo: @wip #346
-                    else
-                    {
-                        paramIndex = paramExprCount - 1;
-                        while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), p))
-                            --paramIndex;
-                        if (paramIndex == -1)
-                            return false;
-                        if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
-                            ++paramIndex;
-                        EmitLoadArg(il, paramIndex);
-                        if (p.IsByRef)
-                            EmitLoadIndirectlyByRef(il, p.Type);
-                    }
-
-                    if (resultVar != -1 & isPost)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
-
-                    il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(incrementDecrementOpCode);
-
-                    if (resultVar != -1 & !isPost)
-                        EmitStoreAndLoadLocalVariable(il, resultVar);
-
-                    if (localVarIndex != -1)
-                        EmitStoreLocalVariable(il, localVarIndex); // store incremented value into the local value;
-                    else if (p.IsByRef)
-                    {
-                        var incrementedVar = il.GetNextLocalVarIndex(exprType);
-                        EmitStoreLocalVariable(il, incrementedVar);
-                        EmitLoadArg(il, paramIndex);
-                        EmitLoadLocalVariable(il, incrementedVar);
-                        EmitStoreIndirectlyByRef(il, exprType);
-                    }
-                    else
-                        il.Emit(OpCodes.Starg_S, paramIndex);
-                }
-                else if (left is MemberExpression leftMemberExpr)
-                {
-                    // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
-                    // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
-                    var operandFlags = (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall) | ParentFlags.Assignment;
-
-                    var leftIsByAddress = false;
-                    if (nodeType == ExpressionType.Assign)
-                    {
-                        Debug.Assert(rightOrNull != null);
-                        var rightIsTryBlock = rightOrNull.NodeType == ExpressionType.Try;
-                        var objExpr = leftMemberExpr.Expression;
-                        if (!rightIsTryBlock & objExpr != null &&
-                            !TryEmit(objExpr, paramExprs, il, ref closure, setup, operandFlags | ParentFlags.InstanceAccess | ParentFlags.MemberAccess))
-                            return false;
-
-                        var rightType = rightOrNull.Type;
-                        if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, operandFlags))
-                            return false;
-                        if (closure.LastEmitIsAddress)
-                            EmitLoadIndirectlyByRef(il, rightType);
-
-                        if (rightIsTryBlock & objExpr != null)
+                        var paramIndex = -1;
+                        var localVarIndex = closure.GetDefinedLocalVarOrDefault(p);
+                        if (localVarIndex != -1)
+                            EmitLoadLocalVariable(il, localVarIndex); // todo: @wip #346
+                        else
                         {
-                            var rightVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(rightType);
-                            EmitStoreLocalVariable(il, rightVar);
-                            if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, operandFlags | ParentFlags.InstanceAccess | ParentFlags.MemberAccess))
+                            paramIndex = paramExprCount - 1;
+                            while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), p))
+                                --paramIndex;
+                            if (paramIndex == -1)
                                 return false;
-                            EmitLoadLocalVariable(il, rightVar);
+                            if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
+                                ++paramIndex;
+                            EmitLoadArg(il, paramIndex);
+                            if (p.IsByRef)
+                                EmitLoadIndirectlyByRef(il, p.Type);
                         }
-                        else if (resultVar != -1)
+
+                        if (resultVar != -1 & isPost)
+                            EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
+
+                        il.Emit(OpCodes.Ldc_I4_1);
+                        il.Emit(incrementDecrementOpCode);
+
+                        if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
 
-                        if (!EmitMemberSet(il, leftMemberExpr.Member))
+                        if (localVarIndex != -1)
+                            EmitStoreLocalVariable(il, localVarIndex); // store incremented value into the local value;
+                        else if (p.IsByRef)
+                        {
+                            var incrementedVar = il.GetNextLocalVarIndex(exprType);
+                            EmitStoreLocalVariable(il, incrementedVar);
+                            EmitLoadArg(il, paramIndex);
+                            EmitLoadLocalVariable(il, incrementedVar);
+                            EmitStoreIndirectlyByRef(il, exprType);
+                        }
+                        else
+                            il.Emit(OpCodes.Starg_S, paramIndex);
+                        break;
+
+                    // todo: @wip what about ArrayIndex ?
+                    case ExpressionType.MemberAccess:
+                    case ExpressionType.Index:
+
+                        var leftMemberExpr = left as MemberExpression;
+                        var leftIndexExpr = left as IndexExpression;
+                        // retrun early for not supported types of left value to avoid multiple checks below
+                        if (leftMemberExpr == null & leftIndexExpr == null)
                             return false;
 
-                        if (resultVar != -1)
-                            EmitLoadLocalVariable(il, resultVar);
-                        return true;
-                    }
-
-                    operandFlags |= ParentFlags.Arithmetic | ParentFlags.DupMemberOwner;
-
-                    var leftOrRightNullableAreNullLabel = default(Label);
-                    var leftType = leftMemberExpr.Type;
-                    var leftIsNullable = leftType.IsNullable();
-                    var leftNullableVar = -1;
-
-                    if (!TryEmitMemberAccess(leftMemberExpr, paramExprs, il, ref closure, setup, operandFlags))
-                        return false;
-                    if (leftIsByAddress = closure.LastEmitIsAddress)
-                        EmitLoadIndirectlyByRef(il, leftType); // if the field is loaded by ref, it need to be loaded from the ref in order to do arithmetic operation on it
-
-                    if (!leftIsNullable)
-                    {
-                        if (rightOrNull == null)
+                        var indexArgCount = -1;
+#if SUPPORTS_ARGUMENT_PROVIDER
+                        IArgumentProvider indexArgs = null;
+#else
+                        IReadOnlyList<Expression> indexArgs = null;
+#endif
+                        if (leftIndexExpr != null)
                         {
-                            if (resultVar != -1 & isPost)
-                                EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value before doing any operation on it
-                            il.Demit(OpCodes.Ldc_I4_1); // Plus or Minus 1
-                            il.Demit(incrementDecrementOpCode);
-                            if (resultVar != -1 & !isPost)
-                                EmitStoreAndLoadLocalVariable(il, resultVar);
+#if SUPPORTS_ARGUMENT_PROVIDER
+                            indexArgs = (IArgumentProvider)leftIndexExpr;
+#else
+                            indexArgs = leftIndexExpr.Arguments;
+#endif
+                            indexArgCount = indexArgs.GetCount();
+                            if (indexArgCount > 4)
+                                return false; // todo: @feature more than 4 index arguments are not supported, and probably not need to be supported
                         }
-                        else
+
+                        var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr.Object;
+
+                        // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
+                        // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
+                        var baseFlags = (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall) | ParentFlags.Assignment;
+                        var leftFlags = leftMemberExpr != null ? baseFlags | ParentFlags.MemberAccess : baseFlags | ParentFlags.IndexAccess;
+
+                        // note that we omit the IndexAccess for the instance of array/indexer, to avoid confusion with the whole expression used as an index,
+                        var objFlags = leftMemberExpr != null ? leftFlags | ParentFlags.InstanceAccess : leftFlags | ParentFlags.InstanceAccess;
+
+                        var leftIsByAddress = false;
+                        if (nodeType == ExpressionType.Assign)
                         {
+                            Debug.Assert(rightOrNull != null);
                             var rightType = rightOrNull.Type;
-                            if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, operandFlags))
-                                return false;
-                            if (closure.LastEmitIsAddress)
-                                EmitLoadIndirectlyByRef(il, rightType);
 
-                            var rightIsNullable = rightType.IsNullable();
-                            if (rightIsNullable) // todo: @perf @clarify is it even possible to have left non-nullable and right nullable
+                            // if the right part is the TryCatch block we will evaluate it first and then assignment of its result
+                            var rightVar = -1;
+                            if (rightOrNull.NodeType == ExpressionType.Try) // todo: @improve mm... what about Block, IfElse, etc?
                             {
-                                var rightVar = EmitStoreAndLoadLocalVariableAddress(il, rightType);
-                                il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
-
-                                il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
-
-                                EmitLoadLocalVariableAddress(il, rightVar);
-                                il.Demit(OpCodes.Call, rightType.GetNullableGetValueOrDefaultMethod()); // unwrap right operand
+                                if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, baseFlags))
+                                    return false;
+                                if (closure.LastEmitIsAddress)
+                                    EmitLoadIndirectlyByRef(il, rightType);
+                                rightVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(rightType);
+                                EmitStoreLocalVariable(il, rightVar);
                             }
 
-                            if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
+                            // Emit the left-value instance and index(es) (for the index access)
+                            if (objExpr != null && !TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags))
                                 return false;
+                            if (leftIndexExpr != null)
+                                for (var i = 0; i < indexArgCount; i++)
+                                    if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, leftFlags, -1))
+                                        return false;
+
+                            // Load already emitted or emit the righ-value normally after the left to be assigned
+                            if (rightVar != -1)
+                                EmitLoadLocalVariable(il, rightVar);
+                            else
+                            {
+                                if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, baseFlags))
+                                    return false;
+                                if (closure.LastEmitIsAddress)
+                                    EmitLoadIndirectlyByRef(il, rightType);
+                                if (resultVar != -1)
+                                    EmitStoreAndLoadLocalVariable(il, resultVar);
+                            }
+
+                            if (leftMemberExpr != null)
+                            {
+                                if (!EmitMemberSet(il, leftMemberExpr.Member))
+                                    return false;
+                            }
+                            else // if (leftIndexExpr != null)
+                            {
+                                var ok = leftIndexExpr.Indexer != null
+                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, leftIndexExpr.Indexer.SetMethod)
+                                    : indexArgCount == 1
+                                        ? TryEmitArrayIndexSet(il, leftIndexExpr.Type) // one-dimensional array
+                                        : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
+                                if (!ok)
+                                    return false;
+                            }
+
                             if (resultVar != -1)
-                                EmitStoreAndLoadLocalVariable(il, resultVar);
+                                EmitLoadLocalVariable(il, resultVar);
+                            return true;
                         }
-                    }
-                    else // if `leftIsNullable == true`
-                    {
-                        // Reuse the result variable for the field,
-                        // so it may be returned as the original value of field if nullable is `null` and we jump to the return
-                        leftNullableVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(leftType);
-                        EmitStoreLocalVariable(il, leftNullableVar);
 
-                        if (rightOrNull == null)
+                        var leftOrRightNullableAreNullLabel = default(Label);
+                        var leftType = left.Type;
+                        if (leftMemberExpr != null)
                         {
-                            EmitLoadLocalVariableAddress(il, leftNullableVar);
-                            il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
-
-                            il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
-
-                            EmitLoadLocalVariableAddress(il, leftNullableVar);
-                            il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());
-
-                            il.Demit(OpCodes.Ldc_I4_1);
-                            il.Demit(incrementDecrementOpCode);
-                        }
-                        else
-                        {
-                            // emit the right expression immediatly after the left and then just process their results
-                            var rightType = rightOrNull.Type;
-                            if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, operandFlags))
+                            if (!TryEmitMemberGet(leftMemberExpr, paramExprs, il, ref closure, setup,
+                                    leftFlags | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner))
                                 return false;
-                            if (closure.LastEmitIsAddress)
-                                EmitLoadIndirectlyByRef(il, rightType);
+                        }
+                        else // if (leftIndexExpr != null)
+                        {
+                            var objVar = -1;
+                            if (objExpr != null)
+                            {
+                                if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags))
+                                    return false;
+                                objVar = EmitStoreAndLoadLocalVariable(il, objExpr.Type);
+                            }
 
-                            var rightVar = EmitStoreLocalVariable(il, rightType);
+                            int indexArgVar0 = -1, indexArgVar1 = -1, indexArgVar2 = -1, indexArgVar3 = -1; // using stackalloc array?
+                            for (var i = 0; i < indexArgCount; i++)
+                            {
+                                var indexArg = indexArgs.GetArgument(i);
+                                if (!TryEmit(indexArg, paramExprs, il, ref closure, setup, leftFlags, -1))
+                                    return false;
+                                var indexArgVar = EmitStoreAndLoadLocalVariable(il, indexArg.Type);
+                                if (i == 0) indexArgVar0 = indexArgVar;
+                                else if (i == 1) indexArgVar1 = indexArgVar;
+                                else if (i == 2) indexArgVar2 = indexArgVar;
+                                else if (i == 3) indexArgVar3 = indexArgVar;
+                            }
 
-                            var rightIsNullable = rightType.IsNullable();
-                            if (!rightIsNullable) // todo: @perf @clarify if it is possible to have left nullable and right non-nullable
+                            // repeat the load of the obj and index variables for the assignment here to avoid store and load of the right value
+                            if (objExpr != null)
+                                EmitLoadLocalVariable(il, objVar);
+
+                            EmitLoadLocalVariable(il, indexArgVar0); // there is always at least one index argument
+                            if (indexArgVar1 != -1)
+                            {
+                                EmitLoadLocalVariable(il, indexArgVar1);
+                                if (indexArgVar2 != -1)
+                                    EmitLoadLocalVariable(il, indexArgVar2);
+                                if (indexArgVar3 != -1)
+                                    EmitLoadLocalVariable(il, indexArgVar3);
+                            }
+
+                            var ok = leftIndexExpr.Indexer != null
+                                ? EmitMethodCallOrVirtualCallCheckForNull(il, leftIndexExpr.Indexer.GetMethod)
+                                : indexArgCount == 1
+                                    ? TryEmitArrayIndexGet(il, leftIndexExpr.Type, ref closure, leftFlags) // one-dimensional array
+                                    : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
+                            if (!ok)
+                                return false;
+                        }
+
+                        if (leftIsByAddress = closure.LastEmitIsAddress)
+                            EmitLoadIndirectlyByRef(il, leftType); // if the field is loaded by ref, it need to be loaded from the ref in order to do arithmetic operation on it
+
+                        var leftIsNullable = leftType.IsNullable();
+                        if (!leftIsNullable)
+                        {
+                            if (rightOrNull == null)
+                            {
+                                if (resultVar != -1 & isPost)
+                                    EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value before doing any operation on it
+                                il.Demit(OpCodes.Ldc_I4_1); // Plus or Minus 1
+                                il.Demit(incrementDecrementOpCode);
+                                if (resultVar != -1 & !isPost)
+                                    EmitStoreAndLoadLocalVariable(il, resultVar);
+                            }
+                            else
+                            {
+                                var rightType = rightOrNull.Type;
+                                if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, baseFlags))
+                                    return false;
+                                if (closure.LastEmitIsAddress)
+                                    EmitLoadIndirectlyByRef(il, rightType);
+
+                                var rightIsNullable = rightType.IsNullable();
+                                if (rightIsNullable) // todo: @perf @clarify is it even possible to have left non-nullable and right nullable
+                                {
+                                    var rightVar = EmitStoreAndLoadLocalVariableAddress(il, rightType);
+                                    il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
+
+                                    il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
+
+                                    EmitLoadLocalVariableAddress(il, rightVar);
+                                    il.Demit(OpCodes.Call, rightType.GetNullableGetValueOrDefaultMethod()); // unwrap right operand
+                                }
+
+                                if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
+                                    return false;
+                                if (resultVar != -1)
+                                    EmitStoreAndLoadLocalVariable(il, resultVar);
+                            }
+                        }
+                        else // if `leftIsNullable == true`
+                        {
+                            // Reuse the result variable for the field,
+                            // so it may be returned as the original value of field if nullable is `null` and we jump to the return
+                            var leftNullableVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(leftType);
+                            EmitStoreLocalVariable(il, leftNullableVar);
+
+                            if (rightOrNull == null)
                             {
                                 EmitLoadLocalVariableAddress(il, leftNullableVar);
                                 il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
@@ -3743,135 +3806,114 @@ namespace FastExpressionCompiler
                                 EmitLoadLocalVariableAddress(il, leftNullableVar);
                                 il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());
 
-                                EmitLoadLocalVariable(il, rightVar);
+                                il.Demit(OpCodes.Ldc_I4_1);
+                                il.Demit(incrementDecrementOpCode);
                             }
                             else
                             {
-                                EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
+                                // emit the right expression immediatly after the left and then just process their results
+                                var rightType = rightOrNull.Type;
+                                if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, baseFlags))
+                                    return false;
+                                if (closure.LastEmitIsAddress)
+                                    EmitLoadIndirectlyByRef(il, rightType);
 
-                                EmitLoadLocalVariableAddress(il, rightVar);
-                                il.Demit(OpCodes.Call, rightType.GetNullableHasValueGetterMethod());
-                                il.Demit(OpCodes.And);
-                                il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
+                                var rightVar = EmitStoreLocalVariable(il, rightType);
 
-                                EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());  // unwrap left operand
+                                var rightIsNullable = rightType.IsNullable();
+                                if (!rightIsNullable) // todo: @perf @clarify if it is possible to have left nullable and right non-nullable
+                                {
+                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
+                                    il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
 
-                                EmitLoadLocalVariableAddress(il, rightVar);
-                                il.Demit(OpCodes.Call, rightType.GetNullableGetValueOrDefaultMethod()); // unwrap right operand
+                                    il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
+
+                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
+                                    il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());
+
+                                    EmitLoadLocalVariable(il, rightVar);
+                                }
+                                else
+                                {
+                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
+                                    il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
+
+                                    EmitLoadLocalVariableAddress(il, rightVar);
+                                    il.Demit(OpCodes.Call, rightType.GetNullableHasValueGetterMethod());
+                                    il.Demit(OpCodes.And);
+                                    il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
+
+                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
+                                    il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());  // unwrap left operand
+
+                                    EmitLoadLocalVariableAddress(il, rightVar);
+                                    il.Demit(OpCodes.Call, rightType.GetNullableGetValueOrDefaultMethod()); // unwrap right operand
+                                }
+
+                                if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
+                                    return false;
                             }
 
-                            if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
+                            il.Demit(OpCodes.Newobj, leftType.GetNullableConstructor()); // wrap the result back into the nullable
+                            if (resultVar != -1 & !isPost)
+                                EmitStoreAndLoadLocalVariable(il, resultVar);
+                        }
+
+                        if (leftIsByAddress)
+                            EmitStoreIndirectlyByRef(il, leftType);
+                        else if (leftMemberExpr != null)
+                        { 
+                            if (!EmitMemberSet(il, leftMemberExpr.Member))
+                                return false;
+                        }
+                        else // if (leftIndexExpr != null)
+                        {
+                            var ok = leftIndexExpr.Indexer != null
+                                ? EmitMethodCallOrVirtualCallCheckForNull(il, leftIndexExpr.Indexer.SetMethod)
+                                : indexArgCount == 1
+                                    ? TryEmitArrayIndexSet(il, leftIndexExpr.Type) // one-dimensional array
+                                    : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
+                            if (!ok)
                                 return false;
                         }
 
-                        il.Demit(OpCodes.Newobj, leftType.GetNullableConstructor()); // wrap the result back into the nullable
-                        if (resultVar != -1 & !isPost)
-                            EmitStoreAndLoadLocalVariable(il, resultVar);
-                    }
-
-                    if (leftIsByAddress)
-                        EmitStoreIndirectlyByRef(il, leftType);
-                    else if (!EmitMemberSet(il, leftMemberExpr.Member))
-                        return false;
-
-                    if (leftIsNullable)
-                    {
-                        // todo: @perf @simplify avoid the Dup and the Pop for this case
-                        if (leftIsByAddress | leftMemberExpr.Expression != null)
+                        if (leftIsNullable)
                         {
-                            var skipPopLeftDuppedInstance = il.DefineLabel();
-                            il.Demit(OpCodes.Br_S, skipPopLeftDuppedInstance);
-                            il.DmarkLabel(leftOrRightNullableAreNullLabel); // jump here if nullables are null after checking them with `!HasValue`
+                            // todo: @perf @simplify avoid the Dup and the Pop for this case
+                            if (leftIsByAddress | objExpr != null)
+                            {
+                                var skipPopLeftDuppedInstance = il.DefineLabel();
+                                il.Demit(OpCodes.Br_S, skipPopLeftDuppedInstance);
+                                il.DmarkLabel(leftOrRightNullableAreNullLabel); // jump here if nullables are null after checking them with `!HasValue`
 
-                            il.Demit(OpCodes.Pop); // pop the dupped instance address or the field address
+                                il.Demit(OpCodes.Pop); // pop the dupped instance address or the field address, or the array instance address
 
-                            il.DmarkLabel(skipPopLeftDuppedInstance);
+                                if (leftIndexExpr != null)
+                                {
+                                    il.Demit(OpCodes.Pop); // pop the first index argument which is always present
+                                    if (indexArgCount > 1)
+                                    {
+                                        il.Demit(OpCodes.Pop);
+                                        if (indexArgCount > 2)
+                                        {
+                                            il.Demit(OpCodes.Pop);
+                                            if (indexArgCount > 3)
+                                                il.Demit(OpCodes.Pop); // pop the 4th last supprted index argument
+                                        }
+                                    }
+                                }
+
+                                il.DmarkLabel(skipPopLeftDuppedInstance);
+                            }
+                            else
+                            {
+                                il.DmarkLabel(leftOrRightNullableAreNullLabel); // jump here if nullables are null after checking them with `!HasValue`
+                            }
                         }
-                        else
-                        {
-                            il.DmarkLabel(leftOrRightNullableAreNullLabel); // jump here if nullables are null after checking them with `!HasValue`
-                        }
-                    }
-                }
-                else if (left is IndexExpression indexExpr)
-                {
-                    // todo: @wip @simplify could we move it to the TryEmitIndex method? #352
-                    var flags = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
-                    if (indexExpr.Object != null)
-                    {
-                        // we still need to emit object if result is ignored, because at least we need to access its index
-                        if (!TryEmit(indexExpr.Object, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceAccess))
-                            return false;
-                        il.Emit(OpCodes.Dup);
-                    }
-#if SUPPORTS_ARGUMENT_PROVIDER
-                    var indexArgs = (IArgumentProvider)indexExpr;
-                    var indexArgCount = indexArgs.ArgumentCount;
-#else
-                    var indexArgs = indexExpr.Arguments;
-                    var indexArgCount = indexArgs.Count;
-#endif
-                    // handle a single argument for now
-                    if (indexArgCount != 1)
-                        return false; // todo: @feature multiple arguments indexing is not supported for assignment yet
-
-                    var indexArg = indexArgs.GetArgument(0);
-
-                    var indexerProp = indexExpr.Indexer;
-                    MethodInfo indexerPropGetter = null;
-                    if (indexerProp != null)
-                        indexerPropGetter = indexerProp.GetMethod;
-                    if (indexerPropGetter == null)
-                    {
-                        if (!TryEmit(indexArg, paramExprs, il, ref closure, setup, flags, -1))
-                            return false;
-                    }
-                    else
-                    {
-                        var indexerPropSetter = indexerProp.SetMethod;
-                        if (indexerPropSetter == null)
-                            return false; // there is no setter pairing the getter, so we won't be able to set after get, and let's fallback to System expression to handle it. 
-
-                        var getterPars = indexerPropGetter.GetParameters();
-                        if (getterPars.Length != 1)
-                            return false; // todo: @feature multiple arguments indexing is not supported for assignment yet
-
-                        if (!TryEmit(indexArg, paramExprs, il, ref closure, setup, flags, getterPars[0].ParameterType.IsByRef ? 0 : -1))
-                            return false;
-                    }
-
-                    // store the index so it can be used later for setting
-                    var indexVar = EmitStoreAndLoadLocalVariable(il, indexArg.Type);
-
-                    var ok = indexerPropGetter != null
-                        ? EmitMethodCallOrVirtualCall(il, indexerPropGetter)
-                        : TryEmitArrayIndexGet(il, indexExpr.Type, ref closure, parent); // one-dimensional array
-                    if (!ok)
-                        return false;
-
-                    if (resultVar != -1 & isPost)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
-                    il.Emit(OpCodes.Ldc_I4_1);
-                    il.Emit(incrementDecrementOpCode);
-
-                    var assignmentResultVar = il.GetNextLocalVarIndex(exprType);
-                    EmitStoreLocalVariable(il, assignmentResultVar);
-
-                    // we don't need to load the index Object, because it's OpCodes.Dup above
-                    EmitLoadLocalVariable(il, indexVar);
-
-                    EmitLoadLocalVariable(il, assignmentResultVar);
-
-                    ok = indexerProp != null ? TryEmitPropertySet(il, indexerProp)
-                        : indexArgCount == 1 ? TryEmitArrayIndexSet(il, exprType) // one-dimensional array
-                        : EmitMethodCallOrVirtualCallCheckForNull(il, indexExpr.Object?.Type?.FindMethod("Set")); // multi-dimensional array
-                    if (!ok)
+                        break;
+                    default:
                         return false;
                 }
-                else
-                    return false; // not_supported_expression
 
                 if (resultVar != -1)
                     EmitLoadLocalVariable(il, resultVar);
@@ -4031,68 +4073,9 @@ namespace FastExpressionCompiler
                             nodeType, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, parent);
 
                     case ExpressionType.MemberAccess:
+                    case ExpressionType.Index:
                         return TryEmitPossiblyArithmeticOperationThenAssign(
                             left, right, exprType, arithmeticNodeType, paramExprs, il, ref closure, setup, parent);
-
-                    case ExpressionType.Index:
-                        bool ok = false;
-                        var flags = parent & ~ParentFlags.IgnoreResult;
-                        var resultLocalVarIndex = -1;
-                        var rightIsTryBlock = right.NodeType == ExpressionType.Try;
-                        if (rightIsTryBlock)
-                        {
-                            if (arithmeticNodeType != nodeType)
-                                return false; // todo: @feature does not support Assign operations when the right operant is the Try expression, see AssignTests.
-                            if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
-                                return false;
-                            resultLocalVarIndex = il.GetNextLocalVarIndex(right.Type);
-                            EmitStoreLocalVariable(il, resultLocalVarIndex);
-                        }
-
-                        var indexLeft = (IndexExpression)left;
-                        var objExpr = indexLeft.Object;
-                        if (objExpr != null
-                            && !TryEmit(objExpr, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceAccess | ParentFlags.IndexAccess))
-                            return false;
-
-#if SUPPORTS_ARGUMENT_PROVIDER
-                        var indexArgExprs = (IArgumentProvider)indexLeft;
-                        var indexArgCount = indexArgExprs.ArgumentCount;
-#else
-                        var indexArgExprs = indexLeft.Arguments;
-                        var indexArgCount = indexArgExprs.Count;
-#endif
-                        for (var i = 0; i < indexArgCount; ++i)
-                            if (!TryEmit(indexArgExprs.GetArgument(i), paramExprs, il, ref closure, setup, flags))
-                                return false;
-
-                        if (rightIsTryBlock)
-                            EmitLoadLocalVariable(il, resultLocalVarIndex);
-                        else if (arithmeticNodeType != nodeType)
-                        {
-                            if (!TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags))
-                                return false;
-                        }
-                        else if (!TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Empty))
-                            return false;
-
-                        var resultVar = -1;
-                        if (!parent.IgnoresResult())
-                        {
-                            resultVar = il.GetNextLocalVarIndex(exprType); // store result value in variable to return
-                            il.Emit(OpCodes.Dup);
-                            EmitStoreLocalVariable(il, resultVar);
-                        }
-
-                        var indexerProp = indexLeft.Indexer;
-                        ok = indexerProp != null ? TryEmitPropertySet(il, indexerProp)
-                            : indexArgCount == 1 ? TryEmitArrayIndexSet(il, exprType) // one-dimensional array
-                            : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type?.FindMethod("Set")); // multi-dimensional array
-
-                        if (resultVar != -1)
-                            EmitLoadLocalVariable(il, resultVar);
-
-                        return ok;
 
                     default: // todo: @feature not yet support assignment targets
                         if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
@@ -4184,7 +4167,7 @@ namespace FastExpressionCompiler
                 }
 
                 // access the value type by address when it is used later for the member access or as instance in the method call
-                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.RefAssignment)) != 0)
+                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.RefAssignment)) != 0) // todo: @wip check it
                 {
                     il.Demit(OpCodes.Ldelema, type);
                     closure.LastEmitIsAddress = true;
@@ -4274,18 +4257,15 @@ namespace FastExpressionCompiler
 
                 if (methodParams.Length > 0)
                 {
-                    flags = flags & ~ParentFlags.MemberAccess & ~ParentFlags.InstanceAccess;
 #if SUPPORTS_ARGUMENT_PROVIDER
                     var callArgs = (IArgumentProvider)callExpr;
+#else
+                    var callArgs = callExpr.Arguments;
+#endif
+                    flags = flags & ~ParentFlags.MemberAccess & ~ParentFlags.InstanceAccess;
                     for (var i = 0; i < methodParams.Length; i++)
                         if (!TryEmit(callArgs.GetArgument(i), paramExprs, il, ref closure, setup, flags, methodParams[i].ParameterType.IsByRef ? i : -1))
                             return false;
-#else
-                    var callArgs = callExpr.Arguments;
-                    for (var i = 0; i < methodParams.Length; i++)
-                        if (!TryEmit(callArgs[i], paramExprs, il, ref closure, setup, flags, methodParams[i].ParameterType.IsByRef ? i : -1))
-                            return false;
-#endif
                 }
 
                 var ok = true;
@@ -4308,7 +4288,7 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            public static bool TryEmitMemberAccess(MemberExpression expr,
+            public static bool TryEmitMemberGet(MemberExpression expr,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -4316,26 +4296,25 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
             {
+                var objExpr = expr.Expression;
                 if (expr.Member is PropertyInfo prop)
                 {
-                    var instanceExpr = expr.Expression;
-                    if (instanceExpr != null)
+                    if (objExpr != null)
                     {
                         var p = (parent | ParentFlags.InstanceCall | ParentFlags.MemberAccess)
                             & ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner;
 
-                        if (!TryEmit(instanceExpr, paramExprs, il, ref closure, setup, p))
+                        if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, p))
                             return false;
 
                         if ((parent & ParentFlags.DupMemberOwner) != 0)
                             il.Demit(OpCodes.Dup);
 
-                        // Value type special treatment to load address of value instance in order to access a field or call a method.
+                        // Value type special treatment to load address of value instance in order to call a method.
                         // Parameter should be excluded because it already loads an address via `LDARGA`, and you don't need to.
-                        // And for field access no need to load address, cause the field stored on stack nearby
                         if (!closure.LastEmitIsAddress &&
-                            instanceExpr.NodeType != ExpressionType.Parameter && instanceExpr.Type.IsValueType)
-                            EmitStoreAndLoadLocalVariableAddress(il, instanceExpr.Type);
+                            objExpr.NodeType != ExpressionType.Parameter && objExpr.Type.IsValueType)
+                            EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
                     }
 
                     closure.LastEmitIsAddress = false;
@@ -4344,20 +4323,19 @@ namespace FastExpressionCompiler
 
                 if (expr.Member is FieldInfo field)
                 {
-                    var instanceExpr = expr.Expression;
-                    if (instanceExpr != null)
+                    if (objExpr != null)
                     {
                         var p = (parent | ParentFlags.InstanceAccess | ParentFlags.MemberAccess)
                             & ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner;
 
-                        if (!TryEmit(instanceExpr, paramExprs, il, ref closure, setup, p))
+                        if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, p))
                             return false;
 
                         // #248 indicates that expression is argument passed by ref to Call
                         var isByAddress = byRefIndex != -1;
 
-                        // we are assigning to the field of ValueType so we need it address `val.Bar += 1`, #352
-                        if ((parent & ParentFlags.Assignment) != 0 && instanceExpr.Type.IsValueType)
+                        // we are assigning to the field of ValueType so we need its address `val.Bar += 1`, #352
+                        if ((parent & ParentFlags.Assignment) != 0 && objExpr.Type.IsValueType)
                             isByAddress = true;
                         else
                             // if the field is not used as an index, #302
@@ -4528,11 +4506,10 @@ namespace FastExpressionCompiler
 #endif
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var argExprs = (IArgumentProvider)expr;
-                var argCount = argExprs.ArgumentCount;
 #else
                 var argExprs = expr.Arguments;
-                var argCount = argExprs.Count;
 #endif
+                var argCount = argExprs.GetCount();
                 var lambda = expr.Expression;
                 if ((setup & CompilerFlags.NoInvocationLambdaInlining) == 0 && lambda is LambdaExpression la)
                 {
@@ -6928,7 +6905,7 @@ namespace FastExpressionCompiler
                                 if (i > 0)
                                     sb.Append(", ");
                                 if (count > 1)
-                                    sb.NewLineIdent(lineIdent);
+                                    sb.NewLineIdent(lineIdent + identSpaces);
 
                                 var pe = x.Parameters[i];
                                 var p = pars[i];
@@ -7234,11 +7211,12 @@ namespace FastExpressionCompiler
                                 case ExpressionType.PreIncrementAssign:
                                 case ExpressionType.PostDecrementAssign:
                                 case ExpressionType.PreDecrementAssign:
-                                    sb = enclosedIn != EnclosedIn.Block ? sb.Append('(') : sb;
+                                    var inBlockOrLambdaBody = enclosedIn == EnclosedIn.Block | enclosedIn == EnclosedIn.LambdaBody;
+                                    if (!inBlockOrLambdaBody) sb.Append('(');
                                     sb = e.NodeType == ExpressionType.PreIncrementAssign ? sb.Append("++") : e.NodeType == ExpressionType.PreDecrementAssign ? sb.Append("--") : sb;
                                     sb = op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                                     sb = e.NodeType == ExpressionType.PostIncrementAssign ? sb.Append("++") : e.NodeType == ExpressionType.PostDecrementAssign ? sb.Append("--") : sb;
-                                    sb = enclosedIn != EnclosedIn.Block ? sb.Append(')') : sb;
+                                    if (!inBlockOrLambdaBody) sb.Append(')');
                                     return sb;
 
                                 case ExpressionType.IsTrue:
@@ -8094,8 +8072,18 @@ namespace FastExpressionCompiler
                 ps[i] = source.GetParameter(i);
             return ps;
         }
+
+        public static int GetCount(this IParameterProvider p) => p.ParameterCount;
 #else
         public static IReadOnlyList<PE> ToReadOnlyList(this IReadOnlyList<PE> source) => source;
+
+        public static int GetCount(this IReadOnlyList<PE> p) => p.Count;
+#endif
+
+#if SUPPORTS_ARGUMENT_PROVIDER
+        public static int GetCount(this IArgumentProvider p) => p.ArgumentCount;
+#else
+        public static int GetCount(this IReadOnlyList<Expression> p) => p.Count;
 #endif
     }
 

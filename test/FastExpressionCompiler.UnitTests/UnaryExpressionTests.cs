@@ -19,6 +19,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            ArrayOfStructParameter_MemberPostDecrementAssign_works();
+            ArrayOfStructParameter_MemberPreDecrementAssign_works();
+
             ArrayLength_compiles();
             Convert_compiles();
             ConvertChecked_compiles();
@@ -39,9 +42,6 @@ namespace FastExpressionCompiler.UnitTests
             ArrayParameter_PostIncrementAssign_works();
             ArrayParameterByRef_PostIncrementAssign_works();
             ArrayItemRefParameter_PostIncrementAssign_works();
-
-            ArrayOfStructParameter_MemberPostDecrementAssign_works();
-            ArrayOfStructParameter_MemberPreDecrementAssign_works();
 
             PreDecrementAssign_compiles();
             PreIncrementAssign_compiles();
@@ -346,30 +346,34 @@ namespace FastExpressionCompiler.UnitTests
         {
             var a = Parameter(typeof(X[]), "a");
             var i = Parameter(typeof(int), "i");
-            var expression = Lambda<Func<X[], int, int>>(
+            var e = Lambda<Func<X[], int, int>>(
                 PostDecrementAssign(Field(ArrayAccess(a, i), nameof(X.N))),
                 a, i);
 
-            expression.PrintCSharp();
+            e.PrintCSharp();
 
-            var f = (Func<X[], int, int>)((
-                UnaryExpressionTests.X[] a, int i) => //$
-                (a[i].N--));
+            var @cs = (Func<X[], int, int>)((
+                X[] a, 
+                int i) =>
+                a[i].N--);
 
             var arr = new X[] { new X { N = 42 }, new X { N = 33 } };
-            Assert.AreEqual(33, f(arr, 1));
+            Assert.AreEqual(33, @cs(arr, 1));
             Assert.AreEqual(32, arr[1].N);
 
-            var fs = expression.CompileSys();
+            var fs = e.CompileSys();
             fs.PrintIL();
 
-            Assert.AreEqual(32, fs(arr, 1));
-            Assert.AreEqual(32, arr[1].N); // It should be 31, No? - The System Expression is wrong, what??
+            arr = new X[] { new X { N = 42 }, new X { N = 33 } };
+            Assert.AreEqual(33, fs(arr, 1));
+            Assert.AreEqual(33 /*should be 32*/, arr[1].N); // todo: @sys Compile is wrong and evaluates to 33
 
-            var ff = expression.CompileFast(true);
+            var ff = e.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(32, ff(arr, 1));
-            Assert.AreEqual(31, arr[1].N);
+
+            arr = new X[] { new X { N = 42 }, new X { N = 33 } };
+            Assert.AreEqual(33, ff(arr, 1));
+            Assert.AreEqual(32, arr[1].N);
         }
 
         [Test]

@@ -23,11 +23,22 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Check_ArrayAccess_AddAssign_PlusOne();
+            Check_IndexerAccess_AddAssign_PlusOne_InAction();
+            Check_MultiArrayAccess_AddAssign_PlusOne();
+            Check_ArrayAccess_AddAssign_NullablePlusNullable();
+
+            Check_Ref_ArrayAccess_AddAssign_PlusOne();
+
+            // Check_Val_IndexerAccess_AddAssign_PlusOne(); // todo: @wip
+            // Check_Val_Ref_IndexerAccess_AddAssign_PlusOne(); // todo: @wip
+
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_AddAssign_InAction();
             Check_ArrayAccess_AddAssign_ReturnResultInFunction();
             Check_ArrayAccess_Add();
 
+            Check_Val_Ref_IndexerAccess_Assign_InAction();
+            Check_Val_IndexerAccess_Assign_InAction();
             Check_MultiArrayAccess_Assign_InAction();
             Check_IndexerAccess_Assign_InAction();
             Check_ArrayAccess_Assign_InAction();
@@ -39,6 +50,7 @@ namespace FastExpressionCompiler.IssueTests
             Check_MemberAccess_PlusOneAssign();
             Check_MemberAccess_AddAssign_NullablePlusNullable();
             Check_MemberAccess_AddAssign_NullablePlusNullable_Prop();
+
             Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
             Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable_Prop();
@@ -55,7 +67,7 @@ namespace FastExpressionCompiler.IssueTests
             Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
             Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
 
-            return 27;
+            return 38;
         }
 
         [Test]
@@ -108,13 +120,13 @@ namespace FastExpressionCompiler.IssueTests
             {
                 a[1, 2] = 33;
             });
-            var a1 = new[,] {{ 1, 2, 9 }, { 3, 4, 5 }};
+            var a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
             @cs(a1);
             Assert.AreEqual(33, a1[1, 2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            a1 = new[,] {{ 1, 2, 9 }, { 3, 4, 5 }};
+            a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
             fs(a1);
             Assert.AreEqual(33, a1[1, 2]);
 
@@ -128,12 +140,28 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,     // Array.Set
                 OpCodes.Ret
             );
-            a1 = new[,] {{ 1, 2, 9 }, { 3, 4, 5 }};
+            a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
             ff(a1);
             Assert.AreEqual(33, a1[1, 2]);
         }
 
         public class Arr
+        {
+            public int Elem;
+            public int this[string s, int i]
+            {
+                get => s == "a" ? i < 0 ? -1 : 1 : i < 0 ? -2 : 2;
+                set
+                {
+                    if (s == "a")
+                        Elem = value;
+                    else
+                        Elem = -value;
+                }
+            }
+        }
+
+        public struct ArrVal
         {
             public int Elem;
             public int this[string s, int i]
@@ -188,6 +216,116 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Check_Val_IndexerAccess_Assign_InAction()
+        {
+            var a = Parameter(typeof(ArrVal), "a");
+            var e = Lambda<Action<ArrVal>>(
+                Block(Assign(Property(a, "Item", Constant("b"), Constant(2)), Constant(33))),
+                a);
+
+            e.PrintCSharp();
+            var @cs = (Action<ArrVal>)((ArrVal a) =>
+            {
+                a["b", 2] = 33;
+            });
+            var a1 = new ArrVal { Elem = 9 };
+            @cs(a1);
+            Assert.AreEqual(9, a1.Elem); // does not change because passed-by-value
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            a1 = new ArrVal { Elem = 9 };
+            fs(a1);
+            Assert.AreEqual(9, a1.Elem);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarga_S,
+                OpCodes.Ldstr,      // "b"
+                OpCodes.Ldc_I4_2,
+                OpCodes.Ldc_I4_S,   // 33
+                OpCodes.Call,       // Arr.set_Item
+                OpCodes.Ret
+            );
+            a1 = new ArrVal { Elem = 9 };
+            ff(a1);
+            Assert.AreEqual(9, a1.Elem);
+        }
+
+        delegate void RefArrVal(ref ArrVal a);
+
+        [Test]
+        public void Check_Val_Ref_IndexerAccess_Assign_InAction()
+        {
+            var a = Parameter(typeof(ArrVal).MakeByRefType(), "a");
+            var e = Lambda<RefArrVal>(
+                Block(Assign(Property(a, "Item", Constant("b"), Constant(2)), Constant(33))),
+                a);
+
+            e.PrintCSharp();
+            var @cs = (RefArrVal)((ref ArrVal a) =>
+            {
+                a["b", 2] = 33;
+            });
+            var a1 = new ArrVal { Elem = 9 };
+            @cs(ref a1);
+            Assert.AreEqual(-33, a1.Elem);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            a1 = new ArrVal { Elem = 9 };
+            fs(ref a1);
+            Assert.AreEqual(-33, a1.Elem);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldstr,      // "b"
+                OpCodes.Ldc_I4_2,
+                OpCodes.Ldc_I4_S,   // 33
+                OpCodes.Call,       // Arr.set_Item
+                OpCodes.Ret
+            );
+            a1 = new ArrVal { Elem = 9 };
+            ff(ref a1);
+            Assert.AreEqual(-33, a1.Elem);
+        }
+
+        [Test]
+        public void Check_IndexerAccess_AddAssign_PlusOne_InAction()
+        {
+            var a = Parameter(typeof(Arr), "a");
+            var e = Lambda<Action<Arr>>(
+                Block(AddAssign(Property(a, "Item", Constant("b"), Constant(2)), Constant(1))),
+                a);
+
+            e.PrintCSharp();
+            var @cs = (Action<Arr>)((Arr a) =>
+            {
+                a["b", 2] += 1;
+            });
+            var a1 = new Arr { Elem = 9 };
+            @cs(a1);
+            Assert.AreEqual(-3, a1.Elem);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            a1 = new Arr { Elem = 9 };
+            fs(a1);
+            Assert.AreEqual(-3, a1.Elem);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            a1 = new Arr { Elem = 9 };
+            ff(a1);
+            Assert.AreEqual(-3, a1.Elem);
+        }
+
+        [Test]
         public void Check_ArrayAccess_AddAssign_InAction()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -234,23 +372,25 @@ namespace FastExpressionCompiler.IssueTests
                 return a[2] += 33;
             });
             var a1 = new[] { 1, 2, 9 };
-            @cs(a1);
+            var res = @cs(a1);
             Assert.AreEqual(42, a1[2]);
+            Assert.AreEqual(res, a1[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            var a2 = new[] { 1, 2, 9 };
-            var res = fs(a2);
+            a1 = new[] { 1, 2, 9 };
+            res = fs(a1);
             Assert.AreEqual(42, res);
-            Assert.AreEqual(res, a2[2]);
+            Assert.AreEqual(res, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
-            res = ff(a2);
-            Assert.AreEqual(75, res);
-            Assert.AreEqual(res, a2[2]);
+            a1 = new[] { 1, 2, 9 };
+            res = ff(a1);
+            Assert.AreEqual(42, res);
+            Assert.AreEqual(res, a1[2]);
         }
 
         [Test]
@@ -318,6 +458,88 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
+        public void Check_MultiArrayAccess_AddAssign_PlusOne()
+        {
+            var a = Parameter(typeof(int[,]), "a");
+            var e = Lambda<Action<int[,]>>(
+                Block(AddAssign(ArrayAccess(a, Constant(1), Constant(2)), Constant(1))),
+                a
+            );
+            e.PrintCSharp();
+            var @cs = (Action<int[,]>)((int[,] a) =>
+            {
+                ++a[1, 2];
+            });
+            var a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
+            @cs(a1);
+            Assert.AreEqual(6, a1[1, 2]);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
+            fs(a1);
+            Assert.AreEqual(6, a1[1, 2]);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+
+            a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
+            ff(a1);
+            Assert.AreEqual(6, a1[1, 2]);
+        }
+
+        delegate void RefArr(ref int[] a);
+
+        [Test]
+        public void Check_Ref_ArrayAccess_AddAssign_PlusOne()
+        {
+            var a = Parameter(typeof(int[]).MakeByRefType(), "a");
+            var e = Lambda<RefArr>(
+                Block(AddAssign(ArrayAccess(a, Constant(2)), Constant(1))),
+                a
+            );
+            e.PrintCSharp();
+            var @cs = (RefArr)((ref int[] a) =>
+            {
+                a[2] += 1;
+            });
+            var a1 = new[] { 1, 2, 9 };
+            @cs(ref a1);
+            Assert.AreEqual(10, a1[2]);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            a1 = new[] { 1, 2, 9 };
+            fs(ref a1);
+            Assert.AreEqual(10, a1[2]);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_Ref,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldc_I4_2,
+                OpCodes.Stloc_1,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldelem_I4,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stelem_I4,
+                OpCodes.Ret
+            );
+
+            a1 = new[] { 1, 2, 9 };
+            ff(ref a1);
+            Assert.AreEqual(10, a1[2]);
+        }
+
+        [Test]
         public void Check_ArrayAccess_PreIncrement_Nullable()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -339,15 +561,16 @@ namespace FastExpressionCompiler.IssueTests
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            var a2 = new[] { 1, 2, 9 };
-            fs(a2);
-            Assert.AreEqual(10, a2[2]);
+            a1 = new[] { 1, 2, 9 };
+            fs(a1);
+            Assert.AreEqual(10, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
-            ff(a2);
-            Assert.AreEqual(11, a2[2]);
+            a1 = new[] { 1, 2, 9 };
+            ff(a1);
+            Assert.AreEqual(10, a1[2]);
         }
 
         [Test]
@@ -372,14 +595,16 @@ namespace FastExpressionCompiler.IssueTests
             var fs = e.CompileSys();
             fs.PrintIL();
 
-            var a2 = new[] { 1, 9 };
-            fs(a2);
-            Assert.AreEqual(42, a2[1]);
+            a1 = new[] { 1, 9 };
+            fs(a1);
+            Assert.AreEqual(42, a1[1]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            ff(a2);
-            Assert.AreEqual(75, a2[1]);
+
+            a1 = new[] { 1, 9 };
+            ff(a1);
+            Assert.AreEqual(42, a1[1]);
         }
 
         class Box
@@ -601,6 +826,73 @@ namespace FastExpressionCompiler.IssueTests
             ff(b2);
             Assert.AreEqual(null, b1.NullableField);
             Assert.AreEqual(42, b2.NullableField);
+        }
+
+        [Test]
+        public void Check_ArrayAccess_AddAssign_NullablePlusNullable()
+        {
+            var a = Parameter(typeof(int?[]), "a");
+            var e = Lambda<Action<int?[]>>(
+                Block(AddAssign(ArrayAccess(a, Constant(2)), Constant((int?)33, typeof(int?)))),
+                a
+            );
+            e.PrintCSharp();
+            var @cs = (Action<int?[]>)((int?[] a) =>
+            {
+                a[2] += (int?)33;
+            });
+
+            var a1 = new int?[] { 1, 2, null, 4 };
+            var a2 = new int?[] { 1, 2,    9, 4 };
+            @cs(a1);
+            @cs(a2);
+            Assert.AreEqual(null, a1[2]);
+            Assert.AreEqual(42,   a2[2]);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+
+            a1 = new int?[] { 1, 2, null, 4 };
+            a2 = new int?[] { 1, 2,    9, 4 };
+            fs(a1);
+            fs(a2);
+            Assert.AreEqual(null, a1[2]);
+            Assert.AreEqual(42,   a2[2]);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            // ff.AssertOpCodes(
+            //     OpCodes.Ldarg_1,
+            //     OpCodes.Dup,
+            //     OpCodes.Ldfld,
+            //     OpCodes.Stloc_0,
+            //     OpCodes.Ldc_I4_S,   // 33
+            //     OpCodes.Newobj,     // Nullable`1..ctor
+            //     OpCodes.Stloc_1,
+            //     OpCodes.Ldloca_S,   // 0
+            //     OpCodes.Call,       // Nullable`1.get_HasValue
+            //     OpCodes.Ldloca_S,   // 1
+            //     OpCodes.Call,       // Nullable`1.get_HasValue
+            //     OpCodes.And,
+            //     OpCodes.Brfalse,    // --> Pop
+            //     OpCodes.Ldloca_S,   // 0
+            //     OpCodes.Call,       // Nullable`1.GetValueOrDefault
+            //     OpCodes.Ldloca_S,   // 1
+            //     OpCodes.Call,       // Nullable`1.GetValueOrDefault
+            //     OpCodes.Add,
+            //     OpCodes.Newobj,     // Nullable`1..ctor
+            //     OpCodes.Stfld,      // Box.NullableValue
+            //     OpCodes.Br_S,       // --> Ret
+            //     OpCodes.Pop,
+            //     OpCodes.Ret
+            // );
+
+            a1 = new int?[] { 1, 2, null, 4 };
+            a2 = new int?[] { 1, 2,    9, 4 };
+            fs(a1);
+            fs(a2);
+            Assert.AreEqual(null, a1[2]);
+            Assert.AreEqual(42,   a2[2]);
         }
 
         [Test]
@@ -904,8 +1196,8 @@ namespace FastExpressionCompiler.IssueTests
 
             v1 = new Val { Field = 9 };
             fs(ref v1);
-            // Assert.AreEqual(10, v1.Value); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
-            Assert.AreEqual(9, v1.Field); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            // Assert.AreEqual(10, v1.Value); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -956,7 +1248,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(ref v1);
             fs(ref v2);
             Assert.AreEqual(null, v1.NullableField);
-            Assert.AreEqual(9, v2.NullableField); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1019,7 +1311,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(ref v1);
             fs(ref v2);
             Assert.AreEqual(null, v1.NullableProp);
-            Assert.AreEqual(9, v2.NullableProp); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v2.NullableProp); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1086,7 +1378,7 @@ namespace FastExpressionCompiler.IssueTests
             x2 = fs(ref v2);
             Assert.AreEqual(null, v1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(9, v2.NullableField); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Assert.AreEqual(10, x2);
 
             var ff = e.CompileFast(true);
@@ -1157,7 +1449,7 @@ namespace FastExpressionCompiler.IssueTests
             x2 = fs(ref v2);
             Assert.AreEqual(null, v1.NullableProp);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(9, v2.NullableProp); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v2.NullableProp); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Assert.AreEqual(10, x2);
 
             var ff = e.CompileFast(true);
@@ -1227,7 +1519,7 @@ namespace FastExpressionCompiler.IssueTests
             x2 = fs(ref v2);
             Assert.AreEqual(null, v1.NullableField);
             Assert.AreEqual(null, x1);
-            Assert.AreEqual(9, v2.NullableField); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Assert.AreEqual(9, x2);
 
             var ff = e.CompileFast(true);
@@ -1290,7 +1582,7 @@ namespace FastExpressionCompiler.IssueTests
 
             v1 = new Val { Field = 9 };
             x1 = fs(ref v1);
-            Assert.AreEqual(9, v1.Field); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Assert.AreEqual(10, x1);
 
             var ff = e.CompileFast(true);
@@ -1340,7 +1632,7 @@ namespace FastExpressionCompiler.IssueTests
 
             v1 = new Val { Field = 9 };
             x1 = fs(ref v1);
-            Assert.AreEqual(9, v1.Field); // todo: @note that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Assert.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Assert.AreEqual(9, x1);
 
             var ff = e.CompileFast(true);
