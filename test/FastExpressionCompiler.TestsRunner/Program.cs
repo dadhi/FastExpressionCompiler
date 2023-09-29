@@ -11,7 +11,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new UnaryExpressionTests().Run();
+            new Issue281_Index_Out_of_Range().Run();
+            // new UnaryExpressionTests().Run();
             // new ConvertOperatorsTests().Run();
             // new LightExpression.UnitTests.ConvertOperatorsTests().Run();
             // new LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();

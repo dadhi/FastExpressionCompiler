@@ -2470,8 +2470,8 @@ namespace FastExpressionCompiler
 
                     //  means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
                     var valueTypeParamCallOrMemberAccess = paramType.IsValueType &&
-                        // but the parameter is not used as an index #281, #265 (excluding the case when the index is on the left assignment part #352)
-                        ((parent & ParentFlags.IndexAccess) == 0 | (parent & ParentFlags.Assignment) != 0) &
+                        // but the parameter is not used as an index #281, #265 (excluding the case when it is used in arithmethic operation #352)
+                        ((parent & ParentFlags.IndexAccess) == 0 | (parent & ParentFlags.Arithmetic) == 0 & (parent & ParentFlags.Assignment) != 0) &
                         // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0;
 
