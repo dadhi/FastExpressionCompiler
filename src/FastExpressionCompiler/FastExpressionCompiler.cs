@@ -6948,7 +6948,8 @@ namespace FastExpressionCompiler
                             sb.NewLineIdentCs(body, EnclosedIn.LambdaBody, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         else
                         {
-                            sb.NewLine(lineIdent, identSpaces).Append('{');
+                            sb.NewLineIdent(lineIdent).Append('{');
+
                             // Body handles `;` itself
                             if (body is BlockExpression bb)
                                 bb.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode,
@@ -6959,7 +6960,7 @@ namespace FastExpressionCompiler
                                 if (isBodyExpression)
                                     sb.AddSemicolonIfFits();
                             }
-                            sb.NewLine(lineIdent, identSpaces).Append('}');
+                            sb.NewLineIdent(lineIdent).Append('}');
                         }
                         return sb.Append(')');
                     }
@@ -6977,7 +6978,6 @@ namespace FastExpressionCompiler
                         var x = (ConditionalExpression)e;
                         if (e.Type == typeof(void)) // otherwise output as ternary expression
                         {
-                            sb.NewLine(lineIdent, identSpaces);
                             sb.Append("if (");
                             x.Test.ToCSharpString(sb, EnclosedIn.IfTest, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             sb.Append(')');
@@ -7011,7 +7011,20 @@ namespace FastExpressionCompiler
                     }
                 case ExpressionType.Block:
                     {
-                        return BlockToCSharpString((BlockExpression)e, sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode: notRecognizedToCode);
+                        if (enclosedIn == EnclosedIn.Block)
+                            return BlockToCSharpString((BlockExpression)e, sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode: notRecognizedToCode);
+                        else
+                        {
+                            var isExpressionBlock = e.Type != typeof(void) && sb.Length > 0;
+                            sb.Append("{");
+                            if (isExpressionBlock)
+                                sb.Append(" /* BlockExpression cannot be written in C#. Please rewrite the code inside these braces as a C# expression, or reorganize the parent expression as a block. */");
+                            BlockToCSharpString((BlockExpression)e, sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode: notRecognizedToCode);
+
+                        if (isExpressionBlock)
+                                sb.Append("/* <- block result */");
+                            return sb.NewLineIdent(lineIdent).Append('}');
+                        }
                     }
                 case ExpressionType.Loop:
                     {
