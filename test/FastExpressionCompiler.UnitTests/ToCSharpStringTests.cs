@@ -32,14 +32,61 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
-        public void Outputs_default_reference_type_is_just_null()
+        public void Lambda_with_block_body()
         {
-            var cs = Default(typeof(string)).ToCSharpString();
-            Assert.AreEqual("null;", cs);
+            var variable = Parameter(typeof(int), "variable");
+            var e = Lambda<Func<int>>(Block(new [] { variable }, Assign(variable,  Constant(1)), Add(variable, Constant(2))));
 
-            cs = Default(typeof(System.Collections.Generic.List<string>)).ToCSharpString();
-            Assert.AreEqual("null;", cs);
+            var cs = e.ToCSharpString();
+
+            Assert.AreEqual("""
+                (Func<int>)(() =>
+                {
+                    int variable = default;
+                    variable = 1;
+                    return (variable + 2);
+                });
+                """, cs);
         }
+
+        [Test]
+        public void Nested_blocks()
+        {
+            var v1 = Parameter(typeof(int), "v1");
+            var v2 = Parameter(typeof(int), "v2");
+            var cs = Block(new [] { v1 },
+                Assign(v1, Constant(2)),
+                Block(new [] { v2 },
+                    Assign(v2, Constant(3)),
+                    AddAssign(v1, v2),
+                    IfThen(
+                        Equal(v1, Constant(5)),
+                        Block(
+                            Assign(v2, Constant(7)),
+                            AddAssign(v1, v2)
+                        )
+                    )
+                ),
+                v1
+            ).ToCSharpString();
+            Console.WriteLine(cs);
+            Assert.AreEqual("""
+                    {
+                        int v1 = default;
+                        v1 = 2;
+                        int v2 = default;
+                        v2 = 3;
+                        v1 += v2;
+                        if (v1 == 5)
+                        {
+                            v2 = 7;
+                            v1 += v2;
+                        }
+                        v1;
+                    };
+                    """, cs);
+        }
+
 
         [Test]
         public void Somehow_handles_block_in_expression()
@@ -51,10 +98,10 @@ namespace FastExpressionCompiler.UnitTests
                 variable
             )).ToCSharpString();
             Assert.AreEqual("""
-                    (1 + {
-                        int variable;
+                    (1 + { /* BlockExpression cannot be written in C#. Please rewrite the code inside these braces as a C# expression, or reorganize the parent expression as a block. */
+                        int variable = default;
                         variable = 2;
-                        variable;
+                        variable;/* <- block result */
                     });
                     """, cs);
         }
