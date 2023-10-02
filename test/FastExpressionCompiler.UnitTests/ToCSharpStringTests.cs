@@ -15,7 +15,9 @@ namespace FastExpressionCompiler.UnitTests
         public int Run()
         {
             Outputs_closed_generic_type_constant_correctly();
-            return 1;
+            Outputs_type_equals();
+            Outputs_default_null_for_reference_types();
+            return 3;
         }
 
         [Test]
@@ -29,6 +31,44 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = e.CompileFast(true);
             Assert.AreEqual(typeof(A<string>), f());
+        }
+
+        [Test]
+        public void Outputs_type_equals()
+        {
+            var p = Parameter(typeof(object), "p");
+            var eSealed = TypeEqual(p, typeof(string));
+            var eStruct = TypeEqual(p, typeof(int));
+            var eArray = TypeEqual(p, typeof(object[]));
+            var eOpen = TypeEqual(p, typeof(System.Collections.Generic.List<string>));
+
+            Assert.AreEqual("(p is string);", eSealed.ToCSharpString());
+            Assert.AreEqual("(p is int);", eStruct.ToCSharpString());
+            Assert.AreEqual("(p.GetType() == typeof(object[]));", eArray.ToCSharpString());
+            Assert.AreEqual("(p.GetType() == typeof(List<string>));", eOpen.ToCSharpString());
+        }
+
+        public void Outputs_default_null_for_reference_types()
+        {
+            Assert.AreEqual("(string)null;", Constant(null, typeof(string)).ToCSharpString());
+            Assert.AreEqual("(string)null;", Default(typeof(string)).ToCSharpString());
+            Assert.AreEqual("(List<string>)null;", Constant(null, typeof(System.Collections.Generic.List<string>)).ToCSharpString());
+            Assert.AreEqual("(List<string>)null;", Default(typeof(System.Collections.Generic.List<string>)).ToCSharpString());
+            Assert.AreEqual("(int?)null;", Constant(null, typeof(int?)).ToCSharpString());
+            Assert.AreEqual("(int?)null;", Default(typeof(int?)).ToCSharpString());
+
+            Assert.AreEqual("default(int);", Default(typeof(int)).ToCSharpString());
+
+            var block = Block(
+                new[] { Variable(typeof(int), "integer"), Variable(typeof(int?), "maybe_integer"), Variable(typeof(string), "str") },
+                Empty()
+            );
+            Assert.AreEqual("""
+
+                int integer = default;
+                int? maybe_integer = null;
+                string str = null;;
+                """, block.ToCSharpString());
         }
 
         class A<X> {}

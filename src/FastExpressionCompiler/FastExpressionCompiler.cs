@@ -6737,9 +6737,11 @@ namespace FastExpressionCompiler
                     {
                         var x = (ConstantExpression)e;
                         if (x.Value == null)
-                            return x.Type != null
+                            return x.Type == null
+                                ? sb.Append("null")
+                                : x.Type.IsValueType && !x.Type.IsNullable()
                                 ? sb.Append("default(").Append(x.Type.ToCode(stripNamespace, printType)).Append(')')
-                                : sb.Append("null");
+                                : sb.Append('(').Append(x.Type.ToCode(stripNamespace, printType)).Append(")null");
 
                         if (x.Value is Type t)
                             return sb.AppendTypeOf(t, stripNamespace, printType);
@@ -6954,7 +6956,6 @@ namespace FastExpressionCompiler
                         var x = (ConditionalExpression)e;
                         if (e.Type == typeof(void)) // otherwise output as ternary expression
                         {
-                            sb.NewLine(lineIdent, identSpaces);
                             sb.Append("if (");
                             x.Test.ToCSharpString(sb, EnclosedIn.IfTest, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             sb.Append(')');
@@ -7140,15 +7141,28 @@ namespace FastExpressionCompiler
                 case ExpressionType.Default:
                     {
                         return e.Type == typeof(void) ? sb // `default(void)` does not make sense in the C#
-                            : sb.Append("default(").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
+                            : e.Type.IsValueType && !e.Type.IsNullable()
+                            ? sb.Append("default(").Append(e.Type.ToCode(stripNamespace, printType)).Append(')')
+                            : sb.Append('(').Append(e.Type.ToCode(stripNamespace, printType)).Append(")null");
                     }
                 case ExpressionType.TypeIs:
                 case ExpressionType.TypeEqual:
                     {
                         var x = (TypeBinaryExpression)e;
                         sb.Append('(');
-                        x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-                        sb.Append(" is ").Append(x.TypeOperand.ToCode(stripNamespace, printType));
+                        // Use C# `is T` even for TypeEqual if the two are equivalent (this syntax is nicer)
+                        // IsSealed returns true for arrays, but arrays are cursed and don't behave like sealed classes (`new string[0] is object[]`, and even `new int[0] is uint[]`)
+                        if (x.NodeType == ExpressionType.TypeIs || (x.TypeOperand.IsSealed && !x.TypeOperand.IsArray))
+                        {
+                            x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            sb.Append(" is ").Append(x.TypeOperand.ToCode(stripNamespace, printType));
+                        }
+                        else
+                        {
+                            x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            sb.Append(".GetType() == typeof(").Append(x.TypeOperand.ToCode(stripNamespace, printType)).Append(')');
+
+                        }
                         return sb.Append(')');
                     }
                 case ExpressionType.Coalesce:
@@ -7419,7 +7433,8 @@ namespace FastExpressionCompiler
 
                 if (!v.IsByRef)
                 {
-                    sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ').AppendName(v.Name, v.Type, v).Append(" = default;");
+                    sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ').AppendName(v.Name, v.Type, v)
+                        .Append(v.Type.IsValueType && !v.Type.IsNullable() ? " = default;" : " = null;");
                     continue;
                 }
 
