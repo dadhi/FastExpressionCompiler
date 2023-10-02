@@ -923,6 +923,22 @@ namespace FastExpressionCompiler
             return false;
         }
 
+        public static bool TryGetDebugClosureNestedLambda(this Delegate parentLambda, int itemIndex, out Delegate d)
+        {
+            var target = parentLambda.Target;
+            if (target is ExpressionCompiler.DebugArrayClosure t)
+            {
+                var closureItems = t.ConstantsAndNestedLambdas;
+                if (itemIndex < closureItems.Length)
+                {
+                    d = (Delegate)closureItems[itemIndex];
+                    return true;
+                }
+            }
+            d = null;
+            return false;
+        }
+
         // todo: @perf better to move the case with no constants to another class OR we can reuse ArrayClosure but now ConstantsAndNestedLambdas will hold NonPassedParams
         public sealed class ArrayClosureWithNonPassedParams : ArrayClosure
         {
@@ -1789,15 +1805,14 @@ namespace FastExpressionCompiler
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
 
+            public static bool TryEmit(Expression expr, 
 #if LIGHT_EXPRESSION
-            public static bool TryEmit(Expression expr, IParameterProvider paramExprs,
-                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
-            {
+                IParameterProvider paramExprs,
 #else
-            public static bool TryEmit(Expression expr, IReadOnlyList<PE> paramExprs,
+                IReadOnlyList<PE> paramExprs,
+#endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
             {
-#endif
                 while (true)
                 {
                     closure.LastEmitIsAddress = false;
@@ -2490,7 +2505,7 @@ namespace FastExpressionCompiler
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
                             // this means the parameter is the argument to the method call and not the instance in the method call or member access
                             if (!isArgByRef & (parent & ParentFlags.Call) != 0 & (parent & ParentFlags.InstanceAccess) == 0 ||
-                                (parent & ParentFlags.Arithmetic) != 0 & (parent & ParentFlags.MemberAccess) == 0)
+                                (parent & ParentFlags.Arithmetic) != 0 & (parent & ParentFlags.MemberAccess) == 0 & (parent & ParentFlags.Assignment) == 0)
                                 EmitLoadIndirectlyByRef(il, paramType);
                         }
                         else
@@ -2498,11 +2513,6 @@ namespace FastExpressionCompiler
                             if (!isArgByRef & (parent & ParentFlags.Call) != 0 ||
                                 (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess)) != 0)
                                 il.Demit(OpCodes.Ldind_Ref);
-                            // else if ((parent & ParentFlags.Arithmetic) != 0)
-                            // {
-                            // todo: @wip debugging #170/#346
-                            //     Console.WriteLine("TryEmitParameter parent: " + parent);
-                            // }
                         }
                     }
                     return true;
@@ -2549,8 +2559,8 @@ namespace FastExpressionCompiler
                 if (paramType.IsValueType)
                 {
                     il.Demit(OpCodes.Unbox_Any, paramType);
-                    if ((parent & (ParentFlags.InstanceAccess | ParentFlags.IndexAccess)) != 0) // the condition fixes the #353, because we don't want to load the address of arithmetic operand
-                        EmitStoreAndLoadLocalVariableAddress(il, paramType); // fixes #347
+                    // if ((parent & (ParentFlags.InstanceAccess | ParentFlags.IndexAccess)) != 0) // the condition fixes the #353, because we don't want to load the address of arithmetic operand
+                    //     EmitStoreAndLoadLocalVariableAddress(il, paramType); // fixes #347
                 }
 
                 return true;
@@ -3707,16 +3717,24 @@ namespace FastExpressionCompiler
                             var objVar = -1;
                             if (objExpr != null)
                             {
-                                if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags))
+                                if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags | ParentFlags.Arithmetic))
                                     return false;
-                                objVar = EmitStoreAndLoadLocalVariable(il, objExpr.Type);
+
+                                objVar = il.GetNextLocalVarIndex(objExpr.Type);
+
+                                // required for calling the method on the value type parameter
+                                if (!closure.LastEmitIsAddress && objExpr.Type.IsValueType &&
+                                    (indexArgCount > 1 || leftIndexExpr.Indexer != null))
+                                    EmitStoreAndLoadLocalVariableAddress(il, objVar);
+                                else
+                                    EmitStoreAndLoadLocalVariable(il, objVar);
                             }
 
                             int indexArgVar0 = -1, indexArgVar1 = -1, indexArgVar2 = -1, indexArgVar3 = -1; // using stackalloc array?
                             for (var i = 0; i < indexArgCount; i++)
                             {
                                 var indexArg = indexArgs.GetArgument(i);
-                                if (!TryEmit(indexArg, paramExprs, il, ref closure, setup, leftFlags, -1))
+                                if (!TryEmit(indexArg, paramExprs, il, ref closure, setup, leftFlags | ParentFlags.Arithmetic))
                                     return false;
                                 var indexArgVar = EmitStoreAndLoadLocalVariable(il, indexArg.Type);
                                 if (i == 0) indexArgVar0 = indexArgVar;
@@ -4301,19 +4319,20 @@ namespace FastExpressionCompiler
                 {
                     if (objExpr != null)
                     {
-                        var p = (parent | ParentFlags.InstanceCall | ParentFlags.MemberAccess)
+                        var p = (parent | ParentFlags.InstanceCall)
+                            & ~ParentFlags.MemberAccess // removing ParentFlags.MemberAccess here because we are calling the method instead of accessing the field
                             & ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner;
 
                         if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, p))
                             return false;
 
-                        if ((parent & ParentFlags.DupMemberOwner) != 0)
+                        if ((parent & ParentFlags.DupMemberOwner) != 0) // just duplicate the whatever is emitted for object
                             il.Demit(OpCodes.Dup);
-
+                        else
                         // Value type special treatment to load address of value instance in order to call a method.
-                        // Parameter should be excluded because it already loads an address via `LDARGA`, and you don't need to.
-                        if (!closure.LastEmitIsAddress &&
-                            objExpr.NodeType != ExpressionType.Parameter && objExpr.Type.IsValueType)
+                        // For the parameters, we will skip the address loading because the `LastEmitIsAddress == true` for `Ldarga`, 
+                        // so the condition here will be skipped
+                        if (!closure.LastEmitIsAddress && objExpr.Type.IsValueType)
                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
                     }
 

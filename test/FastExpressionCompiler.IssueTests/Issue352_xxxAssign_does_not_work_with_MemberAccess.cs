@@ -23,13 +23,11 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Check_ArrayAccess_AddAssign_PlusOne();
-            Check_IndexerAccess_AddAssign_PlusOne_InAction();
             Check_MultiArrayAccess_AddAssign_PlusOne();
+            Check_IndexerAccess_AddAssign_PlusOne_InAction();
             Check_ArrayAccess_AddAssign_NullablePlusNullable();
-
             Check_Ref_ArrayAccess_AddAssign_PlusOne();
-
-            // Check_Val_IndexerAccess_AddAssign_PlusOne(); // todo: @wip
+            Check_Val_IndexerAccess_AddAssign_PlusOne();
             // Check_Val_Ref_IndexerAccess_AddAssign_PlusOne(); // todo: @wip
 
             Check_ArrayAccess_PreIncrement();
@@ -537,6 +535,44 @@ namespace FastExpressionCompiler.IssueTests
             a1 = new[] { 1, 2, 9 };
             ff(ref a1);
             Assert.AreEqual(10, a1[2]);
+        }
+
+        [Test]
+        public void Check_Val_IndexerAccess_AddAssign_PlusOne()
+        {
+            var a = Parameter(typeof(ArrVal), "a");
+            var e = Lambda<Action<ArrVal>>(
+                Block(AddAssign(Property(a, "Item", Constant("b"), Constant(2)), Constant(1))),
+                a);
+
+            e.PrintCSharp();
+            var @cs = (Action<ArrVal>)((ArrVal a) =>
+            {
+                a["b", 2] += 1;
+            });
+            var a1 = new ArrVal { Elem = 9 };
+            @cs(a1);
+            Assert.AreEqual(9, a1.Elem); // NOT E!!! it does not change because passed-by-value
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            a1 = new ArrVal { Elem = 9 };
+            fs(a1);
+            Assert.AreEqual(9, a1.Elem);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            // ff.AssertOpCodes(
+            //     OpCodes.Ldarga_S,
+            //     OpCodes.Ldstr,      // "b"
+            //     OpCodes.Ldc_I4_2,
+            //     OpCodes.Ldc_I4_S,   // 33
+            //     OpCodes.Call,       // Arr.set_Item
+            //     OpCodes.Ret
+            // );
+            a1 = new ArrVal { Elem = 9 };
+            ff(a1);
+            Assert.AreEqual(9, a1.Elem);
         }
 
         [Test]

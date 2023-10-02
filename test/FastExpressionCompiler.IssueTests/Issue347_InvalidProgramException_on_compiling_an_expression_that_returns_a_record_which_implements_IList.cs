@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -21,8 +22,8 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_passing_struct_item_in_object_array_parameter();
             Test_struct_parameter_in_closure_of_the_nested_lambda();
+            Test_passing_struct_item_in_object_array_parameter();
             Test_nullable_param_in_closure_of_the_nested_lambda();
             Test_nullable_of_struct_and_struct_field_in_the_nested_lambda();
             Test_original();
@@ -87,8 +88,21 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNotNull(f);
             f.PrintIL();
 
-            if (f.TryGetDebugClosureNestedLambdaOrConstant(out var item) && item is Delegate d)
+            if (f.TryGetDebugClosureNestedLambda(0, out var d))
+            {
                 d.PrintIL("nested");
+                d.AssertOpCodes(
+                    OpCodes.Ldarg_0,
+                    OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
+                    OpCodes.Ldc_I4_0,
+                    OpCodes.Ldelem_Ref,
+                    OpCodes.Unbox_Any,  // NotifyModel
+                    OpCodes.Stloc_0,
+                    OpCodes.Ldloca_S,   // 0
+                    OpCodes.Call,       // NotifyModel.get_Number1
+                    OpCodes.Ret
+                );
+            }
 
             var y = f(m);
             Assert.AreEqual(43, y);
