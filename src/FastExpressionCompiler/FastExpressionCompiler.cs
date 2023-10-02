@@ -7173,8 +7173,19 @@ namespace FastExpressionCompiler
                     {
                         var x = (TypeBinaryExpression)e;
                         sb.Append('(');
-                        x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-                        sb.Append(" is ").Append(x.TypeOperand.ToCode(stripNamespace, printType));
+                        // Use C# `is T` even for TypeEqual if the two are equivalent (this syntax is nicer)
+                        // IsSealed returns true for arrays, but arrays are cursed and don't behave like sealed classes (`new string[0] is object[]`, and even `new int[0] is uint[]`)
+                        if (x.NodeType == ExpressionType.TypeIs || (x.TypeOperand.IsSealed && !x.TypeOperand.IsArray))
+                        {
+                            x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            sb.Append(" is ").Append(x.TypeOperand.ToCode(stripNamespace, printType));
+                        }
+                        else
+                        {
+                            x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            sb.Append(".GetType() == typeof(").Append(x.TypeOperand.ToCode(stripNamespace, printType)).Append(')');
+
+                        }
                         return sb.Append(')');
                     }
                 case ExpressionType.Coalesce:
