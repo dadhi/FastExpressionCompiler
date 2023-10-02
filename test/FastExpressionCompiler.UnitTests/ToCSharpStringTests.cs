@@ -31,6 +31,30 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(typeof(A<string>), f());
         }
 
+        [Test]
+        public void Outputs_default_null_for_reference_types()
+        {
+            Assert.AreEqual("(string)null;", Constant(null, typeof(string)).ToCSharpString());
+            Assert.AreEqual("(string)null;", Default(typeof(string)).ToCSharpString());
+            Assert.AreEqual("(List<string>)null;", Constant(null, typeof(System.Collections.Generic.List<string>)).ToCSharpString());
+            Assert.AreEqual("(List<string>)null;", Default(typeof(System.Collections.Generic.List<string>)).ToCSharpString());
+            Assert.AreEqual("(int?)null;", Constant(null, typeof(int?)).ToCSharpString());
+            Assert.AreEqual("(int?)null;", Default(typeof(int?)).ToCSharpString());
+
+            Assert.AreEqual("default(int);", Default(typeof(int)).ToCSharpString());
+
+            var block = Block(
+                new[] { Variable(typeof(int), "integer"), Variable(typeof(int?), "maybe_integer"), Variable(typeof(string), "str") },
+                Empty()
+            );
+            Assert.AreEqual("""
+
+                int integer = default;
+                int? maybe_integer = null;
+                string str = null;;
+                """, block.ToCSharpString());
+        }
+
         class A<X> {}
     }
 }
