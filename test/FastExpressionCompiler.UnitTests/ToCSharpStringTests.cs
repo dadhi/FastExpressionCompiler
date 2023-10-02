@@ -14,9 +14,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            Outputs_default_null_for_reference_types();
             Outputs_closed_generic_type_constant_correctly();
             Outputs_type_equals();
-            Outputs_default_null_for_reference_types();
             return 3;
         }
 
@@ -59,18 +59,18 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.AreEqual("default(int);", Default(typeof(int)).ToCSharpString());
 
-            var block = Block(
+            var e = Block(
                 new[] { Variable(typeof(int), "integer"), Variable(typeof(int?), "maybe_integer"), Variable(typeof(string), "str") },
                 Empty()
             );
-            Assert.AreEqual("""
 
-                int integer = default;
-                int? maybe_integer = null;
-                string str = null;;
-                """, block.ToCSharpString());
+            Assert.AreEqual(
+                "int integer = default;" + Environment.NewLine +
+                "int? maybe_integer = null;" + Environment.NewLine +
+                "string str = null;;",
+                e.ToCSharpString().Trim());
         }
 
-        class A<X> {}
+        class A<X> { }
     }
 }
