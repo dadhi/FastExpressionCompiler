@@ -103,12 +103,13 @@ namespace FastExpressionCompiler.LightExpression
             return sysExpr;
         }
 
+        // todo: @perf can use the FHashMap instead of the SmallList here?
         internal abstract SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions);
 
         /// <summary>Converts to Expression and outputs its as string</summary>
         public override string ToString() => this.ToCSharpString(
             new StringBuilder(256), stripNamespace: true,
-            notRecognizedToCode: (x, stripNs, printType) => "default(" + x.GetType().ToCode(stripNs, printType) + ")/*" + x.ToString() + "*/")
+            notRecognizedToCode: static (x, stripNs, printType) => "default(" + x.GetType().ToCode(stripNs, printType) + ")/*" + x.ToString() + "*/")
             .ToString();
 
         /// <summary>Reduces the Expression to simple ones</summary>
@@ -2056,7 +2057,7 @@ namespace FastExpressionCompiler.LightExpression
                     }
                     else
                     {
-                        var score = GetScopeOfExpressionsAssignableToParams(argExprs, mPars);
+                        var score = GetScoreOfExpressionsAssignableToParams(argExprs, mPars);
                         if (score == 0)
                             continue;
                         if (score == bestScore)
@@ -2094,7 +2095,7 @@ namespace FastExpressionCompiler.LightExpression
                     }
                     else
                     {
-                        var score = GetScopeOfExpressionsAssignableToParams(argExprs, mPars);
+                        var score = GetScoreOfExpressionsAssignableToParams(argExprs, mPars);
                         if (score == 0)
                             continue;
                         if (score == bestScore)
@@ -2122,7 +2123,7 @@ namespace FastExpressionCompiler.LightExpression
         // 3 per parameter - same type
         // 2 per parameter - base type
         // 1 per parameter - object type
-        private static int GetScopeOfExpressionsAssignableToParams(IReadOnlyList<Expression> argExprs, ParameterInfo[] pars)
+        private static int GetScoreOfExpressionsAssignableToParams(IReadOnlyList<Expression> argExprs, ParameterInfo[] pars)
         {
             var score = 0;
             for (var i = 0; i < pars.Length; i++)

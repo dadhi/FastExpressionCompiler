@@ -28,7 +28,8 @@ namespace FastExpressionCompiler.IssueTests
             Check_ArrayAccess_AddAssign_NullablePlusNullable();
             Check_Ref_ArrayAccess_AddAssign_PlusOne();
             Check_Val_IndexerAccess_AddAssign_PlusOne();
-            // Check_Val_Ref_IndexerAccess_AddAssign_PlusOne(); // todo: @wip
+            Check_Val_Ref_NoIndexer_AddAssign_PlusOne();
+            // Check_Val_Ref_IndexerAccess_AddAssign_PlusOne();
 
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_AddAssign_InAction();
@@ -172,6 +173,20 @@ namespace FastExpressionCompiler.IssueTests
                     else
                         Elem = -value;
                 }
+            }
+        }
+
+        public struct ArrValNoIndexer
+        {
+            public int Elem;
+            public int GetItem(string s, int i) =>
+                s == "a" ? i < 0 ? -1 : 1 : i < 0 ? -2 : 2;
+            public void SetItem(string s, int i, int value)
+            {
+                if (s == "a")
+                    Elem = value;
+                else
+                    Elem = -value;
             }
         }
 
@@ -562,17 +577,132 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            // ff.AssertOpCodes(
-            //     OpCodes.Ldarga_S,
-            //     OpCodes.Ldstr,      // "b"
-            //     OpCodes.Ldc_I4_2,
-            //     OpCodes.Ldc_I4_S,   // 33
-            //     OpCodes.Call,       // Arr.set_Item
-            //     OpCodes.Ret
-            // );
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloca_S,   // 0
+                OpCodes.Ldstr,      // "b"
+                OpCodes.Stloc_1,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldc_I4_2,
+                OpCodes.Stloc_2,
+                OpCodes.Ldloc_2,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldloc_2,
+                OpCodes.Call,       // ArrVal.get_Item
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Call,       // ArrVal.set_Item
+                OpCodes.Ret
+            );
             a1 = new ArrVal { Elem = 9 };
             ff(a1);
             Assert.AreEqual(9, a1.Elem);
+        }
+
+        [Test]
+        public void Check_Val_Ref_IndexerAccess_AddAssign_PlusOne()
+        {
+            var a = Parameter(typeof(ArrVal).MakeByRefType(), "a");
+            var e = Lambda<RefArrVal>(
+                Block(AddAssign(Property(a, "Item", Constant("b"), Constant(2)), Constant(1))),
+                a);
+
+            e.PrintCSharp();
+            var @cs = (RefArrVal)((ref ArrVal a) =>
+            {
+                a["b", 2] += 1;
+            });
+            var a1 = new ArrVal { Elem = 9 };
+            @cs(ref a1);
+            Assert.AreEqual(-3, a1.Elem);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            a1 = new ArrVal { Elem = 9 };
+            fs(ref a1);
+            Assert.AreEqual(9, a1.Elem); // todo: @sys does not work, or is there bug in converting to the Expression?
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            // ff.AssertOpCodes(
+            //     OpCodes.Ldarg_1,
+            //     OpCodes.Stloc_0,
+            //     OpCodes.Ldloc_0,
+            //     OpCodes.Ldstr,      // "b"
+            //     OpCodes.Stloc_1,
+            //     OpCodes.Ldloc_1,
+            //     OpCodes.Ldc_I4_2,
+            //     OpCodes.Stloc_2,
+            //     OpCodes.Ldloc_2,
+            //     OpCodes.Ldloc_0,
+            //     OpCodes.Ldloc_1,
+            //     OpCodes.Ldloc_2,
+            //     OpCodes.Call,       // ArrVal.get_Item
+            //     OpCodes.Ldc_I4_1,
+            //     OpCodes.Add,
+            //     OpCodes.Call,       // ArrVal.set_Item
+            //     OpCodes.Ret
+            // );
+            a1 = new ArrVal { Elem = 9 };
+            ff(ref a1);
+            Assert.AreEqual(-3, a1.Elem);
+        }
+
+        delegate void RefArrValNoIndexer(ref ArrValNoIndexer a);
+
+        [Test]
+        public void Check_Val_Ref_NoIndexer_AddAssign_PlusOne()
+        {
+            var a = Parameter(typeof(ArrValNoIndexer).MakeByRefType(), "a");
+            var e = Lambda<RefArrValNoIndexer>(
+                Call(a, typeof(ArrValNoIndexer).GetMethod(nameof(ArrValNoIndexer.SetItem)), Constant("b"), Constant(2),
+                    Add(Call(a, typeof(ArrValNoIndexer).GetMethod(nameof(ArrValNoIndexer.GetItem)), Constant("b"), Constant(2)),
+                        Constant(1))
+                    ),
+                a);
+
+            e.PrintCSharp();
+            var @cs = (RefArrValNoIndexer)((ref ArrValNoIndexer a) =>
+            {
+                a.SetItem(
+                    "b",
+                    2,
+                    (a.GetItem(
+                        "b",
+                        2) + 1));
+            });
+
+            var a1 = new ArrValNoIndexer { Elem = 9 };
+            @cs(ref a1);
+            Assert.AreEqual(-3, a1.Elem);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            a1 = new ArrValNoIndexer { Elem = 9 };
+            fs(ref a1);
+            Assert.AreEqual(-3, a1.Elem); // todo: @sys does not work, or is there bug in converting to the Expression?
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldstr,  // "b"
+                OpCodes.Ldc_I4_2,
+                OpCodes.Ldarg_1,
+                OpCodes.Ldobj,  // ArrValNoIndexer - note that this seems optional and the CompileSys works without it
+                OpCodes.Ldstr,  // "b"
+                OpCodes.Ldc_I4_2,
+                OpCodes.Call,   // ArrVal.get_Item
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Call,   // ArrVal.set_Item
+                OpCodes.Ret
+            );
+            a1 = new ArrValNoIndexer { Elem = 9 };
+            ff(ref a1);
+            Assert.AreEqual(-3, a1.Elem);
         }
 
         [Test]
@@ -1718,26 +1848,6 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            /*
-            0    ldarg.1 <-- load the Box argument on stack
-            1    stloc.0
-            2    ldloc.0 <-- on stack
-            3    ldloc.0 <-- todo: @perf twice on stack or do Dup instead?
-            4    ldfld Box.NullableValue
-            9    stloc.1 <-- store and pop, so the ldloc.0 is again on top
-            10   ldloca.s 1 <-- load the address of field variable, not the address of field
-            12   call Nullable`1.get_HasValue <-- if does not have value, then jump to 35
-            17   brfalse.s 35
-            19   ldloca.s 1 <-- load the address of field variable
-            21   call Nullable`1.GetValueOrDefault <-- get it value on stack
-            26   ldc.i4.1 <-- load 1 on stack
-            27   add <-- add 1 to value
-            28   newobj Nullable`1..ctor <-- create new Nullable with the added value
-            33   br.s 36 <-- jump to 36 storing the value in the field
-            35   ldloc.1 <-- todo: @perf load the field variable not the address and store it in NullableValue, why if we may just jump to return?
-            36   stfld Box.NullableValue
-            41   ret
-            */
 
             b1 = new Box { NullableField = null };
             b2 = new Box { NullableField = 41 };
