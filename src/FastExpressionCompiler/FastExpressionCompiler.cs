@@ -2497,7 +2497,7 @@ namespace FastExpressionCompiler
                     else
                         EmitLoadArg(il, paramIndex);
 
-                    // todo: @simplify it is complex overall and EmitLoadIndirectlyByRef does the Ldind_Ref too
+                    // todo: @simplify as it is complex overall and EmitLoadIndirectlyByRef does the Ldind_Ref too
                     if (isParamOrVarByRef)
                     {
                         if (paramType.IsValueType)
@@ -2557,11 +2557,7 @@ namespace FastExpressionCompiler
 
                 // source type is object, NonPassedParams is object array
                 if (paramType.IsValueType)
-                {
                     il.Demit(OpCodes.Unbox_Any, paramType);
-                    // if ((parent & (ParentFlags.InstanceAccess | ParentFlags.IndexAccess)) != 0) // the condition fixes the #353, because we don't want to load the address of arithmetic operand
-                    //     EmitStoreAndLoadLocalVariableAddress(il, paramType); // fixes #347
-                }
 
                 return true;
             }
@@ -3716,19 +3712,24 @@ namespace FastExpressionCompiler
                             // determine is the index essentially the method call to get/set value
                             var isIndexerAMethodCall = indexArgCount > 1 | leftIndexExpr.Indexer != null;
                             var objVar = -1;
+                            var objVarByAddress = false;
                             if (objExpr != null)
                             {
                                 if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags | ParentFlags.Arithmetic))
                                     return false;
-                                
-                                objVar = il.GetNextLocalVarIndex(objExpr.Type);
 
                                 // required for calling the method on the value type parameter
-                                if (!closure.LastEmitIsAddress && objExpr.Type.IsValueType &&
-                                    (indexArgCount > 1 || leftIndexExpr.Indexer != null))
-                                    EmitStoreAndLoadLocalVariableAddress(il, objVar);
+                                var objType = objExpr.Type;
+                                objVarByAddress = objType.IsValueType && !closure.LastEmitIsAddress &&
+                                    (objExpr.NodeType != ExpressionType.Parameter || !((ParameterExpression)objExpr).IsByRef);
+                                if (objVarByAddress)
+                                    objVar = EmitStoreAndLoadLocalVariableAddress(il, objType);
                                 else
-                                    EmitStoreAndLoadLocalVariable(il, objVar);
+                                {
+                                    if (objExpr is ParameterExpression pe && pe.IsByRef)
+                                        objType = objType.MakeByRefType();
+                                    objVar = EmitStoreAndLoadLocalVariable(il, objType);
+                                }
                             }
 
                             int indexArgVar0 = -1, indexArgVar1 = -1, indexArgVar2 = -1, indexArgVar3 = -1; // using stackalloc array?
@@ -3746,7 +3747,12 @@ namespace FastExpressionCompiler
 
                             // repeat the load of the obj and index variables for the assignment here to avoid store and load of the right value
                             if (objExpr != null)
-                                EmitLoadLocalVariable(il, objVar);
+                            {
+                                if (!objVarByAddress)
+                                    EmitLoadLocalVariable(il, objVar);
+                                else
+                                    EmitLoadLocalVariableAddress(il, objVar);
+                            }
 
                             EmitLoadLocalVariable(il, indexArgVar0); // there is always at least one index argument
                             if (indexArgVar1 != -1)
@@ -4257,7 +4263,7 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                var flags = parent & ~ParentFlags.IgnoreResult | ParentFlags.Call;
+                var flags = ParentFlags.Call;
                 var callExpr = (MethodCallExpression)expr;
                 var objExpr = callExpr.Object;
                 var method = callExpr.Method;
@@ -4281,7 +4287,6 @@ namespace FastExpressionCompiler
 #else
                     var callArgs = callExpr.Arguments;
 #endif
-                    flags = flags & ~ParentFlags.MemberAccess & ~ParentFlags.InstanceAccess;
                     for (var i = 0; i < methodParams.Length; i++)
                         if (!TryEmit(callArgs.GetArgument(i), paramExprs, il, ref closure, setup, flags, methodParams[i].ParameterType.IsByRef ? i : -1))
                             return false;
@@ -4290,9 +4295,8 @@ namespace FastExpressionCompiler
                 var ok = true;
                 if (!objIsValueType)
                     ok = EmitMethodCallOrVirtualCall(il, method);
-                else if (!method.IsVirtual ||
-                    objExpr is ParameterExpression p && p.IsByRef ||
-                    method.DeclaringType == objExpr.Type)
+                else if (!method.IsVirtual || method.DeclaringType == objExpr.Type ||
+                    objExpr is ParameterExpression pe && pe.IsByRef)
                     ok = EmitMethodCall(il, method);
                 else
                 {

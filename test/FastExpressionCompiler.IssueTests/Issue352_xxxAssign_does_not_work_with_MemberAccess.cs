@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.IssueTests
             Check_Ref_ArrayAccess_AddAssign_PlusOne();
             Check_Val_IndexerAccess_AddAssign_PlusOne();
             Check_Val_Ref_NoIndexer_AddAssign_PlusOne();
-            // Check_Val_Ref_IndexerAccess_AddAssign_PlusOne();
+            Check_Val_Ref_IndexerAccess_AddAssign_PlusOne();
 
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_AddAssign_InAction();
@@ -567,7 +567,7 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new ArrVal { Elem = 9 };
             @cs(a1);
-            Assert.AreEqual(9, a1.Elem); // NOT E!!! it does not change because passed-by-value
+            Assert.AreEqual(9, a1.Elem); // NOTE!!! it does not change because passed-by-value
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -587,7 +587,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldc_I4_2,
                 OpCodes.Stloc_2,
                 OpCodes.Ldloc_2,
-                OpCodes.Ldloc_0,
+                OpCodes.Ldloca_S,   // 0
                 OpCodes.Ldloc_1,
                 OpCodes.Ldloc_2,
                 OpCodes.Call,       // ArrVal.get_Item
@@ -626,25 +626,25 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            // ff.AssertOpCodes(
-            //     OpCodes.Ldarg_1,
-            //     OpCodes.Stloc_0,
-            //     OpCodes.Ldloc_0,
-            //     OpCodes.Ldstr,      // "b"
-            //     OpCodes.Stloc_1,
-            //     OpCodes.Ldloc_1,
-            //     OpCodes.Ldc_I4_2,
-            //     OpCodes.Stloc_2,
-            //     OpCodes.Ldloc_2,
-            //     OpCodes.Ldloc_0,
-            //     OpCodes.Ldloc_1,
-            //     OpCodes.Ldloc_2,
-            //     OpCodes.Call,       // ArrVal.get_Item
-            //     OpCodes.Ldc_I4_1,
-            //     OpCodes.Add,
-            //     OpCodes.Call,       // ArrVal.set_Item
-            //     OpCodes.Ret
-            // );
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldstr,      // "b"
+                OpCodes.Stloc_1,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldc_I4_2,
+                OpCodes.Stloc_2,
+                OpCodes.Ldloc_2,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldloc_2,
+                OpCodes.Call,       // ArrVal.get_Item
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Call,       // ArrVal.set_Item
+                OpCodes.Ret
+            );
             a1 = new ArrVal { Elem = 9 };
             ff(ref a1);
             Assert.AreEqual(-3, a1.Elem);
@@ -691,7 +691,6 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldstr,  // "b"
                 OpCodes.Ldc_I4_2,
                 OpCodes.Ldarg_1,
-                OpCodes.Ldobj,  // ArrValNoIndexer - note that this seems optional and the CompileSys works without it
                 OpCodes.Ldstr,  // "b"
                 OpCodes.Ldc_I4_2,
                 OpCodes.Call,   // ArrVal.get_Item
