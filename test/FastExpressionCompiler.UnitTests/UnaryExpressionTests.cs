@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection.Emit;
 using NUnit.Framework;
 using SysExpr = System.Linq.Expressions;
 
@@ -370,6 +371,21 @@ namespace FastExpressionCompiler.UnitTests
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
+                OpCodes.Ldelema, //X
+                OpCodes.Ldflda, //X.N
+                OpCodes.Dup,
+                OpCodes.Ldind_I4,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Sub,
+                OpCodes.Stind_I4,
+                OpCodes.Ldloc_0,
+                OpCodes.Ret
+            );
 
             arr = new X[] { new X { N = 42 }, new X { N = 33 } };
             Assert.AreEqual(33, ff(arr, 1));

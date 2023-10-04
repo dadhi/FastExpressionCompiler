@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using NUnit.Framework;
 #pragma warning disable CS0164, CS0649
 
@@ -18,7 +19,6 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Index_Out_of_Range();
-
             return 1;
         }
 
@@ -26,27 +26,34 @@ namespace FastExpressionCompiler.IssueTests
         public void Index_Out_of_Range()
         {
             var input = Parameter(typeof(List<string>));
-            var idx   = Parameter(typeof(int));
+            var idx = Parameter(typeof(int));
 
             var listIdxProp = typeof(List<string>).GetProperties().FirstOrDefault(x => x.GetIndexParameters()?.Count() > 0);
             var printMethod = typeof(object).GetMethod(nameof(ToString));
 
-            var lambda = Lambda<Func<List<string>,int,string>>(
+            var e = Lambda<Func<List<string>, int, string>>(
                 Call(MakeIndex(input, listIdxProp, new[] { idx }), printMethod),
                 input, idx);
 
-            lambda.PrintCSharp();
-            var s = lambda.ToExpressionString();
+            e.PrintCSharp();
 
-            var fs = lambda.CompileSys();
+            var fs = e.CompileSys();
             fs.PrintIL();
-
-            var f = lambda.CompileFast(true);
-            f.PrintIL();
 
             var m = new List<string> { "a" };
             Assert.AreEqual("a", fs(m, 0));
-            Assert.AreEqual("a", f(m, 0));
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_2,
+                OpCodes.Callvirt, // List`1.get_Item
+                OpCodes.Callvirt, // Object.ToString
+                OpCodes.Ret
+            );
+
+            Assert.AreEqual("a", ff(m, 0));
         }
-   }
+    }
 }
