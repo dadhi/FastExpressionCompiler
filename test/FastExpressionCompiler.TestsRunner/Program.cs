@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
             // new Issue374_CompileFast_doesnot_work_with_HasFlag().Run();
             // new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
@@ -23,27 +24,6 @@ namespace FastExpressionCompiler.UnitTests
             // new Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
 
             RunAllTests();
-
-            // new LightExpression.IssueTests.Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception().Run();
-            // new LightExpression.IssueTests.Nested_lambdas_assigned_to_vars().Run();
-            // new HoistedLambdaExprTests().Run();
-            // new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run();
-            // new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
-            // new LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
-            // new LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
-            // new LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
-            // new Issue261_Loop_wih_conditions_fails().Run();
-            // new Issue293_Recursive_Methods().Run();
-
-            // new FastExpressionCompiler.IssueTests.Issue159_NumericConversions().Run();
-            // new Issue357_Invalid_program_exception().Run();
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
-            // new FastExpressionCompiler.LightExpression.UnitTests.AssignTests().Run();
-
-            // new FastExpressionCompiler.LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
-            // new FastExpressionCompiler.IssueTests.EmitHacksTest().Run();
-            // new FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests().Run();
-            // new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
 
             // Console.WriteLine("Local variable usage:");
             // foreach (var t in FastExpressionCompiler.ILGeneratorHacks.LocalVarUsage.OrderByDescending(x => x.Value))
@@ -275,6 +255,8 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run);
                 Run(new FastExpressionCompiler.IssueTests.Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run);
+
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run);
 
                 Run(new Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run);

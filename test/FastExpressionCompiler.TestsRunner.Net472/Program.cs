@@ -232,6 +232,8 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run);
 
+                Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run);
+
                 Run(new Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run);
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run);
 

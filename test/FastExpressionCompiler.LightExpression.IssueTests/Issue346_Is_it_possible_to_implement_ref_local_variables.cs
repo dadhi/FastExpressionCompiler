@@ -11,27 +11,28 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            Check_assignment_to_by_ref_float_parameter();
+            Check_assignment_to_by_ref_float_parameter_Increment();
+            Check_assignment_to_by_ref_float_parameter_PlusOne();
             // SimpleTest();
             // Test();
-            return 1; // todo: @wip update when fixed
+            return 2;
         }
 
         delegate void IncRefFloat(ref float x);
 
         [Test]
-        public void Check_assignment_to_by_ref_float_parameter()
+        public void Check_assignment_to_by_ref_float_parameter_PlusOne()
         {
-            // void (ref float x) => x += 1;
             var p = Parameter(typeof(float).MakeByRefType(), "x");
             var e = Lambda<IncRefFloat>(
-                Block(
-                    // PreIncrementAssign(n)
-                    AddAssign(p, Constant(1.0f))
-                ),
+                Block(AddAssign(p, Constant(1.0f))),
                 p
             );
             e.PrintCSharp();
+            var @cs = (IncRefFloat)((ref float x) =>
+            {
+                x += (float)1;
+            });
 
             var s = e.CompileSys();
             s.PrintIL();
@@ -42,6 +43,55 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var f = e.CompileFast(true);
             f.PrintIL();
+            f.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_R4,
+                OpCodes.Ldc_R4,
+                OpCodes.Add,
+                OpCodes.Stind_R4,
+                OpCodes.Ret
+            );
+
+            var y = 1.0f;
+            f(ref y);
+            Assert.AreEqual(2, (int)y);
+        }
+
+        [Test]
+        public void Check_assignment_to_by_ref_float_parameter_Increment()
+        {
+            var p = Parameter(typeof(float).MakeByRefType(), "x");
+            var e = Lambda<IncRefFloat>(
+                Block(PostIncrementAssign(p)),
+                p
+            );
+            e.PrintCSharp();
+            var @cs = (IncRefFloat)((ref float x) =>
+            {
+                x++;
+            });
+
+            var s = e.CompileSys();
+            s.PrintIL();
+
+            var x = 1.0f;
+            s(ref x);
+            Assert.AreEqual(2, (int)x);
+
+            var f = e.CompileFast(true);
+            f.PrintIL();
+            f.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_R4,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stloc_0,
+                OpCodes.Ldarg_1,
+                OpCodes.Ldloc_0,
+                OpCodes.Stind_R4,
+                OpCodes.Ret
+            );
 
             var y = 1.0f;
             f(ref y);
