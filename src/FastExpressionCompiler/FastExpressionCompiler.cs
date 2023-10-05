@@ -2775,7 +2775,7 @@ namespace FastExpressionCompiler
                 var underlyingNullableTargetType = targetType.GetUnderlyingNullableTypeOrNull();
                 if (underlyingNullableTargetType == sourceType)
                 {
-                    il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                    il.Demit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                     return true;
                 }
 
@@ -2795,7 +2795,7 @@ namespace FastExpressionCompiler
                     {
                         EmitMethodCall(il, convertOpMethod);
                         if (underlyingNullableTargetType != null)
-                            il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                            il.Demit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                         return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
@@ -2845,7 +2845,7 @@ namespace FastExpressionCompiler
                         {
                             var ok = EmitMethodCall(il, convertOpMethod);
                             if (underlyingNullableTargetType != null)
-                                il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                                il.Demit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                             return ok && il.EmitPopIfIgnoreResult(parent);
                         }
                     }
@@ -2853,7 +2853,7 @@ namespace FastExpressionCompiler
 
                 if (sourceType == typeof(object) && targetType.IsValueType)
                 {
-                    il.Emit(OpCodes.Unbox_Any, targetType);
+                    il.Demit(OpCodes.Unbox_Any, targetType);
                 }
                 else if (underlyingNullableTargetType != null)
                 {
@@ -2863,7 +2863,7 @@ namespace FastExpressionCompiler
                         if (!underlyingNullableTargetType.IsEnum && // todo: @clarify hope the source type is convertible to enum, huh 
                             !TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false))
                             return false;
-                        il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                        il.Demit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                     }
                     else
                     {
@@ -2871,17 +2871,17 @@ namespace FastExpressionCompiler
                         EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
 
                         var labelSourceHasValue = il.DefineLabel();
-                        il.Emit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
+                        il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
 
                         // otherwise, emit and load a `new Nullable<TTarget>()` struct (that's why a Init instead of New)
                         EmitLoadLocalVariable(il, InitValueTypeVariable(il, targetType));
 
                         // jump to completion
                         var labelDone = il.DefineLabel();
-                        il.Emit(OpCodes.Br_S, labelDone);
+                        il.Demit(OpCodes.Br_S, labelDone);
 
                         // if source nullable has a value:
-                        il.MarkLabel(labelSourceHasValue);
+                        il.DmarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
                         EmitMethodCall(il, sourceType.GetNullableGetValueOrDefaultMethod());
                         if (method != null && method.ReturnType == targetType)
@@ -2898,9 +2898,9 @@ namespace FastExpressionCompiler
                                     return false; // nor conversion nor conversion operator is found
                                 EmitMethodCall(il, convertOpMethod);
                             }
-                            il.Emit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                            il.Demit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                         }
-                        il.MarkLabel(labelDone);
+                        il.DmarkLabel(labelDone);
                     }
                 }
                 else
@@ -2919,7 +2919,7 @@ namespace FastExpressionCompiler
                     if (!TryEmitValueConvert(targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                     {
                         il.TryEmitBoxOf(sourceType);
-                        il.Emit(OpCodes.Castclass, targetType);
+                        il.Demit(OpCodes.Castclass, targetType);
                     }
                 }
 
@@ -2929,25 +2929,25 @@ namespace FastExpressionCompiler
             private static bool TryEmitValueConvert(Type targetType, ILGenerator il, bool isChecked)
             {
                 if (targetType == typeof(int))
-                    il.Emit(isChecked ? OpCodes.Conv_Ovf_I4 : OpCodes.Conv_I4);
+                    il.Demit(isChecked ? OpCodes.Conv_Ovf_I4 : OpCodes.Conv_I4);
                 else if (targetType == typeof(float))
-                    il.Emit(OpCodes.Conv_R4);
+                    il.Demit(OpCodes.Conv_R4);
                 else if (targetType == typeof(uint))
-                    il.Emit(isChecked ? OpCodes.Conv_Ovf_U4 : OpCodes.Conv_U4);
+                    il.Demit(isChecked ? OpCodes.Conv_Ovf_U4 : OpCodes.Conv_U4);
                 else if (targetType == typeof(sbyte))
-                    il.Emit(isChecked ? OpCodes.Conv_Ovf_I1 : OpCodes.Conv_I1);
+                    il.Demit(isChecked ? OpCodes.Conv_Ovf_I1 : OpCodes.Conv_I1);
                 else if (targetType == typeof(byte))
-                    il.Emit(isChecked ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
+                    il.Demit(isChecked ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
                 else if (targetType == typeof(short))
-                    il.Emit(isChecked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
+                    il.Demit(isChecked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
                 else if (targetType == typeof(ushort) || targetType == typeof(char))
-                    il.Emit(isChecked ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
+                    il.Demit(isChecked ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
                 else if (targetType == typeof(long))
-                    il.Emit(isChecked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
+                    il.Demit(isChecked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
                 else if (targetType == typeof(ulong))
-                    il.Emit(isChecked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8); // should we consider if sourceType.IsUnsigned == false and using the OpCodes.Conv_I8 (seems like the System.Compile does it)
+                    il.Demit(isChecked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8); // should we consider if sourceType.IsUnsigned == false and using the OpCodes.Conv_I8 (seems like the System.Compile does it)
                 else if (targetType == typeof(double))
-                    il.Emit(OpCodes.Conv_R8);
+                    il.Demit(OpCodes.Conv_R8);
                 else
                     return false;
                 return true;
@@ -3385,13 +3385,13 @@ namespace FastExpressionCompiler
 
                     // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                     if (newExpr.Constructor != null)
-                        il.Emit(OpCodes.Newobj, newExpr.Constructor);
+                        il.Demit(OpCodes.Newobj, newExpr.Constructor);
                     else if (newExpr.Type.IsValueType)
                     {
                         if (valueVarIndex == -1)
                             valueVarIndex = il.GetNextLocalVarIndex(expr.Type);
                         EmitLoadLocalVariableAddress(il, valueVarIndex);
-                        il.Emit(OpCodes.Initobj, newExpr.Type);
+                        il.Demit(OpCodes.Initobj, newExpr.Type);
                     }
                     else
                         return false; // null constructor and not a value type, better to fallback
@@ -3413,7 +3413,7 @@ namespace FastExpressionCompiler
                     if (valueVarIndex != -1) // load local value address, to set its members
                         EmitLoadLocalVariableAddress(il, valueVarIndex);
                     else
-                        il.Emit(OpCodes.Dup); // duplicate member owner on stack
+                        il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
                     if (!TryEmit(((MemberAssignment)binding).Expression, paramExprs, il, ref closure, setup, parent) ||
                         !EmitMemberSet(il, binding.Member))
@@ -3476,13 +3476,13 @@ namespace FastExpressionCompiler
 
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (newExpr.Constructor != null)
-                    il.Emit(OpCodes.Newobj, newExpr.Constructor);
+                    il.Demit(OpCodes.Newobj, newExpr.Constructor);
                 else if (exprType.IsValueType)
                 {
                     if (valueVarIndex == -1)
                         valueVarIndex = il.GetNextLocalVarIndex(expr.Type);
                     EmitLoadLocalVariableAddress(il, valueVarIndex);
-                    il.Emit(OpCodes.Initobj, exprType);
+                    il.Demit(OpCodes.Initobj, exprType);
                 }
                 else
                     return false; // null constructor and not a value type, better to fallback
@@ -3498,7 +3498,7 @@ namespace FastExpressionCompiler
                     if (valueVarIndex != -1) // load local value address, to set its members
                         EmitLoadLocalVariableAddress(il, valueVarIndex);
                     else
-                        il.Emit(OpCodes.Dup); // duplicate member owner on stack
+                        il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
                     var elemInit = inits.GetArgument(i);
                     var method = elemInit.AddMethod;
@@ -3515,12 +3515,12 @@ namespace FastExpressionCompiler
 
                     if (!exprType.IsValueType)
                         ok = EmitMethodCallOrVirtualCall(il, method);
-                    else if (!method.IsVirtual // #251 - no need for constrain or virtual call because it is already by-ref
+                    else if (!method.IsVirtual // #251 - no need for constrained or virtual call because it is already by-ref
                         || method.DeclaringType == exprType)
                         ok = EmitMethodCall(il, method);
                     else
                     {
-                        il.Emit(OpCodes.Constrained, exprType); // todo: @clarify it is a value type so... can we de-virtualize the call?
+                        il.Demit(OpCodes.Constrained, exprType); // todo: @clarify it is a value type so... can we de-virtualize the call?
                         ok = EmitVirtualMethodCall(il, method);
                     }
                 }
@@ -3581,8 +3581,8 @@ namespace FastExpressionCompiler
                         if (resultVar != -1 & isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
 
-                        il.Emit(OpCodes.Ldc_I4_1);
-                        il.Emit(incrementDecrementOpCode);
+                        il.Demit(OpCodes.Ldc_I4_1);
+                        il.Demit(incrementDecrementOpCode);
 
                         if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -3598,7 +3598,7 @@ namespace FastExpressionCompiler
                             EmitStoreIndirectlyByRef(il, exprType);
                         }
                         else
-                            il.Emit(OpCodes.Starg_S, paramIndex);
+                            il.Demit(OpCodes.Starg_S, paramIndex);
                         break;
 
                     // todo: @wip what about ArrayIndex ?
@@ -3998,11 +3998,11 @@ namespace FastExpressionCompiler
                         : TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
 
                     if ((parent & ParentFlags.IgnoreResult) == 0)
-                        il.Emit(OpCodes.Dup); // duplicate value to assign and return
+                        il.Demit(OpCodes.Dup); // duplicate value to assign and return
                     if (isLeftByRef)
                         EmitStoreIndirectlyByRef(il, left.Type);
                     else
-                        il.Emit(OpCodes.Starg_S, paramIndex);
+                        il.Demit(OpCodes.Starg_S, paramIndex);
                     return ok;
                 }
 
@@ -4024,7 +4024,7 @@ namespace FastExpressionCompiler
                         if (right is ParameterExpression rp && rp.IsByRef)
                             EmitLoadIndirectlyByRef(il, rp.Type);
                         if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
-                            il.Emit(OpCodes.Dup);
+                            il.Demit(OpCodes.Dup);
                     }
 
                     EmitStoreLocalVariable(il, leftVarIndex);
@@ -4041,7 +4041,7 @@ namespace FastExpressionCompiler
                 if (nonPassedParamIndex == -1)
                     return false;
 
-                il.Emit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
+                il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
 
                 if ((parent & ParentFlags.IgnoreResult) == 0)
                 {
@@ -4052,24 +4052,24 @@ namespace FastExpressionCompiler
                     EmitStoreLocalVariable(il, valueVarIndex);
 
                     // load array field and param item index
-                    il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                     EmitLoadConstantInt(il, nonPassedParamIndex);
                     EmitLoadLocalVariable(il, valueVarIndex);
                     il.TryEmitBoxOf(exprType);
-                    il.Emit(OpCodes.Stelem_Ref); // put the variable into array
+                    il.Demit(OpCodes.Stelem_Ref); // put the variable into array
                     EmitLoadLocalVariable(il, valueVarIndex); // todo: @perf what if we just dup the `valueVar`?
                 }
                 else
                 {
                     // load array field and param item index
-                    il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                     EmitLoadConstantInt(il, nonPassedParamIndex);
 
                     if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                         return false;
 
                     il.TryEmitBoxOf(exprType);
-                    il.Emit(OpCodes.Stelem_Ref); // put the variable into array
+                    il.Demit(OpCodes.Stelem_Ref); // put the variable into array
                 }
                 return true;
             }
@@ -4120,7 +4120,7 @@ namespace FastExpressionCompiler
                 EmitLoadConstantInt(il, nonPassedParIndex);
                 EmitLoadLocalVariable(il, assignedLeftVarIndex);
                 il.TryEmitBoxOf(assignedLeftVar.Type);
-                il.Emit(OpCodes.Stelem_Ref); // put the variable into non-passed parameters (variables) array
+                il.Demit(OpCodes.Stelem_Ref); // put the variable into non-passed parameters (variables) array
             }
 
             private static void EmitLoadIndirectlyByRef(ILGenerator il, Type type)
@@ -4435,14 +4435,14 @@ namespace FastExpressionCompiler
                 var containsConstants = nestedLambdaInfo.Lambda is NestedLambdaWithConstantsAndNestedLambdas;
                 if (containsConstants)
                 {
-                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
+                    il.Demit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
                     EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex); // load the variable for the second time
-                    il.Emit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
+                    il.Demit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
                 }
 
                 // - create `NonPassedParameters` array for the non-passed parameters and variables
                 EmitLoadConstantInt(il, nestedLambdaInfo.NonPassedParameters.Count); // load the length of array
-                il.Emit(OpCodes.Newarr, typeof(object));
+                il.Demit(OpCodes.Newarr, typeof(object));
 
                 // we need to store the array in local variable, because we may assign to closed variable after the closure is passed to the lambda
                 var nonPassedParamsVarIndex = il.GetNextLocalVarIndex(typeof(object[]));
@@ -4453,7 +4453,7 @@ namespace FastExpressionCompiler
                 for (var nestedParamIndex = 0; nestedParamIndex < nestedLambdaInfo.NonPassedParameters.Count; ++nestedParamIndex)
                 {
                     // Duplicate nested array on stack to store the item, and load index to where to store
-                    il.Emit(OpCodes.Dup);
+                    il.Demit(OpCodes.Dup);
                     EmitLoadConstantInt(il, nestedParamIndex);
 
                     var nestedParam = nestedLambdaInfo.NonPassedParameters.GetSurePresentItemRef(nestedParamIndex);
@@ -4481,22 +4481,22 @@ namespace FastExpressionCompiler
                                 return false; // impossible, return error code 2 the same as in TryCollectRound
 
                             // Load the parameter from outer closure `Items` array
-                            il.Emit(OpCodes.Ldarg_0); // closure is always a first argument
-                            il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                            il.Demit(OpCodes.Ldarg_0); // closure is always a first argument
+                            il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                             EmitLoadConstantInt(il, outerNonPassedParamIndex);
-                            il.Emit(OpCodes.Ldelem_Ref);
+                            il.Demit(OpCodes.Ldelem_Ref);
                         }
                     }
 
                     // Store the item into nested lambda array
-                    il.Emit(OpCodes.Stelem_Ref);
+                    il.Demit(OpCodes.Stelem_Ref);
                 }
 
                 // - emit the closure constructor call
                 var closureCtor = containsConstants
                     ? ArrayClosureWithNonPassedParamsConstructor
                     : ArrayClosureWithNonPassedParamsConstructorWithoutConstants;
-                il.Emit(OpCodes.Newobj, closureCtor);
+                il.Demit(OpCodes.Newobj, closureCtor);
 
                 // - call `Curry` method with nested lambda and array closure to produce a closed lambda with the expected signature
                 var lambdaTypeArgs = nestedLambdaInfo.GetLambdaType().GetGenericArguments();
@@ -4510,8 +4510,8 @@ namespace FastExpressionCompiler
                 // converting to the original possibly custom delegate type, see #308
                 if (closureMethod.ReturnType != nestedLambdaExpr.Type)
                 {
-                    il.Emit(OpCodes.Ldftn, closureMethod.ReturnType.FindDelegateInvokeMethod());
-                    il.Emit(OpCodes.Newobj, nestedLambdaExpr.Type.GetConstructors()[0]);
+                    il.Demit(OpCodes.Ldftn, closureMethod.ReturnType.FindDelegateInvokeMethod());
+                    il.Demit(OpCodes.Newobj, nestedLambdaExpr.Type.GetConstructors()[0]);
                 }
 
                 return ok;
@@ -4611,7 +4611,7 @@ namespace FastExpressionCompiler
 
                 EmitMethodCall(il, delegateInvokeMethod);
                 if ((parent & ParentFlags.IgnoreResult) != 0 && delegateInvokeMethod.ReturnType != typeof(void))
-                    il.Emit(OpCodes.Pop);
+                    il.Demit(OpCodes.Pop);
 
                 return true;
             }
@@ -4643,7 +4643,7 @@ namespace FastExpressionCompiler
                     {
                         if (!TryEmitComparison(expr.SwitchValue, caseTestValue, ExpressionType.Equal, typeof(bool), paramExprs, il, ref closure, setup, dontIgnoreTestResult))
                             return false;
-                        il.Emit(OpCodes.Brtrue, labels[caseIndex]);
+                        il.Demit(OpCodes.Brtrue, labels[caseIndex]);
                     }
                 }
 
@@ -4651,7 +4651,7 @@ namespace FastExpressionCompiler
                 {
                     if (!TryEmit(expr.DefaultBody, paramExprs, il, ref closure, setup, parent))
                         return false;
-                    il.Emit(OpCodes.Br, endLabel);
+                    il.Demit(OpCodes.Br, endLabel);
                 }
 
                 for (var caseIndex = 0; caseIndex < cases.Count; ++caseIndex)
@@ -6725,7 +6725,6 @@ namespace FastExpressionCompiler
         public static string ToCSharpString(this Expression expr, CodePrinter.ObjectToCode notRecognizedToCode) =>
             expr.ToCSharpString(new StringBuilder(1024), stripNamespace: true, notRecognizedToCode: notRecognizedToCode).Append(';').ToString();
 
-
         /// <summary>Tries hard to convert the expression into the valid C# code</summary>
         public static StringBuilder ToCSharpString(this Expression e, StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null) =>
@@ -6745,7 +6744,9 @@ namespace FastExpressionCompiler
             /// <summary>The lambda</summary>
             LambdaBody,
             /// <summary>Return expression</summary>
-            Return
+            Return,
+            /// <summary>Instructs the client code to avoid parenthesis for the generated C# code, e.g. if we have as single argument in a method</summary>
+            AvoidParens,
         }
 
         internal static StringBuilder ToCSharpString(this Expression e, StringBuilder sb, EnclosedIn enclosedIn,
@@ -6833,7 +6834,8 @@ namespace FastExpressionCompiler
                             var p = pars[0];
                             if (p.ParameterType.IsByRef)
                                 sb.Append(p.IsOut ? "out " : p.IsIn ? "in" : "ref ");
-                            args[0].ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            args[0].ToCSharpString(sb, EnclosedIn.AvoidParens,
+                                lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         }
                         else if (args.Count > 1)
                         {
@@ -7226,10 +7228,10 @@ namespace FastExpressionCompiler
 
                                 case ExpressionType.Convert:
                                 case ExpressionType.ConvertChecked:
-                                    if (e.Type == op.Type)
-                                        return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                    if (e.Type == op.Type || e.Type == typeof(Enum) && op.Type.IsEnum)
+                                        return op.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
-                                    var encloseInParens = enclosedIn != EnclosedIn.LambdaBody && enclosedIn != EnclosedIn.Return;
+                                    var encloseInParens = enclosedIn != EnclosedIn.AvoidParens & enclosedIn != EnclosedIn.LambdaBody & enclosedIn != EnclosedIn.Return;
                                     sb = encloseInParens ? sb.Append("((") : sb.Append('(');
                                     sb.Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
                                     sb = op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);

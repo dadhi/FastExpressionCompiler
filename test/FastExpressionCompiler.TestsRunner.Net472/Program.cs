@@ -247,6 +247,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new FastExpressionCompiler.LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run);
 
                 Run(new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run);
+                
+                Run(new Issue374_CompileFast_doesnot_work_with_HasFlag().Run);
 
                 Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
