@@ -21,10 +21,10 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test1_simplified();
             Test1_isolated_assign_int_to_the_array_of_objects_and_use_for_addition();
             Test1_closure_over_array_and_changing_its_element();
             Test1_manual_closure();
-            Test1_simplified();
             Test1();
             Test2_original_issue_case();
             return 6;
@@ -190,9 +190,10 @@ namespace FastExpressionCompiler.IssueTests
             var @cs = (Func<int, int>)((int n) =>
             {
                 Func<int, int> sumFunc = null;
-                int m = 0;
+                int m = default;
+                m = 45;
                 sumFunc = (Func<int, int>)((int i) =>
-                    i + m);
+                        i + m);
                 m = 999;
                 return sumFunc(
                     n);

@@ -2209,7 +2209,7 @@ namespace FastExpressionCompiler
                 ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(expr.Target, out var foundLabel);
                 if (!foundLabel)
                     return false;
-                il.MarkLabel(labelInfo.GetOrDefineLabel(il));
+                il.DmarkLabel(labelInfo.GetOrDefineLabel(il));
 
                 var defaultValue = expr.DefaultValue;
                 if (defaultValue != null && !TryEmit(defaultValue, paramExprs, il, ref closure, setup, parent))
@@ -2221,7 +2221,7 @@ namespace FastExpressionCompiler
                     if (defaultValue != null)
                         EmitStoreLocalVariable(il, returnVariableIndexPlusOne - 1);
 
-                    il.MarkLabel(labelInfo.ReturnLabel);
+                    il.DmarkLabel(labelInfo.ReturnLabel);
                     if (!parent.IgnoresResult())
                         EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
                 }
@@ -2684,9 +2684,9 @@ namespace FastExpressionCompiler
                     return true;
                 else if (expr.NodeType == ExpressionType.TypeIs)
                 {
-                    il.Emit(OpCodes.Isinst, expr.TypeOperand);
-                    il.Emit(OpCodes.Ldnull);
-                    il.Emit(OpCodes.Cgt_Un);
+                    il.Demit(OpCodes.Isinst, expr.TypeOperand);
+                    il.Demit(OpCodes.Ldnull);
+                    il.Demit(OpCodes.Cgt_Un);
                     return true;
                 }
                 else
@@ -2716,23 +2716,22 @@ namespace FastExpressionCompiler
                     return false;
 
                 if ((parent & ParentFlags.IgnoreResult) != 0)
-                    il.Emit(OpCodes.Pop);
+                    il.Demit(OpCodes.Pop);
                 else if (expr.Type == typeof(bool))
                     EmitEqualToZeroOrNull(il);
                 else
-                    il.Emit(OpCodes.Not);
+                    il.Demit(OpCodes.Not);
                 return true;
             }
 
+            private static bool TryEmitConvert(UnaryExpression expr,
 #if LIGHT_EXPRESSION
-            private static bool TryEmitConvert(UnaryExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
-            {
+                IParameterProvider paramExprs,
 #else
-            private static bool TryEmitConvert(UnaryExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
-            {
+                IReadOnlyList<PE> paramExprs,
 #endif
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
+            {
                 // todo: @perf! refactor this whole thing in order to handle the hot path without heavy reflection calls
                 var opExpr = expr.Operand;
                 var method = expr.Method;
@@ -2747,9 +2746,9 @@ namespace FastExpressionCompiler
                 // {
                 // todo: @wip @perf for this case because it is a very heavy used for the runtime conversion from the object to the concrete type
                 // if (!targetType.IsValueType)
-                //     il.Emit(OpCodes.Unbox_Any, targetType);
+                //     il.Demit(OpCodes.Unbox_Any, targetType);
                 // else
-                // il.Emit(OpCodes.Castclass, targetType);
+                // il.Demit(OpCodes.Castclass, targetType);
                 // return il.EmitPopIfIgnoreResult(parent);
                 // }
 
@@ -4581,7 +4580,7 @@ namespace FastExpressionCompiler
                             var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
                             if (returnVariableIndexPlusOne != 0)
                             {
-                                il.MarkLabel(label.ReturnLabel);
+                                il.DmarkLabel(label.ReturnLabel);
                                 EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
                             }
                         }
@@ -4656,16 +4655,16 @@ namespace FastExpressionCompiler
 
                 for (var caseIndex = 0; caseIndex < cases.Count; ++caseIndex)
                 {
-                    il.MarkLabel(labels[caseIndex]);
+                    il.DmarkLabel(labels[caseIndex]);
                     var cs = cases[caseIndex];
                     if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
                         return false;
 
                     if (caseIndex != cases.Count - 1)
-                        il.Emit(OpCodes.Br, endLabel);
+                        il.Demit(OpCodes.Br, endLabel);
                 }
 
-                il.MarkLabel(endLabel);
+                il.DmarkLabel(endLabel);
                 return true;
             }
 
@@ -4737,7 +4736,7 @@ namespace FastExpressionCompiler
                 {
                     if (!isEqualityOp)
                         return false;
-                    il.Emit(OpCodes.Ceq); // todo: @? test it, why it is not _objectEqualsMethod 
+                    il.Demit(OpCodes.Ceq); // todo: @? test it, why it is not _objectEqualsMethod 
                     if (nodeType == ExpressionType.NotEqual)
                         EmitEqualToZeroOrNull(il);
                     return il.EmitPopIfIgnoreResult(parent);
@@ -4794,32 +4793,32 @@ namespace FastExpressionCompiler
                 switch (nodeType)
                 {
                     case ExpressionType.Equal:
-                        il.Emit(OpCodes.Ceq);
+                        il.Demit(OpCodes.Ceq);
                         break;
                     case ExpressionType.NotEqual:
-                        il.Emit(OpCodes.Ceq);
+                        il.Demit(OpCodes.Ceq);
                         EmitEqualToZeroOrNull(il);
                         break;
                     case ExpressionType.LessThan:
-                        il.Emit(OpCodes.Clt);
+                        il.Demit(OpCodes.Clt);
                         break;
                     case ExpressionType.GreaterThan:
-                        il.Emit(OpCodes.Cgt);
+                        il.Demit(OpCodes.Cgt);
                         break;
                     case ExpressionType.GreaterThanOrEqual:
                         // simplifying by using the LessThen (Clt) and comparing with negative outcome (Ceq 0)
                         if (leftOpType.IsUnsigned() && rightOpType.IsUnsigned())
-                            il.Emit(OpCodes.Clt_Un);
+                            il.Demit(OpCodes.Clt_Un);
                         else
-                            il.Emit(OpCodes.Clt);
+                            il.Demit(OpCodes.Clt);
                         EmitEqualToZeroOrNull(il);
                         break;
                     case ExpressionType.LessThanOrEqual:
                         // simplifying by using the GreaterThen (Cgt) and comparing with negative outcome (Ceq 0)
                         if (leftOpType.IsUnsigned() && rightOpType.IsUnsigned())
-                            il.Emit(OpCodes.Cgt_Un);
+                            il.Demit(OpCodes.Cgt_Un);
                         else
-                            il.Emit(OpCodes.Cgt);
+                            il.Demit(OpCodes.Cgt);
                         EmitEqualToZeroOrNull(il);
                         break;
 
@@ -4851,24 +4850,24 @@ namespace FastExpressionCompiler
                     switch (nodeType)
                     {
                         case ExpressionType.Equal:
-                            il.Emit(OpCodes.Ceq); // compare both HasValue calls
-                            il.Emit(OpCodes.And); // both results need to be true
+                            il.Demit(OpCodes.Ceq); // compare both HasValue calls
+                            il.Demit(OpCodes.And); // both results need to be true
                             break;
 
                         case ExpressionType.NotEqual:
-                            il.Emit(OpCodes.Ceq);
+                            il.Demit(OpCodes.Ceq);
                             EmitEqualToZeroOrNull(il);
-                            il.Emit(OpCodes.Or);
+                            il.Demit(OpCodes.Or);
                             break;
 
                         case ExpressionType.LessThan:
                         case ExpressionType.GreaterThan:
                         case ExpressionType.LessThanOrEqual:
                         case ExpressionType.GreaterThanOrEqual:
-                            il.Emit(OpCodes.Ceq);
-                            il.Emit(OpCodes.Ldc_I4_1);
-                            il.Emit(OpCodes.Ceq);
-                            il.Emit(OpCodes.And);
+                            il.Demit(OpCodes.Ceq);
+                            il.Demit(OpCodes.Ldc_I4_1);
+                            il.Demit(OpCodes.Ceq);
+                            il.Demit(OpCodes.And);
                             break;
 
                         default:
@@ -4880,13 +4879,13 @@ namespace FastExpressionCompiler
                         var resultLabel = il.DefineLabel();
                         var isNullLabel = il.DefineLabel();
                         EmitLoadLocalVariable(il, leftHasValueVar);
-                        il.Emit(OpCodes.Brfalse, isNullLabel);
+                        il.Demit(OpCodes.Brfalse, isNullLabel);
                         EmitLoadLocalVariable(il, rightHasValueVar);
-                        il.Emit(OpCodes.Brtrue, resultLabel);
-                        il.MarkLabel(isNullLabel);
-                        il.Emit(OpCodes.Pop);
-                        il.Emit(OpCodes.Ldnull);
-                        il.MarkLabel(resultLabel);
+                        il.Demit(OpCodes.Brtrue, resultLabel);
+                        il.DmarkLabel(isNullLabel);
+                        il.Demit(OpCodes.Pop);
+                        il.Demit(OpCodes.Ldnull);
+                        il.DmarkLabel(resultLabel);
                     }
                 }
 
@@ -4914,9 +4913,9 @@ namespace FastExpressionCompiler
                     if (!closure.LastEmitIsAddress)
                         EmitStoreAndLoadLocalVariableAddress(il, leftType);
 
-                    il.Emit(OpCodes.Dup);
+                    il.Demit(OpCodes.Dup);
                     EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
-                    il.Emit(OpCodes.Brfalse, leftNoValueLabel);
+                    il.Demit(OpCodes.Brfalse, leftNoValueLabel);
                     EmitMethodCall(il, leftType.GetNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(left, paramExprs, il, ref closure, setup, flags))
@@ -4934,9 +4933,9 @@ namespace FastExpressionCompiler
                     if (!closure.LastEmitIsAddress)
                         EmitStoreAndLoadLocalVariableAddress(il, rightType);
 
-                    il.Emit(OpCodes.Dup);
+                    il.Demit(OpCodes.Dup);
                     EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
-                    il.Emit(OpCodes.Brfalse, rightNoValueLabel);
+                    il.Demit(OpCodes.Brfalse, rightNoValueLabel);
                     EmitMethodCall(il, rightType.GetNullableGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
@@ -4948,29 +4947,29 @@ namespace FastExpressionCompiler
                 if (leftIsNullable | rightIsNullable) // todo: @clarify that the emitted code is correct
                 {
                     var valueLabel = il.DefineLabel();
-                    il.Emit(OpCodes.Br, valueLabel);
+                    il.Demit(OpCodes.Br, valueLabel);
 
                     if (rightIsNullable)
-                        il.MarkLabel(rightNoValueLabel);
-                    il.Emit(OpCodes.Pop);
+                        il.DmarkLabel(rightNoValueLabel);
+                    il.Demit(OpCodes.Pop);
 
                     if (leftIsNullable)
-                        il.MarkLabel(leftNoValueLabel);
-                    il.Emit(OpCodes.Pop);
+                        il.DmarkLabel(leftNoValueLabel);
+                    il.Demit(OpCodes.Pop);
 
                     if (exprType.IsNullable())
                     {
                         EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
                         var endL = il.DefineLabel();
-                        il.Emit(OpCodes.Br_S, endL);
-                        il.MarkLabel(valueLabel);
-                        il.Emit(OpCodes.Newobj, exprType.GetNullableConstructor());
-                        il.MarkLabel(endL);
+                        il.Demit(OpCodes.Br_S, endL);
+                        il.DmarkLabel(valueLabel);
+                        il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
+                        il.DmarkLabel(endL);
                     }
                     else
                     {
-                        il.Emit(OpCodes.Ldc_I4_0);
-                        il.MarkLabel(valueLabel);
+                        il.Demit(OpCodes.Ldc_I4_0);
+                        il.DmarkLabel(valueLabel);
                     }
                 }
                 return true;
@@ -5049,29 +5048,29 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static bool TryEmitLogicalOperator(BinaryExpression expr,
 #if LIGHT_EXPRESSION
-            private static bool TryEmitLogicalOperator(BinaryExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
+                IParameterProvider paramExprs,
 #else
-            private static bool TryEmitLogicalOperator(BinaryExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
+                IReadOnlyList<PE> paramExprs,
 #endif
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 if (!TryEmit(expr.Left, paramExprs, il, ref closure, setup, parent))
                     return false;
 
                 var labelSkipRight = il.DefineLabel();
-                il.Emit(expr.NodeType == ExpressionType.AndAlso ? OpCodes.Brfalse : OpCodes.Brtrue, labelSkipRight);
+                il.Demit(expr.NodeType == ExpressionType.AndAlso ? OpCodes.Brfalse : OpCodes.Brtrue, labelSkipRight);
 
                 if (!TryEmit(expr.Right, paramExprs, il, ref closure, setup, parent))
                     return false;
 
                 var labelDone = il.DefineLabel();
-                il.Emit(OpCodes.Br, labelDone);
+                il.Demit(OpCodes.Br, labelDone);
 
-                il.MarkLabel(labelSkipRight); // label the second branch
-                il.Emit(expr.NodeType == ExpressionType.AndAlso ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
-                il.MarkLabel(labelDone);
+                il.DmarkLabel(labelSkipRight); // label the second branch
+                il.Demit(expr.NodeType == ExpressionType.AndAlso ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
+                il.DmarkLabel(labelDone);
 
                 return true;
             }
@@ -5183,25 +5182,25 @@ namespace FastExpressionCompiler
                     // try to recognize the pattern like in #301(300) `if (b == null) { goto return_label; }` 
                     // and instead of generating two branches e.g. Brtrue to else branch and Br or Ret to the end of the body,
                     // let's generate a single one e.g. Brfalse to return.
-                    il.Emit(OpCodes.Brtrue, labelIfFalse);
+                    il.Demit(OpCodes.Brtrue, labelIfFalse);
                 }
                 else
-                    il.Emit(OpCodes.Brfalse, labelIfFalse);
+                    il.Demit(OpCodes.Brfalse, labelIfFalse);
 
                 if (!TryEmit(expr.IfTrue, paramExprs, il, ref closure, setup, parent))
                     return false;
 
                 var ifFalseExpr = expr.IfFalse;
                 if (ifFalseExpr.NodeType == ExpressionType.Default && ifFalseExpr.Type == typeof(void))
-                    il.MarkLabel(labelIfFalse);
+                    il.DmarkLabel(labelIfFalse);
                 else
                 {
                     var labelDone = il.DefineLabel();
-                    il.Emit(OpCodes.Br, labelDone);
-                    il.MarkLabel(labelIfFalse);
+                    il.Demit(OpCodes.Br, labelDone);
+                    il.DmarkLabel(labelIfFalse);
                     if (!TryEmit(ifFalseExpr, paramExprs, il, ref closure, setup, parent))
                         return false;
-                    il.MarkLabel(labelDone);
+                    il.DmarkLabel(labelDone);
                 }
                 return true;
             }
