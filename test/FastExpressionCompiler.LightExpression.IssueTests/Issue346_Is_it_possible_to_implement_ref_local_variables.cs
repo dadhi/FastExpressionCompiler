@@ -11,9 +11,9 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
+            // SimpleTest();
             Check_assignment_to_by_ref_float_parameter_Increment();
             Check_assignment_to_by_ref_float_parameter_PlusOne();
-            // SimpleTest();
             // Test();
             return 2;
         }
@@ -107,18 +107,20 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var e = Lambda<Action<int[]>>(
                 Block(new[] { n },
                     Assign(n, ArrayAccess(a, Constant(0))),
-                    // PreIncrementAssign(n)
                     AddAssign(n, Constant(1))
                 ),
                 a
             );
 
             e.PrintCSharp();
-            // var @cs = (Action<int[]>)((int[] a) =>
-            // {
-            //     ref int n = ref a[0];
-            //     n += 1;
-            // });
+            var @cs = (Action<int[]>)((int[] a) =>
+            {
+                ref int n = ref a[0];
+                n += 1;
+            });
+            var array = new[] { 42 };
+            @cs(array);
+            Assert.AreEqual(43, array[0]);
 
             var f = e.CompileFast(true);
             f.PrintIL();
@@ -134,9 +136,8 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ret
             );
 
-            var array = new[] { 42 };
+            array = new[] { 42 };
             f(array);
-
             Assert.AreEqual(43, array[0]);
         }
 

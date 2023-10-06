@@ -1823,7 +1823,7 @@ namespace FastExpressionCompiler
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
 
-            public static bool TryEmit(Expression expr, 
+            public static bool TryEmit(Expression expr,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
