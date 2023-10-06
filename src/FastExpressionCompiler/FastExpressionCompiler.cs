@@ -75,38 +75,15 @@ namespace FastExpressionCompiler
         ThrowOnNotSupportedExpression = 1 << 2
     }
 
-    /// <summary>Indicates the not supported expression combination</summary>
-    public enum NotSupported : ushort
-    {
-        /// <summary>Multi-dimensional array initializer is not supported</summary>
-        NewArrayInit_MultidimensionalArray,
-        /// <summary>Quote is not supported</summary>
-        Quote,
-        /// <summary>Dynamic is not supported</summary>
-        Dynamic,
-        /// <summary>RuntimeVariables is not supported</summary>
-        RuntimeVariables,
-        /// <summary>MemberInit MemberBinding is not supported</summary>
-        MemberInit_MemberBinding,
-        /// <summary>MemberInit ListBinding is not supported</summary>
-        MemberInit_ListBinding,
-        /// <summary>Goto of the Return kind from the TryCatch is not supported</summary>
-        Try_GotoReturnToTheFollowupLabel,
-        /// <summary>Not supported assignment target</summary>
-        Assign_Target,
-        /// <summary> ExpressionType.TypeEqual is not supported </summary>
-        TypeEqual
-    }
-
     /// <summary>FEC Not Supported exception</summary>
     public sealed class NotSupportedExpressionException : InvalidOperationException
     {
         /// <summary>The reason</summary>
-        public readonly NotSupported Reason;
+        public readonly ExpressionCompiler.Result Reason;
         /// <summary>Constructor</summary>
-        public NotSupportedExpressionException(NotSupported reason) : base(reason.ToString()) => Reason = reason;
+        public NotSupportedExpressionException(ExpressionCompiler.Result reason) : base(reason.ToString()) => Reason = reason;
         /// <summary>Constructor</summary>
-        public NotSupportedExpressionException(NotSupported reason, string message) : base(reason + ": " + message) => Reason = reason;
+        public NotSupportedExpressionException(ExpressionCompiler.Result reason, string message) : base(reason + ": " + message) => Reason = reason;
     }
 
     /// <summary>The interface is implemented by the compiled delegate Target if `CompilerFlags.EnableDelegateDebugInfo` is set.</summary>
@@ -1072,16 +1049,25 @@ namespace FastExpressionCompiler
             ExpressionIsNull = 1,
             ParameterIsNotVariableNorInPassedParameters = 2,
             NestedLambdaCompileError = 102,
-            NotSupported_NewArrayInit_MultidimensionalArray = 1000,
-            NotSupported_Quote = 1001,
-            NotSupported_Dynamic = 1002,
-            NotSupported_RuntimeVariables = 1003,
-            NotSupported_MemberInit_MemberBinding = 1004,
-            NotSupported_MemberInit_ListBinding = 1005,
-            NotSupported_Try_GotoReturnToTheFollowupLabel = 1006,
-            NotSupported_Assign_Target = 1007,
-            NotSupported_TypeEqual = 1008,
-            UnknownExpression = 1009,
+            NotSupported_UnknownExpression = 1000,
+            /// <summary>Multi-dimensional array initializer is not supported</summary>
+            NotSupported_NewArrayInit_MultidimensionalArray = 1001,
+            /// <summary>Quote is not supported</summary>
+            NotSupported_Quote = 1002,
+            /// <summary>Dynamic is not supported</summary>
+            NotSupported_Dynamic = 1003,
+            /// <summary>RuntimeVariables is not supported</summary>
+            NotSupported_RuntimeVariables = 1004,
+            /// <summary>MemberInit MemberBinding is not supported</summary>
+            NotSupported_MemberInit_MemberBinding = 1005,
+            /// <summary>MemberInit ListBinding is not supported</summary>
+            NotSupported_MemberInit_ListBinding = 1006,
+            /// <summary>Goto of the Return kind from the TryCatch is not supported</summary>
+            NotSupported_Try_GotoReturnToTheFollowupLabel = 1007,
+            /// <summary>Not supported assignment target</summary>
+            NotSupported_Assign_Target = 1008,
+            /// <summary>TypeEqual is not supported </summary>
+            NotSupported_TypeEqual = 1009
         }
 
         /// <summary>Wraps the call to `TryCollectInfo` for the compatibility and provide the root place to check the returned error code.
@@ -1095,8 +1081,10 @@ namespace FastExpressionCompiler
 #endif
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
         {
-            var error = TryCollectInfo(ref closure, expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-            return error == 0; // exposed here for debugging to set a breakpoint
+            var r = TryCollectInfo(ref closure, expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+            if (r != Result.OK & (flags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                throw new NotSupportedExpressionException(r);
+            return true; // exposed here for debugging to set a breakpoint
         }
 
         /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
@@ -1213,16 +1201,9 @@ namespace FastExpressionCompiler
                         }
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
-                        if (expr.NodeType == ExpressionType.NewArrayInit)
-                        {
-                            // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
-                            if (expr.Type.GetArrayRank() > 1)
-                            {
-                                if ((flags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                                    throw new NotSupportedExpressionException(NotSupported.NewArrayInit_MultidimensionalArray);
-                                return Result.NotSupported_NewArrayInit_MultidimensionalArray;
-                            }
-                        }
+                        // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
+                        if (expr.NodeType == ExpressionType.NewArrayInit && expr.Type.GetArrayRank() > 1)
+                            return Result.NotSupported_NewArrayInit_MultidimensionalArray;
 #if LIGHT_EXPRESSION
                         var arrElems = (IArgumentProvider)expr;
                         var elemCount = arrElems.ArgumentCount;
@@ -1484,16 +1465,10 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Quote:            // todo: @feature - is not supported yet
-                        if ((flags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                            throw new NotSupportedExpressionException(NotSupported.Quote);
                         return Result.NotSupported_Quote;
                     case ExpressionType.Dynamic:          // todo: @feature - is not supported yet
-                        if ((flags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                            throw new NotSupportedExpressionException(NotSupported.Dynamic);
                         return Result.NotSupported_Dynamic;
                     case ExpressionType.RuntimeVariables: // todo: @feature - is not supported yet
-                        if ((flags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                            throw new NotSupportedExpressionException(NotSupported.RuntimeVariables);
                         return NotSupported_RuntimeVariables;
 
                     case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
@@ -1514,7 +1489,7 @@ namespace FastExpressionCompiler
                             continue;
                         }
 
-                        return Result.UnknownExpression;
+                        return Result.NotSupported_UnknownExpression;
                 }
             }
         }
@@ -1670,12 +1645,7 @@ namespace FastExpressionCompiler
             {
                 var b = binds.GetArgument(i);
                 if (b.BindingType != MemberBindingType.Assignment)
-                {
-                    if ((flags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                        throw new NotSupportedExpressionException(
-                            b.BindingType == MemberBindingType.MemberBinding ? NotSupported.MemberInit_MemberBinding : NotSupported.MemberInit_ListBinding);
                     return b.BindingType == MemberBindingType.MemberBinding ? Result.NotSupported_MemberInit_MemberBinding : Result.NotSupported_MemberInit_ListBinding; // todo: @feature MemberMemberBinding and the MemberListBinding is not supported yet.
-                }
 
                 if ((r = TryCollectInfo(ref closure, ((MemberAssignment)b).Expression, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                     return r;
@@ -2019,7 +1989,7 @@ namespace FastExpressionCompiler
                                             if ((parent & ParentFlags.TryCatch) != 0)
                                             {
                                                 if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                                                    throw new NotSupportedExpressionException(NotSupported.Try_GotoReturnToTheFollowupLabel);
+                                                    throw new NotSupportedExpressionException(Result.NotSupported_Try_GotoReturnToTheFollowupLabel);
                                                 return false; // todo: @feature return from the TryCatch with the internal label is not supported, though it is the unlikely case
                                             }
 
@@ -2710,7 +2680,7 @@ namespace FastExpressionCompiler
                 else
                 {
                     if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                        throw new NotSupportedExpressionException(NotSupported.TypeEqual);
+                        throw new NotSupportedExpressionException(Result.NotSupported_TypeEqual);
                     return false;
                 }
             }
@@ -4121,7 +4091,7 @@ namespace FastExpressionCompiler
 
                     default: // todo: @feature not yet support assignment targets
                         if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                            throw new NotSupportedExpressionException(NotSupported.Assign_Target, $"Assignment target `{expr.NodeType}` is not supported");
+                            throw new NotSupportedExpressionException(Result.NotSupported_Assign_Target, $"Assignment target `{expr.NodeType}` is not supported");
                         return false;
                 }
             }
@@ -4495,7 +4465,7 @@ namespace FastExpressionCompiler
                         {
                             var outerNonPassedParamIndex = closure.NonPassedParameters.TryGetIndex(nestedParam, default(RefEq<ParameterExpression>));
                             if (outerNonPassedParamIndex == -1)
-                                return false; // impossible, return error code 2 the same as in TryCollectRound
+                                return false; // impossible, return error code 2 the same as in TryCollectInfo
 
                             // Load the parameter from outer closure `Items` array
                             il.Demit(OpCodes.Ldarg_0); // closure is always a first argument
