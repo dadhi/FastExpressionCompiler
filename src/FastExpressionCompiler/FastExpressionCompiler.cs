@@ -2451,7 +2451,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            public static bool TryEmitParameter(ParameterExpression paramExpr, 
+            public static bool TryEmitParameter(ParameterExpression paramExpr,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -3517,7 +3517,6 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            // todo: @wip rename to TryEmitArithmethicAssign, `++`, `--`, `+=`, `-=`, etc.
             private static bool TryEmitPossiblyArithmeticOperationThenAssign(
                 Expression left, Expression rightOrNull, Type exprType, ExpressionType nodeType,
 #if LIGHT_EXPRESSION
@@ -3536,7 +3535,8 @@ namespace FastExpressionCompiler
                     isPost = nodeType == ExpressionType.PostIncrementAssign | nodeType == ExpressionType.PostDecrementAssign;
                 }
 
-                var incrementDecrementOpCode = nodeType == ExpressionType.PreIncrementAssign | nodeType == ExpressionType.PostIncrementAssign ? OpCodes.Add : OpCodes.Sub;
+                var incrementDecrementOpCode = nodeType == ExpressionType.PreIncrementAssign | nodeType == ExpressionType.PostIncrementAssign
+                    ? OpCodes.Add : OpCodes.Sub;
 
                 switch (left.NodeType)
                 {
@@ -3554,8 +3554,7 @@ namespace FastExpressionCompiler
                         else
                         {
                             paramIndex = paramExprCount - 1;
-                            while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), p))
-                                --paramIndex;
+                            while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), p)) --paramIndex;
                             if (paramIndex == -1)
                                 return false;
                             if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
@@ -3588,7 +3587,10 @@ namespace FastExpressionCompiler
                             il.Demit(OpCodes.Starg_S, paramIndex);
                         break;
 
-                    // todo: @wip what about ArrayIndex ?
+                    case ExpressionType.ArrayIndex:
+                        throw new InvalidOperationException("ArrayIndex is not supported for the left part of the assignment operation. Use Index instead.");
+
+                    // case ExpressionType.Parameter:
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
 
@@ -3753,7 +3755,7 @@ namespace FastExpressionCompiler
 
                             var ok = !isIndexerAMethodCall
                                 ? TryEmitArrayIndexGet(il, leftIndexExpr.Type, ref closure, leftFlags) // one-dimensional array
-                                : leftIndexExpr.Indexer != null 
+                                : leftIndexExpr.Indexer != null
                                     ? EmitMethodCallOrVirtualCallCheckForNull(il, leftIndexExpr.Indexer.GetMethod)
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
                             if (!ok)
@@ -3874,7 +3876,7 @@ namespace FastExpressionCompiler
                         if (leftIsByAddress)
                             EmitStoreIndirectlyByRef(il, leftType);
                         else if (leftMemberExpr != null)
-                        { 
+                        {
                             if (!EmitMemberSet(il, leftMemberExpr.Member))
                                 return false;
                         }
@@ -4081,9 +4083,8 @@ namespace FastExpressionCompiler
                 switch (left.NodeType)
                 {
                     case ExpressionType.Parameter:
-                        return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
-                            nodeType, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, parent);
-
+                    return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
+                        nodeType, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, parent);
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
                         return TryEmitPossiblyArithmeticOperationThenAssign(
@@ -4242,7 +4243,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitMethodCall(Expression expr, 
+            private static bool TryEmitMethodCall(Expression expr,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs, 
 #else
@@ -4325,7 +4326,7 @@ namespace FastExpressionCompiler
                             // For the parameters, we will skip the address loading because the `LastEmitIsAddress == true` for `Ldarga`, 
                             // so the condition here will be skipped
                             if (!closure.LastEmitIsAddress && objExpr.Type.IsValueType)
-                                EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
+                            EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
                     }
 
                     closure.LastEmitIsAddress = false;
