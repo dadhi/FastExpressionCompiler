@@ -1008,21 +1008,21 @@ namespace FastExpressionCompiler.IssueTests
             });
 
             var a1 = new int?[] { 1, 2, null, 4 };
-            var a2 = new int?[] { 1, 2,    9, 4 };
+            var a2 = new int?[] { 1, 2, 9, 4 };
             @cs(a1);
             @cs(a2);
             Assert.AreEqual(null, a1[2]);
-            Assert.AreEqual(42,   a2[2]);
+            Assert.AreEqual(42, a2[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             a1 = new int?[] { 1, 2, null, 4 };
-            a2 = new int?[] { 1, 2,    9, 4 };
+            a2 = new int?[] { 1, 2, 9, 4 };
             fs(a1);
             fs(a2);
             Assert.AreEqual(null, a1[2]);
-            Assert.AreEqual(42,   a2[2]);
+            Assert.AreEqual(42, a2[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1053,11 +1053,11 @@ namespace FastExpressionCompiler.IssueTests
             // );
 
             a1 = new int?[] { 1, 2, null, 4 };
-            a2 = new int?[] { 1, 2,    9, 4 };
+            a2 = new int?[] { 1, 2, 9, 4 };
             fs(a1);
             fs(a2);
             Assert.AreEqual(null, a1[2]);
-            Assert.AreEqual(42,   a2[2]);
+            Assert.AreEqual(42, a2[2]);
         }
 
         [Test]

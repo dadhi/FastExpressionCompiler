@@ -3590,13 +3590,13 @@ namespace FastExpressionCompiler
                     case ExpressionType.ArrayIndex:
                         throw new InvalidOperationException("ArrayIndex is not supported for the left part of the assignment operation. Use Index instead.");
 
-                    // case ExpressionType.Parameter:
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
 
                         var leftMemberExpr = left as MemberExpression;
                         var leftIndexExpr = left as IndexExpression;
-                        // retrun early for not supported types of left value to avoid multiple checks below
+
+                        // return early for not supported types of left value to avoid multiple checks below
                         if (leftMemberExpr == null & leftIndexExpr == null)
                             return false;
 
@@ -3618,7 +3618,7 @@ namespace FastExpressionCompiler
                                 return false; // todo: @feature more than 4 index arguments are not supported, and probably not need to be supported
                         }
 
-                        var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr.Object;
+var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr.Object;
 
                         // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
                         // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
@@ -3627,7 +3627,7 @@ namespace FastExpressionCompiler
 
                         // note that we omit the IndexAccess for the instance of array/indexer, to avoid confusion with the whole expression used as an index,
                         var objFlags = leftMemberExpr != null ? leftFlags | ParentFlags.InstanceAccess : leftFlags | ParentFlags.InstanceAccess;
-
+                        
                         var leftIsByAddress = false;
                         if (nodeType == ExpressionType.Assign)
                         {
@@ -3954,7 +3954,7 @@ namespace FastExpressionCompiler
             };
 
             private static bool TryEmitAssignToParameterOrVariable(
-                ParameterExpression left, Expression right, ExpressionType nodeType, ExpressionType arithmeticNodeType, Type exprType,
+                ParameterExpression left, Expression right, ExpressionType nodeType, bool isPre, Type exprType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -3982,9 +3982,9 @@ namespace FastExpressionCompiler
                     if (isLeftByRef)
                         EmitLoadArg(il, paramIndex);
 
-                    ok = arithmeticNodeType == nodeType
+                    ok = nodeType == ExpressionType.Assign
                         ? TryEmit(right, paramExprs, il, ref closure, setup, flags)
-                        : TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
+                        : TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags);
 
                     if ((parent & ParentFlags.IgnoreResult) == 0)
                         il.Demit(OpCodes.Dup); // duplicate value to assign and return
@@ -4004,8 +4004,8 @@ namespace FastExpressionCompiler
                     // if (leftParamExpr.IsByRef)
                     //     flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
 
-                    if (arithmeticNodeType != nodeType)
-                        ok = TryEmitArithmetic(left, right, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, flags);
+                    if (nodeType != ExpressionType.Assign)
+                        ok = TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags);
                     else
                     {
                         ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
@@ -4083,8 +4083,9 @@ namespace FastExpressionCompiler
                 switch (left.NodeType)
                 {
                     case ExpressionType.Parameter:
-                    return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
-                        nodeType, arithmeticNodeType, exprType, paramExprs, il, ref closure, setup, parent);
+                        return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
+                            arithmeticNodeType, false, exprType, paramExprs, il, ref closure, setup, parent);
+
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
                         return TryEmitPossiblyArithmeticOperationThenAssign(

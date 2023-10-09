@@ -11,9 +11,9 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            // SimpleTest();
-            Check_assignment_to_by_ref_float_parameter_Increment();
             Check_assignment_to_by_ref_float_parameter_PlusOne();
+            Check_assignment_to_by_ref_float_parameter_Increment();
+            // SimpleTest();
             // Test();
             return 2;
         }
