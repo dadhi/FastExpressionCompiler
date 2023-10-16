@@ -399,6 +399,17 @@ namespace FastExpressionCompiler.UnitTests
                     Invoke(add, Constant(13))
                 ));
 
+            e.PrintCSharp();
+            var @cs = (Func<int>)(() =>
+                ((Func<int, int>)((int n) =>
+                        n - ((Func<int, int>)((int n) =>
+                                n + 1)).Invoke(
+                            n))).Invoke(
+                    42) + ((Func<int, int>)((int n) =>
+                        n + 1)).Invoke(
+                    13));
+            Assert.AreEqual(13, @cs());
+
             var fs =  e.CompileSys();
             Assert.AreEqual(13, fs());
 

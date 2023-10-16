@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 // #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG
-#define DEMIT
+// #define DEMIT
 #endif
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
@@ -1307,26 +1307,30 @@ namespace FastExpressionCompiler
                                 var exprs = new Expression[argCount + 1]; // todo: @perf @mem @wip optimize with SmallList
 #endif
                                 List<ParameterExpression> vars = null;
+                                var reusingParameters = false;
                                 for (var i = 0; i < argCount; i++)
                                 {
                                     var p = pars.GetParameter(i);
                                     // Check for the case of reusing the parameters in the different lambdas, 
-                                    // see test `Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
+                                    // see test `NestedLambdaTests.Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
                                     var j = paramCount - 1;
                                     while (j != -1 && !ReferenceEquals(p, paramExprs.GetParameter(j))) --j;
                                     if (j != -1 || closure.IsLocalVar(p)) // don't forget to check the variable in case of upper inlined lambda already moved the parameters into the block variables
                                     {
                                         // if we found the same parameter let's move the non-found (new) parameters into the separate `vars` list
-                                        if (vars == null)
+                                        reusingParameters = true;
+                                        if (vars == null & i > 0)
                                         {
-                                            vars = new List<ParameterExpression>(); // todo: @perf use the GrowableList
+                                            vars = new List<ParameterExpression>(); // not using the SmallList here because the list is directly "borrowed" :) by the Block.Variables
                                             for (var k = 0; k < i; k++)
                                                 vars.Add(pars.GetParameter(k));
                                         }
                                     }
-                                    else if (vars != null)
+                                    else if (reusingParameters)
+                                    {
+                                        vars ??= new List<ParameterExpression>();
                                         vars.Add(p);
-
+                                    }
 #if LIGHT_EXPRESSION
                                     exprs.Append(Assign(p, invokeArgs.GetArgument(i)));
 #else
@@ -3954,7 +3958,7 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
             };
 
             private static bool TryEmitAssignToParameterOrVariable(
-                ParameterExpression left, Expression right, ExpressionType nodeType, bool isPre, Type exprType,
+                ParameterExpression left, Expression right, ExpressionType nodeType, bool isPost, Type exprType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -3967,9 +3971,12 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
 #else
                 var paramExprCount = paramExprs.Count;
 #endif
+                var resultVar = -1;
+                if (!parent.IgnoresResult())
+                    resultVar = il.GetNextLocalVarIndex(exprType);
+
                 bool ok = false;
                 var flags = parent & ~ParentFlags.IgnoreResult;
-
                 var paramIndex = paramExprCount - 1;
                 while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), left)) --paramIndex;
                 if (paramIndex != -1)
@@ -3982,16 +3989,23 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                     if (isLeftByRef)
                         EmitLoadArg(il, paramIndex);
 
+                    if (resultVar != -1 & isPost)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
+
                     ok = nodeType == ExpressionType.Assign
                         ? TryEmit(right, paramExprs, il, ref closure, setup, flags)
                         : TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags);
 
-                    if ((parent & ParentFlags.IgnoreResult) == 0)
-                        il.Demit(OpCodes.Dup); // duplicate value to assign and return
+                    if (resultVar != -1 & !isPost)
+                        EmitStoreAndLoadLocalVariable(il, resultVar);
+
                     if (isLeftByRef)
                         EmitStoreIndirectlyByRef(il, left.Type);
                     else
                         il.Demit(OpCodes.Starg_S, paramIndex);
+                    
+                    if (resultVar != -1)
+                        EmitLoadLocalVariable(il, resultVar);
                     return ok;
                 }
 
@@ -4004,6 +4018,9 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                     // if (leftParamExpr.IsByRef)
                     //     flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
 
+                    if (resultVar != -1 & isPost)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
+
                     if (nodeType != ExpressionType.Assign)
                         ok = TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags);
                     else
@@ -4012,8 +4029,8 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
 
                         if (right is ParameterExpression rp && rp.IsByRef)
                             EmitLoadIndirectlyByRef(il, rp.Type);
-                        if ((parent & ParentFlags.IgnoreResult) == 0) // if we have to push the result back, duplicate the right value
-                            il.Demit(OpCodes.Dup);
+                        if (resultVar != -1 & !isPost)
+                            EmitStoreAndLoadLocalVariable(il, resultVar);
                     }
 
                     EmitStoreLocalVariable(il, leftVarIndex);
@@ -4022,6 +4039,9 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                     var nestedLambdasCount = closure.NestedLambdas.Count;
                     for (var i = 0; i < nestedLambdasCount; ++i)
                         EmitStoreAssignedLeftVarIntoClosureArray(il, closure.NestedLambdas.Items[i], left, leftVarIndex);
+
+                    if (resultVar != -1)
+                        EmitLoadLocalVariable(il, resultVar);
                     return ok;
                 }
 
@@ -6960,7 +6980,11 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                 case ExpressionType.Invoke:
                     {
                         var x = (InvocationExpression)e;
-                        x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append('(');
+                        // wrap the expression in the possibly excessive parentheses, because usually the expression is the delegate 
+                        // which should be cast to the proper delegate type, e.g. `(Func<int>)(() => 1)`, so we need an additional `(<whole thing>)` to call `.Invoke`
+                        sb.Append('(');
+                        x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                        sb.Append(").Invoke("); // indicate the invocation more explicitly
                         for (var i = 0; i < x.Arguments.Count; i++)
                             (i > 0 ? sb.Append(',') : sb)
                             .NewLineIdentCs(x.Arguments[i], lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
@@ -7205,6 +7229,7 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                         if (e is UnaryExpression u)
                         {
                             var op = u.Operand;
+                            var encloseInParens = enclosedIn != EnclosedIn.AvoidParens & enclosedIn != EnclosedIn.LambdaBody & enclosedIn != EnclosedIn.Return;
                             switch (e.NodeType)
                             {
                                 case ExpressionType.ArrayLength:
@@ -7220,32 +7245,35 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                                     if (e.Type == op.Type || e.Type == typeof(Enum) && op.Type.IsEnum)
                                         return op.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
-                                    var encloseInParens = enclosedIn != EnclosedIn.AvoidParens & enclosedIn != EnclosedIn.LambdaBody & enclosedIn != EnclosedIn.Return;
                                     sb = encloseInParens ? sb.Append("((") : sb.Append('(');
                                     sb.Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
                                     sb = op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                                     return encloseInParens ? sb.Append(')') : sb;
 
                                 case ExpressionType.Decrement:
-                                    return op.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(" - 1)");
-
                                 case ExpressionType.Increment:
-                                    return op.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(" + 1)");
+                                    if (encloseInParens) sb.Append('(');
+                                    sb = op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                    sb = e.NodeType == ExpressionType.Decrement ? sb.Append(" - 1") : sb.Append(" + 1");
+                                    if (encloseInParens) sb.Append(')');
+                                    return sb;
 
                                 case ExpressionType.Negate:
                                 case ExpressionType.NegateChecked:
-                                    return op.ToCSharpString(sb.Append("(-"), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(')');
+                                    if (encloseInParens) sb.Append('(');
+                                    op.ToCSharpString(sb.Append('-'), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                    if (encloseInParens) sb.Append(')');
+                                    return sb;
 
                                 case ExpressionType.PostIncrementAssign:
                                 case ExpressionType.PreIncrementAssign:
                                 case ExpressionType.PostDecrementAssign:
                                 case ExpressionType.PreDecrementAssign:
-                                    var inBlockOrLambdaBody = enclosedIn == EnclosedIn.Block | enclosedIn == EnclosedIn.LambdaBody;
-                                    if (!inBlockOrLambdaBody) sb.Append('(');
+                                    if (encloseInParens) sb.Append('(');
                                     sb = e.NodeType == ExpressionType.PreIncrementAssign ? sb.Append("++") : e.NodeType == ExpressionType.PreDecrementAssign ? sb.Append("--") : sb;
-                                    sb = op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                    op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                                     sb = e.NodeType == ExpressionType.PostIncrementAssign ? sb.Append("++") : e.NodeType == ExpressionType.PostDecrementAssign ? sb.Append("--") : sb;
-                                    if (!inBlockOrLambdaBody) sb.Append(')');
+                                    if (encloseInParens) sb.Append(')');
                                     return sb;
 
                                 case ExpressionType.IsTrue:
@@ -7255,18 +7283,19 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                                     return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append("==false");
 
                                 case ExpressionType.TypeAs:
-                                    op.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-                                    return sb.Append(" as ").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
-
                                 case ExpressionType.TypeIs:
-                                    op.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-                                    return sb.Append(" is ").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
+                                    if (encloseInParens) sb.Append('(');
+                                    op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                    sb = e.NodeType == ExpressionType.TypeAs ? sb.Append(" as ") : sb.Append(" is ");
+                                    sb.Append(e.Type.ToCode(stripNamespace, printType));
+                                    if (encloseInParens) sb.Append(')');
+                                    return sb;
 
                                 case ExpressionType.Throw:
                                     sb.Append("throw ");
                                     return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(';');
 
-                                case ExpressionType.Unbox: // output it as the cast 
+                                case ExpressionType.Unbox: // output it as the cast
                                     sb.Append("((").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
                                     return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(')');
 
