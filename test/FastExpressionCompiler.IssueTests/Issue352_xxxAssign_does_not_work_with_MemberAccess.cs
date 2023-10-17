@@ -22,6 +22,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            // todo: @wip
+            // Check_ArrayAccess_Assign_ParameterByRef_InAction();
+
             Check_ArrayAccess_AddAssign_PlusOne();
             Check_MultiArrayAccess_AddAssign_PlusOne();
             Check_IndexerAccess_AddAssign_PlusOne_InAction();
@@ -66,7 +69,7 @@ namespace FastExpressionCompiler.IssueTests
             Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable();
             Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable();
 
-            return 39;
+            return 40;
         }
 
         [Test]
@@ -103,6 +106,50 @@ namespace FastExpressionCompiler.IssueTests
             );
             a1 = new[] { 1, 2, 9 };
             ff(a1);
+            Assert.AreEqual(33, a1[2]);
+        }
+
+        public delegate void ArrAndRefParam(int[] a, ref int b);
+
+        [Test]
+        public void Check_ArrayAccess_Assign_ParameterByRef_InAction()
+        {
+            var a = Parameter(typeof(int[]), "a");
+            var b = Parameter(typeof(int).MakeByRefType(), "b");
+            var e = Lambda<ArrAndRefParam>(
+                Block(Assign(ArrayAccess(a, Constant(2)), b)),
+                a, b
+            );
+            e.PrintCSharp();
+            var @cs = (ArrAndRefParam)((
+                int[] a, 
+                ref int b) =>
+            {
+                a[2] = b;
+            });
+            var a1 = new[] { 1, 2, 9 };
+            var b1 = 33;
+            @cs(a1, ref b1);
+            Assert.AreEqual(33, a1[2]);
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            a1 = new[] { 1, 2, 9 };
+            fs(a1, ref b1);
+            Assert.AreEqual(33, a1[2]);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            ff.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldc_I4_2,
+                OpCodes.Ldarg_2,
+                OpCodes.Ldind_I4,
+                OpCodes.Stelem_I4,
+                OpCodes.Ret
+            );
+            a1 = new[] { 1, 2, 9 };
+            ff(a1, ref b1);
             Assert.AreEqual(33, a1[2]);
         }
 

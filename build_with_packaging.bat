@@ -31,7 +31,7 @@ if %ERRORLEVEL% neq 0 goto :error
 echo:
 echo:## Finished: SOURCE PACKAGING
 echo: 
-echo:## Finished: ALL ##
+echo:# Finished: ALL
 echo:
 exit /b 0
 

@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda();
             Nested_lambda_using_outer_parameter();
             Nested_lambda_using_outer_parameter_and_closed_value();
             Nested_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda();
@@ -21,7 +22,6 @@ namespace FastExpressionCompiler.UnitTests
             Given_composed_expr_with_closure_over_2_parameters_used_in_2_levels_of_nested_lambda(); // todo: @wip
             Given_composed_expr_with_closure_over_2_same_parameters_used_in_2_levels_of_nested_lambda(); // todo: @wip
             Two_same_nested_lambdas_should_compile_once();
-            Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda();
 
 #if !LIGHT_EXPRESSION
             Nested_Hoisted_Func_using_outer_parameter();

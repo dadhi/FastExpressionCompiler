@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 // #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG
-// #define DEMIT
+#define DEMIT
 #endif
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
@@ -1812,7 +1812,8 @@ namespace FastExpressionCompiler
                     if (expr.IsIntrinsic)
                         return expr.TryEmit(setup, ref closure, paramExprs, il, parent, byRefIndex);
 #endif
-                    switch (expr.NodeType)
+                    var nodeType = expr.NodeType;
+                    switch (nodeType)
                     {
                         case ExpressionType.Parameter:
                             return (parent & ParentFlags.IgnoreResult) != 0 ||
@@ -1828,7 +1829,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.OnesComplement:
                         case ExpressionType.UnaryPlus:
                         case ExpressionType.Unbox:
-                            return TryEmitSimpleUnaryExpression((UnaryExpression)expr, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitSimpleUnaryExpression((UnaryExpression)expr, nodeType, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.TypeIs:
                         case ExpressionType.TypeEqual:
@@ -1892,7 +1893,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
                             var binaryExpr = (BinaryExpression)expr;
-                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, binaryExpr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, nodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Add:
                         case ExpressionType.AddChecked:
@@ -1908,11 +1909,11 @@ namespace FastExpressionCompiler
                         case ExpressionType.ExclusiveOr:
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
-                            return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, expr.NodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
-                            return TryEmitLogicalOperator((BinaryExpression)expr, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitLogicalOperator((BinaryExpression)expr, nodeType, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Coalesce:
                             return TryEmitCoalesceOperator((BinaryExpression)expr, paramExprs, il, ref closure, setup, parent);
@@ -1922,10 +1923,13 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.PostIncrementAssign:
                         case ExpressionType.PreIncrementAssign:
+                            return TryEmitArithmeticAndOrAssign(((UnaryExpression)expr).Operand, null, expr.Type, ExpressionType.Add,
+                                nodeType == ExpressionType.PostIncrementAssign, paramExprs, il, ref closure, setup, parent);
+
                         case ExpressionType.PostDecrementAssign:
                         case ExpressionType.PreDecrementAssign:
-                            return TryEmitPossiblyArithmeticOperationThenAssign(
-                                ((UnaryExpression)expr).Operand, null, expr.Type, expr.NodeType, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitArithmeticAndOrAssign(((UnaryExpression)expr).Operand, null, expr.Type, ExpressionType.Subtract,
+                                nodeType == ExpressionType.PostDecrementAssign, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.AddAssign:
                         case ExpressionType.AddAssignChecked:
@@ -1942,7 +1946,9 @@ namespace FastExpressionCompiler
                         case ExpressionType.LeftShiftAssign:
                         case ExpressionType.RightShiftAssign:
                         case ExpressionType.Assign:
-                            return TryEmitAssign((BinaryExpression)expr, paramExprs, il, ref closure, setup, parent);
+                            var ba = (BinaryExpression)expr;
+                            return TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, expr.Type,
+                                AssignToArithmeticOrSelf(nodeType), false, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Block:
                             {
@@ -2592,7 +2598,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitSimpleUnaryExpression(UnaryExpression expr,
+            private static bool TryEmitSimpleUnaryExpression(UnaryExpression expr, ExpressionType nodeType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -2605,13 +2611,13 @@ namespace FastExpressionCompiler
                 if (!TryEmit(expr.Operand, paramExprs, il, ref closure, setup, parent))
                     return false;
 
-                if (expr.NodeType == ExpressionType.TypeAs)
+                if (nodeType == ExpressionType.TypeAs)
                 {
                     il.Demit(OpCodes.Isinst, exprType);
                     if (exprType.IsValueType)
                         il.Demit(OpCodes.Unbox_Any, exprType);
                 }
-                else if (expr.NodeType == ExpressionType.IsFalse)
+                else if (nodeType == ExpressionType.IsFalse)
                 {
                     var falseLabel = il.DefineLabel();
                     var continueLabel = il.DefineLabel();
@@ -2622,7 +2628,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Ldc_I4_1);
                     il.DmarkLabel(continueLabel);
                 }
-                else if (expr.NodeType == ExpressionType.Increment)
+                else if (nodeType == ExpressionType.Increment)
                 {
                     if (exprType.IsPrimitive)
                     {
@@ -2633,7 +2639,7 @@ namespace FastExpressionCompiler
                     else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_Increment")))
                         return false;
                 }
-                else if (expr.NodeType == ExpressionType.Decrement)
+                else if (nodeType == ExpressionType.Decrement)
                 {
                     if (exprType.IsPrimitive)
                     {
@@ -2644,67 +2650,61 @@ namespace FastExpressionCompiler
                     else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_Decrement")))
                         return false;
                 }
-                else if (expr.NodeType == ExpressionType.Negate || expr.NodeType == ExpressionType.NegateChecked)
+                else if (nodeType == ExpressionType.Negate | nodeType == ExpressionType.NegateChecked)
                 {
                     if (exprType.IsPrimitive)
                         il.Demit(OpCodes.Neg);
                     else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_UnaryNegation")))
                         return false;
                 }
-                else if (expr.NodeType == ExpressionType.OnesComplement)
+                else if (nodeType == ExpressionType.OnesComplement)
                     il.Demit(OpCodes.Not);
-                else if (expr.NodeType == ExpressionType.Unbox)
+                else if (nodeType == ExpressionType.Unbox)
                     il.Demit(OpCodes.Unbox_Any, exprType);
-                // else if (expr.NodeType == ExpressionType.IsTrue) { }
-                // else if (expr.NodeType == ExpressionType.UnaryPlus) { }
+                // else if (nodeType == ExpressionType.IsTrue) { }
+                // else if (nodeType == ExpressionType.UnaryPlus) { }
 
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
+            private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr,
 #if LIGHT_EXPRESSION
-            private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr, IParameterProvider paramExprs,
-                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
-            {
+                IParameterProvider paramExprs,
 #else
-            private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr, IReadOnlyList<PE> paramExprs,
+                IReadOnlyList<PE> paramExprs,
+#endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-#endif
                 if (!TryEmit(expr.Expression, paramExprs, il, ref closure, setup, parent))
                     return false;
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     return true;
-                else if (expr.NodeType == ExpressionType.TypeIs)
+                if (expr.NodeType == ExpressionType.TypeIs)
                 {
                     il.Demit(OpCodes.Isinst, expr.TypeOperand);
                     il.Demit(OpCodes.Ldnull);
                     il.Demit(OpCodes.Cgt_Un);
                     return true;
                 }
-                else
-                {
-                    if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                        throw new NotSupportedExpressionException(Result.NotSupported_TypeEqual);
-                    return false;
-                }
+                if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                    throw new NotSupportedExpressionException(Result.NotSupported_TypeEqual);
+                return false;
             }
 
+            private static bool TryEmitNot(UnaryExpression expr,
 #if LIGHT_EXPRESSION
-            private static bool TryEmitNot(UnaryExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
-            {
+                IParameterProvider paramExprs,
 #else
-            private static bool TryEmitNot(UnaryExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
-            {
+                IReadOnlyList<PE> paramExprs,
 #endif
-                if (expr.Operand.NodeType == ExpressionType.Equal)
-                {
-                    var equalExpr = (BinaryExpression)expr.Operand;
-                    return TryEmitComparison(equalExpr.Left, equalExpr.Right, ExpressionType.NotEqual, equalExpr.Type, paramExprs, il, ref closure, setup, parent);
-                }
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
+            {
+                var op = expr.Operand;
+                if (op.NodeType == ExpressionType.Equal)
+                    return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
+                        ExpressionType.NotEqual, expr.Type, paramExprs, il, ref closure, setup, parent);
 
-                if (!TryEmit(expr.Operand, paramExprs, il, ref closure, setup, parent))
+                if (!TryEmit(op, paramExprs, il, ref closure, setup, parent))
                     return false;
 
                 if ((parent & ParentFlags.IgnoreResult) != 0)
@@ -3185,7 +3185,7 @@ namespace FastExpressionCompiler
 
             private static void EmitDecimalConstant(decimal value, ILGenerator il)
             {
-                if (value == 0 || value == 1)
+                if (value == 0 | value == 1)
                 {
                     // emit Decimal.Zero or Decimal.One instead of new Decimal(0) or new Decimal(1)
                     var field = value == 0 ?
@@ -3521,8 +3521,9 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            private static bool TryEmitPossiblyArithmeticOperationThenAssign(
-                Expression left, Expression rightOrNull, Type exprType, ExpressionType nodeType,
+            // the `right = null` argument indicates the increment/decrement operation
+            private static bool TryEmitArithmeticAndOrAssign(
+                Expression left, Expression right, Type exprType, ExpressionType nodeType, bool isPost,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -3532,19 +3533,17 @@ namespace FastExpressionCompiler
             {
                 // we need the result variable and the time of Post/Pre when to store it only if the result is not ignored, otherwise don't bother
                 var resultVar = -1;
-                var isPost = false;
                 if (!parent.IgnoresResult())
-                {
                     resultVar = il.GetNextLocalVarIndex(exprType);
-                    isPost = nodeType == ExpressionType.PostIncrementAssign | nodeType == ExpressionType.PostDecrementAssign;
-                }
-
-                var incrementDecrementOpCode = nodeType == ExpressionType.PreIncrementAssign | nodeType == ExpressionType.PostIncrementAssign
-                    ? OpCodes.Add : OpCodes.Sub;
 
                 switch (left.NodeType)
                 {
                     case ExpressionType.Parameter:
+                        if (!isPost)
+                            return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
+                                nodeType, isPost, exprType, paramExprs, il, ref closure, setup, parent, resultVar);
+
+                        // todo: @wip split for now between the Increment/Decrement and the rest
                         var p = (ParameterExpression)left;
 #if LIGHT_EXPRESSION
                         var paramExprCount = paramExprs.ParameterCount;
@@ -3571,8 +3570,7 @@ namespace FastExpressionCompiler
                         if (resultVar != -1 & isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
 
-                        il.Demit(OpCodes.Ldc_I4_1);
-                        il.Demit(incrementDecrementOpCode);
+                        EmitIncOrDec(il, nodeType == ExpressionType.Add);
 
                         if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -3622,7 +3620,7 @@ namespace FastExpressionCompiler
                                 return false; // todo: @feature more than 4 index arguments are not supported, and probably not need to be supported
                         }
 
-var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr.Object;
+                        var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr.Object;
 
                         // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
                         // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
@@ -3635,14 +3633,14 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                         var leftIsByAddress = false;
                         if (nodeType == ExpressionType.Assign)
                         {
-                            Debug.Assert(rightOrNull != null);
-                            var rightType = rightOrNull.Type;
+                            Debug.Assert(right != null);
+                            var rightType = right.Type;
 
                             // if the right part is the TryCatch block we will evaluate it first and then assignment of its result
                             var rightVar = -1;
-                            if (rightOrNull.NodeType == ExpressionType.Try) // todo: @improve mm... what about Block, IfElse, etc?
+                            if (right.NodeType == ExpressionType.Try) // todo: @improve mm... what about Block, IfElse, etc?
                             {
-                                if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, baseFlags))
+                                if (!TryEmit(right, paramExprs, il, ref closure, setup, baseFlags))
                                     return false;
                                 if (closure.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -3663,7 +3661,7 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                                 EmitLoadLocalVariable(il, rightVar);
                             else
                             {
-                                if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, baseFlags))
+                                if (!TryEmit(right, paramExprs, il, ref closure, setup, baseFlags))
                                     return false;
                                 if (closure.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -3772,19 +3770,18 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                         var leftIsNullable = leftType.IsNullable();
                         if (!leftIsNullable)
                         {
-                            if (rightOrNull == null)
+                            if (right == null) // optimization for the common increment/decrement case, indicated by using the null for the right argument 
                             {
                                 if (resultVar != -1 & isPost)
                                     EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value before doing any operation on it
-                                il.Demit(OpCodes.Ldc_I4_1); // Plus or Minus 1
-                                il.Demit(incrementDecrementOpCode);
+                                EmitIncOrDec(il, nodeType == ExpressionType.Add);
                                 if (resultVar != -1 & !isPost)
                                     EmitStoreAndLoadLocalVariable(il, resultVar);
                             }
                             else
                             {
-                                var rightType = rightOrNull.Type;
-                                if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, baseFlags))
+                                var rightType = right.Type;
+                                if (!TryEmit(right, paramExprs, il, ref closure, setup, baseFlags))
                                     return false;
                                 if (closure.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -3814,7 +3811,7 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                             var leftNullableVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(leftType);
                             EmitStoreLocalVariable(il, leftNullableVar);
 
-                            if (rightOrNull == null)
+                            if (right == null)
                             {
                                 EmitLoadLocalVariableAddress(il, leftNullableVar);
                                 il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
@@ -3824,14 +3821,13 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                                 EmitLoadLocalVariableAddress(il, leftNullableVar);
                                 il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());
 
-                                il.Demit(OpCodes.Ldc_I4_1);
-                                il.Demit(incrementDecrementOpCode);
+                                EmitIncOrDec(il, nodeType == ExpressionType.Add);
                             }
                             else
                             {
                                 // emit the right expression immediatly after the left and then just process their results
-                                var rightType = rightOrNull.Type;
-                                if (!TryEmit(rightOrNull, paramExprs, il, ref closure, setup, baseFlags))
+                                var rightType = right.Type;
+                                if (!TryEmit(right, paramExprs, il, ref closure, setup, baseFlags))
                                     return false;
                                 if (closure.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -3957,6 +3953,7 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                 _ => nodeType
             };
 
+            // the null `right` means the increment/decrement operation
             private static bool TryEmitAssignToParameterOrVariable(
                 ParameterExpression left, Expression right, ExpressionType nodeType, bool isPost, Type exprType,
 #if LIGHT_EXPRESSION
@@ -3964,17 +3961,13 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
 #else
                 IReadOnlyList<PE> paramExprs,
 #endif
-                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int resultVar = -1)
             {
 #if LIGHT_EXPRESSION
                 var paramExprCount = paramExprs.ParameterCount;
 #else
                 var paramExprCount = paramExprs.Count;
 #endif
-                var resultVar = -1;
-                if (!parent.IgnoresResult())
-                    resultVar = il.GetNextLocalVarIndex(exprType);
-
                 bool ok = false;
                 var flags = parent & ~ParentFlags.IgnoreResult;
                 var paramIndex = paramExprCount - 1;
@@ -4012,36 +4005,36 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                 // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
                 // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
                 // if it's a local variable, then store the right value in it.
-                var leftVarIndex = closure.GetDefinedLocalVarOrDefault(left);
-                if (leftVarIndex != -1)
+                var leftLocalVar = closure.GetDefinedLocalVarOrDefault(left);
+                if (leftLocalVar != -1)
                 {
                     // if (leftParamExpr.IsByRef)
                     //     flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
 
                     if (resultVar != -1 & isPost)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
-
-                    if (nodeType != ExpressionType.Assign)
-                        ok = TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags);
-                    else
                     {
-                        ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
-
-                        if (right is ParameterExpression rp && rp.IsByRef)
-                            EmitLoadIndirectlyByRef(il, rp.Type);
-                        if (resultVar != -1 & !isPost)
-                            EmitStoreAndLoadLocalVariable(il, resultVar);
+                        EmitLoadLocalVariable(il, leftLocalVar);
+                        EmitStoreLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
                     }
 
-                    EmitStoreLocalVariable(il, leftVarIndex);
+                    if (nodeType == ExpressionType.Assign)
+                    {
+                        ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
+                        if (right is ParameterExpression rp && rp.IsByRef)
+                            EmitLoadIndirectlyByRef(il, rp.Type);
+                    }
+                    else
+                        ok = TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags);
+
+                    EmitStoreLocalVariable(il, leftLocalVar);
 
                     // assigning the new value into the already closed variable - it enables the recursive nested lambda calls, see #353
                     var nestedLambdasCount = closure.NestedLambdas.Count;
                     for (var i = 0; i < nestedLambdasCount; ++i)
-                        EmitStoreAssignedLeftVarIntoClosureArray(il, closure.NestedLambdas.Items[i], left, leftVarIndex);
+                        EmitStoreAssignedLeftVarIntoClosureArray(il, closure.NestedLambdas.Items[i], left, leftLocalVar);
 
                     if (resultVar != -1)
-                        EmitLoadLocalVariable(il, resultVar);
+                        EmitLoadLocalVariable(il, isPost ? resultVar : leftLocalVar);
                     return ok;
                 }
 
@@ -4050,39 +4043,73 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                 if (nonPassedParamIndex == -1)
                     return false;
 
+                if (nodeType == ExpressionType.Assign)
+                {
+                    if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
+                        return false;
+                    if (right is ParameterExpression rp && rp.IsByRef)
+                        EmitLoadIndirectlyByRef(il, rp.Type);
+
+                    var rightVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(exprType);
+                    EmitStoreLocalVariable(il, rightVar);
+
+                    // load array field and param item index
+                    il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
+                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                    EmitLoadConstantInt(il, nonPassedParamIndex);
+
+                    EmitLoadLocalVariable(il, rightVar);
+
+                    il.TryEmitBoxOf(exprType);
+                    il.Demit(OpCodes.Stelem_Ref); // put the variable into array
+
+                    // assigning the new value into the already closed variable - it enables the recursive nested lambda calls, see #353
+                    var nestedLambdasCount = closure.NestedLambdas.Count;
+                    for (var i = 0; i < nestedLambdasCount; ++i)
+                        EmitStoreAssignedLeftVarIntoClosureArray(il, closure.NestedLambdas.Items[i], left, rightVar);
+
+                    if (resultVar != -1)
+                        EmitLoadLocalVariable(il, rightVar);
+                    return true;
+                }
+
+                if (resultVar != -1 & isPost)
+                {
+                    il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
+                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                    EmitLoadConstantInt(il, nonPassedParamIndex);
+                    il.Demit(OpCodes.Ldelem_Ref); // load the variable from array
+                    if (exprType.IsValueType)
+                        il.Demit(OpCodes.Unbox_Any, exprType);
+#if NETFRAMEWORK
+                    else
+                        il.Demit(OpCodes.Castclass, exprType);
+#endif
+                    EmitStoreLocalVariable(il, resultVar);
+                }
+
+                // todo: @perf optimize for the increment/decrement case
+                if (!TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags))
+                    return false;
+
+                var arithmethicResultVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(exprType);
+                EmitStoreLocalVariable(il, arithmethicResultVar);
+
                 il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
+                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                EmitLoadConstantInt(il, nonPassedParamIndex);
 
-                if ((parent & ParentFlags.IgnoreResult) == 0)
-                {
-                    if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
-                        return false;
+                EmitLoadLocalVariable(il, arithmethicResultVar);
 
-                    var valueVarIndex = il.GetNextLocalVarIndex(exprType); // store left value in variable
-                    EmitStoreLocalVariable(il, valueVarIndex);
+                il.TryEmitBoxOf(exprType);
+                il.Demit(OpCodes.Stelem_Ref); // put the variable into array
 
-                    // load array field and param item index
-                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
-                    EmitLoadConstantInt(il, nonPassedParamIndex);
-                    EmitLoadLocalVariable(il, valueVarIndex);
-                    il.TryEmitBoxOf(exprType);
-                    il.Demit(OpCodes.Stelem_Ref); // put the variable into array
-                    EmitLoadLocalVariable(il, valueVarIndex); // todo: @perf what if we just dup the `valueVar`?
-                }
-                else
-                {
-                    // load array field and param item index
-                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
-                    EmitLoadConstantInt(il, nonPassedParamIndex);
-
-                    if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
-                        return false;
-
-                    il.TryEmitBoxOf(exprType);
-                    il.Demit(OpCodes.Stelem_Ref); // put the variable into array
-                }
+                if (resultVar != -1 & !isPost)
+                    EmitLoadLocalVariable(il, arithmethicResultVar);
                 return true;
             }
 
+            // todo: @wip remove
             private static bool TryEmitAssign(BinaryExpression expr,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
@@ -4108,8 +4135,8 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
 
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
-                        return TryEmitPossiblyArithmeticOperationThenAssign(
-                            left, right, exprType, arithmeticNodeType, paramExprs, il, ref closure, setup, parent);
+                        return TryEmitArithmeticAndOrAssign(left, right, exprType,
+                            arithmeticNodeType, false, paramExprs, il, ref closure, setup, parent);
 
                     default: // todo: @feature not yet support assignment targets
                         if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
@@ -4902,7 +4929,7 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
-            private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType arithmeticNodeType, Type exprType,
+            private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -4932,27 +4959,35 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                     return false;
 
                 var rightNoValueLabel = default(Label);
-                var rightType = right.Type;
-                var rightIsNullable = rightType.IsNullable();
-                if (rightIsNullable)
+                var rightIsNullable = false;
+                if (right == null) // indicates the increment/decrement operation
                 {
-                    rightNoValueLabel = il.DefineLabel();
-                    if (!TryEmit(right, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceCall))
+                    EmitIncOrDec(il, nodeType == ExpressionType.Add);
+                }
+                else
+                {
+                    var rightType = right.Type;
+                    rightIsNullable = rightType.IsNullable();
+                    if (rightIsNullable)
+                    {
+                        rightNoValueLabel = il.DefineLabel();
+                        if (!TryEmit(right, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceCall))
+                            return false;
+
+                        if (!closure.LastEmitIsAddress)
+                            EmitStoreAndLoadLocalVariableAddress(il, rightType);
+
+                        il.Demit(OpCodes.Dup);
+                        EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
+                        il.Demit(OpCodes.Brfalse, rightNoValueLabel);
+                        EmitMethodCall(il, rightType.GetNullableGetValueOrDefaultMethod());
+                    }
+                    else if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                         return false;
 
-                    if (!closure.LastEmitIsAddress)
-                        EmitStoreAndLoadLocalVariableAddress(il, rightType);
-
-                    il.Demit(OpCodes.Dup);
-                    EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
-                    il.Demit(OpCodes.Brfalse, rightNoValueLabel);
-                    EmitMethodCall(il, rightType.GetNullableGetValueOrDefaultMethod());
+                    if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
+                        return false;
                 }
-                else if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
-                    return false;
-
-                if (!TryEmitArithmeticOperation(leftType, rightType, arithmeticNodeType, exprType, il))
-                    return false;
 
                 if (leftIsNullable | rightIsNullable) // todo: @clarify that the emitted code is correct
                 {
@@ -5058,7 +5093,7 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                 return true;
             }
 
-            private static bool TryEmitLogicalOperator(BinaryExpression expr,
+            private static bool TryEmitLogicalOperator(BinaryExpression expr, ExpressionType nodeType,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -5070,7 +5105,7 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                     return false;
 
                 var labelSkipRight = il.DefineLabel();
-                il.Demit(expr.NodeType == ExpressionType.AndAlso ? OpCodes.Brfalse : OpCodes.Brtrue, labelSkipRight);
+                il.Demit(nodeType == ExpressionType.AndAlso ? OpCodes.Brfalse : OpCodes.Brtrue, labelSkipRight);
 
                 if (!TryEmit(expr.Right, paramExprs, il, ref closure, setup, parent))
                     return false;
@@ -5079,21 +5114,22 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                 il.Demit(OpCodes.Br, labelDone);
 
                 il.DmarkLabel(labelSkipRight); // label the second branch
-                il.Demit(expr.NodeType == ExpressionType.AndAlso ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
+                il.Demit(nodeType == ExpressionType.AndAlso ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
                 il.DmarkLabel(labelDone);
 
                 return true;
             }
 
+            private static bool TryEmitConditional(ConditionalExpression expr,
 #if LIGHT_EXPRESSION
-            private static bool TryEmitConditional(ConditionalExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
+                IParameterProvider paramExprs,
 #else
-            private static bool TryEmitConditional(ConditionalExpression expr, IReadOnlyList<PE> paramExprs, ILGenerator il, ref ClosureInfo closure,
-                CompilerFlags setup, ParentFlags parent)
+                IReadOnlyList<PE> paramExprs,
 #endif
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var testExpr = TryReduceCondition(expr.Test);
+                var nodeType = testExpr.NodeType;
 
                 // Detect a simplistic case when we can use `Brtrue` or `Brfalse`.
                 // We are checking the negative result to go into the `IfFalse` branch,
@@ -5113,7 +5149,7 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                 Type nullOfValueType = null;
                 if (testExpr is BinaryExpression b)
                 {
-                    if (b.NodeType == ExpressionType.Equal || b.NodeType == ExpressionType.NotEqual)
+                    if (nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual)
                     {
                         object constVal = null;
                         if (b.Right is ConstantExpression rc)
@@ -5185,8 +5221,8 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                 }
 
                 var labelIfFalse = il.DefineLabel();
-                if (testExpr.NodeType == ExpressionType.Equal && useBrFalseOrTrue == 0 ||
-                    testExpr.NodeType == ExpressionType.NotEqual && useBrFalseOrTrue == 1)
+                if ((nodeType == ExpressionType.Equal & useBrFalseOrTrue == 0) ||
+                    (nodeType == ExpressionType.NotEqual & useBrFalseOrTrue == 1))
                 {
                     // todo: @perf incomplete:
                     // try to recognize the pattern like in #301(300) `if (b == null) { goto return_label; }` 
@@ -5215,6 +5251,7 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                 return true;
             }
 
+            // todo: @perf too many ifs - lets optimize it
             private static Expression TryReduceCondition(Expression testExpr)
             {
                 // removing Not by turning Equal -> NotEqual, NotEqual -> Equal
@@ -5353,6 +5390,14 @@ var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr
                     il.Demit(OpCodes.Ldloc_S, (byte)location);
                 else
                     il.Demit(OpCodes.Ldloc, (short)location);
+                return true;
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool EmitIncOrDec(ILGenerator il, bool isInc = false)
+            {
+                il.Demit(OpCodes.Ldc_I4_1);
+                il.Demit(isInc ? OpCodes.Add : OpCodes.Sub);
                 return true;
             }
 

@@ -444,6 +444,10 @@ public struct SmallList4<TItem>
         }
     }
 
+    /// <summary>Bridge to go from the List.Add</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Add(in TItem item) => Append(in item);
+
     /// <summary>Adds the default item to the end of the list aka the Stack.Push default</summary>
     [MethodImpl((MethodImplOptions)256)]
     public void AppendDefault()
@@ -617,6 +621,10 @@ public struct SmallList2<TItem>
                 break;
         }
     }
+
+    /// <summary>Bridge to go from the List.Add</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Add(in TItem item) => Append(in item);
 
     /// <summary>Adds the default item to the end of the list aka the Stack.Push default</summary>
     [MethodImpl((MethodImplOptions)256)]

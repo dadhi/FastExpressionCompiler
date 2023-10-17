@@ -11,8 +11,9 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
+            // todo: @wip
+            // Check_assignment_to_by_ref_float_parameter_Increment();
             Check_assignment_to_by_ref_float_parameter_PlusOne();
-            Check_assignment_to_by_ref_float_parameter_Increment();
             // SimpleTest();
             // Test();
             return 2;
@@ -83,12 +84,10 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             f.PrintIL();
             f.AssertOpCodes(
                 OpCodes.Ldarg_1,
+                OpCodes.Ldarg_1,
                 OpCodes.Ldind_R4,
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
-                OpCodes.Stloc_0,
-                OpCodes.Ldarg_1,
-                OpCodes.Ldloc_0,
                 OpCodes.Stind_R4,
                 OpCodes.Ret
             );

@@ -23,7 +23,7 @@ if %ERRORLEVEL% neq 0 goto :error
 echo:
 echo:## Finished: TESTS
 
-echo:## Finished: ALL ##
+echo:# Finished: ALL
 echo:
 exit /b 0
 

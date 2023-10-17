@@ -28,7 +28,7 @@ namespace FastExpressionCompiler
             var n = 0;
             foreach (var code in actualCodes)
                 sb.Append(n++).Append(": ").AppendLine(code.ToString());
-            CollectionAssert.AreEqual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual are: " + sb);
+            CollectionAssert.AreEqual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual codes are: " + Environment.NewLine + sb);
         }
 
         static private readonly Func<Type, string, string> _stripOuterTypes = (t, s) => s.Substring(s.LastIndexOf('.') + 1);
@@ -36,7 +36,7 @@ namespace FastExpressionCompiler
         [System.Diagnostics.Conditional("DEBUG")]
         public static void PrintExpression(this Expression expr, bool completeTypeNames = false) =>
             Console.WriteLine(
-                expr.ToExpressionString(out var _, out var _, out var _, 
+                expr.ToExpressionString(out var _, out var _, out var _,
                 stripNamespace: true,
                 printType: completeTypeNames ? null : _stripOuterTypes,
                 identSpaces: 4)

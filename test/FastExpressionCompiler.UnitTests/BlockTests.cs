@@ -29,6 +29,7 @@ namespace FastExpressionCompiler.UnitTests
             Block_local_variable_assignment_with_lambda_invoke();
             Block_returning_the_nested_lambda_assigning_the_outer_parameter();
             Block_calling_non_void_method_returning_the_nested_lambda_assigning_the_outer_parameter();
+            Block_calling_non_void_method_returning_the_nested_lambda_incrementing_the_outer_parameter();
             Block_assigning_local_variable_then_returning_the_nested_lambda_which_reassigns_the_variable();
             Block_assigning_local_ValueType_variable_then_returning_the_nested_lambda_which_reassigns_the_variable();
             Block_local_variable_assignment_with_lambda_invoke_plus_external_assignment();
@@ -36,7 +37,7 @@ namespace FastExpressionCompiler.UnitTests
             Block_local_variable_assignment_with_lambda_invoke_with_param_override();
             Block_local_variable_assignment_with_lambda_invoke_with_param_override_array_closure();
 
-            return 17;
+            return 18;
         }
 
         [Test]
@@ -112,9 +113,8 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 p);
 
-#if LIGHT_EXPRESSION
             lambda.PrintCSharp();
-#endif
+
             var s = lambda.CompileSys();
             s.PrintIL("system il");
 
@@ -129,6 +129,38 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Block_calling_non_void_method_returning_the_nested_lambda_incrementing_the_outer_parameter()
+        {
+            var p = Parameter(typeof(int), "p");
+
+            var lambda = Lambda<Func<int, Func<int>>>(
+                Block(
+                    Lambda(PreIncrementAssign(p))
+                ),
+                p);
+
+            lambda.PrintCSharp();
+            var @cs = (Func<int, Func<int>>)((int p) =>
+            {
+                return (Func<int>)(() =>
+                        ++p);
+            });
+            var f = @cs(17);
+            Assert.AreEqual(18, f());
+
+            var fs = lambda.CompileSys();
+            fs.PrintIL();
+            f = fs(17);
+            Assert.AreEqual(18, f());
+
+            var ff = lambda.CompileFast(true);
+            ff.PrintIL();
+            f = ff(17);
+            Assert.IsInstanceOf<Func<int>>(f);
+            Assert.AreEqual(18, f());
+        }
+
+        [Test]
         public void Block_returning_the_nested_lambda_assigning_the_outer_parameter()
         {
             var p = Parameter(typeof(int), "p");
@@ -137,9 +169,8 @@ namespace FastExpressionCompiler.UnitTests
                     Lambda(Assign(p, Constant(42))),
                 p);
 
-#if LIGHT_EXPRESSION
             lambda.PrintCSharp();
-#endif
+
             var s = lambda.CompileSys();
             s.PrintIL("system il");
 

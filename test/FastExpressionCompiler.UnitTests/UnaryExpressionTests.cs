@@ -20,6 +20,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            // todo: @wip
+            // PostDecrementAssign_compiles();
+
             ArrayOfStructParameter_MemberPostDecrementAssign_works();
             ArrayOfStructParameter_MemberPreDecrementAssign_works();
 
@@ -36,7 +39,6 @@ namespace FastExpressionCompiler.UnitTests
             NegateChecked_compiles();
             Binary_Not_compiles();
             OnesComplement_compiles();
-            PostDecrementAssign_compiles();
             Parameter_PostIncrementAssign_compiles();
 
             RefParameter_PostIncrementAssign_works();
@@ -239,32 +241,39 @@ namespace FastExpressionCompiler.UnitTests
         public void PostDecrementAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
-            var expression = Lambda<Func<int, int>>(
+            var e = Lambda<Func<int, int>>(
                 PostDecrementAssign(param),
                 param);
 
-            var fs = expression.CompileSys();
+            e.PrintCSharp();
+            var @cs = (Func<int, int>)((int i) =>
+                i--);
+            Assert.AreEqual(2, @cs(2));
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
             Assert.AreEqual(2, fs(2));
 
-            var f = expression.CompileFast(true);
-            Assert.AreEqual(2, f(2));
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(2, ff(2));
         }
 
         [Test]
         public void Parameter_PostIncrementAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
-            var expression = Lambda<Func<int, int>>(
+            var e = Lambda<Func<int, int>>(
                 PostIncrementAssign(param),
                 param);
 
-            expression.PrintCSharp();
+            e.PrintCSharp();
 
-            var fs = expression.CompileSys();
+            var fs = e.CompileSys();
             fs.PrintIL();
             Assert.AreEqual(2, fs(2));
 
-            var ff = expression.CompileFast(true);
+            var ff = e.CompileFast(true);
             ff.PrintIL();
             Assert.AreEqual(2, ff(2));
         }

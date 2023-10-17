@@ -11,16 +11,18 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
+            new Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
+            new UnaryExpressionTests().Run();
+            // new NestedLambdaTests().Run();
+            // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
+            // new LightExpression.UnitTests.BlockTests().Run();
             // new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
             // new Issue374_CompileFast_doesnot_work_with_HasFlag().Run();
             // new LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run();
             // new Issue281_Index_Out_of_Range().Run();
-            // new UnaryExpressionTests().Run();
             // new ConvertOperatorsTests().Run();
             // new LightExpression.UnitTests.ConvertOperatorsTests().Run();
             // new LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
-            // new Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
 
             RunAllTests();
 
@@ -35,16 +37,20 @@ namespace FastExpressionCompiler.UnitTests
             var totalTestPassed = 0;
             void Run(Func<int> run, string name = null)
             {
-                var testsName = name ?? run.Method.DeclaringType.FullName;
                 try
                 {
                     var testsPassed = run();
                     totalTestPassed += testsPassed;
+#if DEBUG
+                    // we don't need to list the tests one-by-one on CI, and it makes avoiding it saves 30% of time
+                    var testsName = name ?? run.Method.DeclaringType.FullName;
                     Console.WriteLine($"{testsPassed,-4} of {testsName}");
+#endif
                 }
                 catch (Exception ex)
                 {
                     failed = true;
+                    var testsName = name ?? run.Method.DeclaringType.FullName;
                     Console.WriteLine($"""
                     --------------------------------------------
                     ERROR: Tests `{testsName}` failed with
@@ -54,11 +60,12 @@ namespace FastExpressionCompiler.UnitTests
                 }
             }
 
-            var sw = Stopwatch.StartNew();
+            Console.WriteLine("""
 
-            Console.WriteLine();
-            Console.WriteLine("NET 7: Running UnitTests and IssueTests in parallel...");
-            Console.WriteLine();
+            ### .NET 7: Running UnitTests and IssueTests in parallel...
+            """);
+
+            var sw = Stopwatch.StartNew();
 
             // todo: @perf try Parallel.ForEach
             var unitTests = Task.Run(() =>
@@ -109,7 +116,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new ToCSharpStringTests().Run);
                 Run(new FastExpressionCompiler.LightExpression.UnitTests.ToCSharpStringTests().Run);
 
-                Console.WriteLine($"============={Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
+                Console.WriteLine($"{Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
 
             });
 
@@ -277,7 +284,7 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue374_CompileFast_doesnot_work_with_HasFlag().Run);
 
-                Console.WriteLine($"============={Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
+                Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
             Task.WaitAll(unitTests, issueTests);
@@ -289,7 +296,7 @@ namespace FastExpressionCompiler.UnitTests
                 return;
             }
 
-            Console.WriteLine($"{totalTestPassed,-4} of all tests are passing in {sw.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"ALL {totalTestPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
     }
 }

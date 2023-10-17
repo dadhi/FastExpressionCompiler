@@ -55,15 +55,21 @@ namespace FastExpressionCompiler.UnitTests
         {
             // s => () => s = "aaa" 
             var sParamExpr = Parameter(typeof(string), "s");
-            var expr = Lambda<Func<string, Func<string>>>(
+            var e = Lambda<Func<string, Func<string>>>(
                 Lambda<Func<string>>(
                     Assign(sParamExpr, Constant("aaa"))),
                 sParamExpr);
 
-            var fs = expr.CompileSys();
+            e.PrintCSharp();
+            var @cs = (Func<string, Func<string>>)((string s) =>
+                (Func<string>)(() =>
+                        s = "aaa"));
+            Assert.AreEqual("aaa", @cs("ignored").Invoke());
+
+            var fs = e.CompileSys();
             Assert.AreEqual("aaa", fs("ignored").Invoke());
 
-            var f = expr.CompileFast(true);
+            var f = e.CompileFast(true);
 
             Assert.IsNotNull(f);
             Assert.AreEqual("aaa", f("ignored").Invoke());
@@ -74,7 +80,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             var tryCatchParameter = Variable(typeof(TryCatchTest));
 
-            var assignExpr = Lambda<Func<TryCatchTest, TryCatchTest>>(
+            var e = Lambda<Func<TryCatchTest, TryCatchTest>>(
                 Block(
                     Assign(
                         tryCatchParameter,
@@ -84,8 +90,21 @@ namespace FastExpressionCompiler.UnitTests
                     tryCatchParameter
                 ),
                 tryCatchParameter);
+            e.PrintCSharp();
+            var @cs = (Func<TryCatchTest, TryCatchTest>)((TryCatchTest assigntests_trycatchtest__54708252) =>
+            {
+                assigntests_trycatchtest__54708252 = ((Func<TryCatchTest>)(() => { try
+                {
+                    return new TryCatchTest();
+                }
+                catch (Exception)
+                {
+                    return (TryCatchTest)null;
+                }; }))();
+                return assigntests_trycatchtest__54708252;
+            });
 
-            var func = assignExpr.CompileFast(true);
+            var func = e.CompileFast(true);
 
             Assert.IsNotNull(func);
 
