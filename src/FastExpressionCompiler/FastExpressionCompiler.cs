@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 // #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG
-// #define DEMIT
+#define DEMIT
 #endif
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
@@ -7049,11 +7049,15 @@ namespace FastExpressionCompiler
                 case ExpressionType.Invoke:
                     {
                         var x = (InvocationExpression)e;
-                        // wrap the expression in the possibly excessive parentheses, because usually the expression is the delegate 
-                        // which should be cast to the proper delegate type, e.g. `(Func<int>)(() => 1)`, so we need an additional `(<whole thing>)` to call `.Invoke`
-                        sb.Append('(');
+                        // wrap the expression in the possibly excessive parentheses, because usually the expression is the delegate (except if delegate is parameter)
+                        // which should be cast to the proper delegate type, e.g. `(Func<int>)(() => 1)`, so we need an additional `(<whole thing>)` to call `.Invoke`.
+                        var encloseInParens = x.Expression.NodeType != ExpressionType.Parameter;
+                        if (encloseInParens)
+                            sb.Append('(');
                         x.Expression.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-                        sb.Append(").Invoke("); // indicate the invocation more explicitly
+                        if (encloseInParens)
+                            sb.Append(')');
+                        sb.Append(".Invoke("); // indicate the invocation more explicitly
                         for (var i = 0; i < x.Arguments.Count; i++)
                             (i > 0 ? sb.Append(',') : sb)
                             .NewLineIdentCs(x.Arguments[i], lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);

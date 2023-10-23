@@ -1,5 +1,5 @@
 ﻿#if DEBUG
-// #define PRINTIL
+#define PRINTIL
 #endif
 using System;
 using System.Linq;
