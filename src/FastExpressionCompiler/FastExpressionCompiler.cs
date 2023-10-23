@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 // #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG
-#define DEMIT
+// #define DEMIT
 #endif
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
@@ -1761,10 +1761,11 @@ namespace FastExpressionCompiler
             IndexAccess = 1 << 10,
             /// Invoking the inlined lambda (the default System.Expression behavior)
             InlinedLambdaInvoke = 1 << 11,
-            /// <summary>Indicates that member or index or variable is being assinged directly or inderectly `foo.Bar += 1` </summary>
-            Assignment = 1 << 12,
-            /// Indicates that the expression is part of ref local initialization e.g. `ref var x = ref foo()`
-            RefAssignment = 1 << 13
+            /// <summary>Indicate if the part AT LEAST participates in the assignment on the left side, 
+            /// it may also participate in the right side, e.g. ++x.Bar</summary>
+            AssignmentLeftValue = 1 << 12,
+            /// <summary>Indicates the ONLY right value of assignment, e.g. `p` in `foo.Bar += p` </summary>
+            AssignmentRightValue = 1 << 13
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -2483,10 +2484,10 @@ namespace FastExpressionCompiler
 
                     //  means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
                     var valueTypeParamCallOrMemberAccess = paramType.IsValueType &&
-                        // but the parameter is not used as an index #281, #265 (excluding the case when it is used in arithmethic operation #352)
-                        ((parent & ParentFlags.IndexAccess) == 0 | (parent & ParentFlags.Arithmetic) == 0 & (parent & ParentFlags.Assignment) != 0) &
                         // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
-                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0;
+                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &&
+                        // but the parameter is not used as an index #281, #265, nor it is an arithmetic #352
+                        (parent & (ParentFlags.IndexAccess | ParentFlags.Arithmetic)) == 0;
 
                     closure.LastEmitIsAddress = !isParamOrVarByRef & (isArgByRef | valueTypeParamCallOrMemberAccess);
 
@@ -2502,8 +2503,10 @@ namespace FastExpressionCompiler
                         {
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
                             // this means the parameter is the argument to the method call and not the instance in the method call or member access
-                            if (!isArgByRef & (parent & ParentFlags.Call) != 0 & (parent & ParentFlags.InstanceAccess) == 0 ||
-                                (parent & ParentFlags.Arithmetic) != 0 & (parent & ParentFlags.MemberAccess) == 0 & (parent & ParentFlags.Assignment) == 0)
+                            if (!isArgByRef & (parent & ParentFlags.Call) != 0 &
+                                (parent & ParentFlags.InstanceAccess) == 0 ||
+                                (parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &
+                                (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.AssignmentLeftValue)) == 0)
                                 EmitLoadIndirectlyByRef(il, paramType);
                         }
                         else
@@ -3594,7 +3597,6 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
-
                         var leftMemberExpr = left as MemberExpression;
                         var leftIndexExpr = left as IndexExpression;
 
@@ -3624,12 +3626,12 @@ namespace FastExpressionCompiler
 
                         // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
                         // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
-                        var baseFlags = (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall) | ParentFlags.Assignment;
-                        var leftFlags = leftMemberExpr != null ? baseFlags | ParentFlags.MemberAccess : baseFlags | ParentFlags.IndexAccess;
-
-                        // note that we omit the IndexAccess for the instance of array/indexer, to avoid confusion with the whole expression used as an index,
-                        var objFlags = leftMemberExpr != null ? leftFlags | ParentFlags.InstanceAccess : leftFlags | ParentFlags.InstanceAccess;
+                        var baseFlags = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall;
+                        var rightOnlyFlags = baseFlags | ParentFlags.AssignmentRightValue;
                         
+                        var memberOrIndexFlags = leftMemberExpr != null ? ParentFlags.MemberAccess : ParentFlags.IndexAccess;
+                        var leftArLeastFlags = baseFlags | ParentFlags.AssignmentLeftValue | memberOrIndexFlags;
+
                         var leftIsByAddress = false;
                         if (nodeType == ExpressionType.Assign)
                         {
@@ -3640,7 +3642,7 @@ namespace FastExpressionCompiler
                             var rightVar = -1;
                             if (right.NodeType == ExpressionType.Try) // todo: @improve mm... what about Block, IfElse, etc?
                             {
-                                if (!TryEmit(right, paramExprs, il, ref closure, setup, baseFlags))
+                                if (!TryEmit(right, paramExprs, il, ref closure, setup, rightOnlyFlags))
                                     return false;
                                 if (closure.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -3649,21 +3651,34 @@ namespace FastExpressionCompiler
                             }
 
                             // Emit the left-value instance and index(es) (for the index access)
-                            if (objExpr != null && !TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags))
-                                return false;
-                            if (leftIndexExpr != null)
-                                for (var i = 0; i < indexArgCount; i++)
-                                    if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, leftFlags, -1))
+                            if (leftMemberExpr != null)
+                            {
+                                if (objExpr != null && !TryEmit(objExpr, paramExprs, il, ref closure, setup, leftArLeastFlags))
+                                    return false;
+                            }
+                            else// if (leftIndexExpr != null)
+                            {
+                                if (objExpr != null)
+                                {
+                                    var isIndexerAMethodCall = indexArgCount > 1 | leftIndexExpr.Indexer != null;
+                                    var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
+                                    if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags | ParentFlags.AssignmentLeftValue))
                                         return false;
+                                }
+                                for (var i = 0; i < indexArgCount; i++)
+                                    if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, baseFlags, -1))
+                                        return false;
+                            }
 
                             // Load already emitted or emit the righ-value normally after the left to be assigned
                             if (rightVar != -1)
                                 EmitLoadLocalVariable(il, rightVar);
                             else
                             {
-                                if (!TryEmit(right, paramExprs, il, ref closure, setup, baseFlags))
+                                if (!TryEmit(right, paramExprs, il, ref closure, setup, rightOnlyFlags))
                                     return false;
-                                if (closure.LastEmitIsAddress)
+                                if (closure.LastEmitIsAddress &&
+                                    right.NodeType != ExpressionType.Parameter) // exclude the .Parameter because emitting the parameter handles the loading of ref
                                     EmitLoadIndirectlyByRef(il, rightType);
                                 if (resultVar != -1)
                                     EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -3690,12 +3705,20 @@ namespace FastExpressionCompiler
                             return true;
                         }
 
+                        // Here we are at Arithmetic + Assign:
+                        // 1. First loading the left part as a part of right assignment,
+                        // 2. Loading the right value
+                        // 3. Do arithmetic operation
+                        // 4. Storing the result in the local variable
+                        // 5. Loading the left value for assignment
+                        // 6. Loading the stored arithmetic result
+                        // 7. Assign the result
                         var leftOrRightNullableAreNullLabel = default(Label);
                         var leftType = left.Type;
                         if (leftMemberExpr != null)
                         {
                             if (!TryEmitMemberGet(leftMemberExpr, paramExprs, il, ref closure, setup,
-                                    leftFlags | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner))
+                                    leftArLeastFlags | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner))
                                 return false;
                         }
                         else // if (leftIndexExpr != null)
@@ -3706,12 +3729,13 @@ namespace FastExpressionCompiler
                             var objVarByAddress = false;
                             if (objExpr != null)
                             {
+                                var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
                                 if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags | ParentFlags.Arithmetic))
                                     return false;
 
                                 // required for calling the method on the value type parameter
                                 var objType = objExpr.Type;
-                                objVarByAddress = objType.IsValueType && !closure.LastEmitIsAddress &&
+                                objVarByAddress = objType.IsValueType && !closure.LastEmitIsAddress && // todo: @wip avoid ad-hocking with parameter here
                                     (objExpr.NodeType != ExpressionType.Parameter || !((ParameterExpression)objExpr).IsByRef);
                                 if (objVarByAddress)
                                     objVar = EmitStoreAndLoadLocalVariableAddress(il, objType);
@@ -3727,7 +3751,7 @@ namespace FastExpressionCompiler
                             for (var i = 0; i < indexArgCount; i++)
                             {
                                 var indexArg = indexArgs.GetArgument(i);
-                                if (!TryEmit(indexArg, paramExprs, il, ref closure, setup, leftFlags | ParentFlags.Arithmetic))
+                                if (!TryEmit(indexArg, paramExprs, il, ref closure, setup, baseFlags))
                                     return false;
                                 var indexArgVar = EmitStoreAndLoadLocalVariable(il, indexArg.Type);
                                 if (i == 0) indexArgVar0 = indexArgVar;
@@ -3756,7 +3780,7 @@ namespace FastExpressionCompiler
                             }
 
                             var ok = !isIndexerAMethodCall
-                                ? TryEmitArrayIndexGet(il, leftIndexExpr.Type, ref closure, leftFlags) // one-dimensional array
+                                ? TryEmitArrayIndexGet(il, leftIndexExpr.Type, ref closure, rightOnlyFlags) // one-dimensional array
                                 : leftIndexExpr.Indexer != null
                                     ? EmitMethodCallOrVirtualCallCheckForNull(il, leftIndexExpr.Indexer.GetMethod)
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
@@ -3781,7 +3805,7 @@ namespace FastExpressionCompiler
                             else
                             {
                                 var rightType = right.Type;
-                                if (!TryEmit(right, paramExprs, il, ref closure, setup, baseFlags))
+                                if (!TryEmit(right, paramExprs, il, ref closure, setup, rightOnlyFlags))
                                     return false;
                                 if (closure.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -3827,7 +3851,7 @@ namespace FastExpressionCompiler
                             {
                                 // emit the right expression immediatly after the left and then just process their results
                                 var rightType = right.Type;
-                                if (!TryEmit(right, paramExprs, il, ref closure, setup, baseFlags))
+                                if (!TryEmit(right, paramExprs, il, ref closure, setup, rightOnlyFlags))
                                     return false;
                                 if (closure.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -3996,7 +4020,7 @@ namespace FastExpressionCompiler
                         EmitStoreIndirectlyByRef(il, left.Type);
                     else
                         il.Demit(OpCodes.Starg_S, paramIndex);
-                    
+
                     if (resultVar != -1)
                         EmitLoadLocalVariable(il, resultVar);
                     return ok;
@@ -4228,7 +4252,7 @@ namespace FastExpressionCompiler
                 }
 
                 // access the value type by address when it is used later for the member access or as instance in the method call
-                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.RefAssignment)) != 0) // todo: @wip check it
+                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0) // todo: @wip check it
                 {
                     il.Demit(OpCodes.Ldelema, type);
                     closure.LastEmitIsAddress = true;
@@ -4395,7 +4419,7 @@ namespace FastExpressionCompiler
                         var isByAddress = byRefIndex != -1;
 
                         // we are assigning to the field of ValueType so we need its address `val.Bar += 1`, #352
-                        if ((parent & ParentFlags.Assignment) != 0 && objExpr.Type.IsValueType)
+                        if ((parent & ParentFlags.AssignmentLeftValue) != 0 && objExpr.Type.IsValueType)
                             isByAddress = true;
                         else
                             // if the field is not used as an index, #302
@@ -4408,7 +4432,7 @@ namespace FastExpressionCompiler
                         // so the field address should be Dupped instead for loading and then storing by-ref for assignment (see below).
                         // (don't forget to Pop if the assignment should be skipped for nullable with `null` value)
                         if ((parent & ParentFlags.DupMemberOwner) != 0 &
-                            (!isByAddress | (parent & ParentFlags.Assignment) == 0))
+                            (!isByAddress | (parent & ParentFlags.AssignmentLeftValue) == 0))
                             il.Demit(OpCodes.Dup);
 
                         closure.LastEmitIsAddress = isByAddress;
@@ -4417,7 +4441,7 @@ namespace FastExpressionCompiler
                         else
                         {
                             il.Demit(OpCodes.Ldflda, field);
-                            if ((parent & ParentFlags.Assignment) != 0)
+                            if ((parent & ParentFlags.AssignmentLeftValue) != 0)
                                 il.Demit(OpCodes.Dup);
                         }
                     }
@@ -6791,7 +6815,7 @@ namespace FastExpressionCompiler
             Whatever = 0,
             /// <summary>The test part of the If expression</summary>
             IfTest,
-            /// <summary>The block</summary>
+            /// <summary>The `if (test)` part</summary>
             Block,
             /// <summary>RefAssignment</summary>
             RefAssignment,
@@ -7270,11 +7294,12 @@ namespace FastExpressionCompiler
                     }
                 default:
                     {
+                        var encloseInParens = enclosedIn == EnclosedIn.Whatever; // enclose by default, but not for specific cases
+
                         var name = Enum.GetName(typeof(ExpressionType), e.NodeType);
                         if (e is UnaryExpression u)
                         {
                             var op = u.Operand;
-                            var encloseInParens = enclosedIn != EnclosedIn.AvoidParens & enclosedIn != EnclosedIn.LambdaBody & enclosedIn != EnclosedIn.Return;
                             switch (e.NodeType)
                             {
                                 case ExpressionType.ArrayLength:
@@ -7401,8 +7426,7 @@ namespace FastExpressionCompiler
                                 return b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             }
 
-                            var requiresBrackets = enclosedIn != EnclosedIn.IfTest && enclosedIn != EnclosedIn.LambdaBody && enclosedIn != EnclosedIn.Return;
-                            sb = requiresBrackets ? sb.Append('(') : sb;
+                            sb = encloseInParens ? sb.Append('(') : sb;
                             b.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
                             if (nodeType == ExpressionType.Equal)
@@ -7421,7 +7445,7 @@ namespace FastExpressionCompiler
                                 sb.Append(OperatorToCSharpString(nodeType));
 
                             b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-                            return requiresBrackets ? sb.Append(')') : sb;
+                            return encloseInParens ? sb.Append(')') : sb;
                         }
 
                         return sb.Append(e.ToString()); // falling back ToString and hoping for the best 

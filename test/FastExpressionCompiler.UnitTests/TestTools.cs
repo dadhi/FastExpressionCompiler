@@ -1,4 +1,7 @@
-﻿using System;
+﻿#if DEBUG
+// #define PRINTIL
+#endif
+using System;
 using System.Linq;
 using System.Text;
 using System.Reflection;
@@ -27,7 +30,7 @@ namespace FastExpressionCompiler
             var sb = new StringBuilder();
             var n = 0;
             foreach (var code in actualCodes)
-                sb.Append(n++).Append(": ").AppendLine(code.ToString());
+                sb.AppendLine($"{n++, -4}{code}");
             CollectionAssert.AreEqual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual codes are: " + Environment.NewLine + sb);
         }
 
@@ -65,7 +68,12 @@ namespace FastExpressionCompiler
             Console.WriteLine(result = expr.ToCSharpString());
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void PrintIL(this Delegate @delegate, [CallerMemberName]string tag = null) => @delegate.Method.PrintIL(tag);
+        public static void PrintIL(this Delegate @delegate, [CallerMemberName] string tag = null)
+        {
+#if PRINTIL
+            @delegate.Method.PrintIL(tag);
+#endif
+        }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void PrintIL(this MethodInfo method, string tag = null)

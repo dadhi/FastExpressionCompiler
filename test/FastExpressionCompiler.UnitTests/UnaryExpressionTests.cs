@@ -20,8 +20,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
-            // todo: @wip
-            // PostDecrementAssign_compiles();
+            PostDecrementAssign_compiles();
 
             ArrayOfStructParameter_MemberPostDecrementAssign_works();
             ArrayOfStructParameter_MemberPreDecrementAssign_works();

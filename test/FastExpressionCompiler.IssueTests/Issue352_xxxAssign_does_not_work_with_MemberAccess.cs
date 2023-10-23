@@ -22,25 +22,24 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // todo: @wip
-            // Check_ArrayAccess_Assign_ParameterByRef_InAction();
+            Check_Val_IndexerAccess_Assign_InAction();
+            Check_Val_Ref_IndexerAccess_AddAssign_PlusOne_InAction();
+            Check_Val_IndexerAccess_AddAssign_PlusOne_InAction();
+            Check_Val_Ref_IndexerAccess_Assign_InAction();
+            Check_ArrayAccess_Assign_ParameterByRef_InAction();
 
             Check_ArrayAccess_AddAssign_PlusOne();
             Check_MultiArrayAccess_AddAssign_PlusOne();
             Check_IndexerAccess_AddAssign_PlusOne_InAction();
             Check_ArrayAccess_AddAssign_NullablePlusNullable();
             Check_Ref_ArrayAccess_AddAssign_PlusOne();
-            Check_Val_IndexerAccess_AddAssign_PlusOne();
             Check_Val_Ref_NoIndexer_AddAssign_PlusOne();
-            Check_Val_Ref_IndexerAccess_AddAssign_PlusOne();
 
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_AddAssign_InAction();
             Check_ArrayAccess_AddAssign_ReturnResultInFunction();
             Check_ArrayAccess_Add();
 
-            Check_Val_Ref_IndexerAccess_Assign_InAction();
-            Check_Val_IndexerAccess_Assign_InAction();
             Check_MultiArrayAccess_Assign_InAction();
             Check_IndexerAccess_Assign_InAction();
             Check_ArrayAccess_Assign_InAction();
@@ -122,7 +121,7 @@ namespace FastExpressionCompiler.IssueTests
             );
             e.PrintCSharp();
             var @cs = (ArrAndRefParam)((
-                int[] a, 
+                int[] a,
                 ref int b) =>
             {
                 a[2] = b;
@@ -600,7 +599,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Check_Val_IndexerAccess_AddAssign_PlusOne()
+        public void Check_Val_IndexerAccess_AddAssign_PlusOne_InAction()
         {
             var a = Parameter(typeof(ArrVal), "a");
             var e = Lambda<Action<ArrVal>>(
@@ -649,7 +648,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void Check_Val_Ref_IndexerAccess_AddAssign_PlusOne()
+        public void Check_Val_Ref_IndexerAccess_AddAssign_PlusOne_InAction()
         {
             var a = Parameter(typeof(ArrVal).MakeByRefType(), "a");
             var e = Lambda<RefArrVal>(

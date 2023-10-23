@@ -11,8 +11,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
-            new UnaryExpressionTests().Run();
+            // new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
+            // new Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
+            // new UnaryExpressionTests().Run();
             // new NestedLambdaTests().Run();
             // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new LightExpression.UnitTests.BlockTests().Run();

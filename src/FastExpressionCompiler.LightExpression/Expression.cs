@@ -4482,7 +4482,7 @@ namespace FastExpressionCompiler.LightExpression
         public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4;
         public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4 };
         public sealed override int ParameterCount => 5;
-        public sealed override ParameterExpression GetParameter(int i) => // todo: @wip @perf usually the method is called in a loop, so we may add the explixit LoopParameters method here to avoid condition check on each parameter!!!
+        public sealed override ParameterExpression GetParameter(int i) => // todo: @perf usually the method is called in a loop, so we may add the explixit LoopParameters method here to avoid condition check on each parameter!!!
             i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : Parameter4;
         internal FiveParametersLambdaExpression(Type delegateType, Expression body,
             ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4)
