@@ -22,13 +22,14 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            RefMethodCallingRefMethodWithLocal_OfString();
+
             RefDoNothingShouldNoCrash();
             RefDoNothingShouldNoCrashCustomStruct();
             RefFromConstant();
             RefMethodCallingRefMethod();
             RefMethodCallingRefMethodCustomStruct();
             RefMethodCallingRefMethodWithLocal_OfInt();
-            RefMethodCallingRefMethodWithLocal_OfString();
             RefMethodCallingRefMethodWithLocal_OfStruct();
             OutRefMethodCallingRefMethodWithLocal();
             RefMethodCallingRefMethodWithLocalReturnLocalCalled();
@@ -214,7 +215,7 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void RefMethodCallingRefMethodWithLocal_OfString()
         {
-            void SetIntoLocalVariableAndCallOtherRef(ref string localByRef)
+            static void SetIntoLocalVariableAndCallOtherRef(ref string localByRef)
             {
                 var objVal = localByRef;
                 SetMinus1_OfString(ref objVal);
@@ -226,6 +227,15 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<ActionRef<string>>(Block(new[] { variable }, Assign(variable, objRef), Call(call, variable)), objRef);
 
             lambda.PrintCSharp();
+            var @cs = (ActionRef<string>)((ref string string__58225482) =>
+            {
+                string string__54267293 = null;
+                string__54267293 = string__58225482;
+                Issue55_CompileFast_crash_with_ref_parameter.SetMinus1_OfString(ref string__54267293);
+            });
+            var a = "0";
+            @cs(ref a);
+            Assert.AreEqual("0", a);
 
             var expectedIL = new[]
             {
@@ -237,20 +247,22 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             };
 
-            var compiledS = lambda.CompileSys();
-            compiledS.AssertOpCodes(expectedIL);
+            var fs = lambda.CompileSys();
+            fs.PrintIL();
+            a = "0";
+            fs(ref a);
+            Assert.AreEqual("0", a);
 
-            var compiledB = lambda.CompileFast(true);
-            compiledB.AssertOpCodes(expectedIL);
-
-            var exampleB = "0";
-            compiledB(ref exampleB);
-            Assert.AreEqual("0", exampleB);
+            var ff = lambda.CompileFast(true);
+            ff.AssertOpCodes(expectedIL);
+            a = "0";
+            ff(ref a);
+            Assert.AreEqual("0", a);
 
             ActionRef<string> direct = SetIntoLocalVariableAndCallOtherRef;
-            var exampleC = "0";
-            direct(ref exampleC);
-            Assert.AreEqual("0", exampleC);
+            a = "0";
+            direct(ref a);
+            Assert.AreEqual("0", a);
         }
 
         record struct RecVal(string S);

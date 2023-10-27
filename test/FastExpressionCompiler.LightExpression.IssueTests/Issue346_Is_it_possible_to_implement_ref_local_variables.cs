@@ -11,11 +11,11 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
+            Get_array_element_ref_and_increment_it();
             Check_assignment_to_by_ref_float_parameter_Increment();
             Check_assignment_to_by_ref_float_parameter_PlusOne();
-            // SimpleTest();
             // Test();
-            return 2;
+            return 3;
         }
 
         delegate void IncRefFloat(ref float x);
@@ -97,7 +97,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
         }
 
         [Test]
-        public void SimpleTest()
+        public void Get_array_element_ref_and_increment_it()
         {
             // ref var n = ref array[0];
             var a = Parameter(typeof(int[]), "a");

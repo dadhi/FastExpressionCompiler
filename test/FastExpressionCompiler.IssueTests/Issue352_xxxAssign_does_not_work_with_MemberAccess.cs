@@ -22,13 +22,14 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Check_ArrayAccess_Add();
+            Check_ArrayAccess_AddAssign_PlusOne();
             Check_Val_IndexerAccess_Assign_InAction();
             Check_Val_Ref_IndexerAccess_AddAssign_PlusOne_InAction();
             Check_Val_IndexerAccess_AddAssign_PlusOne_InAction();
             Check_Val_Ref_IndexerAccess_Assign_InAction();
             Check_ArrayAccess_Assign_ParameterByRef_InAction();
 
-            Check_ArrayAccess_AddAssign_PlusOne();
             Check_MultiArrayAccess_AddAssign_PlusOne();
             Check_IndexerAccess_AddAssign_PlusOne_InAction();
             Check_ArrayAccess_AddAssign_NullablePlusNullable();
@@ -38,7 +39,6 @@ namespace FastExpressionCompiler.IssueTests
             Check_ArrayAccess_PreIncrement();
             Check_ArrayAccess_AddAssign_InAction();
             Check_ArrayAccess_AddAssign_ReturnResultInFunction();
-            Check_ArrayAccess_Add();
 
             Check_MultiArrayAccess_Assign_InAction();
             Check_IndexerAccess_Assign_InAction();

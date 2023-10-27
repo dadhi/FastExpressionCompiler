@@ -1,4 +1,6 @@
-﻿using System;
+﻿#pragma warning disable CS0219
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -50,12 +52,24 @@ namespace FastExpressionCompiler.UnitTests
                 Assign(variable, Constant(5)),
                 Assign(variable2, Constant(6)));
 
-            var lambda = Lambda<Func<int>>(block);
+            var e = Lambda<Func<int>>(block);
+            e.PrintCSharp();
+            var @cs = (Func<int>)(() =>
+            {
+                int int__58225482 = default;
+                int int__54267293 = default;
+                int__58225482 = 5;
+                return int__54267293 = 6;
+            });
 
-            var fastCompiled = lambda.CompileFast<Func<int>>(true);
+            var ff = e.CompileSys();
+            ff.PrintIL();
 
-            Assert.NotNull(fastCompiled);
-            Assert.AreEqual(6, fastCompiled());
+            var fs = e.CompileFast(true);
+            fs.PrintIL();
+
+            Assert.NotNull(fs);
+            Assert.AreEqual(6, fs());
         }
 
         [Test]

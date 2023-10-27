@@ -1748,7 +1748,7 @@ namespace FastExpressionCompiler
             /// Expression with instance object (method call or member access or array access)
             InstanceAccess = 1 << 6,
             /// Subject
-            DupMemberOwner = 1 << 7,
+            DupIt = 1 << 7,
             /// Subject
             TryCatch = 1 << 8,
             /// Combination`of InstanceAccess and Call
@@ -1765,7 +1765,9 @@ namespace FastExpressionCompiler
             /// it may also participate in the right side, e.g. ++x.Bar</summary>
             AssignmentLeftValue = 1 << 12,
             /// <summary>Indicates the ONLY right value of assignment, e.g. `p` in `foo.Bar += p` </summary>
-            AssignmentRightValue = 1 << 13
+            AssignmentRightValue = 1 << 13,
+            /// <summary>Assigning the ref of the right value to the left, e.g. in `var a = ref b[1]` we are passing this flag for the `ref b[1]`</summary>
+            AssignmentByRef = 1 << 14
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -2512,7 +2514,7 @@ namespace FastExpressionCompiler
                         else
                         {
                             if (!isArgByRef & (parent & ParentFlags.Call) != 0 ||
-                                (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess)) != 0)
+                                (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue)) != 0)
                                 il.Demit(OpCodes.Ldind_Ref);
                         }
                     }
@@ -2533,8 +2535,23 @@ namespace FastExpressionCompiler
 
                     if (closure.LastEmitIsAddress)
                         EmitLoadLocalVariableAddress(il, varIndex);
-                    else
+                    else if (!isParamOrVarByRef)
                         EmitLoadLocalVariable(il, varIndex);
+                    else
+                    {
+                        il.Demit(OpCodes.Dup); // we assume that the var is the last on the stack and just duplicating it, see #346 `Get_array_element_ref_and_increment_it`
+                        if (paramType.IsValueType)
+                        {
+                            if ((parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &
+                                (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) == 0)
+                                EmitLoadIndirectlyByRef(il, paramType);
+                        }
+                        else
+                        {
+                            if ((parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue)) != 0)
+                                il.Demit(OpCodes.Ldind_Ref);
+                        }
+                    }
                     return true;
                 }
 
@@ -3718,7 +3735,7 @@ namespace FastExpressionCompiler
                         if (leftMemberExpr != null)
                         {
                             if (!TryEmitMemberGet(leftMemberExpr, paramExprs, il, ref closure, setup,
-                                    leftArLeastFlags | ParentFlags.Arithmetic | ParentFlags.DupMemberOwner))
+                                    leftArLeastFlags | ParentFlags.Arithmetic | ParentFlags.DupIt))
                                 return false;
                         }
                         else // if (leftIndexExpr != null)
@@ -3780,7 +3797,7 @@ namespace FastExpressionCompiler
                             }
 
                             var ok = !isIndexerAMethodCall
-                                ? TryEmitArrayIndexGet(il, leftIndexExpr.Type, ref closure, rightOnlyFlags) // one-dimensional array
+                                ? TryEmitArrayIndexGet(il, leftIndexExpr.Type, ref closure, baseFlags) // one-dimensional array
                                 : leftIndexExpr.Indexer != null
                                     ? EmitMethodCallOrVirtualCallCheckForNull(il, leftIndexExpr.Indexer.GetMethod)
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
@@ -3992,7 +4009,7 @@ namespace FastExpressionCompiler
 #else
                 var paramExprCount = paramExprs.Count;
 #endif
-                bool ok = false;
+                var ok = false;
                 var flags = parent & ~ParentFlags.IgnoreResult;
                 var paramIndex = paramExprCount - 1;
                 while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), left)) --paramIndex;
@@ -4032,25 +4049,34 @@ namespace FastExpressionCompiler
                 var leftLocalVar = closure.GetDefinedLocalVarOrDefault(left);
                 if (leftLocalVar != -1)
                 {
-                    // if (leftParamExpr.IsByRef)
-                    //     flags |= ParentFlags.RefAssignment; // todo: @wip double-check and if don't need it, then remove
-
                     if (resultVar != -1 & isPost)
                     {
                         EmitLoadLocalVariable(il, leftLocalVar);
                         EmitStoreLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
                     }
 
+                    var isLeftByRef = left.IsByRef;
                     if (nodeType == ExpressionType.Assign)
                     {
-                        ok = TryEmit(right, paramExprs, il, ref closure, setup, flags);
-                        if (right is ParameterExpression rp && rp.IsByRef)
-                            EmitLoadIndirectlyByRef(il, rp.Type);
+                        var varFlags = flags | ParentFlags.AssignmentRightValue;
+                        if (isLeftByRef)
+                            varFlags |= ParentFlags.AssignmentByRef;
+                        ok = TryEmit(right, paramExprs, il, ref closure, setup, varFlags);
+                        if (resultVar != -1 & !isPost)
+                            EmitStoreAndLoadLocalVariable(il, resultVar);
+                        if (!isLeftByRef)
+                            EmitStoreLocalVariable(il, leftLocalVar);
                     }
                     else
-                        ok = TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags);
-
-                    EmitStoreLocalVariable(il, leftLocalVar);
+                    {
+                        ok = TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags | ParentFlags.AssignmentLeftValue);
+                        if (resultVar != -1 & !isPost)
+                            EmitStoreAndLoadLocalVariable(il, resultVar);
+                        if (isLeftByRef)
+                            EmitStoreIndirectlyByRef(il, exprType);
+                        else
+                            EmitStoreLocalVariable(il, leftLocalVar);
+                    }
 
                     // assigning the new value into the already closed variable - it enables the recursive nested lambda calls, see #353
                     var nestedLambdasCount = closure.NestedLambdas.Count;
@@ -4058,7 +4084,7 @@ namespace FastExpressionCompiler
                         EmitStoreAssignedLeftVarIntoClosureArray(il, closure.NestedLambdas.Items[i], left, leftLocalVar);
 
                     if (resultVar != -1)
-                        EmitLoadLocalVariable(il, isPost ? resultVar : leftLocalVar);
+                        EmitLoadLocalVariable(il, resultVar);
                     return ok;
                 }
 
@@ -4251,8 +4277,8 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                // access the value type by address when it is used later for the member access or as instance in the method call
-                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0) // todo: @wip check it
+                // access the value type by address when it is used later for the member access, as instance in the method call, assigned to the left;
+                if ((parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.AssignmentByRef)) != 0)
                 {
                     il.Demit(OpCodes.Ldelema, type);
                     closure.LastEmitIsAddress = true;
@@ -4386,12 +4412,12 @@ namespace FastExpressionCompiler
                     {
                         var p = (parent | ParentFlags.InstanceCall)
                             & ~ParentFlags.MemberAccess // removing ParentFlags.MemberAccess here because we are calling the method instead of accessing the field
-                            & ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner;
+                            & ~ParentFlags.IgnoreResult & ~ParentFlags.DupIt;
 
                         if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, p))
                             return false;
 
-                        if ((parent & ParentFlags.DupMemberOwner) != 0) // just duplicate the whatever is emitted for object
+                        if ((parent & ParentFlags.DupIt) != 0) // just duplicate the whatever is emitted for object
                             il.Demit(OpCodes.Dup);
                         else
                             // Value type special treatment to load address of value instance in order to call a method.
@@ -4410,7 +4436,7 @@ namespace FastExpressionCompiler
                     if (objExpr != null)
                     {
                         var p = (parent | ParentFlags.InstanceAccess | ParentFlags.MemberAccess)
-                            & ~ParentFlags.IgnoreResult & ~ParentFlags.DupMemberOwner;
+                            & ~ParentFlags.IgnoreResult & ~ParentFlags.DupIt;
 
                         if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, p))
                             return false;
@@ -4431,7 +4457,7 @@ namespace FastExpressionCompiler
                         // we don't need to duplicate the instance if we are working with the field address to save to it directly,
                         // so the field address should be Dupped instead for loading and then storing by-ref for assignment (see below).
                         // (don't forget to Pop if the assignment should be skipped for nullable with `null` value)
-                        if ((parent & ParentFlags.DupMemberOwner) != 0 &
+                        if ((parent & ParentFlags.DupIt) != 0 &
                             (!isByAddress | (parent & ParentFlags.AssignmentLeftValue) == 0))
                             il.Demit(OpCodes.Dup);
 
