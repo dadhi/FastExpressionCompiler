@@ -2142,10 +2142,11 @@ namespace FastExpressionCompiler
 
                 if (loopExpr.ContinueLabel != null)
                 {
-                    ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(loopExpr.ContinueLabel, out var foundLabel);
+                    ref var continueLabelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(loopExpr.ContinueLabel, out var foundLabel);
                     if (!foundLabel)
                         return false;
-                    il.DmarkLabel(labelInfo.GetOrDefineLabel(il));
+                    var continueLabel = continueLabelInfo.GetOrDefineLabel(il);
+                    il.DmarkLabel(continueLabel);
                 }
 
                 if (!TryEmit(loopExpr.Body, paramExprs, il, ref closure, setup, parent))
@@ -2156,10 +2157,11 @@ namespace FastExpressionCompiler
 
                 if (loopExpr.BreakLabel != null)
                 {
-                    ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(loopExpr.BreakLabel, out var foundLabel);
+                    ref var breakLabelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(loopExpr.BreakLabel, out var foundLabel);
                     if (!foundLabel)
                         return false;
-                    il.DmarkLabel(labelInfo.GetOrDefineLabel(il));
+                    var breakLabel = breakLabelInfo.GetOrDefineLabel(il);
+                    il.DmarkLabel(breakLabel);
                 }
 
                 return true;
@@ -7141,7 +7143,7 @@ namespace FastExpressionCompiler
                             x.ContinueLabel.ToCSharpString(sb).Append(":;"); // todo: @improve the label is with the semicolon, because it will invalid code at the end of lambda without it
                         }
 
-                        x.Body.ToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                        x.Body.ToCSharpString(sb.NewLineIdent(lineIdent), lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
                         sb.NewLine(lineIdent, identSpaces).Append("}");
 

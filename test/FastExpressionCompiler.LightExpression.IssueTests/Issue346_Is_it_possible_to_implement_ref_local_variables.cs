@@ -11,10 +11,10 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
+            // Real_world_test_ref_array_element();
             Get_array_element_ref_and_increment_it();
             Check_assignment_to_by_ref_float_parameter_Increment();
             Check_assignment_to_by_ref_float_parameter_PlusOne();
-            // Test();
             return 3;
         }
 
@@ -140,7 +140,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
         }
 
         [Test]
-        public void Test()
+        public void Real_world_test_ref_array_element()
         {
             // Vector3[] array = new Vector3[100]; // struct btw
             // for(int i = 0; i < array.Length; i++) {
@@ -184,36 +184,38 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             e.PrintCSharp();
             // verify the printed code is compiled:
-            // var ff = (Func<Issue346_Is_it_possible_to_implement_ref_local_variables.Vector3[]>)(() =>
-            // {
-            //     Issue346_Is_it_possible_to_implement_ref_local_variables.Vector3[] array;
-            //     int i;
-            //     array = new Issue346_Is_it_possible_to_implement_ref_local_variables.Vector3[100];
-            //     i = 0;
-
-            //     while (true)
-            //     {
-            //         if (i < array.Length)
-            //         {
-            //             ref Issue346_Is_it_possible_to_implement_ref_local_variables.Vector3 v = ref array[i];
-            //             v.x += 12;
-            //             v.Normalize();
-            //             ++i;
-            //         }
-            //         else
-            //         {
-            //             goto void__43495525;
-            //         }
-            //     }
-            //     void__43495525:;
-
-            //     return array;
-            // });
+            var @cs = (Func<Vector3[]>)(() =>
+            {
+                Vector3[] array = null;
+                int i = default;
+                array = new Vector3[100];
+                i = 0;
+                
+                while (true)
+                {
+                    if (i < array.Length)
+                    {
+                        ref Vector3 v = ref array[i];
+                        v.x += 12;
+                        v.Normalize();
+                        ++i;
+                    }
+                    else
+                    {
+                        goto void__54267293;
+                    }
+                }
+                void__54267293:;
+                
+                return array;
+            });
+            var a = @cs();
+            Assert.AreEqual(100, a.Length);
 
             var f = e.CompileFast(true);
-            var vs = f();
-
-            Assert.AreEqual(100, vs.Length);
+            f.PrintIL();
+            a = f();
+            Assert.AreEqual(100, a.Length);
         }
 
         public struct Vector3
