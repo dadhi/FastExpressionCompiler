@@ -6845,8 +6845,6 @@ namespace FastExpressionCompiler
             IfTest,
             /// <summary>The `if (test)` part</summary>
             Block,
-            /// <summary>RefAssignment</summary>
-            RefAssignment,
             /// <summary>The lambda</summary>
             LambdaBody,
             /// <summary>Return expression</summary>
@@ -7452,7 +7450,8 @@ namespace FastExpressionCompiler
 
                                 sb.Append(OperatorToCSharpString(nodeType));
 
-                                if (enclosedIn == EnclosedIn.RefAssignment)
+                                var isByRefAssignment = b.Left is ParameterExpression leftParam && leftParam.IsByRef;
+                                if (isByRefAssignment)
                                     sb.Append("ref ");
 
                                 return b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
@@ -7575,22 +7574,16 @@ namespace FastExpressionCompiler
             foreach (var v in vars)
             {
                 sb.NewLineIdent(lineIdent);
+                var vType = v.Type;
+                var vTypeCode = vType.ToCode(stripNamespace, printType);
+                var vIsByRef = v.IsByRef;
+                var vNameSuffix = !vIsByRef ? "" : "__discard_init_by_ref";
 
-                if (!v.IsByRef)
-                {
-                    sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ').AppendName(v.Name, v.Type, v)
-                        .Append(v.Type.IsValueType && !v.Type.IsNullable() ? " = default;" : " = null;");
-                    continue;
-                }
+                var vName = new StringBuilder().AppendName(v.Name, vTypeCode, v, vNameSuffix);
+                sb.Append(vTypeCode).Append(' ').Append(vName).Append(vType.IsValueType && !vType.IsNullable() ? " = default;" : " = null;");
 
-                sb.Append("ref ");
-                sb.Append(v.Type.ToCode(stripNamespace, printType)).Append(' ');
-                var assign = exprs.FirstOrDefault(a => a.NodeType == ExpressionType.Assign && ((BinaryExpression)a).Left == v);
-                if (assign != null)
-                {
-                    assign.ToCSharpString(sb, EnclosedIn.RefAssignment, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).AddSemicolonIfFits();
-                    exprs = exprs.Where(e => e != assign).ToList(); // remove the assignment expression as it was already printed as part of the ref initialization
-                }
+                if (vIsByRef)
+                    sb.Append(" ref var ").AppendName(v.Name, vTypeCode, v).Append(" = ref ").Append(vName).Append(';');
             }
 
             // we don't inline a single expression case because it can always go crazy with assignment, e.g. `var a; a = 1 + (a = 2) + a * 2`
@@ -7839,10 +7832,15 @@ namespace FastExpressionCompiler
             return sb.Append(" }))");
         }
 
-        internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity) =>
-            name != null ? sb.Append(name)
-                : sb.Append(type.ToCode(true).Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(", ", "_").ToLowerInvariant())
-                    .Append("__").Append(identity.GetHashCode());
+        internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, string typeCode, T identity, string suffix = "") =>
+            name != null 
+                ? sb.Append(name + suffix)
+                : sb.Append(typeCode.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(", ", "_").ToLowerInvariant())
+                    .Append("__").Append(identity.GetHashCode())
+                    .Append(suffix);
+
+        internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity, string suffix = "") =>
+            sb.AppendName(name, type.ToCode(stripNamespace: true), identity, suffix);
 
         // todo: @simplify add `addTypeof = false` or use `AppendTypeOf` generally
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>

@@ -11,11 +11,12 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            // Real_world_test_ref_array_element();
+            // Get_array_element_ref_and_member_change_and_increment_it();
             Get_array_element_ref_and_increment_it();
+            // Real_world_test_ref_array_element();
             Check_assignment_to_by_ref_float_parameter_Increment();
             Check_assignment_to_by_ref_float_parameter_PlusOne();
-            return 3;
+            return 4;
         }
 
         delegate void IncRefFloat(ref float x);
@@ -99,7 +100,6 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
         [Test]
         public void Get_array_element_ref_and_increment_it()
         {
-            // ref var n = ref array[0];
             var a = Parameter(typeof(int[]), "a");
             var n = Variable(typeof(int).MakeByRefType(), "n");
             var e = Lambda<Action<int[]>>(
@@ -120,9 +120,9 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             @cs(array);
             Assert.AreEqual(43, array[0]);
 
-            var f = e.CompileFast(true);
-            f.PrintIL();
-            f.AssertOpCodes(
+            var fs = e.CompileFast(true);
+            fs.PrintIL();
+            fs.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ldelema,
@@ -135,8 +135,58 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             );
 
             array = new[] { 42 };
-            f(array);
+            fs(array);
             Assert.AreEqual(43, array[0]);
+        }
+
+        [Test]
+        public void Get_array_element_ref_and_member_change_and_increment_it()
+        {
+            var a = Variable(typeof(Vector3[]), "a");
+            var i = Variable(typeof(int), "i");
+            var vRef = Variable(typeof(Vector3).MakeByRefType(), "v");
+            var bField = typeof(Vector3).GetField(nameof(Vector3.x));
+            var e = Lambda<Func<Vector3[]>>(
+                Block(
+                    new[] { a, i, vRef },
+                    Assign(a, NewArrayBounds(typeof(Vector3), ConstantInt(10))),
+                    Assign(i, ConstantInt(0)),
+                    Assign(vRef, ArrayAccess(a, i)),
+                    AddAssign(Field(vRef, bField), Constant(12)),
+                    a
+                ));
+
+            e.PrintCSharp();
+            var @cs = (Func<Vector3[]>)(() =>
+            {
+                Vector3[] a = null;
+                int i = default;
+                Vector3 v__discard_init_by_ref = default; ref var v = ref v__discard_init_by_ref;
+                a = new Vector3[10];
+                i = 0;
+                v = ref a[i];
+                v.x += 12;
+                return a;
+            });
+            var vs = @cs();
+            Assert.AreEqual(12, vs[0].x);
+
+            var fs = e.CompileFast(true);
+            fs.PrintIL();
+            // fs.AssertOpCodes(
+            //     OpCodes.Ldarg_1,
+            //     OpCodes.Ldc_I4_0,
+            //     OpCodes.Ldelema,
+            //     OpCodes.Dup,
+            //     OpCodes.Ldind_I4,
+            //     OpCodes.Ldc_I4_1,
+            //     OpCodes.Add,
+            //     OpCodes.Stind_I4,
+            //     OpCodes.Ret
+            // );
+
+            vs = fs();
+            Assert.AreEqual(43, vs[0].x);
         }
 
         [Test]
@@ -190,7 +240,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 int i = default;
                 array = new Vector3[100];
                 i = 0;
-                
+
                 while (true)
                 {
                     if (i < array.Length)
@@ -205,8 +255,8 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                         goto void__54267293;
                     }
                 }
-                void__54267293:;
-                
+            void__54267293:;
+
                 return array;
             });
             var a = @cs();
