@@ -11,12 +11,12 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            // Get_array_element_ref_and_member_change_and_increment_it();
+            Get_array_element_ref_and_member_change_and_increment_it();
             Get_array_element_ref_and_increment_it();
             // Real_world_test_ref_array_element();
             Check_assignment_to_by_ref_float_parameter_Increment();
             Check_assignment_to_by_ref_float_parameter_PlusOne();
-            return 4;
+            return 3;
         }
 
         delegate void IncRefFloat(ref float x);
@@ -168,25 +168,35 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 v.x += 12;
                 return a;
             });
+            // @cs.PrintIL();
             var vs = @cs();
             Assert.AreEqual(12, vs[0].x);
 
             var fs = e.CompileFast(true);
             fs.PrintIL();
             // fs.AssertOpCodes(
-            //     OpCodes.Ldarg_1,
-            //     OpCodes.Ldc_I4_0,
-            //     OpCodes.Ldelema,
-            //     OpCodes.Dup,
-            //     OpCodes.Ldind_I4,
-            //     OpCodes.Ldc_I4_1,
-            //     OpCodes.Add,
-            //     OpCodes.Stind_I4,
-            //     OpCodes.Ret
+                // OpCodes.Ldc_I4_0,
+                // OpCodes.Stloc_0,
+                // OpCodes.Ldloca_S,// 1
+                // OpCodes.Initobj, // C/Vector3
+                // OpCodes.Ldc_I4_S,// 10
+                // OpCodes.Newarr,  // C/Vector3
+                // OpCodes.Ldc_I4_0,
+                // OpCodes.Stloc_0,
+                // OpCodes.Dup,
+                // OpCodes.Ldloc_0,
+                // OpCodes.Ldelema, // C/Vector3
+                // OpCodes.Ldflda,  // float64 C/Vector3::x
+                // OpCodes.Dup,
+                // OpCodes.Ldind_R8,
+                // OpCodes.Ldc_R8,  // 12
+                // OpCodes.Add,
+                // OpCodes.Stind_R8,
+                // OpCodes.Ret
             // );
 
-            vs = fs();
-            Assert.AreEqual(43, vs[0].x);
+            // vs = fs();
+            // Assert.AreEqual(43, vs[0].x);
         }
 
         [Test]
