@@ -2541,7 +2541,11 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, varIndex);
                     else
                     {
-                        il.Demit(OpCodes.Dup); // we assume that the var is the last on the stack and just duplicating it, see #346 `Get_array_element_ref_and_increment_it`
+                        // Assume that the var is the last on the stack and just duplicating it, see #346 `Get_array_element_ref_and_increment_it`
+                        // Do only when accessing the variable directly, and not the member and the array element by index
+                        if ((parent & ParentFlags.InstanceAccess) == 0)
+                            il.Demit(OpCodes.Dup);
+
                         if (paramType.IsValueType)
                         {
                             if ((parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &

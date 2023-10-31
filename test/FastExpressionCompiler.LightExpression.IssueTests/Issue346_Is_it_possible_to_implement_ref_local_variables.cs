@@ -16,7 +16,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             // Real_world_test_ref_array_element();
             Check_assignment_to_by_ref_float_parameter_Increment();
             Check_assignment_to_by_ref_float_parameter_PlusOne();
-            return 3;
+            return 4;
         }
 
         delegate void IncRefFloat(ref float x);
@@ -82,15 +82,17 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var f = e.CompileFast(true);
             f.PrintIL();
-            // f.AssertOpCodes(
-            //     OpCodes.Ldarg_1,
-            //     OpCodes.Ldarg_1,
-            //     OpCodes.Ldind_R4,
-            //     OpCodes.Ldc_I4_1,
-            //     OpCodes.Add,
-            //     OpCodes.Stind_R4,
-            //     OpCodes.Ret
-            // );
+            f.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_R4,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stloc_0,
+                OpCodes.Ldarg_1,
+                OpCodes.Ldloc_0,
+                OpCodes.Stind_R4,
+                OpCodes.Ret
+            );
 
             var y = 1.0f;
             f(ref y);
@@ -174,29 +176,27 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var fs = e.CompileFast(true);
             fs.PrintIL();
-            // fs.AssertOpCodes(
-                // OpCodes.Ldc_I4_0,
-                // OpCodes.Stloc_0,
-                // OpCodes.Ldloca_S,// 1
-                // OpCodes.Initobj, // C/Vector3
-                // OpCodes.Ldc_I4_S,// 10
-                // OpCodes.Newarr,  // C/Vector3
-                // OpCodes.Ldc_I4_0,
-                // OpCodes.Stloc_0,
-                // OpCodes.Dup,
-                // OpCodes.Ldloc_0,
-                // OpCodes.Ldelema, // C/Vector3
-                // OpCodes.Ldflda,  // float64 C/Vector3::x
-                // OpCodes.Dup,
-                // OpCodes.Ldind_R8,
-                // OpCodes.Ldc_R8,  // 12
-                // OpCodes.Add,
-                // OpCodes.Stind_R8,
-                // OpCodes.Ret
-            // );
+            fs.AssertOpCodes(
+                OpCodes.Ldc_I4_S,// 10
+                OpCodes.Newarr,  // C/Vector3
+                OpCodes.Stloc_0,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Stloc_1,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldelema, // C/Vector3
+                OpCodes.Ldflda,  // float64 C/Vector3::x
+                OpCodes.Dup,
+                OpCodes.Ldind_R8,
+                OpCodes.Ldc_I4_S,// 12
+                OpCodes.Add,
+                OpCodes.Stind_R8,
+                OpCodes.Ldloc_0,
+                OpCodes.Ret
+            );
 
-            // vs = fs();
-            // Assert.AreEqual(43, vs[0].x);
+            vs = fs();
+            Assert.AreEqual(12, vs[0].x);
         }
 
         [Test]
