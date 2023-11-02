@@ -777,7 +777,10 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < blockVarExprs.Count; i++)
                 {
                     var varExpr = blockVarExprs[i];
-                    PushVarInBlockMap(varExpr, _blockCount, (ushort)il.GetNextLocalVarIndex(varExpr.Type));
+                    var varType = varExpr.Type;
+                    if (varExpr.IsByRef && !varType.IsByRef)
+                        varType = varType.MakeByRefType();
+                    PushVarInBlockMap(varExpr, _blockCount, (ushort)il.GetNextLocalVarIndex(varType));
                 }
                 ++_blockCount;
             }
@@ -786,7 +789,7 @@ namespace FastExpressionCompiler
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
                 ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe, out var found);
-                if (blocks.Count == 0 || blocks.GetLastSurePresentItem() >>> 16 != blockIndex)
+                if (blocks.Count == 0 || (blocks.GetLastSurePresentItem() >>> 16) != blockIndex)
                     blocks.Append((uint)(blockIndex << 16) | varIndex);
             }
 
@@ -1958,9 +1961,7 @@ namespace FastExpressionCompiler
                                 var blockExpr = (BlockExpression)expr;
                                 var blockVarExprs = blockExpr.Variables;
                                 var blockVarCount = blockVarExprs?.Count ?? 0;
-                                if (blockVarCount == 1)
-                                    closure.PushBlockWithVars(blockVarExprs[0], il.GetNextLocalVarIndex(blockVarExprs[0].Type));
-                                else if (blockVarCount > 1)
+                                if (blockVarCount != 0)
                                     closure.PushBlockAndConstructLocalVars(blockVarExprs, il);
 
                                 var statementExprs = blockExpr.Expressions; // Trim the expressions after the Throw - #196
@@ -2167,7 +2168,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            // similar code is used by the TryEmitPossiblyArithmeticOperationThenAssign, so don't forget to modify it as well
+            // similar code is used by the TryEmitArithmeticAndOrAssign, so don't forget to modify it as well
             private static bool TryEmitIndexGet(IndexExpression indexExpr,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
