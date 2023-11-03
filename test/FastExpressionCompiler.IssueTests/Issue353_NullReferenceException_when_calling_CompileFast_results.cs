@@ -21,11 +21,11 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test1();
             Test1_simplified();
             Test1_isolated_assign_int_to_the_array_of_objects_and_use_for_addition();
             Test1_closure_over_array_and_changing_its_element();
             Test1_manual_closure();
-            Test1();
             Test2_original_issue_case();
             return 6;
         }
@@ -180,7 +180,7 @@ namespace FastExpressionCompiler.IssueTests
                 Block(new[] { sumFunc, m },
                     Assign(m, Constant(45)),  // let's assign before and see if the variable value is correctly used in the nested lambda
                     Assign(sumFunc, Lambda(MakeBinary(ExpressionType.Add, i, m), i)),
-                    Assign(m, Constant(999)), // todo: @fixme assign the variable later when the lambda is already created above
+                    Assign(m, Constant(999)),
                     Invoke(sumFunc, n)
                 ),
                 n);
@@ -225,7 +225,7 @@ namespace FastExpressionCompiler.IssueTests
             var n = Parameter(typeof(int), "n");
             var m = Parameter(typeof(int), "m");
 
-            var expr = Lambda<Func<int, int>>(
+            var e = Lambda<Func<int, int>>(
                 Block(new[] { sumFunc, m },
                     Assign(m, Constant(45)),  // let's assign before and see if the variable value is correctly used in the nested lambda
                     Assign(sumFunc, Lambda(MakeBinary(ExpressionType.Add, i, m), i)),
@@ -234,17 +234,17 @@ namespace FastExpressionCompiler.IssueTests
                 ),
                 n);
 
-            expr.PrintCSharp();
+            e.PrintCSharp();
             // print outputs valid csharp code:
             var @cs = (Func<int, int>)((int n) =>
             {
                 Func<int, int> sumFunc = null;
-                int m;
+                int m = default;
                 m = 45;
                 sumFunc = (Func<int, int>)((int i) =>
-                    i + m);
+                        i + m);
                 m = 999;
-                return sumFunc(
+                return sumFunc.Invoke(
                     n);
             });
             Assert.AreEqual(1009, @cs(10));
@@ -267,13 +267,13 @@ namespace FastExpressionCompiler.IssueTests
             });
             Assert.AreEqual(1009, @cs2(10));
 
-            var fs = expr.CompileSys();
+            var fs = e.CompileSys();
             fs.PrintIL();
 
             var x = fs(10);
             Assert.AreEqual(1009, x);
 
-            var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
             f.PrintIL();
 

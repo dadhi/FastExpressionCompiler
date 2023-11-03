@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.IssueTests
 
 #if LIGHT_EXPRESSION
 
-// todo: @fix to fragile for the test
+// todo: @improve to fragile for the test
 //                 var exprCode = expr.CodeString;
 // var expectedCode = 
 // "Lambda(typeof(Func<Source, Dest>)," + NewLine +
