@@ -11,13 +11,13 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            // Real_world_test_ref_array_element();
+            Real_world_test_ref_array_element();
             Get_array_element_ref_and_member_change_and_increment_it_then_method_call_on_ref_value_elem();
             Get_array_element_ref_and_member_change_and_increment_it();
             Get_array_element_ref_and_increment_it();
             Check_assignment_to_by_ref_float_parameter_Increment();
             Check_assignment_to_by_ref_float_parameter_PlusOne();
-            return 5;
+            return 6;
         }
 
         delegate void IncRefFloat(ref float x);
@@ -345,8 +345,45 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var f = e.CompileFast(true);
             f.PrintIL();
+            f.AssertOpCodes(
+                OpCodes.Ldc_I4_S,// 100
+                OpCodes.Newarr, // Vector3
+                OpCodes.Stloc_0,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Stloc_1,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldlen,
+                OpCodes.Clt,
+                OpCodes.Brfalse,// 55
+                OpCodes.Ldloc_0,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldelema,// Vector3
+                OpCodes.Stloc_2,
+                OpCodes.Ldloc_2,
+                OpCodes.Ldflda,// Vector3.x
+                OpCodes.Dup,
+                OpCodes.Ldind_R8,
+                OpCodes.Ldc_I4_S,// 12
+                OpCodes.Add,
+                OpCodes.Stind_R8,
+                OpCodes.Ldloc_2,
+                OpCodes.Call, //Vector3.Normalize
+                OpCodes.Ldloc_1,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stloc_1,
+                OpCodes.Br, //60
+                OpCodes.Br, //65
+                OpCodes.Br, //10
+                OpCodes.Ldloc_0,
+                OpCodes.Ret
+            );
+
             a = f();
             Assert.AreEqual(100, a.Length);
+            Assert.AreEqual(a[0].x, 53);
+            Assert.AreEqual(a[99].x, 53);
         }
 
         public struct Vector3
