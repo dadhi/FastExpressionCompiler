@@ -2542,10 +2542,15 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, varIndex);
                     else
                     {
+                        if ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall)
+                            EmitLoadLocalVariable(il, varIndex);
+                        else
+                            EmitStoreAndLoadLocalVariable(il, varIndex);
+
                         // Assume that the var is the last on the stack and just duplicating it, see #346 `Get_array_element_ref_and_increment_it`
                         // Do only when accessing the variable directly, and not the member and the array element by index
                         if ((parent & ParentFlags.InstanceAccess) == 0)
-                            il.Demit(OpCodes.Dup);
+                            EmitLoadLocalVariable(il, varIndex);
 
                         if (paramType.IsValueType)
                         {
