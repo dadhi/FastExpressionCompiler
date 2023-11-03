@@ -11,10 +11,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
+            new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
+            // new Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
             // new Issue101_Not_supported_Assign_Modes().Run();
             // new Issue170_Serializer_Person_Ref().Run();
-            // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
             // new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
             // new BlockTests().Run();

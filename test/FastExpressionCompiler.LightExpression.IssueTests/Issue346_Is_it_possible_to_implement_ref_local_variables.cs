@@ -11,13 +11,17 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
+            Get_array_element_ref_and_member_change_and_Pre_increment_it();
+            Get_array_element_ref_and_member_change_and_Post_increment_it();
+
             Real_world_test_ref_array_element();
             Get_array_element_ref_and_member_change_and_increment_it_then_method_call_on_ref_value_elem();
             Get_array_element_ref_and_member_change_and_increment_it();
             Get_array_element_ref_and_increment_it();
             Check_assignment_to_by_ref_float_parameter_Increment();
             Check_assignment_to_by_ref_float_parameter_PlusOne();
-            return 6;
+
+            return 8;
         }
 
         delegate void IncRefFloat(ref float x);
@@ -205,6 +209,132 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
         }
 
         [Test]
+        public void Get_array_element_ref_and_member_change_and_Post_increment_it()
+        {
+            var aPar = Parameter(typeof(Vector3[]), "aPar");
+            var aVar = Variable(typeof(Vector3[]),  "aVar");
+            var i = Variable(typeof(int), "i");
+            var vRef = Variable(typeof(Vector3).MakeByRefType(), "v");
+            var bField = typeof(Vector3).GetField(nameof(Vector3.x));
+            var e = Lambda<Func<Vector3[], double>>(
+                Block(
+                    new[] { aVar, i, vRef },
+                    Assign(aVar, aPar),
+                    Assign(i, ConstantInt(9)),
+                    Assign(vRef, ArrayAccess(aVar, i)),
+                    PostIncrementAssign(Field(vRef, bField))
+                ),
+                aPar);
+
+            e.PrintCSharp();
+            var @cs = (Func<Vector3[], double>)((Vector3[] aPar) =>
+            {
+                Vector3[] aVar = null;
+                int i = default;
+                Vector3 v__discard_init_by_ref = default; ref var v = ref v__discard_init_by_ref;
+                aVar = aPar;
+                i = 9;
+                v = ref aVar[i];
+                return v.x++;
+            });
+            var a = new Vector3[10];
+            var x = @cs(a);
+            Assert.AreEqual(0, x);
+            Assert.AreEqual(1, a[9].x);
+
+            var fs = e.CompileFast(true);
+            fs.PrintIL();
+            fs.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Stloc_0,
+                OpCodes.Ldc_I4_S,// 9
+                OpCodes.Stloc_1,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldelema,// Vector3
+                OpCodes.Stloc_2,
+                OpCodes.Ldloc_2,
+                OpCodes.Ldflda, // Vector3.x
+                OpCodes.Dup,
+                OpCodes.Ldind_R8,
+                OpCodes.Stloc_3,
+                OpCodes.Ldloc_3,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stind_R8,
+                OpCodes.Ldloc_3,
+                OpCodes.Ret
+            );
+            a = new Vector3[10];
+            x = fs(a);
+            Assert.AreEqual(0, x);
+            Assert.AreEqual(1, a[9].x);
+        }
+
+        [Test]
+        public void Get_array_element_ref_and_member_change_and_Pre_increment_it()
+        {
+            var aPar = Parameter(typeof(Vector3[]), "aPar");
+            var aVar = Variable(typeof(Vector3[]),  "aVar");
+            var i = Variable(typeof(int), "i");
+            var vRef = Variable(typeof(Vector3).MakeByRefType(), "v");
+            var bField = typeof(Vector3).GetField(nameof(Vector3.x));
+            var e = Lambda<Func<Vector3[], double>>(
+                Block(
+                    new[] { aVar, i, vRef },
+                    Assign(aVar, aPar),
+                    Assign(i, ConstantInt(9)),
+                    Assign(vRef, ArrayAccess(aVar, i)),
+                    PreIncrementAssign(Field(vRef, bField))
+                ),
+                aPar);
+
+            e.PrintCSharp();
+            var @cs = (Func<Vector3[], double>)((Vector3[] aPar) =>
+            {
+                Vector3[] aVar = null;
+                int i = default;
+                Vector3 v__discard_init_by_ref = default; ref var v = ref v__discard_init_by_ref;
+                aVar = aPar;
+                i = 9;
+                v = ref aVar[i];
+                return ++v.x;
+            });
+            var a = new Vector3[10];
+            var x = @cs(a);
+            Assert.AreEqual(1, x);
+            Assert.AreEqual(1, a[9].x);
+
+            var fs = e.CompileFast(true);
+            fs.PrintIL();
+            fs.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Stloc_0,
+                OpCodes.Ldc_I4_S,// 9
+                OpCodes.Stloc_1,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldloc_1,
+                OpCodes.Ldelema,// Vector3
+                OpCodes.Stloc_2,
+                OpCodes.Ldloc_2,
+                OpCodes.Ldflda, // Vector3.x
+                OpCodes.Dup,
+                OpCodes.Ldind_R8,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stloc_3,
+                OpCodes.Ldloc_3,
+                OpCodes.Stind_R8,
+                OpCodes.Ldloc_3,
+                OpCodes.Ret
+            );
+            a = new Vector3[10];
+            x = fs(a);
+            Assert.AreEqual(1, x);
+            Assert.AreEqual(1, a[9].x);
+        }
+
+        [Test]
         public void Get_array_element_ref_and_member_change_and_increment_it_then_method_call_on_ref_value_elem()
         {
             var a = Variable(typeof(Vector3[]), "a");
@@ -320,7 +450,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 int i = default;
                 array = new Vector3[100];
                 i = 0;
-                
+
                 while (true)
                 {
                     if (i < array.Length)
@@ -336,7 +466,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                         goto void__54267293;
                     }
                 }
-                void__54267293:;
+            void__54267293:;
 
                 return array;
             });
