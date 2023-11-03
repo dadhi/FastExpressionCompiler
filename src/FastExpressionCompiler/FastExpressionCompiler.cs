@@ -4171,42 +4171,6 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            // todo: @wip remove
-            private static bool TryEmitAssign(BinaryExpression expr,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
-                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
-            {
-                var exprType = expr.Type;
-                var left = expr.Left;
-                var right = expr.Right;
-                var nodeType = expr.NodeType;
-                var arithmeticNodeType = AssignToArithmeticOrSelf(nodeType);
-
-                // if this assignment is part of a single body-less expression or the result of a block
-                // we should put its result to the evaluation stack before the return, otherwise we are
-                // somewhere inside the block, so we shouldn't return with the result
-                switch (left.NodeType)
-                {
-                    case ExpressionType.Parameter:
-                        return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
-                            arithmeticNodeType, false, exprType, paramExprs, il, ref closure, setup, parent);
-
-                    case ExpressionType.MemberAccess:
-                    case ExpressionType.Index:
-                        return TryEmitArithmeticAndOrAssign(left, right, exprType,
-                            arithmeticNodeType, false, paramExprs, il, ref closure, setup, parent);
-
-                    default: // todo: @feature not yet support assignment targets
-                        if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                            throw new NotSupportedExpressionException(Result.NotSupported_Assign_Target, $"Assignment target `{expr.NodeType}` is not supported");
-                        return false;
-                }
-            }
-
             private static void EmitStoreAssignedLeftVarIntoClosureArray(ILGenerator il, NestedLambdaInfo nestedLambdaInfo, ParameterExpression assignedLeftVar, int assignedLeftVarIndex)
             {
                 if (nestedLambdaInfo.NonPassedParamsVarIndex == 0)
@@ -6209,7 +6173,7 @@ namespace FastExpressionCompiler
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
         public static readonly Dictionary<Type, int> LocalVarUsage = new Dictionary<Type, int>(); 
 #endif
-        // todo: @perf @wip add the map of the used local variables that can be reused, e.g. we are getting the variable used in the local scope but then we may return them into POOL and reuse (many of int variable can be reuses, say for indexes)
+        // todo: @perf add the map of the used local variables that can be reused, e.g. we are getting the variable used in the local scope but then we may return them into POOL and reuse (many of int variable can be reuses, say for indexes)
         /// <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static int GetNextLocalVarIndex(this ILGenerator il, Type t)
