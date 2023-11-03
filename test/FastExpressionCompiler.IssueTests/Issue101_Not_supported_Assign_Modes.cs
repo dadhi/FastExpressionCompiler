@@ -16,16 +16,17 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            ComplexSupported_MultiPreIncrement();
+            ComplexSupported_SinglePreIncrement();
             PreIncIsSupported();
             PostIncIsSupported();
             PreDecIsSupported();
             PostDecIsSupported();
             PreIncShortIsSupported();
             PreInc3IsSupported();
-            ComplexSupported();
             Complex2Supported();
             Complex3Supported();
-            return 9;
+            return 10;
         }
 
         [Test]
@@ -121,7 +122,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void ComplexSupported()
+        public void ComplexSupported_SinglePreIncrement()
         {
             int j = 0;
             Action a = () => { j++; };
@@ -131,14 +132,33 @@ namespace FastExpressionCompiler.IssueTests
                 Block(new[] { eVar },
                     Call(Constant(a), a.GetType().GetTypeInfo().GetDeclaredMethod("Invoke")),
                     PreIncrementAssign(eVar)
-                    //PreIncrementAssign(eVar), // todo: @wip
-                    //PreIncrementAssign(eVar)
                 );
 
             var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
             Assert.NotNull(fastCompiled);
             Assert.AreEqual(1, fastCompiled());
+        }
+
+        [Test]
+        public void ComplexSupported_MultiPreIncrement()
+        {
+            int j = 0;
+            Action a = () => { j++; };
+            var eVar = Variable(typeof(int));
+            var pVar = Parameter(typeof(Action));
+            var blockExpr =
+                Block(new[] { eVar },
+                    Call(Constant(a), a.GetType().GetTypeInfo().GetDeclaredMethod("Invoke")),
+                    PreIncrementAssign(eVar),
+                    PreIncrementAssign(eVar),
+                    PreIncrementAssign(eVar)
+                );
+
+            var lambda = Lambda<Func<int>>(blockExpr);
+            var fastCompiled = lambda.CompileFast(true);
+            Assert.NotNull(fastCompiled);
+            Assert.AreEqual(3, fastCompiled());
         }
 
         [Test]
