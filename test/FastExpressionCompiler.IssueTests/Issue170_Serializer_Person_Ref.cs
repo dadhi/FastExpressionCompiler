@@ -18,14 +18,12 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            InvokeActionConstantIsSupportedSimpleClass_AddAssign();
+            InvokeActionConstantIsSupportedSimpleStruct_AddAssign();
             InvokeActionConstantIsSupported();
             InvokeActionConstantIsSupportedSimple();
             InvokeActionConstantIsSupportedSimpleStruct();
-            // // todo: @fixme @wip
-            // InvokeActionConstantIsSupportedSimpleStruct_AddAssign();
-            // InvokeActionConstantIsSupportedSimpleClass_AddAssign();
-            // return 5;
-            return 3;
+            return 5;
         }
 
         delegate void DeserializeDelegate<T>(byte[] buffer, ref int offset, ref T value);
@@ -180,10 +178,20 @@ namespace FastExpressionCompiler.IssueTests
 
             var s = lambda.CompileSys();
             s.PrintIL();
-            LocalAssert(s);
+            // LocalAssert(s); // system thing does not work for the structs, but works for the class
 
             var f = lambda.CompileFast(true);
             f.PrintIL();
+            f.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldflda,// SimplePersonStruct.Health
+                OpCodes.Dup,
+                OpCodes.Ldind_I4,
+                OpCodes.Ldc_I4_5,
+                OpCodes.Add,
+                OpCodes.Stind_I4,
+                OpCodes.Ret
+            );
             LocalAssert(f);
         }
 
@@ -192,7 +200,7 @@ namespace FastExpressionCompiler.IssueTests
             public int Health;
         }
 
-        // [Test]
+        [Test]
         public void InvokeActionConstantIsSupportedSimpleClass_AddAssign()
         {
             var refValueArg = Parameter(typeof(SimplePersonClass).MakeByRefType(), "value");
@@ -214,10 +222,20 @@ namespace FastExpressionCompiler.IssueTests
 
             var s = lambda.CompileSys();
             s.PrintIL();
-            LocalAssert(s);
+            LocalAssert(s); // works for class
 
             var f = lambda.CompileFast(true);
             f.PrintIL();
+            f.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_Ref,
+                OpCodes.Dup,
+                OpCodes.Ldfld,  // SimplePersonClass.Health
+                OpCodes.Ldc_I4_5,
+                OpCodes.Add,
+                OpCodes.Stfld,  // SimplePersonClass.Health
+                OpCodes.Ret
+            );
             LocalAssert(f);
         }
     }
