@@ -392,7 +392,7 @@ public struct SmallList4<TItem>
     /// <summary>The number of entries stored inside the map itself without moving them to array on heap</summary>
     public const int StackItemCount = 4;
 
-    // todo: @wip what if someone stores something in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
+    // todo: @check what if someone stores something in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
     internal static TItem Missing; // return the ref to Tombstone when nothing found
 
     internal int _count;
@@ -483,7 +483,7 @@ public struct SmallList2<TItem>
     /// <summary>The number of entries stored inside the map itself without moving them to array on heap</summary>
     public const int StackItemCount = 2;
 
-    // todo: @wip what if someone stores something in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
+    // todo: @check what if someone stores something in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
     internal static TItem Missing; // return the ref to Tombstone when nothing found
 
     internal int _count;
