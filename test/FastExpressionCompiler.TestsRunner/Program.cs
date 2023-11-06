@@ -11,7 +11,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
+            new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run();
+            // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
             // new Issue101_Not_supported_Assign_Modes().Run();
             // new Issue170_Serializer_Person_Ref().Run();
