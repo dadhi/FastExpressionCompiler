@@ -18,12 +18,60 @@ public class Issue365_Working_with_ref_return_values : ITest
 {
     public int Run()
     {
-        Test1();
-        return 1;
+        Test_access_ref_returning_method_assigned_var_then_property();
+        Test_access_ref_returning_method_then_property();
+        return 2;
     }
 
     [Test]
-    public void Test1()
+    public void Test_access_ref_returning_method_assigned_var_then_property()
+    {
+        var getParamValueByRefMethod = typeof(ParamProcessor).GetMethod(nameof(ParamProcessor.GetParamValueByRef));
+        var valueProperty = typeof(ParamValue).GetProperty(nameof(ParamValue.Value));
+        var varByRef = Variable(typeof(ParamValue).MakeByRefType(), "varByRef");
+
+        var pp = Parameter(typeof(ParamProcessor), "pp");
+        var e = Lambda<Action<ParamProcessor>>(
+            Block(new[] { varByRef },
+                Assign(varByRef, Call(pp, getParamValueByRefMethod)),
+                Assign(MakeMemberAccess(varByRef, valueProperty), Constant(8))),
+            pp);
+
+        e.PrintCSharp();
+        var @cs = (Action<ParamProcessor>)((ParamProcessor pp) =>
+        {
+            // ParamValue varByRef__discard_init_by_ref = default; ref var varByRef = ref varByRef__discard_init_by_ref;
+            ref var varByRef = ref pp.GetParamValueByRef();
+            varByRef.Value = 8;
+        });
+        @cs.PrintIL();
+
+        var paramValue = new ParamValue() { Value = 5 };
+        var paramProcessor = new ParamProcessor(paramValue);
+        @cs(paramProcessor);
+        Assert.AreEqual(8, paramProcessor.ParamValue.Value);
+
+        // var fs = e.CompileSys(); // todo: @wip does not convert ref returning method calls, cause unable cannot find the property on the T& type
+
+        var ff = e.CompileFast(true);
+        ff.AssertOpCodes(
+            OpCodes.Ldarg_1,
+            OpCodes.Call, // ParamValue& GetParamValueByRef()
+            OpCodes.Stloc_0,
+            OpCodes.Ldloc_0,
+            OpCodes.Ldc_I4_8,
+            OpCodes.Call, // Void set_Value(Int32)
+            OpCodes.Ret
+        );
+
+        paramValue = new ParamValue() { Value = 5 };
+        paramProcessor = new ParamProcessor(paramValue);
+        ff(paramProcessor);
+        Assert.AreEqual(8, paramProcessor.ParamValue.Value);
+    }
+
+    [Test]
+    public void Test_access_ref_returning_method_then_property()
     {
         var getParamValueByRefMethod = typeof(ParamProcessor).GetMethod(nameof(ParamProcessor.GetParamValueByRef));
         var valueProperty = typeof(ParamValue).GetProperty(nameof(ParamValue.Value));
@@ -47,6 +95,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         Assert.AreEqual(7, paramProcessor.ParamValue.Value);
 
         // var fs = e.CompileSys(); // todo: @wip does not conver ref returning method calls, cause unable cannot find the property on the T& type
+
         var ff = e.CompileFast(true);
         ff.AssertOpCodes(
             OpCodes.Ldarg_1,
@@ -59,7 +108,6 @@ public class Issue365_Working_with_ref_return_values : ITest
         paramValue = new ParamValue() { Value = 5 };
         paramProcessor = new ParamProcessor(paramValue);
         ff(paramProcessor);
-
         Assert.AreEqual(7, paramProcessor.ParamValue.Value);
     }
 

@@ -3422,7 +3422,8 @@ namespace FastExpressionCompiler.LightExpression
 #endif
         internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
         {
-            var expr = SysExpr.Call(Object?.ToExpression(ref exprsConverted), Method, ToExpressions(Arguments, ref exprsConverted));
+            var objExpr = Object?.ToExpression(ref exprsConverted);
+            var expr = SysExpr.Call(objExpr, Method, ToExpressions(Arguments, ref exprsConverted));
             return Type == Method.ReturnType ? expr : SysExpr.Convert(expr, Type); // insert the safe-guard convert
         }
     }
@@ -3643,8 +3644,11 @@ namespace FastExpressionCompiler.LightExpression
         public PropertyInfo PropertyInfo => (PropertyInfo)Member;
         internal PropertyExpression(PropertyInfo property) : base(property) { }
 
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Property(Expression?.ToExpression(ref exprsConverted), PropertyInfo);
+        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+        {
+            var expr = Expression?.ToExpression(ref exprsConverted);
+            return SysExpr.Property(expr, PropertyInfo);
+        }
     }
 
     public sealed class InstancePropertyExpression : PropertyExpression

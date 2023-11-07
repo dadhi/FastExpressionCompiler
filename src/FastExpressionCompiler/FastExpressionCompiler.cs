@@ -3682,7 +3682,8 @@ namespace FastExpressionCompiler
                             // Emit the left-value instance and index(es) (for the index access)
                             if (leftMemberExpr != null)
                             {
-                                if (objExpr != null && !TryEmit(objExpr, paramExprs, il, ref closure, setup, leftArLeastFlags))
+                                if (objExpr != null && 
+                                    !TryEmit(objExpr, paramExprs, il, ref closure, setup, leftArLeastFlags | ParentFlags.InstanceAccess))
                                     return false;
                             }
                             else// if (leftIndexExpr != null)
