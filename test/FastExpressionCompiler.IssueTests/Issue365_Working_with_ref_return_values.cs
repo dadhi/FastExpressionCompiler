@@ -1,17 +1,10 @@
+#if LIGHT_EXPRESSION
 using System;
 using System.Reflection.Emit;
 using NUnit.Framework;
 
-#if LIGHT_EXPRESSION
-using System.Linq.Expressions;
-using FastExpressionCompiler.LightExpression;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
-#else
-using System.Linq.Expressions;
-using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.IssueTests;
-#endif
 
 [TestFixture]
 public class Issue365_Working_with_ref_return_values : ITest
@@ -125,3 +118,4 @@ public class Issue365_Working_with_ref_return_values : ITest
         public ref ParamValue GetParamValueByRef() => ref ParamValue;
     }
 }
+#endif

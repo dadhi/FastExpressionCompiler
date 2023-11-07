@@ -252,7 +252,6 @@ namespace FastExpressionCompiler.UnitTests
                 
                 Run(new LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run);
 
-                // Run(new Issue365_Working_with_ref_return_values().Run);
                 Run(new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run);
 
                 Run(new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run);
