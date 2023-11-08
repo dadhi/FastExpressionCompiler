@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net472;net7.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net8.0;net7.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net472;net7.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
@@ -9,14 +10,14 @@
 
     <ItemGroup>
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0"/>
-        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.3.4"/>
+        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.3.5"/>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj"/>
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' != 'net8.0' ">
         <Reference Include="ILDebugging.Decoder">
             <HintPath>..\libs\ILDebugging.Decoder.dll</HintPath>
         </Reference>

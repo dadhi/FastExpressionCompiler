@@ -11,8 +11,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
+            // new EmitHacksTest().Run();
             // new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run();
-            // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
             // new Issue101_Not_supported_Assign_Modes().Run();
             // new Issue170_Serializer_Person_Ref().Run();
@@ -128,6 +129,10 @@ namespace FastExpressionCompiler.UnitTests
 
             var issueTests = Task.Run(() =>
             {
+#if NET7_0 && !LIGHT_EXPRESSION
+                Run(new EmitHacksTest().Run);
+#endif
+
                 Run(new Issue14_String_constant_comparisons_fail().Run);
                 Run(new LightExpression.IssueTests.Issue14_String_constant_comparisons_fail().Run);
                 Run(new Issue19_Nested_CallExpression_causes_AccessViolationException().Run);
@@ -214,7 +219,6 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
                 Run(new LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
 
-                Run(new EmitHacksTest().Run);
                 Run(new Issue261_Loop_wih_conditions_fails().Run);
                 Run(new LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run);
 

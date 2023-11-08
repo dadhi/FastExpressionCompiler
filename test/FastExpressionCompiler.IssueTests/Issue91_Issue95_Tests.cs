@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection.Emit;
-using ILDebugging.Decoder;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -52,18 +51,14 @@ namespace FastExpressionCompiler.IssueTests
             Assert.NotNull(convert1);
             Assert.AreEqual(1, convert1("aaa"));
 
-            // Check TryEmitInvertedNullComparison is used
-            var il = ILReaderFactory.Create(convert1.Method);
-            CollectionAssert.AreEqual(il.Select(x => x.OpCode),
-                new[] 
-                {
-                    OpCodes.Ldarg_1,
-                    OpCodes.Brfalse,
-                    OpCodes.Ldc_I4_1,
-                    OpCodes.Br,
-                    OpCodes.Ldc_I4_0,
-                    OpCodes.Ret
-                });
+            convert1.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Brfalse,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Br,
+                OpCodes.Ldc_I4_0,
+                OpCodes.Ret
+            );
         }
 
         [Test]

@@ -1,4 +1,4 @@
-﻿#if !LIGHT_EXPRESSION && !NETFRAMEWORK
+﻿#if NET7_0 && !LIGHT_EXPRESSION
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

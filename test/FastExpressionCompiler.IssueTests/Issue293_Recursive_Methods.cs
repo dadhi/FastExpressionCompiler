@@ -53,65 +53,65 @@ namespace FastExpressionCompiler.IssueTests
             // Func<int, int> tmp = n => n <= 1 ? 1 : n * recs[0](n - 1);
             // recs[0] = tmp; // setting the item inside the closure variable of array type should work because of reference semantic
 
-            return Expression.Lambda<Func<T, T>>(
-                Expression.Block(
+            return Lambda<Func<T, T>>(
+                Block(
                     new[] { methodsVar, methodVar },
-                    Expression.Assign(
-                        methodsVar, Expression.NewArrayBounds(typeof(Func<T, T>), Expression.Constant(1))),
-                    Expression.Assign(
+                    Assign(
+                        methodsVar, NewArrayBounds(typeof(Func<T, T>), Constant(1))),
+                    Assign(
                         methodVar,
-                        Expression.Lambda<Func<T, T>>(
-                            Expression.Condition(
+                        Lambda<Func<T, T>>(
+                            Condition(
                                 // ( n <= 1 )
-                                Expression.LessThanOrEqual(nParam, one),
+                                LessThanOrEqual(nParam, one),
                                 // 1
                                 one,
                                 // n * method( n - 1 )
-                                Expression.Multiply(
+                                Multiply(
                                     // n
                                     nParam,
                                     // method( n - 1 )
-                                    Expression.Invoke(
-                                        Expression.ArrayIndex(methodsVar, Expression.Constant(0)),
-                                        Expression.Subtract(nParam, one)))),
+                                    Invoke(
+                                        ArrayIndex(methodsVar, Constant(0)),
+                                        Subtract(nParam, one)))),
                             nParam)),
-                    Expression.Assign(Expression.ArrayAccess(methodsVar, Expression.Constant(0)), methodVar),
+                    Assign(ArrayAccess(methodsVar, Constant(0)), methodVar),
                     // return method( n );
-                    Expression.Invoke(methodVar, nParam)),
+                    Invoke(methodVar, nParam)),
                 nParam);
         }
 
         //from https://chriscavanagh.wordpress.com/2012/06/18/recursive-methods-in-expression-trees/
         public Expression<Func<T, T>> MakeFactorialExpression<T>()
         {
-            var nParam = Expression.Parameter(typeof(T), "n");
-            var methodVar = Expression.Variable(typeof(Func<T, T>), "factorial");
-            var one = Expression.Constant(1, typeof(T));
+            var nParam = Parameter(typeof(T), "n");
+            var methodVar = Variable(typeof(Func<T, T>), "factorial");
+            var one = Constant(1, typeof(T));
 
-            return Expression.Lambda<Func<T, T>>(
-                Expression.Block(
+            return Lambda<Func<T, T>>(
+                Block(
                     // Func<uint, uint> method;
                     new[] { methodVar },
                     // method = n => ( n <= 1 ) ? 1 : n * method( n - 1 );
-                    Expression.Assign(
+                    Assign(
                         methodVar,
-                        Expression.Lambda<Func<T, T>>(
-                            Expression.Condition(
+                        Lambda<Func<T, T>>(
+                            Condition(
                                 // ( n <= 1 )
-                                Expression.LessThanOrEqual(nParam, one),
+                                LessThanOrEqual(nParam, one),
                                 // 1
                                 one,
                                 // n * method( n - 1 )
-                                Expression.Multiply(
+                                Multiply(
                                     // n
                                     nParam,
                                     // method( n - 1 )
-                                    Expression.Invoke(
+                                    Invoke(
                                         methodVar,
-                                        Expression.Subtract(nParam, one)))),
+                                        Subtract(nParam, one)))),
                             nParam)),
                     // return method( n );
-                    Expression.Invoke(methodVar, nParam)),
+                    Invoke(methodVar, nParam)),
                 nParam);
         }
     }

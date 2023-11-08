@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net472</TargetFramework>
+        <TargetFramework Condition="'$(DevMode)' == 'true'">net8.0</TargetFramework>
+        <TargetFramework Condition="'$(DevMode)' != 'true'">net472</TargetFramework>
         <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
@@ -11,6 +12,6 @@
         <ProjectReference Include="..\FastExpressionCompiler.LightExpression.IssueTests\FastExpressionCompiler.LightExpression.IssueTests.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="NUnit" Version="3.13.3"/>
+        <PackageReference Include="NUnit" Version="3.14.0"/>
     </ItemGroup>
 </Project>

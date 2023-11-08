@@ -11,8 +11,8 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            Check_assignment_to_by_ref_float_parameter_PostIncrement_Void();
-            Check_assignment_to_by_ref_float_parameter_PostIncrement_Returning();
+            Check_assignment_to_by_ref_int_parameter_PostIncrement_Returning();
+            Check_assignment_to_by_ref_int_parameter_PostIncrement_Void();
 
             Get_array_element_ref_and_member_change_and_Pre_increment_it();
             Get_array_element_ref_and_member_change_and_Post_increment_it();
@@ -21,33 +21,33 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Get_array_element_ref_and_member_change_and_increment_it_then_method_call_on_ref_value_elem();
             Get_array_element_ref_and_member_change_and_increment_it();
             Get_array_element_ref_and_increment_it();
-            Check_assignment_to_by_ref_float_parameter_PlusOne();
+            Check_assignment_to_by_ref_int_parameter_PlusOne();
 
             return 8;
         }
 
-        delegate void IncRefFloat(ref float x);
+        delegate void IncRefint(ref int x);
 
         [Test]
-        public void Check_assignment_to_by_ref_float_parameter_PlusOne()
+        public void Check_assignment_to_by_ref_int_parameter_PlusOne()
         {
-            var p = Parameter(typeof(float).MakeByRefType(), "x");
-            var e = Lambda<IncRefFloat>(
-                Block(AddAssign(p, Constant(1.0f))),
+            var p = Parameter(typeof(int).MakeByRefType(), "x");
+            var e = Lambda<IncRefint>(
+                Block(AddAssign(p, Constant(1))),
                 p
             );
             e.PrintCSharp();
-            var @cs = (IncRefFloat)((ref float x) =>
+            var @cs = (IncRefint)((ref int x) =>
             {
-                x += (float)1;
+                x += (int)1;
             });
 
             var s = e.CompileSys();
             s.PrintIL();
 
-            var x = 1.0f;
+            var x = 1;
             s(ref x);
-            Assert.AreEqual(2, (int)x);
+            Assert.AreEqual(2, x);
 
             var f = e.CompileFast(true);
             f.PrintIL();
@@ -61,21 +61,21 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ret
             );
 
-            var y = 1.0f;
+            var y = 1;
             f(ref y);
-            Assert.AreEqual(2, (int)y);
+            Assert.AreEqual(2, y);
         }
 
         [Test]
-        public void Check_assignment_to_by_ref_float_parameter_PostIncrement_Void()
+        public void Check_assignment_to_by_ref_int_parameter_PostIncrement_Void()
         {
-            var p = Parameter(typeof(float).MakeByRefType(), "x");
-            var e = Lambda<IncRefFloat>(
+            var p = Parameter(typeof(int).MakeByRefType(), "x");
+            var e = Lambda<IncRefint>(
                 Block(PostIncrementAssign(p)),
                 p);
 
             e.PrintCSharp();
-            var @cs = (IncRefFloat)((ref float x) =>
+            var @cs = (IncRefint)((ref int x) =>
             {
                 x++;
             });
@@ -83,9 +83,9 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var s = e.CompileSys();
             s.PrintIL();
 
-            var x = 1.0f;
+            var x = 1;
             s(ref x);
-            Assert.AreEqual(2, (int)x);
+            Assert.AreEqual(2, x);
 
             var f = e.CompileFast(true);
             f.PrintIL();
@@ -101,23 +101,23 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ret
             );
 
-            var y = 1.0f;
+            var y = 1;
             f(ref y);
-            Assert.AreEqual(2, (int)y);
+            Assert.AreEqual(2, y);
         }
 
-        delegate float IncRefFloatReturning(ref float x);
+        delegate int IncRefintReturning(ref int x);
 
         [Test]
-        public void Check_assignment_to_by_ref_float_parameter_PostIncrement_Returning()
+        public void Check_assignment_to_by_ref_int_parameter_PostIncrement_Returning()
         {
-            var p = Parameter(typeof(float).MakeByRefType(), "x");
-            var e = Lambda<IncRefFloatReturning>(
+            var p = Parameter(typeof(int).MakeByRefType(), "x");
+            var e = Lambda<IncRefintReturning>(
                 Block(PostIncrementAssign(p)),
                 p);
 
             e.PrintCSharp();
-            var @cs = (IncRefFloatReturning)((ref float x) =>
+            var @cs = (IncRefintReturning)((ref int x) =>
             {
                 return x++;
             });
@@ -125,10 +125,10 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var s = e.CompileSys();
             s.PrintIL();
 
-            var x = 1.0f;
+            var x = 1;
             var y = s(ref x);
-            Assert.AreEqual(2, (int)x);
-            Assert.AreEqual(1, (int)y);
+            Assert.AreEqual(2, x);
+            Assert.AreEqual(1, y);
 
             var f = e.CompileFast(true);
             f.PrintIL();
@@ -147,11 +147,10 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ret
             );
 
-            x = 1.0f;
+            x = 1;
             y = f(ref x);
-            Assert.AreEqual(2, (int)x);
-            Assert.AreEqual(1, (int)y);
-
+            Assert.AreEqual(1, y);
+            Assert.AreEqual(2, x);
         }
 
         [Test]
@@ -244,7 +243,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ldelema, // C/Vector3
                 OpCodes.Stloc_2,
                 OpCodes.Ldloc_2,
-                OpCodes.Ldflda,  // float64 C/Vector3::x
+                OpCodes.Ldflda,  // int64 C/Vector3::x
                 OpCodes.Dup,
                 OpCodes.Ldind_R8,
                 OpCodes.Ldc_I4_S,// 12
@@ -266,7 +265,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var i = Variable(typeof(int), "i");
             var vRef = Variable(typeof(Vector3).MakeByRefType(), "v");
             var bField = typeof(Vector3).GetField(nameof(Vector3.x));
-            var e = Lambda<Func<Vector3[], double>>(
+            var e = Lambda<Func<Vector3[], int>>(
                 Block(
                     new[] { aVar, i, vRef },
                     Assign(aVar, aPar),
@@ -277,7 +276,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 aPar);
 
             e.PrintCSharp();
-            var @cs = (Func<Vector3[], double>)((Vector3[] aPar) =>
+            var @cs = (Func<Vector3[], int>)((Vector3[] aPar) =>
             {
                 Vector3[] aVar = null;
                 int i = default;
@@ -329,7 +328,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var i = Variable(typeof(int), "i");
             var vRef = Variable(typeof(Vector3).MakeByRefType(), "v");
             var bField = typeof(Vector3).GetField(nameof(Vector3.x));
-            var e = Lambda<Func<Vector3[], double>>(
+            var e = Lambda<Func<Vector3[], int>>(
                 Block(
                     new[] { aVar, i, vRef },
                     Assign(aVar, aPar),
@@ -340,7 +339,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 aPar);
 
             e.PrintCSharp();
-            var @cs = (Func<Vector3[], double>)((Vector3[] aPar) =>
+            var @cs = (Func<Vector3[], int>)((Vector3[] aPar) =>
             {
                 Vector3[] aVar = null;
                 int i = default;
@@ -433,7 +432,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ldelema, // C/Vector3
                 OpCodes.Stloc_2,
                 OpCodes.Ldloc_2,
-                OpCodes.Ldflda,  // float64 C/Vector3::x
+                OpCodes.Ldflda,  // int64 C/Vector3::x
                 OpCodes.Dup,
                 OpCodes.Ldind_R8,
                 OpCodes.Ldc_I4_S,// 12
@@ -568,8 +567,8 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
         public struct Vector3
         {
-            public double x, y, z;
-            public Vector3(double x, double y, double z) { this.x = x; this.y = y; this.z = z; }
+            public int x, y, z;
+            public Vector3(int x, int y, int z) { this.x = x; this.y = y; this.z = z; }
             public void Normalize() { x += 41; y += 42; z += 42; }
         }
     }

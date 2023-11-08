@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
-using ILDebugging.Decoder;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -50,9 +49,10 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNotNull(fastCompiled);
             Assert.AreEqual(7, fastCompiled());
 
-            var il = ILReaderFactory.Create(fastCompiled.Method);
-            CollectionAssert.AreEqual(il.Select(x => x.OpCode),
-                new[] {OpCodes.Ldc_I4_7,  OpCodes.Ret});
+            fastCompiled.AssertOpCodes(
+                OpCodes.Ldc_I4_7,
+                OpCodes.Ret
+            );
         }
 
         [Test]

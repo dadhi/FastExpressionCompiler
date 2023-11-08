@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net472;net7.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net8.0;net7.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net472;net7.0</TargetFrameworks>
 
         <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
     </PropertyGroup>
@@ -21,7 +22,7 @@
         <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj"/>
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' != 'net8.0' ">
         <Reference Include="ILDebugging.Decoder">
             <HintPath>..\libs\ILDebugging.Decoder.dll</HintPath>
         </Reference>
