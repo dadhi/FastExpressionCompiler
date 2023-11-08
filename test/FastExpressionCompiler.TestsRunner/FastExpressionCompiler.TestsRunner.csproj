@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework Condition="'$(DevMode)' == 'true'">net8.0</TargetFramework>
-        <TargetFramework Condition="'$(DevMode)' != 'true'">net7.0</TargetFramework>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net8.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net7.0</TargetFrameworks>
         <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>

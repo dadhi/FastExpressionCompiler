@@ -43,12 +43,11 @@ namespace FastExpressionCompiler.UnitTests
 
             Console.WriteLine("""
 
-            ### .NET 4.72: Running UnitTests and IssueTests in parallel...
+            ### .NET Framework 4.72: Running UnitTests and IssueTests in parallel...
             """);
 
             var sw = Stopwatch.StartNew();
 
-            // todo: @perf try Parallel.ForEach
             var unitTests = Task.Run(() => 
             {
                 Run(new ArithmeticOperationsTests().Run);
