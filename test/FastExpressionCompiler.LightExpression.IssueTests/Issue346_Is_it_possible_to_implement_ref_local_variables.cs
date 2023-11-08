@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
+            // Check_assignment_to_by_ref_float_parameter_PostIncrement_Returning();
             Check_assignment_to_by_ref_int_parameter_PostIncrement_Returning();
             Check_assignment_to_by_ref_int_parameter_PostIncrement_Void();
 
@@ -106,7 +107,53 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Assert.AreEqual(2, y);
         }
 
+        delegate float IncRefFloatReturning(ref float x);
         delegate int IncRefintReturning(ref int x);
+
+        [Test]
+        public void Check_assignment_to_by_ref_float_parameter_PostIncrement_Returning()
+        {
+            var p = Parameter(typeof(float).MakeByRefType(), "x");
+            var e = Lambda<IncRefFloatReturning>(
+                Block(PostIncrementAssign(p)),
+                p);
+
+            e.PrintCSharp();
+            var @cs = (IncRefFloatReturning)((ref float x) =>
+            {
+                return x++;
+            });
+
+            var s = e.CompileSys();
+            s.PrintIL();
+
+            var x = 1.0f;
+            var y = s(ref x);
+            Assert.AreEqual(2, x);
+            Assert.AreEqual(1, y);
+
+            var f = e.CompileFast(true);
+            f.PrintIL();
+            f.AssertOpCodes(
+                OpCodes.Ldarg_1,
+                OpCodes.Ldind_R4,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldc_I4_1,
+                OpCodes.Add,
+                OpCodes.Stloc_1,
+                OpCodes.Ldarg_1,
+                OpCodes.Ldloc_1,
+                OpCodes.Stind_R4,
+                OpCodes.Ldloc_0,
+                OpCodes.Ret
+            );
+
+            x = 1.0f;
+            y = f(ref x);
+            Assert.AreEqual(1, y);
+            Assert.AreEqual(2, x);
+        }
 
         [Test]
         public void Check_assignment_to_by_ref_int_parameter_PostIncrement_Returning()
