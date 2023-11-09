@@ -69,11 +69,11 @@ namespace FastExpressionCompiler.Benchmarks
             // todo: README.md Benchmarks
             // --------------------------------------------
 
-            BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
-            BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
+            // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
+            // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
-            // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
-            // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
+            BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
+            BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Invoke>();
             //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();

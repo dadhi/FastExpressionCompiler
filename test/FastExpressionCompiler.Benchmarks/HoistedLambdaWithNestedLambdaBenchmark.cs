@@ -96,6 +96,20 @@ namespace FastExpressionCompiler.Benchmarks
             |     Compile | 401.40 us | 7.509 us | 5.863 us | 400.79 us | 35.56 |    1.14 | 1.9531 | 0.9766 |  12.11 KB |        2.66 |
             | CompileFast |  11.47 us | 0.228 us | 0.509 us |  11.28 us |  1.00 |    0.00 | 0.7324 | 0.7172 |   4.55 KB |        1.00 |
 
+            ## v4.0.0 release + net 8.0
+
+            BenchmarkDotNet v0.13.10, Windows 11 (10.0.22621.2428/22H2/2022Update/SunValley2)
+            11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+            .NET SDK 8.0.100-rc.2.23502.2
+            [Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+            DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+
+
+            | Method      | Mean      | Error    | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 442.02 us | 8.768 us | 21.998 us | 40.00 |    2.34 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
+            | CompileFast |  11.06 us | 0.221 us |  0.441 us |  1.00 |    0.00 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
+
             */
             [Benchmark]
             public Func<X> Compile() => _hoistedExpr.Compile();
@@ -168,6 +182,20 @@ namespace FastExpressionCompiler.Benchmarks
             |    DirectMethodCall |    67.15 ns |  1.401 ns |  1.965 ns |  1.06 |    0.05 | 0.0535 |     - |     - |     168 B |
             |     Invoke_Compiled | 1,889.47 ns | 37.145 ns | 53.272 ns | 29.75 |    1.44 | 0.0839 |     - |     - |     264 B |
             | Invoke_CompiledFast |    63.21 ns |  1.239 ns |  2.203 ns |  1.00 |    0.00 | 0.0331 |     - |     - |     104 B |
+
+            ## v4.0.0
+
+            BenchmarkDotNet v0.13.10, Windows 11 (10.0.22621.2428/22H2/2022Update/SunValley2)
+            11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+            .NET SDK 8.0.100-rc.2.23502.2
+            [Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+            DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+
+            | Method              | Mean        | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+            |-------------------- |------------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
+            | DirectMethodCall    |    35.51 ns |  0.783 ns |  1.308 ns |  0.86 |    0.08 | 0.0267 |     168 B |        1.62 |
+            | Invoke_Compiled     | 1,096.15 ns | 21.507 ns | 41.437 ns | 27.15 |    2.75 | 0.0420 |     264 B |        2.54 |
+            | Invoke_CompiledFast |    37.65 ns |  1.466 ns |  4.299 ns |  1.00 |    0.00 | 0.0166 |     104 B |        1.00 |
 
             */
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
