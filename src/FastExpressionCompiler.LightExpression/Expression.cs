@@ -799,6 +799,7 @@ namespace FastExpressionCompiler.LightExpression
                 ? new OneParameterExpression<TDelegate>(body, p0)
                 : new TypedReturnOneParameterExpression<TDelegate>(body, p0, returnType);
 
+        // todo: @perf we may optimize GetDelegateReturnType for known delegate types like `Func` and `Action`
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0) where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, p0, GetDelegateReturnType(typeof(TDelegate)));
 

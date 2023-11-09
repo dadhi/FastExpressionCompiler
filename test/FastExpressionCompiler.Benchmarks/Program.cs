@@ -66,20 +66,21 @@ namespace FastExpressionCompiler.Benchmarks
             // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_NestedLambdaExpr>();
             // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_SimpleExpr>();
 
+            // BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Invoke>();
+            // BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
+            // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
+
             // todo: README.md Benchmarks
             // --------------------------------------------
 
             // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
             // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
-            BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
-            BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
+            // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
+            // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
-            //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Invoke>();
-            //BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
-            //BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
-
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>();
+            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create>(); // not included in README.md, may be it needs to
+            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>(); // not included in README.md, may be it needs to
             // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
             // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
 

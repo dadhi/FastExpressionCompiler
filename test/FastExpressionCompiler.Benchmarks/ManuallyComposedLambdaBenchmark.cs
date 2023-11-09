@@ -8,11 +8,13 @@ namespace FastExpressionCompiler.Benchmarks
 {
     public class ManuallyComposedLambdaBenchmark
     {
+        private static readonly ConstructorInfo _ctorX = typeof(X).GetTypeInfo().DeclaredConstructors.First();
+
         private static Expression<Func<B, X>> ComposeManualExprWithParams(Expression aConstExpr)
         {
             var bParamExpr = Expression.Parameter(typeof(B), "b");
             return Expression.Lambda<Func<B, X>>(
-                Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(), aConstExpr, bParamExpr),
+                Expression.New(_ctorX, aConstExpr, bParamExpr),
                 bParamExpr);
         }
 
@@ -20,7 +22,7 @@ namespace FastExpressionCompiler.Benchmarks
         {
             var bParamExpr = LightExpression.Expression.Parameter(typeof(B), "b");
             return LightExpression.Expression.Lambda<Func<B, X>>(
-                LightExpression.Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(), aConstExpr, bParamExpr),
+                LightExpression.Expression.New(_ctorX, aConstExpr, bParamExpr),
                 bParamExpr);
         }
 
@@ -45,7 +47,34 @@ namespace FastExpressionCompiler.Benchmarks
         private static readonly Expression<Func<B, X>> _expr = ComposeManualExprWithParams(_aConstExpr);
 
         private static readonly LightExpression.ConstantExpression _aConstLEExpr = LightExpression.Expression.Constant(_a, typeof(A));
-        private static readonly FastExpressionCompiler.LightExpression.Expression<Func<B, X>> _leExpr = ComposeManualExprWithParams(_aConstLEExpr);
+        private static readonly LightExpression.Expression<Func<B, X>> _leExpr = ComposeManualExprWithParams(_aConstLEExpr);
+
+        [MemoryDiagnoser]
+        public class Create
+        {
+            /*
+            ## v4.0.0
+
+            BenchmarkDotNet v0.13.10, Windows 11 (10.0.22621.2428/22H2/2022Update/SunValley2)
+            11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+            .NET SDK 8.0.100-rc.2.23502.2
+            [Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+            DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+
+            | Method     | Mean      | Error    | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+            |----------- |----------:|---------:|----------:|------:|--------:|-------:|----------:|------------:|
+            | SystemExpr | 314.19 ns | 6.975 ns | 19.094 ns |  6.42 |    0.87 | 0.0782 |     496 B |        3.88 |
+            | LightExpr  |  48.67 ns | 2.300 ns |  6.745 ns |  1.00 |    0.00 | 0.0204 |     128 B |        1.00 |
+            */
+
+            [Benchmark]
+            public object SystemExpression() => 
+                ComposeManualExprWithParams(Expression.Constant(_a));
+
+            [Benchmark(Baseline = true)]
+            public object FECLightExpression() =>
+                ComposeManualExprWithParams(LightExpression.Expression.ConstantOf(_a));
+        }
 
         [MemoryDiagnoser]
         public class Create_and_Compile
@@ -73,6 +102,22 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 |     SystemExpr_Compile | 165.654 us | 1.7359 us | 1.4496 us | 26.72 |    0.80 | 1.2207 | 0.4883 |      - |   5.31 KB |
 | SystemExpr_CompileFast |   6.680 us | 0.1275 us | 0.1192 us |  1.07 |    0.04 | 0.4959 | 0.2441 | 0.0305 |   2.04 KB |
 |  LightExpr_CompileFast |   6.160 us | 0.1209 us | 0.1773 us |  1.00 |    0.00 | 0.3815 | 0.1907 | 0.0305 |   1.59 KB |
+
+## v4.0.0
+
+BenchmarkDotNet v0.13.10, Windows 11 (10.0.22621.2428/22H2/2022Update/SunValley2)
+11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+.NET SDK 8.0.100-rc.2.23502.2
+[Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+
+
+| Method                 | Mean      | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| SystemExpr_Compile     | 89.873 us | 1.5941 us | 2.1821 us | 24.68 |    1.50 | 0.7324 | 0.4883 |   5.25 KB |        3.40 |
+| SystemExpr_CompileFast |  3.814 us | 0.0694 us | 0.0852 us |  1.04 |    0.07 | 0.3052 | 0.2899 |   1.96 KB |        1.27 |
+| LightExpr_CompileFast  |  3.682 us | 0.0872 us | 0.2401 us |  1.00 |    0.00 | 0.2518 | 0.2365 |   1.55 KB |        1.00 |
+
 */
 
             [Benchmark]
@@ -140,7 +185,21 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
             |                 CompileFast |   4.791 us | 0.0955 us | 0.2307 us |  1.04 |    0.06 | 0.4578 | 0.2289 | 0.0305 |   1.41 KB |
             | CompileFast_LightExpression |   4.636 us | 0.0916 us | 0.1531 us |  1.00 |    0.00 | 0.4425 | 0.2213 | 0.0305 |   1.38 KB |
 
-*/
+            ## v4.0.0
+
+            BenchmarkDotNet v0.13.10, Windows 11 (10.0.22621.2428/22H2/2022Update/SunValley2)
+            11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+            .NET SDK 8.0.100-rc.2.23502.2
+            [Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+            DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+
+            | Method                      | Mean       | Error     | StdDev     | Median     | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |---------------------------- |-----------:|----------:|-----------:|-----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile                     | 109.937 us | 4.5259 us | 12.9855 us | 108.150 us | 30.88 |    4.71 | 0.7324 | 0.4883 |   4.74 KB |        3.41 |
+            | CompileFast                 |   3.902 us | 0.2889 us |  0.8244 us |   3.470 us |  1.09 |    0.24 | 0.2136 | 0.1984 |   1.39 KB |        1.00 |
+            | CompileFast_LightExpression |   3.591 us | 0.1249 us |  0.3642 us |   3.407 us |  1.00 |    0.00 | 0.2136 | 0.1984 |   1.39 KB |        1.00 |
+
+            */
 
             [Benchmark]
             public Func<B, X> Compile() => 
@@ -216,12 +275,13 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 
             ## V3.3.1
 
-|                             Method |     Mean |    Error |   StdDev |   Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|----------------------------------- |---------:|---------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-|                   DirectLambdaCall | 13.72 ns | 0.274 ns | 0.500 ns | 13.62 ns |  1.05 |    0.06 | 0.0102 |     - |     - |      32 B |
-|                     CompiledLambda | 17.12 ns | 1.006 ns | 2.950 ns | 15.78 ns |  1.24 |    0.15 | 0.0102 |     - |     - |      32 B |
-|                 FastCompiledLambda | 12.87 ns | 0.164 ns | 0.128 ns | 12.88 ns |  0.97 |    0.03 | 0.0102 |     - |     - |      32 B |
-| FastCompiledLambda_LightExpression | 13.11 ns | 0.258 ns | 0.471 ns | 13.01 ns |  1.00 |    0.00 | 0.0102 |     - |     - |      32 B |
+            |                             Method |     Mean |    Error |   StdDev |   Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+            |----------------------------------- |---------:|---------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
+            |                   DirectLambdaCall | 13.72 ns | 0.274 ns | 0.500 ns | 13.62 ns |  1.05 |    0.06 | 0.0102 |     - |     - |      32 B |
+            |                     CompiledLambda | 17.12 ns | 1.006 ns | 2.950 ns | 15.78 ns |  1.24 |    0.15 | 0.0102 |     - |     - |      32 B |
+            |                 FastCompiledLambda | 12.87 ns | 0.164 ns | 0.128 ns | 12.88 ns |  0.97 |    0.03 | 0.0102 |     - |     - |      32 B |
+            | FastCompiledLambda_LightExpression | 13.11 ns | 0.258 ns | 0.471 ns | 13.01 ns |  1.00 |    0.00 | 0.0102 |     - |     - |      32 B |
+
             */
             private static readonly Func<B, X> _lambdaCompiled = _expr.Compile();
             private static readonly Func<B, X> _lambdaCompiledFast = _expr.CompileFast(true);

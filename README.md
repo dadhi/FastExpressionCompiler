@@ -129,11 +129,11 @@ var expr = Expression.Lambda(
 
 Compiling expression:
 
-|                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|---------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|                     Compile | 179.266 us | 3.5687 us | 7.2089 us | 39.11 |    2.15 | 1.4648 | 0.7324 |      - |   4.74 KB |
-|                 CompileFast |   4.791 us | 0.0955 us | 0.2307 us |  1.04 |    0.06 | 0.4578 | 0.2289 | 0.0305 |   1.41 KB |
-| CompileFast_LightExpression |   4.636 us | 0.0916 us | 0.1531 us |  1.00 |    0.00 | 0.4425 | 0.2213 | 0.0305 |   1.38 KB |
+| Method                      | Mean       | Error     | StdDev     | Median     | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|---------------------------- |-----------:|----------:|-----------:|-----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| Compile                     | 109.937 us | 4.5259 us | 12.9855 us | 108.150 us | 30.88 |    4.71 | 0.7324 | 0.4883 |   4.74 KB |        3.41 |
+| CompileFast                 |   3.902 us | 0.2889 us |  0.8244 us |   3.470 us |  1.09 |    0.24 | 0.2136 | 0.1984 |   1.39 KB |        1.00 |
+| CompileFast_LightExpression |   3.591 us | 0.1249 us |  0.3642 us |   3.407 us |  1.00 |    0.00 | 0.2136 | 0.1984 |   1.39 KB |        1.00 |
 
 
 Invoking the compiled delegate compared to the normal delegate and the direct call:
