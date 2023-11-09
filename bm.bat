@@ -1,1 +1,1 @@
-dotnet run -c Release --project test/FastExpressionCompiler.Benchmarks/FastExpressionCompiler.Benchmarks.csproj
+dotnet run -f net8.0 -c Release --project test/FastExpressionCompiler.Benchmarks/FastExpressionCompiler.Benchmarks.csproj

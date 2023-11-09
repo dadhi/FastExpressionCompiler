@@ -82,7 +82,7 @@ namespace FastExpressionCompiler.Benchmarks
             |     Compile | 272.904 us | 5.4074 us | 11.8694 us | 50.84 |    3.34 | 1.4648 | 0.4883 |      - |   4.49 KB |
             | CompileFast |   5.379 us | 0.1063 us |  0.2048 us |  1.00 |    0.00 | 0.4959 | 0.2441 | 0.0381 |   1.52 KB |
 
-            ## v4.0.0
+            ## v4.0.0 - baseline - starting of the work
 
             BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.2134/22H2/2022Update/SunValley2)
             11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
@@ -94,6 +94,19 @@ namespace FastExpressionCompiler.Benchmarks
             |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|------------:|
             |     Compile | 129.471 us | 1.6304 us | 1.3615 us | 36.68 |    1.59 | 0.7324 | 0.4883 |      - |   4.52 KB |        3.03 |
             | CompileFast |   3.539 us | 0.0689 us | 0.1151 us |  1.00 |    0.00 | 0.2365 | 0.2289 | 0.0076 |   1.49 KB |        1.00 |
+
+            ## v4.0.0 - release + net8.0
+
+            BenchmarkDotNet v0.13.10, Windows 11 (10.0.22621.2428/22H2/2022Update/SunValley2)
+            11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+            .NET SDK 8.0.100-rc.2.23502.2
+            [Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+            DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+
+            | Method      | Mean       | Error     | StdDev    | Median     | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |-----------:|----------:|----------:|-----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 121.969 us | 2.4180 us | 5.6040 us | 120.830 us | 35.77 |    2.46 | 0.7324 |      - |   4.49 KB |        2.92 |
+            | CompileFast |   3.406 us | 0.0677 us | 0.1820 us |   3.349 us |  1.00 |    0.00 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
 
             */
 
@@ -170,6 +183,19 @@ namespace FastExpressionCompiler.Benchmarks
             |        CompiledLambda | 13.917 ns | 0.2723 ns | 0.3818 ns | 13.872 ns |  1.03 |    0.04 | 0.0102 |     - |     - |      32 B |
             |    FastCompiledLambda | 13.412 ns | 0.2355 ns | 0.4124 ns | 13.328 ns |  1.00 |    0.00 | 0.0102 |     - |     - |      32 B |
 
+            ## v4.0.0 - release + net8.0
+
+            BenchmarkDotNet v0.13.10, Windows 11 (10.0.22621.2428/22H2/2022Update/SunValley2)
+            11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+            .NET SDK 8.0.100-rc.2.23502.2
+            [Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+            DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+
+            | Method                | Mean     | Error     | StdDev    | Median   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+            |---------------------- |---------:|----------:|----------:|---------:|------:|--------:|-------:|----------:|------------:|
+            | DirectConstructorCall | 5.734 ns | 0.1501 ns | 0.2745 ns | 5.679 ns |  0.86 |    0.05 | 0.0051 |      32 B |        1.00 |
+            | CompiledLambda        | 6.857 ns | 0.1915 ns | 0.5434 ns | 6.704 ns |  1.01 |    0.09 | 0.0051 |      32 B |        1.00 |
+            | FastCompiledLambda    | 6.746 ns | 0.1627 ns | 0.1442 ns | 6.751 ns |  1.00 |    0.00 | 0.0051 |      32 B |        1.00 |
             */
 
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();

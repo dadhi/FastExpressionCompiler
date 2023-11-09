@@ -56,14 +56,14 @@ In addition, the memory consumption taken by the compilation will be much smalle
 
 ## Benchmarks
 
-**Updated to .NET 6**
+**Updated to .NET 8.0**
 
 ```ini
-BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.2134/22H2/2022Update/SunValley2)
+BenchmarkDotNet v0.13.10, Windows 11 (10.0.22621.2428/22H2/2022Update/SunValley2)
 11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
-.NET SDK 7.0.307
-  [Host]     : .NET 7.0.10 (7.0.1023.36312), X64 RyuJIT AVX2
-  DefaultJob : .NET 7.0.10 (7.0.1023.36312), X64 RyuJIT AVX2
+.NET SDK 8.0.100-rc.2.23502.2
+[Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
 ```
 
 ### Hoisted expression with the constructor and two arguments in closure
@@ -76,18 +76,19 @@ Expression<Func<X>> e = () => new X(a, b);
 
 Compiling expression:
 
-|      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 |   Gen2 | Allocated | Alloc Ratio |
-|------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|------------:|
-|     Compile | 129.471 us | 1.6304 us | 1.3615 us | 36.68 |    1.59 | 0.7324 | 0.4883 |      - |   4.52 KB |        3.03 |
-| CompileFast |   3.539 us | 0.0689 us | 0.1151 us |  1.00 |    0.00 | 0.2365 | 0.2289 | 0.0076 |   1.49 KB |        1.00 |
+| Method      | Mean       | Error     | StdDev    | Median     | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|------------ |-----------:|----------:|----------:|-----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| Compile     | 121.969 us | 2.4180 us | 5.6040 us | 120.830 us | 35.77 |    2.46 | 0.7324 |      - |   4.49 KB |        2.92 |
+| CompileFast |   3.406 us | 0.0677 us | 0.1820 us |   3.349 us |  1.00 |    0.00 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
+
 
 Invoking the compiled delegate (comparing to the direct constructor call):
 
-|                Method |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|---------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|------:|------:|----------:|
-| DirectConstructorCall |  7.736 ns | 0.2472 ns | 0.6336 ns |  7.510 ns |  0.57 |    0.05 | 0.0102 |     - |     - |      32 B |
-|        CompiledLambda | 13.917 ns | 0.2723 ns | 0.3818 ns | 13.872 ns |  1.03 |    0.04 | 0.0102 |     - |     - |      32 B |
-|    FastCompiledLambda | 13.412 ns | 0.2355 ns | 0.4124 ns | 13.328 ns |  1.00 |    0.00 | 0.0102 |     - |     - |      32 B |
+| Method                | Mean     | Error     | StdDev    | Median   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|---------------------- |---------:|----------:|----------:|---------:|------:|--------:|-------:|----------:|------------:|
+| DirectConstructorCall | 5.734 ns | 0.1501 ns | 0.2745 ns | 5.679 ns |  0.86 |    0.05 | 0.0051 |      32 B |        1.00 |
+| CompiledLambda        | 6.857 ns | 0.1915 ns | 0.5434 ns | 6.704 ns |  1.01 |    0.09 | 0.0051 |      32 B |        1.00 |
+| FastCompiledLambda    | 6.746 ns | 0.1627 ns | 0.1442 ns | 6.751 ns |  1.00 |    0.00 | 0.0051 |      32 B |        1.00 |
 
 
 ### Hoisted expression with the static method and two nested lambdas and two arguments in closure

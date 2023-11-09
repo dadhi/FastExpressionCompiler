@@ -1,3 +1,5 @@
+#if NET7_0 && !LIGHT_EXPRESSION
+
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -10,7 +12,7 @@ namespace FastExpressionCompiler.Benchmarks
     public class EmitHacks
     {
         /*
-        ## Initial result - 4000x slower
+        -- Initial result - 4000x slower
 
         |                    Method |         Mean |        Error |       StdDev | Ratio |  Gen 0 |  Gen 1 | Gen 2 | Allocated |
         |-------------------------- |-------------:|-------------:|-------------:|------:|-------:|-------:|------:|----------:|
@@ -37,48 +39,48 @@ namespace FastExpressionCompiler.Benchmarks
         public class MethodStaticNoArgsEmit
         {
             /*
-            ## Baseline
+            -- Baseline
 
             |                          Method |         Mean |        Error |        StdDev | Ratio | Allocated | Alloc Ratio |
             |-------------------------------- |-------------:|-------------:|--------------:|------:|----------:|------------:|
             | DynamicMethod_Emit_OpCodes_Call | 49,512.07 ns | 5,727.220 ns | 16,886.837 ns | 1.000 |    1183 B |        1.00 |
             |               MethodInfo_Invoke |     80.49 ns |     1.145 ns |      1.015 ns | 0.001 |      24 B |        0.02 |
 
-            ## First working hack
+            -- First working hack
             |                          Method |      Mean |     Error |     StdDev |    Median | Ratio | RatioSD | Allocated | Alloc Ratio |
             |-------------------------------- |----------:|----------:|-----------:|----------:|------:|--------:|----------:|------------:|
             | DynamicMethod_Emit_OpCodes_Call |  36.03 us |  1.354 us |   3.993 us |  34.30 us |  1.00 |    0.00 |   1.16 KB |        1.00 |
             |         DynamicMethod_Emit_Hack | 607.97 us | 40.797 us | 119.008 us | 560.64 us | 17.03 |    3.79 |    1.4 KB |        1.22 |
 
-            ## Moving fields and methods discovery to statics
+            -- Moving fields and methods discovery to statics
 
             |                          Method |      Mean |     Error |    StdDev | Ratio | RatioSD | Allocated | Alloc Ratio |
             |-------------------------------- |----------:|----------:|----------:|------:|--------:|----------:|------------:|
             | DynamicMethod_Emit_OpCodes_Call |  32.74 us |  0.651 us |  1.534 us |  1.00 |    0.00 |   1.16 KB |        1.00 |
             |         DynamicMethod_Emit_Hack | 599.96 us | 28.561 us | 83.313 us | 18.31 |    2.84 |    1.4 KB |        1.21 |
 
-            ## Did some code mangling and now we are talking
+            -- Did some code mangling and now we are talking
 
             |                          Method |     Mean |    Error |   StdDev |   Median | Ratio | RatioSD | Allocated | Alloc Ratio |
             |-------------------------------- |---------:|---------:|---------:|---------:|------:|--------:|----------:|------------:|
             | DynamicMethod_Emit_OpCodes_Call | 35.79 us | 0.789 us | 2.172 us | 35.07 us |  1.00 |    0.00 |   1.16 KB |        1.00 |
             |         DynamicMethod_Emit_Hack | 37.82 us | 0.749 us | 1.513 us | 37.38 us |  1.05 |    0.07 |   1.31 KB |        1.13 |
 
-            ## Method with no args final results
+            -- Method with no args final results
 
             |                          Method |     Mean |    Error |   StdDev |   Median | Ratio | RatioSD | Allocated | Alloc Ratio |
             |-------------------------------- |---------:|---------:|---------:|---------:|------:|--------:|----------:|------------:|
             | DynamicMethod_Emit_OpCodes_Call | 35.48 us | 0.720 us | 2.031 us | 34.86 us |  1.00 |    0.00 |   1.16 KB |        1.00 |
             |         DynamicMethod_Emit_Hack | 34.62 us | 0.685 us | 1.253 us | 34.49 us |  0.97 |    0.07 |   1.16 KB |        1.00 |
 
-            ## Method with one argument
+            -- Method with one argument
 
             |                          Method |     Mean |    Error |   StdDev | Ratio | RatioSD | Allocated | Alloc Ratio |
             |-------------------------------- |---------:|---------:|---------:|------:|--------:|----------:|------------:|
             | DynamicMethod_Emit_OpCodes_Call | 42.67 us | 0.840 us | 1.844 us |  1.00 |    0.00 |   1.17 KB |        1.00 |
             |         DynamicMethod_Emit_Hack | 42.13 us | 0.837 us | 1.145 us |  0.99 |    0.06 |   1.17 KB |        1.00 |
 
-            ## All emits replaced by hacks
+            -- All emits replaced by hacks
 
             |                          Method |     Mean |    Error |   StdDev |   Median | Ratio | RatioSD | Allocated | Alloc Ratio |
             |-------------------------------- |---------:|---------:|---------:|---------:|------:|--------:|----------:|------------:|
@@ -108,3 +110,4 @@ namespace FastExpressionCompiler.Benchmarks
 
     }
 }
+#endif
