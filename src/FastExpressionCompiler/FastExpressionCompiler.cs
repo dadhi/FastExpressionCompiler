@@ -96,6 +96,7 @@ namespace FastExpressionCompiler
         /// <summary>The equivalent C# code of the lambda expression</summary>
         string CSharpString { get; }
 
+        // todo: @feature add the debug info to the nested lambdas
         // /// <summary>Total nested lambda counting</summary>
         // ushort NestedLambdaCount { get; } // todo: @wip count nested lambdas and expressions
 
@@ -471,11 +472,8 @@ namespace FastExpressionCompiler
 #endif
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
             var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
-            var nestedLambdas = new SmallList<NestedLambdaInfo>();
-            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, null, ref nestedLambdas, flags))
+            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, null, ref closureInfo.NestedLambdas, flags))
                 return null;
-
-            closureInfo.NestedLambdas = nestedLambdas; // copy the collected lambdas to the closureInfo
 
             ArrayClosure closure;
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
@@ -5662,7 +5660,6 @@ namespace FastExpressionCompiler
         internal static MethodInfo DelegateTargetGetterMethod =
             typeof(Delegate).GetProperty(nameof(Delegate.Target)).GetMethod;
 
-        // todo: @wip @perf can we use UnsafeAccessAttribute here?
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindDelegateInvokeMethod(this Type type) => type.GetMethod("Invoke");
 

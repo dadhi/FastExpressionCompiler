@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Running;
+using FastExpressionCompiler.LightExpression;
 
 namespace FastExpressionCompiler.Benchmarks
 {
@@ -79,10 +80,10 @@ namespace FastExpressionCompiler.Benchmarks
             // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
             // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
-            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create>(); // not included in README.md, may be it needs to
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>(); // not included in README.md, may be it needs to
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
+            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create>(); // not included in README.md, may be it needs to
+            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
+            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
+            BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>(); // not included in README.md, may be it needs to
 
             //--------------------------------------------
         }

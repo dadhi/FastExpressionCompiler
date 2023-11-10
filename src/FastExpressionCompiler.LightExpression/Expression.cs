@@ -799,7 +799,6 @@ namespace FastExpressionCompiler.LightExpression
                 ? new OneParameterExpression<TDelegate>(body, p0)
                 : new TypedReturnOneParameterExpression<TDelegate>(body, p0, returnType);
 
-        // todo: @perf we may optimize GetDelegateReturnType for known delegate types like `Func` and `Action`
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0) where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, p0, GetDelegateReturnType(typeof(TDelegate)));
 
@@ -896,6 +895,7 @@ namespace FastExpressionCompiler.LightExpression
         public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) where TDelegate : System.Delegate =>
             Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
 
+        // todo: @perf for now it's the fastest method until UnsafeAccessAttribute supports generics
         [MethodImpl((MethodImplOptions)256)]
         private static Type GetDelegateReturnType(Type delegateType) => delegateType.FindDelegateInvokeMethod().ReturnType;
 

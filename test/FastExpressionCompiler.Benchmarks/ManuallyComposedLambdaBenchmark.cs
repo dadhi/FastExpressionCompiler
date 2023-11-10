@@ -10,20 +10,21 @@ namespace FastExpressionCompiler.Benchmarks
     {
         private static readonly ConstructorInfo _ctorX = typeof(X).GetTypeInfo().DeclaredConstructors.First();
 
-        private static Expression<Func<B, X>> ComposeManualExprWithParams(Expression aConstExpr)
+        private static Expression<Func<B, X>> CreateManualExprWithParams()
         {
             var bParamExpr = Expression.Parameter(typeof(B), "b");
             return Expression.Lambda<Func<B, X>>(
-                Expression.New(_ctorX, aConstExpr, bParamExpr),
+                Expression.New(_ctorX, Expression.Constant(_a, typeof(A)), bParamExpr),
                 bParamExpr);
         }
 
-        private static LightExpression.Expression<Func<B, X>> ComposeManualExprWithParams(LightExpression.Expression aConstExpr)
+        private static LightExpression.Expression<Func<B, X>> CreateManualLightExprWithParams()
         {
-            var bParamExpr = LightExpression.Expression.Parameter(typeof(B), "b");
+            var bParamExpr = LightExpression.Expression.ParameterOf<B>("b");
             return LightExpression.Expression.Lambda<Func<B, X>>(
-                LightExpression.Expression.New(_ctorX, aConstExpr, bParamExpr),
-                bParamExpr);
+                LightExpression.Expression.New(_ctorX, LightExpression.Expression.ConstantOf(_a), bParamExpr),
+                bParamExpr,
+                typeof(X));
         }
 
         public class A { }
@@ -43,11 +44,8 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly A _a = new A();
 
-        private static readonly ConstantExpression _aConstExpr = Expression.Constant(_a, typeof(A));
-        private static readonly Expression<Func<B, X>> _expr = ComposeManualExprWithParams(_aConstExpr);
-
-        private static readonly LightExpression.ConstantExpression _aConstLEExpr = LightExpression.Expression.Constant(_a, typeof(A));
-        private static readonly LightExpression.Expression<Func<B, X>> _leExpr = ComposeManualExprWithParams(_aConstLEExpr);
+        private static readonly Expression<Func<B, X>> _expr = CreateManualExprWithParams();
+        private static readonly LightExpression.Expression<Func<B, X>> _leExpr = CreateManualLightExprWithParams();
 
         [MemoryDiagnoser]
         public class Create
@@ -65,72 +63,94 @@ namespace FastExpressionCompiler.Benchmarks
             |----------- |----------:|---------:|----------:|------:|--------:|-------:|----------:|------------:|
             | SystemExpr | 314.19 ns | 6.975 ns | 19.094 ns |  6.42 |    0.87 | 0.0782 |     496 B |        3.88 |
             | LightExpr  |  48.67 ns | 2.300 ns |  6.745 ns |  1.00 |    0.00 | 0.0204 |     128 B |        1.00 |
+
+            # v4.0.0 - with providing return type when constructing the lambda
+
+            | Method             | Mean      | Error    | StdDev    | Median    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+            |------------------- |----------:|---------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
+            | SystemExpression   | 328.47 ns | 9.000 ns | 25.677 ns | 317.90 ns | 14.16 |    1.45 | 0.0782 |     496 B |        3.88 |
+            | FECLightExpression |  23.37 ns | 0.695 ns |  1.948 ns |  22.86 ns |  1.00 |    0.00 | 0.0204 |     128 B |        1.00 |
+
+            # v4.0.0 - with ParameterOf
+
+            | Method             | Mean      | Error    | StdDev    | Median    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+            |------------------- |----------:|---------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
+            | SystemExpression   | 322.29 ns | 8.488 ns | 24.078 ns | 315.39 ns | 17.51 |    3.46 | 0.0782 |     496 B |        4.13 |
+            | FECLightExpression |  19.09 ns | 1.064 ns |  3.139 ns |  19.07 ns |  1.00 |    0.00 | 0.0191 |     120 B |        1.00 |
             */
 
             [Benchmark]
-            public object SystemExpression() => 
-                ComposeManualExprWithParams(Expression.Constant(_a));
+            public LambdaExpression Create_SystemExpression() =>
+                CreateManualExprWithParams();
 
             [Benchmark(Baseline = true)]
-            public object FECLightExpression() =>
-                ComposeManualExprWithParams(LightExpression.Expression.ConstantOf(_a));
+            public LightExpression.LambdaExpression Create_LightExpression() =>
+                CreateManualLightExprWithParams();
         }
 
         [MemoryDiagnoser]
         public class Create_and_Compile
         {
-/*
-## v3-preview-03
+            /*
+            ## v3-preview-03
 
-|                 Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|----------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|     SystemExpr_Compile | 171.098 us | 1.9611 us | 1.8344 us | 30.22 |    0.85 | 1.2207 | 0.4883 |      - |   5.11 KB |
-| SystemExpr_CompileFast |   7.314 us | 0.1273 us | 0.1191 us |  1.29 |    0.05 | 0.4883 | 0.2441 | 0.0305 |   2.03 KB |
-|  LightExpr_CompileFast |   5.647 us | 0.0813 us | 0.1217 us |  1.00 |    0.00 | 0.3815 | 0.1907 | 0.0305 |   1.59 KB |
+            |                 Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |----------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |     SystemExpr_Compile | 171.098 us | 1.9611 us | 1.8344 us | 30.22 |    0.85 | 1.2207 | 0.4883 |      - |   5.11 KB |
+            | SystemExpr_CompileFast |   7.314 us | 0.1273 us | 0.1191 us |  1.29 |    0.05 | 0.4883 | 0.2441 | 0.0305 |   2.03 KB |
+            |  LightExpr_CompileFast |   5.647 us | 0.0813 us | 0.1217 us |  1.00 |    0.00 | 0.3815 | 0.1907 | 0.0305 |   1.59 KB |
 
-## v3-preview-05
+            ## v3-preview-05
 
-BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.630 (2004/?/20H1)
-Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
-.NET Core SDK=5.0.100
-  [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
-  DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
-
-
-|                 Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
-|----------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
-|     SystemExpr_Compile | 165.654 us | 1.7359 us | 1.4496 us | 26.72 |    0.80 | 1.2207 | 0.4883 |      - |   5.31 KB |
-| SystemExpr_CompileFast |   6.680 us | 0.1275 us | 0.1192 us |  1.07 |    0.04 | 0.4959 | 0.2441 | 0.0305 |   2.04 KB |
-|  LightExpr_CompileFast |   6.160 us | 0.1209 us | 0.1773 us |  1.00 |    0.00 | 0.3815 | 0.1907 | 0.0305 |   1.59 KB |
-
-## v4.0.0
-
-BenchmarkDotNet v0.13.10, Windows 11 (10.0.22621.2428/22H2/2022Update/SunValley2)
-11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
-.NET SDK 8.0.100-rc.2.23502.2
-[Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
-DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+            BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19041.630 (2004/?/20H1)
+            Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+            .NET Core SDK=5.0.100
+              [Host]     : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
+              DefaultJob : .NET Core 5.0.0 (CoreCLR 5.0.20.51904, CoreFX 5.0.20.51904), X64 RyuJIT
 
 
-| Method                 | Mean      | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
-| SystemExpr_Compile     | 89.873 us | 1.5941 us | 2.1821 us | 24.68 |    1.50 | 0.7324 | 0.4883 |   5.25 KB |        3.40 |
-| SystemExpr_CompileFast |  3.814 us | 0.0694 us | 0.0852 us |  1.04 |    0.07 | 0.3052 | 0.2899 |   1.96 KB |        1.27 |
-| LightExpr_CompileFast  |  3.682 us | 0.0872 us | 0.2401 us |  1.00 |    0.00 | 0.2518 | 0.2365 |   1.55 KB |        1.00 |
+            |                 Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
+            |----------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
+            |     SystemExpr_Compile | 165.654 us | 1.7359 us | 1.4496 us | 26.72 |    0.80 | 1.2207 | 0.4883 |      - |   5.31 KB |
+            | SystemExpr_CompileFast |   6.680 us | 0.1275 us | 0.1192 us |  1.07 |    0.04 | 0.4959 | 0.2441 | 0.0305 |   2.04 KB |
+            |  LightExpr_CompileFast |   6.160 us | 0.1209 us | 0.1773 us |  1.00 |    0.00 | 0.3815 | 0.1907 | 0.0305 |   1.59 KB |
 
-*/
+            ## v4.0.0
+
+            BenchmarkDotNet v0.13.10, Windows 11 (10.0.22621.2428/22H2/2022Update/SunValley2)
+            11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+            .NET SDK 8.0.100-rc.2.23502.2
+            [Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+            DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
+
+
+            | Method                 | Mean      | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |----------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | SystemExpr_Compile     | 89.873 us | 1.5941 us | 2.1821 us | 24.68 |    1.50 | 0.7324 | 0.4883 |   5.25 KB |        3.40 |
+            | SystemExpr_CompileFast |  3.814 us | 0.0694 us | 0.0852 us |  1.04 |    0.07 | 0.3052 | 0.2899 |   1.96 KB |        1.27 |
+            | LightExpr_CompileFast  |  3.682 us | 0.0872 us | 0.2401 us |  1.00 |    0.00 | 0.2518 | 0.2365 |   1.55 KB |        1.00 |
+
+            ## v4.0.0 - after bm cleanup and consistent creation for all bms
+
+            | Method                                   | Mean      | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |----------------------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Create_SystemExpression_Then_Compile     | 84.437 us | 1.6599 us | 1.9760 us | 20.04 |    1.42 | 0.7324 | 0.6104 |   5.22 KB |        3.46 |
+            | Create_SystemExpression_Then_CompileFast |  3.720 us | 0.0715 us | 0.0734 us |  0.89 |    0.06 | 0.3052 | 0.2899 |   1.93 KB |        1.28 |
+            | Create_LightExpression_Then_CompileFast  |  3.917 us | 0.2579 us | 0.7440 us |  1.00 |    0.00 | 0.2441 | 0.2365 |   1.51 KB |        1.00 |
+
+            */
 
             [Benchmark]
-            public Func<B, X> SystemExpr_Compile() => 
-                ComposeManualExprWithParams(Expression.Constant(_a, typeof(A))).Compile();
+            public Func<B, X> Create_SystemExpression_Then_Compile() =>
+                CreateManualExprWithParams().Compile();
 
             [Benchmark]
-            public Func<B, X> SystemExpr_CompileFast() => 
-                ComposeManualExprWithParams(Expression.Constant(_a, typeof(A))).CompileFast(true);
+            public Func<B, X> Create_SystemExpression_Then_CompileFast() =>
+                CreateManualExprWithParams().CompileFast(true);
 
             [Benchmark(Baseline = true)]
-            public Func<B, X> LightExpr_CompileFast() =>
-                LightExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ComposeManualExprWithParams(LightExpression.Expression.Constant(_a, typeof(A))), true);
+            public Func<B, X> Create_LightExpression_Then_CompileFast() =>
+                LightExpression.ExpressionCompiler.CompileFast(CreateManualLightExprWithParams(), true);
         }
 
         [MemoryDiagnoser]
@@ -199,30 +219,27 @@ DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
             | CompileFast                 |   3.902 us | 0.2889 us |  0.8244 us |   3.470 us |  1.09 |    0.24 | 0.2136 | 0.1984 |   1.39 KB |        1.00 |
             | CompileFast_LightExpression |   3.591 us | 0.1249 us |  0.3642 us |   3.407 us |  1.00 |    0.00 | 0.2136 | 0.1984 |   1.39 KB |        1.00 |
 
+            ## v4.0.0 - after bm cleanup and consistent creation for all bms
+
+            | Method                       | Mean      | Error     | StdDev     | Median    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |----------------------------- |----------:|----------:|-----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile_SystemExpression     | 94.596 us | 4.4636 us | 13.0205 us | 89.418 us | 29.16 |    3.55 | 0.4883 |      - |   4.73 KB |        3.41 |
+            | CompileFast_SystemExpression |  3.047 us | 0.0607 us |  0.1183 us |  3.010 us |  0.97 |    0.06 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
+            | CompileFast_LightExpression  |  3.151 us | 0.0628 us |  0.1117 us |  3.130 us |  1.00 |    0.00 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
+
             */
 
             [Benchmark]
-            public Func<B, X> Compile() => 
+            public Func<B, X> Compile_SystemExpression() =>
                 _expr.Compile();
 
             [Benchmark]
-            public Func<B, X> CompileFast() => 
+            public Func<B, X> CompileFast_SystemExpression() =>
                 _expr.CompileFast(true);
 
             [Benchmark(Baseline = true)]
             public Func<B, X> CompileFast_LightExpression() =>
-                LightExpression.ExpressionCompiler.CompileFast<Func<B, X>>(_leExpr, true);
-
-            // [Benchmark]
-            public Func<B, X> CompileFastWithPreCreatedClosure() => 
-                _expr.TryCompileWithPreCreatedClosure<Func<B, X>>(_aConstExpr)
-                ?? _expr.Compile();
-
-            // [Benchmark]
-            public Func<B, X> CompileFastWithPreCreatedClosureLightExpression() =>
-                LightExpression.ExpressionCompiler.TryCompileWithPreCreatedClosure<Func<B, X>>(
-                    _leExpr, _aConstLEExpr)
-                ?? LightExpression.ExpressionCompiler.CompileSys(_leExpr);
+                LightExpression.ExpressionCompiler.CompileFast(_leExpr, true);
         }
 
         [MemoryDiagnoser]
@@ -282,39 +299,35 @@ DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
             |                 FastCompiledLambda | 12.87 ns | 0.164 ns | 0.128 ns | 12.88 ns |  0.97 |    0.03 | 0.0102 |     - |     - |      32 B |
             | FastCompiledLambda_LightExpression | 13.11 ns | 0.258 ns | 0.471 ns | 13.01 ns |  1.00 |    0.00 | 0.0102 |     - |     - |      32 B |
 
+            ## v4.0.0
+
+            | Method                        | Mean     | Error     | StdDev    | Median   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+            |------------------------------ |---------:|----------:|----------:|---------:|------:|--------:|-------:|----------:|------------:|
+            | DirectCall                    | 8.388 ns | 0.2655 ns | 0.7575 ns | 8.092 ns |  1.00 |    0.07 | 0.0051 |      32 B |        1.00 |
+            | Compiled_SystemExpression     | 9.474 ns | 0.1870 ns | 0.4105 ns | 9.381 ns |  1.10 |    0.05 | 0.0051 |      32 B |        1.00 |
+            | CompiledFast_SystemExpression | 8.575 ns | 0.1624 ns | 0.1440 ns | 8.517 ns |  1.00 |    0.02 | 0.0051 |      32 B |        1.00 |
+            | CompiledFast_LightExpression  | 8.584 ns | 0.0776 ns | 0.0862 ns | 8.594 ns |  1.00 |    0.00 | 0.0051 |      32 B |        1.00 |
+
             */
             private static readonly Func<B, X> _lambdaCompiled = _expr.Compile();
             private static readonly Func<B, X> _lambdaCompiledFast = _expr.CompileFast(true);
-            private static readonly Func<B, X> _lambdaCompiledFast_LightExpession = _expr.CompileFast<Func<B, X>>(true);
-
-            private static readonly Func<B, X> _lambdaCompiledFastWithClosure =
-                _expr.TryCompileWithPreCreatedClosure<Func<B, X>>(_aConstExpr);
-
-            private static readonly Func<B, X> _lambdaCompiledFastWithClosureLE =
-                LightExpression.ExpressionCompiler.TryCompileWithPreCreatedClosure<Func<B, X>>(
-                    _leExpr, _aConstLEExpr);
+            private static readonly Func<B, X> _lambdaCompiledFast_LightExpession = LightExpression.ExpressionCompiler.CompileFast(_leExpr, true);
 
             private static readonly A _aa = new A();
             private static readonly B _bb = new B();
             private static readonly Func<B, X> _lambda = b => new X(_aa, b);
 
             [Benchmark]
-            public X DirectLambdaCall() => _lambda(_bb);
+            public X DirectCall() => _lambda(_bb);
 
             [Benchmark]
-            public X CompiledLambda() => _lambdaCompiled(_bb);
+            public X Compiled_SystemExpression() => _lambdaCompiled(_bb);
 
             [Benchmark]
-            public X FastCompiledLambda() => _lambdaCompiledFast(_bb);
+            public X CompiledFast_SystemExpression() => _lambdaCompiledFast(_bb);
 
             [Benchmark(Baseline = true)]
-            public X FastCompiledLambda_LightExpression() => _lambdaCompiledFast_LightExpession(_bb);
-
-            // [Benchmark]
-            public X FastCompiledLambdaWithPreCreatedClosure() => _lambdaCompiledFastWithClosure(_bb);
-
-            // [Benchmark]
-            public X FastCompiledLambdaWithPreCreatedClosureLE() => _lambdaCompiledFastWithClosureLE(_bb);
+            public X CompiledFast_LightExpression() => _lambdaCompiledFast_LightExpession(_bb);
         }
     }
 }

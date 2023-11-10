@@ -129,21 +129,21 @@ var expr = Expression.Lambda(
 
 Compiling expression:
 
-| Method                      | Mean       | Error     | StdDev     | Median     | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|---------------------------- |-----------:|----------:|-----------:|-----------:|------:|--------:|-------:|-------:|----------:|------------:|
-| Compile                     | 109.937 us | 4.5259 us | 12.9855 us | 108.150 us | 30.88 |    4.71 | 0.7324 | 0.4883 |   4.74 KB |        3.41 |
-| CompileFast                 |   3.902 us | 0.2889 us |  0.8244 us |   3.470 us |  1.09 |    0.24 | 0.2136 | 0.1984 |   1.39 KB |        1.00 |
-| CompileFast_LightExpression |   3.591 us | 0.1249 us |  0.3642 us |   3.407 us |  1.00 |    0.00 | 0.2136 | 0.1984 |   1.39 KB |        1.00 |
+| Method                       | Mean      | Error     | StdDev    | Median    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|----------------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| Compile_SystemExpression     | 89.076 us | 2.6699 us | 7.6605 us | 85.180 us | 28.12 |    3.05 | 0.7324 | 0.4883 |   4.74 KB |        3.41 |
+| CompileFast_SystemExpression |  3.138 us | 0.0550 us | 0.0565 us |  3.118 us |  0.99 |    0.03 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
+| CompileFast_LightExpression  |  3.180 us | 0.0602 us | 0.0591 us |  3.163 us |  1.00 |    0.00 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
 
 
 Invoking the compiled delegate compared to the normal delegate and the direct call:
 
-|                             Method |     Mean |    Error |   StdDev |   Median | Ratio | RatioSD |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|----------------------------------- |---------:|---------:|---------:|---------:|------:|--------:|-------:|------:|------:|----------:|
-|                   DirectLambdaCall | 13.72 ns | 0.274 ns | 0.500 ns | 13.62 ns |  1.05 |    0.06 | 0.0102 |     - |     - |      32 B |
-|                     CompiledLambda | 17.12 ns | 1.006 ns | 2.950 ns | 15.78 ns |  1.24 |    0.15 | 0.0102 |     - |     - |      32 B |
-|                 FastCompiledLambda | 12.87 ns | 0.164 ns | 0.128 ns | 12.88 ns |  0.97 |    0.03 | 0.0102 |     - |     - |      32 B |
-| FastCompiledLambda_LightExpression | 13.11 ns | 0.258 ns | 0.471 ns | 13.01 ns |  1.00 |    0.00 | 0.0102 |     - |     - |      32 B |
+| Method                        | Mean     | Error     | StdDev    | Median   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|------------------------------ |---------:|----------:|----------:|---------:|------:|--------:|-------:|----------:|------------:|
+| DirectCall                    | 8.388 ns | 0.2655 ns | 0.7575 ns | 8.092 ns |  1.00 |    0.07 | 0.0051 |      32 B |        1.00 |
+| Compiled_SystemExpression     | 9.474 ns | 0.1870 ns | 0.4105 ns | 9.381 ns |  1.10 |    0.05 | 0.0051 |      32 B |        1.00 |
+| CompiledFast_SystemExpression | 8.575 ns | 0.1624 ns | 0.1440 ns | 8.517 ns |  1.00 |    0.02 | 0.0051 |      32 B |        1.00 |
+| CompiledFast_LightExpression  | 8.584 ns | 0.0776 ns | 0.0862 ns | 8.594 ns |  1.00 |    0.00 | 0.0051 |      32 B |        1.00 |
 
 
 ### FastExpressionCompiler.LightExpression.Expression vs System.Linq.Expressions.Expression
