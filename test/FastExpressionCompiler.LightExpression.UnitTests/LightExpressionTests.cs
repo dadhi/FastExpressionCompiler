@@ -184,7 +184,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public static Expression<Func<object[], object>> CreateComplexLightExpression(string p = null)
         {
-            var stateParamExpr = Parameter(typeof(object[]), p);
+            var stateParamExpr = ParameterOf<object[]>(p);
 
             var expr = Lambda<Func<object[], object>>(
                 MemberInit(
@@ -208,7 +208,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public static Expression<Func<object[], object>> CreateComplexLightExpression_with_intrinsics(string p = null)
         {
-            var stateParamExpr = Parameter(typeof(object[]), p);
+            var stateParamExpr = ParameterOf<object[]>(p);
 
             var expr = Lambda<Func<object[], object>>(
                 MemberInit(
@@ -346,8 +346,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             public string Sop;
             public IEnumerable<ID> Dop;
 
-            public A(B b, string s, IEnumerable<ID> ds) 
-            { 
+            public A(B b, string s, IEnumerable<ID> ds)
+            {
                 Bop = b;
                 Sop = s;
                 Dop = ds;
