@@ -122,7 +122,7 @@ Invoking compiled delegate comparing to direct method call:
 var a = new A();
 var bParamExpr = Expression.Parameter(typeof(B), "b");
 var expr = Expression.Lambda(
-    Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
+    Expression.New(_ctorX,
         Expression.Constant(a, typeof(A)), bParamExpr),
     bParamExpr);
 ```
@@ -237,12 +237,12 @@ Manually composed lambda expression:
 var a = new A();
 var bParamExpr = Expression.Parameter(typeof(B), "b");
 var expr = Expression.Lambda(
-    Expression.New(typeof(X).GetTypeInfo().DeclaredConstructors.First(),
+    Expression.New(_ctorX,
         Expression.Constant(a, typeof(A)), bParamExpr),
     bParamExpr);
 
-var getX = expr.CompileFast();
-var x = getX(new B());
+var f = expr.CompileFast();
+var x = f(new B());
 ```
 
 __Note:__ You may simplify Expression usage and enable faster refactoring with the C# `using static` statement:
@@ -255,10 +255,11 @@ using static System.Linq.Expressions.Expression;
 var a = new A();
 var bParamExpr = Parameter(typeof(B), "b");
 var expr = Lambda(
-    New(typeof(X).GetTypeInfo().DeclaredConstructors.First(), Constant(a, typeof(A)), bParamExpr),
+    New(_ctorX, Constant(a, typeof(A)), bParamExpr),
     bParamExpr);
 
-var x = expr.CompileFast()(new B());
+var f = expr.CompileFast();
+var x = f(new B());
 ```
 
 
