@@ -34,7 +34,7 @@ The project was originally a part of the [DryIoc], so check it out ;-)
 
 ## The problem
 
-[ExpressionTree] compilation is used by the wide variety of tools, e.g. IoC/DI containers, Serializers, OO Mappers.
+[ExpressionTree] compilation is used by the wide variety of tools, e.g. IoC/DI containers, Serializers, ORMs and OOMs.
 But `Expression.Compile()` is just slow. 
 Moreover the compiled delegate may be slower than the manually created delegate because of the [reasons](https://blogs.msdn.microsoft.com/seteplia/2017/02/01/dissecting-the-new-constraint-in-c-a-perfect-example-of-a-leaky-abstraction/):
 
