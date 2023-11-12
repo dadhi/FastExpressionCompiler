@@ -16,18 +16,18 @@
 - fixed: #353 NullReferenceException when calling CompileFast() results
 - fixed: #357 Invalid program exception
 - fixed: #366 FastExpressionCompiler[v3.3.4] gives incorrect results in some linq operations
-- fixed: #368 Fix duplicate nested lambda compilation enhancement performance
+- fixed: #368 Fix duplicate nested lambda compilation
 - fixed: #374 CompileFast doesn't work with HasFlag
 
-- added: #264 Optimize the array index emit to emit specific Ldelem_ code instead of generic Ldelem enhancement
+- added: #264 Optimize the array index emit to emit specific Ldelem_ code instead of generic Ldelem
 - added: #273 Implement IArgumentProvider for the BlockExpression to minimize the consumed memory
 - added: #346 Is it possible to implement ref local variables?
 - added: #359 Improve the performance of variable lookup
 - added: #367 Better diagnostics and debugging with error codes from Collect and Compile rounds
 - added: #369 Decrease memory occupied by the LightExpression Block by storing Expression in SmallList (partly on stack)
-- added: #370 Optimize any nested lambda compilation (LINQ) by compiling right after collect one-by-one performance
+- added: #370 Optimize any nested lambda compilation (LINQ) by compiling right after collect one-by-one
 - added: #372 Support LightExpression.Expression.TryConvertDelegateIntrinsic for converting one type of delegate to another
-- added: #373 Support custom C# printing for the LightExpression.Expression enhancement
+- added: #373 Support custom C# printing for the LightExpression.Expression
 
         ]]></PackageReleaseNotes>
         <AssemblyName>$(Product)</AssemblyName>

@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.LightExpression.src</id>
-        <version>3.3.4</version>
+        <version>4.0.0</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2023 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,44 +12,24 @@
         <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <releaseNotes><![CDATA[
-## v3.3.4 Bug-fix release
+## v4.0.0 Major release
 
-- fixed: #345 EmitCall is for the varargs method and should not be used for normal convention
-- fixed: #347 InvalidProgramException on compiling an expression that returns a record which implements IList
-- fixed: #349 Error when loading struct parameters closed by the nested lambda e.g. predicate in Linq
-- fixed: #355 Error with converting to/from signed/unsigned integers (Thanks to @TYoungSL for the PR!)
+- fixed: #352 xxxAssign doesn't work with MemberAccess
+- fixed: #353 NullReferenceException when calling CompileFast() results
+- fixed: #357 Invalid program exception
+- fixed: #366 FastExpressionCompiler[v3.3.4] gives incorrect results in some linq operations
+- fixed: #368 Fix duplicate nested lambda compilation
+- fixed: #374 CompileFast doesn't work with HasFlag
 
-- fixed: the C# output for if-else test condition, and inc/dec operations; and for label at the end of the lambda
-- fixed: ref assignment C# output
-
-- perf: Replace ILGenerator.Emit(OpCodes.Call, ..) with EmitMethodCall performance
-
-
-## v3.3.3 Bug-fix release
-
-- fixed: #336 Method TryCompileBoundToFirstClosureParam is returning passed Type array to pool may cause undefined behavior
-- fixed: #337 Switch LightExpression.Expression.ToString from System.Expression.ToString pseudo-code to ToCSharpString
-- fixed: #338 InvocationExpression is not properly converted to System Expression via ToExpression for non-lambda expression
-- fixed: #341 Equality comparison between nullable and null inside Any produces incorrect compiled expression
-
-## v3.3.2 Bug-fix release
-
-- fixed: #335 FastExpressionCompiler.LightExpressions - MemberInit has recursive calls
-
-## v3.3.1 Optimization and bug-fix release
-
-- fixed: #333 AccessViolationException and other suspicious behaviour on invoking result of CompileFast()
-- optim: LightExpression.Parameter consumes less memory for the common standard types. 
-
-## v3.3.0 Feature and bug-fix release
-
-- added: #235 [GodMode] Expression to IL intrinsic
-- added: #325 Add LightExpression.NewNoByRefArgs overloads for performance
-- added: #327 Replace direct il.Emit(OpCodes.Call, ...) with EmitMethodCall
-- added: #329 Optimize special case compilation for New and Call with no arguments
-- added: #330 Optimize nested lambda ClosureInfo memory footprint
-- fixed: #324 The LightExpression.New of IEnumerable is recursive
-- fixed: #328 Fix the performance of TryEmitConvert to String
+- added: #264 Optimize the array index emit to emit specific Ldelem_ code instead of generic Ldelem
+- added: #273 Implement IArgumentProvider for the BlockExpression to minimize the consumed memory
+- added: #346 Is it possible to implement ref local variables?
+- added: #359 Improve the performance of variable lookup
+- added: #367 Better diagnostics and debugging with error codes from Collect and Compile rounds
+- added: #369 Decrease memory occupied by the LightExpression Block by storing Expression in SmallList (partly on stack)
+- added: #370 Optimize any nested lambda compilation (LINQ) by compiling right after collect one-by-one
+- added: #372 Support LightExpression.Expression.TryConvertDelegateIntrinsic for converting one type of delegate to another
+- added: #373 Support custom C# printing for the LightExpression.Expression
 
         ]]></releaseNotes>
         <contentFiles>
