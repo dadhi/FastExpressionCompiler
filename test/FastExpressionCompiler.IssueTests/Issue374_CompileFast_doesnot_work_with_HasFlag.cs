@@ -46,8 +46,8 @@ public class Issue374_CompileFast_doesnot_work_with_HasFlag : ITest
 
         b1 = new Bar { Foo = Foo.Green };
         b2 = new Bar { Foo = Foo.Red | Foo.Blue };
-        Assert.IsTrue(fs(b1));
-        Assert.IsFalse(fs(b2));
+        Assert.IsTrue(ff(b1));
+        Assert.IsFalse(ff(b2));
     }
 
     [Flags]
