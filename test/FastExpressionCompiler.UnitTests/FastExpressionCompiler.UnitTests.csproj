@@ -6,12 +6,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj" />
-    </ItemGroup>
-
-    <ItemGroup Condition=" '$(TargetFramework)' != 'net8.0' ">
-        <Reference Include="ILDebugging.Decoder">
-            <HintPath>..\libs\ILDebugging.Decoder.dll</HintPath>
-        </Reference>
+        <ProjectReference Include="..\FastExpressionCompiler.ILDecoder\FastExpressionCompiler.ILDecoder.csproj" />
     </ItemGroup>
 
 </Project>

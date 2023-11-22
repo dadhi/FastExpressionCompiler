@@ -1,6 +1,5 @@
-﻿#if DEBUG && !NET8_0
+﻿#if DEBUG
 #define PRINTIL
-using ILDebugging.Decoder;
 #endif
 using System;
 using System.Linq;
@@ -9,6 +8,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using NUnit.Framework;
+using FastExpressionCompiler.ILDecoder;
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
 #else

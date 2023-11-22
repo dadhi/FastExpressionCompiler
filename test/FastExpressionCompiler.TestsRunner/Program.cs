@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
+            // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new EmitHacksTest().Run();
             // new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run();
             // new Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.UnitTests
             // new UnaryExpressionTests().Run();
             // new NestedLambdaTests().Run();
             // new LightExpression.UnitTests.BlockTests().Run();
-            // new Issue374_CompileFast_doesnot_work_with_HasFlag().Run();
+            new Issue374_CompileFast_doesnot_work_with_HasFlag().Run();
             // new LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run();
             // new Issue281_Index_Out_of_Range().Run();
             // new ConvertOperatorsTests().Run();

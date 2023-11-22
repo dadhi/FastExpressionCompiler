@@ -6,7 +6,7 @@ echo:## Finished: RESTORE and BUILD
 echo: 
 echo:## Starting: TESTS...
 echo:
-dotnet run -c Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+dotnet run -f net8.0 -c Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
