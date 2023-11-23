@@ -69,7 +69,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Console.WriteLine("""
 
-            ### .NET: Running UnitTests and IssueTests in parallel...
+            ### .NET Latest (Core): Running UnitTests and IssueTests in parallel...
             """);
 
             var sw = Stopwatch.StartNew();

@@ -15,10 +15,10 @@ echo:
 echo:## Starting: TESTS...
 echo: 
 
-dotnet run --no-build  -f net7.0 -c Release -p:DevMode=false --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+dotnet run --no-build  -f net7.0 -c Release -p:DevMode=false --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
-dotnet run --no-build -c Release -p:DevMode=false --project test/FastExpressionCompiler.TestsRunner.Net472/FastExpressionCompiler.TestsRunner.Net472.csproj
+dotnet run --no-build -c Release -p:DevMode=false --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 echo:
 echo:## Finished: TESTS

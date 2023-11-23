@@ -4356,8 +4356,10 @@ namespace FastExpressionCompiler
                 var ok = true;
                 if (!objIsValueType)
                     ok = EmitMethodCallOrVirtualCall(il, method);
-                else if (!method.IsVirtual || method.DeclaringType == objExpr.Type ||
-                    objExpr is ParameterExpression pe && pe.IsByRef)
+                else if (method.DeclaringType != typeof(Enum) &&
+                    (!method.IsVirtual || 
+                    method.DeclaringType == objExpr.Type ||
+                    objExpr is ParameterExpression pe && pe.IsByRef))
                     ok = EmitMethodCall(il, method);
                 else
                 {

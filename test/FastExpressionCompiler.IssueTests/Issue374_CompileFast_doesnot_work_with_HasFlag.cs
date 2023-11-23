@@ -12,7 +12,7 @@ public class Issue374_CompileFast_doesnot_work_with_HasFlag : ITest
 {
     public int Run()
     {
-        // Test1();
+        Test1();
         return 1;
     }
 
@@ -40,8 +40,8 @@ public class Issue374_CompileFast_doesnot_work_with_HasFlag : ITest
             OpCodes.Ldc_I4_4,
             OpCodes.Box,        // Foo
             OpCodes.Castclass,  // Enum
-            OpCodes.Constrained,//Foo
-            OpCodes.Call,       // Enum.HasFlag
+            OpCodes.Constrained,// Foo
+            OpCodes.Callvirt,   // Enum.HasFlag
             OpCodes.Ret
         );
 
