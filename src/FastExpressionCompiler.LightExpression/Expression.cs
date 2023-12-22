@@ -1521,6 +1521,10 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception with a given type.</summary>
         public static UnaryExpression Throw(Expression value, Type type) =>
             new TypedUnaryExpression(ExpressionType.Throw, value, type);
+        
+        /// <summary> Creates a <see cref="UnaryExpression"/> that represents a rethrowing of an exception in a catch block. </summary>
+        public static UnaryExpression Rethrow(Type type) =>
+            new TypedUnaryExpression(ExpressionType.Throw, null, type);
 
         public static LabelExpression Label(LabelTarget target) =>
             new LabelExpression(target);

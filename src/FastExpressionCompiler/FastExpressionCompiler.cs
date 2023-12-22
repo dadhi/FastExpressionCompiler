@@ -1482,6 +1482,8 @@ namespace FastExpressionCompiler
                     default:
                         if (expr is UnaryExpression unaryExpr)
                         {
+                            if (unaryExpr.Operand is null)
+                                return r;
                             expr = unaryExpr.Operand;
                             continue;
                         }
@@ -2054,9 +2056,17 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Throw:
                             {
-                                if (!TryEmit(((UnaryExpression)expr).Operand, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
-                                    return false;
-                                il.Demit(OpCodes.Throw);
+                                var throwExpr = (UnaryExpression)expr;
+                                if (throwExpr.Operand is null)
+                                {
+                                    il.Demit(OpCodes.Rethrow);
+                                }
+                                else
+                                {
+                                    if (!TryEmit(throwExpr.Operand, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
+                                        return false;
+                                    il.Demit(OpCodes.Throw);
+                                }
                                 return true;
                             }
 
