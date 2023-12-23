@@ -7377,8 +7377,13 @@ namespace FastExpressionCompiler
                                     return sb;
 
                                 case ExpressionType.Throw:
-                                    sb.Append("throw ");
-                                    return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(';');
+                                    if (op is null)
+                                        return sb.Append("throw;");
+                                    else
+                                    {
+                                        sb.Append("throw ");
+                                        return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(';');
+                                    }
 
                                 case ExpressionType.Unbox: // output it as the cast
                                     sb.Append("((").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
