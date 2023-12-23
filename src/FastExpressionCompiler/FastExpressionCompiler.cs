@@ -132,6 +132,10 @@ namespace FastExpressionCompiler
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) != 0)
                 throw new NotSupportedException("The `CompilerFlags.EnableDelegateDebugInfo` is not supported because the debug info is gathered into the closure object which is not allowed for static lambda to be compiled to method.");
 
+#if DEMIT
+            Debug.WriteLine("CompileFastToIL: " + lambdaExpr);
+#endif
+
 #if LIGHT_EXPRESSION
             var paramExprs = lambdaExpr;
 #else
@@ -152,6 +156,9 @@ namespace FastExpressionCompiler
                 return false;
 
             il.Demit(OpCodes.Ret);
+#if DEMIT
+            Debug.WriteLine("Compilation done.");
+#endif
             return true;
         }
 
@@ -470,6 +477,9 @@ namespace FastExpressionCompiler
             Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
         {
 #endif
+#if DEMIT
+            Debug.WriteLine("CompileFast: " + bodyExpr.ToCSharpString());
+#endif
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
             var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, null, ref closureInfo.NestedLambdas, flags))
@@ -503,6 +513,10 @@ namespace FastExpressionCompiler
             if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
                 return null;
             il.Demit(OpCodes.Ret);
+
+#if DEMIT
+            Debug.WriteLine("Compilation done.");
+#endif
 
             return method.CreateDelegate(delegateType, closure);
         }
