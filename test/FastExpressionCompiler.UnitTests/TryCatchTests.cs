@@ -31,8 +31,12 @@ namespace FastExpressionCompiler.UnitTests
             Can_return_nested_catch_block_result();
             Can_return_from_try_block_using_goto_to_label_with_default_value();
             Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label();
+            Can_rethrow();
+            Can_rethrow_void();
+            Can_rethrow_or_wrap();
+            Can_rethrow_or_suppress();
 
-            return 13;
+            return 17;
         }
 
         [Test]
