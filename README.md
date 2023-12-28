@@ -270,7 +270,7 @@ and fallback to the system `Expression.Compile()` for the not supported types:
 
 ### What's not supported yet
 
-**FEC V3 does not support yet:** 
+**FEC does not support yet:** 
 
 - `Quote`
 - `Dynamic`
