@@ -31,8 +31,14 @@ namespace FastExpressionCompiler.UnitTests
             Can_return_nested_catch_block_result();
             Can_return_from_try_block_using_goto_to_label_with_default_value();
             Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label();
+            Can_rethrow();
+            Can_rethrow_void();
+            Can_rethrow_or_wrap();
+            Can_rethrow_or_suppress();
+            // Can_be_nested_in_binary();
+            // Can_be_nested_in_call_expression();
 
-            return 13;
+            return 17;
         }
 
         [Test]
@@ -399,6 +405,152 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Can_rethrow()
+        {
+            var exceptions = new System.Collections.Generic.List<Exception>();
+            var pFn = Parameter(typeof(Func<string>), "fn");
+            var pEx = Parameter(typeof(Exception), "ex");
+            var expr = Lambda<Func<Func<string>, string>>(
+                TryCatch(
+                    Invoke(pFn),
+                    Catch(
+                        pEx,
+                        Block(
+                            Invoke(Constant(new Action<Exception>(exceptions.Add)), pEx),
+                            Rethrow(typeof(string))
+                        )
+                    )
+                ),
+                pFn
+            );
+
+            var compiledFast = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+            var compiled = expr.CompileSys();
+            compiledFast.PrintIL();
+
+            // no exception
+            Assert.AreEqual("ok", compiledFast(() => "ok"));
+            Assert.AreEqual("ok", compiled(() => "ok"));
+            // rethrown exception
+            Assert.IsEmpty(exceptions);
+            Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
+            Assert.That(exceptions, Has.Count.EqualTo(1));
+            Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
+            Assert.That(exceptions, Has.Count.EqualTo(2));
+        }
+
+        [Test]
+        public void Can_rethrow_void()
+        {
+            var pFn = Parameter(typeof(Action), "fn");
+            var pEx = Parameter(typeof(Exception), "ex");
+            var expr = Lambda<Action<Action>>(
+                TryCatch(
+                    Invoke(pFn),
+                    Catch(
+                        pEx,
+                        Rethrow(typeof(void))
+                    )
+                ),
+                pFn
+            );
+
+            var compiledFast = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+            var compiled = expr.CompileSys();
+            compiledFast.PrintIL();
+
+            // no exception
+            var executed = 0;
+            compiledFast(() => executed++);
+            Assert.AreEqual(1, executed);
+            compiled(() => executed++);
+            Assert.AreEqual(2, executed);
+            // rethrown exception
+            Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
+            Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
+        }
+
+        [Test]
+        public void Can_rethrow_or_wrap()
+        {
+            var pFn = Parameter(typeof(Func<string>), "fn");
+            var pEx = Parameter(typeof(Exception), "ex");
+            var expr = Lambda<Func<Func<string>, string>>(
+                TryCatch(
+                    Invoke(pFn),
+                    Catch(
+                        pEx,
+                        // ex is ArgumentException ? throw : throw new Exception("wrapped", ex);
+                        Condition(
+                            TypeIs(pEx, typeof(ArgumentException)),
+                            Rethrow(typeof(string)),
+                            Throw(
+                                New(typeof(Exception).GetConstructor(new[] { typeof(string), typeof(Exception) }), Constant("wrapped"), pEx),
+                                typeof(string)
+                            )
+                        )
+                    )
+                ),
+                pFn
+            );
+
+            var compiledFast = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+            var compiled = expr.CompileSys();
+            compiledFast.PrintIL();
+
+            // no exception
+            Assert.AreEqual("ok", compiledFast(() => "ok"));
+            Assert.AreEqual("ok", compiled(() => "ok"));
+            // rethrown exception
+            Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
+            Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
+            // wrapped exception
+            var exception = Assert.Throws<Exception>(() => compiledFast(() => { throw new InvalidOperationException(); }));
+            Assert.AreEqual("wrapped", exception.Message);
+            Assert.IsInstanceOf<InvalidOperationException>(exception.InnerException);
+            exception = Assert.Throws<Exception>(() => compiled(() => { throw new InvalidOperationException(); }));
+            Assert.AreEqual("wrapped", exception.Message);
+            Assert.IsInstanceOf<InvalidOperationException>(exception.InnerException);
+        }
+
+        [Test]
+        public void Can_rethrow_or_suppress()
+        {
+            var pFn = Parameter(typeof(Func<string>), "fn");
+            var pEx = Parameter(typeof(Exception), "ex");
+            var expr = Lambda<Func<Func<string>, string>>(
+                TryCatch(
+                    Invoke(pFn),
+                    Catch(
+                        pEx,
+                        // ex is ArgumentException ? throw : "exception suppressed";
+                        Condition(
+                            TypeIs(pEx, typeof(ArgumentException)),
+                            Rethrow(typeof(string)),
+                            Constant("exception suppressed")
+                        )
+                    )
+                ),
+                pFn
+            );
+
+            var compiledFast = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+            var compiled = expr.CompileSys();
+            compiledFast.PrintIL();
+
+            // no exception
+            Assert.AreEqual("ok", compiledFast(() => "ok"));
+            Assert.AreEqual("ok", compiled(() => "ok"));
+            // rethrown exception
+            Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
+            Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
+            // caught exception
+            Assert.AreEqual("exception suppressed", compiledFast(() => { throw new InvalidOperationException(); }));
+            Assert.AreEqual("exception suppressed", compiled(() => { throw new InvalidOperationException(); }));
+
+            // throw null;
+        }
+
         public void Can_be_nested_in_binary()
         {
             var p = Parameter(typeof(Func<int>), "p");
