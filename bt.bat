@@ -3,7 +3,7 @@
 echo: 
 echo:## Running TESTS on .NET 8.0...
 echo:
-dotnet run -f net8.0 -c Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run -f:net8.0 -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:

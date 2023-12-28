@@ -7,12 +7,13 @@ using System.Text;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Linq.Expressions;
+using System.Diagnostics;
 using NUnit.Framework;
 using FastExpressionCompiler.ILDecoder;
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
 #else
-using System.Linq.Expressions;
 namespace FastExpressionCompiler;
 #endif
 
@@ -23,19 +24,23 @@ public static class TestTools
 
     public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes)
     {
-#if PRINTIL
-        var actualCodes = ILReaderFactory.Create(method).Select(x => x.OpCode).ToArray();
+        var ilReader = ILReaderFactory.Create(method);
+        if (ilReader is null)
+        {
+            Debug.WriteLine($"Reading IL is currently not supported");
+            return;
+        }
+        var actualCodes = ilReader.Select(x => x.OpCode).ToArray();
         var sb = new StringBuilder();
         var n = 0;
         foreach (var code in actualCodes)
             sb.AppendLine($"{n++, -4}{code}");
         CollectionAssert.AreEqual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual codes are: " + Environment.NewLine + sb);
-#endif
     }
 
     static private readonly Func<Type, string, string> _stripOuterTypes = (t, s) => s.Substring(s.LastIndexOf('.') + 1);
 
-    [System.Diagnostics.Conditional("DEBUG")]
+    [Conditional("DEBUG")]
     public static void PrintExpression(this Expression expr, bool completeTypeNames = false) =>
         Console.WriteLine(
             expr.ToExpressionString(out var _, out var _, out var _,
@@ -44,7 +49,7 @@ public static class TestTools
             identSpaces: 4)
         );
 
-    [System.Diagnostics.Conditional("DEBUG")]
+    [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, bool completeTypeNames = false) 
     {
         var sb = new StringBuilder(1024);
@@ -54,19 +59,19 @@ public static class TestTools
         Console.WriteLine(sb.ToString());
     }
 
-    [System.Diagnostics.Conditional("DEBUG")]
+    [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, Func<string, string> transform) =>
         Console.WriteLine(transform(expr.ToCSharpString()));
 
-    [System.Diagnostics.Conditional("DEBUG")]
+    [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode) =>
         Console.WriteLine(expr.ToCSharpString(objectToCode));
 
-    [System.Diagnostics.Conditional("DEBUG")]
+    [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, ref string result) =>
         Console.WriteLine(result = expr.ToCSharpString());
 
-    [System.Diagnostics.Conditional("DEBUG")]
+    [Conditional("DEBUG")]
     public static void PrintIL(this Delegate @delegate, [CallerMemberName] string tag = null)
     {
 #if PRINTIL

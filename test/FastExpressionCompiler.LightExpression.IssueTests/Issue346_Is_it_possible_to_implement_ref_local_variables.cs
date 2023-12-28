@@ -12,6 +12,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
         public int Run()
         {
             // Check_assignment_to_by_ref_float_parameter_PostIncrement_Returning();
+
             Check_assignment_to_by_ref_int_parameter_PostIncrement_Returning();
             Check_assignment_to_by_ref_int_parameter_PostIncrement_Void();
 
@@ -27,18 +28,18 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             return 8;
         }
 
-        delegate void IncRefint(ref int x);
+        delegate void IncRefInt(ref int x);
 
         [Test]
         public void Check_assignment_to_by_ref_int_parameter_PlusOne()
         {
             var p = Parameter(typeof(int).MakeByRefType(), "x");
-            var e = Lambda<IncRefint>(
+            var e = Lambda<IncRefInt>(
                 Block(AddAssign(p, Constant(1))),
                 p
             );
             e.PrintCSharp();
-            var @cs = (IncRefint)((ref int x) =>
+            var @cs = (IncRefInt)((ref int x) =>
             {
                 x += (int)1;
             });
@@ -55,10 +56,10 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             f.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_1,
-                OpCodes.Ldind_R4,
-                OpCodes.Ldc_R4,
+                OpCodes.Ldind_I4,
+                OpCodes.Ldc_I4_1,
                 OpCodes.Add,
-                OpCodes.Stind_R4,
+                OpCodes.Stind_I4,
                 OpCodes.Ret
             );
 
@@ -71,12 +72,12 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
         public void Check_assignment_to_by_ref_int_parameter_PostIncrement_Void()
         {
             var p = Parameter(typeof(int).MakeByRefType(), "x");
-            var e = Lambda<IncRefint>(
+            var e = Lambda<IncRefInt>(
                 Block(PostIncrementAssign(p)),
                 p);
 
             e.PrintCSharp();
-            var @cs = (IncRefint)((ref int x) =>
+            var @cs = (IncRefInt)((ref int x) =>
             {
                 x++;
             });
@@ -92,13 +93,13 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             f.PrintIL();
             f.AssertOpCodes(
                 OpCodes.Ldarg_1,
-                OpCodes.Ldind_R4,
+                OpCodes.Ldind_I4,
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Stloc_0,
                 OpCodes.Ldarg_1,
                 OpCodes.Ldloc_0,
-                OpCodes.Stind_R4,
+                OpCodes.Stind_I4,
                 OpCodes.Ret
             );
 
@@ -181,7 +182,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             f.PrintIL();
             f.AssertOpCodes(
                 OpCodes.Ldarg_1,
-                OpCodes.Ldind_R4,
+                OpCodes.Ldind_I4,
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0,
                 OpCodes.Ldc_I4_1,
@@ -189,7 +190,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Stloc_1,
                 OpCodes.Ldarg_1,
                 OpCodes.Ldloc_1,
-                OpCodes.Stind_R4,
+                OpCodes.Stind_I4,
                 OpCodes.Ldloc_0,
                 OpCodes.Ret
             );
@@ -292,10 +293,10 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ldloc_2,
                 OpCodes.Ldflda,  // int64 C/Vector3::x
                 OpCodes.Dup,
-                OpCodes.Ldind_R8,
+                OpCodes.Ldind_I4,
                 OpCodes.Ldc_I4_S,// 12
                 OpCodes.Add,
-                OpCodes.Stind_R8,
+                OpCodes.Stind_I4,
                 OpCodes.Ldloc_0,
                 OpCodes.Ret
             );
@@ -352,12 +353,12 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ldloc_2,
                 OpCodes.Ldflda, // Vector3.x
                 OpCodes.Dup,
-                OpCodes.Ldind_R8,
+                OpCodes.Ldind_I4,
                 OpCodes.Stloc_3,
                 OpCodes.Ldloc_3,
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
-                OpCodes.Stind_R8,
+                OpCodes.Stind_I4,
                 OpCodes.Ldloc_3,
                 OpCodes.Ret
             );
@@ -415,12 +416,12 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ldloc_2,
                 OpCodes.Ldflda, // Vector3.x
                 OpCodes.Dup,
-                OpCodes.Ldind_R8,
+                OpCodes.Ldind_I4,
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Stloc_3,
                 OpCodes.Ldloc_3,
-                OpCodes.Stind_R8,
+                OpCodes.Stind_I4,
                 OpCodes.Ldloc_3,
                 OpCodes.Ret
             );
@@ -481,10 +482,10 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ldloc_2,
                 OpCodes.Ldflda,  // int64 C/Vector3::x
                 OpCodes.Dup,
-                OpCodes.Ldind_R8,
+                OpCodes.Ldind_I4,
                 OpCodes.Ldc_I4_S,// 12
                 OpCodes.Add,
-                OpCodes.Stind_R8,
+                OpCodes.Stind_I4,
                 OpCodes.Ldloc_2,
                 OpCodes.Call, // call Vector3.Normalize
                 OpCodes.Ldloc_0,
@@ -589,10 +590,10 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ldloc_2,
                 OpCodes.Ldflda,// Vector3.x
                 OpCodes.Dup,
-                OpCodes.Ldind_R8,
+                OpCodes.Ldind_I4,
                 OpCodes.Ldc_I4_S,// 12
                 OpCodes.Add,
-                OpCodes.Stind_R8,
+                OpCodes.Stind_I4,
                 OpCodes.Ldloc_2,
                 OpCodes.Call, //Vector3.Normalize
                 OpCodes.Ldloc_1,

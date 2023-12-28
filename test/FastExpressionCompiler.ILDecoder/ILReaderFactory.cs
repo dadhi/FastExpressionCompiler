@@ -6,6 +6,7 @@ namespace FastExpressionCompiler.ILDecoder;
 
 public static class ILReaderFactory
 {
+    // todo: @wip Support reading IL on the NET_FRAMEWORK and on NET_7_0_OR_LESS, #385
     public static ILReader Create(object obj)
     {
         var type = obj.GetType();
@@ -37,7 +38,9 @@ public static class ILReaderFactory
             return new ILReader(method);
         }
 
-        throw new NotSupportedException($"Reading IL from type {type} is currently not supported");
+        // todo: @wip return the exception back when supported
+        // throw new NotSupportedException($"Reading IL from type {type} is currently not supported");
+        return null;
     }
 
     private static readonly Type s_dynamicMethodType = Type.GetType("System.Reflection.Emit.DynamicMethod");

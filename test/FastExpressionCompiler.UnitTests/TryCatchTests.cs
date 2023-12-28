@@ -398,7 +398,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual("From inner Catch block", func());
         }
 
-        [Test]
+        [Test] // todo: @fixme
         public void Can_be_nested_in_binary()
         {
             var p = Parameter(typeof(Func<int>), "p");
