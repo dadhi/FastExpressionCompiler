@@ -1521,6 +1521,10 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception with a given type.</summary>
         public static UnaryExpression Throw(Expression value, Type type) =>
             new TypedUnaryExpression(ExpressionType.Throw, value, type);
+        
+        /// <summary> Creates a <see cref="UnaryExpression"/> that represents a rethrowing of an exception in a catch block. </summary>
+        public static UnaryExpression Rethrow(Type type) =>
+            new TypedUnaryExpression(ExpressionType.Throw, null, type);
 
         public static LabelExpression Label(LabelTarget target) =>
             new LabelExpression(target);
@@ -2277,7 +2281,7 @@ namespace FastExpressionCompiler.LightExpression
                 case ExpressionType.Quote: return SysExpr.Quote(Operand.ToExpression(ref exprsConverted));
                 case ExpressionType.UnaryPlus: return SysExpr.UnaryPlus(Operand.ToExpression(ref exprsConverted));
                 case ExpressionType.Unbox: return SysExpr.Unbox(Operand.ToExpression(ref exprsConverted), Type);
-                case ExpressionType.Throw: return SysExpr.Throw(Operand.ToExpression(ref exprsConverted), Type);
+                case ExpressionType.Throw: return SysExpr.Throw(Operand?.ToExpression(ref exprsConverted), Type);
                 case ExpressionType.TypeAs: return SysExpr.TypeAs(Operand.ToExpression(ref exprsConverted), Type);
                 case ExpressionType.Not: return SysExpr.Not(Operand.ToExpression(ref exprsConverted));
                 default:
