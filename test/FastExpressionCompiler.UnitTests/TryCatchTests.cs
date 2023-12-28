@@ -35,6 +35,8 @@ namespace FastExpressionCompiler.UnitTests
             Can_rethrow_void();
             Can_rethrow_or_wrap();
             Can_rethrow_or_suppress();
+            // Can_be_nested_in_binary();
+            // Can_be_nested_in_call_expression();
 
             return 17;
         }
@@ -549,5 +551,64 @@ namespace FastExpressionCompiler.UnitTests
             // throw null;
         }
 
+        public void Can_be_nested_in_binary()
+        {
+            var p = Parameter(typeof(Func<int>), "p");
+            var expr = Lambda<Func<Func<int>, int>>(Add(
+                Constant(1),
+                TryCatch(
+                    Invoke(p),
+                    Catch(typeof(Exception),
+                        Constant(0)
+                    )
+                )
+            ), p);
+
+            // var func = expr.CompileSys();
+            var func = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+
+            Assert.AreEqual(3, func(() => 2));
+            Assert.AreEqual(1, func(() => throw new Exception()));
+        }
+
+        [Test]
+        public void Can_be_nested_in_call_expression()
+        {
+            var pa = Parameter(typeof(Func<string>), "pa");
+            var pb = Parameter(typeof(Func<string>), "pb");
+            var pc = Parameter(typeof(Func<string>), "pc");
+            var ex = Parameter(typeof(Exception), "ex");
+            var expr = Lambda<Func<Func<string>, Func<string>, Func<string>, string>>(
+                Call(
+                    typeof(TryCatchTests).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(TestMethod)),
+                    TryCatch(
+                        Invoke(pa),
+                        Catch(ex,
+                            Property(ex, "Message")
+                        )
+                    ),
+                    TryCatch(
+                        Invoke(pb),
+                        Catch(ex,
+                            Property(ex, "Message")
+                        )
+                    ),
+                    TryCatch(
+                        Invoke(pc),
+                        Catch(ex,
+                            Property(ex, "Message")
+                        )
+                    )
+                ),
+                pa, pb, pc);
+
+            // var func = expr.CompileSys();
+            var func = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+
+            Assert.AreEqual("a b c", func(() => "a", () => "b", () => "c"));
+            Assert.AreEqual("a errB c", func(() => "a", () => throw new Exception("errB"), () => "c"));
+        }
+
+        public static string TestMethod(string a, string b, string c) => $"{a} {b} {c}";
     }
 }

@@ -2418,6 +2418,9 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
+#if DEMIT
+                Debug.WriteLine("try {");
+#endif
                 il.BeginExceptionBlock();
 
                 if (!TryEmit(tryExpr.Body, paramExprs, il, ref closure, setup, parent))
@@ -2442,6 +2445,9 @@ namespace FastExpressionCompiler
                     // at the beginning of catch the Exception value is on the stack,
                     // we will store into local variable.
                     var exVarExpr = catchBlock.Variable;
+#if DEMIT
+                Debug.WriteLine($"}} catch {{");
+#endif
                     if (exVarExpr != null)
                     {
                         var exVarIndex = il.GetNextLocalVarIndex(exVarExpr.Type);
@@ -2462,12 +2468,19 @@ namespace FastExpressionCompiler
                 var finallyExpr = tryExpr.Finally;
                 if (finallyExpr != null)
                 {
+#if DEMIT
+                Debug.WriteLine("} finally {" + finallyExpr);
+#endif
                     il.BeginFinallyBlock();
                     if (!TryEmit(finallyExpr, paramExprs, il, ref closure, setup, parent))
                         return false;
                 }
 
                 il.EndExceptionBlock();
+
+#if DEMIT
+                Debug.WriteLine("}");
+#endif
 
                 if (returnsResult)
                     EmitLoadLocalVariable(il, resultVarIndex);
