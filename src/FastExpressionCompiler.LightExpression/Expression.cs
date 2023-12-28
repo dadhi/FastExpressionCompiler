@@ -2281,7 +2281,7 @@ namespace FastExpressionCompiler.LightExpression
                 case ExpressionType.Quote: return SysExpr.Quote(Operand.ToExpression(ref exprsConverted));
                 case ExpressionType.UnaryPlus: return SysExpr.UnaryPlus(Operand.ToExpression(ref exprsConverted));
                 case ExpressionType.Unbox: return SysExpr.Unbox(Operand.ToExpression(ref exprsConverted), Type);
-                case ExpressionType.Throw: return SysExpr.Throw(Operand.ToExpression(ref exprsConverted), Type);
+                case ExpressionType.Throw: return SysExpr.Throw(Operand?.ToExpression(ref exprsConverted), Type);
                 case ExpressionType.TypeAs: return SysExpr.TypeAs(Operand.ToExpression(ref exprsConverted), Type);
                 case ExpressionType.Not: return SysExpr.Not(Operand.ToExpression(ref exprsConverted));
                 default:
