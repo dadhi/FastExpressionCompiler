@@ -2810,7 +2810,7 @@ namespace FastExpressionCompiler
                     if (!closure.LastEmitIsAddress)
                         EmitStoreAndLoadLocalVariableAddress(il, sourceType);
 
-                    return EmitMethodCall(il, sourceType.FindValueGetterMethod()) && il.EmitPopIfIgnoreResult(parent);
+                    return EmitMethodCall(il, sourceType.FindNullableValueGetterMethod()) && il.EmitPopIfIgnoreResult(parent);
                 }
 
                 if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
@@ -2855,7 +2855,7 @@ namespace FastExpressionCompiler
                         if (underlyingNullableSourceType != null)
                         {
                             EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                            EmitMethodCall(il, sourceType.FindValueGetterMethod());
+                            EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
                         }
                         return EmitMethodCall(il, convertOpMethod) && il.EmitPopIfIgnoreResult(parent);
                     }
@@ -2876,7 +2876,7 @@ namespace FastExpressionCompiler
                             if (underlyingNullableSourceType != null)
                             {
                                 EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                                EmitMethodCall(il, sourceType.FindValueGetterMethod());
+                                EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
                             }
                             return EmitMethodCall(il, convertOpMethod) && il.EmitPopIfIgnoreResult(parent);
                         }
@@ -2911,6 +2911,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
+                        Debug.Assert(underlyingNullableSourceType != null);
                         var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
                         EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
 
@@ -2956,7 +2957,7 @@ namespace FastExpressionCompiler
                     if (underlyingNullableSourceType != null)
                     {
                         EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                        EmitMethodCall(il, sourceType.FindValueGetterMethod());
+                        EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
                     }
 
                     // cast as the last resort and let's it fail if unlucky
@@ -5741,9 +5742,10 @@ namespace FastExpressionCompiler
             methods.Constructor = type.GetConstructors()[0];
         }
 
-        // Keeping this method separate from the `_nullableMethods` because it used separate from others in conversion scenarios where `Value` may throw the `InvalidOperationException`
+        // Keeping this method separate from the `_nullableMethods` 
+        // because it used separate from others in conversion scenarios where `Value` may throw the `InvalidOperationException`
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        internal static MethodInfo FindValueGetterMethod(this Type type) => type.GetProperty("Value").GetMethod;
+        internal static MethodInfo FindNullableValueGetterMethod(this Type type) => type.GetProperty("Value").GetMethod;
 
         private static FHashMap<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>,
             FHashMap.SingleArrayEntries<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>>> _convertOperatorMethods;
