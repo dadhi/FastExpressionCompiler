@@ -275,6 +275,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue374_CompileFast_doesnot_work_with_HasFlag().Run);
 
+                Run(new Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
+                Run(new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
+
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

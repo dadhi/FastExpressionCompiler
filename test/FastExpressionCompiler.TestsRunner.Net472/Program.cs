@@ -48,7 +48,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var sw = Stopwatch.StartNew();
 
-            var unitTests = Task.Run(() => 
+            var unitTests = Task.Run(() =>
             {
                 Run(new ArithmeticOperationsTests().Run);
                 Run(new LightExpression.UnitTests.ArithmeticOperationsTests().Run);
@@ -99,7 +99,7 @@ namespace FastExpressionCompiler.UnitTests
                 Console.WriteLine($"{Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
-            var issueTests = Task.Run(() => 
+            var issueTests = Task.Run(() =>
             {
                 Run(new Issue14_String_constant_comparisons_fail().Run);
                 Run(new LightExpression.IssueTests.Issue14_String_constant_comparisons_fail().Run);
@@ -179,7 +179,7 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run);
                 Run(new LightExpression.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site().Run);
-                
+
                 Run(new Issue251_Bad_code_gen_for_byRef_parameters().Run);
                 Run(new LightExpression.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters().Run);
 
@@ -248,14 +248,17 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
                 Run(new LightExpression.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
-                
+
                 Run(new LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run);
 
                 Run(new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run);
 
                 Run(new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run);
-                
+
                 Run(new Issue374_CompileFast_doesnot_work_with_HasFlag().Run);
+
+                Run(new Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
+                Run(new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
