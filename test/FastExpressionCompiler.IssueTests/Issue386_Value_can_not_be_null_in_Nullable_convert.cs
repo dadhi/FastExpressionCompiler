@@ -17,11 +17,12 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
 {
     public int Run()
     {
+        Test_null_spec();
         Test_non_nullable_UserType_nullable_type();
         Test_non_nullable_UserType_non_nullable_type();
         Test_nullable_type();
         Test_non_nullable_type();
-        return 4;
+        return 5;
     }
 
     public enum UserType { Default, Foo, Bar }
@@ -114,6 +115,41 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
     public class Message_non_nullable
     {
         public UserType UserType { get; set; }
+    }
+
+    [Test]
+    public void Test_null_spec()
+    {
+        var spec = default(MessageSpec);
+
+        var p = new ParameterExpression[1]; // the parameter expressions
+        var e = new Expression[6]; // the unique expressions
+        var expr = Lambda<Func<Message_non_nullable, bool>>(
+        e[0] = MakeBinary(ExpressionType.NotEqual,
+            e[1] = Convert(
+            e[2] = Property(
+                p[0] = Parameter(typeof(Message_non_nullable), "x"),
+                typeof(Message_non_nullable).GetProperty("UserType")),
+            typeof(int?)),
+            e[3] = Convert(
+            e[4] = Field(
+                e[5] = Constant(spec, typeof(MessageSpec)),
+                typeof(MessageSpec).GetField("type")),
+            typeof(int?))),
+        p[0 // (Message x)
+            ]);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+        Assert.Throws<NullReferenceException>(() => 
+            fs(new Message_non_nullable { UserType = UserType.Foo }));
+
+        var ff = expr.CompileFast(true);
+        ff.PrintIL();
+        Assert.Throws<NullReferenceException>(() => 
+            ff(new Message_non_nullable { UserType = UserType.Foo }));
     }
 
     [Test]
