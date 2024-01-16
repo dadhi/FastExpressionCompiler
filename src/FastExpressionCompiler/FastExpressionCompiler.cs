@@ -5753,10 +5753,7 @@ namespace FastExpressionCompiler
                 if (m.IsSpecialName && m.ReturnType == targetType)
                 {
                     var n = m.Name;
-                    // n == "op_Implicit" || n == "op_Explicit"
-                    if (n.Length == 11 &&
-                        n[2] == '_' && n[5] == 'p' && n[6] == 'l' && n[7] == 'i' && n[8] == 'c' && n[9] == 'i' && n[10] == 't' &&
-                        m.GetParameters()[0].ParameterType == sourceType)
+                    if ((n == "op_Implicit" || n == "op_Explicit") && m.GetParameters()[0].ParameterType == sourceType)
                     {
                         method = m;
                         return m;
