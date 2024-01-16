@@ -5740,6 +5740,7 @@ namespace FastExpressionCompiler
             if (sourceType == typeof(object) | targetType == typeof(object))
                 return null;
 
+            // todo: @perf do we need the 3 types here?
             // caching the result to avoid searching and allocating through the methods
             ref var method = ref _convertOperatorMethods.GetOrAddValueRef((type, sourceType, targetType), out var found);
             if (found)
