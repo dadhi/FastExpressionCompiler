@@ -125,13 +125,13 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,   // get_Value getter
                 OpCodes.Stloc_0,
                 OpCodes.Ldloca_S,
-                OpCodes.Call,   // GetValueOrDefault
+                OpCodes.Ldfld,  // GetValueOrDefault
                 OpCodes.Ldc_I4, // load `int.MaxValue`
                 OpCodes.Conv_U8,// convert it to `ulong?`  
                 OpCodes.Newobj,
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
-                OpCodes.Call,
+                OpCodes.Ldfld,  // Nullable value getter
                 OpCodes.Cgt_Un,
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ceq,

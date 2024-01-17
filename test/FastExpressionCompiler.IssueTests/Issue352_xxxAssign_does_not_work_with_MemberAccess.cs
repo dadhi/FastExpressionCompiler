@@ -1020,9 +1020,9 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.And,
                 OpCodes.Brfalse,    // --> Pop
                 OpCodes.Ldloca_S,   // 0
-                OpCodes.Call,       // Nullable`1.GetValueOrDefault
+                OpCodes.Ldfld,      // Nullable`1.GetValueOrDefault
                 OpCodes.Ldloca_S,   // 1
-                OpCodes.Call,       // Nullable`1.GetValueOrDefault
+                OpCodes.Ldfld,      // Nullable`1.GetValueOrDefault
                 OpCodes.Add,
                 OpCodes.Newobj,     // Nullable`1..ctor
                 OpCodes.Stfld,      // Box.NullableValue
@@ -1087,9 +1087,9 @@ namespace FastExpressionCompiler.IssueTests
             //     OpCodes.And,
             //     OpCodes.Brfalse,    // --> Pop
             //     OpCodes.Ldloca_S,   // 0
-            //     OpCodes.Call,       // Nullable`1.GetValueOrDefault
+            //     OpCodes.Ldfld,      // Nullable`1.GetValueOrDefault
             //     OpCodes.Ldloca_S,   // 1
-            //     OpCodes.Call,       // Nullable`1.GetValueOrDefault
+            //     OpCodes.Ldfld,      // Nullable`1.GetValueOrDefault
             //     OpCodes.Add,
             //     OpCodes.Newobj,     // Nullable`1..ctor
             //     OpCodes.Stfld,      // Box.NullableValue
@@ -1155,9 +1155,9 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.And,
                 OpCodes.Brfalse,    // --> Pop
                 OpCodes.Ldloca_S,   // 0
-                OpCodes.Call,       // Nullable`1.GetValueOrDefault
+                OpCodes.Ldfld,      // Nullable`1.GetValueOrDefault
                 OpCodes.Ldloca_S,   // 1
-                OpCodes.Call,       // Nullable`1.GetValueOrDefault
+                OpCodes.Ldfld,      // Nullable`1.GetValueOrDefault
                 OpCodes.Add,
                 OpCodes.Newobj,     // Nullable`1..ctor
                 OpCodes.Call,       // Box.set_NullableProp
@@ -1474,7 +1474,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
                 OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
                 OpCodes.Ldloca_S,
-                OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
+                OpCodes.Ldfld,      // System.Nullable`1<int32>::GetValueOrDefault()
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Newobj,
@@ -1536,7 +1536,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
                 OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
                 OpCodes.Ldloca_S,
-                OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
+                OpCodes.Ldfld,      // System.Nullable`1<int32>::GetValueOrDefault()
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Newobj,
@@ -1604,7 +1604,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
                 OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
                 OpCodes.Ldloca_S,   // 0
-                OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
+                OpCodes.Ldfld,      // System.Nullable`1<int32>::GetValueOrDefault()
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Newobj,
@@ -1674,7 +1674,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
                 OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
                 OpCodes.Ldloca_S,   // 0
-                OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
+                OpCodes.Ldfld,      // System.Nullable`1<int32>::GetValueOrDefault()
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Newobj,
@@ -1745,7 +1745,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
                 OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
                 OpCodes.Ldloca_S,   // 0
-                OpCodes.Call,       // System.Nullable`1<int32>::GetValueOrDefault()
+                OpCodes.Ldfld,      // System.Nullable`1<int32>::GetValueOrDefault()
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Newobj,
@@ -1912,7 +1912,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,
                 OpCodes.Brfalse,
                 OpCodes.Ldloca_S,
-                OpCodes.Call,
+                OpCodes.Ldfld,
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Newobj,
@@ -1978,7 +1978,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,
                 OpCodes.Brfalse,
                 OpCodes.Ldloca_S,
-                OpCodes.Call,
+                OpCodes.Ldfld,
                 OpCodes.Ldc_I4_1,
                 OpCodes.Add,
                 OpCodes.Newobj,

@@ -59,6 +59,7 @@ namespace FastExpressionCompiler
     using System.Text;
     using System.Runtime.CompilerServices;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using static System.Environment;
 
     /// <summary>The flags for the compiler</summary>
@@ -107,7 +108,7 @@ namespace FastExpressionCompiler
     /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
     /// Partial to extend with your things when used as source file.</summary>
     // ReSharper disable once PartialTypeWithSinglePart
-    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static partial class ExpressionCompiler
     {
         #region Expression.CompileFast overloads for Delegate, Func, and Action
@@ -753,15 +754,15 @@ namespace FastExpressionCompiler
             }
 
             /// Local variable index is not known in the collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
-            [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+            [RequiresUnreferencedCode(Trimming.Message)]
             public void PushBlockWithVars(ParameterExpression blockVarExpr) =>
                 PushVarInBlockMap(blockVarExpr, _blockCount++, 0);
 
-            [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+            [RequiresUnreferencedCode(Trimming.Message)]
             public void PushBlockWithVars(ParameterExpression blockVarExpr, int varIndex) =>
                 PushVarInBlockMap(blockVarExpr, _blockCount++, (ushort)varIndex);
 
-            [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+            [RequiresUnreferencedCode(Trimming.Message)]
             public void PushBlockWithVars(IReadOnlyList<PE> blockVarExprs)
             {
                 for (var i = 0; i < blockVarExprs.Count; i++)
@@ -769,7 +770,7 @@ namespace FastExpressionCompiler
                 ++_blockCount;
             }
 
-            [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+            [RequiresUnreferencedCode(Trimming.Message)]
             public void PushBlockAndConstructLocalVars(IReadOnlyList<PE> blockVarExprs, ILGenerator il)
             {
                 for (var i = 0; i < blockVarExprs.Count; i++)
@@ -868,7 +869,7 @@ namespace FastExpressionCompiler
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+        [RequiresUnreferencedCode(Trimming.Message)]
         public sealed class DebugArrayClosure : ArrayClosure, IDelegateDebugInfo
         {
             public LambdaExpression Expression { get; internal set; }
@@ -1794,7 +1795,7 @@ namespace FastExpressionCompiler
         /// <summary>Supports emitting of selected expressions, e.g. lambdaExpr are not supported yet.
         /// When emitter find not supported expression it will return false from <see cref="TryEmit"/>, so I could fallback
         /// to normal and slow Expression.Compile.</summary>
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+        [RequiresUnreferencedCode(Trimming.Message)]
         public static class EmittingVisitor
         {
             private static readonly MethodInfo _getTypeFromHandleMethod =
@@ -2343,7 +2344,7 @@ namespace FastExpressionCompiler
 
                     il.Demit(OpCodes.Brfalse, labelFalse);
                     EmitLoadLocalVariableAddress(il, varIndex);
-                    EmitMethodCall(il, leftType.GetNullableGetValueOrDefaultMethod());
+                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
                     il.Demit(OpCodes.Br, labelDone);
                     il.DmarkLabel(labelFalse);
@@ -2913,7 +2914,7 @@ namespace FastExpressionCompiler
                         // if source nullable has a value:
                         il.DmarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
-                        EmitMethodCall(il, sourceType.GetNullableGetValueOrDefaultMethod());
+                        il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                         if (method != null && method.ReturnType == targetType)
                         {
                             EmitMethodCall(il, method);
@@ -3855,7 +3856,7 @@ namespace FastExpressionCompiler
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
 
                                     EmitLoadLocalVariableAddress(il, rightVar);
-                                    il.Demit(OpCodes.Call, rightType.GetNullableGetValueOrDefaultMethod()); // unwrap right operand
+                                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
                                 }
 
                                 if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
@@ -3879,7 +3880,7 @@ namespace FastExpressionCompiler
                                 il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
 
                                 EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());
+                                il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
                                 EmitIncOrDec(il, nodeType == ExpressionType.Add);
                             }
@@ -3903,7 +3904,7 @@ namespace FastExpressionCompiler
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
 
                                     EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());
+                                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
                                     EmitLoadLocalVariable(il, rightVar);
                                 }
@@ -3918,10 +3919,10 @@ namespace FastExpressionCompiler
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
 
                                     EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Call, leftType.GetNullableGetValueOrDefaultMethod());  // unwrap left operand
+                                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());  // unwrap left operand
 
                                     EmitLoadLocalVariableAddress(il, rightVar);
-                                    il.Demit(OpCodes.Call, rightType.GetNullableGetValueOrDefaultMethod()); // unwrap right operand
+                                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
                                 }
 
                                 if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
@@ -4796,7 +4797,7 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
-                    EmitMethodCall(il, leftOpType.GetNullableGetValueOrDefaultMethod());
+                    il.Demit(OpCodes.Ldfld, leftOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                     leftOpType = Nullable.GetUnderlyingType(leftOpType);
                 }
 
@@ -4817,7 +4818,7 @@ namespace FastExpressionCompiler
                 if (rightOpType.IsNullable())
                 {
                     rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
-                    EmitMethodCall(il, rightOpType.GetNullableGetValueOrDefaultMethod());
+                    il.Demit(OpCodes.Ldfld, rightOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                     rightOpType = Nullable.GetUnderlyingType(rightOpType);
                 }
 
@@ -4988,7 +4989,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Dup);
                     EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
                     il.Demit(OpCodes.Brfalse, leftNoValueLabel);
-                    EmitMethodCall(il, leftType.GetNullableGetValueOrDefaultMethod());
+                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                 }
                 else if (!TryEmit(left, paramExprs, il, ref closure, setup, flags))
                     return false;
@@ -5015,7 +5016,7 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Dup);
                         EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
                         il.Demit(OpCodes.Brfalse, rightNoValueLabel);
-                        EmitMethodCall(il, rightType.GetNullableGetValueOrDefaultMethod());
+                        il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                     }
                     else if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                         return false;
@@ -5657,7 +5658,7 @@ namespace FastExpressionCompiler
                 _ => null
             };
 
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+        [RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindMethod(this Type type, string methodName)
         {
             var methods = type.GetMethods();
@@ -5670,81 +5671,37 @@ namespace FastExpressionCompiler
         internal static MethodInfo DelegateTargetGetterMethod =
             typeof(Delegate).GetProperty(nameof(Delegate.Target)).GetMethod;
 
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        internal static MethodInfo FindDelegateInvokeMethod(this Type type) => type.GetMethod("Invoke");
+        [RequiresUnreferencedCode(Trimming.Message)]
+        [MethodImpl((MethodImplOptions)256)]
+        internal static MethodInfo FindDelegateInvokeMethod(this Type type) =>
+            type.GetMethod("Invoke");
 
-        internal struct NullableMethods
-        {
-            public MethodInfo HasValueGetterMethod;
-            public MethodInfo GetValueOrDefaultMethod;
-            public ConstructorInfo Constructor;
-        }
+        [RequiresUnreferencedCode(Trimming.Message)]
+        [MethodImpl((MethodImplOptions)256)]
+        internal static MethodInfo FindNullableValueGetterMethod(this Type type) =>
+            type.GetProperty("Value").GetMethod;
 
-        private static FHashMap<Type, NullableMethods, RefEq<Type>,
-            FHashMap.SingleArrayEntries<Type, NullableMethods, RefEq<Type>>> _nullableMethods;
+        [RequiresUnreferencedCode(Trimming.Message)]
+        [MethodImpl((MethodImplOptions)256)]
+        internal static MethodInfo GetNullableHasValueGetterMethod(this Type type) =>
+            type.GetProperty("HasValue").GetMethod;
 
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        internal static MethodInfo GetNullableHasValueGetterMethod(this Type type)
-        {
-            ref var methods = ref _nullableMethods.GetOrAddValueRef(type, out var found);
-            if (!found)
-                FindAndSetNullableMethods(type, ref methods);
-            return methods.HasValueGetterMethod;
-        }
+        [RequiresUnreferencedCode(Trimming.Message)]
+        [MethodImpl((MethodImplOptions)256)]
+        internal static FieldInfo GetNullableValueUnsafeAkaGetValueOrDefaultMethod(this Type type) =>
+            type.GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
 
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        internal static MethodInfo GetNullableGetValueOrDefaultMethod(this Type type)
-        {
-            ref var methods = ref _nullableMethods.GetOrAddValueRef(type, out var found);
-            if (!found)
-                FindAndSetNullableMethods(type, ref methods);
-            return methods.GetValueOrDefaultMethod;
-        }
+        // todo: @perf we can use the acquired constructor for most-used types, like int?, bool?, DateTime? plus enums, plus use UnsafeAccessor for them
+        [RequiresUnreferencedCode(Trimming.Message)]
+        [MethodImpl((MethodImplOptions)256)]
+        internal static ConstructorInfo GetNullableConstructor(this Type type) =>
+            type.GetConstructors()[0];
 
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        internal static ConstructorInfo GetNullableConstructor(this Type type)
-        {
-            ref var methods = ref _nullableMethods.GetOrAddValueRef(type, out var found);
-            if (!found)
-                FindAndSetNullableMethods(type, ref methods);
-            return methods.Constructor;
-        }
-
-        internal static void FindAndSetNullableMethods(this Type type, ref NullableMethods methods)
-        {
-            var ms = type.GetMethods();
-            for (var i = 0; i < ms.Length; i++)
-            {
-                var m = ms[i];
-                if (m.Name == "GetValueOrDefault")
-                {
-                    methods.GetValueOrDefaultMethod = m;
-                    break;
-                }
-            }
-            methods.HasValueGetterMethod = type.GetProperty("HasValue").GetMethod;
-            methods.Constructor = type.GetConstructors()[0];
-        }
-
-        // Keeping this method separate from the `_nullableMethods` 
-        // because it used separate from others in conversion scenarios where `Value` may throw the `InvalidOperationException`
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        internal static MethodInfo FindNullableValueGetterMethod(this Type type) => type.GetProperty("Value").GetMethod;
-
-        private static FHashMap<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>,
-            FHashMap.SingleArrayEntries<(Type, Type, Type), MethodInfo, RefEq<Type, Type, Type>>> _convertOperatorMethods;
-
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+        [RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
         {
             if (sourceType == typeof(object) | targetType == typeof(object))
                 return null;
-
-            // todo: @perf do we need the 3 types here?
-            // caching the result to avoid searching and allocating through the methods
-            ref var method = ref _convertOperatorMethods.GetOrAddValueRef((type, sourceType, targetType), out var found);
-            if (found)
-                return method;
 
             // conversion operators should be declared as static and public 
             var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public);
@@ -5754,18 +5711,16 @@ namespace FastExpressionCompiler
                 if (m.IsSpecialName && m.ReturnType == targetType)
                 {
                     var n = m.Name;
-                    if ((n == "op_Implicit" || n == "op_Explicit") && m.GetParameters()[0].ParameterType == sourceType)
-                    {
-                        method = m;
+                    if ((n == "op_Implicit" || n == "op_Explicit") &&
+                        m.GetParameters()[0].ParameterType == sourceType)
                         return m;
-                    }
                 }
             }
 
             return null;
         }
 
-        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+        [RequiresUnreferencedCode(Trimming.Message)]
         internal static ConstructorInfo FindSingleParamConstructor(this Type type, Type paramType)
         {
             var ctors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -5932,7 +5887,7 @@ namespace FastExpressionCompiler
         public static T GetFirst<T>(this T[] source) => source.Length == 0 ? default : source[0];
     }
 
-    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static class ILGeneratorTools
     {
         [MethodImpl((MethodImplOptions)256)]
@@ -6082,7 +6037,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>Reflecting the internal methods to access the more performant for defining the local variable</summary>
-    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static class ILGeneratorHacks
     {
         // The original ILGenerator methods we are trying to hack without allocating the `LocalBuilder`
@@ -6280,7 +6235,7 @@ namespace FastExpressionCompiler
         */
     }
 
-    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static class ToExpressionPrinter
     {
         /// <summary>
@@ -6802,7 +6757,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>Converts the expression into the valid C# code representation</summary>
-    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static class ToCSharpPrinter
     {
         /// <summary>Tries hard to convert the expression into the valid C# code</summary>
@@ -7728,7 +7683,7 @@ namespace FastExpressionCompiler
 
     }
 
-    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static class CodePrinter
     {
         public static readonly Func<Type, string, string> PrintTypeStripOuterClasses = (type, name) =>
