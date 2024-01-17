@@ -5677,25 +5677,46 @@ namespace FastExpressionCompiler
             type.GetMethod("Invoke");
 
         [RequiresUnreferencedCode(Trimming.Message)]
+        internal static class NullableReflected<T> where T : struct
+        {
+            public static readonly Type NullableType = typeof(T?);
+            public static readonly MethodInfo ValueGetterMethod =
+                NullableType.GetProperty("Value").GetMethod;
+            public static readonly MethodInfo HasValueGetterMethod = 
+                NullableType.GetProperty("HasValue").GetMethod;
+            public static readonly FieldInfo ValueField = 
+                NullableType.GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
+            public static readonly ConstructorInfo Constructor =
+                NullableType.GetConstructors()[0];
+        }
+
+        [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
         internal static MethodInfo FindNullableValueGetterMethod(this Type type) =>
-            type.GetProperty("Value").GetMethod;
+            type == typeof(int?) 
+                ? NullableReflected<int>.ValueGetterMethod
+                : type.GetProperty("Value").GetMethod;
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
         internal static MethodInfo GetNullableHasValueGetterMethod(this Type type) =>
-            type.GetProperty("HasValue").GetMethod;
+            type == typeof(int?)
+                ? NullableReflected<int>.HasValueGetterMethod
+                : type.GetProperty("HasValue").GetMethod;
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
         internal static FieldInfo GetNullableValueUnsafeAkaGetValueOrDefaultMethod(this Type type) =>
-            type.GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
+            type == typeof(int?)
+                ? NullableReflected<int>.ValueField
+                : type.GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
 
-        // todo: @perf we can use the acquired constructor for most-used types, like int?, bool?, DateTime? plus enums, plus use UnsafeAccessor for them
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
         internal static ConstructorInfo GetNullableConstructor(this Type type) =>
-            type.GetConstructors()[0];
+            type == typeof(int?) 
+                ? NullableReflected<int>.Constructor
+                : type.GetConstructors()[0];
 
         [RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
