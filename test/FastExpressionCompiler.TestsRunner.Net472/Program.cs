@@ -9,6 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            // new Issue55_CompileFast_crash_with_ref_parameter().Run();
+
             RunAllTests();
         }
 

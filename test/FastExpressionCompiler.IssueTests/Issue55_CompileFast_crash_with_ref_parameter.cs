@@ -231,7 +231,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 string string__54267293 = null;
                 string__54267293 = string__58225482;
-                Issue55_CompileFast_crash_with_ref_parameter.SetMinus1_OfString(ref string__54267293);
+                SetMinus1_OfString(ref string__54267293);
             });
             var a = "0";
             @cs(ref a);

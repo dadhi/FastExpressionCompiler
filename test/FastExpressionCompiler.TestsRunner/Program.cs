@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run();
+            // new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run();
             // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run();
 
