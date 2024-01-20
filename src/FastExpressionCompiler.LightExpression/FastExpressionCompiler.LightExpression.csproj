@@ -3,7 +3,7 @@
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">net45;netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
         <TargetFrameworks Condition="'$(DevMode)' != 'true'">net45;netstandard2.0;netstandard2.1;net6.0;net7.0</TargetFrameworks>
 
-        <VersionPrefix>4.0.2</VersionPrefix>
+        <VersionPrefix>4.1.0</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>

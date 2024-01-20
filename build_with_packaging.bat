@@ -4,8 +4,8 @@ echo:
 echo:## Starting: RESTORE and BUILD...
 echo: 
 
-dotnet clean -v:m -p:DevMode=false
-dotnet build -c:Release -v:m -p:DevMode=false
+dotnet clean -v:m
+dotnet build -c:Release -v:m
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
@@ -15,10 +15,10 @@ echo:
 echo:## Starting: TESTS...
 echo: 
 
-dotnet run --no-build  -f net7.0 -c Release -p:DevMode=false --project test/FastExpressionCompiler.TestsRunner
+dotnet run --no-build  -f net8.0 -c Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
-dotnet run --no-build -c Release -p:DevMode=false --project test/FastExpressionCompiler.TestsRunner.Net472
+dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 echo:
 echo:## Finished: TESTS
