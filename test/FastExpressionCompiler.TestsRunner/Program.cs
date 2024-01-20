@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue380_Comparisons_with_nullable_types().Run();
+            // new Issue380_Comparisons_with_nullable_types().Run();
             // new LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types().Run();
 
             // new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run();
