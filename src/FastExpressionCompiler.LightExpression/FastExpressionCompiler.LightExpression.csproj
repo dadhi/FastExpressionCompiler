@@ -3,7 +3,7 @@
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">net45;netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
         <TargetFrameworks Condition="'$(DevMode)' != 'true'">net45;netstandard2.0;netstandard2.1;net6.0;net7.0</TargetFrameworks>
 
-        <VersionPrefix>4.0.1</VersionPrefix>
+        <VersionPrefix>4.0.2</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -13,6 +13,14 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v4.0.2 Bug-fix release
+
+- added: #379 Add direct net8.0 target as soon as Appveyor CI will support it
+- fixed: #380 Comparisons with nullable types
+- fixed: #381 NullReferenceException with V4.X when trying to map
+- fixed: #386 Value can not be null(parametr 'meth')
+
+
 ## v4.0.1 Bug-fix release
 
 - fixed: #374 CompileFast doesn't work with HasFlag
