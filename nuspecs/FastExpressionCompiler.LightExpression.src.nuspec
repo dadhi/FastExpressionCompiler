@@ -48,6 +48,7 @@
             <files include="cs/**/*.*" buildAction="Compile" />
         </contentFiles>
         <dependencies>
+            <group targetFramework="net8.0"/>
             <group targetFramework="net45">
                 <dependency id="System.ValueTuple" version="4.5.0" />
             </group>
@@ -62,6 +63,7 @@
         <file src="..\logo.png" />
         <file src="..\FastExpressionCompiler.snk" />
 
+        <file src="_._" target="lib\net8.0\" />
         <file src="_._" target="lib\net45\" />
         <file src="_._" target="lib\netstandard2.0\" />
 
@@ -74,6 +76,11 @@
         <file src="..\src\FastExpressionCompiler\ImTools.cs"                           target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\Expression.cs"        target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\ExpressionVisitor.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
+
+        <file src="..\src\FastExpressionCompiler\FastExpressionCompiler.cs"            target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler\ImTools.cs"                           target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.LightExpression\Expression.cs"        target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.LightExpression\ExpressionVisitor.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
 
     </files>
 </package>
