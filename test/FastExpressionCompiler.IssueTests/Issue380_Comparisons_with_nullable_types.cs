@@ -18,8 +18,9 @@ public class Issue380_Comparisons_with_nullable_types : ITest
 {
     public int Run()
     {
-        // Test();
-        return 1;
+        Test_left_decimal_constant();
+        Test_right_decimal_constant();
+        return 2;
     }
 
     public class DecimalTest
@@ -27,8 +28,53 @@ public class Issue380_Comparisons_with_nullable_types : ITest
         public decimal? D1 { get; set; }
     }
 
-    [Test] // fixme
-    public void Test()
+    [Test]
+    public void Test_left_decimal_constant()
+    {
+#if LIGHT_EXPRESSION
+        var p = new ParameterExpression[1]; // the parameter expressions
+        var e = new Expression[5]; // the unique expressions
+        var expr = Lambda<Func<DecimalTest, bool>>(
+        e[0]=MakeBinary(ExpressionType.GreaterThan,
+            e[1]=Convert(
+                e[2]=Convert(
+                    e[3]=Constant(20),
+                    typeof(Decimal),
+                    typeof(Decimal).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "op_Implicit" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) }))),
+                typeof(Decimal?)),
+            e[4]=Property(
+                p[0]=Parameter(typeof(DecimalTest), "t"),
+                typeof(DecimalTest).GetTypeInfo().GetDeclaredProperty("D1")),
+            liftToNull: false,
+            typeof(Decimal).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "op_GreaterThan" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Decimal), typeof(Decimal) }))),
+        p[0 // (DecimalTest t)
+            ]);
+#else
+        Expression<Func<DecimalTest, bool>> expr = t => 20 > t.D1;
+#endif
+
+        expr.PrintCSharp();
+        expr.PrintExpression();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var d = new DecimalTest { D1 = null };
+        var r = fs(d);
+        Assert.IsFalse(r);
+
+        var ff = expr.CompileFast(true);
+        ff.PrintIL();
+
+        r = ff(d);
+        Assert.IsFalse(r);
+
+        r = ff(new DecimalTest { D1 = 19m });
+        Assert.IsTrue(r);
+    }
+
+    [Test]
+    public void Test_right_decimal_constant()
     {
 #if LIGHT_EXPRESSION
         var p = new ParameterExpression[1]; // the parameter expressions
@@ -67,5 +113,8 @@ public class Issue380_Comparisons_with_nullable_types : ITest
 
         r = ff(d);
         Assert.IsFalse(r);
+
+        r = ff(new DecimalTest { D1 = 19m });
+        Assert.IsTrue(r);
     }
 }

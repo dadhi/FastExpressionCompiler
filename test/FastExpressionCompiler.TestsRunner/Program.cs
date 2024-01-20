@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue380_Comparisons_with_nullable_types().Run();
+            // new Issue380_Comparisons_with_nullable_types().Run();
             // new LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types().Run();
 
             // new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run();
@@ -275,6 +275,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run);
 
                 Run(new Issue374_CompileFast_doesnot_work_with_HasFlag().Run);
+
+                Run(new Issue380_Comparisons_with_nullable_types().Run);
+                Run(new LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types().Run);
 
                 Run(new Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
                 Run(new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run);

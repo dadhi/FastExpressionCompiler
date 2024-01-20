@@ -4765,10 +4765,10 @@ namespace FastExpressionCompiler
                 var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
 
                 // short-circuit the comparison with null on the right
-                var isEqualityOp = nodeType == ExpressionType.Equal || nodeType == ExpressionType.NotEqual;
+                var isEqualityOp = nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual;
                 if (isEqualityOp)
                 {
-                    if (leftIsNullable && rightIsNull)
+                    if (leftIsNullable & rightIsNull)
                     {
                         if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
                             return false;
@@ -4778,6 +4778,7 @@ namespace FastExpressionCompiler
                             EmitEqualToZeroOrNull(il);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
+
                     if (leftIsNull && rightOpType.IsNullable())
                     {
                         if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
@@ -4845,7 +4846,12 @@ namespace FastExpressionCompiler
                         {
                             var ps = m.GetParameters();
                             if (ps.Length == 2 && ps[0].ParameterType == leftOpType && ps[1].ParameterType == leftOpType)
-                                return EmitMethodCall(il, m);
+                            {
+                                var ok = EmitMethodCall(il, m);
+                                if (leftIsNullable)
+                                    goto nullableCheck;
+                                return ok;
+                            }
                         }
                     }
 
@@ -5916,35 +5922,35 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, in OpCode opcode, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode);
-            Debug.WriteLine($"{opcode} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, Type value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, FieldInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, MethodInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, ConstructorInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -5952,7 +5958,7 @@ namespace FastExpressionCompiler
             [CallerArgumentExpression("value")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {valueName ?? value.ToString()} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {valueName ?? value.ToString()}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -5960,63 +5966,63 @@ namespace FastExpressionCompiler
             [CallerArgumentExpression("value")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.MarkLabel(value);
-            Debug.Write($"{valueName ?? value.ToString()} <--/ {emitterName}:{emitterLine}: ");
+            Debug.Write($"{valueName ?? value.ToString()}    <--/ {emitterName}:{emitterLine}: ");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, byte value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, sbyte value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, short value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, int value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, long value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, float value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, in OpCode opcode, double value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, string value, in OpCode opcode, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value} <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {value}    <--/ {emitterName}:{emitterLine}");
         }
 
 #else // not DEMIT :)
