@@ -17,7 +17,8 @@
             "console": "internalConsole",
             "stopAtEntry": false,
             "internalConsoleOptions": "openOnSessionStart",
-            "requireExactSource": false // allows to for moderate code editing while debugging
+            "requireExactSource": false, // allows to for moderate code editing while debugging
+            "justMyCode": false
         },
         {
             "name": "Benchmarks",
