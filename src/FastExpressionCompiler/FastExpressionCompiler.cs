@@ -8077,6 +8077,9 @@ namespace FastExpressionCompiler
             if (x is char c)
                 return "'" + c + "'";
 
+            if (x is Decimal m)
+                return $"{m}m";
+
             if (x is Type t)
                 return t.ToCode(stripNamespace, printType);
 
