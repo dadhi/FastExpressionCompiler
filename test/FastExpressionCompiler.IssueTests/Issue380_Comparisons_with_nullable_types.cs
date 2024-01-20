@@ -5,11 +5,11 @@ using NUnit.Framework;
 using System.Reflection;
 using System.Linq;
 using System.Linq.Expressions;
-using FastExpressionCompiler.LightExpression;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
@@ -18,14 +18,55 @@ public class Issue380_Comparisons_with_nullable_types : ITest
 {
     public int Run()
     {
+        Test_left_decimal_Nullable_constant();
         Test_left_decimal_constant();
         Test_right_decimal_constant();
-        return 2;
+        return 3;
     }
 
     public class DecimalTest
     {
         public decimal? D1 { get; set; }
+    }
+
+    [Test]
+    public void Test_left_decimal_Nullable_constant()
+    {
+#if LIGHT_EXPRESSION
+        var p = new ParameterExpression[1]; // the parameter expressions
+        var e = new Expression[5]; // the unique expressions
+        var expr = Lambda<Func<DecimalTest, bool>>(
+        e[0]=MakeBinary(ExpressionType.GreaterThan,
+            e[3]=Constant(20m, typeof(decimal?)),
+            e[4]=Property(
+                p[0]=Parameter(typeof(DecimalTest), "t"),
+                typeof(DecimalTest).GetTypeInfo().GetDeclaredProperty("D1")),
+            liftToNull: false,
+            typeof(Decimal).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "op_GreaterThan" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Decimal), typeof(Decimal) }))),
+        p[0 // (DecimalTest t)
+            ]);
+#else
+        Expression<Func<DecimalTest, bool>> expr = t => 20m > t.D1;
+#endif
+
+        expr.PrintCSharp();
+        expr.PrintExpression();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var d = new DecimalTest { D1 = null };
+        var r = fs(d);
+        Assert.IsFalse(r);
+
+        var ff = expr.CompileFast(true);
+        ff.PrintIL();
+
+        r = ff(d);
+        Assert.IsFalse(r);
+
+        r = ff(new DecimalTest { D1 = 19m });
+        Assert.IsTrue(r);
     }
 
     [Test]
