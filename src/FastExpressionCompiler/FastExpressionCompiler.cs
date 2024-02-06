@@ -5732,9 +5732,7 @@ namespace FastExpressionCompiler
 
             // conversion operators should be declared as static and public 
             var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public);
-            for (var i = 0; i < methods.Length; i++)
-            {
-                var m = methods[i];
+            foreach (var m in methods)
                 if (m.IsSpecialName && m.ReturnType == targetType)
                 {
                     var n = m.Name;
@@ -5742,7 +5740,6 @@ namespace FastExpressionCompiler
                         m.GetParameters()[0].ParameterType == sourceType)
                         return m;
                 }
-            }
 
             return null;
         }
