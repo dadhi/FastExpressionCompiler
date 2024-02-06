@@ -293,9 +293,11 @@ If visitor finds the not supported expression node or the error condition,
 the compilation is aborted, and `null` is returned enabling the fallback to System `.Compile()`.
 
 
-## Diagnostics
+## Diagnostics and Code Generation
 
-FEC V3 adds powerful diagnostics tools.
+FEC V3 has added powerful diagnostics and code generation tools.
+
+### Diagnostics
 
 You may pass the optional `CompilerFlags.EnableDelegateDebugInfo`  into the `CompileFast` methods.
 
@@ -310,18 +312,20 @@ Assert.IsNotNull(di.ExpressionString);
 Assert.IsNotNull(di.CSharpString);
 ```
 
-Those conversion capabilities are also available as the `ToCSharpString` and `ToExpressionString` extension methods.
+### ThrowOnNotSupportedExpression and NotSupported_ flags
 
-Besides that, when converting the source expression to either C# code or to the Expression construction code you may find 
-the `// NOT_SUPPORTED_EXPRESSION` comments marking the not supported yet expressions by FEC. So you may verify the presence or absence of this comment in a test. 
-
-
-### ThrowOnNotSupportedExpression and NotSupported cases enum
-
-FEC V3.1 adds to the compiler flags the `CompilerFlags.ThrowOnNotSupportedExpression` 
+FEC V3.1 has added to the compiler flags the `CompilerFlags.ThrowOnNotSupportedExpression` 
 so that compiling the expression with not supported node will throw the respective exception instead of returning `null`.
 
-To get the actual list of the not supported cases you may check `NotSupported` enum.
+To get the actual list of the not supported cases you may check in `Result.NotSupported_` enum values.
+
+
+### Code Generation
+
+The Code Generation capabilities are available via the `ToCSharpString` and `ToExpressionString` extension methods.
+
+**Note:** When converting the source expression to either C# code or to the Expression construction code you may find 
+the `// NOT_SUPPORTED_EXPRESSION` comments marking the not supported yet expressions by FEC. So you may test the presence or absence of this comment.
 
 
 ## Additional optimizations
