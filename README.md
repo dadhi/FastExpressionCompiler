@@ -314,10 +314,10 @@ Assert.IsNotNull(di.CSharpString);
 
 ### ThrowOnNotSupportedExpression and NotSupported_ flags
 
-FEC V3.1 has added to the compiler flags the `CompilerFlags.ThrowOnNotSupportedExpression` 
-so that compiling the expression with not supported node will throw the respective exception instead of returning `null`.
+FEC V3.1 has added the compiler flag `CompilerFlags.ThrowOnNotSupportedExpression`.
+When passed to `CompileFast(flags: CompilerFlags.ThrowOnNotSupportedExpression)` and the expression contains not (yet) supported Expression node the compilation will throw the exception instead of returning `null`.
 
-To get the actual list of the not supported cases you may check in `Result.NotSupported_` enum values.
+To get the whole list of the not yet supported cases you may check in `Result.NotSupported_` enum values.
 
 
 ### Code Generation
