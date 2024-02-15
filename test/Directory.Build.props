@@ -4,6 +4,6 @@
     <PropertyGroup>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
-        <NoWarn>$(NoWarn);1701;1702;1705;CS0659;IDE0090;IDE0044;IDE0060;IDE0054;IDE0051;NETSDK1212</NoWarn>
+        <NoWarn>$(NoWarn);1701;1702;1705;CS0162;CS0164;CS0659;IDE0090;IDE0044;IDE0060;IDE0054;IDE0051;NETSDK1212</NoWarn>
     </PropertyGroup>
 </Project>

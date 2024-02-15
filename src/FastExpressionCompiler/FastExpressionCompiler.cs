@@ -5919,7 +5919,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, in OpCode opcode, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode);
-            Debug.WriteLine($"{opcode}    <--/ {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]

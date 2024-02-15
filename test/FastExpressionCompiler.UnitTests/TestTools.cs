@@ -38,7 +38,8 @@ public static class TestTools
         CollectionAssert.AreEqual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual codes are: " + Environment.NewLine + sb);
     }
 
-    static private readonly Func<Type, string, string> _stripOuterTypes = (t, s) => s.Substring(s.LastIndexOf('.') + 1);
+    static private readonly Func<Type, string, string> _stripOuterTypes = 
+        (t, s) => s.Substring(s.LastIndexOf('.') + 1);
 
     [Conditional("DEBUG")]
     public static void PrintExpression(this Expression expr, bool completeTypeNames = false) =>
@@ -79,7 +80,7 @@ public static class TestTools
 #endif
     }
 
-    [System.Diagnostics.Conditional("DEBUG")]
+    [Conditional("DEBUG")]
     public static void PrintIL(this MethodInfo method, string tag = null)
     {
 #if PRINTIL
