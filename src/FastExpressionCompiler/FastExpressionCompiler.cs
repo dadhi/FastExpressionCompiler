@@ -7812,7 +7812,7 @@ namespace FastExpressionCompiler
         internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, string typeCode, T identity, string suffix = "") =>
             name != null 
                 ? sb.Append(name + suffix)
-                : sb.Append(typeCode.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(", ", "_").ToLowerInvariant())
+                : sb.Append(typeCode.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(", ", "_").Replace("?", "").ToLowerInvariant())
                     .Append("__").Append(identity.GetHashCode())
                     .Append(suffix);
 
