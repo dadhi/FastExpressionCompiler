@@ -6298,7 +6298,7 @@ namespace FastExpressionCompiler
             sb = expr.CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, 2, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(';');
 
             if (lts.Count > 0)
-                sb.Insert(0, $"var l = new Labels{lts.Count}]; // the labels{NewLine}");
+                sb.Insert(0, $"var l = new Labels[{lts.Count}]; // the labels{NewLine}");
             if (uniqueExprs.Count > 0)
                 sb.Insert(0, $"var e = new Expression[{uniqueExprs.Count}]; // the unique expressions{NewLine}");
             if (paramsExprs.Count > 0)
