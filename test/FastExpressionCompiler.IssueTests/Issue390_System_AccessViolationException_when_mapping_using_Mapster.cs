@@ -18,10 +18,69 @@ public class Issue390_System_AccessViolationException_when_mapping_using_Mapster
     public int Run()
     {
         Test_extracted_small_mapping_code();
+        Test_extracted_small_just_mapping_code_No_issue();
         Test_extracted_mapping_code();
-        Test_mapping();
+        Test_original_Mapster_mapping();
 
-        return 3;
+        return 4;
+    }
+
+    [Test]
+    public void Test_extracted_small_just_mapping_code_No_issue()
+    {
+        var p = new ParameterExpression[7]; // the parameter expressions
+        var e = new Expression[48]; // the unique expressions
+        var l = new LabelTarget[1]; // the labels
+        p[1]=Parameter(typeof(AuthResultDto));
+        var expr = Lambda<Func<AuthResultDto, DateTime>>(
+            e[29]=Invoke(
+                e[30]=Lambda<Func<DateTime?, DateTime>>(
+                    e[31]=Condition(
+                        e[32]=MakeBinary(ExpressionType.Equal,
+                            p[6]=Parameter(typeof(DateTime?)),
+                            e[33]=Constant(null, typeof(DateTime?)),
+                            liftToNull: false,
+                            typeof(DateTime).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "op_Equality" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(DateTime), typeof(DateTime) }))),
+                        e[34]=Constant(DateTime.Parse("1/1/0001 12:00:00 AM")),
+                        e[35]=Convert(
+                            p[6 // ([struct] DateTime? datetime__9799115)
+                                ],
+                            typeof(DateTime)),
+                        typeof(DateTime)),
+                    p[6 // ([struct] DateTime? datetime__9799115)
+                        ]),
+                e[36]=Condition(
+                    e[37]=MakeBinary(ExpressionType.Equal,
+                        e[38]=Property(
+                            p[1],
+                            typeof(AuthResultDto).GetTypeInfo().GetDeclaredProperty("RefreshToken")),
+                        e[39]=Constant(null, typeof(RefreshTokenDto))),
+                    e[40]=Constant(null, typeof(DateTime?)),
+                    e[41]=Convert(
+                        e[42]=Property(
+                            e[43]=Property(
+                                e[38 // MemberAccess of RefreshTokenDto
+                                    ],
+                                typeof(RefreshTokenDto).GetTypeInfo().GetDeclaredProperty("ExpirationDate")),
+                            typeof(DateTimeOffset).GetTypeInfo().GetDeclaredProperty("LocalDateTime")),
+                        typeof(DateTime?)),
+
+                  typeof(DateTime?))),
+            p[1]);
+
+        expr.PrintCSharp();
+
+        var auth = new AuthResultDto() { RefreshToken = new() };
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+        var dt = fs(auth);
+        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, dt);
+
+        var ff = expr.CompileFast(true);
+        ff.PrintIL();
+        dt = ff(auth);
+        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, dt);
     }
 
     [Test]
@@ -146,10 +205,14 @@ public class Issue390_System_AccessViolationException_when_mapping_using_Mapster
         var token = fs(auth);
         Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
 
-        // var ff = expr.CompileFast(true); // todo: @fixme
-        var ff = expr.CompileFast(true, flags: CompilerFlags.NoInvocationLambdaInlining);
+        var ff = expr.CompileFast(true); // todo: @fixme
         ff.PrintIL();
         token = ff(auth);
+        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
+
+        var ffn = expr.CompileFast(true, flags: CompilerFlags.NoInvocationLambdaInlining);
+        ffn.PrintIL();
+        token = ffn(auth);
         Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
     }
 
@@ -308,15 +371,19 @@ public class Issue390_System_AccessViolationException_when_mapping_using_Mapster
         var token = fs(auth);
         Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
 
-        // var ff = expr.CompileFast(true); // todo: @fixme
-        var ff = expr.CompileFast(true, flags: CompilerFlags.NoInvocationLambdaInlining);
+        var ff = expr.CompileFast(true); // todo: @fixme
+        ff.PrintIL();
+        token = ff(auth);
+        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
+
+        ff = expr.CompileFast(true, flags: CompilerFlags.NoInvocationLambdaInlining);
         ff.PrintIL();
         token = ff(auth);
         Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
     }
 
     [Test]
-    public void Test_mapping()
+    public void Test_original_Mapster_mapping()
     {
         var auth = new AuthResultDto() { RefreshToken = new() };
 
@@ -356,63 +423,7 @@ public class Issue390_System_AccessViolationException_when_mapping_using_Mapster
             {
                 try
                 {
-                    e.PrintCSharp();
-                    e.PrintExpression();
-
-                    var @cs = (Func<AuthResultDto, Token>)((AuthResultDto issue390_system_accessviolationexception_when_mapping_using_mapster_authresultdto__63208015) =>
-                    {
-                        MapContextScope scope = null;
-                        if (issue390_system_accessviolationexception_when_mapping_using_mapster_authresultdto__63208015 == (AuthResultDto)null)
-                        {
-                            return (Token)null;
-                        }
-                        
-                        scope = new MapContextScope();
-                        try
-                        {
-                            object cache = null;
-                            Dictionary<ReferenceTuple, object> references = null;
-                            ReferenceTuple key = default;
-                            Token result = null;
-                            references = scope.Context.References;
-                            key = new ReferenceTuple(
-                                issue390_system_accessviolationexception_when_mapping_using_mapster_authresultdto__63208015,
-                                typeof(Token));
-                            if (references.TryGetValue(
-                                key,
-                                out cache))
-                            {
-                                return ((Token)cache);
-                            }
-                            
-                            result = new Token();
-                            references[key] = ((object)result);
-                            result.RefreshTokenExpirationDate = ((Func<DateTime?, DateTime>)((DateTime? datetime__9799115) =>
-                                    (datetime__9799115 == (DateTime?)null) ?
-                                        DateTime.Parse("1/1/0001 12:00:00 AM") :
-                                        ((DateTime)datetime__9799115))).Invoke(
-                                (issue390_system_accessviolationexception_when_mapping_using_mapster_authresultdto__63208015.RefreshToken == (RefreshTokenDto)null) ?
-                                    (DateTime?)null :
-                                    ((DateTime?)issue390_system_accessviolationexception_when_mapping_using_mapster_authresultdto__63208015.RefreshToken.ExpirationDate.LocalDateTime));
-                            return result;
-                        }
-                        finally
-                        {
-                            scope.Dispose();
-                        }
-                        
-                        issue390_system_accessviolationexception_when_mapping_using_mapster_token__41962596:;
-                    });
-
-                    var fs = e.CompileSys();
-                    fs.PrintIL();
-
-                    // var ff = e.CompileFast();
-                    var ff = e.CompileFast(true, flags: CompilerFlags.NoInvocationLambdaInlining);
-                    Assert.IsNotNull(ff);
-                    ff.PrintIL();
-
-                    return ff;
+                    return e.CompileFast();
                 }
                 catch (Exception)
                 {

@@ -9,10 +9,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run();
 
             RunAllTests();
 
+            // new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run();
             // new Issue380_Comparisons_with_nullable_types().Run();
             // new LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types().Run();
             // new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run();
@@ -282,6 +282,8 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
                 Run(new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
+
+                Run(new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });

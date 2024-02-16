@@ -3634,10 +3634,10 @@ namespace FastExpressionCompiler
                     case ExpressionType.MemberAccess:
                     case ExpressionType.Index:
                         var leftMemberExpr = left as MemberExpression;
-                        var leftIndexExpr = left as IndexExpression;
+                        var orLeftIndexExpr = left as IndexExpression;
 
                         // return early for not supported types of left value to avoid multiple checks below
-                        if (leftMemberExpr == null & leftIndexExpr == null)
+                        if (leftMemberExpr == null & orLeftIndexExpr == null)
                             return false;
 
                         var indexArgCount = -1;
@@ -3646,19 +3646,19 @@ namespace FastExpressionCompiler
 #else
                         IReadOnlyList<Expression> indexArgs = null;
 #endif
-                        if (leftIndexExpr != null)
+                        if (orLeftIndexExpr != null)
                         {
 #if SUPPORTS_ARGUMENT_PROVIDER
-                            indexArgs = (IArgumentProvider)leftIndexExpr;
+                            indexArgs = (IArgumentProvider)orLeftIndexExpr;
 #else
-                            indexArgs = leftIndexExpr.Arguments;
+                            indexArgs = orLeftIndexExpr.Arguments;
 #endif
                             indexArgCount = indexArgs.GetCount();
                             if (indexArgCount > 4)
                                 return false; // todo: @feature more than 4 index arguments are not supported, and probably not need to be supported
                         }
 
-                        var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : leftIndexExpr.Object;
+                        var objExpr = leftMemberExpr != null ? leftMemberExpr.Expression : orLeftIndexExpr.Object;
 
                         // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
                         // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
@@ -3693,11 +3693,12 @@ namespace FastExpressionCompiler
                                     !TryEmit(objExpr, paramExprs, il, ref closure, setup, leftArLeastFlags | ParentFlags.InstanceAccess))
                                     return false;
                             }
-                            else// if (leftIndexExpr != null)
+                            else
                             {
+                                Debug.Assert(orLeftIndexExpr != null);
                                 if (objExpr != null)
                                 {
-                                    var isIndexerAMethodCall = indexArgCount > 1 | leftIndexExpr.Indexer != null;
+                                    var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null;
                                     var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
                                     if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, objFlags | ParentFlags.AssignmentLeftValue))
                                         return false;
@@ -3707,16 +3708,13 @@ namespace FastExpressionCompiler
                                         return false;
                             }
 
-                            // Load already emitted or emit the righ-value normally after the left to be assigned
+                            // Load already emitted or emit the right-value normally after the left to be assigned
                             if (rightVar != -1)
                                 EmitLoadLocalVariable(il, rightVar);
                             else
                             {
                                 if (!TryEmit(right, paramExprs, il, ref closure, setup, rightOnlyFlags))
                                     return false;
-                                if (closure.LastEmitIsAddress &&
-                                    right.NodeType != ExpressionType.Parameter) // exclude the .Parameter because emitting the parameter handles the loading of ref
-                                    EmitLoadIndirectlyByRef(il, rightType);
                                 if (resultVar != -1)
                                     EmitStoreAndLoadLocalVariable(il, resultVar);
                             }
@@ -3728,10 +3726,10 @@ namespace FastExpressionCompiler
                             }
                             else // if (leftIndexExpr != null)
                             {
-                                var ok = leftIndexExpr.Indexer != null
-                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, leftIndexExpr.Indexer.SetMethod)
+                                var ok = orLeftIndexExpr.Indexer != null
+                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod)
                                     : indexArgCount == 1
-                                        ? TryEmitArrayIndexSet(il, leftIndexExpr.Type) // one-dimensional array
+                                        ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                         : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
                                 if (!ok)
                                     return false;
@@ -3761,7 +3759,7 @@ namespace FastExpressionCompiler
                         else // if (leftIndexExpr != null)
                         {
                             // determine is the index essentially the method call to get/set value
-                            var isIndexerAMethodCall = indexArgCount > 1 | leftIndexExpr.Indexer != null;
+                            var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null;
                             var objVar = -1;
                             var objVarByAddress = false;
                             if (objExpr != null)
@@ -3817,9 +3815,9 @@ namespace FastExpressionCompiler
                             }
 
                             var ok = !isIndexerAMethodCall
-                                ? TryEmitArrayIndexGet(il, leftIndexExpr.Type, ref closure, baseFlags) // one-dimensional array
-                                : leftIndexExpr.Indexer != null
-                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, leftIndexExpr.Indexer.GetMethod)
+                                ? TryEmitArrayIndexGet(il, orLeftIndexExpr.Type, ref closure, baseFlags) // one-dimensional array
+                                : orLeftIndexExpr.Indexer != null
+                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.GetMethod)
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
                             if (!ok)
                                 return false;
@@ -3844,8 +3842,6 @@ namespace FastExpressionCompiler
                                 var rightType = right.Type;
                                 if (!TryEmit(right, paramExprs, il, ref closure, setup, rightOnlyFlags))
                                     return false;
-                                if (closure.LastEmitIsAddress)
-                                    EmitLoadIndirectlyByRef(il, rightType);
 
                                 var rightIsNullable = rightType.IsNullable();
                                 if (rightIsNullable) // todo: @perf @clarify is it even possible to have left non-nullable and right nullable
@@ -3943,10 +3939,10 @@ namespace FastExpressionCompiler
                         }
                         else // if (leftIndexExpr != null)
                         {
-                            var ok = leftIndexExpr.Indexer != null
-                                ? EmitMethodCallOrVirtualCallCheckForNull(il, leftIndexExpr.Indexer.SetMethod)
+                            var ok = orLeftIndexExpr.Indexer != null
+                                ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod)
                                 : indexArgCount == 1
-                                    ? TryEmitArrayIndexSet(il, leftIndexExpr.Type) // one-dimensional array
+                                    ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
                             if (!ok)
                                 return false;
@@ -3963,7 +3959,7 @@ namespace FastExpressionCompiler
 
                                 il.Demit(OpCodes.Pop); // pop the dupped instance address or the field address, or the array instance address
 
-                                if (leftIndexExpr != null)
+                                if (orLeftIndexExpr != null)
                                 {
                                     il.Demit(OpCodes.Pop); // pop the first index argument which is always present
                                     if (indexArgCount > 1)
@@ -4213,7 +4209,7 @@ namespace FastExpressionCompiler
                     case TypeCode.UInt64: il.Demit(OpCodes.Ldobj, type); break;
                     case TypeCode.String: il.Demit(OpCodes.Ldind_Ref); break;
                     default:
-                        if (type == typeof(IntPtr) || type == typeof(UIntPtr))
+                        if (type == typeof(IntPtr) | type == typeof(UIntPtr))
                             il.Demit(OpCodes.Ldind_I);
                         else if (type.IsValueType)
                             il.Demit(OpCodes.Ldobj, type);
