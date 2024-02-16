@@ -6608,7 +6608,8 @@ namespace FastExpressionCompiler
                         {
                             sb.NewLineIdent(lineIdent).Append("new[] {");
                             for (var i = 0; i < x.Variables.Count; i++)
-                                x.Variables[i].ToExpressionString((i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent),
+                                x.Variables[i].ToExpressionString(
+                                    (i > 0 ? sb.Append(',') : sb).NewLineIdent(lineIdent + identSpaces),
                                     paramsExprs, uniqueExprs, lts, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             sb.NewLineIdent(lineIdent).Append("},");
                         }
