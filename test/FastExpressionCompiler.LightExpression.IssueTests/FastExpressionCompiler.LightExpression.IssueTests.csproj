@@ -9,7 +9,6 @@
         <None Remove="*.ncrunchproject"/>
         <Compile Include="..\FastExpressionCompiler.IssueTests\**\*.cs" Exclude="..\FastExpressionCompiler.IssueTests\obj\**\*.*"/>
         <Compile Include="..\FastExpressionCompiler.UnitTests\TestTools.cs" />
-
         <Compile Remove="..\FastExpressionCompiler.IssueTests\ObjectMethodExecutor\**"/>
         <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke.cs"/>
         <Compile Remove="..\FastExpressionCompiler.IssueTests\Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor.cs"/>
@@ -20,6 +19,10 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj"/>
         <ProjectReference Include="..\FastExpressionCompiler.ILDecoder\FastExpressionCompiler.ILDecoder.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net7.0' OR '$(TargetFramework)' == 'net8.0' ">
+        <PackageReference Include="Mapster" Version="7.4.1-pre01" />
     </ItemGroup>
 
 </Project>

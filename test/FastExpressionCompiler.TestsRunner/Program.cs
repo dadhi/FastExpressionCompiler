@@ -9,14 +9,15 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run();
+
+            RunAllTests();
+
             // new Issue380_Comparisons_with_nullable_types().Run();
             // new LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types().Run();
-
             // new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run();
             // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run();
-
-            RunAllTests();
         }
 
         public static void RunAllTests()
