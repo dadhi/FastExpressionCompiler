@@ -7248,6 +7248,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.Default:
                     {
                         return e.Type == typeof(void) ? sb // `default(void)` does not make sense in the C#
+                            : e.Type == typeof(object) ? sb.Append("null")
                             : e.Type.IsValueType && !e.Type.IsNullable()
                             ? sb.Append("default(").Append(e.Type.ToCode(stripNamespace, printType)).Append(')')
                             : sb.Append('(').Append(e.Type.ToCode(stripNamespace, printType)).Append(")null");
