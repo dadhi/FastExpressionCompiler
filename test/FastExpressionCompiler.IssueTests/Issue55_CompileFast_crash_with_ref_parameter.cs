@@ -22,6 +22,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            BlockWithNonRefStatementLast();
             RefMethodCallingRefMethodWithLocal_OfString();
 
             RefDoNothingShouldNoCrash();
@@ -39,7 +40,6 @@ namespace FastExpressionCompiler.IssueTests
             AsValueAndAsRef();
             GenericRefFromConstant();
             GenericRefFromConstantReturn();
-            BlockWithNonRefStatementLast();
             RefReturnToVoid();
             RefRefVoid();
             RefRefReturnToVoid();
@@ -579,6 +579,8 @@ namespace FastExpressionCompiler.IssueTests
             var objRef = Parameter(typeof(uint).MakeByRefType());
             var variable = Variable(typeof(double));
             var lambda = Lambda<ActionRef<uint>>(Block(new[] { variable }, Assign(objRef, Constant((uint)3)), Assign(variable, Constant(0.0))), objRef);
+
+            lambda.PrintCSharp();
 
             var compiledB = lambda.CompileFast<ActionRef<uint>>(true);
             var exampleB = default(uint);

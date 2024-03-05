@@ -1970,6 +1970,19 @@ namespace FastExpressionCompiler
                                 if (statementCount == 0)
                                     return true; // yeah, it is a valid thing
 
+                                // todo: @perf we may simplify the blocks with the known block structure, e.g:
+                                // X t;
+                                // t = a.X;
+                                // b.Y = t;
+                                // recognize this kind of block
+                                if (blockVarCount == 1)
+                                {
+                                    if (statementCount == 2)
+                                    {
+                                        // todo: @wip
+                                    }
+                                }
+
                                 expr = statementExprs[statementCount - 1]; // The last (result) statement in block will provide the result
 
                                 // Try to trim the statements up to the Throw (if any)
@@ -7457,7 +7470,8 @@ namespace FastExpressionCompiler
 
                                 sb.Append(OperatorToCSharpString(nodeType));
 
-                                var isByRefAssignment = b.Left is ParameterExpression leftParam && leftParam.IsByRef;
+                                var isByRefAssignment = b.Left is ParameterExpression leftParam && leftParam.IsByRef && 
+                                    b.Right.NodeType != ExpressionType.Default && b.Right.NodeType != ExpressionType.Constant;
                                 if (isByRefAssignment)
                                     sb.Append("ref ");
 
