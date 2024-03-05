@@ -7089,14 +7089,42 @@ namespace FastExpressionCompiler
                         else
                         {
                             x.Test.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(" ?");
-                            sb.NewLineIdentCs(x.IfTrue, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(" :");
-                            sb.NewLineIdentCs(x.IfFalse, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+
+                            if (x.IfTrue is BlockExpression tb)
+                            {
+                                // note: workaround for the block expression in the ternary expression - passes the block as a lambda arg to __f local method
+                                Insert__fIfNeeded(sb);
+                                sb.NewLineIdent(lineIdent).Append("__f(() => {");
+                                tb.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode,
+                                    inTheLastBlock: true);
+                                sb.NewLineIdent(lineIdent).Append("}) : ");
+                            }
+                            else
+                                sb.NewLineIdentCs(x.IfTrue, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(" :");
+
+                            if (x.IfFalse is BlockExpression fb)
+                            {
+                                // note: workaround for the block expression in the ternary expression - passes the block as a lambda arg to __f local method
+                                Insert__fIfNeeded(sb);
+                                sb.NewLineIdent(lineIdent).Append("__f(() => {");
+                                fb.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode, 
+                                    inTheLastBlock: true); // adds the return for the value of the block
+                                sb.NewLineIdent(lineIdent).Append("})");
+                            }
+                            else
+                                sb.NewLineIdentCs(x.IfFalse, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+
+                            static void Insert__fIfNeeded(StringBuilder sb)
+                            { 
+                                if (sb[0] != 'T' || sb[2] != '_' || sb[3] != '_' || sb[3] != 'f')
+                                    sb.Insert(0, "T __f<T>(System.Func<T> f) => f();\n");
+                            }
                         }
                         return sb;
                     }
                 case ExpressionType.Block:
                     {
-                        return BlockToCSharpString((BlockExpression)e, sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode: notRecognizedToCode);
+                        return ((BlockExpression)e).BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                     }
                 case ExpressionType.Loop:
                     {
