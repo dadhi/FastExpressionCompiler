@@ -52,6 +52,19 @@ namespace FastExpressionCompiler.UnitTests
         }
 
         [Test]
+        public void Implicit_equal()
+        {
+            Expression<Func<EntityWithImplicitEquality, Entity, bool>> e =
+                (ewe, entity) => ewe == entity;
+
+            var f = e.CompileFast(true);
+            var entityWithEquals = new EntityWithImplicitEquality { AvailableDate = DateTime.Now };
+            var entity = new Entity { AvailableDate = entityWithEquals.AvailableDate };
+            var value = f(entityWithEquals, entity);
+            Assert.IsTrue(value);
+        }
+
+        [Test]
         public void Complex_expression_with_DateTime_Strings_and_Int()
         {
             var dtNow = DateTime.Now;
@@ -110,6 +123,37 @@ namespace FastExpressionCompiler.UnitTests
             public string StartTime { get; set; }
             public string EndTime { get; set; }
             public DateTime AvailableDate { get; set; }
+        }
+
+
+        public class EntityWithImplicitEquality
+        {
+            public DateTime AvailableDate { get; set; }
+
+            public static bool operator ==(EntityWithImplicitEquality ewe, Entity entity) => ewe?.AvailableDate == entity?.AvailableDate;
+            public static bool operator !=(EntityWithImplicitEquality ewe, Entity entity) => ewe?.AvailableDate.Equals(entity?.AvailableDate) != true;
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(this, obj))
+                {
+                    return true;
+                }
+
+                if (ReferenceEquals(obj, null))
+                {
+                    return false;
+                }
+
+                if (obj is EntityWithImplicitEquality other)
+                    return AvailableDate == other.AvailableDate;
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                return AvailableDate.GetHashCode();
+            }
         }
     }
 }
