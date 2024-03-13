@@ -1975,13 +1975,12 @@ namespace FastExpressionCompiler
                                 // t = a.X;
                                 // b.Y = t;
                                 // recognize this kind of block
-                                if (blockVarCount == 1)
-                                {
-                                    if (statementCount == 2)
-                                    {
-                                        // todo: @wip
-                                    }
-                                }
+                                // if (blockVarCount == 1)
+                                // {
+                                //     if (statementCount == 2)
+                                //     {
+                                //     }
+                                // }
 
                                 expr = statementExprs[statementCount - 1]; // The last (result) statement in block will provide the result
 
@@ -2946,7 +2945,7 @@ namespace FastExpressionCompiler
                         il.DmarkLabel(labelDone);
                     }
                 }
-                else if (sourceType == typeof(Enum) & targetType.IsEnum)
+                else if (targetType.IsEnum && sourceType == typeof(Enum))
                 {
                     il.Demit(OpCodes.Unbox_Any, targetType); // a special case, see AutoMapper StringToEnumConverter.Should_work
                 }
@@ -5238,9 +5237,7 @@ namespace FastExpressionCompiler
                                 oppositeTestExpr = sideDefaultExpr == testLeftExpr ? testRightExpr : testLeftExpr;
                                 var testSideType = sideDefaultExpr.Type;
                                 if (testSideType.IsPrimitiveWithZeroDefault())
-                                {
                                     useBrFalseOrTrue = 0;
-                                }
                                 else if (testSideType.IsClass || testSideType.IsNullable())
                                 {
                                     useBrFalseOrTrue = 0;
@@ -7113,7 +7110,8 @@ namespace FastExpressionCompiler
                                 sb.NewLineIdentCs(x.IfTrue, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).AddSemicolonIfFits();
 
                             sb.NewLine(lineIdent, identSpaces).Append('}');
-                            if (x.IfFalse.NodeType != ExpressionType.Default || x.IfFalse.Type != typeof(void))
+                            if (x.IfFalse.NodeType != ExpressionType.Default ||
+                                x.IfFalse.Type != typeof(void))
                             {
                                 sb.NewLine(lineIdent, identSpaces).Append("else");
                                 sb.NewLine(lineIdent, identSpaces).Append('{');
@@ -7129,35 +7127,44 @@ namespace FastExpressionCompiler
                         {
                             x.Test.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(" ?");
 
-                            if (x.IfTrue is BlockExpression tb)
+                            var ifTrue = x.IfTrue;
+                            if (ifTrue.NodeType == ExpressionType.Block |
+                                ifTrue.NodeType == ExpressionType.Try |
+                                ifTrue.NodeType == ExpressionType.Loop |
+                                ifTrue.NodeType == ExpressionType.Switch)
                             {
-                                // note: workaround for the block expression in the ternary expression - passes the block as a lambda arg to __f local method
-                                Insert__fIfNeeded(sb);
+                                InsertDoIfNeeded(sb);
                                 sb.NewLineIdent(lineIdent).Append("__f(() => {");
-                                tb.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode,
-                                    inTheLastBlock: true);
+                                if (ifTrue is BlockExpression bl)
+                                    bl.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode, inTheLastBlock: true);
+                                else
+                                    sb.NewLineIdentCs(ifTrue,  lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
                                 sb.NewLineIdent(lineIdent).Append("}) : ");
                             }
                             else
-                                sb.NewLineIdentCs(x.IfTrue, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(" :");
+                                sb.NewLineIdentCs(ifTrue, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(" :");
 
-                            if (x.IfFalse is BlockExpression fb)
+                            var ifFalse = x.IfFalse;
+                            if (ifFalse.NodeType == ExpressionType.Block |
+                                ifFalse.NodeType == ExpressionType.Try |
+                                ifFalse.NodeType == ExpressionType.Loop |
+                                ifFalse.NodeType == ExpressionType.Switch)
                             {
-                                // note: workaround for the block expression in the ternary expression - passes the block as a lambda arg to __f local method
-                                Insert__fIfNeeded(sb);
+                                InsertDoIfNeeded(sb);
                                 sb.NewLineIdent(lineIdent).Append("__f(() => {");
-                                fb.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode, 
-                                    inTheLastBlock: true); // adds the return for the value of the block
+                                if (ifFalse is BlockExpression bl)
+                                    bl.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode, inTheLastBlock: true);
+                                else
+                                    sb.NewLineIdentCs(ifFalse, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
                                 sb.NewLineIdent(lineIdent).Append("})");
                             }
                             else
-                                sb.NewLineIdentCs(x.IfFalse, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                sb.NewLineIdentCs(ifFalse, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
-                            static void Insert__fIfNeeded(StringBuilder sb)
-                            { 
-                                if (sb[0] != 'T' || sb[2] != '_' || sb[3] != '_' || sb[3] != 'f')
-                                    sb.Insert(0, "T __f<T>(System.Func<T> f) => f();\n");
-                            }
+                            static StringBuilder InsertDoIfNeeded(StringBuilder sb) =>
+                                sb[0] != 'T' || sb[2] != '_' || sb[3] != '_' || sb[4] != 'f' || sb[5] != '<'
+                                    ? sb.Insert(0, "T __f<T>(System.Func<T> f) => f();\n")
+                                    : sb;
                         }
                         return sb;
                     }
@@ -7455,22 +7462,7 @@ namespace FastExpressionCompiler
                                 return b.Right.ToCSharpString(sb.Append("["), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append("]");
                             }
 
-                            if (nodeType == ExpressionType.Assign ||
-                                nodeType == ExpressionType.PowerAssign ||
-                                nodeType == ExpressionType.AndAssign ||
-                                nodeType == ExpressionType.OrAssign ||
-                                nodeType == ExpressionType.AddAssign ||
-                                nodeType == ExpressionType.ExclusiveOrAssign ||
-                                nodeType == ExpressionType.AddAssignChecked ||
-                                nodeType == ExpressionType.SubtractAssign ||
-                                nodeType == ExpressionType.SubtractAssignChecked ||
-                                nodeType == ExpressionType.MultiplyAssign ||
-                                nodeType == ExpressionType.MultiplyAssignChecked ||
-                                nodeType == ExpressionType.DivideAssign ||
-                                nodeType == ExpressionType.LeftShiftAssign ||
-                                nodeType == ExpressionType.RightShiftAssign ||
-                                nodeType == ExpressionType.ModuloAssign
-                            )
+                            if (IsAssignNodeType(nodeType))
                             {
                                 // todo: @perf handle the right part is condition with the blocks for If and/or Else, e.g. see #261 test `Serialize_the_nullable_struct_array` 
                                 if (b.Right is BlockExpression rightBlock) // it is valid to assign the block and it is used to my surprise
@@ -7492,8 +7484,7 @@ namespace FastExpressionCompiler
 
                                 sb.Append(OperatorToCSharpString(nodeType));
 
-                                var isByRefAssignment = b.Left is ParameterExpression leftParam && leftParam.IsByRef && 
-                                    b.Right.NodeType != ExpressionType.Default && b.Right.NodeType != ExpressionType.Constant;
+                                var isByRefAssignment = b.Left is ParameterExpression leftParam && leftParam.IsByRef;
                                 if (isByRefAssignment)
                                     sb.Append("ref ");
 
@@ -7526,6 +7517,26 @@ namespace FastExpressionCompiler
                     }
             }
         }
+
+        private static bool IsAssignNodeType(ExpressionType nodeType) => nodeType switch
+        {
+            ExpressionType.Assign => true,
+            ExpressionType.PowerAssign => true,
+            ExpressionType.AndAssign => true,
+            ExpressionType.OrAssign => true,
+            ExpressionType.AddAssign => true,
+            ExpressionType.ExclusiveOrAssign => true,
+            ExpressionType.AddAssignChecked => true,
+            ExpressionType.SubtractAssign => true,
+            ExpressionType.SubtractAssignChecked => true,
+            ExpressionType.MultiplyAssign => true,
+            ExpressionType.MultiplyAssignChecked => true,
+            ExpressionType.DivideAssign => true,
+            ExpressionType.LeftShiftAssign => true,
+            ExpressionType.RightShiftAssign => true,
+            ExpressionType.ModuloAssign => true,
+            _ => false
+        };
 
         private static StringBuilder AddSemicolonIfFits(this StringBuilder sb)
         {
@@ -7714,10 +7725,17 @@ namespace FastExpressionCompiler
                     blockResultAssignment.Left.ToCSharpString(sb, enclosedIn, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(", ");
                 }
             }
-            else if (inTheLastBlock & !containerIgnoresResult & b.Type != typeof(void))
+            else if (inTheLastBlock & !containerIgnoresResult &&
+                b.Type != typeof(void) && lastExpr.Type != typeof(void))
             {
-                enclosedIn = EnclosedIn.Return;
-                sb.Append("return ");
+                // todo: @hack if the last expression is the Assignment BinaryExpression, 
+                // it is very doubtful that it is supposed to be returned result.
+                // but I need to find a better indicator later.
+                if (!IsAssignNodeType(lastExpr.NodeType))
+                {
+                    enclosedIn = EnclosedIn.Return;
+                    sb.Append("return ");
+                }
             }
 
             if (lastExpr is ConditionalExpression ||
