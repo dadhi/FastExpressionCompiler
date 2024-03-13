@@ -22,7 +22,8 @@ namespace FastExpressionCompiler.UnitTests
             Greater_or_equal_than_DateTime_parameter();
             Less_or_equal_than_DateTime_parameter();
             Complex_expression_with_DateTime_Strings_and_Int();
-            return 5;
+            Implicit_equal();
+            return 6;
 #else
             return 2;
 #endif        
