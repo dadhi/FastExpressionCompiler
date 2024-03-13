@@ -17,13 +17,13 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-[TestFixture]
-    public class Issue83_linq2db : ITest
+    [TestFixture]
+    public sealed class Issue83_linq2db : ITest
     {
         public int Run()
         {
-            String_to_number_conversion_using_convert_with_method_with_DefaultExpression();
             String_to_number_conversion_using_convert_with_method();
+            String_to_number_conversion_using_convert_with_method_with_DefaultExpression();
             linq2db_NullReferenceException();
             Jit_compiler_internal_limitation();
             Struct_test();
@@ -956,6 +956,7 @@ namespace FastExpressionCompiler.IssueTests
                 );
 
             var expr = Lambda<Action<object, object>>(body, objParam, valueParam);
+            expr.PrintCSharp();
 
             var compiled = expr.CompileFast(true);
 

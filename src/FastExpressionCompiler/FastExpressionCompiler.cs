@@ -5217,12 +5217,10 @@ namespace FastExpressionCompiler
                             if (sideConstVal == null)
                             {
                                 useBrFalseOrTrue = 0;
-                                // The null comparison for the nullable is actually a `nullable.HasValue` check,
-                                // which implies member access on nullable struct - therefore loading it by address
                                 if (oppositeTestExpr.Type.IsNullable())
                                 {
                                     nullOfValueType = oppositeTestExpr.Type;
-                                    parent |= ParentFlags.MemberAccess;
+                                    parent |= ParentFlags.MemberAccess; // `for the `nullable.HasValue` check
                                 }
                             }
                             else if (sideConstVal is bool boolConst)
@@ -5231,6 +5229,28 @@ namespace FastExpressionCompiler
                                 sideConstVal is int intConst && intConst == 0 ||
                                 sideConstVal is byte byteConst && byteConst == 0)
                                 useBrFalseOrTrue = 0;
+                        }
+                        else
+                        {
+                            var sideDefaultExpr = testRightExpr as DefaultExpression ?? testLeftExpr as DefaultExpression;
+                            if (sideDefaultExpr != null)
+                            {
+                                oppositeTestExpr = sideDefaultExpr == testLeftExpr ? testRightExpr : testLeftExpr;
+                                var testSideType = sideDefaultExpr.Type;
+                                if (testSideType.IsPrimitiveWithZeroDefault())
+                                {
+                                    useBrFalseOrTrue = 0;
+                                }
+                                else if (testSideType.IsClass || testSideType.IsNullable())
+                                {
+                                    useBrFalseOrTrue = 0;
+                                    if (oppositeTestExpr.Type.IsNullable())
+                                    {
+                                        nullOfValueType = oppositeTestExpr.Type;
+                                        parent |= ParentFlags.MemberAccess; // `for the `nullable.HasValue` check
+                                    }
+                                }
+                            }
                         }
 
                         if (useBrFalseOrTrue != -1 &&
