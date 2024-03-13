@@ -5202,63 +5202,40 @@ namespace FastExpressionCompiler
 
                 var useBrFalseOrTrue = -1; // 0 - is comparison with Zero (0, null, false), 1 - is comparison with (true)
                 Type nullOfValueType = null;
-                if (testExpr is BinaryExpression b)
+                if (testExpr is BinaryExpression tb)
                 {
                     if (nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual)
                     {
-                        object constVal = null;
-                        if (b.Right is ConstantExpression rc)
+                        var testLeftExpr = tb.Left;
+                        var testRightExpr = tb.Right;
+                        Expression oppositeTestExpr = null;
+                        var sideConstExpr = testRightExpr as ConstantExpression ?? testLeftExpr as ConstantExpression;
+                        if (sideConstExpr != null)
                         {
-                            constVal = rc.Value;
-                            if (constVal == null)
+                            oppositeTestExpr = sideConstExpr == testLeftExpr ? testRightExpr : testLeftExpr;
+                            var sideConstVal = sideConstExpr.Value;
+                            if (sideConstVal == null)
                             {
                                 useBrFalseOrTrue = 0;
                                 // The null comparison for the nullable is actually a `nullable.HasValue` check,
                                 // which implies member access on nullable struct - therefore loading it by address
-                                if (b.Left.Type.IsNullable())
+                                if (oppositeTestExpr.Type.IsNullable())
                                 {
-                                    nullOfValueType = b.Left.Type;
+                                    nullOfValueType = oppositeTestExpr.Type;
                                     parent |= ParentFlags.MemberAccess;
                                 }
                             }
-                            else if (constVal is bool rcb)
-                            {
-                                useBrFalseOrTrue = rcb ? 1 : 0;
-                            }
-                            else if (constVal is int n && n == 0 || constVal is byte bn && bn == 0)
-                            {
+                            else if (sideConstVal is bool boolConst)
+                                useBrFalseOrTrue = boolConst ? 1 : 0;
+                            else if (
+                                sideConstVal is int intConst && intConst == 0 ||
+                                sideConstVal is byte byteConst && byteConst == 0)
                                 useBrFalseOrTrue = 0;
-                            }
-
-                            if (useBrFalseOrTrue != -1 &&
-                                !TryEmit(b.Left, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
-                                return false;
                         }
-                        else if (b.Left is ConstantExpression lc)
-                        {
-                            constVal = lc.Value;
-                            if (constVal == null)
-                            {
-                                useBrFalseOrTrue = 0;
-                                if (b.Right.Type.IsNullable())
-                                {
-                                    nullOfValueType = b.Right.Type;
-                                    parent |= ParentFlags.MemberAccess;
-                                }
-                            }
-                            else if (constVal is bool lcb)
-                            {
-                                useBrFalseOrTrue = lcb ? 1 : 0;
-                            }
-                            else if (constVal is int n && n == 0 || constVal is byte bn && bn == 0)
-                            {
-                                useBrFalseOrTrue = 0;
-                            }
 
-                            if (useBrFalseOrTrue != -1 &&
-                                !TryEmit(b.Right, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
-                                return false;
-                        }
+                        if (useBrFalseOrTrue != -1 &&
+                            !TryEmit(oppositeTestExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
+                            return false;
                     }
                 }
 
@@ -5654,6 +5631,31 @@ namespace FastExpressionCompiler
             type == typeof(ushort) ||
             type == typeof(uint) ||
             type == typeof(ulong);
+
+        internal static bool IsPrimitiveWithZeroDefault(this Type type)
+        {
+            switch (Type.GetTypeCode(type))
+            {
+                case TypeCode.Boolean:
+                case TypeCode.Char:
+                case TypeCode.SByte:
+                case TypeCode.Byte:
+                case TypeCode.Int16:
+                case TypeCode.UInt16:
+                case TypeCode.Int32:
+                case TypeCode.UInt32:
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                case TypeCode.Single:
+                case TypeCode.Double:
+                case TypeCode.Decimal:
+                    return true;
+                // case TypeCode.DateTime:
+                // case TypeCode.String:
+                default:
+                    return false;
+            }
+        }
 
         [MethodImpl((MethodImplOptions)256)]
         internal static bool IsNullable(this Type type) =>

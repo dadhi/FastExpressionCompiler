@@ -22,6 +22,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            String_to_number_conversion_using_convert_with_method_with_DefaultExpression();
             String_to_number_conversion_using_convert_with_method();
             linq2db_NullReferenceException();
             Jit_compiler_internal_limitation();
@@ -73,9 +74,9 @@ namespace FastExpressionCompiler.IssueTests
             TestConverterFailure();
             TestConverterNullable();
             TestLdArg();
-            return 49;
+            return 50;
 #else
-            return 27;
+            return 28;
 #endif
         }
 
@@ -97,6 +98,31 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = expr.CompileFast(true);
 
             Assert.AreEqual(10, compiled("10"));
+        }
+
+        [Test]
+        public void String_to_number_conversion_using_convert_with_method_with_DefaultExpression()
+        {
+            var from = typeof(string);
+            var to = typeof(int);
+
+            var p = Parameter(from, "p");
+
+            var body = Condition(
+                NotEqual(p, Default(from)),
+                Convert(p, to, to.GetTypeInfo().DeclaredMethods.First(x=> x.Name == "Parse" && x.GetParameters().Length==1 && x.GetParameters()[0].ParameterType == from)),
+                Default(typeof(int)));
+
+            var expr = Lambda<Func<string, int>>(body, p);
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual(10, fs("10"));
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(10, ff("10"));
         }
 
         interface IQueryRunner
