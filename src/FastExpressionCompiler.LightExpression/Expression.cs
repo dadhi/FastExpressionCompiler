@@ -1847,10 +1847,18 @@ namespace FastExpressionCompiler.LightExpression
         public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, params SwitchCase[] cases) =>
             new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases);
 
+        public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, IEnumerable<SwitchCase> cases) =>
+            new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray());
+
         public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
             comparison == null
             ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases)
             : new WithComparisonSwitchExpression(defaultBody.Type, switchValue, defaultBody, cases, comparison);
+
+        public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
+            comparison == null
+            ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray())
+            : new WithComparisonSwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray(), comparison);
 
         public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
             comparison == null
@@ -1864,6 +1872,9 @@ namespace FastExpressionCompiler.LightExpression
 
         public static SwitchExpression Switch(Expression switchValue, params SwitchCase[] cases) =>
             new SwitchExpression(null, switchValue, null, cases);
+
+        public static SwitchExpression Switch(Expression switchValue, IEnumerable<SwitchCase> cases) =>
+            new SwitchExpression(null, switchValue, null, cases.AsArray());
 
         public static SwitchCase SwitchCase(Expression body, IEnumerable<Expression> testValues) =>
             new SwitchCase(body, testValues);

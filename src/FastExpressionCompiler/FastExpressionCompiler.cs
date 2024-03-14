@@ -5201,19 +5201,43 @@ namespace FastExpressionCompiler
 
                 var useBrFalseOrTrue = -1; // 0 - is comparison with Zero (0, null, false), 1 - is comparison with (true)
                 Type nullOfValueType = null;
-                if (testExpr is BinaryExpression tb)
+                if (testExpr is BinaryExpression tb &&
+                    (nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual))
                 {
-                    if (nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual)
+                    var testLeftExpr = tb.Left;
+                    var testRightExpr = tb.Right;
+                    Expression oppositeTestExpr = null;
+                    var sideConstExpr = testRightExpr as ConstantExpression ?? testLeftExpr as ConstantExpression;
+                    if (sideConstExpr != null)
                     {
-                        var testLeftExpr = tb.Left;
-                        var testRightExpr = tb.Right;
-                        Expression oppositeTestExpr = null;
-                        var sideConstExpr = testRightExpr as ConstantExpression ?? testLeftExpr as ConstantExpression;
-                        if (sideConstExpr != null)
+                        oppositeTestExpr = sideConstExpr == testLeftExpr ? testRightExpr : testLeftExpr;
+                        var sideConstVal = sideConstExpr.Value;
+                        if (sideConstVal == null)
                         {
-                            oppositeTestExpr = sideConstExpr == testLeftExpr ? testRightExpr : testLeftExpr;
-                            var sideConstVal = sideConstExpr.Value;
-                            if (sideConstVal == null)
+                            useBrFalseOrTrue = 0;
+                            if (oppositeTestExpr.Type.IsNullable())
+                            {
+                                nullOfValueType = oppositeTestExpr.Type;
+                                parent |= ParentFlags.MemberAccess; // `for the `nullable.HasValue` check
+                            }
+                        }
+                        else if (sideConstVal is bool boolConst)
+                            useBrFalseOrTrue = boolConst ? 1 : 0;
+                        else if (sideConstVal is int intConst)
+                            useBrFalseOrTrue = intConst == 0 ? 0 : intConst == 1 ? 1 : -1;
+                        else if (sideConstVal is byte bytConst)
+                            useBrFalseOrTrue = bytConst == 0 ? 0 : bytConst == 1 ? 1 : -1;
+                    }
+                    else
+                    {
+                        var sideDefaultExpr = testRightExpr as DefaultExpression ?? testLeftExpr as DefaultExpression;
+                        if (sideDefaultExpr != null)
+                        {
+                            oppositeTestExpr = sideDefaultExpr == testLeftExpr ? testRightExpr : testLeftExpr;
+                            var testSideType = sideDefaultExpr.Type;
+                            if (testSideType.IsPrimitiveWithZeroDefault())
+                                useBrFalseOrTrue = 0;
+                            else if (testSideType.IsClass || testSideType.IsNullable())
                             {
                                 useBrFalseOrTrue = 0;
                                 if (oppositeTestExpr.Type.IsNullable())
@@ -5222,38 +5246,12 @@ namespace FastExpressionCompiler
                                     parent |= ParentFlags.MemberAccess; // `for the `nullable.HasValue` check
                                 }
                             }
-                            else if (sideConstVal is bool boolConst)
-                                useBrFalseOrTrue = boolConst ? 1 : 0;
-                            else if (
-                                sideConstVal is int intConst && intConst == 0 ||
-                                sideConstVal is byte byteConst && byteConst == 0)
-                                useBrFalseOrTrue = 0;
                         }
-                        else
-                        {
-                            var sideDefaultExpr = testRightExpr as DefaultExpression ?? testLeftExpr as DefaultExpression;
-                            if (sideDefaultExpr != null)
-                            {
-                                oppositeTestExpr = sideDefaultExpr == testLeftExpr ? testRightExpr : testLeftExpr;
-                                var testSideType = sideDefaultExpr.Type;
-                                if (testSideType.IsPrimitiveWithZeroDefault())
-                                    useBrFalseOrTrue = 0;
-                                else if (testSideType.IsClass || testSideType.IsNullable())
-                                {
-                                    useBrFalseOrTrue = 0;
-                                    if (oppositeTestExpr.Type.IsNullable())
-                                    {
-                                        nullOfValueType = oppositeTestExpr.Type;
-                                        parent |= ParentFlags.MemberAccess; // `for the `nullable.HasValue` check
-                                    }
-                                }
-                            }
-                        }
-
-                        if (useBrFalseOrTrue != -1 &&
-                            !TryEmit(oppositeTestExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
-                            return false;
                     }
+
+                    if (useBrFalseOrTrue != -1 &&
+                        !TryEmit(oppositeTestExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
+                        return false;
                 }
 
                 if (useBrFalseOrTrue == -1)
