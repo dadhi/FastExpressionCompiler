@@ -14,6 +14,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            SwitchIsSupported31();
             SwitchIsSupported1();
             SwitchIsSupportedEnum();
             SwitchIsSupported_TestNullableEnumIsNull();
@@ -23,7 +24,6 @@ namespace FastExpressionCompiler.IssueTests
             SwitchIsSupported30();
             SwitchIsSupported33();
             SwitchIsSupported3();
-            SwitchIsSupported31();
             SwitchIsSupported4();
             SwitchIsSupported5();
             SwitchIsSupported6();
@@ -203,10 +203,18 @@ namespace FastExpressionCompiler.IssueTests
                     SwitchCase(Constant("A"), Constant(1))
                 );
 
-            var lambda = Lambda<Func<int, string>>(blockExpr, eVar);
-            var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
-            Assert.AreEqual("A", fastCompiled(1));
+            var e = Lambda<Func<int, string>>(blockExpr, eVar);
+            e.PrintCSharp(); // todo: @wip @fixme add returns from the switch
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("A", fs(1));
+            Assert.AreEqual("Z", fs(42));
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual("A", ff(1));
+            Assert.AreEqual("Z", ff(42));
         }
 
         [Test]

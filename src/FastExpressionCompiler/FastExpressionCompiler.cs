@@ -1900,7 +1900,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
                             var binaryExpr = (BinaryExpression)expr;
-                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, nodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, expr.Type, nodeType, null, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Add:
                         case ExpressionType.AddChecked:
@@ -1926,7 +1926,8 @@ namespace FastExpressionCompiler
                             return TryEmitCoalesceOperator((BinaryExpression)expr, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Conditional:
-                            return TryEmitConditional((ConditionalExpression)expr, paramExprs, il, ref closure, setup, parent);
+                            var condExpr = (ConditionalExpression)expr;
+                            return TryEmitConditional(condExpr.Test, condExpr.IfTrue, condExpr.IfFalse, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.PostIncrementAssign:
                         case ExpressionType.PreIncrementAssign:
@@ -2768,7 +2769,7 @@ namespace FastExpressionCompiler
                 var op = expr.Operand;
                 if (op.NodeType == ExpressionType.Equal)
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
-                        ExpressionType.NotEqual, expr.Type, paramExprs, il, ref closure, setup, parent);
+                        expr.Type, ExpressionType.NotEqual, null, paramExprs, il, ref closure, setup, parent);
 
                 if (!TryEmit(op, paramExprs, il, ref closure, setup, parent))
                     return false;
@@ -4700,6 +4701,31 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static bool IsEvaluatedExpression(Expression expr)
+            {
+                var nodeType = expr.NodeType;
+                if (expr is UnaryExpression unary && nodeType == ExpressionType.Convert)
+                    return IsEvaluatedExpression(unary.Operand);
+
+                if (expr is IndexExpression index)
+                {
+                    if (!IsEvaluatedExpression(index))
+                        return false;
+#if SUPPORTS_ARGUMENT_PROVIDER
+                    var argExprs = (IArgumentProvider)index;
+                    return argExprs.ArgumentCount == 1 && IsEvaluatedExpression(argExprs.GetArgument(0));
+#else
+                    var argExprs = index.Arguments;
+                    return argExprs.Count == 1 && IsEvaluatedExpression(argExprs[0]);
+#endif
+                }
+
+                return
+                    nodeType == ExpressionType.Parameter |
+                    nodeType == ExpressionType.Constant |
+                    nodeType == ExpressionType.Default;
+            }
+
 #if LIGHT_EXPRESSION
             private static bool TryEmitSwitch(SwitchExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
                 CompilerFlags setup, ParentFlags parent)
@@ -4708,26 +4734,46 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
+                var switchValueExpr = expr.SwitchValue;
+                // todo: @wip add the Property and Field to the IsEvaluatedExpression?
+                // if (!IsEvaluatedExpression(switchValueExpr))
+                //     return false; // todo: @feature we need the `SwitchValue` to be emitted only once and save into the local variable
+
                 // todo: @perf
                 //- use switch statement for int comparison (if int difference is less or equal 3 -> use IL switch)
                 //- TryEmitComparison should not emit "CEQ" so we could use Beq_S instead of Brtrue_S (not always possible (nullable))
                 //- if switch SwitchValue is a nullable parameter, we should call getValue only once and store the result.
-                //- use comparison methods (when defined)
+
+                var dontIgnoreTestResult = parent & ~ParentFlags.IgnoreResult;
+                var comparisonMethod = expr.Comparison;
+                var cases = expr.Cases;
+                if (cases.Count == 1)
+                {
+                    var cs0 = cases[0];
+                    if (cs0.TestValues.Count == 1)
+                    {
+                        Expression testExpr = comparisonMethod == null
+                            ? Equal(switchValueExpr, cs0.TestValues[0])
+                            : Call(comparisonMethod, switchValueExpr, cs0.TestValues[0]);
+                        return TryEmitConditional(testExpr, cs0.Body, expr.DefaultBody, paramExprs, il, ref closure, setup, parent);
+                    }
+                }
 
                 var endLabel = il.DefineLabel();
-                var cases = expr.Cases;
                 var labels = new Label[cases.Count];
-                var dontIgnoreTestResult = parent & ~ParentFlags.IgnoreResult;
+
                 for (var caseIndex = 0; caseIndex < cases.Count; ++caseIndex)
                 {
                     var cs = cases[caseIndex];
-                    labels[caseIndex] = il.DefineLabel();
+                    var lb = il.DefineLabel();
+                    labels[caseIndex] = lb;
 
                     foreach (var caseTestValue in cs.TestValues)
                     {
-                        if (!TryEmitComparison(expr.SwitchValue, caseTestValue, ExpressionType.Equal, typeof(bool), paramExprs, il, ref closure, setup, dontIgnoreTestResult))
+                        if (!TryEmitComparison(switchValueExpr, caseTestValue, typeof(bool), ExpressionType.Equal, comparisonMethod,
+                            paramExprs, il, ref closure, setup, dontIgnoreTestResult))
                             return false;
-                        il.Demit(OpCodes.Brtrue, labels[caseIndex]);
+                        il.Demit(OpCodes.Brtrue, lb);
                     }
                 }
 
@@ -4753,7 +4799,9 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitComparison(Expression left, Expression right, ExpressionType nodeType, Type exprType,
+            private static bool TryEmitComparison(
+                Expression left, Expression right, Type exprType,
+                ExpressionType nodeType, MethodInfo comparisonMethodOrNull,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -4761,17 +4809,30 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
+                if (comparisonMethodOrNull != null)
+                {
+                    Debug.Assert(comparisonMethodOrNull.IsStatic);
+                    Debug.Assert(comparisonMethodOrNull.ReturnType == typeof(bool));
+
+                    var methodParams = comparisonMethodOrNull.GetParameters();
+                    Debug.Assert(methodParams.Length == 2);
+
+                    return TryEmit(left, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[0].ParameterType.IsByRef ? 0 : -1)
+                        && TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[1].ParameterType.IsByRef ? 1 : -1)
+                        && EmitMethodCall(il, comparisonMethodOrNull);
+                }
+
                 var leftOpType = left.Type;
                 var leftIsNullable = leftOpType.IsNullable();
                 var rightOpType = right.Type;
 
                 // if on member is `null` object then list its type to match other member
                 var rightIsNull = right is ConstantExpression r && r.Value == null;
-                if (rightIsNull && rightOpType == typeof(object))
+                if (rightIsNull & rightOpType == typeof(object))
                     rightOpType = leftOpType;
 
                 var leftIsNull = left is ConstantExpression l && l.Value == null;
-                if (leftIsNull && leftOpType == typeof(object))
+                if (leftIsNull & leftOpType == typeof(object))
                     leftOpType = rightOpType;
 
                 var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
@@ -4818,11 +4879,11 @@ namespace FastExpressionCompiler
                     return false;
 
                 if (leftOpType != rightOpType && leftOpType.IsClass && rightOpType.IsClass &&
-                    (leftOpType == typeof(object) || rightOpType == typeof(object)))
+                    (leftOpType == typeof(object) | rightOpType == typeof(object)))
                 {
                     if (!isEqualityOp)
                         return false;
-                    il.Demit(OpCodes.Ceq); // todo: @? test it, why it is not _objectEqualsMethod 
+                    il.Demit(OpCodes.Ceq); // todo: @question test it, why it is not _objectEqualsMethod 
                     if (nodeType == ExpressionType.NotEqual)
                         EmitEqualToZeroOrNull(il);
                     return il.EmitPopIfIgnoreResult(parent);
@@ -4849,7 +4910,7 @@ namespace FastExpressionCompiler
                     if (methodName == null)
                         return false;
 
-                    // todo: @bug? for now handling only parameters of the same type
+                    // todo: @bug? for now handling only the parameters of the same type
                     var methods = leftOpType.GetMethods();
                     for (var i = 0; i < methods.Length; i++)
                     {
@@ -5174,7 +5235,9 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitConditional(ConditionalExpression expr,
+            private static bool TryEmitConditional(
+                Expression testExpr, Expression ifTrueExpr, Expression ifFalseExpr, 
+                // Type type, // todo: @wip what about the type, what if it is void?
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -5182,8 +5245,8 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                var testExpr = TryReduceCondition(expr.Test);
-                var nodeType = testExpr.NodeType;
+                testExpr = TryReduceCondition(testExpr);
+                var testNodeType = testExpr.NodeType;
 
                 // Detect a simplistic case when we can use `Brtrue` or `Brfalse`.
                 // We are checking the negative result to go into the `IfFalse` branch,
@@ -5202,7 +5265,7 @@ namespace FastExpressionCompiler
                 var useBrFalseOrTrue = -1; // 0 - is comparison with Zero (0, null, false), 1 - is comparison with (true)
                 Type nullOfValueType = null;
                 if (testExpr is BinaryExpression tb &&
-                    (nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual))
+                    (testNodeType == ExpressionType.Equal | testNodeType == ExpressionType.NotEqual))
                 {
                     var testLeftExpr = tb.Left;
                     var testRightExpr = tb.Right;
@@ -5223,10 +5286,10 @@ namespace FastExpressionCompiler
                         }
                         else if (sideConstVal is bool boolConst)
                             useBrFalseOrTrue = boolConst ? 1 : 0;
-                        else if (sideConstVal is int intConst)
-                            useBrFalseOrTrue = intConst == 0 ? 0 : intConst == 1 ? 1 : -1;
-                        else if (sideConstVal is byte bytConst)
-                            useBrFalseOrTrue = bytConst == 0 ? 0 : bytConst == 1 ? 1 : -1;
+                        else if (sideConstVal is int intConst && intConst == 0)
+                            useBrFalseOrTrue = 0; // Brtrue does not work for `1`, you need to use Beq, or similar
+                        else if (sideConstVal is byte bytConst && bytConst == 0)
+                            useBrFalseOrTrue = 0;
                     }
                     else
                     {
@@ -5268,8 +5331,8 @@ namespace FastExpressionCompiler
                 }
 
                 var labelIfFalse = il.DefineLabel();
-                if ((nodeType == ExpressionType.Equal & useBrFalseOrTrue == 0) ||
-                    (nodeType == ExpressionType.NotEqual & useBrFalseOrTrue == 1))
+                if ((testNodeType == ExpressionType.Equal & useBrFalseOrTrue == 0) ||
+                    (testNodeType == ExpressionType.NotEqual & useBrFalseOrTrue == 1))
                 {
                     // todo: @perf incomplete:
                     // try to recognize the pattern like in #301(300) `if (b == null) { goto return_label; }` 
@@ -5280,10 +5343,9 @@ namespace FastExpressionCompiler
                 else
                     il.Demit(OpCodes.Brfalse, labelIfFalse);
 
-                if (!TryEmit(expr.IfTrue, paramExprs, il, ref closure, setup, parent))
+                if (!TryEmit(ifTrueExpr, paramExprs, il, ref closure, setup, parent))
                     return false;
 
-                var ifFalseExpr = expr.IfFalse;
                 if (ifFalseExpr.NodeType == ExpressionType.Default && ifFalseExpr.Type == typeof(void))
                     il.DmarkLabel(labelIfFalse);
                 else
@@ -5298,7 +5360,6 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            // todo: @perf too many ifs - lets optimize it
             private static Expression TryReduceCondition(Expression testExpr)
             {
                 // removing Not by turning Equal -> NotEqual, NotEqual -> Equal

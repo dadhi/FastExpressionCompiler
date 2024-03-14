@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new Issue127_Switch_is_supported().Run();
 
             RunAllTests();
 
