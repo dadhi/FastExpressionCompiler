@@ -582,7 +582,7 @@ namespace FastExpressionCompiler.IssueTests
 
             lambda.PrintCSharp();
 
-            var compiledB = lambda.CompileFast<ActionRef<uint>>(true);
+            var compiledB = lambda.CompileFast(true);
             var exampleB = default(uint);
             compiledB(ref exampleB);
             Assert.AreEqual(3, exampleB);
