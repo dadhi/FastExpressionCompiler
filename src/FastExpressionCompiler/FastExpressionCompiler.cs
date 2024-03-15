@@ -1900,7 +1900,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
                             var binaryExpr = (BinaryExpression)expr;
-                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, expr.Type, nodeType, null, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, expr.Type, nodeType, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Add:
                         case ExpressionType.AddChecked:
@@ -2769,7 +2769,7 @@ namespace FastExpressionCompiler
                 var op = expr.Operand;
                 if (op.NodeType == ExpressionType.Equal)
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
-                        expr.Type, ExpressionType.NotEqual, null, paramExprs, il, ref closure, setup, parent);
+                        expr.Type, ExpressionType.NotEqual, paramExprs, il, ref closure, setup, parent);
 
                 if (!TryEmit(op, paramExprs, il, ref closure, setup, parent))
                     return false;
@@ -4734,16 +4734,11 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                var switchValueExpr = expr.SwitchValue;
-                // todo: @wip add the Property and Field to the IsEvaluatedExpression?
-                // if (!IsEvaluatedExpression(switchValueExpr))
-                //     return false; // todo: @feature we need the `SwitchValue` to be emitted only once and save into the local variable
-
                 // todo: @perf
                 //- use switch statement for int comparison (if int difference is less or equal 3 -> use IL switch)
                 //- TryEmitComparison should not emit "CEQ" so we could use Beq_S instead of Brtrue_S (not always possible (nullable))
-                //- if switch SwitchValue is a nullable parameter, we should call getValue only once and store the result.
 
+                var switchValueExpr = expr.SwitchValue;
                 var dontIgnoreTestResult = parent & ~ParentFlags.IgnoreResult;
                 var comparisonMethod = expr.Comparison;
                 var cases = expr.Cases;
@@ -4759,6 +4754,10 @@ namespace FastExpressionCompiler
                     }
                 }
 
+                // todo: @wip add the Property and Field to the IsEvaluatedExpression?
+                // if (!IsEvaluatedExpression(switchValueExpr))
+                //     return false; // todo: @feature we need the `SwitchValue` to be emitted only once and save into the local variable
+
                 var endLabel = il.DefineLabel();
                 var labels = new Label[cases.Count];
 
@@ -4770,7 +4769,7 @@ namespace FastExpressionCompiler
 
                     foreach (var caseTestValue in cs.TestValues)
                     {
-                        if (!TryEmitComparison(switchValueExpr, caseTestValue, typeof(bool), ExpressionType.Equal, comparisonMethod,
+                        if (!TryEmitSwitchEqual(switchValueExpr, caseTestValue, comparisonMethod,
                             paramExprs, il, ref closure, setup, dontIgnoreTestResult))
                             return false;
                         il.Demit(OpCodes.Brtrue, lb);
@@ -4799,9 +4798,24 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitComparison(
-                Expression left, Expression right, Type exprType,
-                ExpressionType nodeType, MethodInfo comparisonMethodOrNull,
+            private static MethodInfo FindComparisonMethod(ILGenerator il, string methodName, Type leftOpType, Type rightOpType)
+            {
+                var methods = leftOpType.GetMethods();
+                for (var i = 0; i < methods.Length; i++)
+                {
+                    var m = methods[i];
+                    if (m.IsSpecialName && m.IsStatic && m.Name == methodName)
+                    {
+                        var ps = m.GetParameters();
+                        if (ps.Length == 2 && ps[0].ParameterType == leftOpType && ps[1].ParameterType == rightOpType)
+                            return m;
+                    }
+                }
+                return null;
+            }
+
+            private static bool TryEmitSwitchEqual(
+                Expression left, Expression right, MethodInfo equalMethodOrNull,
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
@@ -4809,19 +4823,131 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                if (comparisonMethodOrNull != null)
+                if (equalMethodOrNull != null)
                 {
-                    Debug.Assert(comparisonMethodOrNull.IsStatic);
-                    Debug.Assert(comparisonMethodOrNull.ReturnType == typeof(bool));
+                    Debug.Assert(equalMethodOrNull.IsStatic);
+                    Debug.Assert(equalMethodOrNull.ReturnType == typeof(bool));
 
-                    var methodParams = comparisonMethodOrNull.GetParameters();
+                    var methodParams = equalMethodOrNull.GetParameters();
                     Debug.Assert(methodParams.Length == 2);
 
                     return TryEmit(left, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[0].ParameterType.IsByRef ? 0 : -1)
                         && TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[1].ParameterType.IsByRef ? 1 : -1)
-                        && EmitMethodCall(il, comparisonMethodOrNull);
+                        && EmitMethodCall(il, equalMethodOrNull);
                 }
 
+                var leftOpType = left.Type;
+                var leftIsNullable = leftOpType.IsNullable();
+                var rightOpType = right.Type;
+
+                // if on member is `null` object then list its type to match other member
+                var rightIsNull = right is ConstantExpression r && r.Value == null;
+                if (rightIsNull & rightOpType == typeof(object))
+                    rightOpType = leftOpType;
+
+                var leftIsNull = left is ConstantExpression l && l.Value == null;
+                if (leftIsNull & leftOpType == typeof(object))
+                    leftOpType = rightOpType;
+
+                var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+
+                // short-circuit the comparison with null on the right
+                // todo: @wip we don't need to emit the left here, because it should be done once
+                if (leftIsNullable & rightIsNull)
+                {
+                    if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
+                        return false;
+                    EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
+                    EmitMethodCall(il, leftOpType.GetNullableHasValueGetterMethod());
+                    EmitEqualToZeroOrNull(il);
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
+
+                if (leftIsNull && rightOpType.IsNullable())
+                {
+                    if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
+                        return false;
+                    EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
+                    EmitMethodCall(il, rightOpType.GetNullableHasValueGetterMethod());
+                    EmitEqualToZeroOrNull(il);
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
+
+                if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
+                    return false;
+
+                int lVarIndex = -1, rVarIndex = -1;
+                if (leftIsNullable)
+                {
+                    lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
+                    il.Demit(OpCodes.Ldfld, leftOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    leftOpType = Nullable.GetUnderlyingType(leftOpType);
+                }
+
+                if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
+                    return false;
+
+                if (leftOpType != rightOpType && leftOpType.IsClass && rightOpType.IsClass &&
+                    (leftOpType == typeof(object) | rightOpType == typeof(object)))
+                {
+                    il.Demit(OpCodes.Ceq); // todo: @wip test it, why it is not _objectEqualsMethod 
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
+
+                if (rightOpType.IsNullable())
+                {
+                    rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
+                    il.Demit(OpCodes.Ldfld, rightOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    rightOpType = Nullable.GetUnderlyingType(rightOpType);
+                }
+
+                if (!leftOpType.IsPrimitive && !leftOpType.IsEnum)
+                {
+                    var method = FindComparisonMethod(il, "op_Equality", leftOpType, rightOpType);
+                    if (method != null)
+                    {
+                        var ok = EmitMethodCall(il, method);
+                        if (leftIsNullable)
+                            goto nullableCheck;
+                        return ok;
+                    }
+
+                    EmitMethodCall(il, _objectEqualsMethod);
+                    if (leftIsNullable)
+                        goto nullableCheck;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
+
+                il.Demit(OpCodes.Ceq);
+
+                nullableCheck: // todo: @wip we may not need it for the switch
+                if (leftIsNullable)
+                {
+                    var leftNullableHasValueGetterMethod = left.Type.GetNullableHasValueGetterMethod();
+
+                    EmitLoadLocalVariableAddress(il, lVarIndex);
+                    EmitMethodCall(il, leftNullableHasValueGetterMethod);
+
+                    // ReSharper disable once AssignNullToNotNullAttribute
+                    EmitLoadLocalVariableAddress(il, rVarIndex);
+                    EmitMethodCall(il, leftNullableHasValueGetterMethod);
+
+                    il.Demit(OpCodes.Ceq); // compare both HasValue calls
+                    il.Demit(OpCodes.And); // both results need to be true
+                }
+
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            private static bool TryEmitComparison(
+                Expression left, Expression right, Type exprType, ExpressionType nodeType,
+#if LIGHT_EXPRESSION
+                IParameterProvider paramExprs,
+#else
+                IReadOnlyList<PE> paramExprs,
+#endif
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
+            {
                 var leftOpType = left.Type;
                 var leftIsNullable = leftOpType.IsNullable();
                 var rightOpType = right.Type;
@@ -4906,26 +5032,16 @@ namespace FastExpressionCompiler
                         : nodeType == ExpressionType.LessThan ? "op_LessThan"
                         : nodeType == ExpressionType.LessThanOrEqual ? "op_LessThanOrEqual"
                         : null;
-
                     if (methodName == null)
                         return false;
-
                     // todo: @bug? for now handling only the parameters of the same type
-                    var methods = leftOpType.GetMethods();
-                    for (var i = 0; i < methods.Length; i++)
+                    var method = FindComparisonMethod(il, methodName, leftOpType, rightOpType);
+                    if (method != null)
                     {
-                        var m = methods[i];
-                        if (m.IsSpecialName && m.IsStatic && m.Name == methodName)
-                        {
-                            var ps = m.GetParameters();
-                            if (ps.Length == 2 && ps[0].ParameterType == leftOpType && ps[1].ParameterType == rightOpType)
-                            {
-                                var ok = EmitMethodCall(il, m);
-                                if (leftIsNullable)
-                                    goto nullableCheck;
-                                return ok;
-                            }
-                        }
+                        var ok = EmitMethodCall(il, method);
+                        if (leftIsNullable)
+                            goto nullableCheck;
+                        return ok;
                     }
 
                     if (!isEqualityOp)
