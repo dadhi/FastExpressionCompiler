@@ -1,5 +1,6 @@
 ﻿#if DEBUG
-#define PRINTIL
+// #define PRINTIL
+#define PRINTCS
 #endif
 using System;
 using System.Linq;
@@ -53,24 +54,38 @@ public static class TestTools
     [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, bool completeTypeNames = false) 
     {
+#if PRINTCS
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
         sb = expr.ToCSharpString(sb, lineIdent: 0, stripNamespace: true, printType: completeTypeNames ? null : _stripOuterTypes, identSpaces: 4);
         sb.Append(";");
         Console.WriteLine(sb.ToString());
+#endif
     }
 
     [Conditional("DEBUG")]
-    public static void PrintCSharp(this Expression expr, Func<string, string> transform) =>
+    public static void PrintCSharp(this Expression expr, Func<string, string> transform)
+    {
+#if PRINTCS
         Console.WriteLine(transform(expr.ToCSharpString()));
+#endif
+    }
 
     [Conditional("DEBUG")]
-    public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode) =>
+    public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode)
+    {
+#if PRINTCS
         Console.WriteLine(expr.ToCSharpString(objectToCode));
+#endif
+    }
 
     [Conditional("DEBUG")]
-    public static void PrintCSharp(this Expression expr, ref string result) =>
+    public static void PrintCSharp(this Expression expr, ref string result)
+    {
+#if PRINTCS
         Console.WriteLine(result = expr.ToCSharpString());
+#endif
+    }
 
     [Conditional("DEBUG")]
     public static void PrintIL(this Delegate @delegate, [CallerMemberName] string tag = null)

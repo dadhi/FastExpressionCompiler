@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 // #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG && NET6_0_OR_GREATER
-#define DEMIT
+// #define DEMIT
 #endif
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
@@ -7031,6 +7031,8 @@ namespace FastExpressionCompiler
             Return,
             /// <summary>Instructs the client code to avoid parenthesis for the generated C# code, e.g. if we have as single argument in a method</summary>
             AvoidParens,
+            /// <summary>The instance when calling the instance method or accessing the instance member</summary>
+            Instance,
         }
 
         internal static StringBuilder ToCSharpString(this Expression e, StringBuilder sb, EnclosedIn enclosedIn,
@@ -7092,7 +7094,7 @@ namespace FastExpressionCompiler
                         if (diffTypes) sb.Append("((").Append(mc.Type.ToCode(stripNamespace, printType)).Append(')');
 
                         if (mc.Object != null)
-                            mc.Object.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            mc.Object.ToCSharpString(sb, EnclosedIn.Instance, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         else // for the static method or the static extension method we need to qualify with the class
                             sb.Append(mc.Method.DeclaringType.ToCode(stripNamespace, printType));
 
@@ -7512,11 +7514,14 @@ namespace FastExpressionCompiler
                     }
                 case ExpressionType.Default:
                     {
+                        var encloseInParens = enclosedIn == EnclosedIn.Instance;
                         return e.Type == typeof(void) ? sb // `default(void)` does not make sense in the C#
                             : e.Type == typeof(object) ? sb.Append("null")
                             : e.Type.IsValueType && !e.Type.IsNullable()
-                            ? sb.Append("default(").Append(e.Type.ToCode(stripNamespace, printType)).Append(')')
-                            : sb.Append('(').Append(e.Type.ToCode(stripNamespace, printType)).Append(")null");
+                                ? sb.Append("default(").Append(e.Type.ToCode(stripNamespace, printType)).Append(')')
+                                : sb.Append(encloseInParens ? "((" : "(")
+                                    .Append(e.Type.ToCode(stripNamespace, printType)).Append(")null")
+                                    .Append(encloseInParens ? ")" : "");
                     }
                 case ExpressionType.TypeIs:
                 case ExpressionType.TypeEqual:
@@ -7572,7 +7577,7 @@ namespace FastExpressionCompiler
 
                                 case ExpressionType.Not: // either the bool not or the binary not
                                     return op.ToCSharpString(
-                                        e.Type == typeof(bool) ? sb.Append("!(") : sb.Append("~("),
+                                        e.Type == typeof(bool) ? sb.Append("!(") : sb.Append("~("), enclosedIn,
                                         lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(')');
 
                                 case ExpressionType.Convert:
