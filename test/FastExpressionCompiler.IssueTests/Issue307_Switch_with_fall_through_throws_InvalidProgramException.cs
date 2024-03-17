@@ -37,12 +37,12 @@ namespace FastExpressionCompiler.IssueTests
                 param);
 
             lambda.PrintCSharp();
-            // (Func<int, string>)((int p) => //$
+            // (Func<int, string>)((int p) => //string
             // {
             //     switch (p)
             //     {
-            //         case (int)1:
-            //         case (int)2:
+            //         case 1:
+            //         case 2:
             //             return "foo";
             //         default:
             //             return "bar";
@@ -50,17 +50,19 @@ namespace FastExpressionCompiler.IssueTests
             //     string__58225482:;
             // });
 
-            var compiled = lambda.CompileSys();
-            compiled.PrintIL();
+            var fs = lambda.CompileSys();
+            fs.PrintIL();
 
-            var res = compiled(1);
-            Assert.AreEqual("foo", res);
+            Assert.AreEqual("foo", fs(1));
+            Assert.AreEqual("foo", fs(2));
+            Assert.AreEqual("bar", fs(42));
 
-            var compiledFast = lambda.CompileFast();
-            compiledFast.PrintIL();
+            var ff = lambda.CompileFast();
+            ff.PrintIL();
 
-            var resFast = compiledFast(1);
-            Assert.AreEqual("foo", resFast);
+            Assert.AreEqual("foo", ff(1));
+            Assert.AreEqual("foo", ff(2));
+            Assert.AreEqual("bar", ff(42));
         }
     }
 }

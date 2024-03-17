@@ -79,6 +79,12 @@ public static class ILReaderFactory
                     s.Append(' ').Append(tok.Member.Name);
                 else if (il is InlineBrTargetInstruction br)
                     s.Append(' ').Append(br.TargetOffset);
+                else if (il is InlineSwitchInstruction sw)
+                {
+                    s.Append(' ');
+                    foreach (var offset in sw.TargetOffsets)
+                        s.Append(offset).Append(',');
+                }
                 else if (il is ShortInlineBrTargetInstruction sbr)
                     s.Append(' ').Append(sbr.TargetOffset);
                 else if (il is InlineStringInstruction si)
