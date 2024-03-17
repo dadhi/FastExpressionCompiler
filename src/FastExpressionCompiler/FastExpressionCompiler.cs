@@ -4758,6 +4758,9 @@ namespace FastExpressionCompiler
                 // if (!IsEvaluatedExpression(switchValueExpr))
                 //     return false; // todo: @feature we need the `SwitchValue` to be emitted only once and save into the local variable
 
+                // Emit a store the switch value into the local variable
+
+
                 var endLabel = il.DefineLabel();
                 var labels = new Label[cases.Count];
 
@@ -4823,18 +4826,22 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                if (equalMethodOrNull != null)
-                {
-                    Debug.Assert(equalMethodOrNull.IsStatic);
-                    Debug.Assert(equalMethodOrNull.ReturnType == typeof(bool));
+                // if (equalMethodOrNull != null)
+                // {
+                //     Debug.Assert(equalMethodOrNull.IsStatic);
+                //     Debug.Assert(equalMethodOrNull.ReturnType == typeof(bool));
 
-                    var methodParams = equalMethodOrNull.GetParameters();
-                    Debug.Assert(methodParams.Length == 2);
+                //     var methodParams = equalMethodOrNull.GetParameters();
+                //     Debug.Assert(methodParams.Length == 2);
 
-                    return TryEmit(left, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[0].ParameterType.IsByRef ? 0 : -1)
-                        && TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[1].ParameterType.IsByRef ? 1 : -1)
-                        && EmitMethodCall(il, equalMethodOrNull);
-                }
+                //     return TryEmit(left, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[0].ParameterType.IsByRef ? 0 : -1)
+                //         && TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[1].ParameterType.IsByRef ? 1 : -1)
+                //         && EmitMethodCall(il, equalMethodOrNull);
+                // }
+
+                var operandParent = parent & ~ParentFlags.InstanceAccess;
+                if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
+                    return false;
 
                 var leftOpType = left.Type;
                 var leftIsNullable = leftOpType.IsNullable();
@@ -4849,14 +4856,10 @@ namespace FastExpressionCompiler
                 if (leftIsNull & leftOpType == typeof(object))
                     leftOpType = rightOpType;
 
-                var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
-
                 // short-circuit the comparison with null on the right
                 // todo: @wip we don't need to emit the left here, because it should be done once
                 if (leftIsNullable & rightIsNull)
                 {
-                    if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
-                        return false;
                     EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
                     EmitMethodCall(il, leftOpType.GetNullableHasValueGetterMethod());
                     EmitEqualToZeroOrNull(il);
@@ -4872,9 +4875,6 @@ namespace FastExpressionCompiler
                     EmitEqualToZeroOrNull(il);
                     return il.EmitPopIfIgnoreResult(parent);
                 }
-
-                if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
-                    return false;
 
                 int lVarIndex = -1, rVarIndex = -1;
                 if (leftIsNullable)

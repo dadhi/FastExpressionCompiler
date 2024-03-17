@@ -14,20 +14,21 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            SwitchIsSupported31();
+            SwitchIsSupported_string_with_comparison_method();
+            SwitchIsSupported_bool_value();
+            SwitchIsSupported_nullable_enum();
+            SwitchIsSupported_nullable_enum_comparing_with_null();
             SwitchIsSupported1();
-            SwitchIsSupportedEnum();
-            SwitchIsSupported_TestNullableEnumIsNull();
+            SwitchIsSupported31();
             SwitchIsSupported11();
             SwitchIsSupported12();
             SwitchIsSupported2();
             SwitchIsSupported30();
             SwitchIsSupported33();
             SwitchIsSupported3();
-            SwitchIsSupported4();
-            SwitchIsSupported5();
+            SwitchIsSupported_string();
             SwitchIsSupported6();
-            return 13;
+            return 14;
         }
 
         [Test]
@@ -42,10 +43,22 @@ namespace FastExpressionCompiler.IssueTests
                     SwitchCase(Constant("C"), Constant(5))  //Difference of 3 creates empty branches, more creates Conditions
                 );
 
-            var lambda = Lambda<Func<int, string>>(blockExpr, eVar);
-            var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
-            Assert.AreEqual("B", fastCompiled(2));
+            var expr = Lambda<Func<int, string>>(blockExpr, eVar);
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("A", fs(1));
+            Assert.AreEqual("B", fs(2));
+            Assert.AreEqual("C", fs(5));
+            Assert.AreEqual("Z", fs(45));
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual("A", ff(1));
+            Assert.AreEqual("B", ff(2));
+            Assert.AreEqual("C", ff(5));
+            Assert.AreEqual("Z", ff(45));
         }
 
         public enum MyEnum
@@ -54,7 +67,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void SwitchIsSupportedEnum()
+        public void SwitchIsSupported_nullable_enum()
         {
             var eVar = Parameter(typeof(MyEnum?));
             var blockExpr =
@@ -72,7 +85,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void SwitchIsSupported_TestNullableEnumIsNull()
+        public void SwitchIsSupported_nullable_enum_comparing_with_null()
         {
             var eVar = Parameter(typeof(MyEnum));
             var blockExpr =
@@ -218,7 +231,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         [Test]
-        public void SwitchIsSupported4()
+        public void SwitchIsSupported_bool_value()
         {
             var eVar = Parameter(typeof(bool));
             var blockExpr =
@@ -228,14 +241,22 @@ namespace FastExpressionCompiler.IssueTests
                     SwitchCase(Constant("B"), Constant(false))
                 );
 
-            var lambda = Lambda<Func<bool, string>>(blockExpr, eVar);
-            var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
-            Assert.AreEqual("B", fastCompiled(false));
+            var expr = Lambda<Func<bool, string>>(blockExpr, eVar);
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("A", fs(true));
+            Assert.AreEqual("B", fs(false));
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual("A", ff(true));
+            Assert.AreEqual("B", ff(false));
         }
 
         [Test]
-        public void SwitchIsSupported5()
+        public void SwitchIsSupported_string()
         {
             var eVar = Parameter(typeof(string));
             var blockExpr =
@@ -245,11 +266,51 @@ namespace FastExpressionCompiler.IssueTests
                     SwitchCase(Constant("B"), Constant("B"))
                 );
 
-            var lambda = Lambda<Func<string, string>>(blockExpr, eVar);
-            var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
-            Assert.AreEqual("A", fastCompiled("A"));
-            Assert.AreEqual("C", fastCompiled("Z"));
+            var expr = Lambda<Func<string, string>>(blockExpr, eVar);
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("A", fs("A"));
+            Assert.AreEqual("B", fs("B"));
+            Assert.AreEqual("C", fs("Z"));
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual("A", ff("A"));
+            Assert.AreEqual("B", ff("B"));
+            Assert.AreEqual("C", ff("Z"));
+        }
+
+        public static bool StringCompareOrdinalIgnoreCase(string x, string y) =>
+            StringComparer.OrdinalIgnoreCase.Equals(x, y);
+
+        // todo: @fixme @wip
+        [Test]
+        public void SwitchIsSupported_string_with_comparison_method()
+        {
+            var eVar = Parameter(typeof(string));
+            var blockExpr =
+                Switch(eVar,
+                    Constant("C"), GetType().GetMethod(nameof(StringCompareOrdinalIgnoreCase)),
+                    SwitchCase(Constant("A"), Constant("a")),
+                    SwitchCase(Constant("B"), Constant("b"))
+                );
+
+            var expr = Lambda<Func<string, string>>(blockExpr, eVar);
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("A", fs("A"));
+            Assert.AreEqual("B", fs("B"));
+            Assert.AreEqual("C", fs("Z"));
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual("A", ff("A"));
+            Assert.AreEqual("B", ff("B"));
+            Assert.AreEqual("C", ff("Z"));
         }
 
         class Helper

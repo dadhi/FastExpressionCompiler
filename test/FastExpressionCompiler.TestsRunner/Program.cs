@@ -9,8 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
             new Issue127_Switch_is_supported().Run();
+            new Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
 
             RunAllTests();
 
