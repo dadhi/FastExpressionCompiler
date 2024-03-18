@@ -78,10 +78,22 @@ namespace FastExpressionCompiler.IssueTests
                     SwitchCase(Constant("C"), Constant(MyEnum.c, typeof(MyEnum?)))
                 );
 
-            var lambda = Lambda<Func<MyEnum?, string>>(blockExpr, eVar);
-            var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
-            Assert.AreEqual("B", fastCompiled(MyEnum.b));
+            var expr = Lambda<Func<MyEnum?, string>>(blockExpr, eVar);
+            expr.PrintCSharp();
+
+            var ff = expr.CompileSys();
+            ff.PrintIL();
+            Assert.AreEqual("A", ff(MyEnum.a));
+            Assert.AreEqual("B", ff(MyEnum.b));
+            Assert.AreEqual("C", ff(MyEnum.c));
+            Assert.AreEqual("Z", ff(null));
+
+            var fs = expr.CompileFast(true);
+            fs.PrintIL();
+            Assert.AreEqual("A", fs(MyEnum.a));
+            Assert.AreEqual("B", fs(MyEnum.b));
+            Assert.AreEqual("C", fs(MyEnum.c));
+            Assert.AreEqual("Z", fs(null));
         }
 
         [Test]

@@ -1798,9 +1798,9 @@ namespace FastExpressionCompiler
         [RequiresUnreferencedCode(Trimming.Message)]
         public static class EmittingVisitor
         {
+            // todo: @perf use UnsafeAccessAttribute
             private static readonly MethodInfo _getTypeFromHandleMethod =
                 ((Func<RuntimeTypeHandle, Type>)Type.GetTypeFromHandle).Method;
-
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
 
@@ -4801,6 +4801,20 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static void CompareNullableHasValueResults(ILGenerator il, Type opType, int leftVarIndex, int rightVarIndex)
+            {
+                var hasValueGetterMethod = opType.GetNullableHasValueGetterMethod();
+                EmitLoadLocalVariableAddress(il, leftVarIndex);
+                EmitMethodCall(il, hasValueGetterMethod);
+                EmitLoadLocalVariableAddress(il, rightVarIndex);
+                EmitMethodCall(il, hasValueGetterMethod);
+
+                il.Demit(OpCodes.Ceq); // compare both HasValue calls
+
+                // todo: @wip move outside because it combines the actual value comparison with the HasValue comparison ?
+                il.Demit(OpCodes.And); // both results need to be true
+            }
+
             private static MethodInfo FindComparisonMethod(ILGenerator il, string methodName, Type leftOpType, Type rightOpType)
             {
                 var methods = leftOpType.GetMethods();
@@ -4863,7 +4877,7 @@ namespace FastExpressionCompiler
                     EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
                     EmitMethodCall(il, leftOpType.GetNullableHasValueGetterMethod());
                     EmitEqualToZeroOrNull(il);
-                    return il.EmitPopIfIgnoreResult(parent);
+                    return true;
                 }
 
                 if (leftIsNull && rightOpType.IsNullable())
@@ -4873,7 +4887,7 @@ namespace FastExpressionCompiler
                     EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
                     EmitMethodCall(il, rightOpType.GetNullableHasValueGetterMethod());
                     EmitEqualToZeroOrNull(il);
-                    return il.EmitPopIfIgnoreResult(parent);
+                    return true;
                 }
 
                 int lVarIndex = -1, rVarIndex = -1;
@@ -4891,7 +4905,7 @@ namespace FastExpressionCompiler
                     (leftOpType == typeof(object) | rightOpType == typeof(object)))
                 {
                     il.Demit(OpCodes.Ceq); // todo: @wip test it, why it is not _objectEqualsMethod 
-                    return il.EmitPopIfIgnoreResult(parent);
+                    return true;
                 }
 
                 if (rightOpType.IsNullable())
@@ -4903,40 +4917,17 @@ namespace FastExpressionCompiler
 
                 if (!leftOpType.IsPrimitive && !leftOpType.IsEnum)
                 {
-                    var method = FindComparisonMethod(il, "op_Equality", leftOpType, rightOpType);
-                    if (method != null)
-                    {
-                        var ok = EmitMethodCall(il, method);
-                        if (leftIsNullable)
-                            goto nullableCheck;
-                        return ok;
-                    }
-
-                    EmitMethodCall(il, _objectEqualsMethod);
+                    var method = FindComparisonMethod(il, "op_Equality", leftOpType, rightOpType) ?? _objectEqualsMethod;
+                    var ok = EmitMethodCall(il, method);
                     if (leftIsNullable)
-                        goto nullableCheck;
-                    return il.EmitPopIfIgnoreResult(parent);
+                        CompareNullableHasValueResults(il, left.Type, lVarIndex, rVarIndex);
+                    return ok;
                 }
 
                 il.Demit(OpCodes.Ceq);
-
-                nullableCheck: // todo: @wip we may not need it for the switch
                 if (leftIsNullable)
-                {
-                    var leftNullableHasValueGetterMethod = left.Type.GetNullableHasValueGetterMethod();
-
-                    EmitLoadLocalVariableAddress(il, lVarIndex);
-                    EmitMethodCall(il, leftNullableHasValueGetterMethod);
-
-                    // ReSharper disable once AssignNullToNotNullAttribute
-                    EmitLoadLocalVariableAddress(il, rVarIndex);
-                    EmitMethodCall(il, leftNullableHasValueGetterMethod);
-
-                    il.Demit(OpCodes.Ceq); // compare both HasValue calls
-                    il.Demit(OpCodes.And); // both results need to be true
-                }
-
-                return il.EmitPopIfIgnoreResult(parent);
+                    CompareNullableHasValueResults(il, left.Type, lVarIndex, rVarIndex);
+                return true;
             }
 
             private static bool TryEmitComparison(
