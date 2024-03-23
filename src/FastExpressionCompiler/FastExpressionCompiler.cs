@@ -4916,15 +4916,18 @@ namespace FastExpressionCompiler
                         if (!leftOpType.IsPrimitive && !leftOpType.IsEnum)
                         {
                             var method = FindComparisonMethod(il, "op_Equality", leftOpType, rightOpType) ?? _objectEqualsMethod;
-                            var ok = EmitMethodCall(il, method);
+                            Debug.Assert(method != null, "imporssible, we should at least have the _objectEqualsMethod");
+                            if (!EmitMethodCall(il, method))
+                                return false;
                             if (leftIsNullable)
                                 CompareNullableHasValueResults(il, left.Type, lVarIndex, rVarIndex);
-                            return ok;
                         }
-
-                        il.Demit(OpCodes.Ceq);
-                        if (leftIsNullable)
-                            CompareNullableHasValueResults(il, left.Type, lVarIndex, rVarIndex);
+                        else
+                        {
+                            il.Demit(OpCodes.Ceq);
+                            if (leftIsNullable)
+                                CompareNullableHasValueResults(il, left.Type, lVarIndex, rVarIndex);
+                        }
                     }
                 }
                 return true;
