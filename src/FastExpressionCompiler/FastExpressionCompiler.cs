@@ -4772,9 +4772,93 @@ namespace FastExpressionCompiler
 
                     foreach (var caseTestValue in cs.TestValues)
                     {
-                        if (!TryEmitSwitchEqual(switchValueExpr, caseTestValue, comparisonMethod,
-                            paramExprs, il, ref closure, setup, dontIgnoreTestResult))
+                        // if (equalMethodOrNull != null)
+                        // {
+                        //     Debug.Assert(equalMethodOrNull.IsStatic);
+                        //     Debug.Assert(equalMethodOrNull.ReturnType == typeof(bool));
+
+                        //     var methodParams = equalMethodOrNull.GetParameters();
+                        //     Debug.Assert(methodParams.Length == 2);
+
+                        //     return TryEmit(left, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[0].ParameterType.IsByRef ? 0 : -1)
+                        //         && TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[1].ParameterType.IsByRef ? 1 : -1)
+                        //         && EmitMethodCall(il, equalMethodOrNull);
+                        // }
+
+                        var operandParent = dontIgnoreTestResult & ~ParentFlags.InstanceAccess;
+                        if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, operandParent))
                             return false;
+
+                        var leftOpType = switchValueExpr.Type;
+                        var leftIsNullable = leftOpType.IsNullable();
+                        var rightOpType = caseTestValue.Type;
+
+                        // if on member is `null` object then list its type to match other member
+                        var rightIsNull = caseTestValue is ConstantExpression r && r.Value == null;
+                        if (rightIsNull & rightOpType == typeof(object))
+                            rightOpType = leftOpType;
+
+                        var leftIsNull = switchValueExpr is ConstantExpression l && l.Value == null;
+                        if (leftIsNull & leftOpType == typeof(object))
+                            leftOpType = rightOpType;
+
+                        // short-circuit the comparison with null on the right
+                        // todo: @wip we don't need to emit the left here, because it should be done once
+                        if (leftIsNullable & rightIsNull)
+                        {
+                            EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
+                            EmitMethodCall(il, leftOpType.GetNullableHasValueGetterMethod());
+                            EmitEqualToZeroOrNull(il);
+                        }
+                        else if (leftIsNull && rightOpType.IsNullable())
+                        {
+                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent))
+                                return false;
+                            EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
+                            EmitMethodCall(il, rightOpType.GetNullableHasValueGetterMethod());
+                            EmitEqualToZeroOrNull(il);
+                        }
+                        else
+                        {
+                            int lVarIndex = -1, rVarIndex = -1;
+                            if (leftIsNullable)
+                            {
+                                lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
+                                il.Demit(OpCodes.Ldfld, leftOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                                leftOpType = Nullable.GetUnderlyingType(leftOpType);
+                            }
+
+                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent))
+                                return false;
+
+                            if (leftOpType != rightOpType && leftOpType.IsClass && rightOpType.IsClass &&
+                                (leftOpType == typeof(object) | rightOpType == typeof(object)))
+                            {
+                                il.Demit(OpCodes.Ceq); // todo: @wip test it, why it is not _objectEqualsMethod 
+                            }
+                            else
+                            {
+                                if (rightOpType.IsNullable())
+                                {
+                                    rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
+                                    il.Demit(OpCodes.Ldfld, rightOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                                    rightOpType = Nullable.GetUnderlyingType(rightOpType);
+                                }
+
+                                if (leftOpType.IsPrimitive || leftOpType.IsEnum)
+                                    il.Demit(OpCodes.Ceq);
+                                else
+                                {
+                                    var method = FindComparisonMethod(il, "op_Equality", leftOpType, rightOpType) ?? _objectEqualsMethod;
+                                    Debug.Assert(method != null, "impossible, we should at least have the _objectEqualsMethod");
+                                    if (!EmitMethodCall(il, method))
+                                        return false;
+                                }
+                                if (leftIsNullable)
+                                    CompareNullableHasValueResults(il, switchValueExpr.Type, lVarIndex, rVarIndex);
+                            }
+                        }
+
                         il.Demit(OpCodes.Brtrue, lb);
                     }
                 }
@@ -4829,104 +4913,6 @@ namespace FastExpressionCompiler
                     }
                 }
                 return null;
-            }
-
-            private static bool TryEmitSwitchEqual(
-                Expression left, Expression right, MethodInfo equalMethodOrNull,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
-                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
-            {
-                // if (equalMethodOrNull != null)
-                // {
-                //     Debug.Assert(equalMethodOrNull.IsStatic);
-                //     Debug.Assert(equalMethodOrNull.ReturnType == typeof(bool));
-
-                //     var methodParams = equalMethodOrNull.GetParameters();
-                //     Debug.Assert(methodParams.Length == 2);
-
-                //     return TryEmit(left, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[0].ParameterType.IsByRef ? 0 : -1)
-                //         && TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[1].ParameterType.IsByRef ? 1 : -1)
-                //         && EmitMethodCall(il, equalMethodOrNull);
-                // }
-
-                var operandParent = parent & ~ParentFlags.InstanceAccess;
-                if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
-                    return false;
-
-                var leftOpType = left.Type;
-                var leftIsNullable = leftOpType.IsNullable();
-                var rightOpType = right.Type;
-
-                // if on member is `null` object then list its type to match other member
-                var rightIsNull = right is ConstantExpression r && r.Value == null;
-                if (rightIsNull & rightOpType == typeof(object))
-                    rightOpType = leftOpType;
-
-                var leftIsNull = left is ConstantExpression l && l.Value == null;
-                if (leftIsNull & leftOpType == typeof(object))
-                    leftOpType = rightOpType;
-
-                // short-circuit the comparison with null on the right
-                // todo: @wip we don't need to emit the left here, because it should be done once
-                if (leftIsNullable & rightIsNull)
-                {
-                    EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
-                    EmitMethodCall(il, leftOpType.GetNullableHasValueGetterMethod());
-                    EmitEqualToZeroOrNull(il);
-                }
-                else if (leftIsNull && rightOpType.IsNullable())
-                {
-                    if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
-                        return false;
-                    EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
-                    EmitMethodCall(il, rightOpType.GetNullableHasValueGetterMethod());
-                    EmitEqualToZeroOrNull(il);
-                }
-                else
-                {
-                    int lVarIndex = -1, rVarIndex = -1;
-                    if (leftIsNullable)
-                    {
-                        lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
-                        il.Demit(OpCodes.Ldfld, leftOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                        leftOpType = Nullable.GetUnderlyingType(leftOpType);
-                    }
-
-                    if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
-                        return false;
-
-                    if (leftOpType != rightOpType && leftOpType.IsClass && rightOpType.IsClass &&
-                        (leftOpType == typeof(object) | rightOpType == typeof(object)))
-                    {
-                        il.Demit(OpCodes.Ceq); // todo: @wip test it, why it is not _objectEqualsMethod 
-                    }
-                    else
-                    {
-                        if (rightOpType.IsNullable())
-                        {
-                            rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
-                            il.Demit(OpCodes.Ldfld, rightOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                            rightOpType = Nullable.GetUnderlyingType(rightOpType);
-                        }
-
-                        if (leftOpType.IsPrimitive || leftOpType.IsEnum)
-                            il.Demit(OpCodes.Ceq);
-                        else
-                        {
-                            var method = FindComparisonMethod(il, "op_Equality", leftOpType, rightOpType) ?? _objectEqualsMethod;
-                            Debug.Assert(method != null, "impossible, we should at least have the _objectEqualsMethod");
-                            if (!EmitMethodCall(il, method))
-                                return false;
-                        }
-                        if (leftIsNullable)
-                            CompareNullableHasValueResults(il, left.Type, lVarIndex, rVarIndex);
-                    }
-                }
-                return true;
             }
 
             private static bool TryEmitComparison(
