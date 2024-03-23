@@ -4877,56 +4877,56 @@ namespace FastExpressionCompiler
                     EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
                     EmitMethodCall(il, leftOpType.GetNullableHasValueGetterMethod());
                     EmitEqualToZeroOrNull(il);
-                    return true;
                 }
-
-                if (leftIsNull && rightOpType.IsNullable())
+                else if (leftIsNull && rightOpType.IsNullable())
                 {
                     if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
                         return false;
                     EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
                     EmitMethodCall(il, rightOpType.GetNullableHasValueGetterMethod());
                     EmitEqualToZeroOrNull(il);
-                    return true;
                 }
-
-                int lVarIndex = -1, rVarIndex = -1;
-                if (leftIsNullable)
+                else
                 {
-                    lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
-                    il.Demit(OpCodes.Ldfld, leftOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                    leftOpType = Nullable.GetUnderlyingType(leftOpType);
-                }
-
-                if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
-                    return false;
-
-                if (leftOpType != rightOpType && leftOpType.IsClass && rightOpType.IsClass &&
-                    (leftOpType == typeof(object) | rightOpType == typeof(object)))
-                {
-                    il.Demit(OpCodes.Ceq); // todo: @wip test it, why it is not _objectEqualsMethod 
-                    return true;
-                }
-
-                if (rightOpType.IsNullable())
-                {
-                    rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
-                    il.Demit(OpCodes.Ldfld, rightOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                    rightOpType = Nullable.GetUnderlyingType(rightOpType);
-                }
-
-                if (!leftOpType.IsPrimitive && !leftOpType.IsEnum)
-                {
-                    var method = FindComparisonMethod(il, "op_Equality", leftOpType, rightOpType) ?? _objectEqualsMethod;
-                    var ok = EmitMethodCall(il, method);
+                    int lVarIndex = -1, rVarIndex = -1;
                     if (leftIsNullable)
-                        CompareNullableHasValueResults(il, left.Type, lVarIndex, rVarIndex);
-                    return ok;
-                }
+                    {
+                        lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
+                        il.Demit(OpCodes.Ldfld, leftOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        leftOpType = Nullable.GetUnderlyingType(leftOpType);
+                    }
 
-                il.Demit(OpCodes.Ceq);
-                if (leftIsNullable)
-                    CompareNullableHasValueResults(il, left.Type, lVarIndex, rVarIndex);
+                    if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
+                        return false;
+
+                    if (leftOpType != rightOpType && leftOpType.IsClass && rightOpType.IsClass &&
+                        (leftOpType == typeof(object) | rightOpType == typeof(object)))
+                    {
+                        il.Demit(OpCodes.Ceq); // todo: @wip test it, why it is not _objectEqualsMethod 
+                    }
+                    else
+                    {
+                        if (rightOpType.IsNullable())
+                        {
+                            rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
+                            il.Demit(OpCodes.Ldfld, rightOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                            rightOpType = Nullable.GetUnderlyingType(rightOpType);
+                        }
+
+                        if (!leftOpType.IsPrimitive && !leftOpType.IsEnum)
+                        {
+                            var method = FindComparisonMethod(il, "op_Equality", leftOpType, rightOpType) ?? _objectEqualsMethod;
+                            var ok = EmitMethodCall(il, method);
+                            if (leftIsNullable)
+                                CompareNullableHasValueResults(il, left.Type, lVarIndex, rVarIndex);
+                            return ok;
+                        }
+
+                        il.Demit(OpCodes.Ceq);
+                        if (leftIsNullable)
+                            CompareNullableHasValueResults(il, left.Type, lVarIndex, rVarIndex);
+                    }
+                }
                 return true;
             }
 
