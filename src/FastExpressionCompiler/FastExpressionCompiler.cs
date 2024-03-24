@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 // #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG && NET6_0_OR_GREATER
-// #define DEMIT
+#define DEMIT
 #endif
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
@@ -4701,31 +4701,6 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool IsEvaluatedExpression(Expression expr)
-            {
-                var nodeType = expr.NodeType;
-                if (expr is UnaryExpression unary && nodeType == ExpressionType.Convert)
-                    return IsEvaluatedExpression(unary.Operand);
-
-                if (expr is IndexExpression index)
-                {
-                    if (!IsEvaluatedExpression(index))
-                        return false;
-#if SUPPORTS_ARGUMENT_PROVIDER
-                    var argExprs = (IArgumentProvider)index;
-                    return argExprs.ArgumentCount == 1 && IsEvaluatedExpression(argExprs.GetArgument(0));
-#else
-                    var argExprs = index.Arguments;
-                    return argExprs.Count == 1 && IsEvaluatedExpression(argExprs[0]);
-#endif
-                }
-
-                return
-                    nodeType == ExpressionType.Parameter |
-                    nodeType == ExpressionType.Constant |
-                    nodeType == ExpressionType.Default;
-            }
-
 #if LIGHT_EXPRESSION
             private static bool TryEmitSwitch(SwitchExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
                 CompilerFlags setup, ParentFlags parent)
@@ -4737,9 +4712,7 @@ namespace FastExpressionCompiler
                 // todo: @perf
                 //- use switch statement for int comparison (if int difference is less or equal 3 -> use IL switch)
                 //- TryEmitComparison should not emit "CEQ" so we could use Beq_S instead of Brtrue_S (not always possible (nullable))
-
                 var switchValueExpr = expr.SwitchValue;
-                var dontIgnoreTestResult = parent & ~ParentFlags.IgnoreResult;
                 var comparisonMethod = expr.Comparison;
                 var cases = expr.Cases;
                 if (cases.Count == 1)
@@ -4754,24 +4727,34 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                // todo: @wip add the Property and Field to the IsEvaluatedExpression?
-                // if (!IsEvaluatedExpression(switchValueExpr))
-                //     return false; // todo: @feature we need the `SwitchValue` to be emitted only once and save into the local variable
+                // Emit and store the switch value into the local variable
+                var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, operandParent))
+                    return false;
 
-                // Emit a store the switch value into the local variable
+                var switchValueType = switchValueExpr.Type;
+                var switchValueIsNullable = switchValueType.IsNullable();
+                var switchNullableUnderlyingValueType = switchValueIsNullable ? Nullable.GetUnderlyingType(switchValueType) : null;
 
+                var checkType = switchNullableUnderlyingValueType ?? switchValueType;
+                var equalityOpMethod = comparisonMethod == null && !checkType.IsPrimitive && !checkType.IsEnum
+                    ? FindComparisonMethod(il, "op_Equality", switchValueType, switchValueType) ?? _objectEqualsMethod
+                    : null;
+                
+                var switchValueVar = EmitStoreLocalVariable(il, switchValueType);
 
-                var endLabel = il.DefineLabel();
+                var switchEndLabel = il.DefineLabel();
                 var labels = new Label[cases.Count];
 
                 for (var caseIndex = 0; caseIndex < cases.Count; ++caseIndex)
                 {
                     var cs = cases[caseIndex];
-                    var lb = il.DefineLabel();
-                    labels[caseIndex] = lb;
+                    var caseBodyLabel = il.DefineLabel();
+                    labels[caseIndex] = caseBodyLabel;
 
                     foreach (var caseTestValue in cs.TestValues)
                     {
+                        // todo: @wip we should also consider that ComparisonMethod may accept undelying type for nullable switch value
                         // if (equalMethodOrNull != null)
                         // {
                         //     Debug.Assert(equalMethodOrNull.IsStatic);
@@ -4785,81 +4768,43 @@ namespace FastExpressionCompiler
                         //         && EmitMethodCall(il, equalMethodOrNull);
                         // }
 
-                        var operandParent = dontIgnoreTestResult & ~ParentFlags.InstanceAccess;
-                        if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, operandParent))
+                        if (!switchValueIsNullable)
+                        {
+                            EmitLoadLocalVariable(il, switchValueVar);
+                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent))
+                                return false;
+                            if (equalityOpMethod == null)
+                                il.Demit(OpCodes.Ceq);
+                            else if (!EmitMethodCall(il, equalityOpMethod))
+                                return false;
+                            il.Demit(OpCodes.Brtrue, caseBodyLabel);
+                            continue;
+                        }
+
+                        EmitLoadLocalVariableAddress(il, switchValueVar);
+
+                        // short-circuit the comparison with the null, if the switch value has value == false the let's do a Brfalse
+                        if (caseTestValue is ConstantExpression r && r.Value == null)
+                        {
+                            EmitMethodCall(il, switchValueType.GetNullableHasValueGetterMethod());
+                            il.Demit(OpCodes.Brfalse, caseBodyLabel);
+                            continue;
+                        }
+
+                        il.Demit(OpCodes.Ldfld, switchValueType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+
+                        if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent))
+                            return false;
+                        var caseValueVar = EmitStoreAndLoadLocalVariableAddress(il, switchValueType);
+                        il.Demit(OpCodes.Ldfld, switchValueType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+
+                        if (equalityOpMethod == null)
+                            il.Demit(OpCodes.Ceq);
+                        else if (!EmitMethodCall(il, equalityOpMethod))
                             return false;
 
-                        var leftOpType = switchValueExpr.Type;
-                        var leftIsNullable = leftOpType.IsNullable();
-                        var rightOpType = caseTestValue.Type;
-
-                        // if on member is `null` object then list its type to match other member
-                        var rightIsNull = caseTestValue is ConstantExpression r && r.Value == null;
-                        if (rightIsNull & rightOpType == typeof(object))
-                            rightOpType = leftOpType;
-
-                        var leftIsNull = switchValueExpr is ConstantExpression l && l.Value == null;
-                        if (leftIsNull & leftOpType == typeof(object))
-                            leftOpType = rightOpType;
-
-                        // short-circuit the comparison with null on the right
-                        // todo: @wip we don't need to emit the left here, because it should be done once
-                        if (leftIsNullable & rightIsNull)
-                        {
-                            EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
-                            EmitMethodCall(il, leftOpType.GetNullableHasValueGetterMethod());
-                            EmitEqualToZeroOrNull(il);
-                        }
-                        else if (leftIsNull && rightOpType.IsNullable())
-                        {
-                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent))
-                                return false;
-                            EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
-                            EmitMethodCall(il, rightOpType.GetNullableHasValueGetterMethod());
-                            EmitEqualToZeroOrNull(il);
-                        }
-                        else
-                        {
-                            int lVarIndex = -1, rVarIndex = -1;
-                            if (leftIsNullable)
-                            {
-                                lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftOpType);
-                                il.Demit(OpCodes.Ldfld, leftOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                                leftOpType = Nullable.GetUnderlyingType(leftOpType);
-                            }
-
-                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent))
-                                return false;
-
-                            if (leftOpType != rightOpType && leftOpType.IsClass && rightOpType.IsClass &&
-                                (leftOpType == typeof(object) | rightOpType == typeof(object)))
-                            {
-                                il.Demit(OpCodes.Ceq); // todo: @wip test it, why it is not _objectEqualsMethod 
-                            }
-                            else
-                            {
-                                if (rightOpType.IsNullable())
-                                {
-                                    rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightOpType);
-                                    il.Demit(OpCodes.Ldfld, rightOpType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                                    rightOpType = Nullable.GetUnderlyingType(rightOpType);
-                                }
-
-                                if (leftOpType.IsPrimitive || leftOpType.IsEnum)
-                                    il.Demit(OpCodes.Ceq);
-                                else
-                                {
-                                    var method = FindComparisonMethod(il, "op_Equality", leftOpType, rightOpType) ?? _objectEqualsMethod;
-                                    Debug.Assert(method != null, "impossible, we should at least have the _objectEqualsMethod");
-                                    if (!EmitMethodCall(il, method))
-                                        return false;
-                                }
-                                if (leftIsNullable)
-                                    CompareNullableHasValueResults(il, switchValueExpr.Type, lVarIndex, rVarIndex);
-                            }
-                        }
-
-                        il.Demit(OpCodes.Brtrue, lb);
+                        AndCompareNullableHasValueResults(il, switchValueExpr.Type, switchValueVar, caseValueVar);
+                        il.Demit(OpCodes.Brtrue, caseBodyLabel);
                     }
                 }
 
@@ -4867,7 +4812,7 @@ namespace FastExpressionCompiler
                 {
                     if (!TryEmit(expr.DefaultBody, paramExprs, il, ref closure, setup, parent))
                         return false;
-                    il.Demit(OpCodes.Br, endLabel);
+                    il.Demit(OpCodes.Br, switchEndLabel);
                 }
 
                 for (var caseIndex = 0; caseIndex < cases.Count; ++caseIndex)
@@ -4878,14 +4823,14 @@ namespace FastExpressionCompiler
                         return false;
 
                     if (caseIndex != cases.Count - 1)
-                        il.Demit(OpCodes.Br, endLabel);
+                        il.Demit(OpCodes.Br, switchEndLabel);
                 }
 
-                il.DmarkLabel(endLabel);
+                il.DmarkLabel(switchEndLabel);
                 return true;
             }
 
-            private static void CompareNullableHasValueResults(ILGenerator il, Type opType, int leftVarIndex, int rightVarIndex)
+            private static void AndCompareNullableHasValueResults(ILGenerator il, Type opType, int leftVarIndex, int rightVarIndex)
             {
                 var hasValueGetterMethod = opType.GetNullableHasValueGetterMethod();
                 EmitLoadLocalVariableAddress(il, leftVarIndex);
@@ -6116,7 +6061,9 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, FieldInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
+            var t = value.DeclaringType;
+            var fieldStr = value.FieldType.Name + " " + t.Name + "." + value.Name;
+            Debug.WriteLine($"{opcode} {fieldStr}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]

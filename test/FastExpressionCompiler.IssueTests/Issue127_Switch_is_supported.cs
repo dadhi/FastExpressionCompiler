@@ -15,9 +15,12 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             // SwitchIsSupported_string_with_comparison_method();
-            SwitchIsSupported_bool_value();
-            SwitchIsSupported_nullable_enum();
+            // Switch_nullable_enum_value_equals_to_non_nullable_cases_via_comparison_method_Impossible_both_should_be_nullable();
+            // Switch_nullable_enum_value_equals_via_comparison_method_with_non_nullable_parameters();
+
+            Switch_nullable_enum_value_equals_to_nullable_cases();
             SwitchIsSupported_nullable_enum_comparing_with_null();
+            SwitchIsSupported_bool_value();
             SwitchIsSupported1();
             SwitchIsSupported31();
             SwitchIsSupported11();
@@ -28,7 +31,8 @@ namespace FastExpressionCompiler.IssueTests
             SwitchIsSupported3();
             SwitchIsSupported_string();
             SwitchIsSupported6();
-            return 14;
+
+            return 15;
         }
 
         [Test]
@@ -63,19 +67,19 @@ namespace FastExpressionCompiler.IssueTests
 
         public enum MyEnum
         {
-           a,b,c 
+            A, B, C
         }
 
         [Test]
-        public void SwitchIsSupported_nullable_enum()
+        public void Switch_nullable_enum_value_equals_to_nullable_cases()
         {
             var eVar = Parameter(typeof(MyEnum?));
             var blockExpr =
                 Switch(eVar,
                     Constant("Z"),
-                    SwitchCase(Constant("A"), Constant(MyEnum.a, typeof(MyEnum?))),
-                    SwitchCase(Constant("B"), Constant(MyEnum.b, typeof(MyEnum?))),
-                    SwitchCase(Constant("C"), Constant(MyEnum.c, typeof(MyEnum?)))
+                    SwitchCase(Constant("A"), Constant(MyEnum.A, typeof(MyEnum?))),
+                    SwitchCase(Constant("B"), Constant(MyEnum.B, typeof(MyEnum?))),
+                    SwitchCase(Constant("C"), Constant(MyEnum.C, typeof(MyEnum?)))
                 );
 
             var expr = Lambda<Func<MyEnum?, string>>(blockExpr, eVar);
@@ -83,16 +87,83 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = expr.CompileSys();
             ff.PrintIL();
-            Assert.AreEqual("A", ff(MyEnum.a));
-            Assert.AreEqual("B", ff(MyEnum.b));
-            Assert.AreEqual("C", ff(MyEnum.c));
+            Assert.AreEqual("A", ff(MyEnum.A));
+            Assert.AreEqual("B", ff(MyEnum.B));
+            Assert.AreEqual("C", ff(MyEnum.C));
             Assert.AreEqual("Z", ff(null));
 
             var fs = expr.CompileFast(true);
             fs.PrintIL();
-            Assert.AreEqual("A", fs(MyEnum.a));
-            Assert.AreEqual("B", fs(MyEnum.b));
-            Assert.AreEqual("C", fs(MyEnum.c));
+            Assert.AreEqual("A", fs(MyEnum.A));
+            Assert.AreEqual("B", fs(MyEnum.B));
+            Assert.AreEqual("C", fs(MyEnum.C));
+            Assert.AreEqual("Z", fs(null));
+        }
+
+        public static bool MyEnumEquals(MyEnum? y, MyEnum? x) =>
+            x.GetValueOrDefault() == y.GetValueOrDefault() && x.HasValue == y.HasValue;
+
+        [Test]
+        public void Switch_nullable_enum_value_equals_to_non_nullable_cases_via_comparison_method_Impossible_both_should_be_nullable()
+        {
+            var eVar = Parameter(typeof(MyEnum?));
+            var blockExpr =
+                Switch(eVar,
+                    Constant("Z"),
+                    GetType().GetMethod(nameof(MyEnumEquals)),
+                    SwitchCase(Constant("A"), Constant(MyEnum.A, typeof(MyEnum?))),
+                    SwitchCase(Constant("B"), Constant(MyEnum.B, typeof(MyEnum?))),
+                    SwitchCase(Constant("C"), Constant(MyEnum.C, typeof(MyEnum?)))
+                );
+
+            var expr = Lambda<Func<MyEnum?, string>>(blockExpr, eVar);
+            expr.PrintCSharp();
+
+            var ff = expr.CompileSys();
+            ff.PrintIL();
+            Assert.AreEqual("A", ff(MyEnum.A));
+            Assert.AreEqual("B", ff(MyEnum.B));
+            Assert.AreEqual("C", ff(MyEnum.C));
+            Assert.AreEqual("Z", ff(null));
+
+            var fs = expr.CompileFast(true);
+            fs.PrintIL();
+            Assert.AreEqual("A", fs(MyEnum.A));
+            Assert.AreEqual("B", fs(MyEnum.B));
+            Assert.AreEqual("C", fs(MyEnum.C));
+            Assert.AreEqual("Z", fs(null));
+        }
+
+        public static bool MyEnumEqualsNonNullable(MyEnum y, MyEnum x) => y == x;
+
+        [Test]
+        public void Switch_nullable_enum_value_equals_via_comparison_method_with_non_nullable_parameters()
+        {
+            var eVar = Parameter(typeof(MyEnum?));
+            var blockExpr =
+                Switch(eVar,
+                    Constant("Z"),
+                    GetType().GetMethod(nameof(MyEnumEqualsNonNullable)),
+                    SwitchCase(Constant("A"), Constant(MyEnum.A, typeof(MyEnum?))),
+                    SwitchCase(Constant("B"), Constant(MyEnum.B, typeof(MyEnum?))),
+                    SwitchCase(Constant("C"), Constant(MyEnum.C, typeof(MyEnum?)))
+                );
+
+            var expr = Lambda<Func<MyEnum?, string>>(blockExpr, eVar);
+            expr.PrintCSharp();
+
+            var ff = expr.CompileSys();
+            ff.PrintIL();
+            Assert.AreEqual("A", ff(MyEnum.A));
+            Assert.AreEqual("B", ff(MyEnum.B));
+            Assert.AreEqual("C", ff(MyEnum.C));
+            Assert.AreEqual("Z", ff(null));
+
+            var fs = expr.CompileFast(true);
+            fs.PrintIL();
+            Assert.AreEqual("A", fs(MyEnum.A));
+            Assert.AreEqual("B", fs(MyEnum.B));
+            Assert.AreEqual("C", fs(MyEnum.C));
             Assert.AreEqual("Z", fs(null));
         }
 
@@ -103,21 +174,21 @@ namespace FastExpressionCompiler.IssueTests
             var blockExpr =
                 Switch(eVar,
                     Constant(null, typeof(long?)),
-                    SwitchCase(Constant(1L, typeof(long?)), Constant(MyEnum.a)),
-                    SwitchCase(Constant(2L, typeof(long?)), Constant(MyEnum.b))
+                    SwitchCase(Constant(1L, typeof(long?)), Constant(MyEnum.A)),
+                    SwitchCase(Constant(2L, typeof(long?)), Constant(MyEnum.B))
                 );
 
             var e = Lambda<Func<MyEnum, long?>>(blockExpr, eVar);
-            
+
             var fs = e.CompileSys();
             fs.PrintIL();
-            
+
             var f = e.CompileFast(true);
             f.PrintIL();
 
             Assert.NotNull(f);
-            Assert.AreEqual(2L, f(MyEnum.b));
-            Assert.AreEqual(null, f(MyEnum.c));
+            Assert.AreEqual(2L, f(MyEnum.B));
+            Assert.AreEqual(null, f(MyEnum.C));
         }
 
         [Test]
@@ -304,7 +375,8 @@ namespace FastExpressionCompiler.IssueTests
             var eVar = Parameter(typeof(string));
             var blockExpr =
                 Switch(eVar,
-                    Constant("C"), GetType().GetMethod(nameof(StringCompareOrdinalIgnoreCase)),
+                    Constant("C"),
+                    GetType().GetMethod(nameof(StringCompareOrdinalIgnoreCase)),
                     SwitchCase(Constant("A"), Constant("a")),
                     SwitchCase(Constant("B"), Constant("b"))
                 );
