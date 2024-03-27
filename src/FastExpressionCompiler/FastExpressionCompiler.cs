@@ -4774,9 +4774,11 @@ namespace FastExpressionCompiler
                             if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent))
                                 return false;
                             if (equalityOpMethod == null)
-                                il.Demit(OpCodes.Ceq);
-                            else if (!EmitMethodCall(il, equalityOpMethod))
-                                return false;
+                            {
+                                il.Demit(OpCodes.Beq, caseBodyLabel);
+                                continue;
+                            }
+                            if (!EmitMethodCall(il, equalityOpMethod)) return false;
                             il.Demit(OpCodes.Brtrue, caseBodyLabel);
                             continue;
                         }
