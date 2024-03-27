@@ -3681,7 +3681,7 @@ namespace FastExpressionCompiler
                         // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
                         var baseFlags = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceCall;
                         var rightOnlyFlags = baseFlags | ParentFlags.AssignmentRightValue;
-                        
+
                         var memberOrIndexFlags = leftMemberExpr != null ? ParentFlags.MemberAccess : ParentFlags.IndexAccess;
                         var leftArLeastFlags = baseFlags | ParentFlags.AssignmentLeftValue | memberOrIndexFlags;
 
@@ -3706,7 +3706,7 @@ namespace FastExpressionCompiler
                             // Emit the left-value instance and index(es) (for the index access)
                             if (leftMemberExpr != null)
                             {
-                                if (objExpr != null && 
+                                if (objExpr != null &&
                                     !TryEmit(objExpr, paramExprs, il, ref closure, setup, leftArLeastFlags | ParentFlags.InstanceAccess))
                                     return false;
                             }
@@ -4379,7 +4379,7 @@ namespace FastExpressionCompiler
                 if (!objIsValueType)
                     ok = EmitMethodCallOrVirtualCall(il, method);
                 else if (method.DeclaringType != typeof(Enum) &&
-                    (!method.IsVirtual || 
+                    (!method.IsVirtual ||
                     method.DeclaringType == objExpr.Type ||
                     objExpr is ParameterExpression pe && pe.IsByRef))
                     ok = EmitMethodCall(il, method);
@@ -4709,38 +4709,53 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                // todo: @perf
-                //- use switch statement for int comparison (if int difference is less or equal 3 -> use IL switch)
-                //- TryEmitComparison should not emit "CEQ" so we could use Beq_S instead of Brtrue_S (not always possible (nullable))
+                // todo: @perf #398 use switch statement for int comparison, e.g. if int difference is less or equal 3 -> use IL switch
                 var switchValueExpr = expr.SwitchValue;
-                var comparisonMethod = expr.Comparison;
+                var customEqualMethod = expr.Comparison;
                 var cases = expr.Cases;
                 if (cases.Count == 1)
                 {
                     var cs0 = cases[0];
                     if (cs0.TestValues.Count == 1)
                     {
-                        Expression testExpr = comparisonMethod == null
+                        Expression testExpr = customEqualMethod == null
                             ? Equal(switchValueExpr, cs0.TestValues[0])
-                            : Call(comparisonMethod, switchValueExpr, cs0.TestValues[0]);
+                            : Call(customEqualMethod, switchValueExpr, cs0.TestValues[0]);
                         return TryEmitConditional(testExpr, cs0.Body, expr.DefaultBody, paramExprs, il, ref closure, setup, parent);
                     }
                 }
-
-                // Emit and store the switch value into the local variable
-                var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
-                if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, operandParent))
-                    return false;
 
                 var switchValueType = switchValueExpr.Type;
                 var switchValueIsNullable = switchValueType.IsNullable();
                 var switchNullableUnderlyingValueType = switchValueIsNullable ? Nullable.GetUnderlyingType(switchValueType) : null;
 
                 var checkType = switchNullableUnderlyingValueType ?? switchValueType;
-                var equalityOpMethod = comparisonMethod == null && !checkType.IsPrimitive && !checkType.IsEnum
-                    ? FindComparisonMethod(il, "op_Equality", switchValueType, switchValueType) ?? _objectEqualsMethod
-                    : null;
-                
+                var equalityMethod = customEqualMethod != null
+                    ? customEqualMethod
+                    : !checkType.IsPrimitive && !checkType.IsEnum
+                        ? FindComparisonMethod(il, "op_Equality", switchValueType, switchValueType) ?? _objectEqualsMethod
+                        : null;
+
+                var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                var isEqualityMethodForUnderlyingNullable = false;
+                int param0ByRefIndex = -1, param1ByRefIndex = -1;
+                if (equalityMethod != null)
+                {
+                    operandParent |= ParentFlags.Call;
+                    var paramInfos = equalityMethod.GetParameters();
+                    Debug.Assert(paramInfos.Length == 2);
+                    var paramType = paramInfos[0].ParameterType;
+                    isEqualityMethodForUnderlyingNullable = paramType == switchNullableUnderlyingValueType;
+                    if (paramType.IsByRef)
+                        param0ByRefIndex = 0;
+                    if (paramInfos[1].ParameterType.IsByRef)
+                        param1ByRefIndex = 1;
+                }
+
+                // Emit the switch value once and store it in the local variable for comparison in cases below
+                if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, operandParent, param0ByRefIndex))
+                    return false;
+
                 var switchValueVar = EmitStoreLocalVariable(il, switchValueType);
 
                 var switchEndLabel = il.DefineLabel();
@@ -4754,55 +4769,53 @@ namespace FastExpressionCompiler
 
                     foreach (var caseTestValue in cs.TestValues)
                     {
-                        // todo: @wip we should also consider that ComparisonMethod may accept undelying type for nullable switch value
-                        // if (equalMethodOrNull != null)
-                        // {
-                        //     Debug.Assert(equalMethodOrNull.IsStatic);
-                        //     Debug.Assert(equalMethodOrNull.ReturnType == typeof(bool));
-
-                        //     var methodParams = equalMethodOrNull.GetParameters();
-                        //     Debug.Assert(methodParams.Length == 2);
-
-                        //     return TryEmit(left, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[0].ParameterType.IsByRef ? 0 : -1)
-                        //         && TryEmit(right, paramExprs, il, ref closure, setup, ParentFlags.Call, methodParams[1].ParameterType.IsByRef ? 1 : -1)
-                        //         && EmitMethodCall(il, equalMethodOrNull);
-                        // }
-
                         if (!switchValueIsNullable)
                         {
                             EmitLoadLocalVariable(il, switchValueVar);
-                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent))
+                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent, param1ByRefIndex))
                                 return false;
-                            if (equalityOpMethod == null)
+                            if (equalityMethod == null)
                             {
                                 il.Demit(OpCodes.Beq, caseBodyLabel);
                                 continue;
                             }
-                            if (!EmitMethodCall(il, equalityOpMethod)) return false;
+
+                            if (!EmitMethodCall(il, equalityMethod))
+                                return false;
                             il.Demit(OpCodes.Brtrue, caseBodyLabel);
                             continue;
                         }
 
+                        if (equalityMethod != null & isEqualityMethodForUnderlyingNullable)
+                        {
+                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent, param1ByRefIndex) ||
+                                !EmitMethodCall(il, equalityMethod))
+                                return false;
+                        }
+
                         EmitLoadLocalVariableAddress(il, switchValueVar);
 
-                        // short-circuit the comparison with the null, if the switch value has value == false the let's do a Brfalse
-                        if (caseTestValue is ConstantExpression r && r.Value == null)
+                        if (equalityMethod == null)
                         {
-                            EmitMethodCall(il, switchValueType.GetNullableHasValueGetterMethod());
-                            il.Demit(OpCodes.Brfalse, caseBodyLabel);
-                            continue;
+                            // short-circuit the comparison with the null, if the switch value has value == false the let's do a Brfalse
+                            if (caseTestValue is ConstantExpression r && r.Value == null)
+                            {
+                                EmitMethodCall(il, switchValueType.GetNullableHasValueGetterMethod());
+                                il.Demit(OpCodes.Brfalse, caseBodyLabel);
+                                continue;
+                            }
                         }
 
                         il.Demit(OpCodes.Ldfld, switchValueType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
-                        if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent))
+                        if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent, param1ByRefIndex))
                             return false;
                         var caseValueVar = EmitStoreAndLoadLocalVariableAddress(il, switchValueType);
                         il.Demit(OpCodes.Ldfld, switchValueType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
-                        if (equalityOpMethod == null)
+                        if (equalityMethod == null)
                             il.Demit(OpCodes.Ceq);
-                        else if (!EmitMethodCall(il, equalityOpMethod))
+                        else if (!EmitMethodCall(il, equalityMethod))
                             return false;
 
                         AndCompareNullableHasValueResults(il, switchValueExpr.Type, switchValueVar, caseValueVar);
@@ -5275,7 +5288,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitConditional(
-                Expression testExpr, Expression ifTrueExpr, Expression ifFalseExpr, 
+                Expression testExpr, Expression ifTrueExpr, Expression ifFalseExpr,
                 // Type type, // todo: @wip what about the type, what if it is void?
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
@@ -5818,9 +5831,9 @@ namespace FastExpressionCompiler
             public static readonly Type NullableType = typeof(T?);
             public static readonly MethodInfo ValueGetterMethod =
                 NullableType.GetProperty("Value").GetMethod;
-            public static readonly MethodInfo HasValueGetterMethod = 
+            public static readonly MethodInfo HasValueGetterMethod =
                 NullableType.GetProperty("HasValue").GetMethod;
-            public static readonly FieldInfo ValueField = 
+            public static readonly FieldInfo ValueField =
                 NullableType.GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
             public static readonly ConstructorInfo Constructor =
                 NullableType.GetConstructors()[0];
@@ -5829,7 +5842,7 @@ namespace FastExpressionCompiler
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
         internal static MethodInfo FindNullableValueGetterMethod(this Type type) =>
-            type == typeof(int?) 
+            type == typeof(int?)
                 ? NullableReflected<int>.ValueGetterMethod
                 : type.GetProperty("Value").GetMethod;
 
@@ -5850,7 +5863,7 @@ namespace FastExpressionCompiler
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
         internal static ConstructorInfo GetNullableConstructor(this Type type) =>
-            type == typeof(int?) 
+            type == typeof(int?)
                 ? NullableReflected<int>.Constructor
                 : type.GetConstructors()[0];
 
@@ -7240,7 +7253,7 @@ namespace FastExpressionCompiler
                                 if (ifTrue is BlockExpression bl)
                                     bl.BlockToCSharpString(sb, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode, inTheLastBlock: true);
                                 else
-                                    sb.NewLineIdentCs(ifTrue,  lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                    sb.NewLineIdentCs(ifTrue, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
                                 sb.NewLineIdent(lineIdent).Append("}) : ");
                             }
                             else
@@ -7791,7 +7804,7 @@ namespace FastExpressionCompiler
                     if (gt.Value == null)
                         sb.Append("return;");
                     else
-                        gt.Value.ToCSharpString(sb.Append("return "), 
+                        gt.Value.ToCSharpString(sb.Append("return "),
                             EnclosedIn.Return, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode)
                             .AddSemicolonIfFits();
 
@@ -8028,7 +8041,7 @@ namespace FastExpressionCompiler
         }
 
         internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, string typeCode, T identity, string suffix = "") =>
-            name != null 
+            name != null
                 ? sb.Append(name + suffix)
                 : sb.Append(typeCode.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(", ", "_").Replace("?", "").ToLowerInvariant())
                     .Append("__").Append(identity.GetHashCode())

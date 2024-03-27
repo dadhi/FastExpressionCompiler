@@ -14,7 +14,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // SwitchIsSupported_string_with_comparison_method();
+            SwitchIsSupported_string_with_comparison_method();
             // Switch_nullable_enum_value_equals_to_non_nullable_cases_via_comparison_method_Impossible_both_should_be_nullable();
             // Switch_nullable_enum_value_equals_via_comparison_method_with_non_nullable_parameters();
 
