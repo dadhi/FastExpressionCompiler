@@ -2350,14 +2350,16 @@ namespace FastExpressionCompiler
                     return false;
 
                 var leftType = left.Type;
-                if (leftType.IsValueType) // Nullable -> It's the only ValueType comparable to null
+                if (leftType.IsValueType) 
                 {
+                    Debug.Assert(leftType.IsNullable(), "Expecting Nullable, it is the only ValueType comparable to null");
+                    Debug.Assert(leftType == right.Type, "Expecting the same type for Coalesce the left and right expressions");
+
                     var varIndex = EmitStoreAndLoadLocalVariableAddress(il, leftType);
                     EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
 
                     il.Demit(OpCodes.Brfalse, labelFalse);
-                    EmitLoadLocalVariableAddress(il, varIndex);
-                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitLoadLocalVariable(il, varIndex); // loading the value (not address) to return it
 
                     il.Demit(OpCodes.Br, labelDone);
                     il.DmarkLabel(labelFalse);
@@ -6094,7 +6096,8 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, ConstructorInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
+            var ctorStr = value.ToString().Replace(".", value.DeclaringType.Name + ".");
+            Debug.WriteLine($"{opcode} {ctorStr}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]

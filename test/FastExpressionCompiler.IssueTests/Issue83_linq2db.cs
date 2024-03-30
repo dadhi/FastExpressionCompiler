@@ -741,13 +741,14 @@ namespace FastExpressionCompiler.IssueTests
                         )
                         ));
 
-            var mapper = Lambda<Func<IDataReader, int>>(mapperBody, a3);
+            var expr = Lambda<Func<IDataReader, int>>(mapperBody, a3);
+            expr.PrintCSharp();
 
-            var compiled = mapper.CompileFast(true);
-            var c = mapper.Compile();
+            var fs = expr.CompileSys();
+            var ff = expr.CompileFast(true);
 
-            compiled(new SQLiteDataReader(true));
-            c(new SQLiteDataReader(true));
+            fs(new SQLiteDataReader(true));
+            ff(new SQLiteDataReader(true));
         }
 
         [Test]

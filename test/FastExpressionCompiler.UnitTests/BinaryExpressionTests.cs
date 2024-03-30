@@ -16,7 +16,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
-            // Coalesce_for_nullable_long_Automapper_test_Should_substitute_zero_for_null();
+            Coalesce_for_nullable_long_Automapper_test_Should_substitute_zero_for_null();
             Add_compiles();
             AddAssign_compiles();
             AddAssignChecked_compiles();
