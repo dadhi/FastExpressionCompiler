@@ -9,6 +9,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new LightExpression.UnitTests.BinaryExpressionTests().Run();
+            // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
+
             RunAllTests();
 
             // new Issue127_Switch_is_supported().Run();

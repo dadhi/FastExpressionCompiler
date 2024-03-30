@@ -89,10 +89,16 @@ public static class ILReaderFactory
                     s.Append(' ').Append(sbr.TargetOffset);
                 else if (il is InlineStringInstruction si)
                     s.Append(" \"").Append(si.String).Append('"');
-                else if (il is InlineIInstruction ii)
-                    s.Append(' ').Append(ii.Int32);
                 else if (il is ShortInlineIInstruction sii)
                     s.Append(' ').Append(sii.Byte);
+                else if (il is InlineIInstruction ii)
+                    s.Append(' ').Append(ii.Int32);
+                else if (il is InlineI8Instruction i8)
+                    s.Append(' ').Append(i8.Int64);
+                else if (il is ShortInlineRInstruction sir)
+                    s.Append(' ').Append(sir.Single);
+                else if (il is InlineRInstruction ir)
+                    s.Append(' ').Append(ir.Double);
                 else if (il is InlineVarInstruction iv)
                     s.Append(' ').Append(iv.Ordinal);
                 else if (il is ShortInlineVarInstruction siv)

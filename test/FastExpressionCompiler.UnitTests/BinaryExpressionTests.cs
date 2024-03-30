@@ -16,6 +16,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            // Coalesce_for_nullable_long_Automapper_test_Should_substitute_zero_for_null();
             Add_compiles();
             AddAssign_compiles();
             AddAssignChecked_compiles();
@@ -62,7 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             SubtractAssign_compiles();
             SubtractAssignChecked_compiles();
             SubtractChecked_compiles();
-            return 46;
+            return 47;
         }
 
         [Test]
@@ -393,6 +394,44 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.AreEqual("<null>", result);
         }
+
+        [Test]
+        public void Coalesce_for_nullable_long_Automapper_test_Should_substitute_zero_for_null()
+        {
+            var paramSource = Parameter(typeof(Source), "s");
+            var paramDest = Parameter(typeof(Destination), "d");
+            var tmpVar = Parameter(typeof(long?), "tmp");
+            var e = Lambda<Action<Source, Destination>>(
+                Block(new[] { tmpVar },
+                    Assign(tmpVar, Coalesce(Property(paramSource, nameof(Source.Number)), Constant(0L, typeof(long?)))),
+                    Assign(Property(paramDest, nameof(Destination.Number)), tmpVar)
+                ),
+                paramSource, paramDest);
+
+            e.PrintCSharp();
+
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            var d = new Destination();
+            fs(new Source(), d);
+            Assert.AreEqual(0, d.Number);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            d = new Destination();
+            ff(new Source(), d);
+            Assert.AreEqual(0, d.Number);
+        }
+
+        class Source
+        {
+            public long? Number { get; set; }
+        }
+        class Destination
+        {
+            public long? Number { get; set; }
+        }
+
 
         [Test]
         public void Modulo_compiles()
