@@ -4786,11 +4786,14 @@ namespace FastExpressionCompiler
                             continue;
                         }
 
-                        if (equalityMethod != null & isEqualityMethodForUnderlyingNullable)
+                        if (equalityMethod != null & !isEqualityMethodForUnderlyingNullable)
                         {
+                            EmitLoadLocalVariable(il, switchValueVar);
                             if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent, param1ByRefIndex) ||
                                 !EmitMethodCall(il, equalityMethod))
                                 return false;
+                            il.Demit(OpCodes.Brtrue, caseBodyLabel);
+                            continue;
                         }
 
                         EmitLoadLocalVariableAddress(il, switchValueVar);
