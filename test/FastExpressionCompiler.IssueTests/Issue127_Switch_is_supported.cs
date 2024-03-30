@@ -300,7 +300,7 @@ namespace FastExpressionCompiler.IssueTests
                 );
 
             var e = Lambda<Func<int, string>>(blockExpr, eVar);
-            e.PrintCSharp(); // todo: @wip @fixme add returns from the switch
+            e.PrintCSharp();
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -368,7 +368,6 @@ namespace FastExpressionCompiler.IssueTests
         public static bool StringCompareOrdinalIgnoreCase(string x, string y) =>
             StringComparer.OrdinalIgnoreCase.Equals(x, y);
 
-        // todo: @fixme @wip
         [Test]
         public void SwitchIsSupported_string_with_comparison_method()
         {
