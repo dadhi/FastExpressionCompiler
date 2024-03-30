@@ -44,7 +44,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         @cs(paramProcessor);
         Assert.AreEqual(8, paramProcessor.ParamValue.Value);
 
-        // var fs = e.CompileSys(); // todo: @wip does not convert ref returning method calls, cause unable cannot find the property on the T& type
+        // var fs = e.CompileSys(); // todo: does not convert ref returning method calls, cause unable to find the property on the T& type
 
         var ff = e.CompileFast(true);
         ff.AssertOpCodes(
@@ -87,7 +87,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         @cs(paramProcessor);
         Assert.AreEqual(7, paramProcessor.ParamValue.Value);
 
-        // var fs = e.CompileSys(); // todo: @wip does not conver ref returning method calls, cause unable cannot find the property on the T& type
+        // var fs = e.CompileSys(); // todo: does not conver ref returning method calls, cause unable cannot find the property on the T& type
 
         var ff = e.CompileFast(true);
         ff.AssertOpCodes(

@@ -1306,7 +1306,7 @@ namespace FastExpressionCompiler
 #else
                                 var pars = la.Parameters;
                                 var paramCount = paramExprs.Count;
-                                var exprs = new Expression[argCount + 1]; // todo: @perf @mem @wip optimize with SmallList
+                                var exprs = new Expression[argCount + 1]; // todo: @perf @mem optimize with SmallList
 #endif
                                 List<ParameterExpression> vars = null;
                                 var reusingParameters = false;
@@ -5291,7 +5291,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitConditional(
                 Expression testExpr, Expression ifTrueExpr, Expression ifFalseExpr,
-                // Type type, // todo: @wip what about the type, what if it is void?
+                // Type type, // todo: @wip what about the type, what if it is a void?
 #if LIGHT_EXPRESSION
                 IParameterProvider paramExprs,
 #else
