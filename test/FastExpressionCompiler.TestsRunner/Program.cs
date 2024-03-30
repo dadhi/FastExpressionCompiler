@@ -9,11 +9,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue127_Switch_is_supported().Run();
-            new Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
-
             RunAllTests();
 
+            // new Issue127_Switch_is_supported().Run();
+            // new Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
             // new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run();
             // new Issue380_Comparisons_with_nullable_types().Run();
             // new LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types().Run();

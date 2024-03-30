@@ -14,9 +14,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Switch_nullable_enum_value_equals_via_comparison_method_with_non_nullable_parameters();
             Switch_nullable_enum_value_equals_to_non_nullable_cases_via_comparison_method_Impossible_both_should_be_nullable();
             SwitchIsSupported_string_with_comparison_method();
-            // Switch_nullable_enum_value_equals_via_comparison_method_with_non_nullable_parameters();
 
             Switch_nullable_enum_value_equals_to_nullable_cases();
             SwitchIsSupported_nullable_enum_comparing_with_null();
@@ -32,7 +32,7 @@ namespace FastExpressionCompiler.IssueTests
             SwitchIsSupported_string();
             SwitchIsSupported6();
 
-            return 15;
+            return 16;
         }
 
         [Test]

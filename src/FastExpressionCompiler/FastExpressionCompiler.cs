@@ -4727,7 +4727,15 @@ namespace FastExpressionCompiler
 
                 var switchValueType = switchValueExpr.Type;
                 var switchValueIsNullable = switchValueType.IsNullable();
-                var switchNullableUnderlyingValueType = switchValueIsNullable ? Nullable.GetUnderlyingType(switchValueType) : null;
+                Type switchNullableUnderlyingValueType = null;
+                MethodInfo switchNullableHasValueMethod = null;
+                FieldInfo switchNullableUnsafeValueField = null;
+                if (switchValueIsNullable)
+                {
+                    switchNullableUnderlyingValueType = Nullable.GetUnderlyingType(switchValueType);
+                    switchNullableHasValueMethod = switchValueType.GetNullableHasValueGetterMethod();
+                    switchNullableUnsafeValueField = switchValueType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod();
+                }
 
                 var checkType = switchNullableUnderlyingValueType ?? switchValueType;
                 var equalityMethod = customEqualMethod != null
@@ -4796,32 +4804,37 @@ namespace FastExpressionCompiler
                             continue;
                         }
 
-                        EmitLoadLocalVariableAddress(il, switchValueVar);
-
                         if (equalityMethod == null)
                         {
                             // short-circuit the comparison with the null, if the switch value has value == false the let's do a Brfalse
                             if (caseTestValue is ConstantExpression r && r.Value == null)
                             {
-                                EmitMethodCall(il, switchValueType.GetNullableHasValueGetterMethod());
+                                EmitLoadLocalVariableAddress(il, switchValueVar);
+                                EmitMethodCall(il, switchNullableHasValueMethod);
                                 il.Demit(OpCodes.Brfalse, caseBodyLabel);
                                 continue;
                             }
                         }
 
-                        il.Demit(OpCodes.Ldfld, switchValueType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-
+                        // Compare the switch value with the case value via Ceq or comparison method and then compare the HasValue of both
+                        EmitLoadLocalVariableAddress(il, switchValueVar);
+                        il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
                         if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent, param1ByRefIndex))
                             return false;
                         var caseValueVar = EmitStoreAndLoadLocalVariableAddress(il, switchValueType);
-                        il.Demit(OpCodes.Ldfld, switchValueType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-
+                        il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
                         if (equalityMethod == null)
                             il.Demit(OpCodes.Ceq);
                         else if (!EmitMethodCall(il, equalityMethod))
                             return false;
 
-                        AndCompareNullableHasValueResults(il, switchValueExpr.Type, switchValueVar, caseValueVar);
+                        EmitLoadLocalVariableAddress(il, switchValueVar);
+                        EmitMethodCall(il, switchNullableHasValueMethod);
+                        EmitLoadLocalVariableAddress(il, caseValueVar);
+                        EmitMethodCall(il, switchNullableHasValueMethod);
+                        il.Demit(OpCodes.Ceq);
+
+                        il.Demit(OpCodes.And); // both the Nullable values and HashValue results need to be true
                         il.Demit(OpCodes.Brtrue, caseBodyLabel);
                     }
                 }
@@ -4846,20 +4859,6 @@ namespace FastExpressionCompiler
 
                 il.DmarkLabel(switchEndLabel);
                 return true;
-            }
-
-            private static void AndCompareNullableHasValueResults(ILGenerator il, Type opType, int leftVarIndex, int rightVarIndex)
-            {
-                var hasValueGetterMethod = opType.GetNullableHasValueGetterMethod();
-                EmitLoadLocalVariableAddress(il, leftVarIndex);
-                EmitMethodCall(il, hasValueGetterMethod);
-                EmitLoadLocalVariableAddress(il, rightVarIndex);
-                EmitMethodCall(il, hasValueGetterMethod);
-
-                il.Demit(OpCodes.Ceq); // compare both HasValue calls
-
-                // todo: @wip move outside because it combines the actual value comparison with the HasValue comparison ?
-                il.Demit(OpCodes.And); // both results need to be true
             }
 
             private static MethodInfo FindComparisonMethod(ILGenerator il, string methodName, Type leftOpType, Type rightOpType)
