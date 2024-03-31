@@ -73,7 +73,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public virtual bool IsCustomToCSharpString => false;
         public virtual StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, 
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
             CodePrinter.ObjectToCode notRecognizedToCode = null) => sb;
 
 #if SUPPORTS_VISITOR
@@ -455,17 +455,17 @@ namespace FastExpressionCompiler.LightExpression
             foreach (var indexer in instance.Type.GetProperties())
                 if (indexer.Name == propertyName)
                 {
-                     var indexerParams = indexer.GetIndexParameters();
-                     if (indexerParams.Length == arguments.Length)
-                     {
+                    var indexerParams = indexer.GetIndexParameters();
+                    if (indexerParams.Length == arguments.Length)
+                    {
                         var mismatch = false;
                         for (var p = 0; !mismatch && p < indexerParams.Length; ++p)
                             mismatch = indexerParams[p].ParameterType != arguments[p].Type;
                         if (!mismatch)
                             return new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments);
-                     }
+                    }
                 }
-            throw new ArgumentException($"Indexer property '{propertyName}' is not found in '{instance.Type}' with the argument types '{arguments.Select(a => a.Type).ToCode(null)}]", 
+            throw new ArgumentException($"Indexer property '{propertyName}' is not found in '{instance.Type}' with the argument types '{arguments.Select(a => a.Type).ToCode(null)}]",
                 nameof(propertyName));
         }
 
@@ -1530,7 +1530,7 @@ namespace FastExpressionCompiler.LightExpression
         /// <summary>Creates a UnaryExpression that represents a throwing of an exception with a given type.</summary>
         public static UnaryExpression Throw(Expression value, Type type) =>
             new TypedUnaryExpression(ExpressionType.Throw, value, type);
-        
+
         /// <summary> Creates a <see cref="UnaryExpression"/> that represents a rethrowing of an exception in a catch block. </summary>
         public static UnaryExpression Rethrow(Type type) =>
             new TypedUnaryExpression(ExpressionType.Throw, null, type);
@@ -1894,10 +1894,6 @@ namespace FastExpressionCompiler.LightExpression
         public static BinaryExpression Coalesce(Expression left, Expression right) =>
             new CoalesceBinaryExpression(left, right, GetCoalesceType(left.Type, right.Type));
 
-        /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
-        public static BinaryExpression Coalesce(Expression left, Expression right, Type type) =>
-            new CoalesceBinaryExpression(left, right, type);
-
         /// <summary>Creates a BinaryExpression that represents a coalescing operation, given a conversion function.</summary>
         public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) =>
             conversion == null
@@ -1906,23 +1902,14 @@ namespace FastExpressionCompiler.LightExpression
 
         private static Type GetCoalesceType(Type left, Type right)
         {
-            var leftTypeInfo = left.GetTypeInfo();
-            if (leftTypeInfo.IsGenericType && leftTypeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
-                left = leftTypeInfo.GenericTypeArguments[0];
+            var underlyingLeft = left.IsNullable() ? left.GetNonNullable() : null;
+            if (underlyingLeft != null && right.IsImplicitlyConvertibleTo(underlyingLeft))
+                return underlyingLeft; // note: For conformity with BCL
 
-            if (right == left)
+            if (right.IsImplicitlyConvertibleTo(left))
                 return left;
-
-            if (leftTypeInfo.IsAssignableFrom(right.GetTypeInfo()) ||
-                right.IsImplicitlyBoxingConvertibleTo(left) ||
-                right.IsImplicitlyNumericConvertibleTo(left))
-                return left;
-
-            if (right.GetTypeInfo().IsAssignableFrom(leftTypeInfo) ||
-                left.IsImplicitlyBoxingConvertibleTo(right) ||
-                left.IsImplicitlyNumericConvertibleTo(right))
+            if (left.IsImplicitlyConvertibleTo(right))
                 return right;
-
             throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
         }
 
@@ -1995,9 +1982,18 @@ namespace FastExpressionCompiler.LightExpression
 
         internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
             source.IsValueType &&
-            (target == typeof(object) ||
-             target == typeof(ValueType)) ||
-             source.GetTypeInfo().IsEnum && target == typeof(Enum);
+            (target == typeof(object) || target == typeof(ValueType)) ||
+             source.IsEnum && target == typeof(Enum);
+
+        private static bool IsImplicitlyNullableConvertibleTo(Type source, Type target) =>
+            target.IsNullable() && IsImplicitlyConvertibleTo(source.GetNonNullableOrSelf(), target.GetNonNullable());
+
+        public static bool IsImplicitlyConvertibleTo(this Type source, Type target) =>
+            source == target
+            || IsImplicitlyNumericConvertibleTo(source, target)
+            || target.IsAssignableFrom(source)
+            || IsImplicitlyBoxingConvertibleTo(source, target)
+            || IsImplicitlyNullableConvertibleTo(source, target);
 
         internal static PropertyInfo FindProperty(this Type type, string propertyName)
         {
@@ -2192,81 +2188,110 @@ namespace FastExpressionCompiler.LightExpression
 
         internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
         {
-            if (source == typeof(Char))
-                return
-                    target == typeof(UInt16) ||
-                    target == typeof(Int32) ||
-                    target == typeof(UInt32) ||
-                    target == typeof(Int64) ||
-                    target == typeof(UInt64) ||
-                    target == typeof(Single) ||
-                    target == typeof(Double) ||
-                    target == typeof(Decimal);
+            var s = Type.GetTypeCode(source);
+            var t = Type.GetTypeCode(target);
 
-            if (source == typeof(SByte))
-                return
-                    target == typeof(Int16) ||
-                    target == typeof(Int32) ||
-                    target == typeof(Int64) ||
-                    target == typeof(Single) ||
-                    target == typeof(Double) ||
-                    target == typeof(Decimal);
-
-            if (source == typeof(Byte))
-                return
-                    target == typeof(Int16) ||
-                    target == typeof(UInt16) ||
-                    target == typeof(Int32) ||
-                    target == typeof(UInt32) ||
-                    target == typeof(Int64) ||
-                    target == typeof(UInt64) ||
-                    target == typeof(Single) ||
-                    target == typeof(Double) ||
-                    target == typeof(Decimal);
-
-            if (source == typeof(Int16))
-                return
-                    target == typeof(Int32) ||
-                    target == typeof(Int64) ||
-                    target == typeof(Single) ||
-                    target == typeof(Double) ||
-                    target == typeof(Decimal);
-
-            if (source == typeof(UInt16))
-                return
-                    target == typeof(Int32) ||
-                    target == typeof(UInt32) ||
-                    target == typeof(Int64) ||
-                    target == typeof(UInt64) ||
-                    target == typeof(Single) ||
-                    target == typeof(Double) ||
-                    target == typeof(Decimal);
-
-            if (source == typeof(Int32))
-                return
-                    target == typeof(Int64) ||
-                    target == typeof(Single) ||
-                    target == typeof(Double) ||
-                    target == typeof(Decimal);
-
-            if (source == typeof(UInt32))
-                return
-                    target == typeof(UInt32) ||
-                    target == typeof(UInt64) ||
-                    target == typeof(Single) ||
-                    target == typeof(Double) ||
-                    target == typeof(Decimal);
-
-            if (source == typeof(Int64) ||
-                source == typeof(UInt64))
-                return
-                    target == typeof(Single) ||
-                    target == typeof(Double) ||
-                    target == typeof(Decimal);
-
-            if (source == typeof(Single))
-                return target == typeof(Double);
-
+            switch (s)
+            {
+                case TypeCode.SByte:
+                    switch (t)
+                    {
+                        case TypeCode.Int16:
+                        case TypeCode.Int32:
+                        case TypeCode.Int64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    break;
+                case TypeCode.Byte:
+                    switch (t)
+                    {
+                        case TypeCode.Int16:
+                        case TypeCode.UInt16:
+                        case TypeCode.Int32:
+                        case TypeCode.UInt32:
+                        case TypeCode.Int64:
+                        case TypeCode.UInt64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    break;
+                case TypeCode.Int16:
+                    switch (t)
+                    {
+                        case TypeCode.Int32:
+                        case TypeCode.Int64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    break;
+                case TypeCode.UInt16:
+                    switch (t)
+                    {
+                        case TypeCode.Int32:
+                        case TypeCode.UInt32:
+                        case TypeCode.Int64:
+                        case TypeCode.UInt64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    break;
+                case TypeCode.Int32:
+                    switch (t)
+                    {
+                        case TypeCode.Int64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    break;
+                case TypeCode.UInt32:
+                    switch (t)
+                    {
+                        case TypeCode.Int64:
+                        case TypeCode.UInt64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    break;
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                    switch (t)
+                    {
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    break;
+                case TypeCode.Char:
+                    switch (t)
+                    {
+                        case TypeCode.UInt16:
+                        case TypeCode.Int32:
+                        case TypeCode.UInt32:
+                        case TypeCode.Int64:
+                        case TypeCode.UInt64:
+                        case TypeCode.Single:
+                        case TypeCode.Double:
+                        case TypeCode.Decimal:
+                            return true;
+                    }
+                    break;
+                case TypeCode.Single:
+                    return t == TypeCode.Double;
+            }
             return false;
         }
     }
@@ -2397,7 +2422,7 @@ namespace FastExpressionCompiler.LightExpression
 
         public override bool IsCustomToCSharpString => true;
         public override StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, 
+            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
             CodePrinter.ObjectToCode notRecognizedToCode = null)
         {
             var encloseInParens = enclosedIn != ToCSharpPrinter.EnclosedIn.LambdaBody && enclosedIn != ToCSharpPrinter.EnclosedIn.Return;
