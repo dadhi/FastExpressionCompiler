@@ -19,9 +19,9 @@ namespace FastExpressionCompiler.IssueTests
         {
             public int Run()
             {
+                Coalesce_should_produce_optimal_opcodes();
                 Comparison_with_null_should_produce_optimal_Brtrue_or_Brfalse_opcodes();
                 Logical_OrElse_should_be_reduced_if_one_of_operands_is_known_boolean_value();
-                Coalesce_should_produce_optimal_opcodes();
                 Setting_the_outside_variable();
                 TryCatch_setting_the_outside_variable();
                 TryCatch_with_void_rethrows_error_in_catch();
@@ -129,11 +129,16 @@ namespace FastExpressionCompiler.IssueTests
                                 Property(sourceParam, nameof(Source.Value))))));
 
                 var expr = Lambda<Func<Source, Dest>>(body, sourceParam);
+                expr.PrintCSharp();
 
-                //var fs = expr.Compile();
+                var fs = expr.CompileSys();
+                fs.PrintIL();
+                var dest = fs(new Source { Value = 42 });
+                Assert.AreEqual(13, dest.Value);
+
                 var ff = expr.CompileFast(true);
-
-                var dest = ff(new Source { Value = 42 });
+                ff.PrintIL();
+                dest = ff(new Source { Value = 42 });
                 Assert.AreEqual(13, dest.Value);
             }
 
