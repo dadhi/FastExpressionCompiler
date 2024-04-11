@@ -7003,11 +7003,15 @@ namespace FastExpressionCompiler
                     {
                         var x = (ConstantExpression)e;
                         if (x.Value == null)
-                            return x.Type == null
-                                ? sb.Append("null")
-                                : x.Type.IsValueType && !x.Type.IsNullable()
-                                ? sb.Append("default(").Append(x.Type.ToCode(stripNamespace, printType)).Append(')')
-                                : sb.Append('(').Append(x.Type.ToCode(stripNamespace, printType)).Append(")null");
+                        {
+                            var cType = x.Type;
+                            return 
+                                cType == null | cType == typeof(object)
+                                    ? sb.Append("null")
+                                : cType.IsValueType && !cType.IsNullable()
+                                    ? sb.Append("default(").Append(cType.ToCode(stripNamespace, printType)).Append(')')
+                                    : sb.Append('(').Append(cType.ToCode(stripNamespace, printType)).Append(")null");
+                        }
 
                         if (x.Value is Type t)
                             return sb.AppendTypeOf(t, stripNamespace, printType);
