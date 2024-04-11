@@ -50,9 +50,9 @@ namespace FastExpressionCompiler.UnitTests
 
         public void Outputs_default_null_for_reference_types()
         {
-            Assert.AreEqual("(string)null;", Constant(null, typeof(string)).ToCSharpString());
+            Assert.AreEqual("null;", Constant(null, typeof(string)).ToCSharpString());
             Assert.AreEqual("(string)null;", Default(typeof(string)).ToCSharpString());
-            Assert.AreEqual("(List<string>)null;", Constant(null, typeof(System.Collections.Generic.List<string>)).ToCSharpString());
+            Assert.AreEqual("null;", Constant(null, typeof(System.Collections.Generic.List<string>)).ToCSharpString());
             Assert.AreEqual("(List<string>)null;", Default(typeof(System.Collections.Generic.List<string>)).ToCSharpString());
             Assert.AreEqual("(int?)null;", Constant(null, typeof(int?)).ToCSharpString());
             Assert.AreEqual("(int?)null;", Default(typeof(int?)).ToCSharpString());

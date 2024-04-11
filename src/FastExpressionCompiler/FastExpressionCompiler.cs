@@ -1971,17 +1971,17 @@ namespace FastExpressionCompiler
                                 if (statementCount == 0)
                                     return true; // yeah, it is a valid thing
 
-                                // todo: @perf we may simplify the blocks with the known block structure, e.g:
-                                // X t;
-                                // t = a.X;
-                                // b.Y = t;
-                                // recognize this kind of block
-                                // if (blockVarCount == 1)
-                                // {
-                                //     if (statementCount == 2)
-                                //     {
-                                //     }
-                                // }
+                                // we may simplify the blocks with the known block structure, e.g from the AutoMapper `X t; t = a.X; b.Y = t;`
+                                if (blockVarCount == 1 && statementCount == 2 &&
+                                    statementExprs[0] is BinaryExpression st0 && st0.NodeType == ExpressionType.Assign &&
+                                    statementExprs[0] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
+                                    st0.Left == blockVarExprs[0] && st1.Right == blockVarExprs[0])
+                                {
+                                    TryEmitArithmeticAndOrAssign(st1.Left, st0.Right, st0.Left.Type,
+                                        ExpressionType.Assign, false, paramExprs, il, ref closure, setup, parent);
+                                    closure.PopBlock();
+                                    return true;
+                                }
 
                                 expr = statementExprs[statementCount - 1]; // The last (result) statement in block will provide the result
 
@@ -7008,7 +7008,7 @@ namespace FastExpressionCompiler
                         {
                             var cType = x.Type;
                             return 
-                                cType == null | cType == typeof(object)
+                                cType == null | cType == typeof(object) | cType.IsClass
                                     ? sb.Append("null")
                                 : cType.IsValueType && !cType.IsNullable()
                                     ? sb.Append("default(").Append(cType.ToCode(stripNamespace, printType)).Append(')')
