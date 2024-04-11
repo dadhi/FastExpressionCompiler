@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC.FastExpressionCompilerBug().Run();
+            new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC.FastExpressionCompilerBug().Run();
             // new LightExpression.UnitTests.BinaryExpressionTests().Run();
             // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
 

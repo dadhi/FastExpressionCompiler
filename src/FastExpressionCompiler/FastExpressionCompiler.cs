@@ -1972,9 +1972,9 @@ namespace FastExpressionCompiler
                                     return true; // yeah, it is a valid thing
 
                                 // we may simplify the blocks with the known block structure, e.g from the AutoMapper `X t; t = a.X; b.Y = t;`
-                                if (blockVarCount == 1 && statementCount == 2 &&
+                                if (blockVarCount == 1 & statementCount == 2 &&
                                     statementExprs[0] is BinaryExpression st0 && st0.NodeType == ExpressionType.Assign &&
-                                    statementExprs[0] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
+                                    statementExprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
                                     st0.Left == blockVarExprs[0] && st1.Right == blockVarExprs[0])
                                 {
                                     TryEmitArithmeticAndOrAssign(st1.Left, st0.Right, st0.Left.Type,
@@ -7789,6 +7789,15 @@ namespace FastExpressionCompiler
         {
             var vars = b.Variables.AsList();
             var exprs = b.Expressions.AsList();
+            
+            // handling the special case, AutoMapper like using the tmp variable to reassign the property
+            if (vars.Count == 1 & exprs.Count == 2 &&
+                exprs[0] is BinaryExpression st0 && st0.NodeType == ExpressionType.Assign &&
+                exprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
+                st0.Left == vars[0] && st1.Right == vars[0])
+                return Assign(st1.Left, st0.Right).ToCSharpString(sb.NewLineIdent(lineIdent), 
+                    EnclosedIn.Block, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+
             foreach (var v in vars)
             {
                 sb.NewLineIdent(lineIdent);
@@ -7861,8 +7870,8 @@ namespace FastExpressionCompiler
 
             if (lastExpr is BlockExpression lastBlock)
                 return lastBlock.BlockToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode,
-                inTheLastBlock, // the last block is marked so if only it is itself in the last block
-                blockResultAssignment);
+                    inTheLastBlock, // the last block is marked so if only it is itself in the last block
+                    blockResultAssignment);
 
             // todo: @improve the label is already used by the Return GoTo we should skip it output here OR we need to replace the Return Goto `return` with `goto`  
             if (lastExpr is LabelExpression) // keep the last label on the same vertical line

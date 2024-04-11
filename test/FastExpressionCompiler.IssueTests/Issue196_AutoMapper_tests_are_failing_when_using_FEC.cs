@@ -19,6 +19,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             public int Run()
             {
+                Test_the_tmp_var_block_reduction();
                 Coalesce_should_work_with_throw();
                 Coalesce_should_produce_optimal_opcodes();
                 Comparison_with_null_should_produce_optimal_Brtrue_or_Brfalse_opcodes();
@@ -29,7 +30,7 @@ namespace FastExpressionCompiler.IssueTests
                 TryCatch_with_rethrow_error_in_catch_and_the_unreachable_code_after_the_throw();
                 TryCatch_with_non_void_rethrows_error_in_catch();
 
-                return 9;
+                return 10;
             }
 
             public class Source
@@ -171,6 +172,41 @@ namespace FastExpressionCompiler.IssueTests
                 ex = Assert.Throws<ArgumentNullException>(() => 
                     ff(new Source { Value = 42 }, null));
                 StringAssert.Contains("meh!", ex.Message);
+            }
+
+            [Test]
+            public void Test_the_tmp_var_block_reduction()
+            {
+                var srcParam = Parameter(typeof(Source), "src");
+                var dstParam = Parameter(typeof(Dest), "dst");
+                var tmpVar = Parameter(typeof(int), "tmp");
+
+                var expr = Lambda<Func<Source, Dest, Dest>>(
+                    Condition(
+                        Equal(srcParam, Constant(null)),
+                        Constant(null, typeof(Dest)),
+                        Block(
+                            Assign(dstParam, Coalesce(dstParam, New(typeof(Dest)))),
+                            Block(new[] { tmpVar },
+                                Assign(tmpVar, Property(srcParam, "Value")),
+                                Assign(Property(dstParam, "Value"), tmpVar)
+                            ),
+                            dstParam
+                        )
+                    ), 
+                    srcParam, dstParam);
+
+                expr.PrintCSharp();
+
+                var fs = expr.CompileSys();
+                fs.PrintIL();
+                var dst = fs(new Source { Value = 42 }, null);
+                Assert.AreEqual(42, dst.Value);
+
+                var ff = expr.CompileFast(true);
+                ff.PrintIL();
+                dst = ff(new Source { Value = 42 }, null);
+                Assert.AreEqual(42, dst.Value);
             }
 
             public class ResolutionContext { }
