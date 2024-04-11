@@ -19,6 +19,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             public int Run()
             {
+                Coalesce_should_work_with_throw();
                 Coalesce_should_produce_optimal_opcodes();
                 Comparison_with_null_should_produce_optimal_Brtrue_or_Brfalse_opcodes();
                 Logical_OrElse_should_be_reduced_if_one_of_operands_is_known_boolean_value();
@@ -27,7 +28,8 @@ namespace FastExpressionCompiler.IssueTests
                 TryCatch_with_void_rethrows_error_in_catch();
                 TryCatch_with_rethrow_error_in_catch_and_the_unreachable_code_after_the_throw();
                 TryCatch_with_non_void_rethrows_error_in_catch();
-                return 8;
+
+                return 9;
             }
 
             public class Source
@@ -140,6 +142,35 @@ namespace FastExpressionCompiler.IssueTests
                 ff.PrintIL();
                 dest = ff(new Source { Value = 42 });
                 Assert.AreEqual(13, dest.Value);
+            }
+
+            [Test]
+            public void Coalesce_should_work_with_throw()
+            {
+                var srcParam = Parameter(typeof(Source), "src");
+                var dstParam = Parameter(typeof(Dest), "dst");
+
+                var expr = Lambda<Func<Source, Dest, Dest>>(
+                    Condition(
+                        Equal(srcParam, Constant(null)),
+                        Constant(null, typeof(Dest)),
+                        Coalesce(dstParam, Throw(Constant(new ArgumentNullException("meh!")), typeof(Dest)))
+                    ), 
+                    srcParam, dstParam);
+
+                expr.PrintCSharp();
+
+                var fs = expr.CompileSys();
+                fs.PrintIL();
+                var ex = Assert.Throws<ArgumentNullException>(() => 
+                    fs(new Source { Value = 42 }, null));
+                StringAssert.Contains("meh!", ex.Message);
+
+                var ff = expr.CompileFast(true);
+                ff.PrintIL();
+                ex = Assert.Throws<ArgumentNullException>(() => 
+                    ff(new Source { Value = 42 }, null));
+                StringAssert.Contains("meh!", ex.Message);
             }
 
             public class ResolutionContext { }

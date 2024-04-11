@@ -6987,6 +6987,8 @@ namespace FastExpressionCompiler
             AvoidParens,
             /// <summary>The instance when calling the instance method or accessing the instance member</summary>
             Instance,
+            /// <summary>Says that the parent is the expression which does not require the ';' after the statements, e.g. for `=> a ?? throw ex` in Coalesce we don't need the `ex;`</summary> 
+            Expression
         }
 
         internal static StringBuilder ToCSharpString(this Expression e, StringBuilder sb, EnclosedIn enclosedIn,
@@ -7506,7 +7508,7 @@ namespace FastExpressionCompiler
                         var x = (BinaryExpression)e;
                         x.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces);
                         sb.Append(" ?? ").NewLineIdent(lineIdent);
-                        return x.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                        return x.Right.ToCSharpString(sb, EnclosedIn.Expression, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                     }
                 case ExpressionType.Extension:
                     {
@@ -7591,12 +7593,9 @@ namespace FastExpressionCompiler
 
                                 case ExpressionType.Throw:
                                     if (op is null)
-                                        return sb.Append("throw;");
-                                    else
-                                    {
-                                        sb.Append("throw ");
-                                        return op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(';');
-                                    }
+                                        return enclosedIn == EnclosedIn.Expression ? sb.Append("throw") : sb.Append("throw;");
+                                    op.ToCSharpString(sb.Append("throw "), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                    return enclosedIn == EnclosedIn.Expression ? sb : sb.AddSemicolonIfFits();
 
                                 case ExpressionType.Unbox: // output it as the cast
                                     sb.Append("((").Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
@@ -7691,13 +7690,8 @@ namespace FastExpressionCompiler
             _ => false
         };
 
-        private static StringBuilder AddSemicolonIfFits(this StringBuilder sb)
-        {
-            var lastChar = sb[sb.Length - 1];
-            if (lastChar != ';')
-                return sb.Append(";");
-            return sb;
-        }
+        private static StringBuilder AddSemicolonIfFits(this StringBuilder sb) =>
+            sb[sb.Length - 1] != ';' ? sb.Append(";") : sb;
 
         private static bool IsReturnable(ExpressionType nodeType) =>
             nodeType != ExpressionType.Goto &
