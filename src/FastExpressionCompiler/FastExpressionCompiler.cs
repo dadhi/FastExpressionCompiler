@@ -1069,7 +1069,9 @@ namespace FastExpressionCompiler
             /// <summary>Not supported assignment target</summary>
             NotSupported_Assign_Target = 1008,
             /// <summary>TypeEqual is not supported </summary>
-            NotSupported_TypeEqual = 1009
+            NotSupported_TypeEqual = 1009,
+            /// <summary>`when` in catch is not supported yet</summary>
+            NotSupported_ExceptionCatchFilter = 1010
         }
 
         /// <summary>Wraps the call to `TryCollectInfo` for the compatibility and provide the root place to check the returned error code.
@@ -1386,6 +1388,18 @@ namespace FastExpressionCompiler
 
                         var varExprs = blockExpr.Variables;
                         var varExprCount = varExprs?.Count ?? 0; // todo: @perf optimize for an empty and a single variable
+                        
+                        if (varExprCount == 1 & blockExprCount == 2 &&
+                            blockExprs[0] is BinaryExpression st0 && st0.NodeType == ExpressionType.Assign &&
+                            blockExprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
+                            st0.Left == blockExprs[0] && st1.Right == blockExprs[0])
+                        {
+                            if ((r = TryCollectInfo(ref closure, st0.Right, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                                return r;
+                            expr = st1.Left;
+                            continue;
+                        }
+
                         if (varExprCount == 1)
                             closure.PushBlockWithVars(varExprs[0]);
                         else if (varExprCount != 0)
@@ -1396,8 +1410,8 @@ namespace FastExpressionCompiler
                                 return r;
 
                         expr = blockExprs[blockExprCount - 1];
-                        if (varExprCount == 0) // in case of no variables we can collect the last exp without recursion
-                            continue;
+                        if (varExprCount == 0)
+                            continue; // in case of no variables we can collect the last exp without recursion
 
                         if ((r = TryCollectInfo(ref closure, expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                             return r;
@@ -1963,25 +1977,20 @@ namespace FastExpressionCompiler
                                 var blockExpr = (BlockExpression)expr;
                                 var blockVarExprs = blockExpr.Variables;
                                 var blockVarCount = blockVarExprs?.Count ?? 0;
-                                if (blockVarCount != 0)
-                                    closure.PushBlockAndConstructLocalVars(blockVarExprs, il);
-
                                 var statementExprs = blockExpr.Expressions; // Trim the expressions after the Throw - #196
                                 var statementCount = statementExprs.Count;
                                 if (statementCount == 0)
                                     return true; // yeah, it is a valid thing
 
-                                // we may simplify the blocks with the known block structure, e.g from the AutoMapper `X t; t = a.X; b.Y = t;`
                                 if (blockVarCount == 1 & statementCount == 2 &&
                                     statementExprs[0] is BinaryExpression st0 && st0.NodeType == ExpressionType.Assign &&
                                     statementExprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
                                     st0.Left == blockVarExprs[0] && st1.Right == blockVarExprs[0])
-                                {
-                                    TryEmitArithmeticAndOrAssign(st1.Left, st0.Right, st0.Left.Type,
+                                    return TryEmitArithmeticAndOrAssign(st1.Left, st0.Right, st0.Left.Type,
                                         ExpressionType.Assign, false, paramExprs, il, ref closure, setup, parent);
-                                    closure.PopBlock();
-                                    return true;
-                                }
+
+                                if (blockVarCount != 0)
+                                    closure.PushBlockAndConstructLocalVars(blockVarExprs, il);
 
                                 expr = statementExprs[statementCount - 1]; // The last (result) statement in block will provide the result
 
@@ -2462,7 +2471,11 @@ namespace FastExpressionCompiler
                 {
                     var catchBlock = catchBlocks[i];
                     if (catchBlock.Filter != null)
-                        return false; // todo: Add support for filters in catch expression
+                    {
+                        if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                            throw new NotSupportedExpressionException(Result.NotSupported_ExceptionCatchFilter);
+                        return false;
+                    }
 
                     il.BeginCatchBlock(catchBlock.Test);
 
@@ -2470,7 +2483,7 @@ namespace FastExpressionCompiler
                     // we will store into local variable.
                     var exVarExpr = catchBlock.Variable;
 #if DEMIT
-                Debug.WriteLine($"}} catch {{");
+                    Debug.WriteLine($"}} catch {{");
 #endif
                     if (exVarExpr != null)
                     {

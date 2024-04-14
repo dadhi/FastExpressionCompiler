@@ -9,7 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC.FastExpressionCompilerBug().Run();
+            // new LightExpression.IssueTests.Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run();
+            // new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC.FastExpressionCompilerBug().Run();
             // new LightExpression.UnitTests.BinaryExpressionTests().Run();
             // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
 
@@ -289,6 +290,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
 
                 Run(new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run);
+
+                Run(new Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run);
+                Run(new LightExpression.IssueTests.Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
