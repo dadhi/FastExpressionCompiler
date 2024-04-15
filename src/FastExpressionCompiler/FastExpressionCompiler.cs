@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 // #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG && NET6_0_OR_GREATER
-// #define DEMIT
+#define DEMIT
 #endif
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
@@ -4683,6 +4683,7 @@ namespace FastExpressionCompiler
                         exprs[i] = Assign(p, argExprs.GetArgument(i));
                     }
                     exprs[argCount] = la.Body;
+                    var blockVars = vars?.Count > 0 ? vars : pars.ToReadOnlyList(); // todo: @wip review this code and the one in TryCollectInfo
                     if (!TryEmit(Block(vars ?? pars.ToReadOnlyList(), exprs), paramExprs, il, ref closure, setup, parent))
                         return false;
 

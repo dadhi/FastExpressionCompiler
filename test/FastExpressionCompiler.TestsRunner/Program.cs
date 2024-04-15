@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             new Issue83_linq2db().Run();
+            // new NestedLambdaTests().Run();
             // new LightExpression.IssueTests.Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run();
             // new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC.FastExpressionCompilerBug().Run();
             // new LightExpression.UnitTests.BinaryExpressionTests().Run();
