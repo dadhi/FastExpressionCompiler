@@ -1289,13 +1289,13 @@ namespace FastExpressionCompiler
 #endif
                             var argCount = invokeArgs.GetCount();
                             var invokedExpr = invokeExpr.Expression;
-                            if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression la)
+                            if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression invokeLambdaExpr)
                             {
                                 var oldIndex = closure.CurrentInlinedLambdaInvokeIndex;
                                 closure.CurrentInlinedLambdaInvokeIndex = closure.AddInlinedLambdaInvoke(invokeExpr);
 
                                 if (argCount == 0 &&
-                                    (r = TryCollectInfo(ref closure, la.Body, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                                    (r = TryCollectInfo(ref closure, invokeLambdaExpr.Body, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
 
                                 // To inline the lambda we will wrap its body into a block, parameters into the block variables, 
@@ -1304,24 +1304,24 @@ namespace FastExpressionCompiler
 
                                 // We don't optimize the memory with IParameterProvider because anyway we materialize the parameters into the block below
 #if LIGHT_EXPRESSION
-                                var pars = (IParameterProvider)la;
-                                var paramCount = paramExprs.ParameterCount;
-                                SmallList2<Expression> exprs = default;
+                                var invokeLambdaPars = (IParameterProvider)invokeLambdaExpr;
+                                var outerParCount = paramExprs.ParameterCount;
+                                SmallList2<Expression> newBlockExprs = default;
 #else
-                                var pars = la.Parameters;
-                                var paramCount = paramExprs.Count;
-                                var exprs = new Expression[argCount + 1]; // todo: @perf @mem optimize with SmallList
+                                var invokeLambdaPars = invokeLambdaExpr.Parameters;
+                                var outerParCount = paramExprs.Count;
+                                var newBlockExprs = new Expression[argCount + 1]; // +1 to put the lambda body as the last expr
 #endif
                                 List<ParameterExpression> vars = null;
                                 var reusingParameters = false;
                                 for (var i = 0; i < argCount; i++)
                                 {
-                                    var p = pars.GetParameter(i);
+                                    var invokeLambdaPar = invokeLambdaPars.GetParameter(i);
                                     // Check for the case of reusing the parameters in the different lambdas, 
                                     // see test `NestedLambdaTests.Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
-                                    var j = paramCount - 1;
-                                    while (j != -1 && !ReferenceEquals(p, paramExprs.GetParameter(j))) --j;
-                                    if (j != -1 || closure.IsLocalVar(p)) // don't forget to check the variable in case of upper inlined lambda already moved the parameters into the block variables
+                                    var j = outerParCount - 1;
+                                    while (j != -1 && !ReferenceEquals(invokeLambdaPar, paramExprs.GetParameter(j))) --j;
+                                    if (j != -1 || closure.IsLocalVar(invokeLambdaPar)) // don't forget to check the variable in case of upper inlined lambda already moved the parameters into the block variables
                                     {
                                         // if we found the same parameter let's move the non-found (new) parameters into the separate `vars` list
                                         reusingParameters = true;
@@ -1329,26 +1329,26 @@ namespace FastExpressionCompiler
                                         {
                                             vars = new List<ParameterExpression>(); // not using the SmallList here because the list is directly "borrowed" :) by the Block.Variables
                                             for (var k = 0; k < i; k++)
-                                                vars.Add(pars.GetParameter(k));
+                                                vars.Add(invokeLambdaPars.GetParameter(k));
                                         }
                                     }
                                     else if (reusingParameters)
                                     {
                                         vars ??= new List<ParameterExpression>();
-                                        vars.Add(p);
+                                        vars.Add(invokeLambdaPar);
                                     }
 #if LIGHT_EXPRESSION
-                                    exprs.Append(Assign(p, invokeArgs.GetArgument(i)));
+                                    newBlockExprs.Append(Assign(invokeLambdaPar, invokeArgs.GetArgument(i)));
 #else
-                                    exprs[i] = Assign(p, invokeArgs.GetArgument(i));
+                                    newBlockExprs[i] = Assign(invokeLambdaPar, invokeArgs.GetArgument(i));
 #endif
                                 }
 #if LIGHT_EXPRESSION
-                                exprs.Append(la.Body);
-                                expr = Block(vars ?? pars.ToReadOnlyList(), in exprs);
+                                newBlockExprs.Append(invokeLambdaExpr.Body);
+                                expr = Block(vars ?? invokeLambdaPars.ToReadOnlyList(), in newBlockExprs);
 #else
-                                exprs[argCount] = la.Body;
-                                expr = Block(vars ?? pars.ToReadOnlyList(), exprs);
+                                newBlockExprs[argCount] = invokeLambdaExpr.Body;
+                                expr = Block(vars ?? invokeLambdaPars.ToReadOnlyList(), newBlockExprs);
 #endif
                                 if ((r = TryCollectInfo(ref closure, expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
