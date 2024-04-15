@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 // #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG && NET6_0_OR_GREATER
-#define DEMIT
+// #define DEMIT
 #endif
 #if LIGHT_EXPRESSION || !NET45
 #define SUPPORTS_ARGUMENT_PROVIDER
@@ -7055,13 +7055,13 @@ namespace FastExpressionCompiler
         /// <summary>Tries hard to convert the expression into the valid C# code</summary>
         public static StringBuilder ToCSharpString(this Expression e, StringBuilder sb,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null) =>
-            e.ToCSharpString(sb, EnclosedIn.Whatever, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+            e.ToCSharpString(sb, EnclosedIn.ParensByDefault, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
         /// <summary>Indicates the expression container</summary>
         public enum EnclosedIn
         {
-            /// <summary>Does not matter for the output - the default value</summary>
-            Whatever = 0,
+            /// <summary>Prefers the parens by default</summary>
+            ParensByDefault = 0,
             /// <summary>The test part of the If expression</summary>
             IfTest,
             /// <summary>The `if (test)` part</summary>
@@ -7318,9 +7318,12 @@ namespace FastExpressionCompiler
                         if (encloseInParens)
                             sb.Append(')');
 
-                        // indicate the invocation more explicitly with the new line, 
+                        // Indicates the lambda invocation more explicitly with the new line, 
                         // it also helps to pair the identation of invacation expression, specifically where it starts. 
-                        sb.NewLine(lineIdent, identSpaces).Append(".Invoke(");
+                        if (x.Expression.NodeType == ExpressionType.Lambda)
+                            sb.NewLine(lineIdent, identSpaces);
+
+                        sb.Append(".Invoke(");
                         for (var i = 0; i < x.Arguments.Count; i++)
                             (i > 0 ? sb.Append(',') : sb)
                             .NewLineIdentCs(x.Arguments[i], EnclosedIn.AvoidParens,
@@ -7346,10 +7349,10 @@ namespace FastExpressionCompiler
                             x.Test.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             sb.Append(" ? ");
                             var doNewLine = !x.IfTrue.IsParamOrConstantOrDefault();
-                            x.IfTrue.ToCSharpExpression(sb, doNewLine, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            x.IfTrue.ToCSharpExpression(sb, EnclosedIn.AvoidParens, doNewLine, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             sb.Append(" : ");
                             doNewLine = !x.IfFalse.IsParamOrConstantOrDefault();
-                            x.IfFalse.ToCSharpExpression(sb, doNewLine, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            x.IfFalse.ToCSharpExpression(sb, EnclosedIn.AvoidParens, doNewLine, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         }
                         return sb;
                     }
@@ -7550,9 +7553,9 @@ namespace FastExpressionCompiler
                 case ExpressionType.Coalesce:
                     {
                         var x = (BinaryExpression)e;
-                        x.Left.ToCSharpExpression(sb, false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                        x.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         sb.Append(" ?? ");
-                        x.Right.ToCSharpExpression(sb, false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                        x.Right.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         return sb;
                     }
                 case ExpressionType.Extension:
@@ -7570,7 +7573,7 @@ namespace FastExpressionCompiler
                 default:
                     {
                         // By default enclose in the parentheses, and look at the specific cases for the individual types of expressions
-                        var encloseInParens = enclosedIn == EnclosedIn.Whatever;
+                        var encloseInParens = enclosedIn == EnclosedIn.ParensByDefault;
 
                         var name = Enum.GetName(typeof(ExpressionType), e.NodeType);
                         if (e is UnaryExpression u)
@@ -7589,11 +7592,11 @@ namespace FastExpressionCompiler
                                 case ExpressionType.Convert:
                                 case ExpressionType.ConvertChecked:
                                     if (e.Type == op.Type || e.Type == typeof(Enum) && op.Type.IsEnum)
-                                        return op.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                        return op.ToCSharpExpression(sb, EnclosedIn.AvoidParens, false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
                                     sb = encloseInParens ? sb.Append("((") : sb.Append('(');
                                     sb.Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
-                                    sb = op.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                    sb = op.ToCSharpExpression(sb, EnclosedIn.AvoidParens, false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                                     return encloseInParens ? sb.Append(')') : sb;
 
                                 case ExpressionType.Decrement:
@@ -7683,8 +7686,8 @@ namespace FastExpressionCompiler
 
                                 if (b.Left is ParameterExpression leftParam && leftParam.IsByRef && !b.Right.IsConstantOrDefault())
                                     sb.Append("ref ");
-
-                                return b.Right.ToCSharpExpression(sb, false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+ 
+                                return b.Right.ToCSharpExpression(sb, EnclosedIn.AvoidParens,false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             }
 
                             // remove the parens from the simple comparisons and ops between params, variables and constants
@@ -7729,13 +7732,13 @@ namespace FastExpressionCompiler
             return sb.NewLine(lineIdent, identSpaces).Append('}');
         }
 
-        private static StringBuilder ToCSharpExpression(this Expression expr, StringBuilder sb, bool newLineExpr,
+        private static StringBuilder ToCSharpExpression(this Expression expr, StringBuilder sb, EnclosedIn enclosedIn, bool newLineExpr,
             int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces, CodePrinter.ObjectToCode notRecognizedToCode)
         {
             if (!expr.NodeType.IsBlockLike())
                 return newLineExpr
-                    ? sb.NewLineIdentCs(expr, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode)
-                    : expr.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                    ? sb.NewLineIdentCs(expr, enclosedIn, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode)
+                    : expr.ToCSharpString(sb, enclosedIn, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
             InsertTopFFuncDefinitionOnce(sb);
             sb.NewLineIdent(lineIdent).Append("__f(() => {");
@@ -7925,7 +7928,7 @@ namespace FastExpressionCompiler
                 }
             }
 
-            if (lastExpr is ConditionalExpression ||
+            if (lastExpr is ConditionalExpression || // todo: @wip use IsBlockLike
                 lastExpr is TryExpression ||
                 lastExpr is LoopExpression ||
                 lastExpr is SwitchExpression ||

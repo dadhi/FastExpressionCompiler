@@ -22,6 +22,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+#if !LIGHT_EXPRESSION
+            linq2db_InvalidProgramException2_reuse_variable_for_upper_and_nested_lambda();
+#endif
             String_to_number_conversion_using_convert_with_method();
             String_to_number_conversion_using_convert_with_method_with_DefaultExpression();
             linq2db_NullReferenceException();
@@ -74,9 +77,9 @@ namespace FastExpressionCompiler.IssueTests
             TestConverterFailure();
             TestConverterNullable();
             TestLdArg();
-            return 50;
+            return 51;
 #else
-            return 28;
+            return 29;
 #endif
         }
 
@@ -702,6 +705,73 @@ namespace FastExpressionCompiler.IssueTests
             var c = lambda.Compile();
 
             Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
+        }
+
+        [Test]
+        public void linq2db_InvalidProgramException2_reuse_variable_for_upper_and_nested_lambda()
+        {
+            var qr = Parameter(typeof(IQueryRunner), "qr");
+            var a2 = Parameter(typeof(IDataContext), "dctx");
+            var a3 = Parameter(typeof(IDataReader), "rd");
+            var a4 = Parameter(typeof(Expression), "expr");
+            var a5 = Parameter(typeof(object[]), "ps");
+
+            var ldr = Variable(typeof(SQLiteDataReader), "ldr");
+
+            var mapperBody = Block(
+                new[] { ldr },
+                Assign(ldr, Convert(a3, typeof(SQLiteDataReader))),
+                Convert(
+                    Block(
+                        Call(GetType().GetMethod(nameof(CheckNullValue)), a3, Constant("Average")),
+                        Condition(
+                            Call(ldr, nameof(SQLiteDataReader.IsDBNull), null, Constant(0)),
+                            Constant(0d),
+                            Convert(
+                                Call(
+                                    GetType().GetMethod(nameof(ConvertDefault)),
+                                    Convert(
+                                        Convert(
+                                            Call(ldr, nameof(SQLiteDataReader.GetValue), null, Constant(0)),
+                                            typeof(object)),
+                                        typeof(object)),
+                                    Constant(typeof(double))),
+                                typeof(double)))),
+                    typeof(object)));
+
+            var mapper = Lambda<Func<IQueryRunner, IDataContext, IDataReader, Expression, object[], object>>(mapperBody, qr, a2, a3, a4, a5);
+
+            var p2 = Parameter(typeof(IDataReader), "dr");
+
+            var body = Block(
+                    Invoke(
+                        mapper,
+                        qr,
+                        Property(qr, nameof(IQueryRunner.DataContext)),
+                        p2,
+                        Property(qr, nameof(IQueryRunner.Expression)),
+                        Property(qr, nameof(IQueryRunner.Parameters)))
+                        ,
+                    Invoke(
+                        mapper,
+                        qr,
+                        Property(qr, nameof(IQueryRunner.DataContext)),
+                        p2,
+                        Property(qr, nameof(IQueryRunner.Expression)),
+                        Property(qr, nameof(IQueryRunner.Parameters))
+                    )
+                );
+
+            var lambda = Lambda<Func<IQueryRunner, IDataReader, object>>(body, qr, p2);
+            lambda.PrintCSharp();
+
+            var fs = lambda.Compile();
+            fs.PrintIL();
+            Assert.Throws<InvalidOperationException>(() => fs(new QueryRunner(), new SQLiteDataReader(true)));
+
+            var ff = lambda.CompileFast(true);
+            ff.PrintIL();
+            Assert.Throws<InvalidOperationException>(() => ff(new QueryRunner(), new SQLiteDataReader(true)));
         }
 
         public static int GetDefault2(int n)
