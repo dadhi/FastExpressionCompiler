@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter();
             Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda();
             Nested_lambda_using_outer_parameter();
             Nested_lambda_using_outer_parameter_and_closed_value();
@@ -29,9 +30,9 @@ namespace FastExpressionCompiler.UnitTests
             Nested_Hoisted_Action_using_outer_parameter_and_closed_value();
             Nested_Hoisted_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda();
             Given_hoisted_expr_with_closure_over_parameters_in_nested_lambda_should_work();
-            return 14;
+            return 15;
 #else
-            return 9;
+            return 10;
 #endif
         }
 
@@ -418,6 +419,42 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = e.CompileFast(true, CompilerFlags.NoInvocationLambdaInlining);
             Assert.AreEqual(13, f());
+        }
+
+        [Test]
+        public void Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter()
+        {
+            var np = Parameter(typeof(int));
+            var e = Lambda<Func<int, int>>(
+                Block(
+                    Assign(np, Constant(42)),
+                    Invoke(Lambda<Action<int>>(Assign(np, Subtract(np, Constant(2))), np), np),
+                    np
+                ),
+                np);
+
+            e.PrintCSharp();
+            var @cs = (Func<int, int>)((int int__54267293) => //int
+            {
+                int__54267293 = 42;
+                ((Action<int>)((int int__54267293) => //void
+                {
+                        int__54267293 = int__54267293 - 2;
+                }))
+                .Invoke(
+                    int__54267293);
+                return int__54267293;
+            });
+            Assert.AreEqual(42, @cs(0));
+
+            var fs = e.CompileSys();
+            Assert.AreEqual(42, fs(0));
+
+            var ff = e.CompileFast(true, CompilerFlags.NoInvocationLambdaInlining);
+            Assert.AreEqual(42, ff(0));
+
+            var fi = e.CompileFast(true);
+            Assert.AreEqual(42, fi(0));
         }
     }
 }
