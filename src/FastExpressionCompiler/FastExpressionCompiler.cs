@@ -4684,7 +4684,7 @@ namespace FastExpressionCompiler
                     }
                     exprs[argCount] = la.Body;
                     var blockVars = vars?.Count > 0 ? vars : pars.ToReadOnlyList(); // todo: @wip review this code and the one in TryCollectInfo
-                    if (!TryEmit(Block(vars ?? pars.ToReadOnlyList(), exprs), paramExprs, il, ref closure, setup, parent))
+                    if (!TryEmit(Block(blockVars, exprs), paramExprs, il, ref closure, setup, parent))
                         return false;
 
                     if ((parent & ParentFlags.IgnoreResult) == 0 && la.Body.Type != typeof(void))

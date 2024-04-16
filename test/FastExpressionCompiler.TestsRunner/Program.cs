@@ -9,7 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new NestedLambdaTests().Run();
+            new Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
+            // new NestedLambdaTests().Run();
             // new Issue83_linq2db().Run();
             // new LightExpression.IssueTests.Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run();
             // new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC.FastExpressionCompilerBug().Run();

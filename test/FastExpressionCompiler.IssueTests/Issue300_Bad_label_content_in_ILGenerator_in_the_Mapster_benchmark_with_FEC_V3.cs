@@ -22,9 +22,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_301_Invoke_Lambda_inlining_case_simplified();
             Test_301_MemberInit_PrivateProperty();
             Test_301_MemberInit_InternalProperty();
-            Test_301_Invoke_Lambda_inlining_case_simplified();
             Test_301_Invoke_Lambda_inlining_case();
             Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present();
             Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present_Custom_constant_output();
@@ -279,7 +279,6 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL("sys");
-
             var p1 = new Post
             {
                 Dic = new Dictionary<string, string>
@@ -291,7 +290,6 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = expr.CompileFast(true);
             ff.PrintIL("fec");
-
             var post2 = ff(p1);
         }
 
