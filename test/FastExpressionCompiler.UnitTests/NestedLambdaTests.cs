@@ -13,7 +13,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
-            // Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter();
+            Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter();
             Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda();
             Nested_lambda_using_outer_parameter();
             Nested_lambda_using_outer_parameter_and_closed_value();

@@ -634,6 +634,9 @@ namespace FastExpressionCompiler
 
             /// Map the Labels to their Targets
             internal SmallList4<LabelInfo> Labels;
+
+            /// This is required because we have the return from the nested lambda expression,
+            /// and when inlined in the parent lambda it is no longer the return but just a jump to the label.
             internal short CurrentInlinedLambdaInvokeIndex;
 
             public ClosureStatus Status;
