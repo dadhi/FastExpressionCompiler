@@ -205,7 +205,7 @@ public class Issue390_System_AccessViolationException_when_mapping_using_Mapster
         var token = fs(auth);
         Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
 
-        var ff = expr.CompileFast(true); // todo: @fixme
+        var ff = expr.CompileFast(true);
         ff.PrintIL();
         token = ff(auth);
         Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);

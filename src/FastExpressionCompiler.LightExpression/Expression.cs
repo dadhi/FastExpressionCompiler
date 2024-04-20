@@ -1418,22 +1418,32 @@ namespace FastExpressionCompiler.LightExpression
         public static BlockExpression Block(in SmallList2<Expression> expressions) => new BlockExpression(in expressions);
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0) =>
-            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0);
+            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0); // todo: @perf @mem add the check for empty variables
 
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1) =>
             new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0, expr1);
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IReadOnlyList<Expression> expressions) =>
-            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions);
-
         public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1, params Expression[] rest) =>
             new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0, expr1, rest);
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
-            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expressions.AsReadOnlyList()); // todo: @perf @mem optimize 
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
+        {
+            var vars = variables.AsReadOnlyList();
+            return vars.Count == 0
+                ? new BlockExpression(expressions.AsReadOnlyList())
+                : new ManyVariablesBlockExpression(vars, expressions);
+        }
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, in SmallList2<Expression> expressions) =>
-            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), in expressions);
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
+            Block(variables, expressions.AsReadOnlyList());
+
+        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, in SmallList2<Expression> expressions)
+        {
+            var vars = variables.AsReadOnlyList();
+            return vars.Count == 0
+                ? new BlockExpression(in expressions)
+                : new ManyVariablesBlockExpression(vars, in expressions);
+        }
 
         public static BlockExpression Block(Type type, Expression expr0) =>
             new TypedBlockExpression(type, expr0);
@@ -1513,7 +1523,7 @@ namespace FastExpressionCompiler.LightExpression
             new WithFinallyTryExpression(body, handlers, @finally);
 
         public static TryExpression TryFinally(Expression body, Expression @finally) =>
-            new WithFinallyTryExpression(body, null, @finally);
+            new WithFinallyTryExpression(body, Tools.Empty<CatchBlock>(), @finally);
 
         public static CatchBlock Catch(ParameterExpression variable, Expression body) =>
             new CatchBlock(variable.Type, variable, body, null);
@@ -4074,7 +4084,7 @@ namespace FastExpressionCompiler.LightExpression
         internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
             SysExpr.Block(Type,
                 ParameterExpression.ToParameterExpressions(Variables, ref exprsConverted),
-                ToExpressions(Expressions.CopyToArray(), ref exprsConverted));
+                ToExpressions(Expressions.ToArray(), ref exprsConverted));
     }
 
     /// <summary>Block with no variable but user-specified type.</summary>

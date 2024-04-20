@@ -61,6 +61,7 @@ namespace FastExpressionCompiler
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using static System.Environment;
+    using System.Collections.ObjectModel;
 
     /// <summary>The flags for the compiler</summary>
     [Flags]
@@ -1290,77 +1291,33 @@ namespace FastExpressionCompiler
 #else
                             var invokeArgs = invokeExpr.Arguments;
 #endif
-                            var argCount = invokeArgs.GetCount();
+                            var invokeArgCount = invokeArgs.GetCount();
                             var invokedExpr = invokeExpr.Expression;
-                            if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression invokeLambdaExpr)
+                            if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 &&
+                                invokedExpr is LambdaExpression lambdaExpr)
                             {
                                 var oldIndex = closure.CurrentInlinedLambdaInvokeIndex;
-                                closure.CurrentInlinedLambdaInvokeIndex = closure.AddInlinedLambdaInvoke(invokeExpr);
+                                closure.CurrentInlinedLambdaInvokeIndex = closure.AddInlinedLambdaInvoke(invokeExpr); // todo: @wip check that the invoke expression actually contains Return(LabelTarget), BUT what if it is a conditional expression without return, what happens when inlining? 
 
-                                if (argCount == 0 &&
-                                    (r = TryCollectInfo(ref closure, invokeLambdaExpr.Body, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
-                                    return r;
-
-                                // To inline the lambda we will wrap its body into a block, parameters into the block variables, 
-                                // and the invocation arguments into the variable assignments, see #278.
-                                // Note: we do the same in the `TryEmitInvoke`
-
-                                // We don't optimize the memory with IParameterProvider because anyway we materialize the parameters into the block below
-#if LIGHT_EXPRESSION
-                                var invokeLambdaPars = (IParameterProvider)invokeLambdaExpr;
-                                var outerParCount = paramExprs.ParameterCount;
-                                SmallList2<Expression> newBlockExprs = default;
-#else
-                                var invokeLambdaPars = invokeLambdaExpr.Parameters;
-                                var outerParCount = paramExprs.Count;
-                                var newBlockExprs = new Expression[argCount + 1]; // +1 to put the lambda body as the last expr
-#endif
-                                List<ParameterExpression> vars = null;
-                                var reusingParameters = false;
-                                for (var i = 0; i < argCount; i++)
+                                if (invokeArgCount == 0)
                                 {
-                                    var invokeLambdaPar = invokeLambdaPars.GetParameter(i);
-                                    // Check for the case of reusing the parameters in the different lambdas, 
-                                    // see test `NestedLambdaTests.Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
-                                    var j = outerParCount - 1;
-                                    while (j != -1 && !ReferenceEquals(invokeLambdaPar, paramExprs.GetParameter(j))) --j;
-                                    if (j != -1 || closure.IsLocalVar(invokeLambdaPar)) // don't forget to check the variable in case of upper inlined lambda already moved the parameters into the block variables
-                                    {
-                                        // if we found the same parameter let's move the non-found (new) parameters into the separate `vars` list
-                                        reusingParameters = true;
-                                        if (vars == null & i > 0)
-                                        {
-                                            vars = new List<ParameterExpression>(); // not using the SmallList here because the list is directly "borrowed" :) by the Block.Variables
-                                            for (var k = 0; k < i; k++)
-                                                vars.Add(invokeLambdaPars.GetParameter(k));
-                                        }
-                                    }
-                                    else if (reusingParameters)
-                                    {
-                                        vars ??= new List<ParameterExpression>();
-                                        vars.Add(invokeLambdaPar);
-                                    }
-#if LIGHT_EXPRESSION
-                                    newBlockExprs.Append(Assign(invokeLambdaPar, invokeArgs.GetArgument(i)));
-#else
-                                    newBlockExprs[i] = Assign(invokeLambdaPar, invokeArgs.GetArgument(i));
-#endif
+                                    r = TryCollectInfo(ref closure, lambdaExpr.Body, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+                                    closure.CurrentInlinedLambdaInvokeIndex = oldIndex;
+                                    return r;
                                 }
-#if LIGHT_EXPRESSION
-                                newBlockExprs.Append(invokeLambdaExpr.Body);
-                                expr = Block(vars ?? invokeLambdaPars.ToReadOnlyList(), in newBlockExprs);
-#else
-                                newBlockExprs[argCount] = invokeLambdaExpr.Body;
-                                expr = Block(vars ?? invokeLambdaPars.ToReadOnlyList(), newBlockExprs);
-#endif
-                                if ((r = TryCollectInfo(ref closure, expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+
+                                var inlinedExpr = CreateInlinedLambdaInvocationExpression(ref closure,
+                                    paramExprs, invokeArgs, invokeArgCount, lambdaExpr);
+
+                                if ((r = TryCollectInfo(ref closure, inlinedExpr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
 
                                 closure.CurrentInlinedLambdaInvokeIndex = oldIndex;
                                 return r;
                             }
 
-                            if (argCount == 0)
+                            // No inlining, collect the normal way
+                            if (invokeArgCount == 0)
                             {
                                 expr = invokedExpr;
                                 continue;
@@ -1369,7 +1326,7 @@ namespace FastExpressionCompiler
                             if ((r = TryCollectInfo(ref closure, invokedExpr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                 return r;
 
-                            var lastArgIndex = argCount - 1;
+                            var lastArgIndex = invokeArgCount - 1;
                             for (var i = 0; i < lastArgIndex; i++)
                                 if ((r = TryCollectInfo(ref closure, invokeArgs.GetArgument(i), paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
@@ -1519,6 +1476,90 @@ namespace FastExpressionCompiler
                         return Result.NotSupported_UnknownExpression;
                 }
             }
+        }
+
+        private static Expression CreateInlinedLambdaInvocationExpression(ref ClosureInfo closure,
+#if LIGHT_EXPRESSION
+            IParameterProvider paramExprs, 
+#else
+            IReadOnlyList<PE> paramExprs,
+#endif
+#if SUPPORTS_ARGUMENT_PROVIDER
+            IArgumentProvider invokeArgs,
+#else
+            IReadOnlyList<Expression> invokeArgs,
+#endif
+            int invokeArgCount, LambdaExpression lambdaExpr)
+        {
+            // To inline the lambda we will wrap its body into a block, parameters into the block variables, 
+            // and the invocation arguments into the variable assignments, see #278.
+            // If the nested lambda variables are reused prior in the parent lambdas, 
+            // we will store their original value and then restore it in the finally block.
+#if LIGHT_EXPRESSION
+            var lambdaPars = (IParameterProvider)lambdaExpr;
+            var outerParCount = paramExprs.ParameterCount;
+#else
+            var lambdaPars = lambdaExpr.Parameters;
+            var outerParCount = paramExprs.Count;
+#endif
+            SmallList4<ParameterExpression> parsToVars = default;
+            SmallList2<Expression> inlinedBlockExprs = default;
+            SmallList2<ParameterExpression> savedVars = default;
+            SmallList2<Expression> finallyRestoreVarsExprs = default;
+            var useParsToVarsList = false;
+
+            for (var i = 0; i < invokeArgCount; i++)
+            {
+                var lambdaPar = lambdaPars.GetParameter(i);
+                var invokeArg = invokeArgs.GetArgument(i);
+
+                // Check for the case of reusing the parameters in the different lambdas, 
+                // see test `NestedLambdaTests.Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
+                // and the `Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter`.
+                // If we using the same parameter then we save the outer parameter value into the `<name>_<unique_id>` parameter,
+                // and then restore it back after the lambda invocation. To do it safely the restore should happen in the `finally`.
+                var j = outerParCount - 1;
+                while (j != -1 && !ReferenceEquals(lambdaPar, paramExprs.GetParameter(j))) --j;
+                if (j != -1 || closure.IsLocalVar(lambdaPar))
+                {
+                    var savedPar = Parameter(lambdaPar.Type, lambdaPar.Name + "_" + lambdaPar.GetHashCode().ToString());
+                    savedVars.Add(savedPar);
+                    if (!useParsToVarsList)
+                    {
+                        useParsToVarsList = true;
+                        for (var pri = 0; pri < i; ++pri)
+                            parsToVars.Add(lambdaPars.GetParameter(pri));
+                    }
+
+                    inlinedBlockExprs.Add(Assign(savedPar, lambdaPar));
+                    finallyRestoreVarsExprs.Add(Assign(lambdaPar, savedPar));
+                }
+                else if (useParsToVarsList)
+                    parsToVars.Add(lambdaPar);
+
+                if (lambdaPar != invokeArg)
+                    inlinedBlockExprs.Add(Assign(lambdaPar, invokeArg));
+            }
+
+            inlinedBlockExprs.Append(lambdaExpr.Body);
+            var blockVars = useParsToVarsList ? parsToVars.ToArray() : lambdaPars.ToReadOnlyList();
+
+            // using actual lambda return type in case it differs from the Body type, 
+            // e.g. often case for the Action lambdad where the its Body type is ignored in favor of `void`. 
+            var lambdaReturnType = lambdaExpr.ReturnType;
+
+#if LIGHT_EXPRESSION
+            Expression inlinedExpr = Block(lambdaReturnType, blockVars, in inlinedBlockExprs);
+            Expression finallyExpr = finallyRestoreVarsExprs.Count == 0 ? null : 
+                finallyRestoreVarsExprs.Count == 1 ? finallyRestoreVarsExprs._it0 : 
+                Block(in finallyRestoreVarsExprs);
+#else
+            Expression inlinedExpr = Block(lambdaReturnType, blockVars, inlinedBlockExprs.ToArray());
+            Expression finallyExpr = finallyRestoreVarsExprs.Count == 0 ? null :
+                finallyRestoreVarsExprs.Count == 1 ? finallyRestoreVarsExprs._it0 :
+                Block(finallyRestoreVarsExprs.ToArray());
+#endif
+            return finallyExpr == null ? inlinedExpr : Block(savedVars.ToArray(), TryFinally(inlinedExpr, finallyExpr));
         }
 
 #if LIGHT_EXPRESSION
@@ -2518,7 +2559,8 @@ namespace FastExpressionCompiler
                     Debug.WriteLine("} finally {" + finallyExpr);
 #endif
                     il.BeginFinallyBlock();
-                    if (!TryEmit(finallyExpr, paramExprs, il, ref closure, setup, parent))
+                    // it is important to ignore result for the finally block, because it should not return anything
+                    if (!TryEmit(finallyExpr, paramExprs, il, ref closure, setup, parent | ParentFlags.IgnoreResult))
                         return false;
                 }
 
@@ -2557,7 +2599,7 @@ namespace FastExpressionCompiler
                     //  means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
                     var valueTypeParamCallOrMemberAccess = paramType.IsValueType &&
                         // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
-                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &&
+                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &
                         // but the parameter is not used as an index #281, #265, nor it is an arithmetic #352
                         (parent & (ParentFlags.IndexAccess | ParentFlags.Arithmetic)) == 0;
 
@@ -3723,9 +3765,11 @@ namespace FastExpressionCompiler
                             Debug.Assert(right != null);
                             var rightType = right.Type;
 
-                            // if the right part is the TryCatch block we will evaluate it first and then assignment of its result
+                            // if the right part is the block or alike, it is better from the complexity perspective
+                            // to emit it first and then restore the assignement target from var and assign the value
                             var rightVar = -1;
-                            if (right.NodeType.IsBlockLikeOrConditional())
+                            if (right.NodeType.IsBlockLikeOrConditional() ||
+                                right.NodeType == ExpressionType.Invoke)
                             {
                                 if (!TryEmit(right, paramExprs, il, ref closure, setup, rightOnlyFlags))
                                     return false;
@@ -3759,7 +3803,9 @@ namespace FastExpressionCompiler
 
                             // Load already emitted or emit the right-value normally after the left to be assigned
                             if (rightVar != -1)
+                            {
                                 EmitLoadLocalVariable(il, rightVar);
+                            }
                             else
                             {
                                 if (!TryEmit(right, paramExprs, il, ref closure, setup, rightOnlyFlags))
@@ -4655,39 +4701,13 @@ namespace FastExpressionCompiler
                 if ((setup & CompilerFlags.NoInvocationLambdaInlining) == 0 && lambda is LambdaExpression la)
                 {
                     parent |= ParentFlags.InlinedLambdaInvoke;
+                    Expression inlinedExpr;
                     if (argCount == 0)
-                        return TryEmit(la.Body, paramExprs, il, ref closure, setup, parent);
-#if LIGHT_EXPRESSION
-                    var pars = (IParameterProvider)la;
-#else
-                    var pars = la.Parameters;
-#endif
-                    var exprs = new Expression[argCount + 1];
-                    List<ParameterExpression> vars = null;
-                    for (var i = 0; i < argCount; i++)
-                    {
-                        var p = pars.GetParameter(i);
-                        // Check for the case of reusing the parameters in the different lambdas, 
-                        // see test `Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
-                        var j = paramCount - 1;
-                        while (j != -1 && !ReferenceEquals(p, paramExprs.GetParameter(j))) --j;
-                        if (j != -1 || closure.IsLocalVar(p))
-                        {
-                            // if we found the same parameter let's move the non-found (new) parameters into the separate `vars` list
-                            if (vars == null)
-                            {
-                                vars = new List<ParameterExpression>();
-                                for (var k = 0; k < i; k++)
-                                    vars.Add(pars.GetParameter(k));
-                            }
-                        }
-                        else if (vars != null) // but vars maybe empty in the result - it is fine
-                            vars.Add(p);
-                        exprs[i] = Assign(p, argExprs.GetArgument(i));
-                    }
-                    exprs[argCount] = la.Body;
-                    var blockVars = vars?.Count > 0 ? vars : pars.ToReadOnlyList(); // todo: @wip review this code and the one in TryCollectInfo
-                    if (!TryEmit(Block(blockVars, exprs), paramExprs, il, ref closure, setup, parent))
+                        inlinedExpr = la.Body;
+                    else
+                        inlinedExpr = CreateInlinedLambdaInvocationExpression(ref closure, paramExprs, argExprs, argCount, la);
+
+                    if (!TryEmit(inlinedExpr, paramExprs, il, ref closure, setup, parent))
                         return false;
 
                     if ((parent & ParentFlags.IgnoreResult) == 0 && la.Body.Type != typeof(void))
@@ -5169,6 +5189,14 @@ namespace FastExpressionCompiler
                 else
                 {
                     var rightType = right.Type;
+
+                    // stores the left value for later to restore it after the complex right emit,
+                    // it prevents the problems in cases of right being a block, try-catch, etc.
+                    // see `Using_try_finally_as_arithmetic_operand_use_void_block_in_finally`
+                    var leftVar = -1;
+                    if (right.NodeType.IsBlockLikeOrConditional() || right.NodeType == ExpressionType.Invoke)
+                        leftVar = EmitStoreLocalVariable(il, leftType);
+
                     rightIsNullable = rightType.IsNullable();
                     if (rightIsNullable)
                     {
@@ -5186,6 +5214,14 @@ namespace FastExpressionCompiler
                     }
                     else if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
                         return false;
+
+                    if (leftVar != -1)
+                    {
+                        // restore the left and right in proper order for operation
+                        var rightVar = EmitStoreLocalVariable(il, rightType);
+                        EmitLoadLocalVariable(il, leftVar);
+                        EmitLoadLocalVariable(il, rightVar);
+                    }
 
                     if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
                         return false;
@@ -5362,14 +5398,11 @@ namespace FastExpressionCompiler
                     {
                         oppositeTestExpr = sideConstExpr == testLeftExpr ? testRightExpr : testLeftExpr;
                         var sideConstVal = sideConstExpr.Value;
-                        if (sideConstVal == null)
+                        if (sideConstVal == null) // todo: @perf we need to optimize for the Default as well
                         {
                             useBrFalseOrTrue = 0;
                             if (oppositeTestExpr.Type.IsNullable())
-                            {
                                 nullOfValueType = oppositeTestExpr.Type;
-                                parent |= ParentFlags.MemberAccess; // `for the `nullable.HasValue` check
-                            }
                         }
                         else if (sideConstVal is bool boolConst)
                             useBrFalseOrTrue = boolConst ? 1 : 0;
@@ -5391,10 +5424,7 @@ namespace FastExpressionCompiler
                             {
                                 useBrFalseOrTrue = 0;
                                 if (oppositeTestExpr.Type.IsNullable())
-                                {
                                     nullOfValueType = oppositeTestExpr.Type;
-                                    parent |= ParentFlags.MemberAccess; // `for the `nullable.HasValue` check
-                                }
                             }
                         }
                     }
@@ -7690,8 +7720,8 @@ namespace FastExpressionCompiler
 
                                 if (b.Left is ParameterExpression leftParam && leftParam.IsByRef && !b.Right.IsConstantOrDefault())
                                     sb.Append("ref ");
- 
-                                return b.Right.ToCSharpExpression(sb, EnclosedIn.AvoidParens,false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+
+                                return b.Right.ToCSharpExpression(sb, EnclosedIn.AvoidParens, false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             }
 
                             // remove the parens from the simple comparisons and ops between params, variables and constants
@@ -7699,7 +7729,8 @@ namespace FastExpressionCompiler
                                 encloseInParens = false;
 
                             sb = encloseInParens ? sb.Append('(') : sb;
-                            b.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            b.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, false,
+                                lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
                             if (nodeType == ExpressionType.Equal)
                             {
@@ -7716,7 +7747,8 @@ namespace FastExpressionCompiler
                             else
                                 sb.Append(OperatorToCSharpString(nodeType));
 
-                            b.Right.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            b.Right.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, false,
+                                lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             return encloseInParens ? sb.Append(')') : sb;
                         }
 

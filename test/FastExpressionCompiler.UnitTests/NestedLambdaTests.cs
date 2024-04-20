@@ -13,8 +13,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
-            Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter();
+            Using_try_finally_as_arithmetic_operand_use_void_block_in_finally();
+            Using_try_finally_as_arithmetic_operand();
             Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda();
+            Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter();
             Nested_lambda_using_outer_parameter();
             Nested_lambda_using_outer_parameter_and_closed_value();
             Nested_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda();
@@ -30,9 +32,9 @@ namespace FastExpressionCompiler.UnitTests
             Nested_Hoisted_Action_using_outer_parameter_and_closed_value();
             Nested_Hoisted_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda();
             Given_hoisted_expr_with_closure_over_parameters_in_nested_lambda_should_work();
-            return 15;
+            return 17;
 #else
-            return 10;
+            return 12;
 #endif
         }
 
@@ -412,13 +414,81 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(13, @cs());
 
             var fs =  e.CompileSys();
+            fs.PrintIL();
             Assert.AreEqual(13, fs());
 
             var fi = e.CompileFast(true);
+            fi.PrintIL();
             Assert.AreEqual(13, fi());
 
             var f = e.CompileFast(true, CompilerFlags.NoInvocationLambdaInlining);
             Assert.AreEqual(13, f());
+        }
+
+        [Test]
+        public void Using_try_finally_as_arithmetic_operand()
+        {
+            var n = Parameter(typeof(int), "n");
+            var nSaved = Parameter(typeof(int), "nSaved");
+
+            var e = Lambda<Func<int, int>>(
+                Subtract(n, 
+                    Block(
+                        new[] { nSaved },
+                        TryFinally(
+                            Block(
+                                Assign(nSaved, n),
+                                Add(n, Constant(10))
+                            ), 
+                            Assign(n, nSaved)
+                        )
+                    )
+                ),
+                n);
+
+            e.PrintCSharp();
+
+            var fs =  e.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual(-10, fs(42));
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(-10, ff(42));
+        }
+
+        [Test]
+        public void Using_try_finally_as_arithmetic_operand_use_void_block_in_finally()
+        {
+            var n = Parameter(typeof(int), "n");
+            var nSaved = Parameter(typeof(int), "nSaved");
+
+            var e = Lambda<Func<int, int>>(
+                Subtract(n, 
+                    Block(
+                        new[] { nSaved },
+                        TryFinally(
+                            Block(
+                                Assign(nSaved, n),
+                                Add(n, Constant(10))
+                            ), 
+                            Block(typeof(void),
+                                Assign(n, nSaved)
+                            )
+                        )
+                    )
+                ),
+                n);
+
+            e.PrintCSharp();
+
+            var fs =  e.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual(-10, fs(42));
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
+            Assert.AreEqual(-10, ff(42));
         }
 
         [Test]
@@ -448,13 +518,16 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(42, @cs(0));
 
             var fs = e.CompileSys();
+            fs.PrintIL();
             Assert.AreEqual(42, fs(0));
 
+            var fi = e.CompileFast(true);
+            fi.PrintIL();
+            Assert.AreEqual(42, fi(0));
+
+            // just to be sure the both options work
             var ff = e.CompileFast(true, CompilerFlags.NoInvocationLambdaInlining);
             Assert.AreEqual(42, ff(0));
-
-            var fi = e.CompileFast(true);
-            Assert.AreEqual(42, fi(0));
         }
     }
 }
