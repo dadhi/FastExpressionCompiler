@@ -1288,7 +1288,7 @@ public static class FHashMap
 /// For instance, for the `RefEq` the tombstone is <see langword="null"/>. You may redefine it in the `IEq{K}.GetTombstone()` implementation.
 /// 
 /// </summary>
-[DebuggerDisplay("{Count} of {_it0}, {_it1}, {_it2}, {_it3}, ...")]
+[DebuggerDisplay("{Count} of {_e0}, {_e1}, {_e2}, {_e3}, ...")]
 public struct FHashMap<K, V, TEq, TEntries>
     where TEq : struct, IEq<K>
     where TEntries : struct, IEntries<K, V, TEq>
