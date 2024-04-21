@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new Issue405_NullReferenceException_with_V4X_when_using_nullable_long_array().Run();
             // new Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run();
 
             // new LightExpression.UnitTests.NestedLambdaTests().Run();
@@ -302,6 +303,8 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run);
                 Run(new LightExpression.IssueTests.Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run);
+
+                Run(new Issue405_NullReferenceException_with_V4X_when_using_nullable_long_array().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
