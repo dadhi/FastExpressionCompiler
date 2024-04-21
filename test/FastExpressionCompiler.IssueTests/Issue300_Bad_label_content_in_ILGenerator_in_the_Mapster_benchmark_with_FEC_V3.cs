@@ -22,6 +22,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Test_300();
             Test_301_Invoke_Lambda_inlining_case_simplified();
             Test_301_MemberInit_PrivateProperty();
             Test_301_MemberInit_InternalProperty();
@@ -32,8 +33,6 @@ namespace FastExpressionCompiler.IssueTests
             Test_301_Dictionary_case();
             Test_301_TryCatch_case();
             Test_301();
-
-            Test_300();
 
             return 11;
         }
@@ -69,7 +68,7 @@ namespace FastExpressionCompiler.IssueTests
             var p = new ParameterExpression[2]; // the parameter expressions 
             var e = new Expression[11]; // the unique expressions 
             var l = new LabelTarget[0]; // the labels 
-            var expr = Lambda<System.Func<object, CustomerDTO2>>( //$
+            var expr = Lambda<Func<object, CustomerDTO2>>( //$
                 e[0] = Block(
                     typeof(CustomerDTO2),
                     new[] {
@@ -131,7 +130,7 @@ namespace FastExpressionCompiler.IssueTests
             var p = new ParameterExpression[1]; // the parameter expressions 
             var e = new Expression[8]; // the unique expressions 
             var l = new LabelTarget[0]; // the labels
-            var expr = Lambda<System.Func<SimplePoco, SimpleDto>>( //$
+            var expr = Lambda<Func<SimplePoco, SimpleDto>>( //$
                 e[0] = Condition(
                     e[1] = MakeBinary(ExpressionType.Equal,
                     p[0] = Parameter(typeof(SimplePoco)),
@@ -296,11 +295,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Test_301_Invoke_Lambda_inlining_case()
         {
-            var f = (Func<Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post, Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post, Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post>)((
-                Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__1707556,
-                Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__15368010) => //$
+            var f = (Func<Post, Post, Post>)((
+                Post issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__1707556,
+                Post issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__15368010) => //$
             {
-                Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post result;
+                Post result;
 
                 if (issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__1707556 == null)
                 {
@@ -308,7 +307,7 @@ namespace FastExpressionCompiler.IssueTests
                 }
 
                 result = issue300_bad_label_content_in_ilgenerator_in_the_mapster_benchmark_with_fec_v3_post__15368010 ??
-                    new Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3.Post();
+                    new Post();
                 result.Dic = new Func<IDictionary<string, string>, IDictionary<string, string>, IDictionary<string, string>>(
                     (Func<IDictionary<string, string>, IDictionary<string, string>, IDictionary<string, string>>)((
                         IDictionary<string, string> idictionary_string_string___32347029,
@@ -367,7 +366,7 @@ namespace FastExpressionCompiler.IssueTests
             var p = new ParameterExpression[9]; // the parameter expressions 
             var e = new Expression[62]; // the unique expressions 
             var l = new LabelTarget[4]; // the labels 
-            var expr = Lambda<System.Func<Post, Post, Post>>( //$
+            var expr = Lambda<Func<Post, Post, Post>>( //$
                 e[0] = Block(
                     typeof(Post),
                     new[] {
@@ -400,19 +399,19 @@ namespace FastExpressionCompiler.IssueTests
                         typeof(Post).GetTypeInfo().GetDeclaredProperty("Dic")),
                         e[13] = Invoke(
                         e[14] = Lambda( //$
-                            typeof(System.Func<System.Collections.Generic.IDictionary<string, string>, System.Collections.Generic.IDictionary<string, string>, System.Collections.Generic.IDictionary<string, string>>),
+                            typeof(Func<IDictionary<string, string>, IDictionary<string, string>, IDictionary<string, string>>),
                             e[15] = Block(
-                            typeof(System.Collections.Generic.IDictionary<string, string>),
+                            typeof(IDictionary<string, string>),
                             new[] {
-                            p[3]=Parameter(typeof(System.Collections.Generic.IDictionary<string, string>), "result")
+                            p[3]=Parameter(typeof(IDictionary<string, string>), "result")
                             },
                             e[16] = Condition(
                                 e[17] = MakeBinary(ExpressionType.Equal,
-                                p[4] = Parameter(typeof(System.Collections.Generic.IDictionary<string, string>)),
-                                e[18] = Constant(null, typeof(System.Collections.Generic.IDictionary<string, string>))),
+                                p[4] = Parameter(typeof(IDictionary<string, string>)),
+                                e[18] = Constant(null, typeof(IDictionary<string, string>))),
                                 e[19] = MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
-                                l[1] = Label(typeof(System.Collections.Generic.IDictionary<string, string>)),
-                                e[20] = Constant(null, typeof(System.Collections.Generic.IDictionary<string, string>)),
+                                l[1] = Label(typeof(IDictionary<string, string>)),
+                                e[20] = Constant(null, typeof(IDictionary<string, string>)),
                                 typeof(void)),
                                 e[6 // Default of void
                                 ],
@@ -421,11 +420,11 @@ namespace FastExpressionCompiler.IssueTests
                                 p[3 // (System.Collections.Generic.IDictionary<string, string> result)
                                 ],
                                 e[22] = Coalesce(
-                                p[5] = Parameter(typeof(System.Collections.Generic.IDictionary<string, string>)),
+                                p[5] = Parameter(typeof(IDictionary<string, string>)),
                                 e[23] = New( // 0 args
-                                    typeof(System.Collections.Generic.Dictionary<string, string>).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0]))),
+                                    typeof(Dictionary<string, string>).GetTypeInfo().DeclaredConstructors.ToArray()[0], new Expression[0]))),
                             e[24] = Block(
-                                typeof(System.Collections.Generic.IDictionary<string, string>),
+                                typeof(IDictionary<string, string>),
                                 new ParameterExpression[0],
                                 e[25] = Block(
                                 typeof(string),
@@ -434,7 +433,7 @@ namespace FastExpressionCompiler.IssueTests
                                     e[27] = MakeIndex(
                                     p[3 // (System.Collections.Generic.IDictionary<string, string> result)
                                         ],
-                                    typeof(System.Collections.Generic.IDictionary<string, string>).GetTypeInfo().GetDeclaredProperty("Item"), new Expression[] {
+                                    typeof(IDictionary<string, string>).GetTypeInfo().GetDeclaredProperty("Item"), new Expression[] {
                                     e[28]=Constant("Secret")}),
                                     e[29] = Constant(null, typeof(string)))),
                                 e[30] = Condition(
@@ -446,7 +445,7 @@ namespace FastExpressionCompiler.IssueTests
                                     p[3 // (System.Collections.Generic.IDictionary<string, string> result)
                                     ]),
                                 e[32] = MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
-                                    l[2] = Label(typeof(System.Collections.Generic.IDictionary<string, string>)),
+                                    l[2] = Label(typeof(IDictionary<string, string>)),
                                     p[3 // (System.Collections.Generic.IDictionary<string, string> result)
                                     ],
                                     typeof(void)),
@@ -456,7 +455,7 @@ namespace FastExpressionCompiler.IssueTests
                                 e[33] = Block(
                                 typeof(void),
                                 new[] {
-                                p[6]=Parameter(typeof(System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<string, string>>), "enumerator")
+                                p[6]=Parameter(typeof(IEnumerator<KeyValuePair<string, string>>), "enumerator")
                                 },
                                 e[34] = MakeBinary(ExpressionType.Assign,
                                     p[6 // (System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<string, string>> enumerator)
@@ -464,7 +463,7 @@ namespace FastExpressionCompiler.IssueTests
                                     e[35] = Call(
                                     p[4 // (System.Collections.Generic.IDictionary<string, string> idictionary_string, string___28691996)
                                         ],
-                                    typeof(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, string>>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "GetEnumerator" && x.GetParameters().Length == 0))),
+                                    typeof(IEnumerable<KeyValuePair<string, string>>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "GetEnumerator" && x.GetParameters().Length == 0))),
                                 e[36] = Loop(
                                     e[37] = Condition(
                                     e[38] = Call(
@@ -474,7 +473,7 @@ namespace FastExpressionCompiler.IssueTests
                                     e[39] = Block(
                                         typeof(string),
                                         new[] {
-                                        p[7]=Parameter(typeof(System.Collections.Generic.KeyValuePair<string, string>), "kvp")
+                                        p[7]=Parameter(typeof(KeyValuePair<string, string>), "kvp")
                                         },
                                         e[40] = MakeBinary(ExpressionType.Assign,
                                         p[7 // ([struct] System.Collections.Generic.KeyValuePair<string, string> kvp)
@@ -482,7 +481,7 @@ namespace FastExpressionCompiler.IssueTests
                                         e[41] = Property(
                                             p[6 // (System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<string, string>> enumerator)
                                             ],
-                                            typeof(System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<string, string>>).GetTypeInfo().GetDeclaredProperty("Current"))),
+                                            typeof(IEnumerator<KeyValuePair<string, string>>).GetTypeInfo().GetDeclaredProperty("Current"))),
                                         e[42] = Block(
                                         typeof(string),
                                         new[] {
@@ -494,18 +493,18 @@ namespace FastExpressionCompiler.IssueTests
                                             e[44] = Property(
                                             p[7 // ([struct] System.Collections.Generic.KeyValuePair<string, string> kvp)
                                                 ],
-                                            typeof(System.Collections.Generic.KeyValuePair<string, string>).GetTypeInfo().GetDeclaredProperty("Key"))),
+                                            typeof(KeyValuePair<string, string>).GetTypeInfo().GetDeclaredProperty("Key"))),
                                         e[45] = MakeBinary(ExpressionType.Assign,
                                             e[46] = MakeIndex(
                                             p[3 // (System.Collections.Generic.IDictionary<string, string> result)
                                                 ],
-                                            typeof(System.Collections.Generic.IDictionary<string, string>).GetTypeInfo().GetDeclaredProperty("Item"), new Expression[] {
+                                            typeof(IDictionary<string, string>).GetTypeInfo().GetDeclaredProperty("Item"), new Expression[] {
                                             p[8 // (string key)
                                                 ]}),
                                             e[47] = Property(
                                             p[7 // ([struct] System.Collections.Generic.KeyValuePair<string, string> kvp)
                                                 ],
-                                            typeof(System.Collections.Generic.KeyValuePair<string, string>).GetTypeInfo().GetDeclaredProperty("Value"))))),
+                                            typeof(KeyValuePair<string, string>).GetTypeInfo().GetDeclaredProperty("Value"))))),
                                     e[48] = MakeGoto(System.Linq.Expressions.GotoExpressionKind.Break,
                                         l[3] = Label(typeof(void), "LoopBreak"),
                                         null,
@@ -515,7 +514,7 @@ namespace FastExpressionCompiler.IssueTests
                                     ])),
                                 e[49] = Label(l[2 // (idictionary_string, string___64204788)
                                 ],
-                                e[50] = Constant(null, typeof(System.Collections.Generic.IDictionary<string, string>)))),
+                                e[50] = Constant(null, typeof(IDictionary<string, string>)))),
                             e[51] = MakeGoto(System.Linq.Expressions.GotoExpressionKind.Return,
                                 l[1 // (idictionary_string, string___47410583)
                                 ],
@@ -524,7 +523,7 @@ namespace FastExpressionCompiler.IssueTests
                                 typeof(void)),
                             e[52] = Label(l[1 // (idictionary_string, string___47410583)
                                 ],
-                                e[53] = Constant(null, typeof(System.Collections.Generic.IDictionary<string, string>)))),
+                                e[53] = Constant(null, typeof(IDictionary<string, string>)))),
                             p[4 // (System.Collections.Generic.IDictionary<string, string> idictionary_string, string___28691996)
                             ],
                             p[5 // (System.Collections.Generic.IDictionary<string, string> idictionary_string, string___44280823)
@@ -1153,7 +1152,7 @@ namespace FastExpressionCompiler.IssueTests
                         null,
                         typeof(TypeAdapterConfig).GetTypeInfo().GetDeclaredProperty("GlobalSettings")),
                         typeof(TypeAdapterConfig).GetMethods().Where(x => x.IsGenericMethod && x.Name == "GetMapToTargetFunction" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 2).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(Address), typeof(Address)) : x).Single()),
-                    typeof(System.Func<Address, Address, Address>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Invoke" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Address), typeof(Address) })),
+                    typeof(Func<Address, Address, Address>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Invoke" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Address), typeof(Address) })),
                     e[22] = Property(
                         p[1 // (Customer customer__62468121)
                         ],
@@ -1173,7 +1172,7 @@ namespace FastExpressionCompiler.IssueTests
                         null,
                         typeof(TypeAdapterConfig).GetTypeInfo().GetDeclaredProperty("GlobalSettings")),
                         typeof(TypeAdapterConfig).GetMethods().Where(x => x.IsGenericMethod && x.Name == "GetMapToTargetFunction" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 2).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(Address), typeof(AddressDTO)) : x).Single()),
-                    typeof(System.Func<Address, AddressDTO, AddressDTO>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Invoke" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Address), typeof(AddressDTO) })),
+                    typeof(Func<Address, AddressDTO, AddressDTO>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Invoke" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Address), typeof(AddressDTO) })),
                     e[29] = Property(
                         p[1 // (Customer customer__62468121)
                         ],
@@ -1193,7 +1192,7 @@ namespace FastExpressionCompiler.IssueTests
                         null,
                         typeof(TypeAdapterConfig).GetTypeInfo().GetDeclaredProperty("GlobalSettings")),
                         typeof(TypeAdapterConfig).GetMethods().Where(x => x.IsGenericMethod && x.Name == "GetMapToTargetFunction" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 2).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(Address[]), typeof(AddressDTO[])) : x).Single()),
-                    typeof(System.Func<Address[], AddressDTO[], AddressDTO[]>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Invoke" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Address[]), typeof(AddressDTO[]) })),
+                    typeof(Func<Address[], AddressDTO[], AddressDTO[]>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Invoke" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Address[]), typeof(AddressDTO[]) })),
                     e[36] = Property(
                         p[1 // (Customer customer__62468121)
                         ],
@@ -1213,7 +1212,7 @@ namespace FastExpressionCompiler.IssueTests
                         null,
                         typeof(TypeAdapterConfig).GetTypeInfo().GetDeclaredProperty("GlobalSettings")),
                         typeof(TypeAdapterConfig).GetMethods().Where(x => x.IsGenericMethod && x.Name == "GetMapToTargetFunction" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 2).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(ICollection<Address>), typeof(List<AddressDTO>)) : x).Single()),
-                    typeof(System.Func<ICollection<Address>, List<AddressDTO>, List<AddressDTO>>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Invoke" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(ICollection<Address>), typeof(List<AddressDTO>) })),
+                    typeof(Func<ICollection<Address>, List<AddressDTO>, List<AddressDTO>>).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "Invoke" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(ICollection<Address>), typeof(List<AddressDTO>) })),
                     e[43] = Property(
                         p[1 // (Customer customer__62468121)
                         ],
