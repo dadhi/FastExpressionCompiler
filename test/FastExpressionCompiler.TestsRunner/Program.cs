@@ -9,6 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            // new Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run();
+
             // new LightExpression.UnitTests.NestedLambdaTests().Run();
             // new Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
             // new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run();
@@ -297,6 +299,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run);
                 Run(new LightExpression.IssueTests.Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run);
+
+                Run(new Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run);
+                Run(new LightExpression.IssueTests.Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
