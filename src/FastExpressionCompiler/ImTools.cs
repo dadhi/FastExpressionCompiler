@@ -744,7 +744,7 @@ public static class FHashMap
     }
 
     /// binary reprsentation of the `int`
-    public static string ToB(int x) => Convert.ToString(x, 2).PadLeft(32, '0');
+    public static string ToB(int x) => System.Convert.ToString(x, 2).PadLeft(32, '0');
 
     [MethodImpl((MethodImplOptions)256)]
 #if NET7_0_OR_GREATER

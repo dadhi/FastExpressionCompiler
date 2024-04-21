@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.UnitTests.NestedLambdaTests().Run();
+            // new LightExpression.UnitTests.NestedLambdaTests().Run();
             // new Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
             // new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run();
             // new Issue83_linq2db().Run();
