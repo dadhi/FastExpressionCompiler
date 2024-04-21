@@ -765,7 +765,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<IQueryRunner, IDataReader, object>>(body, qr, p2);
             lambda.PrintCSharp();
 
-            var fs = lambda.Compile();
+            var fs = lambda.CompileSys();
             fs.PrintIL();
             Assert.Throws<InvalidOperationException>(() => fs(new QueryRunner(), new SQLiteDataReader(true)));
 

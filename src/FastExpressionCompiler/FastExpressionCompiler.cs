@@ -631,7 +631,14 @@ namespace FastExpressionCompiler
             /// <summary>Tracks the use of the variables in the blocks stack per variable, 
             /// (uint) contains (ushort) BlockIndex in the upper bits and (ushort) VarIndex in the lower bits.
             /// to determine if variable is the local variable and in what block it's defined</summary>
-            private FHashMap<PE, SmallList4<uint>, RefEq<PE>, FHashMap.SingleArrayEntries<PE, SmallList4<uint>, RefEq<PE>>> _varInBlockMap;
+            private FHashMap<PE, SmallList4<uint>, 
+                RefEq<PE>, FHashMap.SingleArrayEntries<PE, SmallList4<uint>, RefEq<PE>>
+                > _varInBlockMap;
+
+            /// The map of inlined invocations collected in TryCollect and then used in TryEmit
+            internal FHashMap<InvocationExpression, Expression, RefEq<InvocationExpression>, 
+                FHashMap.SingleArrayEntries<InvocationExpression, Expression, RefEq<InvocationExpression>>
+                > InlinedLambdaInvocationMap;
 
             /// Map the Labels to their Targets
             internal SmallList4<LabelInfo> Labels;
@@ -791,7 +798,7 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
-                ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe, out var found);
+                ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe, out _);
                 if (blocks.Count == 0 || (blocks.GetLastSurePresentItem() >>> 16) != blockIndex)
                     blocks.Append((uint)(blockIndex << 16) | varIndex);
             }
@@ -1293,21 +1300,14 @@ namespace FastExpressionCompiler
 #endif
                             var invokeArgCount = invokeArgs.GetCount();
                             var invokedExpr = invokeExpr.Expression;
-                            if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 &&
-                                invokedExpr is LambdaExpression lambdaExpr)
+                            if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                             {
                                 var oldIndex = closure.CurrentInlinedLambdaInvokeIndex;
                                 closure.CurrentInlinedLambdaInvokeIndex = closure.AddInlinedLambdaInvoke(invokeExpr); // todo: @wip check that the invoke expression actually contains Return(LabelTarget), BUT what if it is a conditional expression without return, what happens when inlining? 
 
-                                if (invokeArgCount == 0)
-                                {
-                                    r = TryCollectInfo(ref closure, lambdaExpr.Body, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-                                    closure.CurrentInlinedLambdaInvokeIndex = oldIndex;
-                                    return r;
-                                }
-
-                                var inlinedExpr = CreateInlinedLambdaInvocationExpression(ref closure,
-                                    paramExprs, invokeArgs, invokeArgCount, lambdaExpr);
+                                ref var inlinedExpr = ref closure.InlinedLambdaInvocationMap.GetOrAddValueRef(invokeExpr, out var found);
+                                if (!found)
+                                    inlinedExpr = CreateInlinedLambdaInvocationExpression(invokeArgs, invokeArgCount, lambdaExpr);
 
                                 if ((r = TryCollectInfo(ref closure, inlinedExpr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
@@ -1373,7 +1373,7 @@ namespace FastExpressionCompiler
 
                         expr = blockExprs[blockExprCount - 1];
                         if (varExprCount == 0)
-                            continue; // in case of no variables we can collect the last exp without recursion
+                            continue; // in case of no variables we can collect the last expr without recursion
 
                         if ((r = TryCollectInfo(ref closure, expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                             return r;
@@ -1478,12 +1478,7 @@ namespace FastExpressionCompiler
             }
         }
 
-        private static Expression CreateInlinedLambdaInvocationExpression(ref ClosureInfo closure,
-#if LIGHT_EXPRESSION
-            IParameterProvider paramExprs, 
-#else
-            IReadOnlyList<PE> paramExprs,
-#endif
+        private static Expression CreateInlinedLambdaInvocationExpression(
 #if SUPPORTS_ARGUMENT_PROVIDER
             IArgumentProvider invokeArgs,
 #else
@@ -1491,75 +1486,68 @@ namespace FastExpressionCompiler
 #endif
             int invokeArgCount, LambdaExpression lambdaExpr)
         {
+            // Check the actual lambda return type in case it differs from the Body type,
+            // e.g. often case for the Action lambdas where the Body type is ignored in favor of `void`. 
+            var lambdaReturnType = lambdaExpr.ReturnType;
+            var lambdaBodyExpr = lambdaExpr.Body;
+            if (invokeArgCount == 0)
+                return lambdaReturnType == lambdaBodyExpr.Type ? lambdaBodyExpr :
+                lambdaReturnType == typeof(void) ? Block(typeof(void), lambdaBodyExpr) :
+                Convert(lambdaBodyExpr, lambdaReturnType);
+
             // To inline the lambda we will wrap its body into a block, parameters into the block variables, 
             // and the invocation arguments into the variable assignments, see #278.
-            // If the nested lambda variables are reused prior in the parent lambdas, 
-            // we will store their original value and then restore it in the finally block.
 #if LIGHT_EXPRESSION
             var lambdaPars = (IParameterProvider)lambdaExpr;
-            var outerParCount = paramExprs.ParameterCount;
 #else
             var lambdaPars = lambdaExpr.Parameters;
-            var outerParCount = paramExprs.Count;
 #endif
-            SmallList4<ParameterExpression> parsToVars = default;
             SmallList2<Expression> inlinedBlockExprs = default;
             SmallList2<ParameterExpression> savedVars = default;
-            SmallList2<Expression> finallyRestoreVarsExprs = default;
-            var useParsToVarsList = false;
+            SmallList2<Expression> savedVarsBlockExprs = default;
 
             for (var i = 0; i < invokeArgCount; i++)
             {
                 var lambdaPar = lambdaPars.GetParameter(i);
                 var invokeArg = invokeArgs.GetArgument(i);
 
-                // Check for the case of reusing the parameters in the different lambdas, 
-                // see test `NestedLambdaTests.Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
+                // The case of reusing the parameters or variables in the different lambdas, 
+                // see the test `NestedLambdaTests.Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
                 // and the `Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter`.
-                // If we using the same parameter then we save the outer parameter value into the `<name>_<unique_id>` parameter,
-                // and then restore it back after the lambda invocation. To do it safely the restore should happen in the `finally`.
-                var j = outerParCount - 1;
-                while (j != -1 && !ReferenceEquals(lambdaPar, paramExprs.GetParameter(j))) --j;
-                if (j != -1 || closure.IsLocalVar(lambdaPar))
+                if (lambdaPar == invokeArg)
                 {
                     var savedPar = Parameter(lambdaPar.Type, lambdaPar.Name + "_" + lambdaPar.GetHashCode().ToString());
                     savedVars.Add(savedPar);
-                    if (!useParsToVarsList)
-                    {
-                        useParsToVarsList = true;
-                        for (var pri = 0; pri < i; ++pri)
-                            parsToVars.Add(lambdaPars.GetParameter(pri));
-                    }
-
-                    inlinedBlockExprs.Add(Assign(savedPar, lambdaPar));
-                    finallyRestoreVarsExprs.Add(Assign(lambdaPar, savedPar));
+                    savedVarsBlockExprs.Add(Assign(savedPar, invokeArg));
+                    inlinedBlockExprs.Add(Assign(lambdaPar, savedPar));
+                    continue;
                 }
-                else if (useParsToVarsList)
-                    parsToVars.Add(lambdaPar);
 
-                if (lambdaPar != invokeArg)
-                    inlinedBlockExprs.Add(Assign(lambdaPar, invokeArg));
+                inlinedBlockExprs.Add(Assign(lambdaPar, invokeArg));
             }
 
-            inlinedBlockExprs.Append(lambdaExpr.Body);
-            var blockVars = useParsToVarsList ? parsToVars.ToArray() : lambdaPars.ToReadOnlyList();
-
-            // using actual lambda return type in case it differs from the Body type, 
-            // e.g. often case for the Action lambdad where the its Body type is ignored in favor of `void`. 
-            var lambdaReturnType = lambdaExpr.ReturnType;
+            inlinedBlockExprs.Append(lambdaBodyExpr);
 
 #if LIGHT_EXPRESSION
-            Expression inlinedExpr = Block(lambdaReturnType, blockVars, in inlinedBlockExprs);
-            Expression finallyExpr = finallyRestoreVarsExprs.Count == 0 ? null : 
-                finallyRestoreVarsExprs.Count == 1 ? finallyRestoreVarsExprs._it0 : 
-                Block(in finallyRestoreVarsExprs);
+            var inlinedBlock = lambdaReturnType == lambdaBodyExpr.Type
+                ? Block(lambdaPars.ToReadOnlyList(), in inlinedBlockExprs)
+                : Block(lambdaReturnType, lambdaPars.ToReadOnlyList(), in inlinedBlockExprs);
+            if (savedVars.Count != 0)
+            {
+                savedVarsBlockExprs.Add(inlinedBlock);
+                inlinedBlock = Block(savedVars.ToArray(), in savedVarsBlockExprs);
+            }
 #else
-            Expression inlinedExpr = Block(lambdaReturnType, blockVars, inlinedBlockExprs.ToArray());
-            Expression finallyExpr = finallyRestoreVarsExprs.Count == 0 ? null :
-                finallyRestoreVarsExprs.Count == 1 ? finallyRestoreVarsExprs._it0 :
-                Block(finallyRestoreVarsExprs.ToArray());
+            var inlinedBlock = lambdaReturnType == lambdaBodyExpr.Type
+                ? Block(lambdaPars, inlinedBlockExprs.ToArray())
+                : Block(lambdaReturnType, lambdaPars, inlinedBlockExprs.ToArray());
+            if (savedVars.Count != 0)
+            {
+                savedVarsBlockExprs.Add(inlinedBlock);
+                inlinedBlock = Block(savedVars.ToArray(), savedVarsBlockExprs.ToArray());
+            }
 #endif
-            return finallyExpr == null ? inlinedExpr : Block(savedVars.ToArray(), TryFinally(inlinedExpr, finallyExpr));
+            return inlinedBlock;
         }
 
 #if LIGHT_EXPRESSION
@@ -2589,6 +2577,49 @@ namespace FastExpressionCompiler
                 var isParamOrVarByRef = paramExpr.IsByRef;
                 var isArgByRef = byRefIndex != -1;
 
+                // Parameter may represent a variable, so first look if this is the case,
+                // and the variable is defined in the current block 
+                var varIndex = closure.GetDefinedLocalVarOrDefault(paramExpr);
+                if (varIndex != -1)
+                {
+                    closure.LastEmitIsAddress = !isParamOrVarByRef &&
+                        (isArgByRef ||
+                            paramType.IsValueType &&
+                            (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281, #265
+                            (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
+
+                    if (closure.LastEmitIsAddress)
+                        EmitLoadLocalVariableAddress(il, varIndex);
+                    else if (!isParamOrVarByRef)
+                        EmitLoadLocalVariable(il, varIndex);
+                    else
+                    {
+                        if ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall)
+                            EmitLoadLocalVariable(il, varIndex);
+                        else
+                            EmitStoreAndLoadLocalVariable(il, varIndex);
+
+                        // Assume that the var is the last on the stack and just duplicating it, see #346 `Get_array_element_ref_and_increment_it`
+                        // Do only when accessing the variable directly, and not the member and the array element by index
+                        if ((parent & ParentFlags.InstanceAccess) == 0)
+                            EmitLoadLocalVariable(il, varIndex);
+
+                        if (paramType.IsValueType)
+                        {
+                            if ((parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &
+                                (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) == 0)
+                                EmitLoadIndirectlyByRef(il, paramType);
+                        }
+                        else
+                        {
+                            if ((parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue)) != 0)
+                                il.Demit(OpCodes.Ldind_Ref);
+                        }
+                    }
+                    return true;
+                }
+
+                // If not variable then look if the parameter is passed to the current lambda
                 var paramIndex = paramExprCount - 1;
                 while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), paramExpr)) --paramIndex;
                 if (paramIndex != -1)
@@ -2627,49 +2658,6 @@ namespace FastExpressionCompiler
                         {
                             if (!isArgByRef & (parent & ParentFlags.Call) != 0 ||
                                 (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue)) != 0)
-                                il.Demit(OpCodes.Ldind_Ref);
-                        }
-                    }
-                    return true;
-                }
-
-                // If parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
-                // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
-                // Parameter may represent a variable, so first look if this is the case
-                var varIndex = closure.GetDefinedLocalVarOrDefault(paramExpr);
-                if (varIndex != -1)
-                {
-                    closure.LastEmitIsAddress = !isParamOrVarByRef &&
-                        (isArgByRef ||
-                            paramType.IsValueType &&
-                            (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281, #265
-                            (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
-
-                    if (closure.LastEmitIsAddress)
-                        EmitLoadLocalVariableAddress(il, varIndex);
-                    else if (!isParamOrVarByRef)
-                        EmitLoadLocalVariable(il, varIndex);
-                    else
-                    {
-                        if ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall)
-                            EmitLoadLocalVariable(il, varIndex);
-                        else
-                            EmitStoreAndLoadLocalVariable(il, varIndex);
-
-                        // Assume that the var is the last on the stack and just duplicating it, see #346 `Get_array_element_ref_and_increment_it`
-                        // Do only when accessing the variable directly, and not the member and the array element by index
-                        if ((parent & ParentFlags.InstanceAccess) == 0)
-                            EmitLoadLocalVariable(il, varIndex);
-
-                        if (paramType.IsValueType)
-                        {
-                            if ((parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &
-                                (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) == 0)
-                                EmitLoadIndirectlyByRef(il, paramType);
-                        }
-                        else
-                        {
-                            if ((parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue)) != 0)
                                 il.Demit(OpCodes.Ldind_Ref);
                         }
                     }
@@ -4122,41 +4110,8 @@ namespace FastExpressionCompiler
 #endif
                 var ok = false;
                 var flags = parent & ~ParentFlags.IgnoreResult;
-                var paramIndex = paramExprCount - 1;
-                while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), left)) --paramIndex;
-                if (paramIndex != -1)
-                {
-                    // shift parameter index by one, because the first one will be closure
-                    if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
-                        ++paramIndex;
 
-                    var isLeftByRef = left.IsByRef;
-                    if (isLeftByRef)
-                        EmitLoadArg(il, paramIndex);
-
-                    if (resultVar != -1 & isPost)
-                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
-
-                    ok = nodeType == ExpressionType.Assign
-                        ? TryEmit(right, paramExprs, il, ref closure, setup, flags)
-                        : TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags);
-
-                    if (resultVar != -1 & !isPost)
-                        EmitStoreAndLoadLocalVariable(il, resultVar);
-
-                    if (isLeftByRef)
-                        EmitStoreIndirectlyByRef(il, left.Type);
-                    else
-                        il.Demit(OpCodes.Starg_S, paramIndex);
-
-                    if (resultVar != -1)
-                        EmitLoadLocalVariable(il, resultVar);
-                    return ok;
-                }
-
-                // if parameter isn't passed, then it is passed into some outer lambda or it is a local variable,
-                // so it should be loaded from closure or from the locals. Then the closure is null will be an invalid state.
-                // if it's a local variable, then store the right value in it.
+                // First look if the left value is the local variable (in the current block) then store the right value in it.
                 var leftLocalVar = closure.GetDefinedLocalVarOrDefault(left);
                 if (leftLocalVar != -1)
                 {
@@ -4193,6 +4148,39 @@ namespace FastExpressionCompiler
                     var nestedLambdasCount = closure.NestedLambdas.Count;
                     for (var i = 0; i < nestedLambdasCount; ++i)
                         EmitStoreAssignedLeftVarIntoClosureArray(il, closure.NestedLambdas.Items[i], left, leftLocalVar);
+
+                    if (resultVar != -1)
+                        EmitLoadLocalVariable(il, resultVar);
+                    return ok;
+                }
+
+                // If not the variable, then look if it is the passed parameter - yes it is bad but you can assign to the parameter
+                var paramIndex = paramExprCount - 1;
+                while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), left)) --paramIndex;
+                if (paramIndex != -1)
+                {
+                    // shift parameter index by one, because the first one will be closure
+                    if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
+                        ++paramIndex;
+
+                    var isLeftByRef = left.IsByRef;
+                    if (isLeftByRef)
+                        EmitLoadArg(il, paramIndex);
+
+                    if (resultVar != -1 & isPost)
+                        EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
+
+                    ok = nodeType == ExpressionType.Assign
+                        ? TryEmit(right, paramExprs, il, ref closure, setup, flags)
+                        : TryEmitArithmetic(left, right, nodeType, exprType, paramExprs, il, ref closure, setup, flags);
+
+                    if (resultVar != -1 & !isPost)
+                        EmitStoreAndLoadLocalVariable(il, resultVar);
+
+                    if (isLeftByRef)
+                        EmitStoreIndirectlyByRef(il, left.Type);
+                    else
+                        il.Demit(OpCodes.Starg_S, paramIndex);
 
                     if (resultVar != -1)
                         EmitLoadLocalVariable(il, resultVar);
@@ -4697,20 +4685,19 @@ namespace FastExpressionCompiler
                 var argExprs = expr.Arguments;
 #endif
                 var argCount = argExprs.GetCount();
-                var lambda = expr.Expression;
-                if ((setup & CompilerFlags.NoInvocationLambdaInlining) == 0 && lambda is LambdaExpression la)
+                var invokedExpr = expr.Expression;
+                if ((setup & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                 {
                     parent |= ParentFlags.InlinedLambdaInvoke;
-                    Expression inlinedExpr;
-                    if (argCount == 0)
-                        inlinedExpr = la.Body;
-                    else
-                        inlinedExpr = CreateInlinedLambdaInvocationExpression(ref closure, paramExprs, argExprs, argCount, la);
+
+                    ref var inlinedExpr = ref closure.InlinedLambdaInvocationMap.GetOrAddValueRef(expr, out var found);
+                    if (!found)
+                        inlinedExpr = CreateInlinedLambdaInvocationExpression(argExprs, argCount, lambdaExpr);
 
                     if (!TryEmit(inlinedExpr, paramExprs, il, ref closure, setup, parent))
                         return false;
 
-                    if ((parent & ParentFlags.IgnoreResult) == 0 && la.Body.Type != typeof(void))
+                    if ((parent & ParentFlags.IgnoreResult) == 0 && lambdaExpr.Body.Type != typeof(void))
                     {
                         // find if the variable with the result is exist in the label infos
                         ref var label = ref closure.Labels.GetLabelOrInvokeIndexByTarget(expr, out var labelFound);
@@ -4727,15 +4714,14 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                if (!TryEmit(lambda, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
+                if (!TryEmit(invokedExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
                     return false;
 
-                MethodInfo delegateInvokeMethod;
                 //if (lambda is ConstantExpression lambdaConst) // todo: @perf opportunity to optimize
                 //    delegateInvokeMethod = ((Delegate)lambdaConst.Value).GetMethodInfo();
                 //else 
-                delegateInvokeMethod = lambda.Type.FindDelegateInvokeMethod(); // todo: @perf bad thingy
-                if (argCount > 0)
+                var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod(); // todo: @perf bad thingy
+                if (argCount != 0)
                 {
                     var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
                     var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
