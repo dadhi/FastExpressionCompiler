@@ -31,7 +31,7 @@ public class Issue366_FEC334_gives_incorrect_results_in_some_linq_operations : I
         LambdaExpression e = Expression.Lambda(body, symbols);
         e.PrintCSharp();
 
-        var fs = e.Compile();
+        var fs = e.CompileSys();
         fs.PrintIL();
 
         var ff = e.CompileFast();

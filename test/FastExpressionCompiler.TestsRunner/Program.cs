@@ -9,23 +9,15 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue405_NullReferenceException_with_V4X_when_using_nullable_long_array().Run();
-            // new Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run();
-
-            // new LightExpression.UnitTests.NestedLambdaTests().Run();
-            // new Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
-            // new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run();
-            // new Issue83_linq2db().Run();
-            // new LightExpression.IssueTests.Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run();
-            // new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC.FastExpressionCompilerBug().Run();
-            // new LightExpression.UnitTests.BinaryExpressionTests().Run();
-            // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
+            new LightExpression.IssueTests.Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
+            // new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
+            // new LightExpression.IssueTests.Issue127_Switch_is_supported().Run();
+            // new Issue390_405_406_Mapster_tests().Run();
 
             RunAllTests();
 
             // new Issue127_Switch_is_supported().Run();
             // new Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
-            // new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run();
             // new Issue380_Comparisons_with_nullable_types().Run();
             // new LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types().Run();
             // new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run();
@@ -296,15 +288,13 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
                 Run(new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
 
-                Run(new Issue390_System_AccessViolationException_when_mapping_using_Mapster().Run);
+                Run(new Issue390_405_406_Mapster_tests().Run);
 
                 Run(new Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run);
                 Run(new LightExpression.IssueTests.Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run);
 
                 Run(new Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run);
                 Run(new LightExpression.IssueTests.Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run);
-
-                Run(new Issue405_NullReferenceException_with_V4X_when_using_nullable_long_array().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
@@ -321,4 +311,9 @@ namespace FastExpressionCompiler.UnitTests
             Console.WriteLine($"ALL {totalTestPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
     }
+}
+
+namespace System.Runtime.CompilerServices
+{
+    internal static class IsExternalInit { }
 }

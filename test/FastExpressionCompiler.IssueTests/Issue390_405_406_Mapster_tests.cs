@@ -13,20 +13,96 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 
 [TestFixture]
-public class Issue390_System_AccessViolationException_when_mapping_using_Mapster : ITest
+public class Issue390_405_406_Mapster_tests : ITest
 {
     public int Run()
     {
-        Test_extracted_small_mapping_code();
-        Test_extracted_small_just_mapping_code_No_issue();
-        Test_extracted_mapping_code();
-        Test_original_Mapster_mapping();
+        var compilerFlags = new[]
+        {
+            CompilerFlags.Default,
+            CompilerFlags.NoInvocationLambdaInlining
+        };
 
-        return 4;
+        TypeAdapterConfig.GlobalSettings.RequireDestinationMemberSource = true;
+        TypeAdapterConfig.GlobalSettings.Default.PreserveReference(true);
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<AuthResultDto, Token>()
+            .Map(dst => dst.RefreshTokenExpirationDate, src => src.RefreshToken.ExpirationDate.LocalDateTime);
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<ExportInfoModel, ExportInfoDto>();
+
+        TypeAdapterConfig.GlobalSettings.NewConfig<ResultAgent, AgentStatusDto>()
+            .Map(dst => dst.ErrorCode, src => src.Common.Code)
+            .Map(dst => dst.CompleteTaskType, src => src.Common.TaskType)
+            .AfterMapping((ResultAgent res, AgentStatusDto dto) =>
+                dto.CompleteTaskType = res.Common.TaskType switch
+                {
+                    2 => 3,
+                    _ => default
+                });
+
+        foreach (var flags in compilerFlags)
+        {
+            TypeAdapterConfig.GlobalSettings.Compiler = e =>
+            {
+                e.PrintCSharp();
+                var ff = e.CompileFast(true, flags);
+                Assert.IsNotNull(ff);
+                return ff;
+            };
+
+            TypeAdapterConfig.GlobalSettings.Compile();
+
+            Issue390_Test_original_Mapster_mapping();
+            Issue405_NullItemArray();
+            Issue406_NullReferenceException();
+        }
+
+        Issue390_Test_extracted_small_mapping_code();
+        Issue390_Test_extracted_small_just_mapping_code_No_issue();
+        Issue390_Test_extracted_mapping_code();
+
+        return 3*2 + 3;
     }
 
+    private sealed record ExportInfoDto(long[] Locations);
+    private sealed record ExportInfoModel(long?[] Locations);
+
     [Test]
-    public void Test_extracted_small_just_mapping_code_No_issue()
+    public void Issue405_NullItemArray()
+    {
+        var model = new ExportInfoModel(new long?[] { 1, null });
+
+        var dto = model.Adapt<ExportInfoDto>();
+
+        CollectionAssert.AreEqual(new long[] { 1, 0 }, dto.Locations);
+    }
+
+
+    public sealed record AgentStatusDto
+    {
+        public int ErrorCode { get; init; }
+
+        public int CompleteTaskType { get; set; }
+    }
+
+    public sealed record ResultAgent(ResponseAgent Common);
+
+    public sealed record ResponseAgent(int ErrorType, int TaskType, int Code);
+
+    [Test]
+    public void Issue406_NullReferenceException()
+    {
+        var result = new ResultAgent(new ResponseAgent(1, 2, 3));
+
+        var resultStatus = result.Adapt<AgentStatusDto>();
+
+        Assert.IsNotNull(resultStatus);
+    }
+
+
+    [Test]
+    public void Issue390_Test_extracted_small_just_mapping_code_No_issue()
     {
         var p = new ParameterExpression[7]; // the parameter expressions
         var e = new Expression[48]; // the unique expressions
@@ -84,7 +160,7 @@ public class Issue390_System_AccessViolationException_when_mapping_using_Mapster
     }
 
     [Test]
-    public void Test_extracted_small_mapping_code()
+    public void Issue390_Test_extracted_small_mapping_code()
     {
         var p = new ParameterExpression[7]; // the parameter expressions
         var e = new Expression[48]; // the unique expressions
@@ -217,7 +293,7 @@ public class Issue390_System_AccessViolationException_when_mapping_using_Mapster
     }
 
     [Test]
-    public void Test_extracted_mapping_code()
+    public void Issue390_Test_extracted_mapping_code()
     {
         var p = new ParameterExpression[7]; // the parameter expressions
         var e = new Expression[48]; // the unique expressions
@@ -383,75 +459,29 @@ public class Issue390_System_AccessViolationException_when_mapping_using_Mapster
     }
 
     [Test]
-    public void Test_original_Mapster_mapping()
+    public void Issue390_Test_original_Mapster_mapping()
     {
         var auth = new AuthResultDto() { RefreshToken = new() };
 
-        var token = DataMapper.Current.Map<Token>(auth);
+        var token = new DataMapper().Map<Token>(auth);
 
         Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
     }
 
     public class DataMapper
     {
-        private readonly Lazy<Mapper> _lazyMapper;
-        public Mapper Mapper => _lazyMapper.Value;
-        private static DataMapper _instance;
-        private static TypeAdapterConfig _cfg;
+        public Mapper Mapper;
 
-        public static DataMapper Current
+        public DataMapper() 
         {
-            get
-            {
-                _instance ??= new DataMapper();
-                return _instance;
-            }
+            Mapper = new Mapper(TypeAdapterConfig.GlobalSettings);
         }
-
-        public DataMapper() => _lazyMapper = new Lazy<Mapper>(() => new Mapper(_cfg ??= Config()));
 
         public TSource Clone<TSource>(TSource source) => Mapper.Map<TSource, TSource>(source);
 
         public TDes Map<TSource, TDes>(TSource source) => Mapper.Map<TSource, TDes>(source);
 
         public TDes Map<TDes>(object source) => Mapper.Map<TDes>(source);
-
-        private static TypeAdapterConfig Config()
-        {
-            var cfg = TypeAdapterConfig.GlobalSettings;
-            cfg.Compiler = static e =>
-            {
-                try
-                {
-                    return e.CompileFast();
-                }
-                catch (Exception)
-                {
-                    throw;
-                }
-            };
-
-            cfg.RequireDestinationMemberSource = true;
-            cfg.Default.PreserveReference(true);
-            RegisterMappings(cfg);
-
-            try
-            {
-                cfg.Compile();
-            }
-            catch (Exception)
-            {
-            }
-
-            return cfg;
-        }
-
-        private static void RegisterMappings(TypeAdapterConfig cfg)
-        {
-            cfg.NewConfig<AuthResultDto, Token>().Map(
-                static dst => dst.RefreshTokenExpirationDate,
-                static src => src.RefreshToken.ExpirationDate.LocalDateTime);
-        }
     }
 
     public class AuthResultDto

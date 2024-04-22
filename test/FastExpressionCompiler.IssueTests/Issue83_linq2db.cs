@@ -22,12 +22,13 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            linq2db_NullReferenceException();
+
 #if !LIGHT_EXPRESSION
             linq2db_InvalidProgramException2_reuse_variable_for_upper_and_nested_lambda();
 #endif
             String_to_number_conversion_using_convert_with_method();
             String_to_number_conversion_using_convert_with_method_with_DefaultExpression();
-            linq2db_NullReferenceException();
             Jit_compiler_internal_limitation();
             Struct_test();
             Struct_test2();
@@ -332,7 +333,6 @@ namespace FastExpressionCompiler.IssueTests
             var p1 = Parameter(typeof(IQueryRunner), "qr");
             var p2 = Parameter(typeof(IDataReader), "dr");
 
-
             var body = Invoke(
                 mapper,
                 p1,
@@ -341,14 +341,55 @@ namespace FastExpressionCompiler.IssueTests
                 Property(p1, nameof(IQueryRunner.Expression)),
                 Property(p1, nameof(IQueryRunner.Parameters)));
 
-            var lambda = Lambda<Func<IQueryRunner, IDataReader, InheritanceTests.InheritanceA>>(body, p1, p2);
+            var expr = Lambda<Func<IQueryRunner, IDataReader, InheritanceTests.InheritanceA>>(body, p1, p2);
+            expr.PrintCSharp();
+            // var @cs = (Func<IQueryRunner, IDataReader, InheritanceA>)((
+            //     IQueryRunner qr, 
+            //     IDataReader dr) => //InheritanceA
+            //     ((Func<IQueryRunner, IDataContext, IDataReader, Expression, object[], InheritanceA>)((
+            //             IQueryRunner qr, 
+            //             IDataContext dctx, 
+            //             IDataReader rd, 
+            //             Expression expr, 
+            //             object[] ps) => //InheritanceA
+            //     {
+            //             SQLiteDataReader ldr = null;
+            //             ldr = (SQLiteDataReader)rd;
+            //             return (ldr.IsDBNull(0) ? TypeCodeEnum.Base : 
+            //                 (TypeCodeEnum)ldr.GetInt32(0) == TypeCodeEnum.A1) ? 
+            //                 (InheritanceA)(InheritanceA1)TableContext.OnEntityCreated(
+            //                     dctx,
+            //                     new InheritanceA1()
+            //                     {
+            //                         GuidValue = ldr.IsDBNull(1) ? Guid.Parse("00000000-0000-0000-0000-000000000000") : 
+            //                         ldr.GetGuid(1),
+            //                     }) : 
+            //                 (InheritanceA)(InheritanceA2)TableContext.OnEntityCreated(
+            //                     dctx,
+            //                     new InheritanceA2()
+            //                     {
+            //                         GuidValue = ldr.IsDBNull(1) ? Guid.Parse("00000000-0000-0000-0000-000000000000") : 
+            //                         ldr.GetGuid(1),
+            //                     });
+            //     }))
+            //     .Invoke(
+            //         qr,
+            //         qr.DataContext,
+            //         dr,
+            //         qr.Expression,
+            //         qr.Parameters));
 
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            var res = fs(new QueryRunner(), new SQLiteDataReader(false));
+            Assert.IsNotNull(res);
+            Assert.AreEqual(TypeCodeEnum.A2, res.TypeCode);
+            Assert.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
 
-            var compiled = lambda.CompileFast(true);
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
            
-            // NRE during execution of nested function
-            var res = compiled(new QueryRunner(), new SQLiteDataReader(false));
-
+            res = ff(new QueryRunner(), new SQLiteDataReader(false));
             Assert.IsNotNull(res);
             Assert.AreEqual(TypeCodeEnum.A2, res.TypeCode);
             Assert.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
