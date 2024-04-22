@@ -41,6 +41,16 @@ public class Issue390_405_406_Mapster_tests : ITest
                     _ => default
                 });
 
+        TypeAdapterConfig.GlobalSettings.NewConfig<TestClass, TestEnum>()
+            .Map(dest => dest,
+                src => src.Type == (int)TestEnum.A
+                ? TestEnum.A
+                : src.Type == (int)TestEnum.B
+                    ? TestEnum.B
+                    : src.Type == (int)TestEnum.C
+                        ? TestEnum.C
+                        : TestEnum.D);
+
         foreach (var flags in compilerFlags)
         {
             TypeAdapterConfig.GlobalSettings.Compiler = e =>
@@ -48,11 +58,17 @@ public class Issue390_405_406_Mapster_tests : ITest
                 e.PrintCSharp();
                 var ff = e.CompileFast(true, flags);
                 Assert.IsNotNull(ff);
+
+                var fs = e.CompileSys();
+                fs.PrintIL("sys");
+
+                ff.PrintIL("fec");
                 return ff;
             };
 
             TypeAdapterConfig.GlobalSettings.Compile();
 
+            MapsterIssue676_NullReferenceException_with_FastExpressionCompiler();
             Issue390_Test_original_Mapster_mapping();
             Issue405_NullItemArray();
             Issue406_NullReferenceException();
@@ -62,8 +78,32 @@ public class Issue390_405_406_Mapster_tests : ITest
         Issue390_Test_extracted_small_just_mapping_code_No_issue();
         Issue390_Test_extracted_mapping_code();
 
-        return 3*2 + 3;
+        return 4*2 + 3;
     }
+
+    class TestClass
+    {
+        public int Type { get; set; }
+    }
+
+    enum TestEnum
+    {
+        A = 1,
+        B,
+        C,
+        D
+    }
+
+    [Test]
+    public void MapsterIssue676_NullReferenceException_with_FastExpressionCompiler()
+    {
+        Assert.AreEqual(TestEnum.A, new TestClass { Type = 1 }.Adapt<TestEnum>());
+        Assert.AreEqual(TestEnum.B, new TestClass { Type = 2 }.Adapt<TestEnum>());
+        Assert.AreEqual(TestEnum.C, new TestClass { Type = 3 }.Adapt<TestEnum>());
+        Assert.AreEqual(TestEnum.D, new TestClass { Type = 4 }.Adapt<TestEnum>());
+        Assert.AreEqual(TestEnum.D, new TestClass { Type = 42 }.Adapt<TestEnum>());
+    }
+
 
     private sealed record ExportInfoDto(long[] Locations);
     private sealed record ExportInfoModel(long?[] Locations);
