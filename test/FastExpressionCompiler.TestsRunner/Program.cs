@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved().Run();
             // new LightExpression.IssueTests.Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
             // new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();
             // new LightExpression.IssueTests.Issue127_Switch_is_supported().Run();
