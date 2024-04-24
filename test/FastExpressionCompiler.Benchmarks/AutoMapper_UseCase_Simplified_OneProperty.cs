@@ -105,12 +105,26 @@ Intel Core i7-8750H CPU 2.20GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical 
   [Host]     : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
   DefaultJob : .NET Core 3.1.0 (CoreCLR 4.700.19.56402, CoreFX 4.700.19.56404), X64 RyuJIT
 
-
 |                      Method |       Mean |     Error |    StdDev | Ratio | RatioSD |  Gen 0 |  Gen 1 |  Gen 2 | Allocated |
 |---------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|-------:|----------:|
 |                     Compile | 261.157 us | 0.5004 us | 0.4680 us | 28.76 |    0.13 | 1.9531 | 0.9766 |      - |  10.59 KB |
 |                 CompileFast |   9.641 us | 0.0420 us | 0.0350 us |  1.06 |    0.01 | 0.6256 | 0.3052 | 0.0305 |   2.93 KB |
 | CompileFast_LightExpression |   9.081 us | 0.0476 us | 0.0445 us |  1.00 |    0.00 | 0.6256 | 0.3052 | 0.0305 |   2.93 KB |
+
+
+## V4.2
+
+BenchmarkDotNet v0.13.10, Windows 11 (10.0.22631.3447/23H2/2023Update/SunValley3)
+11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+.NET SDK 8.0.104
+  [Host]     : .NET 8.0.4 (8.0.424.16909), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.4 (8.0.424.16909), X64 RyuJIT AVX2
+
+| Method                      | Mean       | Error     | StdDev     | Median     | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|---------------------------- |-----------:|----------:|-----------:|-----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| Compile                     | 132.592 us | 5.9486 us | 17.1631 us | 123.066 us | 27.12 |    2.01 | 0.9766 |      - |  10.87 KB |        4.26 |
+| CompileFast                 |   6.077 us | 0.1099 us |  0.1711 us |   6.063 us |  1.01 |    0.03 | 0.3967 | 0.3662 |   2.55 KB |        1.00 |
+| CompileFast_LightExpression |   5.945 us | 0.1135 us |  0.1062 us |   5.890 us |  1.00 |    0.00 | 0.3967 | 0.3662 |   2.55 KB |        1.00 |
 
         */
         [MemoryDiagnoser]
