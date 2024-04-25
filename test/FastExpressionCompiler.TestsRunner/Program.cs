@@ -297,6 +297,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run);
                 Run(new LightExpression.IssueTests.Issue404_String_plus_parameter_causes_Exception_in_target_invocation().Run);
 
+                Run(new Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved().Run);
+                Run(new LightExpression.IssueTests.Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved().Run);
+
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

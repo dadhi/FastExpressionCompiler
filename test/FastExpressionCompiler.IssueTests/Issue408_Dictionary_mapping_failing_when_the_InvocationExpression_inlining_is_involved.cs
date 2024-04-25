@@ -81,7 +81,7 @@ namespace FastExpressionCompiler.IssueTests
                 e[6] = Block(
                   typeof(Destination),
                   new[] {
-        p[2]=Parameter(typeof(Destination), "typeMapDestination")
+                    p[2]=Parameter(typeof(Destination), "typeMapDestination")
                   },
                   e[7] = Block(
                     typeof(Destination),
@@ -211,7 +211,7 @@ namespace FastExpressionCompiler.IssueTests
                                                   e[49] = Block(
                                                     typeof(DestinationValue),
                                                     new[] {
-                                          p[11]=Parameter(typeof(DestinationValue), "typeMapDestination")
+                                                      p[11]=Parameter(typeof(DestinationValue), "typeMapDestination")
                                                     },
                                                     e[50] = Block(
                                                       typeof(DestinationValue),
@@ -228,7 +228,7 @@ namespace FastExpressionCompiler.IssueTests
                                                         e[55] = Block(
                                                           typeof(int),
                                                           new[] {
-                                                p[12]=Parameter(typeof(int), "resolvedValue")
+                                                            p[12]=Parameter(typeof(int), "resolvedValue")
                                                           },
                                                           e[56] = MakeBinary(ExpressionType.Assign,
                                                             p[12 // (int resolvedValue)
@@ -272,7 +272,7 @@ namespace FastExpressionCompiler.IssueTests
                                                 ],
                                               p[14 // (ResolutionContext context)
                                                 ])))),
-                                      e[64] = MakeGoto(System.Linq.Expressions.GotoExpressionKind.Break,
+                                      e[64] = MakeGoto(GotoExpressionKind.Break,
                                         l[0] = Label(typeof(void), "LoopBreak"),
                                         null,
                                         typeof(void)),

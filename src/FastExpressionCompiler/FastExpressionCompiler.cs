@@ -2179,10 +2179,42 @@ namespace FastExpressionCompiler
                 if (argCount != 0)
                 {
                     var pars = ctor.GetParameters();
-                    for (var i = 0; i < argCount; ++i)
-                        if (!TryEmit(argExprs.GetArgument(i),
-                            paramExprs, il, ref closure, setup, parent, pars[i].ParameterType.IsByRef ? i : -1))
+
+                    // If we have complex arguments then it is better to store them in the variables, then load them before calling ctor.
+                    // Otherwise the stack may be broken by the long emit chain, and the previous argument result on stack 
+                    // may be hidden by the next argument interim stack additions,
+                    // see the #488 for the details.
+                    if (argCount == 1)
+                    {
+                        if (!TryEmit(argExprs.GetArgument(0), paramExprs, il, ref closure, setup, parent, pars[0].ParameterType.IsByRef ? 0 : -1))
                             return false;
+                    }
+                    else
+                    {
+                        var hasComplexArgs = false;
+                        for (var i = 0; !hasComplexArgs && i < argCount; i++)
+                            hasComplexArgs = argExprs.GetArgument(i).IsComplexExpression();
+                        if (!hasComplexArgs)
+                        {
+                            for (var i = 0; i < argCount; ++i)
+                                if (!TryEmit(argExprs.GetArgument(i), paramExprs, il, ref closure, setup, parent, pars[i].ParameterType.IsByRef ? i : -1))
+                                    return false;
+                        }
+                        else
+                        {
+                            SmallList4<int> argVars = default;
+                            for (var i = 0; i < argCount; ++i)
+                            {
+                                var argExpr = argExprs.GetArgument(i);
+                                var parType = pars[i].ParameterType;
+                                if (!TryEmit(argExpr, paramExprs, il, ref closure, setup, parent, parType.IsByRef ? i : -1))
+                                    return false;
+                                argVars.Add(EmitStoreLocalVariable(il, parType));
+                            }
+                            for (var i = 0; i < argCount; ++i)
+                                EmitLoadLocalVariable(il, argVars[i]);
+                        }
+                    }
                 }
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (ctor != null)
@@ -4736,8 +4768,9 @@ namespace FastExpressionCompiler
                     parent |= ParentFlags.InlinedLambdaInvoke;
 
                     ref var inlinedExpr = ref closure.InlinedLambdaInvocationMap.GetOrAddValueRef(expr, out var found);
+                    Debug.Assert(found, "The invocation expression should be collected in TryCollect but it is not");
                     if (!found)
-                        inlinedExpr = CreateInlinedLambdaInvocationExpression(argExprs, argCount, lambdaExpr);
+                        return false;
 
                     if (!TryEmit(inlinedExpr, paramExprs, il, ref closure, setup, parent))
                         return false;
