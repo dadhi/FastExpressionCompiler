@@ -6697,7 +6697,7 @@ namespace FastExpressionCompiler
                     .Append(']');
 
             paramsExprs.Add(pe);
-            sb.Append("p[").Append(paramsExprs.Count - 1).Append("]=");
+            sb.Append("p[").Append(paramsExprs.Count - 1).Append("] = ");
             return pe.CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
         }
 
