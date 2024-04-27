@@ -870,6 +870,9 @@ public static class FHashMap
 
     internal const int MinEntriesCapacity = 2;
 
+    /// <summary>For now to use in the Set as a value</summary>
+    public readonly struct NoValue {}
+
     /// <summary>Stores the entries in a single dynamically reallocated array</summary>
     public struct SingleArrayEntries<K, V, TEq> : IEntries<K, V, TEq> where TEq : struct, IEq<K>
     {
