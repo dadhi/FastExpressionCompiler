@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">net45;netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
         <TargetFrameworks Condition="'$(DevMode)' != 'true'">net45;netstandard2.0;netstandard2.1;net6.0;net7.0</TargetFrameworks>
-        <VersionPrefix>4.1.0</VersionPrefix>
+        <VersionPrefix>4.2.0</VersionPrefix>
         <VersionSuffix></VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
@@ -10,7 +10,28 @@
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
-## v4.1.0 Small feature and bug release
+## v4.2.0 Feature and bug-fix release
+
+- feat: #133 Optimize Switch Expression
+- feat: #393 Support ToCSharpString of the block in the ternary expression
+- feat: #396 Optimize conditional expressions with the DefaultExpression left or right operand the same way as ConstantExpression
+
+- fix: #390 System.AccessViolationException when mapping using Mapster
+- fix: #391 ToCSharpString outputs ? for Nullable which does not produce the compile-able code
+- fix: #392 ToExpressionString wrongly declares Label instead of LabelTarget array
+- fix: #394 Calling a user defined == operator runs into a CLR invalid program exception
+- fix: #397 Fix and optimize the Switch support
+- fix: #399 Coalesce nullable with 0 is not working
+- fix: #400 Fix the direct assignment of Try to Member expression because indirect assignment through tmp var works
+- fix: #401 Invoke inlining is not working with collections in AutoMapper tests
+- fix: #404 An expression with a single parameter concatenated to a string causes 'Exception has been thrown by the target of an invocation' during delegate invocation
+- fix: #405 NullReferenceException with V4.X when using long?[]
+- fix: #406 NullReferenceException with V4.X
+- fix: #407 NullReferenceException when setting the Enum field
+- fix: #408 Dictionary mapping failing when the InvocationExpression inlining is involved
+
+
+## v4.1.0 Small feature and bug-fix release
 
 - added: #379 Add direct net8.0 target as soon as Appveyor CI will support it
 - fixed: #380 Comparisons with nullable types
