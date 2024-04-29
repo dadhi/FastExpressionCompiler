@@ -20,7 +20,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            // AutoMapper_UnitTests_When_mapping_to_a_generic_dictionary_with_mapped_value_pairs();
+            AutoMapper_UnitTests_When_mapping_to_a_generic_dictionary_with_mapped_value_pairs();
             return 1;
         }
 
@@ -319,7 +319,7 @@ namespace FastExpressionCompiler.IssueTests
             var fs = expr.CompileSys();
             fs.PrintIL();
 
-            var ff = expr.CompileFast(true);
+            var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
             ff.PrintIL();
 
             var source = new Source
@@ -337,6 +337,11 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(10, destination.Values["Key2"].Value);
 
             destination = ff(source, null, new ResolutionContext());
+            Assert.AreEqual(2,  destination.Values.Count);
+            Assert.AreEqual(5,  destination.Values["Key1"].Value);
+            Assert.AreEqual(10, destination.Values["Key2"].Value);
+
+            destination = ff(source, destination, new ResolutionContext());
             Assert.AreEqual(2,  destination.Values.Count);
             Assert.AreEqual(5,  destination.Values["Key1"].Value);
             Assert.AreEqual(10, destination.Values["Key2"].Value);

@@ -36,7 +36,10 @@ namespace FastExpressionCompiler.Benchmarks
 
             // BenchmarkRunner.Run<NestedLambdasVsVars>();
 
-            BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
+            BenchmarkRunner.Run<AutoMapper_Map_Dictionary_of_Obj_with_One_prop.Compile_only>();
+            // BenchmarkRunner.Run<AutoMapper_Map_Dictionary_of_Obj_with_One_prop.Invoke_compiled_delegate>();
+
+            // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
             // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
             // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
 

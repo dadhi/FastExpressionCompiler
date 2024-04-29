@@ -640,8 +640,14 @@ namespace FastExpressionCompiler
                 FHashMap.SingleArrayEntries<InvocationExpression, Expression, RefEq<InvocationExpression>>
                 > InlinedLambdaInvocationMap;
 
-            /// Map the Labels to their Targets
-            internal SmallList4<LabelInfo> Labels;
+            internal FHashMap<Expression, NoValue, RefEq<Expression>,
+                FHashMap.SingleArrayEntries<Expression, NoValue, RefEq<Expression>>
+                > ArgsContainingInlinedLambdaInvocation;
+
+            internal bool HasNestedInlinedLambdaInvoke;
+
+            /// The stack for the lambda invocation and the labels bound to them
+            internal SmallList4<LabelInfo> LambdaInvokeStackLabels;
 
             /// This is required because we have the return from the nested lambda expression,
             /// and when inlined in the parent lambda it is no longer the return but just a jump to the label.
@@ -686,7 +692,7 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            public bool ContainsConstantsOrNestedLambdas() => Constants.Count != 0 || NestedLambdas.Count != 0;
+            public bool ContainsConstantsOrNestedLambdas() => Constants.Count != 0 | NestedLambdas.Count != 0;
 
             public bool AddConstantOrIncrementUsageCount(object value)
             {
@@ -712,10 +718,10 @@ namespace FastExpressionCompiler
                 // skip null labelTargets, e.g. it may be the case for LoopExpression.Continue
                 if (labelTarget == null)
                     return;
-                GetLabelOrInvokeIndexByTarget(ref Labels, labelTarget, out var found);
+                GetLabelOrInvokeIndexByTarget(ref LambdaInvokeStackLabels, labelTarget, out var found);
                 if (!found)
                 {
-                    ref var label = ref Labels.AppendDefaultAndGetRef();
+                    ref var label = ref LambdaInvokeStackLabels.AppendDefaultAndGetRef();
                     label.Target = labelTarget;
                     label.InlinedLambdaInvokeIndex = inlinedLambdaInvokeIndex;
                 }
@@ -723,12 +729,12 @@ namespace FastExpressionCompiler
 
             public short AddInlinedLambdaInvoke(InvocationExpression e)
             {
-                var count = Labels.Count;
+                var count = LambdaInvokeStackLabels.Count;
                 for (var i = 0; i < count; ++i)
-                    if (Labels.GetSurePresentItemRef(i).Target == e)
+                    if (LambdaInvokeStackLabels.GetSurePresentItemRef(i).Target == e)
                         return (short)i;
 
-                ref var label = ref Labels.AppendDefaultAndGetRef();
+                ref var label = ref LambdaInvokeStackLabels.AppendDefaultAndGetRef();
                 label.Target = e;
                 return (short)count;
             }
@@ -798,7 +804,7 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
-                ref var blocks = ref _varInBlockMap.GetOrAddValueRef(pe, out _);
+                ref var blocks = ref _varInBlockMap.AddOrGetValueRef(pe, out _);
                 if (blocks.Count == 0 || (blocks.GetLastSurePresentItem() >>> 16) != blockIndex)
                     blocks.Append((uint)(blockIndex << 16) | varIndex);
             }
@@ -1180,15 +1186,26 @@ namespace FastExpressionCompiler
                             }
 
                             if (callObjectExpr != null &&
-                                (r = TryCollectInfo(ref closure, callExpr.Object, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                                (r = TryCollectInfo(ref closure, callObjectExpr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                 return r;
 
-                            var lastArgIndex = argCount - 1;
-                            for (var i = 0; i < lastArgIndex; i++)
+                            var hasNestedInlinedLambdaInvoke = false;
+
+                            for (var i = 0; i < argCount; i++)
+                            {
+                                closure.HasNestedInlinedLambdaInvoke = false; // reset the flag because we want to know the real result after the arg collection
                                 if ((r = TryCollectInfo(ref closure, callArgs.GetArgument(i), paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
-                            expr = callArgs.GetArgument(lastArgIndex);
-                            continue;
+                                hasNestedInlinedLambdaInvoke |= closure.HasNestedInlinedLambdaInvoke;
+                            }
+
+                            // propagate the value up the stack
+                            if (hasNestedInlinedLambdaInvoke)
+                            {
+                                closure.HasNestedInlinedLambdaInvoke = hasNestedInlinedLambdaInvoke;
+                                closure.ArgsContainingInlinedLambdaInvocation.AddOrGetValueRef(callExpr, out _);
+                            }
+                            return r;
                         }
 
                     case ExpressionType.MemberAccess:
@@ -1209,12 +1226,25 @@ namespace FastExpressionCompiler
                             var argCount = ctorArgs.GetCount();
                             if (argCount == 0)
                                 return r;
-                            var lastArgIndex = argCount - 1;
-                            for (var i = 0; i < lastArgIndex; i++)
+
+                            var hasNestedInlinedLambdaInvoke = false;
+
+                            for (var i = 0; i < argCount; i++)
+                            {
+                                closure.HasNestedInlinedLambdaInvoke = false;
                                 if ((r = TryCollectInfo(ref closure, ctorArgs.GetArgument(i), paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
-                            expr = ctorArgs.GetArgument(lastArgIndex);
-                            continue;
+                                hasNestedInlinedLambdaInvoke |= closure.HasNestedInlinedLambdaInvoke;
+                            }
+
+                            // pop the value up the stack 
+                            if (hasNestedInlinedLambdaInvoke)
+                            {
+                                closure.HasNestedInlinedLambdaInvoke = hasNestedInlinedLambdaInvoke;
+                                closure.ArgsContainingInlinedLambdaInvocation.AddOrGetValueRef(newExpr, out _);
+                            }
+
+                            return r;
                         }
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
@@ -1304,14 +1334,16 @@ namespace FastExpressionCompiler
                             {
                                 var oldIndex = closure.CurrentInlinedLambdaInvokeIndex;
                                 closure.CurrentInlinedLambdaInvokeIndex = closure.AddInlinedLambdaInvoke(invokeExpr);
+                                closure.HasNestedInlinedLambdaInvoke = false; // switch off because we have entered the inlined lambda
 
-                                ref var inlinedExpr = ref closure.InlinedLambdaInvocationMap.GetOrAddValueRef(invokeExpr, out var found);
+                                ref var inlinedExpr = ref closure.InlinedLambdaInvocationMap.AddOrGetValueRef(invokeExpr, out var found);
                                 if (!found)
                                     inlinedExpr = CreateInlinedLambdaInvocationExpression(invokeArgs, invokeArgCount, lambdaExpr);
 
                                 if ((r = TryCollectInfo(ref closure, inlinedExpr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
 
+                                closure.HasNestedInlinedLambdaInvoke = true;
                                 closure.CurrentInlinedLambdaInvokeIndex = oldIndex;
                                 return r;
                             }
@@ -2073,10 +2105,10 @@ namespace FastExpressionCompiler
 
                                                 if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
                                                 {
-                                                    ref var foundLabel = ref closure.Labels.GetLabelOrInvokeIndexByTarget(gt.Target, out var labelFound);
+                                                    ref var foundLabel = ref closure.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(gt.Target, out var labelFound);
                                                     if (!labelFound || foundLabel.InlinedLambdaInvokeIndex == -1)
                                                         return false;
-                                                    EmitGotoToReturnLabel(ref closure.Labels.GetSurePresentItemRef(foundLabel.InlinedLambdaInvokeIndex), il, gtOrLabelValue, OpCodes.Br);
+                                                    EmitGotoToReturnLabel(ref closure.LambdaInvokeStackLabels.GetSurePresentItemRef(foundLabel.InlinedLambdaInvokeIndex), il, gtOrLabelValue, OpCodes.Br);
                                                 }
                                                 else
                                                 {
@@ -2191,10 +2223,12 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        var hasComplexArgs = false;
-                        for (var i = 0; !hasComplexArgs && i < argCount; i++)
-                            hasComplexArgs = argExprs.GetArgument(i).IsComplexExpression();
-                        if (!hasComplexArgs)
+                        // var hasComplexArgs = false;
+                        // for (var i = 0; !hasComplexArgs && i < argCount; i++)
+                        //     hasComplexArgs = argExprs.GetArgument(i).IsComplexExpression();
+
+                        closure.ArgsContainingInlinedLambdaInvocation.TryGetValueRef(newExpr, out var containsInlinedInvoke);
+                        if (!containsInlinedInvoke)
                         {
                             for (var i = 0; i < argCount; ++i)
                                 if (!TryEmit(argExprs.GetArgument(i), paramExprs, il, ref closure, setup, parent, pars[i].ParameterType.IsByRef ? i : -1))
@@ -2240,7 +2274,7 @@ namespace FastExpressionCompiler
 
                 if (loopExpr.ContinueLabel != null)
                 {
-                    ref var continueLabelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(loopExpr.ContinueLabel, out var foundLabel);
+                    ref var continueLabelInfo = ref closure.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(loopExpr.ContinueLabel, out var foundLabel);
                     if (!foundLabel)
                         return false;
                     var continueLabel = continueLabelInfo.GetOrDefineLabel(il);
@@ -2255,7 +2289,7 @@ namespace FastExpressionCompiler
 
                 if (loopExpr.BreakLabel != null)
                 {
-                    ref var breakLabelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(loopExpr.BreakLabel, out var foundLabel);
+                    ref var breakLabelInfo = ref closure.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(loopExpr.BreakLabel, out var foundLabel);
                     if (!foundLabel)
                         return false;
                     var breakLabel = breakLabelInfo.GetOrDefineLabel(il);
@@ -2307,7 +2341,7 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(expr.Target, out var foundLabel);
+                ref var labelInfo = ref closure.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out var foundLabel);
                 if (!foundLabel)
                     return false;
                 il.DmarkLabel(labelInfo.GetOrDefineLabel(il));
@@ -2352,7 +2386,7 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                ref var labelInfo = ref closure.Labels.GetLabelOrInvokeIndexByTarget(expr.Target, out var labelFound);
+                ref var labelInfo = ref closure.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out var labelFound);
                 if (!labelFound)
                 {
                     if ((closure.Status & ClosureStatus.ToBeCollected) == 0)
@@ -2392,7 +2426,7 @@ namespace FastExpressionCompiler
                                 var invokeIndex = labelInfo.InlinedLambdaInvokeIndex;
                                 if (invokeIndex == -1)
                                     return false;
-                                EmitGotoToReturnLabel(ref closure.Labels.GetSurePresentItemRef(invokeIndex), il, gotoValue, OpCodes.Br);
+                                EmitGotoToReturnLabel(ref closure.LambdaInvokeStackLabels.GetSurePresentItemRef(invokeIndex), il, gotoValue, OpCodes.Br);
                             }
                         }
                         else
@@ -4472,11 +4506,13 @@ namespace FastExpressionCompiler
 #else
                     var callArgs = callExpr.Arguments;
 #endif
-                    var hasComplexArgs = false;
-                    for (var i = 0; !hasComplexArgs && i < parCount; i++)
-                        hasComplexArgs = callArgs.GetArgument(i).IsComplexExpression();
+                    // var hasComplexArgs = false;
+                    // for (var i = 0; !hasComplexArgs && i < parCount; i++)
+                    //     hasComplexArgs = callArgs.GetArgument(i).IsComplexExpression();
+                    // if (!hasComplexArgs)
 
-                    if (!hasComplexArgs)
+                    closure.ArgsContainingInlinedLambdaInvocation.TryGetValueRef(callExpr, out var containsInlinedInvoke);
+                    if (!containsInlinedInvoke)
                     {
                         if (loadObjByAddress)
                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
@@ -4767,8 +4803,8 @@ namespace FastExpressionCompiler
                 {
                     parent |= ParentFlags.InlinedLambdaInvoke;
 
-                    ref var inlinedExpr = ref closure.InlinedLambdaInvocationMap.GetOrAddValueRef(expr, out var found);
-                    Debug.Assert(found, "The invocation expression should be collected in TryCollect but it is not");
+                    ref var inlinedExpr = ref closure.InlinedLambdaInvocationMap.AddOrGetValueRef(expr, out var found);
+                    Debug.Assert(found, "The invocation expression should be collected in TryCollectInfo but it is not");
                     if (!found)
                         return false;
 
@@ -4778,7 +4814,7 @@ namespace FastExpressionCompiler
                     if ((parent & ParentFlags.IgnoreResult) == 0 && inlinedExpr.Type != typeof(void))
                     {
                         // find if the variable with the result is exist in the label infos
-                        ref var label = ref closure.Labels.GetLabelOrInvokeIndexByTarget(expr, out var labelFound);
+                        ref var label = ref closure.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr, out var labelFound);
                         if (labelFound)
                         {
                             var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
@@ -5990,13 +6026,16 @@ namespace FastExpressionCompiler
         internal static bool IsConstantOrDefault(this Expression expr)
         {
             var nodeType = StripConvertRecursively(expr).NodeType;
-            return nodeType == ExpressionType.Constant | nodeType == ExpressionType.Default;
+            return nodeType == ExpressionType.Constant
+                | nodeType == ExpressionType.Default;
         }
 
         internal static bool IsParamOrConstantOrDefault(this Expression expr)
         {
             var nodeType = StripConvertRecursively(expr).NodeType;
-            return nodeType == ExpressionType.Parameter | nodeType == ExpressionType.Constant | nodeType == ExpressionType.Default;
+            return nodeType == ExpressionType.Parameter
+                | nodeType == ExpressionType.Constant
+                | nodeType == ExpressionType.Default;
         }
 
         internal static string GetCSharpName(this MemberInfo m)
@@ -6120,10 +6159,11 @@ namespace FastExpressionCompiler
         internal static IList<T> AsList<T>(this IEnumerable<T> source) =>
             source == null ? Empty<T>() : source as IList<T> ?? source.ToList();
 
-        internal static bool TryGetIndexByReferenceEquals<T>(this IList<T> items, out int index, T item, int count)
+        internal static bool TryGetIndex<T, TEq>(this IList<T> items, out int index, T item, int count,
+            TEq eq = default) where TEq : struct, IEq<T>
         {
             for (var i = 0; (uint)i < count; ++i)
-                if (ReferenceEquals(items[i], item))
+                if (eq.Equals(items[i], item))
                 {
                     index = i;
                     return true;
@@ -6670,7 +6710,7 @@ namespace FastExpressionCompiler
             if (expr is ParameterExpression p)
                 return p.ToExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
 
-            if (uniqueExprs.TryGetIndexByReferenceEquals(out var i, expr, uniqueExprs.Count))
+            if (uniqueExprs.TryGetIndex(out var i, expr, uniqueExprs.Count, default(RefEq<Expression>)))
                 return sb.Append("e[").Append(i)
                     // output expression type and kind to help to understand what is it
                     .Append(" // ").Append(expr.NodeType.ToString()).Append(" of ")
@@ -6686,7 +6726,7 @@ namespace FastExpressionCompiler
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIdent, bool stripNamespace, Func<Type, string, string> printType, int identSpaces, CodePrinter.ObjectToCode notRecognizedToCode)
         {
-            if (paramsExprs.TryGetIndexByReferenceEquals(out var i, pe, paramsExprs.Count))
+            if (paramsExprs.TryGetIndex(out var i, pe, paramsExprs.Count, default(RefEq<PE>)))
                 return sb
                     .Append("p[").Append(i)
                     .Append(" // (")
@@ -6704,7 +6744,7 @@ namespace FastExpressionCompiler
         internal static StringBuilder ToExpressionString(this LabelTarget lt, StringBuilder sb, List<LabelTarget> labelTargets,
             int lineIdent, bool stripNamespace, Func<Type, string, string> printType)
         {
-            if (labelTargets.TryGetIndexByReferenceEquals(out var i, lt, labelTargets.Count))
+            if (labelTargets.TryGetIndex(out var i, lt, labelTargets.Count, default(RefEq<LabelTarget>)))
                 return sb.Append("l[").Append(i)
                     .Append(" // (").AppendName(lt.Name, lt.Type, lt).Append(')')
                     .NewLineIdent(lineIdent).Append(']');
@@ -6859,7 +6899,7 @@ namespace FastExpressionCompiler
                             return sb.Append("New(").AppendTypeOf(e.Type, stripNamespace, printType).Append(')');
 
                         sb.Append("New( // ").Append(args.Count).Append(" args");
-                        var ctorIndex = x.Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.AsArray().GetFirstIndexByReferenceEquals(x.Constructor);
+                        var ctorIndex = x.Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.AsArray().GetFirstIndex(x.Constructor, default(RefEq<ConstructorInfo>));
                         sb.NewLineIdent(lineIdent).AppendTypeOf(x.Type, stripNamespace, printType)
                             .Append(".GetTypeInfo().DeclaredConstructors.AsArray()[").Append(ctorIndex).Append("],");
                         sb.NewLineIdentArgumentExprs(args, paramsExprs, uniqueExprs, lts, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
@@ -8591,11 +8631,12 @@ namespace FastExpressionCompiler
 
     internal static class FecHelpers
     {
-        public static int GetFirstIndexByReferenceEquals<T>(this IReadOnlyList<T> source, T item) where T : class
+        public static int GetFirstIndex<T, TEq>(this IReadOnlyList<T> source, T item, TEq eq = default)
+            where TEq : struct, IEq<T>
         {
             if (source.Count != 0)
                 for (var i = 0; i < source.Count; ++i)
-                    if (ReferenceEquals(source[i], item))
+                    if (eq.Equals(source[i], item))
                         return i;
             return -1;
         }

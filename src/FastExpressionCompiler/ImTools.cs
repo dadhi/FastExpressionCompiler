@@ -944,12 +944,12 @@ public static class FHashMap
 
     /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V GetOrAddValueRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
+    public static ref V AddOrGetValueRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
         if (map._count > StackEntriesCount)
-            return ref map.GetOrAddValueRefByHash(key, out found);
+            return ref map.AddOrGetValueRefByHash(key, out found);
         found = true;
         switch (map._count)
         {
@@ -1214,7 +1214,7 @@ public static class FHashMap
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    private static ref V GetOrAddValueRefByHash<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
+    private static ref V AddOrGetValueRefByHash<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
