@@ -704,8 +704,9 @@ public struct SmallList2<TItem>
 /// <summary>Configiration and the tools for the FHashMap map data structure</summary>
 public static class FHashMap
 {
-    /// <summary>2^32 / phi for the Fibonacci hashing, where phi is the golden ratio ~1.61803</summary>
-    public const uint GoldenRatio32 = 2654435769;
+    // todo: @improve for the future me
+    // <summary>2^32 / phi for the Fibonacci hashing, where phi is the golden ratio ~1.61803</summary>
+    // public const uint GoldenRatio32 = 2654435769;
 
     internal const byte MinFreeCapacityShift = 3; // e.g. for the capacity 16: 16 >> 3 => 2, 12.5% of the free hash slots (it does not mean the entries free slot)
     internal const byte MinHashesCapacityBitShift = 4; // 1 << 4 == 16
@@ -942,6 +943,30 @@ public static class FHashMap
         return ref FHashMap<K, V, TEq, TEntries>._missing.Value;
     }
 
+    /// <summary>Finds the stored value by key. If found returns ref to the value it can be modified in place.</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static bool Contains<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key)
+        where TEq : struct, IEq<K>
+        where TEntries : struct, IEntries<K, V, TEq>
+    {
+        if (map._count > StackEntriesCount)
+        {
+            map.TryGetValueRefByHash(key, out var found);
+            return found;
+        }
+
+        // for small counts just compare the keys without calculating the hashes
+        var eq = default(TEq);
+        return map._count switch
+        {
+            1 => eq.Equals(key, map._e0.Key),
+            2 => eq.Equals(key, map._e0.Key) || eq.Equals(key, map._e1.Key),
+            3 => eq.Equals(key, map._e0.Key) || eq.Equals(key, map._e1.Key) || eq.Equals(key, map._e2.Key),
+            4 => eq.Equals(key, map._e0.Key) || eq.Equals(key, map._e1.Key) || eq.Equals(key, map._e2.Key) || eq.Equals(key, map._e3.Key),
+            _ => false,
+        };
+    }
+
     /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref V AddOrGetValueRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
@@ -1055,7 +1080,6 @@ public static class FHashMap
     /// <summary>Adds the sure absent key entry. 
     /// Provides the performance in scenarios where you look for present key, and using it, and if ABSENT then add the new one.
     /// So this method optimized NOT to look for the present item for the second time in SEQUENCE</summary>
-    [MethodImpl((MethodImplOptions)256)]
     public static ref V AddSureAbsentDefaultAndGetRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>

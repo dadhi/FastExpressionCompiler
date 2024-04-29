@@ -2228,12 +2228,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        // var hasComplexArgs = false;
-                        // for (var i = 0; !hasComplexArgs && i < argCount; i++)
-                        //     hasComplexArgs = argExprs.GetArgument(i).IsComplexExpression();
-
-                        closure.ArgsContainingComplexExpression.TryGetValueRef(newExpr, out var containsInlinedInvoke);
-                        if (!containsInlinedInvoke)
+                        if (!closure.ArgsContainingComplexExpression.Contains(newExpr))
                         {
                             for (var i = 0; i < argCount; ++i)
                                 if (!TryEmit(argExprs.GetArgument(i), paramExprs, il, ref closure, setup, parent, pars[i].ParameterType.IsByRef ? i : -1))
@@ -4511,13 +4506,7 @@ namespace FastExpressionCompiler
 #else
                     var callArgs = callExpr.Arguments;
 #endif
-                    // var hasComplexArgs = false;
-                    // for (var i = 0; !hasComplexArgs && i < parCount; i++)
-                    //     hasComplexArgs = callArgs.GetArgument(i).IsComplexExpression();
-                    // if (!hasComplexArgs)
-
-                    closure.ArgsContainingComplexExpression.TryGetValueRef(callExpr, out var containsInlinedInvoke);
-                    if (!containsInlinedInvoke)
+                    if (!closure.ArgsContainingComplexExpression.Contains(callExpr))
                     {
                         if (loadObjByAddress)
                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
