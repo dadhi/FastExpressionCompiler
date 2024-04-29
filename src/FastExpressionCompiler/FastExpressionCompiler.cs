@@ -640,11 +640,12 @@ namespace FastExpressionCompiler
                 FHashMap.SingleArrayEntries<InvocationExpression, Expression, RefEq<InvocationExpression>>
                 > InlinedLambdaInvocationMap;
 
+            /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
             internal FHashMap<Expression, NoValue, RefEq<Expression>,
                 FHashMap.SingleArrayEntries<Expression, NoValue, RefEq<Expression>>
-                > ArgsContainingInlinedLambdaInvocation;
+                > ArgsContainingComplexExpression;
 
-            internal bool HasNestedInlinedLambdaInvoke;
+            internal bool HasComplexExpression;
 
             /// The stack for the lambda invocation and the labels bound to them
             internal SmallList4<LabelInfo> LambdaInvokeStackLabels;
@@ -1193,17 +1194,17 @@ namespace FastExpressionCompiler
 
                             for (var i = 0; i < argCount; i++)
                             {
-                                closure.HasNestedInlinedLambdaInvoke = false; // reset the flag because we want to know the real result after the arg collection
+                                closure.HasComplexExpression = false; // reset the flag because we want to know the real result after the arg collection
                                 if ((r = TryCollectInfo(ref closure, callArgs.GetArgument(i), paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
-                                hasNestedInlinedLambdaInvoke |= closure.HasNestedInlinedLambdaInvoke;
+                                hasNestedInlinedLambdaInvoke |= closure.HasComplexExpression;
                             }
 
                             // propagate the value up the stack
                             if (hasNestedInlinedLambdaInvoke)
                             {
-                                closure.HasNestedInlinedLambdaInvoke = hasNestedInlinedLambdaInvoke;
-                                closure.ArgsContainingInlinedLambdaInvocation.AddOrGetValueRef(callExpr, out _);
+                                closure.HasComplexExpression = hasNestedInlinedLambdaInvoke;
+                                closure.ArgsContainingComplexExpression.AddOrGetValueRef(callExpr, out _);
                             }
                             return r;
                         }
@@ -1231,17 +1232,17 @@ namespace FastExpressionCompiler
 
                             for (var i = 0; i < argCount; i++)
                             {
-                                closure.HasNestedInlinedLambdaInvoke = false;
+                                closure.HasComplexExpression = false;
                                 if ((r = TryCollectInfo(ref closure, ctorArgs.GetArgument(i), paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
-                                hasNestedInlinedLambdaInvoke |= closure.HasNestedInlinedLambdaInvoke;
+                                hasNestedInlinedLambdaInvoke |= closure.HasComplexExpression;
                             }
 
                             // pop the value up the stack 
                             if (hasNestedInlinedLambdaInvoke)
                             {
-                                closure.HasNestedInlinedLambdaInvoke = hasNestedInlinedLambdaInvoke;
-                                closure.ArgsContainingInlinedLambdaInvocation.AddOrGetValueRef(newExpr, out _);
+                                closure.HasComplexExpression = hasNestedInlinedLambdaInvoke;
+                                closure.ArgsContainingComplexExpression.AddOrGetValueRef(newExpr, out _);
                             }
 
                             return r;
@@ -1334,7 +1335,7 @@ namespace FastExpressionCompiler
                             {
                                 var oldIndex = closure.CurrentInlinedLambdaInvokeIndex;
                                 closure.CurrentInlinedLambdaInvokeIndex = closure.AddInlinedLambdaInvoke(invokeExpr);
-                                closure.HasNestedInlinedLambdaInvoke = false; // switch off because we have entered the inlined lambda
+                                closure.HasComplexExpression = false; // switch off because we have entered the inlined lambda
 
                                 ref var inlinedExpr = ref closure.InlinedLambdaInvocationMap.AddOrGetValueRef(invokeExpr, out var found);
                                 if (!found)
@@ -1343,7 +1344,7 @@ namespace FastExpressionCompiler
                                 if ((r = TryCollectInfo(ref closure, inlinedExpr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
 
-                                closure.HasNestedInlinedLambdaInvoke = true;
+                                closure.HasComplexExpression = true;
                                 closure.CurrentInlinedLambdaInvokeIndex = oldIndex;
                                 return r;
                             }
@@ -1804,9 +1805,13 @@ namespace FastExpressionCompiler
                     closure.PopBlock();
             }
 
-            if (tryExpr.Finally != null &&
-                (r = TryCollectInfo(ref closure, tryExpr.Finally, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
-                return r;
+            if (tryExpr.Finally != null)
+            {
+                closure.HasComplexExpression = false;
+                if ((r = TryCollectInfo(ref closure, tryExpr.Finally, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                    return r;
+                closure.HasComplexExpression = true;
+            }
 
             return r;
         }
@@ -2227,7 +2232,7 @@ namespace FastExpressionCompiler
                         // for (var i = 0; !hasComplexArgs && i < argCount; i++)
                         //     hasComplexArgs = argExprs.GetArgument(i).IsComplexExpression();
 
-                        closure.ArgsContainingInlinedLambdaInvocation.TryGetValueRef(newExpr, out var containsInlinedInvoke);
+                        closure.ArgsContainingComplexExpression.TryGetValueRef(newExpr, out var containsInlinedInvoke);
                         if (!containsInlinedInvoke)
                         {
                             for (var i = 0; i < argCount; ++i)
@@ -4511,7 +4516,7 @@ namespace FastExpressionCompiler
                     //     hasComplexArgs = callArgs.GetArgument(i).IsComplexExpression();
                     // if (!hasComplexArgs)
 
-                    closure.ArgsContainingInlinedLambdaInvocation.TryGetValueRef(callExpr, out var containsInlinedInvoke);
+                    closure.ArgsContainingComplexExpression.TryGetValueRef(callExpr, out var containsInlinedInvoke);
                     if (!containsInlinedInvoke)
                     {
                         if (loadObjByAddress)

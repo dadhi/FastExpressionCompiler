@@ -708,7 +708,7 @@ public static class FHashMap
     public const uint GoldenRatio32 = 2654435769;
 
     internal const byte MinFreeCapacityShift = 3; // e.g. for the capacity 16: 16 >> 3 => 2, 12.5% of the free hash slots (it does not mean the entries free slot)
-    internal const byte MinHashesCapacityBitShift = 4; // 1 << 3 == 8
+    internal const byte MinHashesCapacityBitShift = 4; // 1 << 4 == 16
 
     /// <summary>Upper hash bits spent on storing the probes, e.g. 5 bits mean 31 probes max.</summary>
     public const byte MaxProbeBits = 5;
@@ -996,6 +996,7 @@ public static class FHashMap
                 var indexMask = (1 << MinHashesCapacityBitShift) - 1;
 
                 // todo: @perf optimize by calculating the keys hashes and putting them into the span and iterating over them inside a single method
+
                 map.AddInitialHashWithoutResizing(map._e0.Key, 0, indexMask);
                 map.AddInitialHashWithoutResizing(map._e1.Key, 1, indexMask);
                 map.AddInitialHashWithoutResizing(map._e2.Key, 2, indexMask);
@@ -1004,6 +1005,8 @@ public static class FHashMap
 
                 map._count = 5;
                 map._entries.Init(2);
+
+                // we do not copying the entries because we provide the stable value reference guaranties
                 return ref map._entries.AddKeyAndGetValueRef(key, 0);
         }
     }
