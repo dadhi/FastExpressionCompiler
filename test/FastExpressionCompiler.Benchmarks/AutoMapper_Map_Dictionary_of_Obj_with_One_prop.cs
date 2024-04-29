@@ -11,25 +11,27 @@ namespace FastExpressionCompiler.Benchmarks
 {
     public class AutoMapper_Map_Dictionary_of_Obj_with_One_prop
     {
-        /*
-        ## V4.2
-
-        BenchmarkDotNet v0.13.10, Windows 11 (10.0.22631.3447/23H2/2023Update/SunValley3)
-        11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
-        .NET SDK 8.0.104
-        [Host]     : .NET 8.0.4 (8.0.424.16909), X64 RyuJIT AVX2
-        DefaultJob : .NET 8.0.4 (8.0.424.16909), X64 RyuJIT AVX2
-
-        | Method                      | Mean      | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-        |---------------------------- |----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
-        | Compile                     | 610.38 us | 11.534 us | 13.730 us | 31.52 |    1.09 | 3.9063 | 1.9531 |  35.22 KB |        3.58 |
-        | CompileFast                 |  20.13 us |  0.370 us |  0.309 us |  1.03 |    0.03 | 1.5869 | 1.4648 |  10.46 KB |        1.06 |
-        | CompileFast_LightExpression |  19.48 us |  0.367 us |  0.360 us |  1.00 |    0.00 | 1.5869 | 1.4648 |   9.85 KB |        1.00 |
-
-        */
         [MemoryDiagnoser]
         public class Compile_only
         {
+            /*
+            ## V4.2
+
+            BenchmarkDotNet v0.13.10, Windows 11 (10.0.22631.3447/23H2/2023Update/SunValley3)
+            11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
+            .NET SDK 8.0.104
+            [Host]     : .NET 8.0.4 (8.0.424.16909), X64 RyuJIT AVX2
+            DefaultJob : .NET 8.0.4 (8.0.424.16909), X64 RyuJIT AVX2
+
+            | Method                       | Mean      | Error     | StdDev    | Median    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |----------------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile                      | 627.90 us | 11.774 us | 29.754 us | 616.91 us | 30.05 |    2.30 | 4.8828 | 3.9063 |  35.16 KB |        3.50 |
+            | CompileFast                  |  22.85 us |  0.400 us |  0.520 us |  22.93 us |  1.09 |    0.03 | 1.7090 | 1.5869 |  10.66 KB |        1.06 |
+            | CompileFast_NoInvokeInlining |  23.28 us |  0.409 us |  0.437 us |  23.16 us |  1.11 |    0.04 | 1.4648 | 1.3428 |   9.64 KB |        0.96 |
+            | CompileFast_LightExpression  |  20.90 us |  0.413 us |  0.631 us |  20.78 us |  1.00 |    0.00 | 1.5869 | 1.4648 |  10.05 KB |        1.00 |
+            
+            */
+            
             private static readonly Expression<Func<Source, Destination, ResolutionContext, Destination>> _expression = CreateExpression();
             private static readonly LightExpression.Expression<Func<Source, Destination, ResolutionContext, Destination>> _lightExpression = CreateLightExpression();
 
@@ -63,17 +65,17 @@ namespace FastExpressionCompiler.Benchmarks
             public object Create_n_CompileFast_LightExpression() => LightExpression.ExpressionCompiler.CompileFast(CreateLightExpression());
         }
 
-        /*
-| Method                               | Mean     | Error    | StdDev   | Ratio | RatioSD |
-|------------------------------------- |---------:|---------:|---------:|------:|--------:|
-| Invoke_Compiled                      | 87.56 ns | 1.739 ns | 3.046 ns |  1.00 |    0.00 |
-| Invoke_CompiledFast                  |       NA |       NA |       NA |     ? |       ? |
-| Invoke_CompiledFast_NoInvokeInlining | 84.72 ns | 1.241 ns | 1.219 ns |  0.96 |    0.03 |
-| Invoke_CompiledFast_LightExpression  |       NA |       NA |       NA |     ? |       ? |
-        */
 
         public class Invoke_compiled_delegate
         {
+            /*
+            | Method                               | Mean     | Error    | StdDev    | Median   | Ratio | RatioSD |
+            |------------------------------------- |---------:|---------:|----------:|---------:|------:|--------:|
+            | Invoke_Compiled                      | 90.22 ns | 3.131 ns |  9.134 ns | 86.50 ns |  1.00 |    0.00 |
+            | Invoke_CompiledFast                  | 86.14 ns | 1.954 ns |  5.510 ns | 84.94 ns |  0.97 |    0.11 |
+            | Invoke_CompiledFast_NoInvokeInlining | 93.63 ns | 3.405 ns |  9.931 ns | 90.49 ns |  1.05 |    0.14 |
+            | Invoke_CompiledFast_LightExpression  | 93.56 ns | 3.857 ns | 11.312 ns | 87.86 ns |  1.05 |    0.15 |
+            */
             private static readonly Func<Source, Destination, ResolutionContext, Destination> _compiled = CreateExpression().Compile();
             private static readonly Func<Source, Destination, ResolutionContext, Destination> _compiledFast = CreateExpression().CompileFast(true);
             private static readonly Func<Source, Destination, ResolutionContext, Destination> _compiledFastNoInvokeInlining = CreateExpression().CompileFast(true, CompilerFlags.NoInvocationLambdaInlining);
