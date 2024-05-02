@@ -37,14 +37,14 @@ THE SOFTWARE.
 namespace FastExpressionCompiler.LightExpression
 {
     using FastExpressionCompiler.LightExpression.ImTools;
-    using static FastExpressionCompiler.LightExpression.ImTools.FHashMap;
+    using static FastExpressionCompiler.LightExpression.ImTools.SmallMap4;
     using static FastExpressionCompiler.LightExpression.Expression;
     using PE = FastExpressionCompiler.LightExpression.ParameterExpression;
 #else
 namespace FastExpressionCompiler
 {
     using FastExpressionCompiler.ImTools;
-    using static FastExpressionCompiler.ImTools.FHashMap;
+    using static FastExpressionCompiler.ImTools.SmallMap4;
     using static System.Linq.Expressions.Expression;
     using PE = System.Linq.Expressions.ParameterExpression;
 #endif
@@ -61,7 +61,6 @@ namespace FastExpressionCompiler
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using static System.Environment;
-    using System.Collections.ObjectModel;
 
     /// <summary>The flags for the compiler</summary>
     [Flags]
@@ -631,18 +630,18 @@ namespace FastExpressionCompiler
             /// <summary>Tracks the use of the variables in the blocks stack per variable, 
             /// (uint) contains (ushort) BlockIndex in the upper bits and (ushort) VarIndex in the lower bits.
             /// to determine if variable is the local variable and in what block it's defined</summary>
-            private FHashMap<PE, SmallList4<uint>,
-                RefEq<PE>, FHashMap.SingleArrayEntries<PE, SmallList4<uint>, RefEq<PE>>
+            private SmallMap4<PE, SmallList4<uint>,
+                RefEq<PE>, SmallMap4.SingleArrayEntries<PE, SmallList4<uint>, RefEq<PE>>
                 > _varInBlockMap;
 
             /// The map of inlined invocations collected in TryCollect and then used in TryEmit
-            internal FHashMap<InvocationExpression, Expression, RefEq<InvocationExpression>,
-                FHashMap.SingleArrayEntries<InvocationExpression, Expression, RefEq<InvocationExpression>>
+            internal SmallMap4<InvocationExpression, Expression, RefEq<InvocationExpression>,
+                SmallMap4.SingleArrayEntries<InvocationExpression, Expression, RefEq<InvocationExpression>>
                 > InlinedLambdaInvocationMap;
 
             /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
-            internal FHashMap<Expression, NoValue, RefEq<Expression>,
-                FHashMap.SingleArrayEntries<Expression, NoValue, RefEq<Expression>>
+            internal SmallMap4<Expression, NoValue, RefEq<Expression>,
+                SmallMap4.SingleArrayEntries<Expression, NoValue, RefEq<Expression>>
                 > ArgsContainingComplexExpression;
 
             internal bool HasComplexExpression;

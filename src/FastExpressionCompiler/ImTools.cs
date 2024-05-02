@@ -38,7 +38,7 @@ namespace FastExpressionCompiler.LightExpression.ImTools;
 namespace FastExpressionCompiler.ImTools;
 #endif
 
-using static FHashMap;
+using static SmallMap4;
 
 /// <summary>Wrapper for the array and count</summary>
 public struct SmallList<T>
@@ -144,7 +144,7 @@ public static class SmallList
 
     /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList<TItem> source, in TItem item, TEq eq)
+    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList<TItem> source, in TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         var count = source.Count;
@@ -247,7 +247,7 @@ public static class SmallList
 
     /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList4<TItem> source, in TItem item, TEq eq)
+    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList4<TItem> source, in TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         switch (source._count)
@@ -372,7 +372,7 @@ public static class SmallList
 
     /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList2<TItem> source, TItem item, TEq eq)
+    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList2<TItem> source, TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         switch (source._count)
@@ -727,7 +727,7 @@ public struct SmallList2<TItem>
 }
 
 /// <summary>Configiration and the tools for the FHashMap map data structure</summary>
-public static class FHashMap
+public static class SmallMap4
 {
     // todo: @improve for the future me
     // <summary>2^32 / phi for the Fibonacci hashing, where phi is the golden ratio ~1.61803</summary>
@@ -747,7 +747,7 @@ public static class FHashMap
 
     /// <summary>Creates the map with the <see cref="SingleArrayEntries{K, V, TEq}"/> storage</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static FHashMap<K, V, TEq, SingleArrayEntries<K, V, TEq>> New<K, V, TEq>(byte capacityBitShift = 0)
+    public static SmallMap4<K, V, TEq, SingleArrayEntries<K, V, TEq>> New<K, V, TEq>(byte capacityBitShift = 0)
         where TEq : struct, IEq<K> => new(capacityBitShift);
 
     /// <summary>Holds a single entry consisting of key and value. 
@@ -937,7 +937,7 @@ public static class FHashMap
 
     /// <summary>Finds the stored value by key. If found returns ref to the value it can be modified in place.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V TryGetValueRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
+    public static ref V TryGetValueRef<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
@@ -965,12 +965,12 @@ public static class FHashMap
                 break;
         }
         found = false;
-        return ref FHashMap<K, V, TEq, TEntries>._missing.Value;
+        return ref SmallMap4<K, V, TEq, TEntries>._missing.Value;
     }
 
     /// <summary>Finds the stored value by key. If found returns ref to the value it can be modified in place.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static bool Contains<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key)
+    public static bool Contains<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, K key)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
@@ -994,7 +994,7 @@ public static class FHashMap
 
     /// <summary>Gets the reference to the existing value of the provided key, or the default value to set for the newly added key.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V AddOrGetValueRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
+    public static ref V AddOrGetValueRef<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
@@ -1061,7 +1061,7 @@ public static class FHashMap
         }
     }
 
-    private static void AddInitialHashWithoutResizing<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, int index, int indexMask)
+    private static void AddInitialHashWithoutResizing<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, K key, int index, int indexMask)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
@@ -1105,7 +1105,7 @@ public static class FHashMap
     /// <summary>Adds the sure absent key entry. 
     /// Provides the performance in scenarios where you look for present key, and using it, and if ABSENT then add the new one.
     /// So this method optimized NOT to look for the present item for the second time in SEQUENCE</summary>
-    public static ref V AddSureAbsentDefaultAndGetRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key)
+    public static ref V AddSureAbsentDefaultAndGetRef<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, K key)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
@@ -1152,7 +1152,7 @@ public static class FHashMap
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    private static ref V AddSureAbsentDefaultAndGetRefByHash<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key)
+    private static ref V AddSureAbsentDefaultAndGetRefByHash<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, K key)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
@@ -1204,7 +1204,7 @@ public static class FHashMap
     ///<summary>Get the value ref by the entry index. Also the index corresponds to entry adding order.
     ///Improtant: it does not checks the index bounds, so you need to check that the index is from 0 to map.Count-1</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref Entry<K, V> GetSurePresentEntryRef<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, int index)
+    public static ref Entry<K, V> GetSurePresentEntryRef<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, int index)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
@@ -1219,11 +1219,11 @@ public static class FHashMap
             case 2: return ref map._e2;
             case 3: return ref map._e3;
         }
-        return ref FHashMap<K, V, TEq, TEntries>._missing;
+        return ref SmallMap4<K, V, TEq, TEntries>._missing;
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    internal static ref V TryGetValueRefByHash<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
+    internal static ref V TryGetValueRefByHash<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
@@ -1262,11 +1262,11 @@ public static class FHashMap
         }
 
         found = false;
-        return ref FHashMap<K, V, TEq, TEntries>._missing.Value;
+        return ref SmallMap4<K, V, TEq, TEntries>._missing.Value;
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    private static ref V AddOrGetValueRefByHash<K, V, TEq, TEntries>(this ref FHashMap<K, V, TEq, TEntries> map, K key, out bool found)
+    private static ref V AddOrGetValueRefByHash<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {
@@ -1344,7 +1344,7 @@ public static class FHashMap
 /// 
 /// </summary>
 [DebuggerDisplay("{Count} of {_e0}, {_e1}, {_e2}, {_e3}, ...")]
-public struct FHashMap<K, V, TEq, TEntries>
+public struct SmallMap4<K, V, TEq, TEntries>
     where TEq : struct, IEq<K>
     where TEntries : struct, IEntries<K, V, TEq>
 {
@@ -1381,7 +1381,7 @@ public struct FHashMap<K, V, TEq, TEntries>
     public TEntries Entries => _entries;
 
     /// <summary>Capacity calculates as `1 leftShift capacityBitShift`</summary>
-    public FHashMap(byte capacityBitShift)
+    public SmallMap4(byte capacityBitShift)
     {
         _capacityBitShift = capacityBitShift;
 
