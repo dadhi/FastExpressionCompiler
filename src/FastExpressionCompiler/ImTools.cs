@@ -899,7 +899,8 @@ public static class SmallMap4
     /// <summary>For now to use in the Set as a value</summary>
     public readonly struct NoValue {}
 
-    /// <summary>Stores the entries in a single dynamically reallocated array</summary>
+    /// <summary>Stores the entries in a single dynamically reallocated growing array</summary>
+    [DebuggerDisplay("{Capacity:_entries?.Length ?? 0} of {_entries?[0]}, {_entries?[1]}, ...")]
     public struct SingleArrayEntries<K, V, TEq> : IEntries<K, V, TEq> where TEq : struct, IEq<K>
     {
         internal Entry<K, V>[] _entries;
@@ -970,7 +971,7 @@ public static class SmallMap4
 
     /// <summary>Finds the stored value by key. If found returns ref to the value it can be modified in place.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static bool Contains<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, K key)
+    public static bool ContainsKey<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, K key)
         where TEq : struct, IEq<K>
         where TEntries : struct, IEntries<K, V, TEq>
     {

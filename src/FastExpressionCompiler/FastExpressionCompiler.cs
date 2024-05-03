@@ -26,7 +26,7 @@ THE SOFTWARE.
 // ReSharper disable CoVariantArrayConversion
 
 // #define LIGHT_EXPRESSION
-// #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
+#define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG && NET6_0_OR_GREATER
 #define DEMIT
 #endif
@@ -2227,7 +2227,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        if (!closure.ArgsContainingComplexExpression.Contains(newExpr))
+                        if (!closure.ArgsContainingComplexExpression.ContainsKey(newExpr))
                         {
                             for (var i = 0; i < argCount; ++i)
                                 if (!TryEmit(argExprs.GetArgument(i), paramExprs, il, ref closure, setup, parent, pars[i].ParameterType.IsByRef ? i : -1))
@@ -4505,7 +4505,7 @@ namespace FastExpressionCompiler
 #else
                     var callArgs = callExpr.Arguments;
 #endif
-                    if (!closure.ArgsContainingComplexExpression.Contains(callExpr))
+                    if (!closure.ArgsContainingComplexExpression.ContainsKey(callExpr))
                     {
                         if (loadObjByAddress)
                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
@@ -6556,7 +6556,9 @@ namespace FastExpressionCompiler
 
 
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
-        public static readonly Dictionary<Type, int> LocalVarUsage = new Dictionary<Type, int>(); 
+        public static SmallMap4<Type, int, RefEq<Type>,
+            SmallMap4.SingleArrayEntries<Type, int, RefEq<Type>>
+            > LocalVarUsage;
 #endif
         // todo: @perf add the map of the used local variables that can be reused, e.g. we are getting the variable used in the local scope but then we may return them into POOL and reuse (many of int variable can be reuses, say for indexes)
         /// <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
@@ -6564,10 +6566,11 @@ namespace FastExpressionCompiler
         public static int GetNextLocalVarIndex(this ILGenerator il, Type t)
         {
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
-            if (!LocalVarUsage.ContainsKey(t)) // todo: @perf use FHashMap?
-                LocalVarUsage[t] = 1;
-            else 
-                ++LocalVarUsage[t];
+            ref var varUsage = ref LocalVarUsage.AddOrGetValueRef(t, out var found);
+            if (!found)
+                varUsage = 1;
+            else
+                ++varUsage;
 #endif
             return _getNextLocalVarIndex(il, t);
         }
