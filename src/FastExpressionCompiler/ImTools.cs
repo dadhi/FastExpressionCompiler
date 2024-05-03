@@ -66,7 +66,7 @@ public struct SmallList<T>
 public static class SmallList
 {
     internal const int ForLoopCopyCount = 4;
-    internal const int InitialCapacity = 4;
+    internal const int DefaultInitialCapacity = 4;
 
     [MethodImpl((MethodImplOptions)256)]
     internal static void Expand<TItem>(ref TItem[] items)
@@ -94,7 +94,7 @@ public static class SmallList
 
     /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`, `items` may be null</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem AppendDefaultAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity = InitialCapacity)
+    public static ref TItem AppendDefaultAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity = DefaultInitialCapacity)
     {
         if (items == null)
         {
@@ -117,13 +117,13 @@ public static class SmallList
     // todo: @perf add the not null variant
     /// <summary>Appends the new default item to the list and returns ref to it for write or read</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem Append<TItem>(ref this SmallList<TItem> source, int initialCapacity = InitialCapacity) =>
+    public static ref TItem Append<TItem>(ref this SmallList<TItem> source, int initialCapacity = DefaultInitialCapacity) =>
         ref AppendDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity);
 
     /// <summary>Appends the new item to the list</summary>
     // todo: @perf add the not null variant
     [MethodImpl((MethodImplOptions)256)]
-    public static void Append<TItem>(ref this SmallList<TItem> source, in TItem item, int initialCapacity = InitialCapacity) =>
+    public static void Append<TItem>(ref this SmallList<TItem> source, in TItem item, int initialCapacity = DefaultInitialCapacity) =>
         AppendDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity) = item;
 
     /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
