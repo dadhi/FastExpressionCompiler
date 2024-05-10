@@ -234,7 +234,7 @@ public static class SmallList
                 if (eq.Equals(it, source._it2)) return 2;
                 if (eq.Equals(it, source._it3)) return 3;
                 if (source._rest != null)
-                    return source._rest.TryGetIndex(it, 0, source._count - SmallList4<TItem>.StackCapacity, eq, 
+                    return source._rest.TryGetIndex(it, 0, source._count - SmallList4<TItem>.StackCapacity, eq,
                         -1 - SmallList4<TItem>.StackCapacity) + SmallList4<TItem>.StackCapacity;
                 break;
         }
@@ -279,19 +279,14 @@ public static class SmallList
                 if (eq.Equals(item, source._it1)) return 1;
                 if (eq.Equals(item, source._it2)) return 2;
                 if (eq.Equals(item, source._it3)) return 3;
-
-                var restCount = source._count - SmallList4<TItem>.StackCapacity;
+                var restCount = source._count - SmallList2<TItem>.StackCapacity;
                 if (restCount != 0)
                 {
-                    var items = source._rest;
-                    for (var i = 0; i < restCount; ++i)
-                    {
-                        ref var di = ref items[i]; // todo: @perf Marshall?
-                        if (eq.Equals(item, di))
-                            return i + SmallList4<TItem>.StackCapacity;
-                    }
+                    var i = source._rest.TryGetIndex(item, 0, restCount, eq);
+                    if (i != -1)
+                        return i + SmallList4<TItem>.StackCapacity;
                 }
-                AddDefaultAndGetRef(ref source._rest, restCount, SmallList4<TItem>.StackCapacity) = item;
+                AddDefaultAndGetRef(ref source._rest, restCount) = item;
                 ++source._count;
                 return -1;
         }
@@ -332,7 +327,7 @@ public static class SmallList
             case 0: return ref source._it0;
             case 1: return ref source._it1;
             default:
-                return ref AddDefaultAndGetRef(ref source._rest, index - SmallList2<TItem>.StackCapacity, SmallList2<TItem>.StackCapacity);
+                return ref AddDefaultAndGetRef(ref source._rest, index - SmallList2<TItem>.StackCapacity);
         }
     }
 
@@ -383,15 +378,11 @@ public static class SmallList
                 var restCount = source._count - SmallList2<TItem>.StackCapacity;
                 if (restCount != 0)
                 {
-                    var items = source._rest;
-                    for (var i = 0; i < restCount; ++i)
-                    {
-                        ref var di = ref items[i]; // todo: @perf Marshall?
-                        if (eq.Equals(item, di))
-                            return i + SmallList2<TItem>.StackCapacity;
-                    }
+                    var i = source._rest.TryGetIndex(item, 0, restCount, eq);
+                    if (i != -1)
+                        return i + SmallList2<TItem>.StackCapacity;
                 }
-                AddDefaultAndGetRef(ref source._rest, restCount, SmallList2<TItem>.StackCapacity) = item;
+                AddDefaultAndGetRef(ref source._rest, restCount) = item;
                 ++source._count;
                 return -1;
         }
