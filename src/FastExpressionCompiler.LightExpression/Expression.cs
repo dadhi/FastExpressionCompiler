@@ -2472,7 +2472,7 @@ namespace FastExpressionCompiler.LightExpression
             }
 #if NETFRAMEWORK
             else
-                // The cast is required only for Full CLR starting from NET45, e.g.
+                // The cast is required only for Full CLR, e.g.
                 // .NET Core does not seem to care about verifiability and it's faster without the explicit cast
                 il.Demit(OpCodes.Castclass, Type);
 #endif

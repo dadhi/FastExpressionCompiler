@@ -30,7 +30,7 @@ THE SOFTWARE.
 #if DEBUG && NET6_0_OR_GREATER
 #define DEMIT
 #endif
-#if LIGHT_EXPRESSION || !NET45
+#if LIGHT_EXPRESSION
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
 #if LIGHT_EXPRESSION
@@ -3191,7 +3191,7 @@ namespace FastExpressionCompiler
 #if NETFRAMEWORK
                         else
                         {
-                            // The cast probably required only for Full CLR starting from NET45, 
+                            // The cast probably required only for Full CLR starting, 
                             // e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`.
                             // .NET Core does not seem to care about verifiability and it's faster without the explicit cast.
                             il.Demit(OpCodes.Castclass, exprType);

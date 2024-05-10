@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.LightExpression.Internal.src</id>
-        <version>4.2.0</version>
+        <version>5.0.0</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2023 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -70,7 +70,7 @@
         </contentFiles>
         <dependencies>
             <group targetFramework="net8.0"/>
-            <group targetFramework="net45">
+            <group targetFramework="net472">
                 <dependency id="System.ValueTuple" version="4.5.0" />
             </group>
             <group targetFramework="netstandard2.0">
@@ -85,13 +85,13 @@
         <file src="..\FastExpressionCompiler.snk" />
 
         <file src="_._" target="lib\net8.0\" />
-        <file src="_._" target="lib\net45\" />
+        <file src="_._" target="lib\net472\" />
         <file src="_._" target="lib\netstandard2.0\" />
 
-        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs"   target="contentFiles\cs\net45\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs"                  target="contentFiles\cs\net45\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.Internal\Expression.cs"               target="contentFiles\cs\net45\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.Internal\ExpressionVisitor.cs"        target="contentFiles\cs\net45\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs"   target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs"                  target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\Expression.cs"               target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\ExpressionVisitor.cs"        target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
 
         <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs"   target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs"                  target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
