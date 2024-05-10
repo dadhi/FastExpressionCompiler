@@ -36,7 +36,7 @@ public class AccessByRef_vs_ByIGetRefStructImpl
     public AccessByRef_vs_ByIGetRefStructImpl()
     {
         for (var i = 0; i < 8; ++i)
-            Labels.AppendDefault();
+            Labels.AddDefault();
     }
 
     // [Benchmark(Baseline = true)]

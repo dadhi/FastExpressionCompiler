@@ -721,7 +721,7 @@ namespace FastExpressionCompiler
                 GetLabelOrInvokeIndexByTarget(ref LambdaInvokeStackLabels, labelTarget, out var found);
                 if (!found)
                 {
-                    ref var label = ref LambdaInvokeStackLabels.AppendDefaultAndGetRef();
+                    ref var label = ref LambdaInvokeStackLabels.AddDefaultAndGetRef();
                     label.Target = labelTarget;
                     label.InlinedLambdaInvokeIndex = inlinedLambdaInvokeIndex;
                 }
@@ -734,7 +734,7 @@ namespace FastExpressionCompiler
                     if (LambdaInvokeStackLabels.GetSurePresentItemRef(i).Target == e)
                         return (short)i;
 
-                ref var label = ref LambdaInvokeStackLabels.AppendDefaultAndGetRef();
+                ref var label = ref LambdaInvokeStackLabels.AddDefaultAndGetRef();
                 label.Target = e;
                 return (short)count;
             }
@@ -806,7 +806,7 @@ namespace FastExpressionCompiler
             {
                 ref var blocks = ref _varInBlockMap.AddOrGetValueRef(pe, out _);
                 if (blocks.Count == 0 || (blocks.GetLastSurePresentItem() >>> 16) != blockIndex)
-                    blocks.Append((uint)(blockIndex << 16) | varIndex);
+                    blocks.Add((uint)(blockIndex << 16) | varIndex);
             }
 
             public void PopBlock()

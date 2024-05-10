@@ -188,7 +188,7 @@ public static class SmallList
 
     /// <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem AppendDefaultAndGetRef<TItem>(this ref SmallList4<TItem> source)
+    public static ref TItem AddDefaultAndGetRef<TItem>(this ref SmallList4<TItem> source)
     {
         var index = source._count++;
         switch (index)
@@ -198,7 +198,7 @@ public static class SmallList
             case 2: return ref source._it2;
             case 3: return ref source._it3;
             default:
-                return ref AddDefaultAndGetRef(ref source._rest, index - SmallList4<TItem>.OnStackItemCount, SmallList4<TItem>.OnStackItemCount);
+                return ref AddDefaultAndGetRef(ref source._rest, index - SmallList4<TItem>.OnStackItemCount);
         }
     }
 
@@ -247,7 +247,7 @@ public static class SmallList
 
     /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList4<TItem> source, in TItem item, TEq eq = default)
+    public static int GetIndexOrAdd<TItem, TEq>(this ref SmallList4<TItem> source, in TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         switch (source._count)
@@ -328,7 +328,7 @@ public static class SmallList
 
     /// <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem AppendDefaultAndGetRef<TItem>(this ref SmallList2<TItem> source)
+    public static ref TItem AddDefaultAndGetRef<TItem>(this ref SmallList2<TItem> source)
     {
         var index = source._count++;
         switch (index)
@@ -455,7 +455,7 @@ public struct SmallList4<TItem>
 
     /// <summary>Adds the item to the end of the list aka the Stack.Push</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Append(in TItem item)
+    public void Add(in TItem item)
     {
         var index = _count++;
         switch (index)
@@ -465,21 +465,17 @@ public struct SmallList4<TItem>
             case 2: _it2 = item; break;
             case 3: _it3 = item; break;
             default:
-                SmallList.AddDefaultAndGetRef(ref _rest, index - OnStackItemCount, OnStackItemCount) = item;
+                SmallList.AddDefaultAndGetRef(ref _rest, index - OnStackItemCount) = item;
                 break;
         }
     }
 
-    /// <summary>Bridge to go from the List.Add</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public void Add(in TItem item) => Append(in item);
-
     /// <summary>Adds the default item to the end of the list aka the Stack.Push default</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void AppendDefault()
+    public void AddDefault()
     {
         if (++_count >= OnStackItemCount)
-            SmallList.AddDefaultAndGetRef(ref _rest, _count - OnStackItemCount, OnStackItemCount);
+            SmallList.AddDefaultAndGetRef(ref _rest, _count - OnStackItemCount);
     }
 
     /// <summary>Removes the last item from the list aka the Stack Pop. Assumes that the list is not empty!</summary>
