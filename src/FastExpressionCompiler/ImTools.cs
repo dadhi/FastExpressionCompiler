@@ -72,7 +72,7 @@ public static class SmallList
     internal static void Expand<TItem>(ref TItem[] items)
     {
         // `| 1` is for the case when the length is 0
-        var newItems = new TItem[(items.Length << 1) | 1]; // have fun to guess the new length, haha ;-P
+        var newItems = new TItem[(items.Length << 1) | 1]; // have fun to guess the new length, ha-ha ;-P
         if (items.Length > ForLoopCopyCount)
             Array.Copy(items, newItems, items.Length);
         else
@@ -84,7 +84,7 @@ public static class SmallList
     /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`! 
     /// `items` should be not null</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem AppendDefaultToNotNullItemsAndGetRef<TItem>(ref TItem[] items, int index)
+    public static ref TItem AddDefaultToNotNullItemsAndGetRef<TItem>(ref TItem[] items, int index)
     {
         Debug.Assert(index <= items.Length);
         if (index == items.Length)
@@ -94,7 +94,7 @@ public static class SmallList
 
     /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`, `items` may be null</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem AppendDefaultAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity = DefaultInitialCapacity)
+    public static ref TItem AddDefaultAndGetRef<TItem>(ref TItem[] items, int index, int initialCapacity = DefaultInitialCapacity)
     {
         if (items == null)
         {
@@ -117,14 +117,14 @@ public static class SmallList
     // todo: @perf add the not null variant
     /// <summary>Appends the new default item to the list and returns ref to it for write or read</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem Append<TItem>(ref this SmallList<TItem> source, int initialCapacity = DefaultInitialCapacity) =>
-        ref AppendDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity);
+    public static ref TItem Add<TItem>(ref this SmallList<TItem> source, int initialCapacity = DefaultInitialCapacity) =>
+        ref AddDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity);
 
     /// <summary>Appends the new item to the list</summary>
     // todo: @perf add the not null variant
     [MethodImpl((MethodImplOptions)256)]
-    public static void Append<TItem>(ref this SmallList<TItem> source, in TItem item, int initialCapacity = DefaultInitialCapacity) =>
-        AppendDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity) = item;
+    public static void Add<TItem>(ref this SmallList<TItem> source, in TItem item, int initialCapacity = DefaultInitialCapacity) =>
+        AddDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity) = item;
 
     /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
     [MethodImpl((MethodImplOptions)256)]
@@ -144,7 +144,7 @@ public static class SmallList
 
     /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList<TItem> source, in TItem item, TEq eq = default)
+    public static int GetIndexOrAdd<TItem, TEq>(this ref SmallList<TItem> source, in TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         var count = source.Count;
@@ -155,7 +155,7 @@ public static class SmallList
             if (eq.Equals(item, di))
                 return i;
         }
-        source.Append() = item;
+        source.Add() = item;
         return -1;
     }
 
@@ -198,7 +198,7 @@ public static class SmallList
             case 2: return ref source._it2;
             case 3: return ref source._it3;
             default:
-                return ref AppendDefaultAndGetRef(ref source._rest, index - SmallList4<TItem>.OnStackItemCount, SmallList4<TItem>.OnStackItemCount);
+                return ref AddDefaultAndGetRef(ref source._rest, index - SmallList4<TItem>.OnStackItemCount, SmallList4<TItem>.OnStackItemCount);
         }
     }
 
@@ -295,7 +295,7 @@ public static class SmallList
                             return i + SmallList4<TItem>.OnStackItemCount;
                     }
                 }
-                AppendDefaultAndGetRef(ref source._rest, restCount, SmallList4<TItem>.OnStackItemCount) = item;
+                AddDefaultAndGetRef(ref source._rest, restCount, SmallList4<TItem>.OnStackItemCount) = item;
                 ++source._count;
                 return -1;
         }
@@ -336,7 +336,7 @@ public static class SmallList
             case 0: return ref source._it0;
             case 1: return ref source._it1;
             default:
-                return ref AppendDefaultAndGetRef(ref source._rest, index - SmallList2<TItem>.OnStackItemCount, SmallList2<TItem>.OnStackItemCount);
+                return ref AddDefaultAndGetRef(ref source._rest, index - SmallList2<TItem>.OnStackItemCount, SmallList2<TItem>.OnStackItemCount);
         }
     }
 
@@ -403,7 +403,7 @@ public static class SmallList
                             return i + SmallList2<TItem>.OnStackItemCount;
                     }
                 }
-                AppendDefaultAndGetRef(ref source._rest, restCount, SmallList2<TItem>.OnStackItemCount) = item;
+                AddDefaultAndGetRef(ref source._rest, restCount, SmallList2<TItem>.OnStackItemCount) = item;
                 ++source._count;
                 return -1;
         }
@@ -465,7 +465,7 @@ public struct SmallList4<TItem>
             case 2: _it2 = item; break;
             case 3: _it3 = item; break;
             default:
-                SmallList.AppendDefaultAndGetRef(ref _rest, index - OnStackItemCount, OnStackItemCount) = item;
+                SmallList.AddDefaultAndGetRef(ref _rest, index - OnStackItemCount, OnStackItemCount) = item;
                 break;
         }
     }
@@ -479,7 +479,7 @@ public struct SmallList4<TItem>
     public void AppendDefault()
     {
         if (++_count >= OnStackItemCount)
-            SmallList.AppendDefaultAndGetRef(ref _rest, _count - OnStackItemCount, OnStackItemCount);
+            SmallList.AddDefaultAndGetRef(ref _rest, _count - OnStackItemCount, OnStackItemCount);
     }
 
     /// <summary>Removes the last item from the list aka the Stack Pop. Assumes that the list is not empty!</summary>
@@ -521,14 +521,10 @@ public struct SmallList4<TItem>
                 return items;
         }
     }
-
-    /// <summary>Exposing as list</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public IList<TItem> AsList() => ToArray();
 }
 
 /// <summary>List with the number of first items (2) stored inside its struct and the rest in the growable array.
-/// Supports addition and removal (removel is without resize) only at the end of the list, aka Stack behavior</summary>
+/// Supports addition and removal (remove is without resize) only at the end of the list, aka Stack behavior</summary>
 [DebuggerDisplay("{Count} of {_it0?.ToString()}, {_it1?.ToString()}, ...")]
 public struct SmallList2<TItem>
 {
@@ -559,7 +555,7 @@ public struct SmallList2<TItem>
         _it0 = it0;
     }
 
-    /// <summary>Good steff</summary>
+    /// <summary>Good stiff</summary>
     [MethodImpl((MethodImplOptions)256)]
     public void Init(TItem it0, TItem it1)
     {
@@ -578,7 +574,7 @@ public struct SmallList2<TItem>
         _rest = rest;
     }
 
-    /// <summary>Good styff</summary>
+    /// <summary>Good stiff</summary>
     public void Init(params TItem[] items)
     {
         switch (items.Length)
@@ -661,7 +657,7 @@ public struct SmallList2<TItem>
 
     /// <summary>Adds the item to the end of the list aka the Stack.Push</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Append(in TItem item)
+    public void Add(in TItem item)
     {
         var index = _count++;
         switch (index)
@@ -669,21 +665,17 @@ public struct SmallList2<TItem>
             case 0: _it0 = item; break;
             case 1: _it1 = item; break;
             default:
-                SmallList.AppendDefaultAndGetRef(ref _rest, index - OnStackItemCount, OnStackItemCount) = item;
+                SmallList.AddDefaultAndGetRef(ref _rest, index - OnStackItemCount) = item;
                 break;
         }
     }
 
-    /// <summary>Sugar bridge from the List.Add</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public void Add(in TItem item) => Append(in item);
-
     /// <summary>Adds the default item to the end of the list aka the Stack.Push default</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void AppendDefault()
+    public void AddDefault()
     {
         if (++_count >= OnStackItemCount)
-            SmallList.AppendDefaultAndGetRef(ref _rest, _count - OnStackItemCount, OnStackItemCount);
+            SmallList.AddDefaultAndGetRef(ref _rest, _count - OnStackItemCount);
     }
 
     /// <summary>Removes the last item from the list aka the Stack Pop. Assumes that the list is not empty!</summary>
@@ -720,13 +712,9 @@ public struct SmallList2<TItem>
                 return items;
         }
     }
-
-    /// <summary>Exposing as list</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public IList<TItem> AsList() => ToArray();
 }
 
-/// <summary>Configiration and the tools for the FHashMap map data structure</summary>
+/// <summary>Configuration and the tools for the FHashMap map data structure</summary>
 public static class SmallMap4
 {
     // todo: @improve for the future me
@@ -769,7 +757,7 @@ public static class SmallMap4
         }
     }
 
-    /// binary reprsentation of the `int`
+    /// binary representation of the `int`
     public static string ToB(int x) => System.Convert.ToString(x, 2).PadLeft(32, '0');
 
     [MethodImpl((MethodImplOptions)256)]
@@ -799,7 +787,7 @@ public static class SmallMap4
         int GetHashCode(K key);
     }
 
-    /// <summary>Default comparer using the `object.GetHashCode` and `object.Equals` oveloads</summary>
+    /// <summary>Default comparer using the `object.GetHashCode` and `object.Equals` overloads</summary>
     public struct DefaultEq<K> : IEq<K>
     {
         /// <inheritdoc />
@@ -881,7 +869,7 @@ public static class SmallMap4
     }
 
     // todo: @improve can we move the Entry into the type parameter to configure and possibly save the memory e.g. for the sets? 
-    /// <summary>Abstraction to configure your own entries data structure. Check the derivitives for the examples</summary>
+    /// <summary>Abstraction to configure your own entries data structure. Check the derived types for the examples</summary>
     public interface IEntries<K, V, TEq> where TEq : IEq<K>
     {
         /// <summary>Initializes the entries storage to the specified capacity via the number of <paramref name="capacityBitShift"/> bits in the capacity</summary>
@@ -890,14 +878,14 @@ public static class SmallMap4
         /// <summary>Returns the reference to entry by its index, index should map to the present/non-removed entry</summary>
         ref Entry<K, V> GetSurePresentEntryRef(int index);
 
-        /// <summary>Adds the key at the "end" of entriesc- so the order of addition is preserved.</summary>
+        /// <summary>Adds the key at the "end" of entries - so the order of addition is preserved.</summary>
         ref V AddKeyAndGetValueRef(K key, int index);
     }
 
     internal const int MinEntriesCapacity = 2;
 
     /// <summary>For now to use in the Set as a value</summary>
-    public readonly struct NoValue {}
+    public readonly struct NoValue { }
 
     /// <summary>Stores the entries in a single dynamically reallocated growing array</summary>
     [DebuggerDisplay("{Capacity:_entries?.Length ?? 0} of {_entries?[0]}, {_entries?[1]}, ...")]
@@ -1203,7 +1191,7 @@ public static class SmallMap4
     }
 
     ///<summary>Get the value ref by the entry index. Also the index corresponds to entry adding order.
-    ///Improtant: it does not checks the index bounds, so you need to check that the index is from 0 to map.Count-1</summary>
+    ///Important: it does not checks the index bounds, so you need to check that the index is from 0 to map.Count-1</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref Entry<K, V> GetSurePresentEntryRef<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, int index)
         where TEq : struct, IEq<K>
@@ -1332,7 +1320,7 @@ public static class SmallMap4
 // todo: @improve ? how/where to add SIMD to improve CPU utilization but not losing perf for smaller sizes
 /// <summary>
 /// Fast and less-allocating hash map without thread safety nets. Please measure it in your own use case before use.
-/// It is configurable in regard of hash calculation/equality via `TEq` type paremeter and 
+/// It is configurable in regard of hash calculation/equality via `TEq` type parameter and 
 /// in regard of key-value storage via `TEntries` type parameter.
 /// 
 /// Details:
@@ -1362,7 +1350,7 @@ public struct SmallMap4<K, V, TEq, TEntries>
     // |- 5 (MaxProbeBits) high bits of the Probe count, with the minimal value of b00001 indicating the non-empty slot.
     internal int[] _packedHashesAndIndexes;
 
-#pragma warning disable IDE0044 // it tries to make entries readonly but they should stay modifyable to prevent its defensive struct copying  
+#pragma warning disable IDE0044 // it tries to make entries readonly but they should stay modify-able to prevent its defensive struct copying  
     internal TEntries _entries;
 #pragma warning restore IDE0044
 
@@ -1387,7 +1375,7 @@ public struct SmallMap4<K, V, TEq, TEntries>
         _capacityBitShift = capacityBitShift;
 
         // the overflow tail to the hashes is the size of log2N where N==capacityBitShift, 
-        // it is probably fine to have the check for the overlow of capacity because it will be mispredicted only once at the end of loop (it even rarely for the lookup)
+        // it is probably fine to have the check for the overflow of capacity because it will be mis-predicted only once at the end of loop (it even rarely for the lookup)
         _packedHashesAndIndexes = new int[1 << capacityBitShift];
         _entries = default;
         _entries.Init(capacityBitShift);
@@ -1423,7 +1411,7 @@ public struct SmallMap4<K, V, TEq, TEntries>
                 // get the new hash index from the old one with the next bit equal to the `oldCapacity`
                 var indexWithNextBit = (oldHash & oldCapacity) | (((i + 1) - (oldHash >>> ProbeCountShift)) & indexMask);
 
-                // no need for robinhooding because we already did it for the old hashes and now just sparcing the hashes into the new array which are already in order
+                // no need for robin-hooding because we already did it for the old hashes and now just filling the hashes into the new array which are already in order
                 var probes = 1;
                 ref var newHash = ref GetHashRef(ref newHashes, indexWithNextBit);
                 while (newHash != 0)

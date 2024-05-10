@@ -8,6 +8,7 @@
         "cref",
         "dont",
         "Funcs",
+        "Hasher",
         "intrinsics",
         "Isinst",
         "Ldarg",

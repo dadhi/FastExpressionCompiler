@@ -97,7 +97,7 @@ namespace FastExpressionCompiler.LightExpression
 
             var sysExpr = CreateSysExpression(ref exprsConverted);
 
-            ref var item = ref exprsConverted.Append();
+            ref var item = ref exprsConverted.Add();
             item.LightExpr = this;
             item.SysExpr = sysExpr;
             return sysExpr;
@@ -4263,7 +4263,7 @@ namespace FastExpressionCompiler.LightExpression
                 ? SysExpr.Label(Type)
                 : SysExpr.Label(Type, Name);
 
-            ref var item = ref converted.Append();
+            ref var item = ref converted.Add();
             item.LightExpr = this;
             item.SysExpr = sysItem;
             return sysItem;
