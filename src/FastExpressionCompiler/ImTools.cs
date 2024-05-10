@@ -411,7 +411,7 @@ public static class SmallList
 }
 
 /// <summary>List with the number of first items (4) stored inside its struct and the rest in the growable array.
-/// Supports addition and removal (removel is without resize) only at the end of the list, aka Stack behavior</summary>
+/// Supports addition and removal (remove is without resize) only at the end of the list, aka Stack behavior</summary>
 [DebuggerDisplay("{Count} of {_it0?.ToString()}, {_it1?.ToString()}, {_it2?.ToString()}, {_it3?.ToString()}, ...")]
 public struct SmallList4<TItem>
 {
