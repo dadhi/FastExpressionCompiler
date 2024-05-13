@@ -26,9 +26,8 @@ THE SOFTWARE.
 // ReSharper disable CoVariantArrayConversion
 
 // #define LIGHT_EXPRESSION
-#define DEBUG_INFO_LOCAL_VARIABLE_USAGE // todo: @wip uncomment to observe the SmallMap IndexOutOfRange error in the net80 release
 #if DEBUG && NET6_0_OR_GREATER
-// #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
+#define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #define DEMIT
 #endif
 #if LIGHT_EXPRESSION
@@ -6556,6 +6555,7 @@ namespace FastExpressionCompiler
 
 
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
+        [ThreadStatic]
         public static SmallMap4<Type, int, RefEq<Type>,
             SmallMap4.SingleArrayEntries<Type, int, RefEq<Type>>
             > LocalVarUsage;
@@ -6576,7 +6576,7 @@ namespace FastExpressionCompiler
             }
             catch(Exception ex)
             {
-                Console.WriteLine("ErrorX: " + ex);
+                Debug.WriteLine("Error tracking the local variable usage: " + ex);
             }
 #endif
             return _getNextLocalVarIndex(il, t);
