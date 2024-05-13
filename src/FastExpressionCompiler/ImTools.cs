@@ -349,7 +349,7 @@ public static class SmallList
 
     /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static int GetIndexOrAppend<TItem, TEq>(this ref SmallList2<TItem> source, TItem item, TEq eq = default)
+    public static int GetIndexOrAdd<TItem, TEq>(this ref SmallList2<TItem> source, TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         switch (source._count)
