@@ -4071,13 +4071,13 @@ namespace FastExpressionCompiler.LightExpression
         internal BlockExpression(in SmallList2<Expression> expressions) =>
             Expressions = expressions;
         internal BlockExpression(Expression e0) =>
-            Expressions.Init(e0);
+            Expressions.Populate1(e0);
         internal BlockExpression(Expression e0, Expression e1) =>
-            Expressions.Init(e0, e1);
+            Expressions.Populate2(e0, e1);
         internal BlockExpression(Expression e0, Expression e1, params Expression[] rest) =>
-            Expressions.Init(e0, e1, rest);
+            Expressions.Populate(e0, e1, rest);
         internal BlockExpression(IReadOnlyList<Expression> expressions) =>
-            Expressions.Init(expressions);
+            Expressions.Populate(expressions);
 #if SUPPORTS_VISITOR
         protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock(this);
 #endif

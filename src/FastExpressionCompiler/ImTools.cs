@@ -128,13 +128,7 @@ public static class SmallList
 
     /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static int TryGetIndex<TItem, TEq>(this ref SmallList<TItem> source, TItem it, TEq eq = default)
-        where TEq : struct, IEq<TItem>
-        => source.Items.TryGetIndex(it, 0, source.Count, eq);
-
-    /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static int TryGetIndex<TItem, TEq>(this TItem[] items, TItem it, int startIndex, int count, TEq eq = default, int notFoundResult = -1)
+    public static int TryGetIndex<TItem, TEq>(this TItem[] items, in TItem it, int startIndex, int count, TEq eq = default, int notFoundResult = -1)
         where TEq : struct, IEq<TItem>
     {
         for (var i = startIndex; i < count; ++i)
@@ -146,21 +140,21 @@ public static class SmallList
         return notFoundResult;
     }
 
+    /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static int TryGetIndex<TItem, TEq>(this ref SmallList<TItem> source, TItem it, TEq eq = default)
+        where TEq : struct, IEq<TItem>
+        => source.Items.TryGetIndex(it, 0, source.Count, eq);
+
     /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static int GetIndexOrAdd<TItem, TEq>(this ref SmallList<TItem> source, in TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
-        var count = source.Count;
-        var items = source.Items;
-        for (var i = 0; i < count; ++i)
-        {
-            ref var di = ref items[i]; // todo: @perf Marshall?
-            if (eq.Equals(item, di))
-                return i;
-        }
-        source.Add() = item;
-        return -1;
+        var i = TryGetIndex(source.Items, in item, 0, source.Count, eq);
+        if (i == -1)
+            source.Add() = item;
+        return i;
     }
 
     /// <summary>Returns surely present item ref by its index</summary>
@@ -234,7 +228,7 @@ public static class SmallList
                 if (eq.Equals(it, source._it2)) return 2;
                 if (eq.Equals(it, source._it3)) return 3;
                 if (source._rest != null)
-                    return source._rest.TryGetIndex(it, 0, source._count - SmallList4<TItem>.StackCapacity, eq,
+                    return source._rest.TryGetIndex(in it, 0, source._count - SmallList4<TItem>.StackCapacity, eq,
                         -1 - SmallList4<TItem>.StackCapacity) + SmallList4<TItem>.StackCapacity;
                 break;
         }
@@ -279,7 +273,7 @@ public static class SmallList
                 if (eq.Equals(item, source._it1)) return 1;
                 if (eq.Equals(item, source._it2)) return 2;
                 if (eq.Equals(item, source._it3)) return 3;
-                var restCount = source._count - SmallList2<TItem>.StackCapacity;
+                var restCount = source._count - SmallList4<TItem>.StackCapacity;
                 if (restCount != 0)
                 {
                     var i = source._rest.TryGetIndex(item, 0, restCount, eq);
@@ -346,7 +340,7 @@ public static class SmallList
                 if (eq.Equals(it, source._it0)) return 0;
                 if (eq.Equals(it, source._it1)) return 1;
                 if (source._rest != null)
-                    return source._rest.TryGetIndex(it, 0, source._count - SmallList2<TItem>.StackCapacity, eq,
+                    return source._rest.TryGetIndex(in it, 0, source._count - SmallList2<TItem>.StackCapacity, eq,
                         -1 - SmallList2<TItem>.StackCapacity) + SmallList2<TItem>.StackCapacity;
                 break;
         }
@@ -378,7 +372,7 @@ public static class SmallList
                 var restCount = source._count - SmallList2<TItem>.StackCapacity;
                 if (restCount != 0)
                 {
-                    var i = source._rest.TryGetIndex(item, 0, restCount, eq);
+                    var i = source._rest.TryGetIndex(in item, 0, restCount, eq);
                     if (i != -1)
                         return i + SmallList2<TItem>.StackCapacity;
                 }
@@ -522,83 +516,55 @@ public struct SmallList2<TItem>
             _rest = new TItem[count - StackCapacity];
     }
 
-    /// <summary>Good stiff</summary>
+    /// <summary>Populate with one item</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Init(TItem it0)
+    public void Populate1(TItem it0)
     {
         _count = 1;
         _it0 = it0;
     }
 
-    /// <summary>Good stiff</summary>
+    /// <summary>Populate with two items</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Init(TItem it0, TItem it1)
+    public void Populate2(TItem it0, TItem it1)
     {
         _count = 2;
         _it0 = it0;
         _it1 = it1;
     }
 
-    /// <summary>Good staff</summary>
+    /// <summary>Populate with more than two items</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Init(TItem it0, TItem it1, params TItem[] rest)
+    public void Populate(TItem it0, TItem it1, params TItem[] rest)
     {
-        _count = 2 + rest.Length;
+        _count = StackCapacity + rest.Length;
         _it0 = it0;
         _it1 = it1;
         _rest = rest;
     }
 
-    /// <summary>Good stiff</summary>
-    public void Init(params TItem[] items)
+    /// <summary>Populate with arbitrary items</summary>
+    public void Populate<TList>(TList items) where TList : IReadOnlyList<TItem>
     {
-        switch (items.Length)
-        {
-            case 0:
-                break;
-            case 1:
-                Init(items[0]);
-                break;
-            case 2:
-                Init(items[0], items[1]);
-                break;
-            default:
-                _count = items.Length;
-                _it0 = items[0];
-                _it1 = items[1];
-                for (var i = StackCapacity; i < items.Length; ++i)
-                    items[i - StackCapacity] = items[i];
-                _rest = items;
-                break;
-        }
-    }
-
-    /// <summary>Good staff</summary>
-    public void Init<TList>(TList items) where TList : IReadOnlyList<TItem>
-    {
-        if (items is TItem[] arr)
-        {
-            Init(arr);
-            return;
-        }
         switch (items.Count)
         {
             case 0:
                 break;
             case 1:
-                Init(items[0]);
+                Populate1(items[0]);
                 break;
             case 2:
-                Init(items[0], items[1]);
+                Populate2(items[0], items[1]);
                 break;
             default:
-                var count = items.Count;
-                var rest = new TItem[count - StackCapacity];
-                _count = count;
+                _count = items.Count;
                 _it0 = items[0];
                 _it1 = items[1];
-                for (var i = StackCapacity; i < count; ++i)
-                    rest[i - StackCapacity] = items[i];
+
+                // keep the capacity at count + StackCapacity
+                var rest = new TItem[_count]; // todo: @perf take from the ArrayPool.Shared
+                for (var i = StackCapacity; i < _count; ++i)
+                    rest[i - StackCapacity] = items[i]; // todo: @perf does List have a Copy?
                 _rest = rest;
                 break;
         }
