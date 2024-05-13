@@ -26,8 +26,8 @@ THE SOFTWARE.
 // ReSharper disable CoVariantArrayConversion
 
 // #define LIGHT_EXPRESSION
-#define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG && NET6_0_OR_GREATER
+#define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #define DEMIT
 #endif
 #if LIGHT_EXPRESSION

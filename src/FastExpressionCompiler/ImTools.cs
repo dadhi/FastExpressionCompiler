@@ -111,19 +111,19 @@ public static class SmallList
 
     /// <summary>Returns surely present item ref by its index</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem GetSurePresentItemRef<TItem>(ref this SmallList<TItem> source, int index) =>
+    public static ref TItem GetSurePresentItemRef<TItem>(this ref SmallList<TItem> source, int index) =>
         ref source.Items[index];
 
     // todo: @perf add the not null variant
     /// <summary>Appends the new default item to the list and returns ref to it for write or read</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem Add<TItem>(ref this SmallList<TItem> source, int initialCapacity = DefaultInitialCapacity) =>
+    public static ref TItem Add<TItem>(this ref SmallList<TItem> source, int initialCapacity = DefaultInitialCapacity) =>
         ref AddDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity);
 
     /// <summary>Appends the new item to the list</summary>
     // todo: @perf add the not null variant
     [MethodImpl((MethodImplOptions)256)]
-    public static void Add<TItem>(ref this SmallList<TItem> source, in TItem item, int initialCapacity = DefaultInitialCapacity) =>
+    public static void Add<TItem>(this ref SmallList<TItem> source, in TItem item, int initialCapacity = DefaultInitialCapacity) =>
         AddDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity) = item;
 
     /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
@@ -513,7 +513,7 @@ public struct SmallList2<TItem>
     {
         _count = count;
         if (count > StackCapacity)
-            _rest = new TItem[count - StackCapacity];
+            _rest = new TItem[count]; // add the StackCapacity empty space at the end, we may use it later for BuildToArray
     }
 
     /// <summary>Populate with one item</summary>
