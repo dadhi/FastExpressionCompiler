@@ -68,6 +68,7 @@ public class Issue390_405_406_Mapster_tests : ITest
 
             TypeAdapterConfig.GlobalSettings.Compile();
 
+            Issue410_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation();
             MapsterIssue676_NullReferenceException_with_FastExpressionCompiler();
             Issue390_Test_original_Mapster_mapping();
             Issue405_NullItemArray();
@@ -78,8 +79,83 @@ public class Issue390_405_406_Mapster_tests : ITest
         Issue390_Test_extracted_small_just_mapping_code_No_issue();
         Issue390_Test_extracted_mapping_code();
 
-        return 4*2 + 3;
+        return 5*2 + 3;
     }
+
+    public class TenantConfig
+    {
+        public string Name { get; set; }
+
+        public string Value { get; set; }
+
+        public bool IsEncrypted { get; set; }
+    }
+
+    class UnknownFieldSet {}
+
+    public sealed class TenantConfigVal
+    {
+        private UnknownFieldSet _unknownFields;
+
+        public const int IdFieldNumber = 1;
+
+        private string id_ = "";
+
+        public const int NameFieldNumber = 2;
+
+        private string name_ = "";
+
+        public const int ValueFieldNumber = 3;
+
+        private string value_ = "";
+
+        public string Id
+        {
+            get
+            {
+                return id_;
+            }
+            set
+            {
+                id_ = value;
+            }
+        }
+
+        public string Name
+        {
+            get
+            {
+                return name_;
+            }
+            set
+            {
+                name_ = value;
+            }
+        }
+
+        public string Value
+        {
+            get
+            {
+                return value_;
+            }
+            set
+            {
+                value_ = value;
+            }
+        }
+
+        public TenantConfigVal() { }
+    }
+
+    [Test]
+    public void Issue410_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation()
+    {
+        var failure = new TenantConfig().Adapt<TenantConfigVal>();
+
+        Assert.NotNull(failure);
+    }
+
 
     class TestClass
     {
