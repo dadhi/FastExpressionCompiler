@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 #define DEBUG_INFO_LOCAL_VARIABLE_USAGE // todo: @wip uncomment to observe the SmallMap IndexOutOfRange error in the net80 release
 #if DEBUG && NET6_0_OR_GREATER
-#define DEBUG_INFO_LOCAL_VARIABLE_USAGE
+// #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #define DEMIT
 #endif
 #if LIGHT_EXPRESSION
@@ -6566,11 +6566,18 @@ namespace FastExpressionCompiler
         public static int GetNextLocalVarIndex(this ILGenerator il, Type t)
         {
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
-            ref var varUsage = ref LocalVarUsage.AddOrGetValueRef(t, out var found);
-            if (!found)
-                varUsage = 1;
-            else
-                ++varUsage;
+            try 
+            {
+                ref var varUsage = ref LocalVarUsage.AddOrGetValueRef(t, out var found);
+                if (!found)
+                    varUsage = 1;
+                else
+                    ++varUsage;
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("ErrorX: " + ex);
+            }
 #endif
             return _getNextLocalVarIndex(il, t);
         }
