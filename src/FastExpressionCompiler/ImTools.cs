@@ -405,6 +405,88 @@ public struct SmallList4<TItem>
         get => _count;
     }
 
+    /// <summary>Populate with one item</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Populate1(TItem it0)
+    {
+        _count = 1;
+        _it0 = it0;
+    }
+
+    /// <summary>Populate with two items</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Populate2(TItem it0, TItem it1)
+    {
+        _count = 2;
+        _it0 = it0;
+        _it1 = it1;
+    }
+
+    /// <summary>Populate with 3 items</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Populate3(TItem it0, TItem it1, TItem it2)
+    {
+        _count = 3;
+        _it0 = it0;
+        _it1 = it1;
+        _it2 = it2;
+    }
+
+    /// <summary>Populate with 4 items</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Populate4(TItem it0, TItem it1, TItem it2, TItem it3)
+    {
+        _count = StackCapacity;
+        _it0 = it0;
+        _it1 = it1;
+        _it2 = it2;
+        _it3 = it3;
+    }
+
+    /// <summary>Populate with more than two items</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Populate(TItem it0, TItem it1, TItem it2, TItem it3, params TItem[] rest)
+    {
+        _count = StackCapacity + rest.Length;
+        _it0 = it0;
+        _it1 = it1;
+        _it2 = it2;
+        _it3 = it3;
+        _rest = rest;
+    }
+
+    /// <summary>Populate with arbitrary items</summary>
+    public void Populate<TList>(TList items) where TList : IReadOnlyList<TItem>
+    {
+        switch (items.Count)
+        {
+            case 0:
+                break;
+            case 1:
+                Populate1(items[0]);
+                break;
+            case 2:
+                Populate2(items[0], items[1]);
+                break;
+            case 3:
+                Populate3(items[0], items[1], items[2]);
+                break;
+            case 4:
+                Populate4(items[0], items[1], items[2], items[3]);
+                break;
+            default:
+                Populate4(items[0], items[1], items[2], items[3]);
+
+                // keep the capacity at count + StackCapacity
+                _count = items.Count;
+                var rest = new TItem[_count]; // todo: @perf take from the ArrayPool.Shared
+                for (var i = StackCapacity; i < _count; ++i)
+                    rest[i - StackCapacity] = items[i]; // todo: @perf does List have a Copy?
+                _rest = rest;
+                break;
+        }
+    }
+
     /// <summary>Returns surely present item by its index</summary>
     public TItem this[int index]
     {
@@ -528,7 +610,7 @@ public struct SmallList2<TItem>
     [MethodImpl((MethodImplOptions)256)]
     public void Populate2(TItem it0, TItem it1)
     {
-        _count = 2;
+        _count = StackCapacity;
         _it0 = it0;
         _it1 = it1;
     }
@@ -557,11 +639,10 @@ public struct SmallList2<TItem>
                 Populate2(items[0], items[1]);
                 break;
             default:
-                _count = items.Count;
-                _it0 = items[0];
-                _it1 = items[1];
+                Populate2(items[0], items[1]);
 
                 // keep the capacity at count + StackCapacity
+                _count = items.Count;
                 var rest = new TItem[_count]; // todo: @perf take from the ArrayPool.Shared
                 for (var i = StackCapacity; i < _count; ++i)
                     rest[i - StackCapacity] = items[i]; // todo: @perf does List have a Copy?
