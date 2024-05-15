@@ -97,29 +97,17 @@ public class Issue390_405_406_Mapster_tests : ITest
     {
         private UnknownFieldSet _unknownFields;
 
-        public const int IdFieldNumber = 1;
-
-        private string id_ = "";
-
-        public const int NameFieldNumber = 2;
+        public const int NameFieldNumber = 1;
 
         private string name_ = "";
 
-        public const int ValueFieldNumber = 3;
+        public const int ValueFieldNumber = 2;
 
         private string value_ = "";
 
-        public string Id
-        {
-            get
-            {
-                return id_;
-            }
-            set
-            {
-                id_ = value;
-            }
-        }
+        public const int IsEncryptedFieldNumber = 3;
+
+        private bool isEncrypted_ = false;
 
         public string Name
         {
@@ -145,13 +133,35 @@ public class Issue390_405_406_Mapster_tests : ITest
             }
         }
 
+        public bool IsEncrypted
+        {
+            get
+            {
+                return isEncrypted_;
+            }
+            set
+            {
+                isEncrypted_ = value;
+            }
+        }
+
         public TenantConfigVal() { }
     }
 
     [Test]
     public void Issue410_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation()
     {
-        var failure = new TenantConfig().Adapt<TenantConfigVal>();
+        var list = new List<TenantConfig>()
+        {
+            new() 
+            {
+                Name = Guid.NewGuid().ToString(),
+                Value = Guid.NewGuid().ToString(),
+                IsEncrypted = true
+            }
+        };
+
+        var failure = list.Adapt<List<TenantConfigVal>>();
 
         Assert.NotNull(failure);
     }
