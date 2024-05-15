@@ -26,8 +26,8 @@ THE SOFTWARE.
 // ReSharper disable CoVariantArrayConversion
 
 // #define LIGHT_EXPRESSION
-// #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #if DEBUG && NET6_0_OR_GREATER
+// #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #define DEMIT
 #endif
 #if LIGHT_EXPRESSION || !NET45
@@ -6557,6 +6557,7 @@ namespace FastExpressionCompiler
 
 
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
+        [ThreadStatic]
         public static readonly Dictionary<Type, int> LocalVarUsage = new Dictionary<Type, int>(); 
 #endif
         // todo: @perf add the map of the used local variables that can be reused, e.g. we are getting the variable used in the local scope but then we may return them into POOL and reuse (many of int variable can be reuses, say for indexes)
