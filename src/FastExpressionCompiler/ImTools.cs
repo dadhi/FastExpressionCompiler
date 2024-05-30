@@ -736,13 +736,104 @@ public struct SmallList2<TItem>
     }
 }
 
+/// <summary>Combines the hashes of 2 keys</summary>
+internal static class Hasher
+{
+    /// <summary>Combines the hashes of 2 keys</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static int Combine(int h1, int h2) => unchecked((h1 * (int)0xA5555529) + h2);
+}
+
+/// <summary>Configures removed key tombstone, equality and hash function for the FHashMap</summary>
+public interface IEq<K>
+{
+    /// <summary>Defines the value of the key indicating the removed entry</summary>
+    K GetTombstone();
+
+    /// <summary>Equals keys</summary>
+    bool Equals(K x, K y);
+
+    /// <summary>Calculates and returns the hash of the key</summary>
+    int GetHashCode(K key);
+}
+
+/// <summary>Default comparer using the `object.GetHashCode` and `object.Equals` overloads</summary>
+public struct DefaultEq<K> : IEq<K>
+{
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public K GetTombstone() => default;
+
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public bool Equals(K x, K y) => x.Equals(y);
+
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public int GetHashCode(K key) => key.GetHashCode();
+}
+
+/// <summary>Uses the `object.GetHashCode` and `object.ReferenceEquals`</summary>
+public struct RefEq<K> : IEq<K> where K : class
+{
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public K GetTombstone() => null;
+
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public bool Equals(K x, K y) => ReferenceEquals(x, y);
+
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public int GetHashCode(K key) => RuntimeHelpers.GetHashCode(key);
+}
+
+/// <summary>Compares via `ReferenceEquals` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
+public struct RefEq<A, B> : IEq<(A, B)>
+    where A : class
+    where B : class
+{
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public (A, B) GetTombstone() => (null, null);
+
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public bool Equals((A, B) x, (A, B) y) =>
+        ReferenceEquals(x.Item1, y.Item1) && ReferenceEquals(x.Item2, y.Item2);
+
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public int GetHashCode((A, B) key) =>
+        Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item1), RuntimeHelpers.GetHashCode(key.Item2));
+}
+
+/// <summary>Compares via `ReferenceEquals` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
+public struct RefEq<A, B, C> : IEq<(A, B, C)>
+    where A : class
+    where B : class
+    where C : class
+{
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public (A, B, C) GetTombstone() => (null, null, null);
+
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public bool Equals((A, B, C) x, (A, B, C) y) =>
+        ReferenceEquals(x.Item1, y.Item1) && ReferenceEquals(x.Item2, y.Item2) && ReferenceEquals(x.Item3, y.Item3);
+
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public int GetHashCode((A, B, C) key) =>
+        Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item1), Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item2), RuntimeHelpers.GetHashCode(key.Item3)));
+}
+
+
 /// <summary>Configuration and the tools for the FHashMap map data structure</summary>
 public static class SmallMap4
 {
-    // todo: @improve for the future me
-    // <summary>2^32 / phi for the Fibonacci hashing, where phi is the golden ratio ~1.61803</summary>
-    // public const uint GoldenRatio32 = 2654435769;
-
     internal const byte MinFreeCapacityShift = 3; // e.g. for the capacity 16: 16 >> 3 => 2, 12.5% of the free hash slots (it does not mean the entries free slot)
     internal const byte MinHashesCapacityBitShift = 4; // 1 << 4 == 16
 
@@ -795,100 +886,6 @@ public static class SmallMap4
 #else
     internal static int GetHash(ref int[] start, int distance) => start[distance];
 #endif
-
-    /// <summary>Configures removed key tombstone, equality and hash function for the FHashMap</summary>
-    public interface IEq<K>
-    {
-        /// <summary>Defines the value of the key indicating the removed entry</summary>
-        K GetTombstone();
-
-        /// <summary>Equals keys</summary>
-        bool Equals(K x, K y);
-
-        /// <summary>Calculates and returns the hash of the key</summary>
-        int GetHashCode(K key);
-    }
-
-    /// <summary>Default comparer using the `object.GetHashCode` and `object.Equals` overloads</summary>
-    public struct DefaultEq<K> : IEq<K>
-    {
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public K GetTombstone() => default;
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public bool Equals(K x, K y) => x.Equals(y);
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetHashCode(K key) => key.GetHashCode();
-    }
-
-    /// <summary>Uses the `object.GetHashCode` and `object.ReferenceEquals`</summary>
-    public struct RefEq<K> : IEq<K> where K : class
-    {
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public K GetTombstone() => null;
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public bool Equals(K x, K y) => ReferenceEquals(x, y);
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetHashCode(K key) => RuntimeHelpers.GetHashCode(key);
-    }
-
-    /// <summary>Compares via `ReferenceEquals` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
-    public struct RefEq<A, B> : IEq<(A, B)>
-        where A : class
-        where B : class
-    {
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public (A, B) GetTombstone() => (null, null);
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public bool Equals((A, B) x, (A, B) y) =>
-            ReferenceEquals(x.Item1, y.Item1) && ReferenceEquals(x.Item2, y.Item2);
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetHashCode((A, B) key) =>
-            Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item1), RuntimeHelpers.GetHashCode(key.Item2));
-    }
-
-    /// <summary>Compares via `ReferenceEquals` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
-    public struct RefEq<A, B, C> : IEq<(A, B, C)>
-        where A : class
-        where B : class
-        where C : class
-    {
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public (A, B, C) GetTombstone() => (null, null, null);
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public bool Equals((A, B, C) x, (A, B, C) y) =>
-            ReferenceEquals(x.Item1, y.Item1) && ReferenceEquals(x.Item2, y.Item2) && ReferenceEquals(x.Item3, y.Item3);
-
-        /// <inheritdoc />
-        [MethodImpl((MethodImplOptions)256)]
-        public int GetHashCode((A, B, C) key) =>
-            Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item1), Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item2), RuntimeHelpers.GetHashCode(key.Item3)));
-    }
-
-    /// <summary>Combines the hashes of 2 keys</summary>
-    internal static class Hasher
-    {
-        /// <summary>Combines the hashes of 2 keys</summary>
-        [MethodImpl((MethodImplOptions)256)]
-        public static int Combine(int h1, int h2) => unchecked((h1 * (int)0xA5555529) + h2);
-    }
 
     // todo: @improve can we move the Entry into the type parameter to configure and possibly save the memory e.g. for the sets? 
     /// <summary>Abstraction to configure your own entries data structure. Check the derived types for the examples</summary>
