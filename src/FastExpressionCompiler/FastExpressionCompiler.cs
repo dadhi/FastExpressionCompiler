@@ -62,6 +62,8 @@ namespace FastExpressionCompiler
     using System.Diagnostics.CodeAnalysis;
     using static System.Environment;
 
+#nullable disable
+
     /// <summary>The flags for the compiler</summary>
     [Flags]
     public enum CompilerFlags : byte
@@ -8693,3 +8695,4 @@ namespace System.Diagnostics.CodeAnalysis
     }
 }
 #endif
+#nullable restore

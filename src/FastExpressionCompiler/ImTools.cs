@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
+#nullable disable
 #if NET7_0_OR_GREATER
 using System.Runtime.InteropServices;
 #endif
@@ -1453,3 +1454,4 @@ public struct SmallMap4<K, V, TEq, TEntries>
         return newIndexMask;
     }
 }
+#nullable restore
