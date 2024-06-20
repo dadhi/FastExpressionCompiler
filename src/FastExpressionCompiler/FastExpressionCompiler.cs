@@ -150,7 +150,7 @@ namespace FastExpressionCompiler
             if ((closureInfo.Status & ClosureStatus.HasClosure) != 0)
                 return false;
 
-            var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
+            var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
             if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
                 return false;
 
@@ -402,7 +402,7 @@ namespace FastExpressionCompiler
             var il = method.GetILGenerator();
             EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
 
-            var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
+            var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
             if (!EmittingVisitor.TryEmit(lambdaExpr.Body,
 #if LIGHT_EXPRESSION
                 lambdaExpr,
@@ -502,7 +502,7 @@ namespace FastExpressionCompiler
             if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
 
-            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
+            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
             if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
                 return null;
             il.Demit(OpCodes.Ret);
@@ -1690,7 +1690,7 @@ namespace FastExpressionCompiler
             if (containsConstantsOrNestedLambdas & ((nestedClosureInfo.Status & ClosureStatus.HasClosure) != 0))
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo);
 
-            var parent = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
+            var parent = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
             if (!EmittingVisitor.TryEmit(nestedLambdaBody, nestedLambdaParamExprs, il, ref nestedClosureInfo, setup, parent))
                 return false;
             il.Demit(OpCodes.Ret);
@@ -1856,7 +1856,9 @@ namespace FastExpressionCompiler
             /// <summary>Indicates the ONLY right value of assignment, e.g. `p` in `foo.Bar += p` </summary>
             AssignmentRightValue = 1 << 13,
             /// <summary>Assigning the ref of the right value to the left, e.g. in `var a = ref b[1]` we are passing this flag for the `ref b[1]`</summary>
-            AssignmentByRef = 1 << 14
+            AssignmentByRef = 1 << 14,
+            /// <summary>Indicates the root lambda call</summary>
+            LambdaCall = 1 << 15,
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -2714,7 +2716,7 @@ namespace FastExpressionCompiler
                         {
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
                             // this means the parameter is the argument to the method call and not the instance in the method call or member access
-                            if (!isArgByRef & (parent & ParentFlags.Call) != 0 &
+                            if (!isArgByRef & (parent & (ParentFlags.Call | ParentFlags.LambdaCall)) != 0 &
                                 (parent & ParentFlags.InstanceAccess) == 0 ||
                                 (parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.AssignmentLeftValue)) == 0)
@@ -2722,7 +2724,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            if (!isArgByRef & (parent & ParentFlags.Call) != 0 ||
+                            if (!isArgByRef & (parent & (ParentFlags.Call | ParentFlags.LambdaCall)) != 0 ||
                                 (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue)) != 0)
                                 il.Demit(OpCodes.Ldind_Ref);
                         }
