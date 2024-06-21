@@ -2662,14 +2662,19 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, varIndex);
                     else
                     {
-                        if ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall)
+                        var byAddress = isParamOrVarByRef & isArgByRef & paramType.IsValueType;
+                        if (byAddress)
+                            EmitStoreAndLoadLocalVariableAddress(il, varIndex);
+                        else if ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall)
                             EmitLoadLocalVariable(il, varIndex);
                         else
                             EmitStoreAndLoadLocalVariable(il, varIndex);
 
                         // Assume that the var is the last on the stack and just duplicating it, see #346 `Get_array_element_ref_and_increment_it`
                         // Do only when accessing the variable directly, and not the member and the array element by index
-                        if ((parent & ParentFlags.InstanceAccess) == 0)
+                        if (byAddress)
+                            il.Demit(OpCodes.Dup);
+                        else if ((parent & ParentFlags.InstanceAccess) == 0)
                             EmitLoadLocalVariable(il, varIndex);
 
                         if (paramType.IsValueType)
@@ -6570,7 +6575,7 @@ namespace FastExpressionCompiler
         public static int GetNextLocalVarIndex(this ILGenerator il, Type t)
         {
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
-            try 
+            try
             {
                 ref var varUsage = ref LocalVarUsage.AddOrGetValueRef(t, out var found);
                 if (!found)
@@ -6578,7 +6583,7 @@ namespace FastExpressionCompiler
                 else
                     ++varUsage;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Debug.WriteLine("Error tracking the local variable usage: " + ex);
             }
