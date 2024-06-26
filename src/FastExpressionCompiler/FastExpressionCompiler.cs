@@ -1820,7 +1820,7 @@ namespace FastExpressionCompiler
 
         /// The minimal context-aware flags set by parent
         [Flags]
-        public enum ParentFlags : ushort
+        public enum ParentFlags
         {
             /// Default is no flags
             Empty = 0,
@@ -1859,6 +1859,8 @@ namespace FastExpressionCompiler
             AssignmentByRef = 1 << 14,
             /// <summary>Indicates the root lambda call</summary>
             LambdaCall = 1 << 15,
+            /// <summary>The block result</summary>
+            BlockResult = 1 << 16,
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -2135,6 +2137,7 @@ namespace FastExpressionCompiler
                                     }
                                 }
 
+                                parent |= ParentFlags.BlockResult;
                                 if (blockVarCount == 0)
                                     continue; // OMG! no recursion, continue with the last expression
 
@@ -2642,8 +2645,9 @@ namespace FastExpressionCompiler
             {
                 var paramExprCount = paramExprs.GetCount();
                 var paramType = paramExpr.Type;
+                var isValueType = paramType.IsValueType;
                 var isParamOrVarByRef = paramExpr.IsByRef;
-                var isArgByRef = byRefIndex != -1;
+                var isPassedToMethodByRef = byRefIndex != -1;
 
                 // Parameter may represent a variable, so first look if this is the case,
                 // and the variable is defined in the current block 
@@ -2651,8 +2655,8 @@ namespace FastExpressionCompiler
                 if (varIndex != -1)
                 {
                     closure.LastEmitIsAddress = !isParamOrVarByRef &&
-                        (isArgByRef ||
-                            paramType.IsValueType &&
+                        (isPassedToMethodByRef ||
+                            isValueType &&
                             (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281, #265
                             (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
 
@@ -2662,7 +2666,7 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, varIndex);
                     else
                     {
-                        var byAddress = isParamOrVarByRef & isArgByRef & paramType.IsValueType;
+                        var byAddress = isParamOrVarByRef & isPassedToMethodByRef & isValueType;
                         if (byAddress)
                             EmitStoreAndLoadLocalVariableAddress(il, varIndex);
                         else if ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall)
@@ -2677,7 +2681,7 @@ namespace FastExpressionCompiler
                         else if ((parent & ParentFlags.InstanceAccess) == 0)
                             EmitLoadLocalVariable(il, varIndex);
 
-                        if (paramType.IsValueType)
+                        if (isValueType)
                         {
                             if ((parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) == 0)
@@ -2701,13 +2705,13 @@ namespace FastExpressionCompiler
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     //  means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
-                    var valueTypeParamCallOrMemberAccess = paramType.IsValueType &&
+                    var valueTypeParamCallOrMemberAccess = isValueType &&
                         // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &
                         // but the parameter is not used as an index #281, #265, nor it is an arithmetic #352
                         (parent & (ParentFlags.IndexAccess | ParentFlags.Arithmetic)) == 0;
 
-                    closure.LastEmitIsAddress = !isParamOrVarByRef & (isArgByRef | valueTypeParamCallOrMemberAccess);
+                    closure.LastEmitIsAddress = !isParamOrVarByRef & (isPassedToMethodByRef | valueTypeParamCallOrMemberAccess);
 
                     if (closure.LastEmitIsAddress)
                         EmitLoadArgAddress(il, paramIndex);
@@ -2717,19 +2721,18 @@ namespace FastExpressionCompiler
                     // todo: @simplify as it is complex overall and EmitLoadIndirectlyByRef does the Ldind_Ref too
                     if (isParamOrVarByRef)
                     {
-                        if (paramType.IsValueType)
+                        if (isValueType)
                         {
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
                             // this means the parameter is the argument to the method call and not the instance in the method call or member access
-                            if (!isArgByRef & (parent & (ParentFlags.Call | ParentFlags.LambdaCall)) != 0 &
-                                (parent & ParentFlags.InstanceAccess) == 0 ||
+                            if (!isPassedToMethodByRef & ((parent & ParentFlags.Call) != 0) & ((parent & ParentFlags.InstanceAccess) == 0) ||
                                 (parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.AssignmentLeftValue)) == 0)
                                 EmitLoadIndirectlyByRef(il, paramType);
                         }
                         else
                         {
-                            if (!isArgByRef & (parent & (ParentFlags.Call | ParentFlags.LambdaCall)) != 0 ||
+                            if (!isPassedToMethodByRef & ((parent & ParentFlags.Call) != 0) ||
                                 (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue)) != 0)
                                 il.Demit(OpCodes.Ldind_Ref);
                         }
