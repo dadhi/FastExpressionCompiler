@@ -18,7 +18,8 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         // ReturnRefParameter();
         // PassByRefParameter();
 #if LIGHT_EXPRESSION
-        Issue415_ReturnRefParameterByRef();
+        // Issue415_ReturnRefParameterByRef();
+        Issue415_ReturnRefParameterByRef_ReturnRefCall();
         // PassByRefVariable();
         return 3;
 #else
@@ -26,7 +27,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 #endif
     }
 
-    public delegate int MyDelegate(ref int x);
+    delegate int MyDelegate(ref int x);
 
     [Test]
     public void ReturnRefParameter()
@@ -110,6 +111,32 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
             OpCodes.Ldarg_1,
             OpCodes.Ret
         );
+        
+        var x = 17;
+        ++ff(ref x);
+        Assert.AreEqual(18, x);
+    }
+    
+    
+    public static ref int ReturnRef(ref int x) => ref x;
+
+    [Test]
+    public void Issue415_ReturnRefParameterByRef_ReturnRefCall()
+    {
+        var p = Parameter(typeof(int).MakeByRefType());
+        var expr = Lambda<MyDelegateByRef>(
+            Expression.Call(GetType().GetMethod(nameof(ReturnRef)), p),
+            p);
+
+        expr.PrintCSharp();
+            
+        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        ff.PrintIL();
+
+        // ff.AssertOpCodes(
+        //     OpCodes.Ldarg_1,
+        //     OpCodes.Ret
+        // );
         
         var x = 17;
         ++ff(ref x);
