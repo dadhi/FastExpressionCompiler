@@ -6747,7 +6747,7 @@ namespace FastExpressionCompiler
                     .Append(" // (")
                     .Append(!pe.Type.IsPrimitive && pe.Type.IsValueType ? "[struct] " : string.Empty)
                     .Append(pe.Type.ToCode(stripNamespace, printType))
-                    .Append(' ').AppendName(pe.Name, pe.Type, pe).Append(')')
+                    .Append(' ').AppendName(pe.Name, pe.Type.ToCode(stripNamespace, printType), pe).Append(')')
                     .NewLineIdent(lineIdent)
                     .Append(']');
 
@@ -6761,7 +6761,7 @@ namespace FastExpressionCompiler
         {
             if (labelTargets.TryGetIndex(out var i, lt, labelTargets.Count, default(RefEq<LabelTarget>)))
                 return sb.Append("l[").Append(i)
-                    .Append(" // (").AppendName(lt.Name, lt.Type, lt).Append(')')
+                    .Append(" // (").AppendName(lt.Name, lt.Type.ToCode(stripNamespace, printType), lt).Append(')')
                     .NewLineIdent(lineIdent).Append(']');
 
             labelTargets.Add(lt);
@@ -7278,9 +7278,7 @@ namespace FastExpressionCompiler
                         return sb.Append(x.Value.ToCode(notRecognizedToCode ?? CodePrinter.DefaultNotRecognizedToCode, stripNamespace, printType));
                     }
                 case ExpressionType.Parameter:
-                    {
-                        return sb.AppendName(((ParameterExpression)e).Name, e.Type, e);
-                    }
+                    return sb.AppendName(((ParameterExpression)e).Name, e.Type.ToCode(stripNamespace, printType), e);
                 case ExpressionType.New:
                     {
                         var x = (NewExpression)e;
@@ -7301,9 +7299,12 @@ namespace FastExpressionCompiler
                 case ExpressionType.Call:
                     {
                         var mc = (MethodCallExpression)e;
-
+                        var methodReturnType = mc.Method.ReturnType;
+                        if (methodReturnType.IsByRef)
+                            sb.Append("ref ");
+                            
                         // output convert only if it is required, e.g. it may happen for custom expressions designed by users
-                        var diffTypes = mc.Type != mc.Method.ReturnType;
+                        var diffTypes = mc.Type != methodReturnType;
                         if (diffTypes) sb.Append("((").Append(mc.Type.ToCode(stripNamespace, printType)).Append(')');
 
                         if (mc.Object != null)
@@ -7438,8 +7439,9 @@ namespace FastExpressionCompiler
                                 var p = pars[i];
                                 if (pe.IsByRef)
                                     sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
-                                sb.Append(pe.Type.ToCode(stripNamespace, printType)).Append(' ');
-                                sb.AppendName(pe.Name, pe.Type, pe);
+                                var typeCode = pe.Type.ToCode(stripNamespace, printType);
+                                sb.Append(typeCode).Append(' ');
+                                sb.AppendName(pe.Name, typeCode, pe);
                             }
                         }
 
@@ -7598,7 +7600,7 @@ namespace FastExpressionCompiler
                                 sb.Append(exTypeName);
 
                                 if (h.Variable != null)
-                                    sb.Append(' ').AppendName(h.Variable.Name, h.Variable.Type, h.Variable);
+                                    sb.Append(' ').AppendName(h.Variable.Name, h.Variable.Type.ToCode(stripNamespace, printType), h.Variable);
 
                                 sb.Append(')');
                                 if (h.Filter != null)
@@ -8002,10 +8004,10 @@ namespace FastExpressionCompiler
             {
                 sb.NewLineIdent(lineIdent);
                 var vType = v.Type;
-                var vTypeCode = vType.ToCode(stripNamespace, printType);
                 var vIsByRef = v.IsByRef;
                 var vNameSuffix = !vIsByRef ? "" : "__discard_init_by_ref";
 
+                var vTypeCode = vType.ToCode(stripNamespace, printType);
                 var vName = new StringBuilder().AppendName(v.Name, vTypeCode, v, vNameSuffix);
                 sb.Append(vTypeCode).Append(' ').Append(vName).Append(vType.IsValueType && !vType.IsNullable() ? " = default;" : " = null;");
 

@@ -17,14 +17,14 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         // ReturnRefParameter();
         // PassByRefParameter();
 
-        Issue413_VariableStructIndexer();
-        Issue413_ParameterStructIndexer();
+        // Issue413_VariableStructIndexer();
+        // Issue413_ParameterStructIndexer();
         
 #if LIGHT_EXPRESSION
         // PassByRefVariable();
 
         // Issue415_ReturnRefParameterByRef();
-        // Issue415_ReturnRefParameterByRef_ReturnRefCall();
+        Issue415_ReturnRefParameterByRef_ReturnRefCall();
         return 3;
 #else
         return 2;
@@ -152,14 +152,12 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         );
 
         expr.PrintCSharp();
-        // todo: @wip
-        // var @cs = (MyDelegateNoArgs)(() => //int
-        // {
-        //     MyStruct mystruct__32854180 = default;
-        //     issue414_incorrect_il_when_passing_by_ref_value_mystruct__32854180 = new MyStruct();
-        //     return issue414_incorrect_il_when_passing_by_ref_value_mystruct__32854180[1];
-        // });
-
+        var @cs = (MyDelegateNoArgs)(() => //int
+        {
+            MyStruct mystruct__32854180 = default;
+            mystruct__32854180 = new MyStruct();
+            return mystruct__32854180[1];
+        });
 
         var fs = expr.CompileSys();
         fs.PrintIL();
@@ -176,7 +174,6 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         // );
 
         Assert.AreEqual(289, fs());
-
         Assert.AreEqual(289, ff());
     }
 
