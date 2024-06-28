@@ -14,7 +14,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 {
     public int Run()
     {
-        // Issue413_VariableStructIndexer();
+        Issue413_VariableStructIndexer();
         // Issue413_ParameterStructIndexer();
 
         // ReturnRefParameter();

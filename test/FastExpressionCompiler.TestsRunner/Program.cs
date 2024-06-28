@@ -9,7 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue414_Incorrect_il_when_passing_by_ref_value().Run();
+            // new LightExpression.IssueTests.Issue414_Incorrect_il_when_passing_by_ref_value().Run();
+            // new LightExpression.IssueTests.Issue281_Index_Out_of_Range().Run();
             // new Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved().Run();
             // new LightExpression.IssueTests.Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
             // new LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess().Run();

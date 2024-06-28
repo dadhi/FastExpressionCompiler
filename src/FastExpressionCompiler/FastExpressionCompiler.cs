@@ -2655,18 +2655,20 @@ namespace FastExpressionCompiler
                 var paramType = paramExpr.Type;
                 var isValueType = paramType.IsValueType;
                 var isParamOrVarByRef = paramExpr.IsByRef;
-                var isPassedToMethodByRef = byRefIndex != -1;
+                var isPassedRef = byRefIndex != -1;
 
                 // Parameter may represent a variable, so first look if this is the case,
                 // and the variable is defined in the current block 
                 var varIndex = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (varIndex != -1)
                 {
-                    closure.LastEmitIsAddress = !isParamOrVarByRef &&
-                        (isPassedToMethodByRef ||
-                            isValueType &&
-                            (parent & ParentFlags.IndexAccess) == 0 &&  // but the variable is not used as an index #281, #265
-                            (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
+                    var valueTypeMemberButNotIndexAccess = isValueType &
+                        // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
+                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &
+                        // but the variable is not used as an index #281, #265
+                        (parent & (ParentFlags.IndexAccess | ParentFlags.Arithmetic)) == 0;
+                    
+                    closure.LastEmitIsAddress = !isParamOrVarByRef & (isPassedRef | valueTypeMemberButNotIndexAccess);
 
                     if (closure.LastEmitIsAddress)
                         EmitLoadLocalVariableAddress(il, varIndex);
@@ -2674,7 +2676,7 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, varIndex);
                     else
                     {
-                        var byAddress = isParamOrVarByRef & isPassedToMethodByRef & isValueType;
+                        var byAddress = isParamOrVarByRef & isPassedRef & isValueType;
                         if (byAddress)
                             EmitStoreAndLoadLocalVariableAddress(il, varIndex);
                         else if ((parent & ParentFlags.InstanceCall) == ParentFlags.InstanceCall)
@@ -2713,13 +2715,13 @@ namespace FastExpressionCompiler
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     //  means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
-                    var valueTypeParamCallOrMemberAccess = isValueType &&
+                    var valueTypeMemberButNotIndexAccess = isValueType &
                         // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &
                         // but the parameter is not used as an index #281, #265, nor it is an arithmetic #352
                         (parent & (ParentFlags.IndexAccess | ParentFlags.Arithmetic)) == 0;
 
-                    closure.LastEmitIsAddress = !isParamOrVarByRef & (isPassedToMethodByRef | valueTypeParamCallOrMemberAccess);
+                    closure.LastEmitIsAddress = !isParamOrVarByRef & (isPassedRef | valueTypeMemberButNotIndexAccess);
 
                     if (closure.LastEmitIsAddress)
                         EmitLoadArgAddress(il, paramIndex);
@@ -2733,14 +2735,14 @@ namespace FastExpressionCompiler
                         {
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
                             // this means the parameter is the argument to the method call and not the instance in the method call or member access
-                            if (!isPassedToMethodByRef & ((parent & ParentFlags.Call) != 0) & ((parent & ParentFlags.InstanceAccess) == 0) ||
+                            if (!isPassedRef & ((parent & ParentFlags.Call) != 0) & ((parent & ParentFlags.InstanceAccess) == 0) ||
                                 (parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.AssignmentLeftValue)) == 0)
                                 EmitLoadIndirectlyByRef(il, paramType);
                         }
                         else
                         {
-                            if (!isPassedToMethodByRef & ((parent & ParentFlags.Call) != 0) ||
+                            if (!isPassedRef & ((parent & ParentFlags.Call) != 0) ||
                                 (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue)) != 0)
                                 il.Demit(OpCodes.Ldind_Ref);
                         }
@@ -6352,7 +6354,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, ConstructorInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            var ctorStr = value.ToString().Replace(".", value.DeclaringType.Name + ".");
+            var ctorStr = value.ToString().Replace(".", (value.DeclaringType?.Name ?? "") + ".");
             Debug.WriteLine($"{opcode} {ctorStr}  -- {emitterName}:{emitterLine}");
         }
 
