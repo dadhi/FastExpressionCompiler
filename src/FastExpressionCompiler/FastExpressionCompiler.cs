@@ -2665,11 +2665,11 @@ namespace FastExpressionCompiler
                     var valueTypeMemberButNotIndexAccess = isValueType &
                         // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &
-                        // but the variable is not used as an index for the method call or the member access
-                        // `a[i].Foo()` -> false, see #281
-                        // `a[i].Bar`   -> false, see #265
-                        // `a[i]`       -> true,  see #413
                         (
+                            // but the variable is not used as an index for the method call or the member access
+                            // `a[i].Foo()` -> false, see #281
+                            // `a[i].Bar`   -> false, see #265
+                            // `a[i]`       -> true,  see #413
                             (parent & ParentFlags.IndexAccess) == 0 | 
                             (parent & (ParentFlags.Call | ParentFlags.MemberAccess)) == 0
                         );
@@ -2724,8 +2724,16 @@ namespace FastExpressionCompiler
                     var valueTypeMemberButNotIndexAccess = isValueType &
                         // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &
-                        // but the parameter is not used as an index #281, #265, nor it is an arithmetic #352
-                        (parent & (ParentFlags.IndexAccess | ParentFlags.Arithmetic)) == 0;
+                        // see #352 for the arithmetic
+                        (parent & ParentFlags.Arithmetic) == 0 &
+                        (
+                            // but the variable is not used as an index for the method call or the member access
+                            // `a[i].Foo()` -> false, see #281
+                            // `a[i].Bar`   -> false, see #265
+                            // `a[i]`       -> true,  see #413
+                            (parent & ParentFlags.IndexAccess) == 0 | 
+                            (parent & (ParentFlags.Call | ParentFlags.MemberAccess)) == 0
+                        );
 
                     closure.LastEmitIsAddress = !isParamOrVarByRef & (isPassedRef | valueTypeMemberButNotIndexAccess);
 

@@ -14,8 +14,8 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 {
     public int Run()
     {
+        Issue413_ParameterStructIndexer();
         Issue413_VariableStructIndexer();
-        // Issue413_ParameterStructIndexer();
 
         // ReturnRefParameter();
         // PassByRefParameter();
@@ -122,16 +122,14 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
-        // ff.AssertOpCodes(
-        //     OpCodes.Ldarg_1,
-        //     OpCodes.Call,
-        //     OpCodes.Ldarg_1,
-        //     OpCodes.Ldind_I4,
-        //     OpCodes.Ret
-        // );
+        ff.AssertOpCodes(
+            OpCodes.Ldarga_S,
+            OpCodes.Ldc_I4_1,
+            OpCodes.Call,
+            OpCodes.Ret
+        );
 
         Assert.AreEqual(289, fs(new MyStruct()));
-
         Assert.AreEqual(289, ff(new MyStruct()));
     }
 
