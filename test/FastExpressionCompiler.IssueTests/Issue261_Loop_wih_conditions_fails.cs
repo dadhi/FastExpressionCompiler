@@ -27,26 +27,26 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
 #if !NET472
-            Test_serialization_of_the_Dictionary(); // passes!
+            // Test_serialization_of_the_Dictionary();
 #endif
-            Constant_of_Type_value_should_be_of_RuntimeType_because_the_SystemConstant_works_this_way();
-            Constant_of_Byte_should_stay_the_Byte_and_not_to_be_changed_to_int();
-
-            Serialize_hard_coded();
-
-            Serialize_the_nullable_decimal_array();
-            Serialize_the_nullable_struct_array();
-
-            Serialize_struct_with_the_explicit_layout_and_boxed_on_return();
-
-            Test_unbox_struct_with_the_struct_member_with_the_explicit_layout_and_casted_ref_serialize();
-
-            Test_DictionaryTest_StringDictionary();
-
-            Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
-
-            Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
-            Test_assignment_with_the_block_on_the_right_side();
+            // Constant_of_Type_value_should_be_of_RuntimeType_because_the_SystemConstant_works_this_way();
+            // Constant_of_Byte_should_stay_the_Byte_and_not_to_be_changed_to_int();
+            //
+            // Serialize_hard_coded();
+            //
+            // Serialize_the_nullable_decimal_array();
+            // Serialize_the_nullable_struct_array();
+            //
+            // Serialize_struct_with_the_explicit_layout_and_boxed_on_return();
+            //
+            // Test_unbox_struct_with_the_struct_member_with_the_explicit_layout_and_casted_ref_serialize();
+            //
+            // Test_DictionaryTest_StringDictionary();
+            //
+            // Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments();
+            //
+            // Test_assignment_with_the_block_on_the_right_side_with_just_a_constant();
+            // Test_assignment_with_the_block_on_the_right_side();
 
             // #265
             Test_class_items_array_index_via_variable_access_then_the_member_access();
@@ -546,10 +546,22 @@ namespace FastExpressionCompiler.IssueTests
               ),
               elArr, index
             );
+            
+            e.PrintCSharp();
+            // var @cs = (Func<El[], int, string>)((
+            //     El[] elArr, 
+            //     int index) => //string
+            // {
+            //     int tempIndex = default;
+            //     tempIndex = index;
+            //     return elArr[tempIndex].Message;
+            // });
 
-            var f = e.CompileFast(true);
+            var fs = e.CompileSys();
 
-            f.AssertOpCodes(
+            var ff = e.CompileFast(true);
+
+            ff.AssertOpCodes(
                 OpCodes.Ldarg_2,
                 OpCodes.Stloc_0,
                 OpCodes.Ldarg_1,
@@ -559,7 +571,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            Assert.AreEqual("13", f(new[] { new El() }, 0));
+            Assert.AreEqual("13", ff(new[] { new El() }, 0));
         }
 
         [Test]

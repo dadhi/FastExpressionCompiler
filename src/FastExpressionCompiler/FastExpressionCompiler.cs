@@ -2719,7 +2719,9 @@ namespace FastExpressionCompiler
                         // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &
                         // but the parameter is not used as an index #281, #265, nor it is an arithmetic #352
-                        (parent & (ParentFlags.IndexAccess | ParentFlags.Arithmetic)) == 0;
+                        (
+                            (parent & (ParentFlags.IndexAccess | ParentFlags.Arithmetic)) == 0
+                        );
 
                     closure.LastEmitIsAddress = !isParamOrVarByRef & (isPassedRef | valueTypeMemberButNotIndexAccess);
 
@@ -7836,7 +7838,10 @@ namespace FastExpressionCompiler
                             var nodeType = e.NodeType;
                             if (nodeType == ExpressionType.ArrayIndex)
                             {
-                                b.Left.ToCSharpString(sb.Append('('), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append(')');
+                                var arrInParens = b.Left.NodeType != ExpressionType.Parameter;
+                                if (arrInParens) sb.Append('(');
+                                b.Left.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                if (arrInParens) sb.Append(')');
                                 return b.Right.ToCSharpString(sb.Append("["), lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode).Append("]");
                             }
 
