@@ -558,9 +558,9 @@ namespace FastExpressionCompiler.IssueTests
             // });
 
             var fs = e.CompileSys();
+            fs.PrintIL();
 
             var ff = e.CompileFast(true);
-
             ff.AssertOpCodes(
                 OpCodes.Ldarg_2,
                 OpCodes.Stloc_0,
@@ -571,6 +571,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
+            Assert.AreEqual("13", fs(new[] { new El() }, 0));
             Assert.AreEqual("13", ff(new[] { new El() }, 0));
         }
 

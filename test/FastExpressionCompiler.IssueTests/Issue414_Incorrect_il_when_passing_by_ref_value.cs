@@ -164,14 +164,14 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
-        // ff.AssertOpCodes(
-        //     OpCodes.newobj,
-        //     OpCodes.Stloc_0,
-        //     OpCodes.Ldloca_S,
-        //     OpCodes.Ldc_I4_1,
-        //     OpCodes.Call,
-        //     OpCodes.Ret
-        // );
+        ff.AssertOpCodes(
+            OpCodes.Newobj,
+            OpCodes.Stloc_0,
+            OpCodes.Ldloca_S,
+            OpCodes.Ldc_I4_1,
+            OpCodes.Call,
+            OpCodes.Ret
+        );
 
         Assert.AreEqual(289, fs());
         Assert.AreEqual(289, ff());
