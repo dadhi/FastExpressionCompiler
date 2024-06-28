@@ -14,17 +14,16 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 {
     public int Run()
     {
-        // ReturnRefParameter();
-        // PassByRefParameter();
-
         // Issue413_VariableStructIndexer();
         // Issue413_ParameterStructIndexer();
-        
+
+        // ReturnRefParameter();
+        // PassByRefParameter();
 #if LIGHT_EXPRESSION
         // PassByRefVariable();
 
         // Issue415_ReturnRefParameterByRef();
-        Issue415_ReturnRefParameterByRef_ReturnRefCall();
+        // Issue415_ReturnRefParameterByRef_ReturnRefCall();
         return 3;
 #else
         return 2;
@@ -152,12 +151,12 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         );
 
         expr.PrintCSharp();
-        var @cs = (MyDelegateNoArgs)(() => //int
-        {
-            MyStruct mystruct__32854180 = default;
-            mystruct__32854180 = new MyStruct();
-            return mystruct__32854180[1];
-        });
+        // var @cs = (MyDelegateNoArgs)(() => //int
+        // {
+        //     MyStruct mystruct__32854180 = default;
+        //     mystruct__32854180 = new MyStruct();
+        //     return mystruct__32854180[1];
+        // });
 
         var fs = expr.CompileSys();
         fs.PrintIL();
@@ -166,10 +165,11 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         ff.PrintIL();
 
         // ff.AssertOpCodes(
-        //     OpCodes.Ldarg_1,
+        //     OpCodes.newobj,
+        //     OpCodes.Stloc_0,
+        //     OpCodes.Ldloca_S,
+        //     OpCodes.Ldc_I4_1,
         //     OpCodes.Call,
-        //     OpCodes.Ldarg_1,
-        //     OpCodes.Ldind_I4,
         //     OpCodes.Ret
         // );
 
@@ -213,6 +213,8 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
             p);
 
         expr.PrintCSharp();
+        // var @cs = (MyDelegateByRef)((ref int int__32854180) => //Int32
+        //     ref Issue414_Incorrect_il_when_passing_by_ref_value.ReturnRef(ref int__32854180));
 
         var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();

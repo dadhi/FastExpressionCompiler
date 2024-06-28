@@ -2259,7 +2259,15 @@ namespace FastExpressionCompiler
                 if (ctor != null)
                     il.Demit(OpCodes.Newobj, ctor);
                 else if (newExpr.Type.IsValueType)
-                    EmitLoadLocalVariable(il, InitValueTypeVariable(il, newExpr.Type));
+                {
+                    ctor = newExpr.Type.GetConstructor(
+                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, 
+                        default, CallingConventions.Any, Tools.Empty<Type>(), default);
+                    if (ctor != null)
+                        il.Demit(OpCodes.Newobj, ctor);
+                    else
+                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, newExpr.Type));
+                }
                 else
                     return false;
                 return true;
@@ -2657,7 +2665,7 @@ namespace FastExpressionCompiler
                     closure.LastEmitIsAddress = !isParamOrVarByRef &&
                         (isPassedToMethodByRef ||
                             isValueType &&
-                            (parent & ParentFlags.IndexAccess) == 0 &&  // but the parameter is not used as an index #281, #265
+                            (parent & ParentFlags.IndexAccess) == 0 &&  // but the variable is not used as an index #281, #265
                             (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0); // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
 
                     if (closure.LastEmitIsAddress)
