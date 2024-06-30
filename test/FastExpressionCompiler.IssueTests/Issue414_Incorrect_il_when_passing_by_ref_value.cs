@@ -17,10 +17,11 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         Issue413_ParameterStructIndexer();
         Issue413_VariableStructIndexer();
 
-        // ReturnRefParameter();
-        // PassByRefParameter();
+        Issue414_ReturnRefParameter();
+        Issue414_PassByRefParameter();
+        
 #if LIGHT_EXPRESSION
-        // PassByRefVariable();
+        Issue414_PassByRefVariable();
 
         // Issue415_ReturnRefParameterByRef();
         // Issue415_ReturnRefParameterByRef_ReturnRefCall();
@@ -33,7 +34,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
     delegate int MyDelegate(ref int x);
 
     [Test]
-    public void ReturnRefParameter()
+    public void Issue414_ReturnRefParameter()
     {
         var p = Parameter(typeof(int).MakeByRefType());
         var expr = Lambda<MyDelegate>(p, p);
@@ -62,7 +63,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
     public static void IncRef(ref int x) => ++x;
 
     [Test]
-    public void PassByRefParameter()
+    public void Issue414_PassByRefParameter()
     {
         var p = Parameter(typeof(int).MakeByRefType());
         var expr = Lambda<MyDelegate>(
@@ -231,7 +232,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
     delegate int MyDelegateNoPars();
 
     [Test]
-    public void PassByRefVariable()
+    public void Issue414_PassByRefVariable()
     {
         var p = Parameter(typeof(int).MakeByRefType());
         var expr = Lambda<MyDelegateNoPars>(

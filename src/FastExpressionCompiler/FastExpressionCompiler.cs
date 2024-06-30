@@ -2682,6 +2682,14 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, varIndex);
                     else
                     {
+                        if (isParamOrVarByRef & isValueType &
+                            (parent & ParentFlags.BlockResult) != 0 &
+                            (parent & (ParentFlags.MemberAccess | ParentFlags.Call | ParentFlags.InstanceAccess | ParentFlags.Arithmetic)) == 0)
+                        {
+                            EmitLoadIndirectlyByRef(il, paramType);
+                            return true;
+                        }
+                        
                         var byAddress = isParamOrVarByRef & isPassedRef & isValueType;
                         if (byAddress)
                             EmitStoreAndLoadLocalVariableAddress(il, varIndex);
@@ -2749,7 +2757,7 @@ namespace FastExpressionCompiler
                         {
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
                             // this means the parameter is the argument to the method call and not the instance in the method call or member access
-                            if (!isPassedRef & ((parent & ParentFlags.Call) != 0) & ((parent & ParentFlags.InstanceAccess) == 0) ||
+                            if (!isPassedRef & ((parent & (ParentFlags.Call | ParentFlags.LambdaCall)) != 0) & ((parent & ParentFlags.InstanceAccess) == 0) ||
                                 (parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.AssignmentLeftValue)) == 0)
                                 EmitLoadIndirectlyByRef(il, paramType);

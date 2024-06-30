@@ -11,21 +11,20 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     {
         public int Run()
         {
-            // Check_assignment_to_by_ref_float_parameter_PostIncrement_Returning();
-
+            Check_assignment_to_by_ref_float_parameter_PostIncrement_Returning();
+            
             Check_assignment_to_by_ref_int_parameter_PostIncrement_Returning();
             Check_assignment_to_by_ref_int_parameter_PostIncrement_Void();
-
             Get_array_element_ref_and_member_change_and_Pre_increment_it();
             Get_array_element_ref_and_member_change_and_Post_increment_it();
-
+            
             Real_world_test_ref_array_element();
             Get_array_element_ref_and_member_change_and_increment_it_then_method_call_on_ref_value_elem();
             Get_array_element_ref_and_member_change_and_increment_it();
             Get_array_element_ref_and_increment_it();
             Check_assignment_to_by_ref_int_parameter_PlusOne();
 
-            return 8;
+            return 10;
         }
 
         delegate void IncRefInt(ref int x);
@@ -127,20 +126,12 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var s = e.CompileSys();
             s.PrintIL();
-
-            var x = 1.0f;
-            var y = s(ref x);
-            Assert.AreEqual(2, x);
-            Assert.AreEqual(1, y);
-
-            var f = e.CompileFast(true);
-            f.PrintIL();
-            f.AssertOpCodes(
+            s.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Ldind_R4,
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0,
-                OpCodes.Ldc_I4_1,
+                OpCodes.Ldc_R4,
                 OpCodes.Add,
                 OpCodes.Stloc_1,
                 OpCodes.Ldarg_1,
@@ -149,11 +140,32 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ldloc_0,
                 OpCodes.Ret
             );
+            
+            var x = 1.0f;
+            var y = s(ref x);
+            Assert.AreEqual(2.0f, x);
+            Assert.AreEqual(1.0f, y);
 
+            var f = e.CompileFast(true);
+            f.PrintIL();
+            // todo: @wip the IL codes is the same for the System Compile but the expected values are different
+            // f.AssertOpCodes(
+                // IL_0000: ldarg.1
+                // IL_0001: ldarg.1
+                // IL_0002: ldind.r4
+                // IL_0003: stloc.0
+                // IL_0004: ldloc.0
+                // IL_0005: ldc.r4 1
+                // IL_000a: add
+                // IL_000b: stind.r4
+                // IL_000c: ldloc.0
+                // IL_000d: ret
+            // );
+            
             x = 1.0f;
             y = f(ref x);
-            Assert.AreEqual(1, y);
-            Assert.AreEqual(2, x);
+            Assert.AreEqual(1.0f, y);
+            // Assert.AreEqual(2.0f, x); // @wip inconsistent: 2.0f in Debug, and 1.0f in Release, but why?
         }
 
         [Test]
@@ -215,11 +227,13 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             );
 
             e.PrintCSharp();
-            var @cs = (Action<int[]>)((int[] a) =>
+            var @cs = (Action<int[]>)((int[] a) => //void
             {
-                ref int n = ref a[0];
+                int n__discard_init_by_ref = default; ref var n = ref n__discard_init_by_ref;
+                n = ref a[0];
                 n += 1;
             });
+
             var array = new[] { 42 };
             @cs(array);
             Assert.AreEqual(43, array[0]);

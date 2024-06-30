@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             new LightExpression.IssueTests.Issue414_Incorrect_il_when_passing_by_ref_value().Run();
+            // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
             // new LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
             // new LightExpression.IssueTests.Issue281_Index_Out_of_Range().Run();
             // new Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved().Run();
@@ -122,7 +123,6 @@ namespace FastExpressionCompiler.UnitTests
 #if NET7_0 && !LIGHT_EXPRESSION
                 Run(new EmitHacksTest().Run);
 #endif
-
                 Run(new Issue14_String_constant_comparisons_fail().Run);
                 Run(new LightExpression.IssueTests.Issue14_String_constant_comparisons_fail().Run);
                 Run(new Issue19_Nested_CallExpression_causes_AccessViolationException().Run);
