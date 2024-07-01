@@ -2757,7 +2757,8 @@ namespace FastExpressionCompiler
                         {
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
                             // this means the parameter is the argument to the method call and not the instance in the method call or member access
-                            if (!isPassedRef & ((parent & (ParentFlags.Call | ParentFlags.LambdaCall)) != 0) & ((parent & ParentFlags.InstanceAccess) == 0) ||
+                            if (!isPassedRef & (parent & (ParentFlags.Call | ParentFlags.LambdaCall)) != 0 &
+                                (parent & ParentFlags.InstanceAccess) == 0 ||
                                 (parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0 &
                                 (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.AssignmentLeftValue)) == 0)
                                 EmitLoadIndirectlyByRef(il, paramType);
@@ -7266,7 +7267,7 @@ namespace FastExpressionCompiler
             /// <summary>Instructs the client code to avoid parenthesis for the generated C# code, e.g. if we have as single argument in a method</summary>
             AvoidParens,
             /// <summary>The instance when calling the instance method or accessing the instance member</summary>
-            Instance
+            Instance,
         }
 
         private static StringBuilder NullConstantOrDefaultToCSharpString(Type exprType, StringBuilder sb, EnclosedIn encloseIn,
@@ -7286,7 +7287,7 @@ namespace FastExpressionCompiler
 
         internal static StringBuilder ToCSharpString(this Expression e, StringBuilder sb, EnclosedIn enclosedIn,
             int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
-            CodePrinter.ObjectToCode notRecognizedToCode = null)
+            CodePrinter.ObjectToCode notRecognizedToCode = null, bool isReturnByRef = false)
         {
 #if LIGHT_EXPRESSION
             if (e.IsCustomToCSharpString)
@@ -7310,7 +7311,11 @@ namespace FastExpressionCompiler
                         return sb.Append(x.Value.ToCode(notRecognizedToCode ?? CodePrinter.DefaultNotRecognizedToCode, stripNamespace, printType));
                     }
                 case ExpressionType.Parameter:
-                    return sb.AppendName(((ParameterExpression)e).Name, e.Type.ToCode(stripNamespace, printType), e);
+                    {
+                        if (isReturnByRef)
+                            sb.Append("ref ");
+                        return sb.AppendName(((ParameterExpression)e).Name, e.Type.ToCode(stripNamespace, printType), e);
+                    }
                 case ExpressionType.New:
                     {
                         var x = (NewExpression)e;
@@ -7483,7 +7488,12 @@ namespace FastExpressionCompiler
                         var isReturnable = bNodeType.IsReturnable();
                         var ignoresResult = x.ReturnType == typeof(void);
                         if (isReturnable & !ignoresResult)
-                            sb.NewLineIdentCs(body, EnclosedIn.LambdaBody, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                        {
+                            var newLineIdent = lineIdent + identSpaces;
+                            body.ToCSharpString(sb.NewLineIdent(newLineIdent),
+                                EnclosedIn.LambdaBody, newLineIdent, stripNamespace, printType, identSpaces, 
+                                notRecognizedToCode, lambdaMethod.ReturnType.IsByRef);
+                        }
                         else
                         {
                             sb.NewLine(lineIdent, identSpaces).Append('{');
