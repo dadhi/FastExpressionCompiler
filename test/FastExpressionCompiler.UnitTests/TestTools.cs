@@ -39,7 +39,7 @@ public static class TestTools
         CollectionAssert.AreEqual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual codes are: " + Environment.NewLine + sb);
     }
 
-    static private readonly Func<Type, string, string> _stripOuterTypes = 
+    private static readonly Func<Type, string, string> _stripOuterTypes = 
         (t, s) => s.Substring(s.LastIndexOf('.') + 1);
 
     [Conditional("DEBUG")]
