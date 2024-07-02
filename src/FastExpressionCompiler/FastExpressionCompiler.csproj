@@ -2,14 +2,31 @@
     <PropertyGroup>
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">net472;netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
         <TargetFrameworks Condition="'$(DevMode)' != 'true'">net472;netstandard2.0;netstandard2.1;net6.0;net7.0</TargetFrameworks>
-        <VersionPrefix>5.0.0</VersionPrefix>
-        <VersionSuffix>preview-01</VersionSuffix>
+        <VersionPrefix>4.2.1</VersionPrefix>
+        <VersionSuffix></VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
         <Title>$(Product)</Title>
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v4.2.1 Feature and bug-fix release
+
+- fix: ImTools should disable the nullable context
+- fix: nullable property
+- fix: Incorrect il for struct indexer
+- fix: Fix or support return ref value
+- fix: Incorrect il when passing by ref value
+
+## Contributors
+
+* @sebastienros made contribution in https://github.com/dadhi/FastExpressionCompiler/pull/412
+
+## Full Changelog
+
+https://github.com/dadhi/FastExpressionCompiler/compare/v4.2.0...v4.2.1
+        
+
 ## v4.2.0 Feature and bug-fix release
 
 - feat: #133 Optimize Switch Expression

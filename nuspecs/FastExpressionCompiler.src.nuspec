@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.src</id>
-        <version>5.0.0</version>
+        <version>4.2.1</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2023 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,6 +12,23 @@
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <icon>logo.png</icon>
         <releaseNotes><![CDATA[
+## v4.2.1 Feature and bug-fix release
+
+- fix: ImTools should disable the nullable context
+- fix: nullable property
+- fix: Incorrect il for struct indexer
+- fix: Fix or support return ref value
+- fix: Incorrect il when passing by ref value
+
+## Contributors
+
+* @sebastienros made contribution in https://github.com/dadhi/FastExpressionCompiler/pull/412
+
+## Full Changelog
+
+https://github.com/dadhi/FastExpressionCompiler/compare/v4.2.0...v4.2.1
+
+
 ## v4.2.0 Feature and bug-fix release
 
 - feat: #133 Optimize Switch Expression

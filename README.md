@@ -16,7 +16,7 @@
 [Apex.Serialization]: https://github.com/dbolin/Apex.Serialization
 [MapsterMapper]: https://github.com/MapsterMapper/Mapster 
 
-[![latest release notes](https://img.shields.io/badge/latest%20release%20notes-v4.2.0-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/v4.2.0)
+[![latest release notes](https://img.shields.io/badge/latest%20release%20notes-v4.2.0-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/v4.2.1)
 [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 
 Targets .NET 6+, .NET 4.5+, .NET Standard 2.0+
@@ -76,16 +76,16 @@ Expression<Func<X>> e = () => new X(a, b);
 
 Compiling expression:
 
-| Method      | Mean       | Error     | StdDev    | Median     | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|------------ |-----------:|----------:|----------:|-----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| Method      |       Mean |     Error |    StdDev |     Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ----------- | ---------: | --------: | --------: | ---------: | ----: | ------: | -----: | -----: | --------: | ----------: |
 | Compile     | 121.969 us | 2.4180 us | 5.6040 us | 120.830 us | 35.77 |    2.46 | 0.7324 |      - |   4.49 KB |        2.92 |
 | CompileFast |   3.406 us | 0.0677 us | 0.1820 us |   3.349 us |  1.00 |    0.00 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
 
 
 Invoking the compiled delegate (comparing to the direct constructor call):
 
-| Method                | Mean     | Error     | StdDev    | Median   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|---------------------- |---------:|----------:|----------:|---------:|------:|--------:|-------:|----------:|------------:|
+| Method                |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
+| --------------------- | -------: | --------: | --------: | -------: | ----: | ------: | -----: | --------: | ----------: |
 | DirectConstructorCall | 5.734 ns | 0.1501 ns | 0.2745 ns | 5.679 ns |  0.86 |    0.05 | 0.0051 |      32 B |        1.00 |
 | CompiledLambda        | 6.857 ns | 0.1915 ns | 0.5434 ns | 6.704 ns |  1.01 |    0.09 | 0.0051 |      32 B |        1.00 |
 | FastCompiledLambda    | 6.746 ns | 0.1627 ns | 0.1442 ns | 6.751 ns |  1.00 |    0.00 | 0.0051 |      32 B |        1.00 |
@@ -101,16 +101,16 @@ Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy
 
 Compiling expression:
 
-| Method      | Mean      | Error    | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|------------ |----------:|---------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| Method      |      Mean |    Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ----------- | --------: | -------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
 | Compile     | 442.02 us | 8.768 us | 21.998 us | 40.00 |    2.34 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
 | CompileFast |  11.06 us | 0.221 us |  0.441 us |  1.00 |    0.00 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
 
 
 Invoking compiled delegate comparing to direct method call:
 
-| Method              | Mean        | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|-------------------- |------------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
+| Method              |        Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
+| ------------------- | ----------: | --------: | --------: | ----: | ------: | -----: | --------: | ----------: |
 | DirectMethodCall    |    35.51 ns |  0.783 ns |  1.308 ns |  0.86 |    0.08 | 0.0267 |     168 B |        1.62 |
 | Invoke_Compiled     | 1,096.15 ns | 21.507 ns | 41.437 ns | 27.15 |    2.75 | 0.0420 |     264 B |        2.54 |
 | Invoke_CompiledFast |    37.65 ns |  1.466 ns |  4.299 ns |  1.00 |    0.00 | 0.0166 |     104 B |        1.00 |
@@ -129,8 +129,8 @@ var expr = Expression.Lambda(
 
 Compiling expression:
 
-| Method                       | Mean      | Error     | StdDev    | Median    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|----------------------------- |----------:|----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| Method                       |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ---------------------------- | --------: | --------: | --------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
 | Compile_SystemExpression     | 89.076 us | 2.6699 us | 7.6605 us | 85.180 us | 28.12 |    3.05 | 0.7324 | 0.4883 |   4.74 KB |        3.41 |
 | CompileFast_SystemExpression |  3.138 us | 0.0550 us | 0.0565 us |  3.118 us |  0.99 |    0.03 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
 | CompileFast_LightExpression  |  3.180 us | 0.0602 us | 0.0591 us |  3.163 us |  1.00 |    0.00 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
@@ -138,8 +138,8 @@ Compiling expression:
 
 Invoking the compiled delegate compared to the normal delegate and the direct call:
 
-| Method                        | Mean     | Error     | StdDev    | Median   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|------------------------------ |---------:|----------:|----------:|---------:|------:|--------:|-------:|----------:|------------:|
+| Method                        |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
+| ----------------------------- | -------: | --------: | --------: | -------: | ----: | ------: | -----: | --------: | ----------: |
 | DirectCall                    | 8.388 ns | 0.2655 ns | 0.7575 ns | 8.092 ns |  1.00 |    0.07 | 0.0051 |      32 B |        1.00 |
 | Compiled_SystemExpression     | 9.474 ns | 0.1870 ns | 0.4105 ns | 9.381 ns |  1.10 |    0.05 | 0.0051 |      32 B |        1.00 |
 | CompiledFast_SystemExpression | 8.575 ns | 0.1624 ns | 0.1440 ns | 8.517 ns |  1.00 |    0.02 | 0.0051 |      32 B |        1.00 |
@@ -171,16 +171,16 @@ Hopefully you are checking the expression arguments yourself and not waiting for
 
 Creating the expression:
 
-| Method                                 | Mean       | Error    | StdDev   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|--------------------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
+| Method                                 |       Mean |    Error |   StdDev | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
+| -------------------------------------- | ---------: | -------: | -------: | ----: | ------: | -----: | --------: | ----------: |
 | Create_SystemExpression                | 1,039.5 ns | 20.75 ns | 45.98 ns |  8.29 |    0.50 | 0.2060 |    1304 B |        2.63 |
 | Create_LightExpression                 |   125.7 ns |  2.46 ns |  5.99 ns |  1.00 |    0.00 | 0.0789 |     496 B |        1.00 |
 | Create_LightExpression_with_intrinsics |   130.0 ns |  2.47 ns |  6.25 ns |  1.04 |    0.07 | 0.0777 |     488 B |        0.98 |
 
 Creating and compiling:
 
-| Method                                               | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|----------------------------------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| Method                                               |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ---------------------------------------------------- | ---------: | --------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
 | Create_SystemExpression_and_Compile                  | 159.184 us | 2.9731 us | 7.1235 us | 37.34 |    1.65 | 0.9766 | 0.4883 |    7.4 KB |        3.06 |
 | Create_SystemExpression_and_CompileFast              |   5.923 us | 0.0996 us | 0.1771 us |  1.34 |    0.05 | 0.5188 | 0.5035 |   3.27 KB |        1.35 |
 | Create_LightExpression_and_CompileFast               |   4.399 us | 0.0484 us | 0.0453 us |  1.00 |    0.00 | 0.3815 | 0.3662 |   2.42 KB |        1.00 |
