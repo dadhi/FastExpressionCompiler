@@ -6,6 +6,7 @@ using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using static System.Linq.Expressions.Expression;
+
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
@@ -22,7 +23,10 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
 #if LIGHT_EXPRESSION
         Issue414_PassByRefVariable();
+#endif
 
+#if LIGHT_EXPRESSION && !NET472
+        // NET472 does not support ref returns
         Issue415_ReturnRefParameterByRef();
         Issue415_ReturnRefParameterByRef_ReturnRefCall();
         return 7;
@@ -172,11 +176,50 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
             OpCodes.Ret
         );
 
+#if !NET472
+        // todo: The .NET 472 version generates the wrong IL
         Assert.AreEqual(289, fs());
+#endif
         Assert.AreEqual(289, ff());
     }
 
+
 #if LIGHT_EXPRESSION
+    delegate int MyDelegateNoPars();
+
+    [Test]
+    public void Issue414_PassByRefVariable()
+    {
+        var p = Parameter(typeof(int).MakeByRefType());
+        var expr = Lambda<MyDelegateNoPars>(
+            Block(
+                new[] { p },
+                Assign(p, Constant(17)),
+                Call(GetType().GetMethod(nameof(IncRef)), p),
+                p
+            )
+        );
+
+        expr.PrintCSharp();
+
+        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        ff.PrintIL();
+
+        ff.AssertOpCodes(
+            OpCodes.Ldc_I4_S,
+            OpCodes.Stloc_0,
+            OpCodes.Ldloca_S,
+            OpCodes.Dup,
+            OpCodes.Call,
+            OpCodes.Ldind_I4,
+            OpCodes.Ret
+        );
+
+        Assert.AreEqual(18, ff());
+    }
+#endif
+
+#if LIGHT_EXPRESSION && !NET472
     delegate ref int MyDelegateByRef(ref int x);
 
     [Test]
@@ -228,39 +271,6 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         var x = 17;
         ++ff(ref x);
         Assert.AreEqual(18, x);
-    }
-
-    delegate int MyDelegateNoPars();
-
-    [Test]
-    public void Issue414_PassByRefVariable()
-    {
-        var p = Parameter(typeof(int).MakeByRefType());
-        var expr = Lambda<MyDelegateNoPars>(
-            Block(
-                new[] { p },
-                Assign(p, Constant(17)),
-                Call(GetType().GetMethod(nameof(IncRef)), p),
-                p
-            )
-        );
-
-        expr.PrintCSharp();
-
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
-        ff.PrintIL();
-
-        ff.AssertOpCodes(
-            OpCodes.Ldc_I4_S,
-            OpCodes.Stloc_0,
-            OpCodes.Ldloca_S,
-            OpCodes.Dup,
-            OpCodes.Call,
-            OpCodes.Ldind_I4,
-            OpCodes.Ret
-        );
-
-        Assert.AreEqual(18, ff());
     }
 #endif
 }

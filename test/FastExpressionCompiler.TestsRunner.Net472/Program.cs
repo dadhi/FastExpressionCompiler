@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new Issue414_Incorrect_il_when_passing_by_ref_value().Run();
             // new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
             RunAllTests();
@@ -273,6 +274,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved().Run);
                 Run(new LightExpression.IssueTests.Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved().Run);
+
+                Run(new Issue414_Incorrect_il_when_passing_by_ref_value().Run);
+                Run(new LightExpression.IssueTests.Issue414_Incorrect_il_when_passing_by_ref_value().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
