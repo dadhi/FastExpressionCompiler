@@ -16,18 +16,18 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
     {
         Issue413_ParameterStructIndexer();
         Issue413_VariableStructIndexer();
-        
+
         Issue414_ReturnRefParameter();
         Issue414_PassByRefParameter();
-        
+
 #if LIGHT_EXPRESSION
         Issue414_PassByRefVariable();
 
-        // Issue415_ReturnRefParameterByRef();
-        // Issue415_ReturnRefParameterByRef_ReturnRefCall();
-        return 3;
+        Issue415_ReturnRefParameterByRef();
+        Issue415_ReturnRefParameterByRef_ReturnRefCall();
+        return 7;
 #else
-        return 2;
+        return 4;
 #endif
     }
 
@@ -135,12 +135,12 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
     }
 
     delegate int MyDelegateNoArgs();
-    
+
     [Test]
     public void Issue413_VariableStructIndexer()
     {
         var p = Parameter(typeof(MyStruct));
-        
+
         var expr = Lambda<MyDelegateNoArgs>(
             Block(
                 new[] { p },
@@ -192,10 +192,10 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
-        // ff.AssertOpCodes(
-        //     OpCodes.Ldarg_1,
-        //     OpCodes.Ret
-        // );
+        ff.AssertOpCodes(
+            OpCodes.Ldarg_1,
+            OpCodes.Ret
+        );
 
         var x = 17;
         ++ff(ref x);
