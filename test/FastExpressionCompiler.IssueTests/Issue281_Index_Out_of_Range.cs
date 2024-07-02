@@ -28,7 +28,7 @@ namespace FastExpressionCompiler.IssueTests
             var input = Parameter(typeof(List<string>));
             var idx = Parameter(typeof(int));
 
-            var listIdxProp = typeof(List<string>).GetProperties().FirstOrDefault(x => x.GetIndexParameters()?.Count() > 0);
+            var listIdxProp = typeof(List<string>).GetProperties().FirstOrDefault(x => x.GetIndexParameters().Any());
             var printMethod = typeof(object).GetMethod(nameof(ToString));
 
             var e = Lambda<Func<List<string>, int, string>>(
@@ -36,7 +36,11 @@ namespace FastExpressionCompiler.IssueTests
                 input, idx);
 
             e.PrintCSharp();
-
+            // var @cs = (Func<List<string>, int, string>)((
+            //     List<string> list_string___32854180,
+            //     int int__27252167) => //string
+            //     list_string___32854180[int__27252167].ToString());
+            
             var fs = e.CompileSys();
             fs.PrintIL();
 
