@@ -6366,7 +6366,7 @@ namespace FastExpressionCompiler
     {
 #if DEMIT
         [MethodImpl((MethodImplOptions)256)]
-        public static void Demit(this ILGenerator il, OpCode opcode, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
+        public static void Demit(this ILGenerator il, OpCode opcode, [CallerMemberName] string emitterName = "", [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode);
             Debug.WriteLine($"{opcode}  -- {emitterName}:{emitterLine}");
