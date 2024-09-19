@@ -23,12 +23,12 @@ Targets .NET 6+, .NET 4.5+, .NET Standard 2.0+
 
 NuGet packages:
 
-- FastExpressionCompiler [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)
-  * sources package: FastExpressionCompiler.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.src)](https://www.nuget.org/packages/FastExpressionCompiler.src)
-  * sources with the public code made internal: FastExpressionCompiler.Internal.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.Internal.src)](https://www.nuget.org/packages/FastExpressionCompiler.Internal.src)
-- FastExpressionCompiler.LightExpression [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression)  
-  * sources package: FastExpressionCompiler.LightExpression.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression.src)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression.src)  
-  * sources with the public code made internal: FastExpressionCompiler.LightExpression.Internal.src [![NuGet Badge](https://buildstats.info/nuget/FastExpressionCompiler.LightExpression.Internal.src)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression.Internal.src)
+- FastExpressionCompiler [![NuGet Version](https://img.shields.io/nuget/v/FastExpressionCompiler)](https://www.nuget.org/packages/FastExpressionCompiler)![NuGet Downloads](https://img.shields.io/nuget/dt/FastExpressionCompiler)
+  * sources package: FastExpressionCompiler.src [![NuGet Version](https://img.shields.io/nuget/v/FastExpressionCompiler.src)](https://www.nuget.org/packages/FastExpressionCompiler.src)![NuGet Downloads](https://img.shields.io/nuget/dt/FastExpressionCompiler.src)
+  * sources with the public code made internal: FastExpressionCompiler.Internal.src [![NuGet Version](https://img.shields.io/nuget/v/FastExpressionCompiler.Internal.src)](https://www.nuget.org/packages/FastExpressionCompiler.Internal.src)![NuGet Downloads](https://img.shields.io/nuget/dt/FastExpressionCompiler.Internal.src)
+- FastExpressionCompiler.LightExpression [![NuGet Version](https://img.shields.io/nuget/v/FastExpressionCompiler.LightExpression)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression)![NuGet Downloads](https://img.shields.io/nuget/dt/FastExpressionCompiler.LightExpression)  
+  * sources package: FastExpressionCompiler.LightExpression.src [![NuGet Version](https://img.shields.io/nuget/v/FastExpressionCompiler.LightExpression.src)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression.src)![NuGet Downloads](https://img.shields.io/nuget/dt/FastExpressionCompiler.LightExpression.src)  
+  * sources with the public code made internal: FastExpressionCompiler.LightExpression.Internal.src [![NuGet Version](https://img.shields.io/nuget/v/FastExpressionCompiler.LightExpression.Internal.src)](https://www.nuget.org/packages/FastExpressionCompiler.LightExpression.Internal.src)![NuGet Downloads](https://img.shields.io/nuget/dt/FastExpressionCompiler.LightExpression.Internal.src)
 
 The project was originally a part of the [DryIoc], so check it out ;-)
 
