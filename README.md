@@ -19,7 +19,7 @@
 [![latest release notes](https://img.shields.io/badge/latest%20release%20notes-v4.2.0-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/v4.2.1)
 [![Windows build](https://ci.appveyor.com/api/projects/status/4iyhed69l3k0k37o/branch/master?svg=true)](https://ci.appveyor.com/project/MaksimVolkau/fastexpressioncompiler/branch/master)[![license](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)  
 
-Targets .NET 6+, .NET 4.5+, .NET Standard 2.0+
+Targets .NET 6+, .NET 4.7.2+, .NET Standard 2.0+
 
 NuGet packages:
 
