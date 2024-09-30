@@ -3,6 +3,7 @@ using System.Reflection.Emit;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
+
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using static System.Linq.Expressions.Expression;
@@ -27,11 +28,13 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
 #if LIGHT_EXPRESSION && !NET472
         // NET472 does not support ref returns
+        // todo: @fixme
+        // Issue415_ReturnRefParameter_ReturnRefCall();
         Issue415_ReturnRefParameterByRef();
         Issue415_ReturnRefParameterByRef_ReturnRefCall();
-        return 7;
+        return 8;
 #else
-        return 4;
+        return 5;
 #endif
     }
 
@@ -183,7 +186,6 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         Assert.AreEqual(289, ff());
     }
 
-
 #if LIGHT_EXPRESSION
     delegate int MyDelegateNoPars();
 
@@ -272,5 +274,33 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         ++ff(ref x);
         Assert.AreEqual(18, x);
     }
+
+    [Test]
+    public void Issue415_ReturnRefParameter_ReturnRefCall()
+    {
+        var p = Parameter(typeof(int).MakeByRefType());
+        var expr = Lambda<MyDelegate>(
+            Call(GetType().GetMethod(nameof(ReturnRef)), p),
+            p);
+
+        expr.PrintCSharp();
+        // var @cs = (MyDelegate)((ref int int__32854180) => //Int32
+        //     ref Issue414_Incorrect_il_when_passing_by_ref_value.ReturnRef(ref int__32854180));
+
+        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        ff.PrintIL();
+
+        // ff.AssertOpCodes(
+        //     OpCodes.Ldarg_1,
+        //     OpCodes.Call,
+        //     OpCodes.Ldind_I4,
+        //     OpCodes.Ret
+        // );
+
+        var x = 17;
+        var y = ff(ref x);
+        Assert.AreEqual(18, y);
+    }
+
 #endif
 }
