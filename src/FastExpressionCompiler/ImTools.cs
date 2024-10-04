@@ -22,26 +22,27 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-
+// ReSharper disable once InconsistentNaming
 #nullable disable
-#if NET7_0_OR_GREATER
-using System.Runtime.InteropServices;
-#endif
-
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression.ImTools;
 #else
 namespace FastExpressionCompiler.ImTools;
 #endif
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
+using System.Runtime.CompilerServices; // For [MethodImpl(AggressiveInlining)]
+
+#if NET7_0_OR_GREATER
+using System.Runtime.InteropServices;
+#endif
+
 using static SmallMap4;
 
-/// <summary>Wrapper for the array and count</summary>
+/// <summary>Wrapper for the array of the specific capacity and a separate count less or equal to this capacity </summary>
 public struct SmallList<T>
 {
     /// <summary>Array of items</summary>
@@ -737,25 +738,44 @@ public struct SmallList2<TItem>
     }
 }
 
-/// <summary>Combines the hashes of 2 keys</summary>
-internal static class Hasher
+/// <summary>Printable thing via provided printer </summary>
+public interface IPrintable
 {
-    /// <summary>Combines the hashes of 2 keys</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static int Combine(int h1, int h2) => unchecked((h1 * (int)0xA5555529) + h2);
+    /// <summary>Print to the provided string builder via the provided printer.</summary>
+    StringBuilder Print(StringBuilder s, Func<StringBuilder, object, StringBuilder> printer);
 }
 
-/// <summary>Configures removed key tombstone, equality and hash function for the FHashMap</summary>
-public interface IEq<K>
+/// <summary>Produces good enough hash codes for the fields</summary>
+public static class Hasher
+{
+    /// <summary>Combines hashes of two fields</summary>
+    public static int Combine<T1, T2>(T1 a, T2 b)
+    {
+        var bh = b?.GetHashCode() ?? 0;
+        if (ReferenceEquals(a, null))
+            return bh;
+        var ah = a.GetHashCode();
+        if (ah == 0)
+            return bh;
+        return Combine(ah, bh);
+    }
+
+    /// <summary>Inspired by System.Tuple.CombineHashCodes</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static int Combine(int h1, int h2)
+    {
+        unchecked
+        {
+            return (h1 << 5) + h1 ^ h2;
+        }
+    }
+}
+
+/// <summary>Configures removed key tombstone, equality and hash function for the SmallMap and friends</summary>
+public interface IEq<K> : IEqualityComparer<K>
 {
     /// <summary>Defines the value of the key indicating the removed entry</summary>
     K GetTombstone();
-
-    /// <summary>Equals keys</summary>
-    bool Equals(K x, K y);
-
-    /// <summary>Calculates and returns the hash of the key</summary>
-    int GetHashCode(K key);
 }
 
 /// <summary>Default comparer using the `object.GetHashCode` and `object.Equals` overloads</summary>
@@ -767,11 +787,27 @@ public struct DefaultEq<K> : IEq<K>
 
     /// <inheritdoc />
     [MethodImpl((MethodImplOptions)256)]
-    public bool Equals(K x, K y) => x.Equals(y);
+    public bool Equals(K x, K y) => ReferenceEquals(x, y) || x.Equals(y);
 
     /// <inheritdoc />
     [MethodImpl((MethodImplOptions)256)]
     public int GetHashCode(K key) => key.GetHashCode();
+}
+
+/// <summary>Uses the integer itself as hash code and `==` for equality</summary>
+public struct IntEq : IEq<int>
+{
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public int GetTombstone() => int.MinValue; // todo: @improve separate the tombstone from the hash
+
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public bool Equals(int x, int y) => x == y;
+
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public int GetHashCode(int key) => key;
 }
 
 /// <summary>Uses the `object.GetHashCode` and `object.ReferenceEquals`</summary>
@@ -832,7 +868,7 @@ public struct RefEq<A, B, C> : IEq<(A, B, C)>
 }
 
 
-/// <summary>Configuration and the tools for the FHashMap map data structure</summary>
+/// <summary>Configuration and the tools for the SmallMap and friends</summary>
 public static class SmallMap4
 {
     internal const byte MinFreeCapacityShift = 3; // e.g. for the capacity 16: 16 >> 3 => 2, 12.5% of the free hash slots (it does not mean the entries free slot)

@@ -36,17 +36,17 @@ THE SOFTWARE.
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression
 {
-    using FastExpressionCompiler.LightExpression.ImTools;
-    using static FastExpressionCompiler.LightExpression.ImTools.SmallMap4;
     using static FastExpressionCompiler.LightExpression.Expression;
     using PE = FastExpressionCompiler.LightExpression.ParameterExpression;
+    using FastExpressionCompiler.LightExpression.ImTools;
+    using static FastExpressionCompiler.LightExpression.ImTools.SmallMap4;
 #else
 namespace FastExpressionCompiler
 {
-    using FastExpressionCompiler.ImTools;
-    using static FastExpressionCompiler.ImTools.SmallMap4;
     using static System.Linq.Expressions.Expression;
     using PE = System.Linq.Expressions.ParameterExpression;
+    using FastExpressionCompiler.ImTools;
+    using static FastExpressionCompiler.ImTools.SmallMap4;
 #endif
     using System;
     using System.Collections;
@@ -505,7 +505,7 @@ namespace FastExpressionCompiler
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
             if (returnType.IsByRef)
                 parent |= ParentFlags.ReturnByRef;
- 
+
             if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
                 return null;
             il.Demit(OpCodes.Ret);
@@ -1696,7 +1696,7 @@ namespace FastExpressionCompiler
             var parent = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
             if (nestedReturnType.IsByRef)
                 parent |= ParentFlags.ReturnByRef;
-                
+
             if (!EmittingVisitor.TryEmit(nestedLambdaBody, nestedLambdaParamExprs, il, ref nestedClosureInfo, setup, parent))
                 return false;
             il.Demit(OpCodes.Ret);
@@ -3721,7 +3721,7 @@ namespace FastExpressionCompiler
 
                 // see the TryEmitMethodCall for the reason of the callFlags
                 var callFlags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.InstanceAccess | 
+                    & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.InstanceAccess |
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
                     | ParentFlags.Call;
                 for (var i = 0; i < initCount; ++i)
@@ -3863,7 +3863,7 @@ namespace FastExpressionCompiler
 
                         // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
                         // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
-                        var baseFlags = parent & 
+                        var baseFlags = parent &
                             ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
                               ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
                         var rightOnlyFlags = baseFlags | ParentFlags.AssignmentRightValue;
@@ -4640,7 +4640,7 @@ namespace FastExpressionCompiler
                     {
                         var p = (parent | ParentFlags.InstanceCall)
                             // removing ParentFlags.MemberAccess here because we are calling the method instead of accessing the field
-                            & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.DupIt | 
+                            & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.DupIt |
                                 ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
 
                         if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, p))
@@ -5315,7 +5315,7 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall | 
+                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
                     | ParentFlags.Arithmetic;
 
