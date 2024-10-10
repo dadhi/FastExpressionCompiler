@@ -278,6 +278,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue414_Incorrect_il_when_passing_by_ref_value().Run);
                 Run(new LightExpression.IssueTests.Issue414_Incorrect_il_when_passing_by_ref_value().Run);
 
+                Run(new Issue423_Converting_a_uint_to_a_float_gives_the_wrong_result().Run);
+                Run(new LightExpression.IssueTests.Issue423_Converting_a_uint_to_a_float_gives_the_wrong_result().Run);
+
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

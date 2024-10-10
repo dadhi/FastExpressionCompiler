@@ -2973,7 +2973,7 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                // todo: @perf! refactor this whole thing in order to handle the hot path without heavy reflection calls
+                // todo: @perf refactor this whole thing in order to handle the hot path without heavy reflection calls
                 var opExpr = expr.Operand;
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
@@ -3086,7 +3086,7 @@ namespace FastExpressionCompiler
                     if (underlyingNullableSourceType == null)
                     {
                         if (!underlyingNullableTargetType.IsEnum && // todo: @clarify hope the source type is convertible to enum, huh 
-                            !TryEmitValueConvert(underlyingNullableTargetType, il, isChecked: false))
+                            !TryEmitValueConvert(sourceType, underlyingNullableTargetType, il, isChecked: false))
                             return false;
                         il.Demit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
                     }
@@ -3116,7 +3116,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            if (!TryEmitValueConvert(underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
+                            if (!TryEmitValueConvert(underlyingNullableSourceType, underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                             {
                                 method ??= underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
                                 if (method == null)
@@ -3145,7 +3145,7 @@ namespace FastExpressionCompiler
                     }
 
                     // cast as the last resort and let's it fail if unlucky
-                    if (!TryEmitValueConvert(targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
+                    if (!TryEmitValueConvert(underlyingNullableSourceType ?? sourceType, targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                     {
                         il.TryEmitBoxOf(sourceType);
                         il.Demit(OpCodes.Castclass, targetType);
@@ -3155,12 +3155,18 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
-            private static bool TryEmitValueConvert(Type targetType, ILGenerator il, bool isChecked)
+            private static bool TryEmitValueConvert(Type sourceType, Type targetType, ILGenerator il, bool isChecked)
             {
+                // todo: @perf convert to the switch table on the TypeCode
                 if (targetType == typeof(int))
                     il.Demit(isChecked ? OpCodes.Conv_Ovf_I4 : OpCodes.Conv_I4);
                 else if (targetType == typeof(float))
+                {
+                    // take care of this pesky sign bit with a special op-code, e.g. when converting uint.MaxValue, see #423
+                    if (sourceType == typeof(uint))
+                        il.Demit(OpCodes.Conv_R_Un);
                     il.Demit(OpCodes.Conv_R4);
+                }
                 else if (targetType == typeof(uint))
                     il.Demit(isChecked ? OpCodes.Conv_Ovf_U4 : OpCodes.Conv_U4);
                 else if (targetType == typeof(sbyte))
