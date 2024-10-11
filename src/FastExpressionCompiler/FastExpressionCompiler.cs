@@ -3157,34 +3157,45 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitValueConvert(Type sourceType, Type targetType, ILGenerator il, bool isChecked)
             {
-                // todo: @perf convert to the switch table on the TypeCode
-                if (targetType == typeof(int))
-                    il.Demit(isChecked ? OpCodes.Conv_Ovf_I4 : OpCodes.Conv_I4);
-                else if (targetType == typeof(float))
+                switch (Type.GetTypeCode(targetType))
                 {
-                    // take care of this pesky sign bit with a special op-code, e.g. when converting uint.MaxValue, see #423
-                    if (sourceType == typeof(uint))
-                        il.Demit(OpCodes.Conv_R_Un);
-                    il.Demit(OpCodes.Conv_R4);
+                    case TypeCode.SByte:
+                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I1 : OpCodes.Conv_I1);
+                        break;
+                    case TypeCode.Byte:
+                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
+                        break;
+                    case TypeCode.Int16:
+                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
+                        break;
+                    case TypeCode.Int32:
+                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I4 : OpCodes.Conv_I4);
+                        break;
+                    case TypeCode.Int64:
+                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
+                        break;
+                    case TypeCode.Double:
+                        il.Demit(OpCodes.Conv_R8);
+                        break;
+                    case TypeCode.Single:
+                        if (sourceType == typeof(uint))
+                            il.Demit(OpCodes.Conv_R_Un);
+                        il.Demit(OpCodes.Conv_R4);
+                        break;
+                    case TypeCode.UInt16:
+                    case TypeCode.Char:
+                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
+                        break;
+                    case TypeCode.UInt32:
+                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U4 : OpCodes.Conv_U4);
+                        break;
+                    case TypeCode.UInt64:
+                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8); // should we consider if sourceType.IsUnsigned == false and using the OpCodes.Conv_I8 (seems like the System.Compile does it)
+                        break;
+                    default:
+                        // todo: @feature for net7+ add Half, Int128, UInt128
+                        return false;
                 }
-                else if (targetType == typeof(uint))
-                    il.Demit(isChecked ? OpCodes.Conv_Ovf_U4 : OpCodes.Conv_U4);
-                else if (targetType == typeof(sbyte))
-                    il.Demit(isChecked ? OpCodes.Conv_Ovf_I1 : OpCodes.Conv_I1);
-                else if (targetType == typeof(byte))
-                    il.Demit(isChecked ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
-                else if (targetType == typeof(short))
-                    il.Demit(isChecked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
-                else if (targetType == typeof(ushort) || targetType == typeof(char))
-                    il.Demit(isChecked ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
-                else if (targetType == typeof(long))
-                    il.Demit(isChecked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
-                else if (targetType == typeof(ulong))
-                    il.Demit(isChecked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8); // should we consider if sourceType.IsUnsigned == false and using the OpCodes.Conv_I8 (seems like the System.Compile does it)
-                else if (targetType == typeof(double))
-                    il.Demit(OpCodes.Conv_R8);
-                else
-                    return false;
                 return true;
             }
 
