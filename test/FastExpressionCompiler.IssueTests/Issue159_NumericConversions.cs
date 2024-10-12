@@ -139,9 +139,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,
                 OpCodes.Ldloca_S,
                 OpCodes.Call,
-                OpCodes.Ceq,
-                OpCodes.Ldc_I4_1,
-                OpCodes.Ceq,
+                OpCodes.And,
                 OpCodes.And,
                 OpCodes.Ret);
 
