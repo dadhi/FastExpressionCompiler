@@ -3022,7 +3022,7 @@ namespace FastExpressionCompiler
                     {
                         EmitMethodCall(il, method);
                         if (underlyingNullableTargetType != null)
-                            il.Demit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                            il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
                         return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
@@ -3070,7 +3070,7 @@ namespace FastExpressionCompiler
                         {
                             EmitMethodCall(il, method);
                             if (underlyingNullableTargetType != null)
-                                il.Demit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                                il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
                             return il.EmitPopIfIgnoreResult(parent);
                         }
                     }
@@ -3088,7 +3088,7 @@ namespace FastExpressionCompiler
                         if (!underlyingNullableTargetType.IsEnum && // todo: @clarify hope the source type is convertible to enum, huh 
                             !TryEmitValueConvert(sourceType, underlyingNullableTargetType, il, isChecked: false))
                             return false;
-                        il.Demit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                        il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
                     }
                     else
                     {
@@ -3123,7 +3123,7 @@ namespace FastExpressionCompiler
                                     return false; // nor conversion nor conversion operator is found
                                 EmitMethodCall(il, method);
                             }
-                            il.Demit(OpCodes.Newobj, targetType.GetTypeInfo().DeclaredConstructors.GetFirst());
+                            il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
                         }
                         il.DmarkLabel(labelDone);
                     }
@@ -3290,7 +3290,7 @@ namespace FastExpressionCompiler
                 if (exprType != constType && constType.IsValueType)
                 {
                     if (exprType.IsNullable())
-                        il.Demit(OpCodes.Newobj, exprType.GetConstructors().GetFirst());
+                        il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
                     else if (exprType == typeof(object))
                         il.Demit(OpCodes.Box, constType); // using normal type for Enum instead of underlying type
                 }
