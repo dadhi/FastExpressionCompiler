@@ -308,7 +308,7 @@ namespace FastExpressionCompiler.IssueTests
             var floatValuePropExpr = Property(floatParamExpr, "Value");
 
             var condition = GreaterThanOrEqual(
-                floatValuePropExpr, 
+                floatValuePropExpr,
                 Convert(Constant(decimal.MinValue), floatValuePropExpr.Type));
 
             var expr = Lambda<Func<ValueHolder<float>, bool>>(condition, floatParamExpr);
@@ -316,12 +316,12 @@ namespace FastExpressionCompiler.IssueTests
 
             var compiledFast = expr.CompileFast(true);
 
-            compiledFast.Method.AssertOpCodes(
+            compiledFast.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Call,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
-                OpCodes.Clt,
+                OpCodes.Clt_Un,
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ceq,
                 OpCodes.Ret);
@@ -348,12 +348,12 @@ namespace FastExpressionCompiler.IssueTests
             var compiledFast = expr.CompileFast(true);
             compiledFast.PrintIL();
 
-            compiledFast.Method.AssertOpCodes(
+            compiledFast.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Call,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
-                OpCodes.Clt,
+                OpCodes.Clt_Un,
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ceq,
                 OpCodes.Brfalse,
@@ -361,7 +361,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Call,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
-                OpCodes.Cgt,
+                OpCodes.Cgt_Un,
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ceq,
                 OpCodes.Br,

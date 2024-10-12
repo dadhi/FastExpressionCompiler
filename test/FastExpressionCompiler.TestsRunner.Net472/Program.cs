@@ -278,6 +278,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue414_Incorrect_il_when_passing_by_ref_value().Run);
                 Run(new LightExpression.IssueTests.Issue414_Incorrect_il_when_passing_by_ref_value().Run);
 
+                Run(new Issue418_Wrong_output_when_comparing_NaN_value().Run);
+                Run(new LightExpression.IssueTests.Issue418_Wrong_output_when_comparing_NaN_value().Run);
+
                 Run(new Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch().Run);
                 Run(new LightExpression.IssueTests.Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch().Run);
 

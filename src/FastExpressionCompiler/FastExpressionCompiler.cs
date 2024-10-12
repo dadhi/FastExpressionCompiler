@@ -5290,7 +5290,8 @@ namespace FastExpressionCompiler
                         break;
                     case ExpressionType.GreaterThanOrEqual:
                         // simplifying by using the LessThen (Clt) and comparing with negative outcome (Ceq 0)
-                        if (leftOpType.IsUnsigned() && rightOpType.IsUnsigned())
+                        if (leftOpType.IsUnsigned() && rightOpType.IsUnsigned() ||
+                            (leftOpType.IsFloatingPoint() || rightOpType.IsFloatingPoint()))
                             il.Demit(OpCodes.Clt_Un);
                         else
                             il.Demit(OpCodes.Clt);
@@ -5298,7 +5299,8 @@ namespace FastExpressionCompiler
                         break;
                     case ExpressionType.LessThanOrEqual:
                         // simplifying by using the GreaterThen (Cgt) and comparing with negative outcome (Ceq 0)
-                        if (leftOpType.IsUnsigned() && rightOpType.IsUnsigned())
+                        if (leftOpType.IsUnsigned() && rightOpType.IsUnsigned() ||
+                            (leftOpType.IsFloatingPoint() || rightOpType.IsFloatingPoint()))
                             il.Demit(OpCodes.Cgt_Un);
                         else
                             il.Demit(OpCodes.Cgt);
@@ -6047,11 +6049,17 @@ namespace FastExpressionCompiler
             return exprs;
         }
 
+        [MethodImpl((MethodImplOptions)256)]
         internal static bool IsUnsigned(this Type type) =>
             type == typeof(byte) ||
             type == typeof(ushort) ||
             type == typeof(uint) ||
             type == typeof(ulong);
+
+        [MethodImpl((MethodImplOptions)256)]
+        internal static bool IsFloatingPoint(this Type type) =>
+            type == typeof(float) ||
+            type == typeof(double);
 
         internal static bool IsPrimitiveWithZeroDefault(this Type type)
         {
