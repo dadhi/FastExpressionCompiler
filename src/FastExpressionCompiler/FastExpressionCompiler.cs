@@ -8601,7 +8601,8 @@ namespace FastExpressionCompiler
         private static Type[] GetGenericTypeParametersOrArguments(this TypeInfo typeInfo) =>
             typeInfo.IsGenericTypeDefinition ? typeInfo.GenericTypeParameters : typeInfo.GenericTypeArguments;
 
-        /// <summary>Custom handler for output the object in valid C#. Note, the `printGenericTypeArgs` is excluded because it cannot be a open-generic object.
+        /// <summary>Custom handler for output the object in valid C#. 
+        /// Note, the `printGenericTypeArgs` is excluded because it cannot be a open-generic object.
         /// This handler is also used to allow user to fully control a Constant expression output</summary>
         public delegate string ObjectToCode(object x, bool stripNamespace = false, Func<Type, string, string> printType = null);
 
