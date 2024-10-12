@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new Issue421_Date_difference_is_giving_wrong_negative_value().Run();
             // new LightExpression.IssueTests.Issue418_Wrong_output_when_comparing_NaN_value().Run();
             // new LightExpression.IssueTests.Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch().Run();
             // new LightExpression.IssueTests.Issue423_Converting_a_uint_to_a_float_gives_the_wrong_result().Run();
