@@ -27,7 +27,7 @@ public class Issue421_Date_difference_is_giving_wrong_negative_value : ITest
         var contract = new Contract();
         Expression<Func<double>> e = () => (DateTime.Now - contract.StartDate).TotalDays;
 
-        e.PrintCSharp(_ => "contract");
+        e.PrintCSharp();
 
         var fs = e.CompileSys();
         fs.PrintIL();
@@ -45,7 +45,7 @@ public class Issue421_Date_difference_is_giving_wrong_negative_value : ITest
         var contract = new Contract();
         Expression<Func<double>> e = () => (DateTime.Now.Date - contract.StartDate.Date).TotalDays;
 
-        e.PrintCSharp(_ => "contract");
+        e.PrintCSharp();
 
         var fs = e.CompileSys();
         fs.PrintIL();
