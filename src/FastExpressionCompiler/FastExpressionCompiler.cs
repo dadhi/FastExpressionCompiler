@@ -5355,9 +5355,9 @@ namespace FastExpressionCompiler
                         case ExpressionType.GreaterThan:
                         case ExpressionType.LessThanOrEqual:
                         case ExpressionType.GreaterThanOrEqual:
-                            il.Demit(OpCodes.Ceq);
-                            il.Demit(OpCodes.Ldc_I4_1);
-                            il.Demit(OpCodes.Ceq);
+                            // left.HasValue `and` right.HasValue
+                            il.Demit(OpCodes.And);
+                            // `and` the prev result of comparison operation
                             il.Demit(OpCodes.And);
                             break;
 
@@ -7662,6 +7662,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
+                            sb.Append('(');
                             x.Test.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             sb.Append(" ? ");
                             var doNewLine = !x.IfTrue.IsParamOrConstantOrDefault();
@@ -7669,6 +7670,7 @@ namespace FastExpressionCompiler
                             sb.Append(" : ");
                             doNewLine = !x.IfFalse.IsParamOrConstantOrDefault();
                             x.IfFalse.ToCSharpExpression(sb, EnclosedIn.AvoidParens, doNewLine, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            sb.Append(')');
                         }
                         return sb;
                     }
