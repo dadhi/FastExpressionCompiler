@@ -16,6 +16,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            Can_modulus_custom();
             Can_sum_bytes_converted_to_ints();
             Can_sum_signed_bytes_converted_to_ints();
             Can_sum_all_primitive_numeric_types_that_define_binary_operator_add();
@@ -23,7 +24,6 @@ namespace FastExpressionCompiler.UnitTests
             Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract();
             Can_substract_with_unchecked_overflow();
             Can_not_substract_with_checked_overflow();
-            Can_modulus_custom();
             // Can_modulus_custom_in_Action();
             Can_modulus();
             Can_bit_or_1();
@@ -128,15 +128,15 @@ namespace FastExpressionCompiler.UnitTests
             Assert.Throws<OverflowException>(() => sumFunc(int.MaxValue, 1));
         }
 
-        void AssertSub<T, R>(T x, T y, R expected, bool convertArgsToResult = false) 
+        void AssertSub<T, R>(T x, T y, R expected, bool convertArgsToResult = false)
         {
             var a = Parameter(typeof(T), "a");
             var b = Parameter(typeof(T), "b");
             var sub = !convertArgsToResult ? Subtract(a, b) : Subtract(Convert(a, typeof(R)), Convert(b, typeof(R)));
             var expr = Lambda<Func<T, T, R>>(sub, a, b);
-            
+
             var f = expr.CompileFast(true);
-            
+
             Assert.IsNotNull(f);
             Assert.AreEqual(expected, f(x, y));
         }
@@ -182,8 +182,16 @@ namespace FastExpressionCompiler.UnitTests
             var b = Parameter(typeof(BigInteger), "b");
             var expr = Lambda<Func<BigInteger, BigInteger, BigInteger>>(Modulo(a, b), a, b);
 
-            var f = expr.CompileFast(true);
-            Assert.AreEqual(new BigInteger(1), f(7, 6));
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+
+            Assert.AreEqual(new BigInteger(1), fs(7, 6));
+            Assert.AreEqual(new BigInteger(1), ff(7, 6));
         }
 
         [Test, Ignore("todo: fixme")]
@@ -289,7 +297,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(fs(231, 785), f(231, 785));
         }
 
-        void AssertMultiple<T, R>(T x, T y, R expected, Type convertTo = null) 
+        void AssertMultiple<T, R>(T x, T y, R expected, Type convertTo = null)
         {
             var a = Parameter(typeof(T), "a");
             var b = Parameter(typeof(T), "b");
@@ -307,7 +315,7 @@ namespace FastExpressionCompiler.UnitTests
         public void Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply()
         {
             AssertMultiple<sbyte, short>(3, 2, 6, typeof(short));
-            AssertMultiple<byte, ushort>  (3, 2, 6, typeof(ushort));
+            AssertMultiple<byte, ushort>(3, 2, 6, typeof(ushort));
             AssertMultiple<short, short>(3, 2, 6);
             AssertMultiple<ushort, ushort>(3, 2, 6);
             AssertMultiple<int, int>(3, 2, 6);

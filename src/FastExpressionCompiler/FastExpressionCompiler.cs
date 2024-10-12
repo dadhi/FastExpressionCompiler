@@ -4969,7 +4969,8 @@ namespace FastExpressionCompiler
                 var equalityMethod = customEqualMethod != null
                     ? customEqualMethod
                     : !checkType.IsPrimitive && !checkType.IsEnum
-                        ? FindComparisonMethod(il, "op_Equality", switchValueType, switchValueType) ?? _objectEqualsMethod
+                        ? FindBinaryOperandMethod("op_Equality", switchValueType, switchValueType, switchValueType, typeof(bool))
+                        ?? _objectEqualsMethod
                         : null;
 
                 var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
@@ -5089,13 +5090,16 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static MethodInfo FindComparisonMethod(ILGenerator il, string methodName, Type leftOpType, Type rightOpType)
+
+            // todo: @perf cache found method, because for some cases there many methods to search from, e.g. 157 methods in BigInteger
+            private static MethodInfo FindBinaryOperandMethod(
+                string methodName, Type sourceType, Type leftOpType, Type rightOpType, Type resultType)
             {
-                var methods = leftOpType.GetMethods();
+                var methods = sourceType.GetMethods();
                 for (var i = 0; i < methods.Length; i++)
                 {
                     var m = methods[i];
-                    if (m.IsSpecialName && m.IsStatic && m.Name == methodName)
+                    if (m.IsSpecialName && m.IsStatic && m.Name == methodName && m.ReturnType == resultType)
                     {
                         var ps = m.GetParameters();
                         if (ps.Length == 2 && ps[0].ParameterType == leftOpType && ps[1].ParameterType == rightOpType)
@@ -5249,8 +5253,10 @@ namespace FastExpressionCompiler
                         : null;
                     if (methodName == null)
                         return false;
-                    // todo: @bug? for now handling only the parameters of the same type
-                    var method = FindComparisonMethod(il, methodName, leftOpType, rightOpType);
+
+                    var method = FindBinaryOperandMethod(methodName, leftOpType, leftOpType, rightOpType, typeof(bool));
+                    if (method == null & leftOpType != rightOpType)
+                        method = FindBinaryOperandMethod(methodName, rightOpType, leftOpType, rightOpType, typeof(bool));
                     if (method != null)
                     {
                         var ok = EmitMethodCall(il, method);
@@ -5502,20 +5508,6 @@ namespace FastExpressionCompiler
                 return null;
             }
 
-            private static MethodInfo FindStaticOperatorMethod(Type type, string methodName)
-            {
-                if (methodName == null)
-                    return null;
-                var methods = type.GetMethods();
-                for (var i = 0; i < methods.Length; i++)
-                {
-                    var m = methods[i];
-                    if (m.IsSpecialName && m.IsStatic && m.Name == methodName)
-                        return m;
-                }
-                return null;
-            }
-
             private static bool TryEmitArithmeticOperation(Type leftType, Type rightType, ExpressionType arithmeticNodeType, Type exprType, ILGenerator il)
             {
                 if (!exprType.IsPrimitive)
@@ -5525,11 +5517,28 @@ namespace FastExpressionCompiler
 
                     if (!exprType.IsPrimitive)
                     {
-                        var method = exprType != typeof(string)
-                            ? FindStaticOperatorMethod(exprType, arithmeticNodeType.GetArithmeticBinaryOperatorMethodName())
-                            : leftType != rightType || leftType != typeof(string)
-                                ? _stringObjectConcatMethod ?? (_stringObjectConcatMethod = GetStringConcatMethod(typeof(object)))
-                                : _stringStringConcatMethod ?? (_stringStringConcatMethod = GetStringConcatMethod(typeof(string)));
+                        var opMethodName = arithmeticNodeType.GetArithmeticBinaryOperatorMethodName();
+                        if (opMethodName == null)
+                            return false; // todo: @feature should return specific error
+
+                        MethodInfo method = null;
+                        if (exprType != typeof(string))
+                        {
+                            // Note, that the result operation Type may be different from the operand Type,
+                            // e.g. `TimeSpan op_Subtraction(DateTime, DateTime)`, that mean we should look
+                            // for the specific method in the operand types, then in the result (expr) type.
+                            method = FindBinaryOperandMethod(opMethodName, leftType, leftType, rightType, exprType);
+                            if (method == null & leftType != rightType)
+                                method = FindBinaryOperandMethod(opMethodName, rightType, leftType, rightType, exprType);
+                            if (method == null & leftType != exprType & rightType != exprType)
+                                method = FindBinaryOperandMethod(opMethodName, exprType, leftType, rightType, exprType);
+                            // todo: @feature should return specific error
+                            return method != null && EmitMethodCall(il, method);
+                        }
+
+                        method = leftType != rightType | leftType != typeof(string)
+                            ? _stringObjectConcatMethod ?? (_stringObjectConcatMethod = GetStringConcatMethod(typeof(object)))
+                            : _stringStringConcatMethod ?? (_stringStringConcatMethod = GetStringConcatMethod(typeof(string)));
 
                         return method != null && EmitMethodCallOrVirtualCall(il, method);
                     }

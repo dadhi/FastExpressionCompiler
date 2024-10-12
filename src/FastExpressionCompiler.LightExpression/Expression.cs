@@ -1730,7 +1730,7 @@ namespace FastExpressionCompiler.LightExpression
 
             // Is lifting conditional logical operator
             if (method == null && rightType != nnRightType && leftType != nnLeftType &&
-                (binaryType == ExpressionType.AndAlso || binaryType == ExpressionType.OrElse))
+                (binaryType == ExpressionType.AndAlso | binaryType == ExpressionType.OrElse))
                 method = GetUserDefinedBinaryOperator(binaryType, nnLeftType, nnRightType, name);
 
             return method;
