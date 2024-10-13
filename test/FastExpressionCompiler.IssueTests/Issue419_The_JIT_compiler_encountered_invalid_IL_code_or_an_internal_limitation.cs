@@ -11,8 +11,11 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
 {
     public int Run()
     {
-        // Original_case_1();
-        return 1;
+        Original_Case_1();
+        Case_1_Simplified_less();
+        Case_1_simplified();
+        Case_1_Simplified_less_reversed_mul_args();
+        return 4;
     }
 
     public class Obj
@@ -29,12 +32,21 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
     }
 
     [Test]
-    public void Original_case_1()
+    public void Original_Case_1()
     {
         Expression<Func<Obj, bool>> e = d =>
-            (d == null ? null : d.A) > (double?)3 * ((d == null ? null : d.Nested) == null ? null : d.Nested.B);
+            (d == null ? null : d.A) >
+            (double?)3 * ((d == null ? null : d.Nested) == null ? null : d.Nested.B);
 
         e.PrintCSharp();
+        var @cs = (Func<Obj, bool>)((Obj d) => //bool
+            (d == null ? (double?)null :
+            d.A) > (((double?)3) * (((d == null ? (Nested)null :
+            d.Nested) == null) ? (double?)null :
+            d.Nested.B)));
+
+        var data = new Obj(10, new Nested(5));
+        Assert.IsFalse(@cs(data));
 
         var fs = e.CompileSys();
         fs.PrintIL();
@@ -42,9 +54,71 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
         var ff = e.CompileFast(true);
         ff.PrintIL();
 
-        var data = new Obj(10, new Nested(5));
         Assert.IsFalse(fs(data));
         Assert.IsFalse(ff(data));
+    }
+
+    [Test]
+    public void Case_1_Simplified_less_reversed_mul_args()
+    {
+        Expression<Func<Obj, bool>> e = d =>
+            (d == null ? null : d.A) >
+            (d.Nested == null ? null : d.Nested.B) * (double?)3;
+
+        e.PrintCSharp();
+
+        var data = new Obj(10, new Nested(5));
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+
+        var ff = e.CompileFast(true);
+        ff.PrintIL();
+
+        Assert.IsFalse(fs(data));
+        Assert.IsFalse(ff(data));
+    }
+
+    [Test]
+    public void Case_1_Simplified_less()
+    {
+        Expression<Func<Obj, bool>> e = d =>
+            (d == null ? null : d.A) >
+            (double?)3 * (d.Nested == null ? null : d.Nested.B);
+
+        e.PrintCSharp();
+
+        var data = new Obj(10, new Nested(5));
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+
+        var ff = e.CompileFast(true);
+        ff.PrintIL();
+
+        Assert.IsFalse(fs(data));
+        Assert.IsFalse(ff(data));
+    }
+
+    [Test]
+    public void Case_1_simplified()
+    {
+        Expression<Func<Obj, bool>> e = d =>
+            (d == null ? null : d.A) >
+            (double?)3;
+
+        e.PrintCSharp();
+
+        var data = new Obj(10, new Nested(5));
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+
+        var ff = e.CompileFast(true);
+        ff.PrintIL();
+
+        Assert.IsTrue(fs(data));
+        Assert.IsTrue(ff(data));
     }
 }
 
