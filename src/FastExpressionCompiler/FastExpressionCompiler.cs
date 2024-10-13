@@ -6232,30 +6232,30 @@ namespace FastExpressionCompiler
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
         internal static MethodInfo FindNullableValueGetterMethod(this Type type) =>
-            type == typeof(int?)
-                ? NullableReflected<int>.ValueGetterMethod
-                : type.GetProperty("Value").GetMethod;
+            type == typeof(int?) ? NullableReflected<int>.ValueGetterMethod :
+            type == typeof(double?) ? NullableReflected<double>.ValueGetterMethod :
+            type.GetProperty("Value").GetMethod;
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
         internal static MethodInfo GetNullableHasValueGetterMethod(this Type type) =>
-            type == typeof(int?)
-                ? NullableReflected<int>.HasValueGetterMethod
-                : type.GetProperty("HasValue").GetMethod;
+            type == typeof(int?) ? NullableReflected<int>.HasValueGetterMethod :
+            type == typeof(double?) ? NullableReflected<double>.HasValueGetterMethod :
+            type.GetProperty("HasValue").GetMethod;
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
         internal static FieldInfo GetNullableValueUnsafeAkaGetValueOrDefaultMethod(this Type type) =>
-            type == typeof(int?)
-                ? NullableReflected<int>.ValueField
-                : type.GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
+            type == typeof(int?) ? NullableReflected<int>.ValueField :
+            type == typeof(double?) ? NullableReflected<double>.ValueField :
+            type.GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
         internal static ConstructorInfo GetNullableConstructor(this Type type) =>
-            type == typeof(int?)
-                ? NullableReflected<int>.Constructor
-                : type.GetConstructors()[0];
+            type == typeof(int?) ? NullableReflected<int>.Constructor :
+            type == typeof(double?) ? NullableReflected<double>.Constructor :
+            type.GetConstructors()[0];
 
         [RequiresUnreferencedCode(Trimming.Message)]
         internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
