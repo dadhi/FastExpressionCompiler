@@ -5477,11 +5477,11 @@ namespace FastExpressionCompiler
                     if (exprType.IsNullable())
                     {
                         EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
-                        var endL = il.DefineLabel();
-                        il.Demit(OpCodes.Br_S, endL);
+                        var endLabel = il.DefineLabel();
+                        il.Demit(OpCodes.Br_S, endLabel);
                         il.DmarkLabel(valueLabel);
                         il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
-                        il.DmarkLabel(endL);
+                        il.DmarkLabel(endLabel);
                     }
                     else
                     {
