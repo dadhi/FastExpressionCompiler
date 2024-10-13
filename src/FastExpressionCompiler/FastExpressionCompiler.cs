@@ -5397,20 +5397,20 @@ namespace FastExpressionCompiler
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
                     | ParentFlags.Arithmetic;
 
-                var leftNoValueLabel = default(Label);
+                var noNullableValueLabel = default(Label);
                 var leftType = left.Type;
                 var leftIsNullable = leftType.IsNullable();
                 var leftVar = -1;
                 var leftValueVar = -1;
                 if (leftIsNullable)
                 {
-                    leftNoValueLabel = il.DefineLabel();
+                    noNullableValueLabel = il.DefineLabel();
                     if (!TryEmit(left, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceCall))
                         return false;
 
                     leftVar = EmitStoreAndLoadLocalVariableAddress(il, leftType);
                     EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
-                    il.Demit(OpCodes.Brfalse, leftNoValueLabel);
+                    il.Demit(OpCodes.Brfalse, noNullableValueLabel);
 
                     EmitLoadLocalVariableAddress(il, leftVar);
                     il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
@@ -5419,7 +5419,6 @@ namespace FastExpressionCompiler
                 else if (!TryEmit(left, paramExprs, il, ref closure, setup, flags))
                     return false;
 
-                var rightNoValueLabel = default(Label);
                 var rightIsNullable = false;
                 if (right == null) // indicates the increment/decrement operation
                 {
@@ -5439,14 +5438,13 @@ namespace FastExpressionCompiler
                     rightIsNullable = rightType.IsNullable();
                     if (rightIsNullable)
                     {
-                        rightNoValueLabel = il.DefineLabel();
                         if (!TryEmit(right, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceCall))
                             return false;
 
                         rightVar = EmitStoreAndLoadLocalVariableAddress(il, rightType);
 
                         EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
-                        il.Demit(OpCodes.Brfalse, rightNoValueLabel);
+                        il.Demit(OpCodes.Brfalse, noNullableValueLabel);
 
                         EmitLoadLocalVariableAddress(il, rightVar);
                         il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
@@ -5474,11 +5472,7 @@ namespace FastExpressionCompiler
                     var valueLabel = il.DefineLabel();
                     il.Demit(OpCodes.Br, valueLabel);
 
-                    if (rightIsNullable)
-                        il.DmarkLabel(rightNoValueLabel);
-
-                    if (leftIsNullable)
-                        il.DmarkLabel(leftNoValueLabel);
+                    il.DmarkLabel(noNullableValueLabel);
 
                     if (exprType.IsNullable())
                     {
