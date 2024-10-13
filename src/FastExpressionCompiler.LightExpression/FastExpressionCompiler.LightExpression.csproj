@@ -3,7 +3,7 @@
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">net472;netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
         <TargetFrameworks Condition="'$(DevMode)' != 'true'">net472;netstandard2.0;netstandard2.1;net6.0;net7.0</TargetFrameworks>
 
-        <VersionPrefix>4.2.1</VersionPrefix>
+        <VersionPrefix>4.2.2</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -13,6 +13,16 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v4.2.2 Bug-fix release
+
+- fix: #418 Wrong output when comparing NaN value  
+- fix: #419 System.InvalidProgramException : The JIT compiler encountered invalid IL code or an internal limitation
+- fix: #420 Nullable<DateTime> comparison differs from Expression.Compile
+- fix: #421 Date difference is giving wrong negative value
+- fix: #422 [bug] InvalidProgramException when having TryCatch + Default in Catch
+- fix: #423 Converting a uint to a float gives the wrong result
+
+
 ## v4.2.1 Feature and bug-fix release
 
 - fix: ImTools should disable the nullable context
@@ -82,21 +92,21 @@ https://github.com/dadhi/FastExpressionCompiler/compare/v4.2.0...v4.2.1
 - added: #372 Support LightExpression.Expression.TryConvertDelegateIntrinsic for converting one type of delegate to another
 - added: #373 Support custom C# printing for the LightExpression.Expression
 
-        ]]></PackageReleaseNotes>
+        ]]>        </PackageReleaseNotes>
 
-            <AssemblyName>$(Product)</AssemblyName>
-            <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
-            <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
-            <IsTrimmable>true</IsTrimmable>
+        <AssemblyName>$(Product)</AssemblyName>
+        <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
+        <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+        <IsTrimmable>true</IsTrimmable>
 
-            <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
-        </PropertyGroup>
-        <ItemGroup>
-            <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs"/>
-            <Compile Include="..\FastExpressionCompiler\ImTools.cs"/>
-        </ItemGroup>
-        <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-            <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
-            <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0"/>
-        </ItemGroup>
-    </Project>
+        <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs"/>
+        <Compile Include="..\FastExpressionCompiler\ImTools.cs"/>
+    </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
+        <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0"/>
+    </ItemGroup>
+</Project>

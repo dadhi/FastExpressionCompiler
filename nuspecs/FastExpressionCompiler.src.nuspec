@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.src</id>
-        <version>4.2.1</version>
+        <version>4.2.2</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2023 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,6 +12,16 @@
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <icon>logo.png</icon>
         <releaseNotes><![CDATA[
+## v4.2.2 Bug-fix release
+
+- fix: #418 Wrong output when comparing NaN value  
+- fix: #419 System.InvalidProgramException : The JIT compiler encountered invalid IL code or an internal limitation
+- fix: #420 Nullable<DateTime> comparison differs from Expression.Compile
+- fix: #421 Date difference is giving wrong negative value
+- fix: #422 [bug] InvalidProgramException when having TryCatch + Default in Catch
+- fix: #423 Converting a uint to a float gives the wrong result
+
+
 ## v4.2.1 Feature and bug-fix release
 
 - fix: ImTools should disable the nullable context
