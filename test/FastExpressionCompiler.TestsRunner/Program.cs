@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            // new LightExpression.IssueTests.Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile().Run();
             // new LightExpression.IssueTests.Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation().Run();
             // new Issue421_Date_difference_is_giving_wrong_negative_value().Run();
             // new ArithmeticOperationsTests().Run();
@@ -317,6 +318,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation().Run);
                 Run(new LightExpression.IssueTests.Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation().Run);
+
+                Run(new Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile().Run);
+                Run(new LightExpression.IssueTests.Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile().Run);
 
                 Run(new Issue421_Date_difference_is_giving_wrong_negative_value().Run);
 
