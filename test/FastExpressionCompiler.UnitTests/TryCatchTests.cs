@@ -18,6 +18,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            // todo: @fixme
+            // Issue424_Can_be_nested_in_call_expression();
+            Can_be_nested_in_binary();
             Can_catch_exception();
             Can_execute_finally();
             Can_handle_the_exception_and_return_result_from_TryCatch_block();
@@ -35,10 +38,8 @@ namespace FastExpressionCompiler.UnitTests
             Can_rethrow_void();
             Can_rethrow_or_wrap();
             Can_rethrow_or_suppress();
-            // Can_be_nested_in_binary(); // todo: @fixme #
-            // Can_be_nested_in_call_expression();
 
-            return 17;
+            return 19;
         }
 
         [Test]
@@ -107,25 +108,26 @@ namespace FastExpressionCompiler.UnitTests
             // should print this:
             var f = (Func<string, int>)((string a) => //$
             {
-            try
-            {
-                return int.Parse(a);
-            }
-            catch (Exception ex)
-            {
-                return ex.Message.Length > (int)0 ?
-                    (int)47 :
-                    (int)0;
-            }});
+                try
+                {
+                    return int.Parse(a);
+                }
+                catch (Exception ex)
+                {
+                    return ex.Message.Length > (int)0 ?
+                        (int)47 :
+                        (int)0;
+                }
+            });
 
             var fs = fe.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(47,  fs("A"));
+            Assert.AreEqual(47, fs("A"));
             Assert.AreEqual(123, fs("123"));
 
             var ff = fe.CompileFast(ifFastFailedReturnNull: true);
             ff.PrintIL();
-            Assert.AreEqual(47,  ff("A"));
+            Assert.AreEqual(47, ff("A"));
             Assert.AreEqual(123, ff("123"));
         }
 
@@ -282,12 +284,12 @@ namespace FastExpressionCompiler.UnitTests
             var expr = Lambda<Func<string>>(Block(
                 new[] { result },
                 TryCatch(
-                    // Block(
+                        // Block(
                         // Assign(result, Constant("trying...")),
                         Goto(label, Constant("From Try block"), typeof(string)),
                     Catch(typeof(Exception),
                         // Block(
-                            // Assign(result, Constant("catching..."))
+                        // Assign(result, Constant("catching..."))
                         Goto(label, Constant("From Catch block"), typeof(string))
                     )
                 ),
@@ -551,6 +553,7 @@ namespace FastExpressionCompiler.UnitTests
             // throw null;
         }
 
+        [Test]
         public void Can_be_nested_in_binary()
         {
             var p = Parameter(typeof(Func<int>), "p");
@@ -564,15 +567,19 @@ namespace FastExpressionCompiler.UnitTests
                 )
             ), p);
 
-            // var func = expr.CompileSys();
-            var func = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+            expr.PrintCSharp();
 
-            Assert.AreEqual(3, func(() => 2));
-            Assert.AreEqual(1, func(() => throw new Exception()));
+            var fs = expr.CompileSys();
+            Assert.AreEqual(3, fs(() => 2));
+            Assert.AreEqual(1, fs(() => throw new Exception()));
+
+            var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+            Assert.AreEqual(3, ff(() => 2));
+            Assert.AreEqual(1, ff(() => throw new Exception()));
         }
 
         [Test]
-        public void Can_be_nested_in_call_expression()
+        public void Issue424_Can_be_nested_in_call_expression()
         {
             var pa = Parameter(typeof(Func<string>), "pa");
             var pb = Parameter(typeof(Func<string>), "pb");
@@ -602,11 +609,44 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 pa, pb, pc);
 
-            // var func = expr.CompileSys();
-            var func = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+            expr.PrintCSharp();
+            // var @cs = (Func<Func<string>, Func<string>, Func<string>, string>)((
+            //     Func<string> pa, 
+            //     Func<string> pb, 
+            //     Func<string> pc) => //string
+            //     TryCatchTests.TestMethod(
+            //     try
+            //     {
+            //         return pa.Invoke();
+            //     }
+            //     catch (Exception ex)
+            //     {
+            //         return ex.Message;
+            //     },
+            //     try
+            //     {
+            //         return pb.Invoke();
+            //     }
+            //     catch (Exception ex)
+            //     {
+            //         return ex.Message;
+            //     },
+            //     try
+            //     {
+            //         return pc.Invoke();
+            //     }
+            //     catch (Exception ex)
+            //     {
+            //         return ex.Message;
+            //     }));
 
-            Assert.AreEqual("a b c", func(() => "a", () => "b", () => "c"));
-            Assert.AreEqual("a errB c", func(() => "a", () => throw new Exception("errB"), () => "c"));
+            var fs = expr.CompileSys();
+            Assert.AreEqual("a b c", fs(() => "a", () => "b", () => "c"));
+            Assert.AreEqual("a errB c", fs(() => "a", () => throw new Exception("errB"), () => "c"));
+
+            var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+            Assert.AreEqual("a b c", ff(() => "a", () => "b", () => "c"));
+            Assert.AreEqual("a errB c", ff(() => "a", () => throw new Exception("errB"), () => "c"));
         }
 
         public static string TestMethod(string a, string b, string c) => $"{a} {b} {c}";
