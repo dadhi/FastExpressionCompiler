@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation().Run();
+            // new LightExpression.IssueTests.Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation().Run();
             // new Issue421_Date_difference_is_giving_wrong_negative_value().Run();
             // new ArithmeticOperationsTests().Run();
             // new LightExpression.IssueTests.Issue418_Wrong_output_when_comparing_NaN_value().Run();
@@ -316,6 +316,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.IssueTests.Issue418_Wrong_output_when_comparing_NaN_value().Run);
 
                 Run(new Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation().Run);
+                Run(new LightExpression.IssueTests.Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation().Run);
+
                 Run(new Issue421_Date_difference_is_giving_wrong_negative_value().Run);
 
                 Run(new Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch().Run);
