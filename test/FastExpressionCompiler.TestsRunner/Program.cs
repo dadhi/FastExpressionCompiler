@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new TryCatchTests().Run();
+            // new TryCatchTests().Run();
             // new LightExpression.IssueTests.Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile().Run();
             // new Issue421_Date_difference_is_giving_wrong_negative_value().Run();
             // new LightExpression.IssueTests.Issue414_Incorrect_il_when_passing_by_ref_value().Run();

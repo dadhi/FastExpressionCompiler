@@ -18,8 +18,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
-            // todo: @fixme
-            // Issue424_Can_be_nested_in_call_expression();
+            Issue424_Can_be_nested_in_call_expression();
             Can_be_nested_in_binary();
             Can_catch_exception();
             Can_execute_finally();
@@ -610,41 +609,56 @@ namespace FastExpressionCompiler.UnitTests
                 pa, pb, pc);
 
             expr.PrintCSharp();
-            // var @cs = (Func<Func<string>, Func<string>, Func<string>, string>)((
-            //     Func<string> pa, 
-            //     Func<string> pb, 
-            //     Func<string> pc) => //string
-            //     TryCatchTests.TestMethod(
-            //     try
-            //     {
-            //         return pa.Invoke();
-            //     }
-            //     catch (Exception ex)
-            //     {
-            //         return ex.Message;
-            //     },
-            //     try
-            //     {
-            //         return pb.Invoke();
-            //     }
-            //     catch (Exception ex)
-            //     {
-            //         return ex.Message;
-            //     },
-            //     try
-            //     {
-            //         return pc.Invoke();
-            //     }
-            //     catch (Exception ex)
-            //     {
-            //         return ex.Message;
-            //     }));
+            T __f<T>(System.Func<T> f) => f();
+            var @cs = (Func<Func<string>, Func<string>, Func<string>, string>)((
+                Func<string> pa,
+                Func<string> pb,
+                Func<string> pc) => //string
+                TryCatchTests.TestMethod(
+                __f(() =>
+                {
+                    try
+                    {
+                        return pa.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        return ex.Message;
+                    }
+                }),
+                __f(() =>
+                {
+                    try
+                    {
+                        return pb.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        return ex.Message;
+                    }
+                }),
+                __f(() =>
+                {
+                    try
+                    {
+                        return pc.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        return ex.Message;
+                    }
+                })));
+
+            Assert.AreEqual("a b c", @cs(() => "a", () => "b", () => "c"));
+            Assert.AreEqual("a errB c", @cs(() => "a", () => throw new Exception("errB"), () => "c"));
 
             var fs = expr.CompileSys();
+            fs.PrintIL();
             Assert.AreEqual("a b c", fs(() => "a", () => "b", () => "c"));
             Assert.AreEqual("a errB c", fs(() => "a", () => throw new Exception("errB"), () => "c"));
 
             var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+            ff.PrintIL();
             Assert.AreEqual("a b c", ff(() => "a", () => "b", () => "c"));
             Assert.AreEqual("a errB c", ff(() => "a", () => throw new Exception("errB"), () => "c"));
         }

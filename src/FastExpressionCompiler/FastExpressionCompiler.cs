@@ -1194,20 +1194,21 @@ namespace FastExpressionCompiler
                                 (r = TryCollectInfo(ref closure, callObjectExpr, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                 return r;
 
-                            var hasNestedInlinedLambdaInvoke = false;
-
+                            var hasComplexExpression = false;
                             for (var i = 0; i < argCount; i++)
                             {
                                 closure.HasComplexExpression = false; // reset the flag because we want to know the real result after the arg collection
                                 if ((r = TryCollectInfo(ref closure, callArgs.GetArgument(i), paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
-                                hasNestedInlinedLambdaInvoke |= closure.HasComplexExpression;
+                                // if any argument is complex, then thw whole call should be complex,
+                                // because we cannot just store and restore a single argument, it should be done for all arguments
+                                hasComplexExpression |= closure.HasComplexExpression;
                             }
 
                             // propagate the value up the stack
-                            if (hasNestedInlinedLambdaInvoke)
+                            if (hasComplexExpression)
                             {
-                                closure.HasComplexExpression = hasNestedInlinedLambdaInvoke;
+                                closure.HasComplexExpression = true;
                                 closure.ArgsContainingComplexExpression.AddOrGetValueRef(callExpr, out _);
                             }
                             return r;
@@ -1232,20 +1233,19 @@ namespace FastExpressionCompiler
                             if (argCount == 0)
                                 return r;
 
-                            var hasNestedInlinedLambdaInvoke = false;
-
+                            var hasComplexExpression = false;
                             for (var i = 0; i < argCount; i++)
                             {
                                 closure.HasComplexExpression = false;
                                 if ((r = TryCollectInfo(ref closure, ctorArgs.GetArgument(i), paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                                     return r;
-                                hasNestedInlinedLambdaInvoke |= closure.HasComplexExpression;
+                                hasComplexExpression |= closure.HasComplexExpression;
                             }
 
                             // pop the value up the stack 
-                            if (hasNestedInlinedLambdaInvoke)
+                            if (hasComplexExpression)
                             {
-                                closure.HasComplexExpression = hasNestedInlinedLambdaInvoke;
+                                closure.HasComplexExpression = true;
                                 closure.ArgsContainingComplexExpression.AddOrGetValueRef(newExpr, out _);
                             }
 
@@ -1441,8 +1441,12 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Try:
-                        return TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-
+                        {
+                            closure.HasComplexExpression = false;
+                            r = TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+                            closure.HasComplexExpression = true;
+                            return r;
+                        }
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
                         closure.AddLabel(labelExpr.Target, closure.CurrentInlinedLambdaInvokeIndex);
@@ -1464,6 +1468,7 @@ namespace FastExpressionCompiler
                             switchExpr.DefaultBody != null &&
                             (r = TryCollectInfo(ref closure, switchExpr.DefaultBody, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                             return r;
+
                         var switchCases = switchExpr.Cases;
                         for (var i = 0; i < switchCases.Count - 1; i++)
                             if ((r = TryCollectInfo(ref closure, switchCases[i].Body, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
@@ -1811,13 +1816,9 @@ namespace FastExpressionCompiler
                     closure.PopBlock();
             }
 
-            if (tryExpr.Finally != null)
-            {
-                closure.HasComplexExpression = false;
-                if ((r = TryCollectInfo(ref closure, tryExpr.Finally, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
-                    return r;
-                closure.HasComplexExpression = true;
-            }
+            if (tryExpr.Finally != null &&
+                (r = TryCollectInfo(ref closure, tryExpr.Finally, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                return r;
 
             return r;
         }
@@ -7479,7 +7480,7 @@ namespace FastExpressionCompiler
                             var a = args[0];
                             if (p.ParameterType.IsByRef && !a.IsConstantOrDefault())
                                 sb.Append(p.IsOut ? "out " : p.IsIn ? "in" : "ref ");
-                            a.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                            a.ToCSharpExpression(sb, EnclosedIn.AvoidParens, false, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
                         }
                         else if (args.Count > 1)
                         {
@@ -7490,7 +7491,7 @@ namespace FastExpressionCompiler
                                 var a = args[i];
                                 if (p.ParameterType.IsByRef && !a.IsConstantOrDefault())
                                     sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
-                                a.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
+                                a.ToCSharpExpression(sb, EnclosedIn.AvoidParens, false, lineIdent + identSpaces, stripNamespace, printType, identSpaces, notRecognizedToCode);
                             }
                         }
                         // for the different return and expression types wrapping the whole expression including the cast with additional parentheses
