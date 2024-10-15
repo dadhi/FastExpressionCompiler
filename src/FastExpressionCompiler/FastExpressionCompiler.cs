@@ -6057,6 +6057,12 @@ namespace FastExpressionCompiler
             return exprs;
         }
 
+        /// <summary>Returns true if class is compiler generated. Checking for CompilerGeneratedAttribute
+        /// is not enough, because this attribute is not applied for classes generated from "async/await".</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static bool IsCompilerGenerated(this Type type) =>
+            type.Name[0] == '<'; // consider the types with obstruct names like `<>blah` as compiler-generated
+
         [MethodImpl((MethodImplOptions)256)]
         internal static bool IsUnsigned(this Type type) =>
             type == typeof(byte) ||
@@ -8623,7 +8629,12 @@ namespace FastExpressionCompiler
 
         /// <summary>Outputs the `default(Type)` for the unknown constant with the comment message</summary>
         public static readonly ObjectToCode DefaultNotRecognizedToCode = (x, stripNamespace, printType) =>
-            "default(" + x.GetType().ToCode(stripNamespace, printType) + ")/*Please provide the non-default value for the constant!*/";
+        {
+            var t = x.GetType();
+            var isCompGen = t.IsCompilerGenerated();
+            var typeCs = x.GetType().ToCode(stripNamespace, printType);
+            return $"default({typeCs})/*NOTE: Provide the non-default value for the Constant{(isCompGen ? " of compiler-generated type" : "")}!*/";
+        };
 
         /// <summary>Prints many code items as the array initializer.</summary>
         public static string ToCommaSeparatedCode(this IEnumerable items, ObjectToCode notRecognizedToCode,
