@@ -40,4857 +40,4856 @@ using SysExpr = System.Linq.Expressions.Expression;
 
 using FastExpressionCompiler.LightExpression.ImTools;
 
-namespace FastExpressionCompiler.LightExpression
-{
-    using static ExpressionCompiler;
+namespace FastExpressionCompiler.LightExpression;
+
+using static ExpressionCompiler;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-    /// <summary>The base class and the Factory methods provider for the Expression.</summary>
-    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-    public abstract class Expression
-    {
-        /// <summary>Expression node type.</summary>
-        public abstract ExpressionType NodeType { get; }
-        /// <summary>All expressions should have a Type.</summary>
-        public abstract Type Type { get; }
+/// <summary>The base class and the Factory methods provider for the Expression.</summary>
+[System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
+public abstract class Expression
+{
+    /// <summary>Expression node type.</summary>
+    public abstract ExpressionType NodeType { get; }
+    /// <summary>All expressions should have a Type.</summary>
+    public abstract Type Type { get; }
 
-        /// <summary>You may use it whatever you like overloading for the specific value in your custom expression.</summary>
-        public virtual object Tag => null;
+    /// <summary>You may use it whatever you like overloading for the specific value in your custom expression.</summary>
+    public virtual object Tag => null;
 
-        /// <summary>Allows to overwrite the FEC stages to customize and optimize 
-        /// the expression constant(label, blocks, tries) collection and il emitting phase</summary>
-        public virtual bool IsIntrinsic => false;
-        /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
-        /// Returns `0` if everything is fine and positive error code for error.</summary>
-        public virtual Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
+    /// <summary>Allows to overwrite the FEC stages to customize and optimize 
+    /// the expression constant(label, blocks, tries) collection and il emitting phase</summary>
+    public virtual bool IsIntrinsic => false;
+    /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
+    /// Returns `0` if everything is fine and positive error code for error.</summary>
+    public virtual Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
 
-        /// <summary>The second FEC state to emit the actual IL op-codes based on the information collected by the first traversal
-        /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
-        public virtual bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
+    /// <summary>The second FEC state to emit the actual IL op-codes based on the information collected by the first traversal
+    /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
+    public virtual bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
 
-        public virtual bool IsCustomToCSharpString => false;
-        public virtual StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
-            CodePrinter.ObjectToCode notRecognizedToCode = null) => sb;
+    public virtual bool IsCustomToCSharpString => false;
+    public virtual StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
+        int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
+        CodePrinter.ObjectToCode notRecognizedToCode = null) => sb;
 
 #if SUPPORTS_VISITOR
-        protected internal abstract Expression Accept(ExpressionVisitor visitor);
+    protected internal abstract Expression Accept(ExpressionVisitor visitor);
 #endif
-        protected internal virtual Expression VisitChildren(ExpressionVisitor visitor) => this;
+    protected internal virtual Expression VisitChildren(ExpressionVisitor visitor) => this;
 
-        /// <summary>Converts the LightExpression to the System Expression to enable fallback to the System Compile</summary>
-        public SysExpr ToExpression()
+    /// <summary>Converts the LightExpression to the System Expression to enable fallback to the System Compile</summary>
+    public SysExpr ToExpression()
+    {
+        var exprsConverted = new SmallList<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
+        return ToExpression(ref exprsConverted);
+    }
+
+    internal SysExpr ToExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        var i = exprsConverted.Count - 1;
+        while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].LightExpr, this)) --i;
+        if (i != -1)
+            return (SysExpr)exprsConverted.Items[i].SysExpr;
+
+        var sysExpr = CreateSysExpression(ref exprsConverted);
+
+        ref var item = ref exprsConverted.Add();
+        item.LightExpr = this;
+        item.SysExpr = sysExpr;
+        return sysExpr;
+    }
+
+    // todo: @perf can use the FHashMap instead of the SmallList here?
+    internal abstract SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions);
+
+    /// <summary>Converts to Expression and outputs its as string</summary>
+    public override string ToString() => this.ToCSharpString(
+        new StringBuilder(256), stripNamespace: true,
+        notRecognizedToCode: static (x, stripNs, printType) => "default(" + x.GetType().ToCode(stripNs, printType) + ")/*" + x.ToString() + "*/")
+        .ToString();
+
+    /// <summary>Reduces the Expression to simple ones</summary>
+    public virtual Expression Reduce() => this;
+
+    internal static SysExpr[] ToExpressions(IReadOnlyList<Expression> exprs, ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        if (exprs.Count == 0)
+            return Tools.Empty<SysExpr>();
+
+        if (exprs.Count == 1)
+            return new[] { exprs[0].ToExpression(ref exprsConverted) };
+
+        var result = new SysExpr[exprs.Count];
+        for (var i = 0; i < result.Length; ++i)
+            result[i] = exprs[i].ToExpression(ref exprsConverted);
+        return result;
+    }
+
+    [MethodImpl((MethodImplOptions)256)]
+    public static ParameterExpression Parameter(Type type, string name = null) =>
+        type.IsByRef ? new ByRefParameterExpression(type.GetElementType(), name) :
+        type.IsEnum ? new TypedParameterExpression(type, name) :
+            TryToMakeKnownTypeParameter(type, name);
+
+    [MethodImpl((MethodImplOptions)256)]
+    public static ParameterExpression ParameterOf<T>(string name = null) => new TypedParameterExpression<T>(name);
+
+    public static ParameterExpression Variable(Type type, string name = null) => Parameter(type, name);
+
+    // Enum is excluded because otherwise TypeCode will return the thing for the underlying 
+    private static ParameterExpression TryToMakeKnownTypeParameter(Type type, string name = null) =>
+        Type.GetTypeCode(type) switch
         {
-            var exprsConverted = new SmallList<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
-            return ToExpression(ref exprsConverted);
-        }
-
-        internal SysExpr ToExpression(ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            var i = exprsConverted.Count - 1;
-            while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].LightExpr, this)) --i;
-            if (i != -1)
-                return (SysExpr)exprsConverted.Items[i].SysExpr;
-
-            var sysExpr = CreateSysExpression(ref exprsConverted);
-
-            ref var item = ref exprsConverted.Add();
-            item.LightExpr = this;
-            item.SysExpr = sysExpr;
-            return sysExpr;
-        }
-
-        // todo: @perf can use the FHashMap instead of the SmallList here?
-        internal abstract SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions);
-
-        /// <summary>Converts to Expression and outputs its as string</summary>
-        public override string ToString() => this.ToCSharpString(
-            new StringBuilder(256), stripNamespace: true,
-            notRecognizedToCode: static (x, stripNs, printType) => "default(" + x.GetType().ToCode(stripNs, printType) + ")/*" + x.ToString() + "*/")
-            .ToString();
-
-        /// <summary>Reduces the Expression to simple ones</summary>
-        public virtual Expression Reduce() => this;
-
-        internal static SysExpr[] ToExpressions(IReadOnlyList<Expression> exprs, ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            if (exprs.Count == 0)
-                return Tools.Empty<SysExpr>();
-
-            if (exprs.Count == 1)
-                return new[] { exprs[0].ToExpression(ref exprsConverted) };
-
-            var result = new SysExpr[exprs.Count];
-            for (var i = 0; i < result.Length; ++i)
-                result[i] = exprs[i].ToExpression(ref exprsConverted);
-            return result;
-        }
-
-        [MethodImpl((MethodImplOptions)256)]
-        public static ParameterExpression Parameter(Type type, string name = null) =>
-            type.IsByRef ? new ByRefParameterExpression(type.GetElementType(), name) :
-            type.IsEnum ? new TypedParameterExpression(type, name) :
-                TryToMakeKnownTypeParameter(type, name);
-
-        [MethodImpl((MethodImplOptions)256)]
-        public static ParameterExpression ParameterOf<T>(string name = null) => new TypedParameterExpression<T>(name);
-
-        public static ParameterExpression Variable(Type type, string name = null) => Parameter(type, name);
-
-        // Enum is excluded because otherwise TypeCode will return the thing for the underlying 
-        private static ParameterExpression TryToMakeKnownTypeParameter(Type type, string name = null) =>
-            Type.GetTypeCode(type) switch
-            {
-                TypeCode.Boolean => new TypedParameterExpression<bool>(name),
-                TypeCode.Byte => new TypedParameterExpression<byte>(name),
-                TypeCode.Char => new TypedParameterExpression<char>(name),
-                TypeCode.DateTime => new TypedParameterExpression<DateTime>(name),
-                TypeCode.Decimal => new TypedParameterExpression<decimal>(name),
-                TypeCode.Double => new TypedParameterExpression<double>(name),
-                TypeCode.Int16 => new TypedParameterExpression<short>(name),
-                TypeCode.Int32 => new TypedParameterExpression<int>(name),
-                TypeCode.Int64 => new TypedParameterExpression<long>(name),
-                TypeCode.SByte => new TypedParameterExpression<sbyte>(name),
-                TypeCode.Single => new TypedParameterExpression<float>(name),
-                TypeCode.String => new TypedParameterExpression<string>(name),
-                TypeCode.UInt16 => new TypedParameterExpression<ushort>(name),
-                TypeCode.UInt32 => new TypedParameterExpression<uint>(name),
-                TypeCode.UInt64 => new TypedParameterExpression<ulong>(name),
-                // we cannot match on TypeCode.Object because it corresponds to any reference type
-                _ => type == typeof(object) ? new TypedParameterExpression<object>(name)
-                    : type == typeof(object[]) ? new TypedParameterExpression<object[]>(name)
-                    : new TypedParameterExpression(type, name)
-            };
-
-        public static readonly ConstantExpression NullConstant = new NullConstantExpression<object>();
-        public static readonly ConstantExpression FalseConstant = new ValueConstantExpression<bool>(false);
-        public static readonly ConstantExpression TrueConstant = new ValueConstantExpression<bool>(true);
-        public static readonly ConstantExpression ZeroConstant = new IntConstantExpression(0);
-        public static readonly ConstantExpression OneConstant = new IntConstantExpression(1);
-        public static readonly ConstantExpression MinusOneConstant = new IntConstantExpression(-1);
-
-        /// <summary>Avoids the boxing for all (two) bool values</summary>
-        public static ConstantExpression Constant(bool value) => value ? TrueConstant : FalseConstant;
-
-        public static ConstantExpression Constant(object value) =>
-            value == null ? NullConstant :
-            value is bool b ? (b ? TrueConstant : FalseConstant) :
-            value is int n ? (
-                n == 0 ? ZeroConstant :
-                n == 1 ? OneConstant :
-                n == -1 ? MinusOneConstant :
-                new IntConstantExpression(n)) :
-            new ValueConstantExpression(value);
-
-        public static ConstantExpression Constant(object value, Type type) =>
-            value == null ? ConstantNull(type) :
-            type == typeof(bool) ? ((bool)value ? TrueConstant : FalseConstant) :
-            type == value.GetType() ? new ValueConstantExpression(value) :
-            new TypedValueConstantExpression(value, type);
+            TypeCode.Boolean => new TypedParameterExpression<bool>(name),
+            TypeCode.Byte => new TypedParameterExpression<byte>(name),
+            TypeCode.Char => new TypedParameterExpression<char>(name),
+            TypeCode.DateTime => new TypedParameterExpression<DateTime>(name),
+            TypeCode.Decimal => new TypedParameterExpression<decimal>(name),
+            TypeCode.Double => new TypedParameterExpression<double>(name),
+            TypeCode.Int16 => new TypedParameterExpression<short>(name),
+            TypeCode.Int32 => new TypedParameterExpression<int>(name),
+            TypeCode.Int64 => new TypedParameterExpression<long>(name),
+            TypeCode.SByte => new TypedParameterExpression<sbyte>(name),
+            TypeCode.Single => new TypedParameterExpression<float>(name),
+            TypeCode.String => new TypedParameterExpression<string>(name),
+            TypeCode.UInt16 => new TypedParameterExpression<ushort>(name),
+            TypeCode.UInt32 => new TypedParameterExpression<uint>(name),
+            TypeCode.UInt64 => new TypedParameterExpression<ulong>(name),
+            // we cannot match on TypeCode.Object because it corresponds to any reference type
+            _ => type == typeof(object) ? new TypedParameterExpression<object>(name)
+                : type == typeof(object[]) ? new TypedParameterExpression<object[]>(name)
+                : new TypedParameterExpression(type, name)
+        };
+
+    public static readonly ConstantExpression NullConstant = new NullConstantExpression<object>();
+    public static readonly ConstantExpression FalseConstant = new ValueConstantExpression<bool>(false);
+    public static readonly ConstantExpression TrueConstant = new ValueConstantExpression<bool>(true);
+    public static readonly ConstantExpression ZeroConstant = new IntConstantExpression(0);
+    public static readonly ConstantExpression OneConstant = new IntConstantExpression(1);
+    public static readonly ConstantExpression MinusOneConstant = new IntConstantExpression(-1);
+
+    /// <summary>Avoids the boxing for all (two) bool values</summary>
+    public static ConstantExpression Constant(bool value) => value ? TrueConstant : FalseConstant;
+
+    public static ConstantExpression Constant(object value) =>
+        value == null ? NullConstant :
+        value is bool b ? (b ? TrueConstant : FalseConstant) :
+        value is int n ? (
+            n == 0 ? ZeroConstant :
+            n == 1 ? OneConstant :
+            n == -1 ? MinusOneConstant :
+            new IntConstantExpression(n)) :
+        new ValueConstantExpression(value);
+
+    public static ConstantExpression Constant(object value, Type type) =>
+        value == null ? ConstantNull(type) :
+        type == typeof(bool) ? ((bool)value ? TrueConstant : FalseConstant) :
+        type == value.GetType() ? new ValueConstantExpression(value) :
+        new TypedValueConstantExpression(value, type);
+
+    [MethodImpl((MethodImplOptions)256)]
+    public static ConstantExpression ConstantNull(Type type = null) =>
+        type == null || type == typeof(object) ? NullConstant : new TypedNullConstantExpression(type);
+
+    [MethodImpl((MethodImplOptions)256)]
+    public static ConstantExpression ConstantNull<T>() => new NullConstantExpression<T>();
+
+    [MethodImpl((MethodImplOptions)256)]
+    public static ConstantExpression ConstantInt(int value) => new IntConstantExpression(value);
+
+    [MethodImpl((MethodImplOptions)256)]
+    public static ConstantExpression ConstantOf<T>(T value) =>
+        value == null ? ConstantNull<T>() : new ValueConstantExpression<T>(value);
+
+    [MethodImpl((MethodImplOptions)256)]
+    public static int TryGetIntConstantValue(Expression e) => ((IntConstantExpression)e).IntValue;
+
+    public static NewExpression New(Type type)
+    {
+        if (type.IsValueType)
+            return new NewValueTypeExpression(type);
+
+        foreach (var x in type.GetConstructors())
+            if (x.GetParameters().Length == 0)
+                return new NoArgsNewClassIntrinsicExpression(x);
+
+        throw new ArgumentException($"The type {type} is missing the default constructor");
+    }
+
+    public static NewExpression New(ConstructorInfo ctor, IReadOnlyList<Expression> arguments) =>
+        arguments == null || arguments.Count == 0
+        ? new NoArgsNewClassIntrinsicExpression(ctor)
+        : new ManyArgumentsNewExpression(ctor, arguments);
+
+    public static NewExpression New(ConstructorInfo ctor, params Expression[] arguments) =>
+        New(ctor, (IReadOnlyList<Expression>)arguments);
+
+    public static NewExpression New(ConstructorInfo ctor, IEnumerable<Expression> arguments) =>
+        New(ctor, arguments.AsReadOnlyList());
+
+    public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, IReadOnlyList<Expression> arguments) =>
+        arguments == null || arguments.Count == 0
+        ? new NoArgsNewClassIntrinsicExpression(ctor)
+        : new NoByRefManyArgsNewIntrinsicExpression(ctor, arguments);
+
+    public static NewExpression New(ConstructorInfo ctor) => new NoArgsNewClassIntrinsicExpression(ctor);
+
+    public static NewExpression New(ConstructorInfo ctor, Expression arg) => new OneArgumentNewExpression(ctor, arg);
+
+    public static NewExpression NewObjArgs(ConstructorInfo ctor, object arg) => new OneArgumentNewExpression(ctor, arg);
+
+    public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, object arg) => new NoByRefOneArgNewIntrinsicExpression(ctor, arg);
+
+    public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1) =>
+        new TwoArgumentsNewExpression(ctor, arg0, arg1);
 
-        [MethodImpl((MethodImplOptions)256)]
-        public static ConstantExpression ConstantNull(Type type = null) =>
-            type == null || type == typeof(object) ? NullConstant : new TypedNullConstantExpression(type);
+    public static NewExpression NewObjArgs(ConstructorInfo ctor, object arg0, object arg1) =>
+        new TwoArgumentsNewExpression(ctor, arg0, arg1);
 
-        [MethodImpl((MethodImplOptions)256)]
-        public static ConstantExpression ConstantNull<T>() => new NullConstantExpression<T>();
+    public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, object arg0, object arg1) =>
+        new NoByRefTwoArgumentsNewIntrinsicExpression(ctor, arg0, arg1);
 
-        [MethodImpl((MethodImplOptions)256)]
-        public static ConstantExpression ConstantInt(int value) => new IntConstantExpression(value);
+    public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2) =>
+        new ThreeArgumentsNewExpression(ctor, arg0, arg1, arg2);
 
-        [MethodImpl((MethodImplOptions)256)]
-        public static ConstantExpression ConstantOf<T>(T value) =>
-            value == null ? ConstantNull<T>() : new ValueConstantExpression<T>(value);
+    public static NewExpression New(ConstructorInfo ctor, object arg0, object arg1, object arg2) =>
+        new ThreeArgumentsNewExpression(ctor, arg0, arg1, arg2);
 
-        [MethodImpl((MethodImplOptions)256)]
-        public static int TryGetIntConstantValue(Expression e) => ((IntConstantExpression)e).IntValue;
+    public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, object arg0, object arg1, object arg2) =>
+        new NoByRefThreeArgumentsNewIntrinsicExpression(ctor, arg0, arg1, arg2);
 
-        public static NewExpression New(Type type)
-        {
-            if (type.IsValueType)
-                return new NewValueTypeExpression(type);
+    public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
+        new FourArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3);
 
-            foreach (var x in type.GetConstructors())
-                if (x.GetParameters().Length == 0)
-                    return new NoArgsNewClassIntrinsicExpression(x);
+    public static NewExpression NewObjArgs(ConstructorInfo ctor, object arg0, object arg1, object arg2, object arg3) =>
+        new FourArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3);
 
-            throw new ArgumentException($"The type {type} is missing the default constructor");
-        }
+    public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, object arg0, object arg1, object arg2, object arg3) =>
+        new NoByRefFourArgumentsNewIntrinsicExpression(ctor, arg0, arg1, arg2, arg3);
 
-        public static NewExpression New(ConstructorInfo ctor, IReadOnlyList<Expression> arguments) =>
-            arguments == null || arguments.Count == 0
-            ? new NoArgsNewClassIntrinsicExpression(ctor)
-            : new ManyArgumentsNewExpression(ctor, arguments);
+    public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
+        new FiveArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4);
 
-        public static NewExpression New(ConstructorInfo ctor, params Expression[] arguments) =>
-            New(ctor, (IReadOnlyList<Expression>)arguments);
+    public static NewExpression NewObjArgs(ConstructorInfo ctor, object arg0, object arg1, object arg2, object arg3, object arg4) =>
+        new FiveArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4);
 
-        public static NewExpression New(ConstructorInfo ctor, IEnumerable<Expression> arguments) =>
-            New(ctor, arguments.AsReadOnlyList());
+    public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, object arg0, object arg1, object arg2, object arg3, object arg4) =>
+        new NoByRefFiveArgumentsNewIntrinsicExpression(ctor, arg0, arg1, arg2, arg3, arg4);
 
-        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, IReadOnlyList<Expression> arguments) =>
-            arguments == null || arguments.Count == 0
-            ? new NoArgsNewClassIntrinsicExpression(ctor)
-            : new NoByRefManyArgsNewIntrinsicExpression(ctor, arguments);
+    public static NewExpression New(ConstructorInfo ctor,
+        Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5) =>
+        new SixArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5);
 
-        public static NewExpression New(ConstructorInfo ctor) => new NoArgsNewClassIntrinsicExpression(ctor);
+    public static NewExpression NewObjArgs(ConstructorInfo ctor,
+        object arg0, object arg1, object arg2, object arg3, object arg4, object arg5) =>
+        new SixArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5);
 
-        public static NewExpression New(ConstructorInfo ctor, Expression arg) => new OneArgumentNewExpression(ctor, arg);
+    public static NewExpression NewNoByRefArgs(ConstructorInfo ctor,
+        object arg0, object arg1, object arg2, object arg3, object arg4, object arg5) =>
+        new NoByRefSixArgumentsNewIntrinsicExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5);
 
-        public static NewExpression NewObjArgs(ConstructorInfo ctor, object arg) => new OneArgumentNewExpression(ctor, arg);
+    public static NewExpression New(ConstructorInfo ctor,
+        Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5, Expression arg6) =>
+        new SevenArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
 
-        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, object arg) => new NoByRefOneArgNewIntrinsicExpression(ctor, arg);
+    public static NewExpression NewObjArgs(ConstructorInfo ctor,
+        object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6) =>
+        new SevenArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
 
-        public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1) =>
-            new TwoArgumentsNewExpression(ctor, arg0, arg1);
+    public static NewExpression NewNoByRefArgs(ConstructorInfo ctor,
+        object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6) =>
+        new NoByRefSevenArgumentsNewIntrinsicExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
 
-        public static NewExpression NewObjArgs(ConstructorInfo ctor, object arg0, object arg1) =>
-            new TwoArgumentsNewExpression(ctor, arg0, arg1);
-
-        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, object arg0, object arg1) =>
-            new NoByRefTwoArgumentsNewIntrinsicExpression(ctor, arg0, arg1);
-
-        public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2) =>
-            new ThreeArgumentsNewExpression(ctor, arg0, arg1, arg2);
-
-        public static NewExpression New(ConstructorInfo ctor, object arg0, object arg1, object arg2) =>
-            new ThreeArgumentsNewExpression(ctor, arg0, arg1, arg2);
-
-        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, object arg0, object arg1, object arg2) =>
-            new NoByRefThreeArgumentsNewIntrinsicExpression(ctor, arg0, arg1, arg2);
-
-        public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
-            new FourArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3);
-
-        public static NewExpression NewObjArgs(ConstructorInfo ctor, object arg0, object arg1, object arg2, object arg3) =>
-            new FourArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3);
-
-        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, object arg0, object arg1, object arg2, object arg3) =>
-            new NoByRefFourArgumentsNewIntrinsicExpression(ctor, arg0, arg1, arg2, arg3);
-
-        public static NewExpression New(ConstructorInfo ctor, Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
-            new FiveArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4);
-
-        public static NewExpression NewObjArgs(ConstructorInfo ctor, object arg0, object arg1, object arg2, object arg3, object arg4) =>
-            new FiveArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4);
-
-        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor, object arg0, object arg1, object arg2, object arg3, object arg4) =>
-            new NoByRefFiveArgumentsNewIntrinsicExpression(ctor, arg0, arg1, arg2, arg3, arg4);
-
-        public static NewExpression New(ConstructorInfo ctor,
-            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5) =>
-            new SixArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5);
-
-        public static NewExpression NewObjArgs(ConstructorInfo ctor,
-            object arg0, object arg1, object arg2, object arg3, object arg4, object arg5) =>
-            new SixArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5);
-
-        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor,
-            object arg0, object arg1, object arg2, object arg3, object arg4, object arg5) =>
-            new NoByRefSixArgumentsNewIntrinsicExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5);
-
-        public static NewExpression New(ConstructorInfo ctor,
-            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5, Expression arg6) =>
-            new SevenArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-
-        public static NewExpression NewObjArgs(ConstructorInfo ctor,
-            object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6) =>
-            new SevenArgumentsNewExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-
-        public static NewExpression NewNoByRefArgs(ConstructorInfo ctor,
-            object arg0, object arg1, object arg2, object arg3, object arg4, object arg5, object arg6) =>
-            new NoByRefSevenArgumentsNewIntrinsicExpression(ctor, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-
-        public static MethodCallExpression Call(MethodInfo method, IReadOnlyList<Expression> arguments) =>
-            arguments == null || arguments.Count == 0
-                ? new NotNullMethodCallExpression(method)
-                : new ManyArgumentsMethodCallExpression(method, arguments);
-
-        public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
-            Call(method, (IReadOnlyList<Expression>)arguments);
-
-        public static MethodCallExpression Call(MethodInfo method, IEnumerable<Expression> arguments) =>
-            Call(method, arguments.AsReadOnlyList());
-
-        public static MethodCallExpression Call(Expression instance, MethodInfo method, IReadOnlyList<Expression> arguments) =>
-            arguments == null || arguments.Count == 0
-                ? new InstanceMethodCallExpression(instance, method)
-                : new InstanceManyArgumentsMethodCallExpression(instance, method, arguments);
-
-        public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) =>
-            Call(instance, method, (IReadOnlyList<Expression>)arguments);
-
-        public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) =>
-            Call(instance, method, arguments.AsReadOnlyList());
-
-        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IReadOnlyList<Expression> arguments) =>
-            Call(type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.StaticMethods), arguments);
-
-        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) =>
-            Call(type, methodName, typeArguments, (IReadOnlyList<Expression>)arguments);
-
-        public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments) =>
-            Call(type, methodName, typeArguments, arguments.AsReadOnlyList());
-
-        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IReadOnlyList<Expression> arguments) =>
-            Call(instance, instance.Type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.InstanceMethods), arguments);
-
-        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments) =>
-            Call(instance, methodName, typeArguments, (IReadOnlyList<Expression>)arguments);
-
-        public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments) =>
-            Call(instance, methodName, typeArguments, arguments.AsReadOnlyList());
-
-        public static MethodCallExpression Call(MethodInfo method) =>
-            new NotNullMethodCallExpression(method);
-
-        public static MethodCallExpression Call(Expression instance, MethodInfo method) =>
-            instance == null
+    public static MethodCallExpression Call(MethodInfo method, IReadOnlyList<Expression> arguments) =>
+        arguments == null || arguments.Count == 0
             ? new NotNullMethodCallExpression(method)
-            : new InstanceMethodCallExpression(instance, method);
+            : new ManyArgumentsMethodCallExpression(method, arguments);
 
-        public static MethodCallExpression Call(MethodInfo method, Expression argument) =>
-            new OneArgumentMethodCallExpression(method, argument);
+    public static MethodCallExpression Call(MethodInfo method, params Expression[] arguments) =>
+        Call(method, (IReadOnlyList<Expression>)arguments);
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression argument) =>
-            instance == null
-            ? new OneArgumentMethodCallExpression(method, argument)
-            : new InstanceOneArgumentMethodCallExpression(instance, method, argument);
+    public static MethodCallExpression Call(MethodInfo method, IEnumerable<Expression> arguments) =>
+        Call(method, arguments.AsReadOnlyList());
 
-        public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1) =>
-            new TwoArgumentsMethodCallExpression(method, arg0, arg1);
+    public static MethodCallExpression Call(Expression instance, MethodInfo method, IReadOnlyList<Expression> arguments) =>
+        arguments == null || arguments.Count == 0
+            ? new InstanceMethodCallExpression(instance, method)
+            : new InstanceManyArgumentsMethodCallExpression(instance, method, arguments);
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression arg0, Expression arg1) =>
-            instance == null
-            ? new TwoArgumentsMethodCallExpression(method, arg0, arg1)
-            : new InstanceTwoArgumentsMethodCallExpression(instance, method, arg0, arg1);
+    public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) =>
+        Call(instance, method, (IReadOnlyList<Expression>)arguments);
 
-        public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1, Expression arg2) =>
-            new ThreeArgumentsMethodCallExpression(method, arg0, arg1, arg2);
+    public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) =>
+        Call(instance, method, arguments.AsReadOnlyList());
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression arg0, Expression arg1, Expression arg2) =>
-            instance == null
-            ? new ThreeArgumentsMethodCallExpression(method, arg0, arg1, arg2)
-            : new InstanceThreeArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2);
+    public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IReadOnlyList<Expression> arguments) =>
+        Call(type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.StaticMethods), arguments);
 
-        public static MethodCallExpression Call(MethodInfo method,
-            Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
-            new FourArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3);
+    public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) =>
+        Call(type, methodName, typeArguments, (IReadOnlyList<Expression>)arguments);
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method,
-            Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
-            instance == null
-                ? new FourArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3)
-                : new InstanceFourArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3);
+    public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments) =>
+        Call(type, methodName, typeArguments, arguments.AsReadOnlyList());
 
-        public static MethodCallExpression Call(MethodInfo method,
-            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
-            new FiveArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4);
+    public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IReadOnlyList<Expression> arguments) =>
+        Call(instance, instance.Type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.InstanceMethods), arguments);
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method,
-            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
-            instance == null
-            ? new FiveArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4)
-            : new InstanceFiveArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4);
+    public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments) =>
+        Call(instance, methodName, typeArguments, (IReadOnlyList<Expression>)arguments);
 
-        public static MethodCallExpression Call(MethodInfo method,
-            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5) =>
-            new SixArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4, arg5);
+    public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments) =>
+        Call(instance, methodName, typeArguments, arguments.AsReadOnlyList());
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method,
-            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5) =>
-            instance == null
-            ? new SixArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4, arg5)
-            : new InstanceSixArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4, arg5);
+    public static MethodCallExpression Call(MethodInfo method) =>
+        new NotNullMethodCallExpression(method);
 
-        public static MethodCallExpression Call(Expression instance, MethodInfo method,
-            Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5, Expression arg6) =>
-            instance == null
-            ? new SevenArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4, arg5, arg6)
-            : new InstanceSevenArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+    public static MethodCallExpression Call(Expression instance, MethodInfo method) =>
+        instance == null
+        ? new NotNullMethodCallExpression(method)
+        : new InstanceMethodCallExpression(instance, method);
 
-        public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
-            CallIfNotNull(instance, method, Tools.Empty<Expression>());
+    public static MethodCallExpression Call(MethodInfo method, Expression argument) =>
+        new OneArgumentMethodCallExpression(method, argument);
 
-        public static Expression CallIfNotNull(Expression instance, MethodInfo method, IEnumerable<Expression> arguments)
-        {
-            var instanceVar = Parameter(instance.Type, "x");
-            return Block(
-                new[] { instanceVar },
-                Assign(instanceVar, instance),
-                Condition(
-                    Equal(instanceVar, Constant(null, instance.Type)),
-                    NullConstant,
-                    Call(instanceVar, method, arguments),
-                    method.ReturnType));
-        }
+    public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression argument) =>
+        instance == null
+        ? new OneArgumentMethodCallExpression(method, argument)
+        : new InstanceOneArgumentMethodCallExpression(instance, method, argument);
 
-        public static MemberExpression Property(PropertyInfo property) =>
-            new PropertyExpression(property);
+    public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1) =>
+        new TwoArgumentsMethodCallExpression(method, arg0, arg1);
 
-        public static MemberExpression Property(Expression instance, PropertyInfo property) =>
-            instance == null
-                ? new PropertyExpression(property)
-                : new InstancePropertyExpression(instance, property);
+    public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression arg0, Expression arg1) =>
+        instance == null
+        ? new TwoArgumentsMethodCallExpression(method, arg0, arg1)
+        : new InstanceTwoArgumentsMethodCallExpression(instance, method, arg0, arg1);
 
-        public static MemberExpression Property(Expression expression, string propertyName) =>
-            Property(expression, expression.Type.FindProperty(propertyName)
-                ?? throw new ArgumentException($"Declared property with the name '{propertyName}' is not found in '{expression.Type}'", nameof(propertyName)));
+    public static MethodCallExpression Call(MethodInfo method, Expression arg0, Expression arg1, Expression arg2) =>
+        new ThreeArgumentsMethodCallExpression(method, arg0, arg1, arg2);
 
-        public static IndexExpression Property(Expression instance, PropertyInfo indexer, Expression argument) =>
-            new HasIndexerOneArgumentIndexExpression(instance, indexer, argument);
+    public static MethodCallExpression Call(Expression instance, MethodInfo method, Expression arg0, Expression arg1, Expression arg2) =>
+        instance == null
+        ? new ThreeArgumentsMethodCallExpression(method, arg0, arg1, arg2)
+        : new InstanceThreeArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2);
 
-        public static IndexExpression Property(Expression instance, PropertyInfo indexer, params Expression[] arguments) =>
-            new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments);
+    public static MethodCallExpression Call(MethodInfo method,
+        Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
+        new FourArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3);
 
-        public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
-            new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments.AsReadOnlyList());
+    public static MethodCallExpression Call(Expression instance, MethodInfo method,
+        Expression arg0, Expression arg1, Expression arg2, Expression arg3) =>
+        instance == null
+            ? new FourArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3)
+            : new InstanceFourArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3);
 
-        public static IndexExpression Property(Expression instance, string propertyName, params Expression[] arguments)
-        {
-            Debug.Assert(instance != null); // because otherwise there is no way to get type to find the indexer by name
-            foreach (var indexer in instance.Type.GetProperties())
-                if (indexer.Name == propertyName)
+    public static MethodCallExpression Call(MethodInfo method,
+        Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
+        new FiveArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4);
+
+    public static MethodCallExpression Call(Expression instance, MethodInfo method,
+        Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4) =>
+        instance == null
+        ? new FiveArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4)
+        : new InstanceFiveArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4);
+
+    public static MethodCallExpression Call(MethodInfo method,
+        Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5) =>
+        new SixArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4, arg5);
+
+    public static MethodCallExpression Call(Expression instance, MethodInfo method,
+        Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5) =>
+        instance == null
+        ? new SixArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4, arg5)
+        : new InstanceSixArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4, arg5);
+
+    public static MethodCallExpression Call(Expression instance, MethodInfo method,
+        Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5, Expression arg6) =>
+        instance == null
+        ? new SevenArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+        : new InstanceSevenArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+
+    public static Expression CallIfNotNull(Expression instance, MethodInfo method) =>
+        CallIfNotNull(instance, method, Tools.Empty<Expression>());
+
+    public static Expression CallIfNotNull(Expression instance, MethodInfo method, IEnumerable<Expression> arguments)
+    {
+        var instanceVar = Parameter(instance.Type, "x");
+        return Block(
+            new[] { instanceVar },
+            Assign(instanceVar, instance),
+            Condition(
+                Equal(instanceVar, Constant(null, instance.Type)),
+                NullConstant,
+                Call(instanceVar, method, arguments),
+                method.ReturnType));
+    }
+
+    public static MemberExpression Property(PropertyInfo property) =>
+        new PropertyExpression(property);
+
+    public static MemberExpression Property(Expression instance, PropertyInfo property) =>
+        instance == null
+            ? new PropertyExpression(property)
+            : new InstancePropertyExpression(instance, property);
+
+    public static MemberExpression Property(Expression expression, string propertyName) =>
+        Property(expression, expression.Type.FindProperty(propertyName)
+            ?? throw new ArgumentException($"Declared property with the name '{propertyName}' is not found in '{expression.Type}'", nameof(propertyName)));
+
+    public static IndexExpression Property(Expression instance, PropertyInfo indexer, Expression argument) =>
+        new HasIndexerOneArgumentIndexExpression(instance, indexer, argument);
+
+    public static IndexExpression Property(Expression instance, PropertyInfo indexer, params Expression[] arguments) =>
+        new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments);
+
+    public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
+        new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments.AsReadOnlyList());
+
+    public static IndexExpression Property(Expression instance, string propertyName, params Expression[] arguments)
+    {
+        Debug.Assert(instance != null); // because otherwise there is no way to get type to find the indexer by name
+        foreach (var indexer in instance.Type.GetProperties())
+            if (indexer.Name == propertyName)
+            {
+                var indexerParams = indexer.GetIndexParameters();
+                if (indexerParams.Length == arguments.Length)
                 {
-                    var indexerParams = indexer.GetIndexParameters();
-                    if (indexerParams.Length == arguments.Length)
-                    {
-                        var mismatch = false;
-                        for (var p = 0; !mismatch && p < indexerParams.Length; ++p)
-                            mismatch = indexerParams[p].ParameterType != arguments[p].Type;
-                        if (!mismatch)
-                            return new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments);
-                    }
+                    var mismatch = false;
+                    for (var p = 0; !mismatch && p < indexerParams.Length; ++p)
+                        mismatch = indexerParams[p].ParameterType != arguments[p].Type;
+                    if (!mismatch)
+                        return new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments);
                 }
-            throw new ArgumentException($"Indexer property '{propertyName}' is not found in '{instance.Type}' with the argument types '{arguments.Select(a => a.Type).ToCode(null)}]",
-                nameof(propertyName));
-        }
-
-        public static MemberExpression PropertyOrField(Expression expression, string memberName) =>
-            expression.Type.FindProperty(memberName) != null
-                ? Property(expression, expression.Type.FindProperty(memberName)
-                    ?? throw new ArgumentException($"Declared property with the name '{memberName}' is not found in '{expression.Type}'", nameof(memberName)))
-                : Field(expression, expression.Type.FindField(memberName)
-                    ?? throw new ArgumentException($"Declared field with the name '{memberName}' is not found '{expression.Type}'", nameof(memberName)));
-
-        public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member)
-        {
-            if (member is FieldInfo field)
-                return Field(expression, field);
-            if (member is PropertyInfo property)
-                return Property(expression, property);
-            throw new ArgumentException($"Member is not field or property: {member}", nameof(member));
-        }
-
-        public static IndexExpression MakeIndex(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
-            indexer != null
-                ? Property(instance, indexer, arguments)
-                : ArrayAccess(instance, arguments);
-
-        public static IndexExpression ArrayAccess(Expression array, Expression index) =>
-            new OneArgumentIndexExpression(array, index);
-
-        public static IndexExpression ArrayAccess(Expression array, IReadOnlyList<Expression> indexes) =>
-            new ManyArgumentsIndexExpression(array, indexes);
-
-        public static IndexExpression ArrayAccess(Expression array, params Expression[] indexes) =>
-            ArrayAccess(array, (IReadOnlyList<Expression>)indexes);
-
-        public static IndexExpression ArrayAccess(Expression array, IEnumerable<Expression> indexes) =>
-            ArrayAccess(array, indexes.AsReadOnlyList());
-
-        public static MemberExpression Field(FieldInfo field) =>
-            new FieldExpression(field);
-
-        public static MemberExpression Field(Expression instance, FieldInfo field) =>
-            instance == null
-                ? new FieldExpression(field)
-                : new InstanceFieldExpression(instance, field);
-
-        public static MemberExpression Field(Expression instance, string fieldName) =>
-            Field(instance, instance.Type.FindField(fieldName));
-
-        /// <summary>Creates a UnaryExpression that represents a bitwise complement operation.</summary>
-        public static UnaryExpression Not(Expression expression)
-        {
-            if (expression.Type == typeof(bool))
-                return new NotBooleanUnaryExpression(expression);
-            return new NodeTypedUnaryExpression(ExpressionType.Not, expression);
-        }
-
-        /// <summary>Creates a UnaryExpression that represents an explicit reference or boxing conversion where null is supplied if the conversion fails.</summary>
-        public static UnaryExpression TypeAs(Expression expression, Type type) =>
-            new TypedUnaryExpression(ExpressionType.TypeAs, expression, type);
-
-        public static TypeBinaryExpression TypeEqual(Expression operand, Type type) =>
-            new TypeBinaryExpression(ExpressionType.TypeEqual, operand, type);
-
-        public static TypeBinaryExpression TypeIs(Expression operand, Type type) =>
-            new TypeBinaryExpression(ExpressionType.TypeIs, operand, type);
-
-        /// <summary>Creates a UnaryExpression that represents an expression for obtaining the length of a one-dimensional array.</summary>
-        public static UnaryExpression ArrayLength(Expression array) =>
-            new TypedUnaryExpression<int>(ExpressionType.ArrayLength, array);
-
-        /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
-        public static UnaryExpression Convert(Expression expression, Type type) =>
-            new ConvertUnaryExpression(expression, type);
-
-        public static UnaryExpression Convert<T>(Expression expression) =>
-            new TypedConvertUnaryExpression<T>(expression);
-
-        public static UnaryExpression TryConvertDelegateIntrinsic(Expression expression, Type type) =>
-            type != expression.Type &&
-            typeof(Delegate).IsAssignableFrom(type) && typeof(Delegate).IsAssignableFrom(expression.Type)
-                ? new ConvertDelegateIntrinsicExpression(expression, type)
-                : Convert(expression, type);
-
-        public static UnaryExpression TryConvertDelegateIntrinsic<D>(Expression expression) where D : Delegate =>
-            typeof(D) != expression.Type && typeof(Delegate).IsAssignableFrom(expression.Type)
-                ? new ConvertDelegateIntrinsicExpression(expression, typeof(D))
-                : Convert(expression, typeof(D));
-
-        public static UnaryExpression TryConvertIntrinsic(Expression expression, Type type) =>
-            !type.IsValueType && (!expression.Type.IsValueType || type == typeof(object))
-                ? new ConvertIntrinsicExpression(expression, type)
-                : Convert(expression, type);
-
-        public static UnaryExpression TryConvertIntrinsic<T>(Expression expression) where T : class =>
-            !typeof(T).IsValueType && (!expression.Type.IsValueType || typeof(T) == typeof(object))
-                ? new ConvertIntrinsicExpression<T>(expression)
-                : Convert<T>(expression);
-
-        /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
-        public static UnaryExpression Convert(Expression expression, Type type, MethodInfo method) =>
-            new ConvertWithMethodUnaryExpression(ExpressionType.Convert, expression, type, method);
-
-        /// <summary>Creates a UnaryExpression that represents a conversion operation that throws an exception if the target type is overflowed.</summary>
-        public static UnaryExpression ConvertChecked(Expression expression, Type type) =>
-            new TypedUnaryExpression(ExpressionType.ConvertChecked, expression, type);
-
-        /// <summary>Creates a UnaryExpression that represents a conversion operation that throws an exception if the target type is overflowed and for which the implementing method is specified.</summary>
-        public static UnaryExpression ConvertChecked(Expression expression, Type type, MethodInfo method) =>
-            new ConvertWithMethodUnaryExpression(ExpressionType.ConvertChecked, expression, type, method);
-
-        /// <summary>Creates a UnaryExpression that represents the decrementing of the expression by 1.</summary>
-        public static UnaryExpression Decrement(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.Decrement, expression);
-
-        /// <summary>Creates a UnaryExpression that represents the incrementing of the expression value by 1.</summary>
-        public static UnaryExpression Increment(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.Increment, expression);
-
-        /// <summary>Returns whether the expression evaluates to false.</summary>
-        public static UnaryExpression IsFalse(Expression expression) =>
-            new TypedUnaryExpression<bool>(ExpressionType.IsFalse, expression);
-
-        /// <summary>Returns whether the expression evaluates to true.</summary>
-        public static UnaryExpression IsTrue(Expression expression) =>
-            new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
-
-        /// <summary>Creates a UnaryExpression, given an operand, by calling the appropriate factory method.</summary>
-        public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type) =>
-            type == null || type == operand.Type
-                ? new NodeTypedUnaryExpression(unaryType, operand)
-                : new TypedUnaryExpression(unaryType, operand, type);
-
-        /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation.</summary>
-        public static UnaryExpression Negate(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.Negate, expression);
-
-        /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation that has overflow checking.</summary>
-        public static UnaryExpression NegateChecked(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.NegateChecked, expression);
-
-        /// <summary>Returns the expression representing the ones complement.</summary>
-        public static UnaryExpression OnesComplement(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.OnesComplement, expression);
-
-        /// <summary>Creates a UnaryExpression that increments the expression by 1 and assigns the result back to the expression.</summary>
-        public static UnaryExpression PreIncrementAssign(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.PreIncrementAssign, expression);
-
-        /// <summary>Creates a UnaryExpression that represents the assignment of the expression followed by a subsequent increment by 1 of the original expression.</summary>
-        public static UnaryExpression PostIncrementAssign(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.PostIncrementAssign, expression);
-
-        /// <summary>Creates a UnaryExpression that decrements the expression by 1 and assigns the result back to the expression.</summary>
-        public static UnaryExpression PreDecrementAssign(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.PreDecrementAssign, expression);
-
-        /// <summary>Creates a UnaryExpression that represents the assignment of the expression followed by a subsequent decrement by 1 of the original expression.</summary>
-        public static UnaryExpression PostDecrementAssign(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.PostDecrementAssign, expression);
-
-        /// <summary>Creates a UnaryExpression that represents an expression that has a constant value of type Expression.</summary>
-        public static UnaryExpression Quote(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.Quote, expression);
-
-        /// <summary>Creates a UnaryExpression that represents a unary plus operation.</summary>
-        public static UnaryExpression UnaryPlus(Expression expression) =>
-            new NodeTypedUnaryExpression(ExpressionType.UnaryPlus, expression);
-
-        /// <summary>Creates a UnaryExpression that represents an explicit unboxing.</summary>
-        public static UnaryExpression Unbox(Expression expression, Type type)
-        {
-            if (type.IsEnum)
-                return new TypedUnaryExpression(ExpressionType.Unbox, expression, type);
-            return Type.GetTypeCode(type) switch
-            {
-                TypeCode.Boolean => new TypedUnaryExpression<bool>(ExpressionType.Unbox, expression),
-                TypeCode.Byte => new TypedUnaryExpression<byte>(ExpressionType.Unbox, expression),
-                TypeCode.Char => new TypedUnaryExpression<char>(ExpressionType.Unbox, expression),
-                TypeCode.DateTime => new TypedUnaryExpression<DateTime>(ExpressionType.Unbox, expression),
-                TypeCode.Decimal => new TypedUnaryExpression<decimal>(ExpressionType.Unbox, expression),
-                TypeCode.Double => new TypedUnaryExpression<double>(ExpressionType.Unbox, expression),
-                TypeCode.Int16 => new TypedUnaryExpression<short>(ExpressionType.Unbox, expression),
-                TypeCode.Int32 => new TypedUnaryExpression<int>(ExpressionType.Unbox, expression),
-                TypeCode.Int64 => new TypedUnaryExpression<long>(ExpressionType.Unbox, expression),
-                TypeCode.SByte => new TypedUnaryExpression<sbyte>(ExpressionType.Unbox, expression),
-                TypeCode.Single => new TypedUnaryExpression<float>(ExpressionType.Unbox, expression),
-                TypeCode.String => new TypedUnaryExpression<string>(ExpressionType.Unbox, expression),
-                TypeCode.UInt16 => new TypedUnaryExpression<ushort>(ExpressionType.Unbox, expression),
-                TypeCode.UInt32 => new TypedUnaryExpression<uint>(ExpressionType.Unbox, expression),
-                TypeCode.UInt64 => new TypedUnaryExpression<ulong>(ExpressionType.Unbox, expression),
-                _ => new TypedUnaryExpression(ExpressionType.Unbox, expression, type)
-            };
-        }
-
-        public static LambdaExpression Lambda(Expression body) =>
-            new TypedLambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body)
-        {
-            if (delegateType == null || delegateType == typeof(Delegate))
-                return Lambda(body);
-            var returnType = GetDelegateReturnType(delegateType);
-            return returnType == body.Type
-                ? new TypedLambdaExpression(delegateType, body)
-                : new TypedReturnLambdaExpression(delegateType, body, returnType);
-        }
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body, Type returnType)
-        {
-            if (delegateType == null || delegateType == typeof(Delegate))
-                delegateType = Tools.GetFuncOrActionType(returnType);
-            return returnType == body.Type
-                ? new TypedLambdaExpression(delegateType, body)
-                : new TypedReturnLambdaExpression(delegateType, body, returnType);
-        }
-
-        public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters) =>
-            parameters != null && parameters.Count > 0
-                ? new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters)
-                : new TypedLambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
-
-        public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) =>
-            Lambda(body, (IReadOnlyList<ParameterExpression>)parameters);
-
-        public static LambdaExpression Lambda(Expression body, IEnumerable<ParameterExpression> parameters) =>
-            Lambda(body, parameters.AsReadOnlyList<ParameterExpression>());
-
-        public static LambdaExpression Lambda(Expression body, ParameterExpression parameter) =>
-            new OneParameterLambdaExpression(Tools.GetFuncOrActionType(parameter.Type, body.Type), body, parameter);
-
-        public static LambdaExpression Lambda(Expression body, ParameterExpression p0, ParameterExpression p1) =>
-            new TwoParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, body.Type), body, p0, p1);
-
-        public static LambdaExpression Lambda(Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) =>
-            new ThreeParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, body.Type), body, p0, p1, p2);
-
-        public static LambdaExpression Lambda(Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3) =>
-            new FourParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, p3.Type, body.Type), body, p0, p1, p2, p3);
-
-        public static LambdaExpression Lambda(Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4) =>
-            new FiveParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, p3.Type, p4.Type, body.Type), body, p0, p1, p2, p3, p4);
-
-        public static LambdaExpression Lambda(Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5) =>
-            new SixParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, p3.Type, p4.Type, p5.Type, body.Type), body, p0, p1, p2, p3, p4, p5);
-
-        public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
-        {
-            if (returnType == body.Type)
-                return Lambda(body, parameters);
-            var delegateType = Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), returnType);
-            return parameters?.Count > 0
-                ? new TypedReturnManyParametersLambdaExpression(delegateType, body, parameters, returnType)
-                : new TypedReturnLambdaExpression(delegateType, body, returnType);
-        }
-
-        public static LambdaExpression Lambda(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) =>
-            Lambda(body, parameters.AsReadOnlyList(), returnType);
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters) =>
-            delegateType == null || delegateType == typeof(Delegate)
-                ? Lambda(body, parameters)
-                : Lambda(delegateType, body, parameters, GetDelegateReturnType(delegateType));
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) =>
-            Lambda(delegateType, body, (IReadOnlyList<ParameterExpression>)parameters);
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
-        {
-            if (delegateType == null || delegateType == typeof(Delegate))
-                return Lambda(body, parameters, returnType);
-            if (parameters?.Count > 0)
-                return returnType == body.Type
-                    ? new ManyParametersLambdaExpression(delegateType, body, parameters)
-                    : new TypedReturnManyParametersLambdaExpression(delegateType, body, parameters, returnType);
-            return returnType == body.Type
-                ? new TypedLambdaExpression(delegateType, body)
-                : new TypedReturnLambdaExpression(delegateType, body, returnType);
-        }
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) =>
-            Lambda(delegateType, body, parameters.AsReadOnlyList(), returnType);
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body, ParameterExpression p0, Type returnType) =>
-            returnType == body.Type
-                ? new OneParameterLambdaExpression(delegateType, body, p0)
-                : new TypedReturnOneParameterLambdaExpression(delegateType, body, p0, returnType);
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body, ParameterExpression p0, ParameterExpression p1, Type returnType) =>
-            returnType == body.Type
-                ? new TwoParametersLambdaExpression(delegateType, body, p0, p1)
-                : new TypedReturnTwoParametersLambdaExpression(delegateType, body, p0, p1, returnType);
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, Type returnType) =>
-            returnType == body.Type
-                ? new ThreeParametersLambdaExpression(delegateType, body, p0, p1, p2)
-                : new TypedReturnThreeParametersLambdaExpression(delegateType, body, p0, p1, p2, returnType);
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, Type returnType) =>
-            returnType == body.Type
-                ? new FourParametersLambdaExpression(delegateType, body, p0, p1, p2, p3)
-                : new TypedReturnFourParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, returnType);
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, Type returnType) =>
-            returnType == body.Type
-                ? new FiveParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4)
-                : new TypedReturnFiveParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, returnType);
-
-        public static LambdaExpression Lambda(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5, Type returnType) =>
-            returnType == body.Type
-                ? new SixParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, p5)
-                : new TypedReturnSixParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, p5, returnType);
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body) where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, GetDelegateReturnType(typeof(TDelegate)));
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, Type returnType) where TDelegate : System.Delegate =>
-            returnType == body.Type
-                ? new Expression<TDelegate>(body)
-                : new TypedReturnExpression<TDelegate>(body, returnType);
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, Type returnType)
-            where TDelegate : System.Delegate =>
-            returnType == body.Type
-                ? new OneParameterExpression<TDelegate>(body, p0)
-                : new TypedReturnOneParameterExpression<TDelegate>(body, p0, returnType);
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0) where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, p0, GetDelegateReturnType(typeof(TDelegate)));
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, Type returnType)
-            where TDelegate : System.Delegate
-        {
-            if (returnType == body.Type)
-                return new TwoParametersExpression<TDelegate>(body, p0, p1);
-            return new TypedReturnTwoParametersExpression<TDelegate>(body, p0, p1, returnType);
-        }
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1)
-            where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, p0, p1, GetDelegateReturnType(typeof(TDelegate)));
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1,
-            ParameterExpression p2, Type returnType)
-            where TDelegate : System.Delegate
-        {
-            if (returnType == body.Type)
-                return new ThreeParametersExpression<TDelegate>(body, p0, p1, p2);
-            return new TypedReturnThreeParametersExpression<TDelegate>(body, p0, p1, p2, returnType);
-        }
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2)
-            where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, p0, p1, p2, GetDelegateReturnType(typeof(TDelegate)));
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1,
-            ParameterExpression p2, ParameterExpression p3, Type returnType)
-            where TDelegate : System.Delegate
-        {
-            if (returnType == body.Type)
-                return new FourParametersExpression<TDelegate>(body, p0, p1, p2, p3);
-            return new TypedReturnFourParametersExpression<TDelegate>(body, p0, p1, p2, p3, returnType);
-        }
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
-            ParameterExpression p3)
-            where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, p0, p1, p2, p3, GetDelegateReturnType(typeof(TDelegate)));
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1,
-            ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, Type returnType)
-            where TDelegate : System.Delegate
-        {
-            if (returnType == body.Type)
-                return new FiveParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4);
-            return new TypedReturnFiveParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, returnType);
-        }
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
-            ParameterExpression p3, ParameterExpression p4)
-            where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, p0, p1, p2, p3, p4, GetDelegateReturnType(typeof(TDelegate)));
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1,
-            ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5, Type returnType)
-            where TDelegate : System.Delegate
-        {
-            if (returnType == body.Type)
-                return new SixParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, p5);
-            return new TypedReturnSixParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, p5, returnType);
-        }
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
-            ParameterExpression p3, ParameterExpression p4, ParameterExpression p5)
-            where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, p0, p1, p2, p3, p4, p5, GetDelegateReturnType(typeof(TDelegate)));
-
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
-            where TDelegate : System.Delegate
-        {
-            if (parameters?.Count > 0)
-            {
-                if (returnType == body.Type)
-                    return new ManyParametersExpression<TDelegate>(body, parameters);
-                return new TypedReturnManyParametersExpression<TDelegate>(body, parameters, returnType);
             }
-            return Lambda<TDelegate>(body, returnType);
-        }
+        throw new ArgumentException($"Indexer property '{propertyName}' is not found in '{instance.Type}' with the argument types '{arguments.Select(a => a.Type).ToCode(null)}]",
+            nameof(propertyName));
+    }
 
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType)
-            where TDelegate : System.Delegate => Lambda<TDelegate>(body, parameters.AsReadOnlyList(), returnType);
+    public static MemberExpression PropertyOrField(Expression expression, string memberName) =>
+        expression.Type.FindProperty(memberName) != null
+            ? Property(expression, expression.Type.FindProperty(memberName)
+                ?? throw new ArgumentException($"Declared property with the name '{memberName}' is not found in '{expression.Type}'", nameof(memberName)))
+            : Field(expression, expression.Type.FindField(memberName)
+                ?? throw new ArgumentException($"Declared field with the name '{memberName}' is not found '{expression.Type}'", nameof(memberName)));
 
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, params ParameterExpression[] parameters)
-            where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
+    public static MemberExpression MakeMemberAccess(Expression expression, MemberInfo member)
+    {
+        if (member is FieldInfo field)
+            return Field(expression, field);
+        if (member is PropertyInfo property)
+            return Property(expression, property);
+        throw new ArgumentException($"Member is not field or property: {member}", nameof(member));
+    }
 
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters) where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, parameters.AsReadOnlyList(), GetDelegateReturnType(typeof(TDelegate)));
+    public static IndexExpression MakeIndex(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
+        indexer != null
+            ? Property(instance, indexer, arguments)
+            : ArrayAccess(instance, arguments);
 
-        /// <summary><paramref name="name"/> is ignored for now, the method is just for compatibility with SysExpression</summary>
-        public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) where TDelegate : System.Delegate =>
-            Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
+    public static IndexExpression ArrayAccess(Expression array, Expression index) =>
+        new OneArgumentIndexExpression(array, index);
 
-        // todo: @perf for now it's the fastest method until UnsafeAccessAttribute supports generics
-        [MethodImpl((MethodImplOptions)256)]
-        private static Type GetDelegateReturnType(Type delegateType) => delegateType.FindDelegateInvokeMethod().ReturnType;
+    public static IndexExpression ArrayAccess(Expression array, IReadOnlyList<Expression> indexes) =>
+        new ManyArgumentsIndexExpression(array, indexes);
 
-        /// <summary>Creates a BinaryExpression that represents applying an array index operator to an array of rank one.</summary>
-        /// <param name="array">A Expression to set the Left property equal to.</param>
-        /// <param name="index">A Expression to set the Right property equal to.</param>
-        /// <returns>A BinaryExpression that has the NodeType property equal to ArrayIndex and the Left and Right properties set to the specified values.</returns>
-        public static BinaryExpression ArrayIndex(Expression array, Expression index) =>
-            new ArrayIndexExpression(array, index);
+    public static IndexExpression ArrayAccess(Expression array, params Expression[] indexes) =>
+        ArrayAccess(array, (IReadOnlyList<Expression>)indexes);
 
-        public static BinaryExpression ArrayIndex(Expression array, Expression index, MethodInfo method) =>
-            method == null
-                ? new ArrayIndexExpression(array, index)
-                : GetMethodBasedBinaryOperator(ExpressionType.ArrayIndex, array, index, method, liftToNull: true);
+    public static IndexExpression ArrayAccess(Expression array, IEnumerable<Expression> indexes) =>
+        ArrayAccess(array, indexes.AsReadOnlyList());
 
-        public static MethodCallExpression ArrayIndex(Expression array, IEnumerable<Expression> indexes) =>
-            Call(array, array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance), indexes.AsReadOnlyList());
+    public static MemberExpression Field(FieldInfo field) =>
+        new FieldExpression(field);
 
-        public static MethodCallExpression ArrayIndex(Expression array, params Expression[] indexes) =>
-            Call(array, array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance), indexes);
+    public static MemberExpression Field(Expression instance, FieldInfo field) =>
+        instance == null
+            ? new FieldExpression(field)
+            : new InstanceFieldExpression(instance, field);
 
-        public static MemberAssignment Bind(MemberInfo member, Expression expression) =>
-            new MemberAssignment(member, expression);
+    public static MemberExpression Field(Expression instance, string fieldName) =>
+        Field(instance, instance.Type.FindField(fieldName));
 
-        public static MemberMemberBinding MemberBind(MemberInfo member, params MemberBinding[] bindings) =>
-            new MemberMemberBinding(member, bindings);
+    /// <summary>Creates a UnaryExpression that represents a bitwise complement operation.</summary>
+    public static UnaryExpression Not(Expression expression)
+    {
+        if (expression.Type == typeof(bool))
+            return new NotBooleanUnaryExpression(expression);
+        return new NodeTypedUnaryExpression(ExpressionType.Not, expression);
+    }
 
-        public static MemberMemberBinding MemberBind(MemberInfo member, IEnumerable<MemberBinding> bindings) =>
-            new MemberMemberBinding(member, bindings.AsReadOnlyList());
+    /// <summary>Creates a UnaryExpression that represents an explicit reference or boxing conversion where null is supplied if the conversion fails.</summary>
+    public static UnaryExpression TypeAs(Expression expression, Type type) =>
+        new TypedUnaryExpression(ExpressionType.TypeAs, expression, type);
 
-        public static MemberListBinding ListBind(MemberInfo member, params ElementInit[] initializers) =>
-            new MemberListBinding(member, initializers);
+    public static TypeBinaryExpression TypeEqual(Expression operand, Type type) =>
+        new TypeBinaryExpression(ExpressionType.TypeEqual, operand, type);
 
-        public static MemberListBinding ListBind(MemberInfo member, IEnumerable<ElementInit> initializers) =>
-            new MemberListBinding(member, initializers.AsReadOnlyList());
+    public static TypeBinaryExpression TypeIs(Expression operand, Type type) =>
+        new TypeBinaryExpression(ExpressionType.TypeIs, operand, type);
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr) => new MemberInitExpression(newExpr);
+    /// <summary>Creates a UnaryExpression that represents an expression for obtaining the length of a one-dimensional array.</summary>
+    public static UnaryExpression ArrayLength(Expression array) =>
+        new TypedUnaryExpression<int>(ExpressionType.ArrayLength, array);
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding binding) =>
-            new OneBindingMemberInitExpression(newExpr, binding);
+    /// <summary>Creates a UnaryExpression that represents a type conversion operation.</summary>
+    public static UnaryExpression Convert(Expression expression, Type type) =>
+        new ConvertUnaryExpression(expression, type);
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1) =>
-            new TwoBindingsMemberInitExpression(newExpr, b0, b1);
+    public static UnaryExpression Convert<T>(Expression expression) =>
+        new TypedConvertUnaryExpression<T>(expression);
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
-            MemberBinding b2) =>
-            new ThreeBindingsMemberInitExpression(newExpr, b0, b1, b2);
+    public static UnaryExpression TryConvertDelegateIntrinsic(Expression expression, Type type) =>
+        type != expression.Type &&
+        typeof(Delegate).IsAssignableFrom(type) && typeof(Delegate).IsAssignableFrom(expression.Type)
+            ? new ConvertDelegateIntrinsicExpression(expression, type)
+            : Convert(expression, type);
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
-            MemberBinding b2, MemberBinding b3) =>
-            new FourBindingsMemberInitExpression(newExpr, b0, b1, b2, b3);
+    public static UnaryExpression TryConvertDelegateIntrinsic<D>(Expression expression) where D : Delegate =>
+        typeof(D) != expression.Type && typeof(Delegate).IsAssignableFrom(expression.Type)
+            ? new ConvertDelegateIntrinsicExpression(expression, typeof(D))
+            : Convert(expression, typeof(D));
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
-            MemberBinding b2, MemberBinding b3, MemberBinding b4) =>
-            new FiveBindingsMemberInitExpression(newExpr, b0, b1, b2, b3, b4);
+    public static UnaryExpression TryConvertIntrinsic(Expression expression, Type type) =>
+        !type.IsValueType && (!expression.Type.IsValueType || type == typeof(object))
+            ? new ConvertIntrinsicExpression(expression, type)
+            : Convert(expression, type);
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
-            MemberBinding b2, MemberBinding b3, MemberBinding b4, MemberBinding b5) =>
-            new SixBindingsMemberInitExpression(newExpr, b0, b1, b2, b3, b4, b5);
+    public static UnaryExpression TryConvertIntrinsic<T>(Expression expression) where T : class =>
+        !typeof(T).IsValueType && (!expression.Type.IsValueType || typeof(T) == typeof(object))
+            ? new ConvertIntrinsicExpression<T>(expression)
+            : Convert<T>(expression);
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr, IReadOnlyList<MemberBinding> bindings) =>
-            bindings == null || bindings.Count == 0
-                ? new MemberInitExpression(newExpr)
-                : new ManyBindingsMemberInitExpression(newExpr, bindings);
+    /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
+    public static UnaryExpression Convert(Expression expression, Type type, MethodInfo method) =>
+        new ConvertWithMethodUnaryExpression(ExpressionType.Convert, expression, type, method);
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr, params MemberBinding[] bindings) =>
-            MemberInit(newExpr, (IReadOnlyList<MemberBinding>)bindings);
+    /// <summary>Creates a UnaryExpression that represents a conversion operation that throws an exception if the target type is overflowed.</summary>
+    public static UnaryExpression ConvertChecked(Expression expression, Type type) =>
+        new TypedUnaryExpression(ExpressionType.ConvertChecked, expression, type);
 
-        public static MemberInitExpression MemberInit(NewExpression newExpr, IEnumerable<MemberBinding> bindings) =>
-            MemberInit(newExpr, bindings.AsReadOnlyList());
+    /// <summary>Creates a UnaryExpression that represents a conversion operation that throws an exception if the target type is overflowed and for which the implementing method is specified.</summary>
+    public static UnaryExpression ConvertChecked(Expression expression, Type type, MethodInfo method) =>
+        new ConvertWithMethodUnaryExpression(ExpressionType.ConvertChecked, expression, type, method);
 
-        // @LightExpression only - System expression does not support the member initialization list on the non new expression but why not :)
-        /// <summary>Does not present in System Expression. Enables member assignment on existing instance expression.</summary>
-        public static MemberInitExpression MemberInit(Expression expression, IReadOnlyList<MemberBinding> bindings) =>
-            bindings == null || bindings.Count == 0
-                ? new MemberInitExpression(expression) // todo: @improve @perf Why to create the expression with Zero bindings anyway and not jsut return the original expression?
-                : new ManyBindingsMemberInitExpression(expression, bindings);
+    /// <summary>Creates a UnaryExpression that represents the decrementing of the expression by 1.</summary>
+    public static UnaryExpression Decrement(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.Decrement, expression);
 
-        // @LightExpression only
-        public static MemberInitExpression MemberInit(Expression expression, params MemberBinding[] assignments) =>
-            MemberInit(expression, (IReadOnlyList<MemberBinding>)assignments);
+    /// <summary>Creates a UnaryExpression that represents the incrementing of the expression value by 1.</summary>
+    public static UnaryExpression Increment(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.Increment, expression);
 
-        // @LightExpression only
-        /// <summary>Applies both the New and arbitrary other expression</summary>
-        [MethodImpl((MethodImplOptions)256)]
-        public static MemberInitExpression MemberInitMany(Expression expression, params MemberBinding[] assignments)
+    /// <summary>Returns whether the expression evaluates to false.</summary>
+    public static UnaryExpression IsFalse(Expression expression) =>
+        new TypedUnaryExpression<bool>(ExpressionType.IsFalse, expression);
+
+    /// <summary>Returns whether the expression evaluates to true.</summary>
+    public static UnaryExpression IsTrue(Expression expression) =>
+        new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
+
+    /// <summary>Creates a UnaryExpression, given an operand, by calling the appropriate factory method.</summary>
+    public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type) =>
+        type == null || type == operand.Type
+            ? new NodeTypedUnaryExpression(unaryType, operand)
+            : new TypedUnaryExpression(unaryType, operand, type);
+
+    /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation.</summary>
+    public static UnaryExpression Negate(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.Negate, expression);
+
+    /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation that has overflow checking.</summary>
+    public static UnaryExpression NegateChecked(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.NegateChecked, expression);
+
+    /// <summary>Returns the expression representing the ones complement.</summary>
+    public static UnaryExpression OnesComplement(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.OnesComplement, expression);
+
+    /// <summary>Creates a UnaryExpression that increments the expression by 1 and assigns the result back to the expression.</summary>
+    public static UnaryExpression PreIncrementAssign(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.PreIncrementAssign, expression);
+
+    /// <summary>Creates a UnaryExpression that represents the assignment of the expression followed by a subsequent increment by 1 of the original expression.</summary>
+    public static UnaryExpression PostIncrementAssign(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.PostIncrementAssign, expression);
+
+    /// <summary>Creates a UnaryExpression that decrements the expression by 1 and assigns the result back to the expression.</summary>
+    public static UnaryExpression PreDecrementAssign(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.PreDecrementAssign, expression);
+
+    /// <summary>Creates a UnaryExpression that represents the assignment of the expression followed by a subsequent decrement by 1 of the original expression.</summary>
+    public static UnaryExpression PostDecrementAssign(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.PostDecrementAssign, expression);
+
+    /// <summary>Creates a UnaryExpression that represents an expression that has a constant value of type Expression.</summary>
+    public static UnaryExpression Quote(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.Quote, expression);
+
+    /// <summary>Creates a UnaryExpression that represents a unary plus operation.</summary>
+    public static UnaryExpression UnaryPlus(Expression expression) =>
+        new NodeTypedUnaryExpression(ExpressionType.UnaryPlus, expression);
+
+    /// <summary>Creates a UnaryExpression that represents an explicit unboxing.</summary>
+    public static UnaryExpression Unbox(Expression expression, Type type)
+    {
+        if (type.IsEnum)
+            return new TypedUnaryExpression(ExpressionType.Unbox, expression, type);
+        return Type.GetTypeCode(type) switch
         {
-            Debug.Assert(assignments != null && assignments.Length > 0, "assignments != null && assignments.Length > 0");
-            return new ManyBindingsMemberInitExpression(expression, assignments);
-        }
-
-        // @LightExpression only
-        public static MemberInitExpression MemberInit(Expression expression, IEnumerable<MemberBinding> assignments) =>
-            MemberInit(expression, assignments.AsReadOnlyList());
-
-        // todo: @perf optimize for the small amount of initializers the same as NewArrayInit
-        public static ListInitExpression ListInit(NewExpression newExpression, IReadOnlyList<ElementInit> initializers) =>
-            new ListInitExpression(newExpression, initializers);
-
-        public static ListInitExpression ListInit(NewExpression newExpression, params ElementInit[] initializers) =>
-            ListInit(newExpression, (IReadOnlyList<ElementInit>)initializers);
-
-        public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) =>
-            ListInit(newExpression, initializers.AsReadOnlyList());
-
-        public static NewArrayExpression NewArrayInit(Type type, IReadOnlyList<Expression> initializers) =>
-            new ManyElementsNewArrayInitExpression(type.MakeArrayType(), initializers);
-
-        public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
-            NewArrayInit(type, (IReadOnlyList<Expression>)initializers);
-
-        public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) =>
-            NewArrayInit(type, initializers.AsReadOnlyList());
-
-        public static NewArrayExpression NewArrayInit(Type type, Expression element) =>
-            new OneElementNewArrayInitExpression(type.MakeArrayType(), element);
-
-        public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1) =>
-            new TwoElementNewArrayInitExpression(type.MakeArrayType(), el0, el1);
-
-        public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2) =>
-            new ThreeElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2);
-
-        public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2,
-            Expression el3) =>
-            new FourElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2, el3);
-
-        public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2,
-            Expression el3, Expression el4) =>
-            new FiveElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2, el3, el4);
-
-        public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2,
-            Expression el3, Expression el4, Expression el5) =>
-            new SixElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2, el3, el4, el5);
-
-        public static NewArrayExpression NewArrayBounds(Type type, Expression bound) =>
-            new OneBoundNewArrayBoundsExpression(type.MakeArrayType(), bound);
-
-        public static NewArrayExpression MakeArrayBounds(Type type, IReadOnlyList<Expression> bounds) =>
-            new ManyBoundsNewArrayBoundsExpression(bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count), bounds);
-
-        public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
-            MakeArrayBounds(type, (IReadOnlyList<Expression>)bounds);
-
-        public static NewArrayExpression NewArrayBounds(Type type, IEnumerable<Expression> bounds) =>
-            MakeArrayBounds(type, bounds.AsReadOnlyList());
-
-        /// <summary>Creates a BinaryExpression that represents an assignment operation.</summary>
-        public static BinaryExpression Assign(Expression left, Expression right) => new AssignBinaryExpression(left, right);
-
-        /// <summary>Creates a BinaryExpression that represents raising an expression to a power and assigning the result back to the expression.</summary>
-        public static BinaryExpression PowerAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.PowerAssign, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents an addition assignment operation that does not have overflow checking.</summary>
-        public static BinaryExpression AddAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.AddAssign, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents an addition assignment operation that has overflow checking.</summary>
-        public static BinaryExpression AddAssignChecked(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.AddAssignChecked, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a bitwise AND assignment operation.</summary>
-        public static BinaryExpression AndAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.AndAssign, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a bitwise OR assignment operation.</summary>
-        public static BinaryExpression OrAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.OrAssign, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a bitwise XOR assignment operation.</summary>
-        public static BinaryExpression ExclusiveOrAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.ExclusiveOrAssign, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a bitwise right-shift assignment operation.</summary>
-        public static BinaryExpression RightShiftAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.RightShiftAssign, left, right);
-
-        public static BinaryExpression LeftShiftAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.LeftShiftAssign, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a remainder assignment operation.</summary>
-        public static BinaryExpression ModuloAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.ModuloAssign, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a subtraction assignment operation that does not have overflow checking.</summary>
-        public static BinaryExpression SubtractAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.SubtractAssign, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a subtraction assignment operation that has overflow checking.</summary>
-        public static BinaryExpression SubtractAssignChecked(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.SubtractAssignChecked, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a multiplication assignment operation that does not have overflow checking.</summary>
-        public static BinaryExpression MultiplyAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.MultiplyAssign, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a multiplication assignment operation that has overflow checking.</summary>
-        public static BinaryExpression MultiplyAssignChecked(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.MultiplyAssignChecked, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a division assignment operation that does not have overflow checking.</summary>
-        public static BinaryExpression DivideAssign(Expression left, Expression right) =>
-            new OpAssignBinaryExpression(ExpressionType.DivideAssign, left, right);
-
-        public static ElementInit ElementInit(MethodInfo addMethod, Expression arg) =>
-            new OneArgumentElementInit(addMethod, arg);
-
-        public static ElementInit ElementInit(MethodInfo addMethod, IReadOnlyList<Expression> arguments) =>
-            new ManyArgumentsElementInit(addMethod, arguments);
-
-        public static ElementInit ElementInit(MethodInfo addMethod, params Expression[] arguments) =>
-            ElementInit(addMethod, (IReadOnlyList<Expression>)arguments);
-
-        public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) =>
-            ElementInit(addMethod, arguments.AsReadOnlyList());
-
-        public static InvocationExpression Invoke(LambdaExpression expression) =>
-            new NotNullExpressionInvocationExpression(expression);
-
-        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0) =>
-            new OneArgumentInvocationExpression(expression, a0);
-
-        public static InvocationExpression Invoke(Expression expression, Expression a0) =>
-            expression is LambdaExpression
-                ? new OneArgumentInvocationExpression(expression, a0)
-                : new TypedOneArgumentInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0);
-
-        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0) =>
-            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
-                ? new OneArgumentInvocationExpression(expression, a0)
-                : new TypedOneArgumentInvocationExpression(expression, returnType, a0);
-
-        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1) =>
-            new TwoArgumentsInvocationExpression(expression, a0, a1);
-
-        public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1) =>
-            expression is LambdaExpression
-                ? new TwoArgumentsInvocationExpression(expression, a0, a1)
-                : new TypedTwoArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1);
-
-        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1) =>
-            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
-                ? new TwoArgumentsInvocationExpression(expression, a0, a1)
-                : new TypedTwoArgumentsInvocationExpression(expression, returnType, a0, a1);
-
-        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2) =>
-            new ThreeArgumentsInvocationExpression(expression, a0, a1, a2);
-
-        public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2) =>
-            expression is LambdaExpression
-                ? new ThreeArgumentsInvocationExpression(expression, a0, a1, a2)
-                : new TypedThreeArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2);
-
-        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2) =>
-            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
-                ? new ThreeArgumentsInvocationExpression(expression, a0, a1, a2)
-                : new TypedThreeArgumentsInvocationExpression(expression, returnType, a0, a1, a2);
-
-        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
-            new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3);
-
-        public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
-            expression is LambdaExpression
-                ? new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3)
-                : new TypedFourArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3);
-
-        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
-            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
-                ? new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3)
-                : new TypedFourArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3);
-
-        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
-            new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4);
-
-        public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
-            expression is LambdaExpression
-                ? new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4)
-                : new TypedFiveArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4);
-
-        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
-            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
-                ? new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4)
-                : new TypedFiveArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3, a4);
-
-        public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
-            new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5);
-
-        public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
-            expression is LambdaExpression
-                ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
-                : new TypedSixArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4, a5);
-
-        public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
-            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
-                ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
-                : new TypedSixArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3, a4, a5);
-
-        public static InvocationExpression Invoke(Expression expression, IReadOnlyList<Expression> args) =>
-            expression is LambdaExpression
-                ? new ManyArgumentsInvocationExpression(expression, args)
-                : new TypedManyArgumentsInvocationExpression(expression, args, expression.Type.FindDelegateInvokeMethod().ReturnType);
-
-        public static InvocationExpression Invoke(Expression expression, params Expression[] args) =>
-            Invoke(expression, (IReadOnlyList<Expression>)args);
-
-        public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
-            Invoke(expression, args.AsReadOnlyList());
-
-        public static InvocationExpression Invoke(Type returnType, Expression expression, IReadOnlyList<Expression> args) =>
-            expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
-                ? new ManyArgumentsInvocationExpression(expression, args)
-                : new TypedManyArgumentsInvocationExpression(expression, args, returnType);
-
-        public static InvocationExpression Invoke(Type returnType, Expression expression, params Expression[] args) =>
-            Invoke(returnType, expression, (IReadOnlyList<Expression>)args);
-
-        public static InvocationExpression Invoke(Type returnType, Expression expression, IEnumerable<Expression> args) =>
-            Invoke(returnType, expression, args.AsReadOnlyList());
-
-        public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) =>
-            new WithFalseBranchConditionalExpression(test, ifTrue, ifFalse);
-
-        public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Type type) =>
-            ifTrue.Type == type
-                ? new WithFalseBranchConditionalExpression(test, ifTrue, ifFalse)
-                : (ConditionalExpression)new TypedWithFalseBranchConditionalExpression(test, ifTrue, ifFalse, type);
-
-        public static ConditionalExpression IfThen(Expression test, Expression ifTrue) =>
-            new ConditionalExpression(test, ifTrue); // absence of ifFalse automatically mean void type of all expression
-
-        public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) =>
-            new VoidWithFalseBranchConditionalExpression(test, ifTrue, ifFalse);
-
-        public static readonly DefaultExpression VoidDefault = new DefaultExpression(typeof(void));
-
-        public static DefaultExpression Empty() => VoidDefault;
-
-        public static DefaultExpression Default(Type type) =>
-            type == typeof(void) ? VoidDefault : new DefaultExpression(type);
-
-        public static BinaryExpression GetArithmeticBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null)
+            TypeCode.Boolean => new TypedUnaryExpression<bool>(ExpressionType.Unbox, expression),
+            TypeCode.Byte => new TypedUnaryExpression<byte>(ExpressionType.Unbox, expression),
+            TypeCode.Char => new TypedUnaryExpression<char>(ExpressionType.Unbox, expression),
+            TypeCode.DateTime => new TypedUnaryExpression<DateTime>(ExpressionType.Unbox, expression),
+            TypeCode.Decimal => new TypedUnaryExpression<decimal>(ExpressionType.Unbox, expression),
+            TypeCode.Double => new TypedUnaryExpression<double>(ExpressionType.Unbox, expression),
+            TypeCode.Int16 => new TypedUnaryExpression<short>(ExpressionType.Unbox, expression),
+            TypeCode.Int32 => new TypedUnaryExpression<int>(ExpressionType.Unbox, expression),
+            TypeCode.Int64 => new TypedUnaryExpression<long>(ExpressionType.Unbox, expression),
+            TypeCode.SByte => new TypedUnaryExpression<sbyte>(ExpressionType.Unbox, expression),
+            TypeCode.Single => new TypedUnaryExpression<float>(ExpressionType.Unbox, expression),
+            TypeCode.String => new TypedUnaryExpression<string>(ExpressionType.Unbox, expression),
+            TypeCode.UInt16 => new TypedUnaryExpression<ushort>(ExpressionType.Unbox, expression),
+            TypeCode.UInt32 => new TypedUnaryExpression<uint>(ExpressionType.Unbox, expression),
+            TypeCode.UInt64 => new TypedUnaryExpression<ulong>(ExpressionType.Unbox, expression),
+            _ => new TypedUnaryExpression(ExpressionType.Unbox, expression, type)
+        };
+    }
+
+    public static LambdaExpression Lambda(Expression body) =>
+        new TypedLambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body)
+    {
+        if (delegateType == null || delegateType == typeof(Delegate))
+            return Lambda(body);
+        var returnType = GetDelegateReturnType(delegateType);
+        return returnType == body.Type
+            ? new TypedLambdaExpression(delegateType, body)
+            : new TypedReturnLambdaExpression(delegateType, body, returnType);
+    }
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body, Type returnType)
+    {
+        if (delegateType == null || delegateType == typeof(Delegate))
+            delegateType = Tools.GetFuncOrActionType(returnType);
+        return returnType == body.Type
+            ? new TypedLambdaExpression(delegateType, body)
+            : new TypedReturnLambdaExpression(delegateType, body, returnType);
+    }
+
+    public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters) =>
+        parameters != null && parameters.Count > 0
+            ? new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters)
+            : new TypedLambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
+
+    public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) =>
+        Lambda(body, (IReadOnlyList<ParameterExpression>)parameters);
+
+    public static LambdaExpression Lambda(Expression body, IEnumerable<ParameterExpression> parameters) =>
+        Lambda(body, parameters.AsReadOnlyList<ParameterExpression>());
+
+    public static LambdaExpression Lambda(Expression body, ParameterExpression parameter) =>
+        new OneParameterLambdaExpression(Tools.GetFuncOrActionType(parameter.Type, body.Type), body, parameter);
+
+    public static LambdaExpression Lambda(Expression body, ParameterExpression p0, ParameterExpression p1) =>
+        new TwoParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, body.Type), body, p0, p1);
+
+    public static LambdaExpression Lambda(Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) =>
+        new ThreeParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, body.Type), body, p0, p1, p2);
+
+    public static LambdaExpression Lambda(Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3) =>
+        new FourParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, p3.Type, body.Type), body, p0, p1, p2, p3);
+
+    public static LambdaExpression Lambda(Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4) =>
+        new FiveParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, p3.Type, p4.Type, body.Type), body, p0, p1, p2, p3, p4);
+
+    public static LambdaExpression Lambda(Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5) =>
+        new SixParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, p3.Type, p4.Type, p5.Type, body.Type), body, p0, p1, p2, p3, p4, p5);
+
+    public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
+    {
+        if (returnType == body.Type)
+            return Lambda(body, parameters);
+        var delegateType = Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), returnType);
+        return parameters?.Count > 0
+            ? new TypedReturnManyParametersLambdaExpression(delegateType, body, parameters, returnType)
+            : new TypedReturnLambdaExpression(delegateType, body, returnType);
+    }
+
+    public static LambdaExpression Lambda(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) =>
+        Lambda(body, parameters.AsReadOnlyList(), returnType);
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters) =>
+        delegateType == null || delegateType == typeof(Delegate)
+            ? Lambda(body, parameters)
+            : Lambda(delegateType, body, parameters, GetDelegateReturnType(delegateType));
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) =>
+        Lambda(delegateType, body, (IReadOnlyList<ParameterExpression>)parameters);
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
+    {
+        if (delegateType == null || delegateType == typeof(Delegate))
+            return Lambda(body, parameters, returnType);
+        if (parameters?.Count > 0)
+            return returnType == body.Type
+                ? new ManyParametersLambdaExpression(delegateType, body, parameters)
+                : new TypedReturnManyParametersLambdaExpression(delegateType, body, parameters, returnType);
+        return returnType == body.Type
+            ? new TypedLambdaExpression(delegateType, body)
+            : new TypedReturnLambdaExpression(delegateType, body, returnType);
+    }
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) =>
+        Lambda(delegateType, body, parameters.AsReadOnlyList(), returnType);
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body, ParameterExpression p0, Type returnType) =>
+        returnType == body.Type
+            ? new OneParameterLambdaExpression(delegateType, body, p0)
+            : new TypedReturnOneParameterLambdaExpression(delegateType, body, p0, returnType);
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body, ParameterExpression p0, ParameterExpression p1, Type returnType) =>
+        returnType == body.Type
+            ? new TwoParametersLambdaExpression(delegateType, body, p0, p1)
+            : new TypedReturnTwoParametersLambdaExpression(delegateType, body, p0, p1, returnType);
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, Type returnType) =>
+        returnType == body.Type
+            ? new ThreeParametersLambdaExpression(delegateType, body, p0, p1, p2)
+            : new TypedReturnThreeParametersLambdaExpression(delegateType, body, p0, p1, p2, returnType);
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, Type returnType) =>
+        returnType == body.Type
+            ? new FourParametersLambdaExpression(delegateType, body, p0, p1, p2, p3)
+            : new TypedReturnFourParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, returnType);
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, Type returnType) =>
+        returnType == body.Type
+            ? new FiveParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4)
+            : new TypedReturnFiveParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, returnType);
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5, Type returnType) =>
+        returnType == body.Type
+            ? new SixParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, p5)
+            : new TypedReturnSixParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, p5, returnType);
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body) where TDelegate : System.Delegate =>
+        Lambda<TDelegate>(body, GetDelegateReturnType(typeof(TDelegate)));
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, Type returnType) where TDelegate : System.Delegate =>
+        returnType == body.Type
+            ? new Expression<TDelegate>(body)
+            : new TypedReturnExpression<TDelegate>(body, returnType);
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, Type returnType)
+        where TDelegate : System.Delegate =>
+        returnType == body.Type
+            ? new OneParameterExpression<TDelegate>(body, p0)
+            : new TypedReturnOneParameterExpression<TDelegate>(body, p0, returnType);
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0) where TDelegate : System.Delegate =>
+        Lambda<TDelegate>(body, p0, GetDelegateReturnType(typeof(TDelegate)));
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, Type returnType)
+        where TDelegate : System.Delegate
+    {
+        if (returnType == body.Type)
+            return new TwoParametersExpression<TDelegate>(body, p0, p1);
+        return new TypedReturnTwoParametersExpression<TDelegate>(body, p0, p1, returnType);
+    }
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1)
+        where TDelegate : System.Delegate =>
+        Lambda<TDelegate>(body, p0, p1, GetDelegateReturnType(typeof(TDelegate)));
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1,
+        ParameterExpression p2, Type returnType)
+        where TDelegate : System.Delegate
+    {
+        if (returnType == body.Type)
+            return new ThreeParametersExpression<TDelegate>(body, p0, p1, p2);
+        return new TypedReturnThreeParametersExpression<TDelegate>(body, p0, p1, p2, returnType);
+    }
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2)
+        where TDelegate : System.Delegate =>
+        Lambda<TDelegate>(body, p0, p1, p2, GetDelegateReturnType(typeof(TDelegate)));
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1,
+        ParameterExpression p2, ParameterExpression p3, Type returnType)
+        where TDelegate : System.Delegate
+    {
+        if (returnType == body.Type)
+            return new FourParametersExpression<TDelegate>(body, p0, p1, p2, p3);
+        return new TypedReturnFourParametersExpression<TDelegate>(body, p0, p1, p2, p3, returnType);
+    }
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+        ParameterExpression p3)
+        where TDelegate : System.Delegate =>
+        Lambda<TDelegate>(body, p0, p1, p2, p3, GetDelegateReturnType(typeof(TDelegate)));
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1,
+        ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, Type returnType)
+        where TDelegate : System.Delegate
+    {
+        if (returnType == body.Type)
+            return new FiveParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4);
+        return new TypedReturnFiveParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, returnType);
+    }
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+        ParameterExpression p3, ParameterExpression p4)
+        where TDelegate : System.Delegate =>
+        Lambda<TDelegate>(body, p0, p1, p2, p3, p4, GetDelegateReturnType(typeof(TDelegate)));
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1,
+        ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5, Type returnType)
+        where TDelegate : System.Delegate
+    {
+        if (returnType == body.Type)
+            return new SixParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, p5);
+        return new TypedReturnSixParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, p5, returnType);
+    }
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+        ParameterExpression p3, ParameterExpression p4, ParameterExpression p5)
+        where TDelegate : System.Delegate =>
+        Lambda<TDelegate>(body, p0, p1, p2, p3, p4, p5, GetDelegateReturnType(typeof(TDelegate)));
+
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
+        where TDelegate : System.Delegate
+    {
+        if (parameters?.Count > 0)
         {
-            if (method == null)
-            {
-                if (left.Type == right.Type && left.Type.IsArithmetic())
-                    return new LeftTypedBinaryExpression(nodeType, left, right);
-                return GetUserDefinedBinaryOperatorOrThrow(nodeType, nodeType.GetArithmeticBinaryOperatorMethodName(), left, right, liftToNull: true);
-            }
-            return GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
+            if (returnType == body.Type)
+                return new ManyParametersExpression<TDelegate>(body, parameters);
+            return new TypedReturnManyParametersExpression<TDelegate>(body, parameters, returnType);
         }
+        return Lambda<TDelegate>(body, returnType);
+    }
 
-        public static BinaryExpression GetLeftTypedBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null) =>
-            method == null
-                 ? new LeftTypedBinaryExpression(nodeType, left, right)
-                 : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType)
+        where TDelegate : System.Delegate => Lambda<TDelegate>(body, parameters.AsReadOnlyList(), returnType);
 
-        /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
-        public static BinaryExpression Add(Expression left, Expression right) =>
-            GetArithmeticBinary(ExpressionType.Add, left, right, null);
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, params ParameterExpression[] parameters)
+        where TDelegate : System.Delegate =>
+        Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
 
-        public static BinaryExpression Add(Expression left, Expression right, MethodInfo method) =>
-            GetArithmeticBinary(ExpressionType.Add, left, right, method);
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters) where TDelegate : System.Delegate =>
+        Lambda<TDelegate>(body, parameters.AsReadOnlyList(), GetDelegateReturnType(typeof(TDelegate)));
 
-        /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that has overflow checking.</summary>
-        public static BinaryExpression AddChecked(Expression left, Expression right) =>
-            GetArithmeticBinary(ExpressionType.AddChecked, left, right);
+    /// <summary><paramref name="name"/> is ignored for now, the method is just for compatibility with SysExpression</summary>
+    public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) where TDelegate : System.Delegate =>
+        Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
 
-        public static BinaryExpression AddChecked(Expression left, Expression right, MethodInfo method) =>
-            GetArithmeticBinary(ExpressionType.AddChecked, left, right, method);
+    // todo: @perf for now it's the fastest method until UnsafeAccessAttribute supports generics
+    [MethodImpl((MethodImplOptions)256)]
+    private static Type GetDelegateReturnType(Type delegateType) => delegateType.FindDelegateInvokeMethod().ReturnType;
 
-        /// <summary>Creates a BinaryExpression that represents a bitwise XOR operation.</summary>
-        public static BinaryExpression ExclusiveOr(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.ExclusiveOr, left, right);
+    /// <summary>Creates a BinaryExpression that represents applying an array index operator to an array of rank one.</summary>
+    /// <param name="array">A Expression to set the Left property equal to.</param>
+    /// <param name="index">A Expression to set the Right property equal to.</param>
+    /// <returns>A BinaryExpression that has the NodeType property equal to ArrayIndex and the Left and Right properties set to the specified values.</returns>
+    public static BinaryExpression ArrayIndex(Expression array, Expression index) =>
+        new ArrayIndexExpression(array, index);
 
-        public static BinaryExpression ExclusiveOr(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.ExclusiveOr, left, right, method);
+    public static BinaryExpression ArrayIndex(Expression array, Expression index, MethodInfo method) =>
+        method == null
+            ? new ArrayIndexExpression(array, index)
+            : GetMethodBasedBinaryOperator(ExpressionType.ArrayIndex, array, index, method, liftToNull: true);
 
-        /// <summary>Creates a BinaryExpression that represents a bitwise left-shift operation.</summary>
-        public static BinaryExpression LeftShift(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.LeftShift, left, right);
+    public static MethodCallExpression ArrayIndex(Expression array, IEnumerable<Expression> indexes) =>
+        Call(array, array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance), indexes.AsReadOnlyList());
 
-        public static BinaryExpression LeftShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.LeftShift, left, right, method);
+    public static MethodCallExpression ArrayIndex(Expression array, params Expression[] indexes) =>
+        Call(array, array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance), indexes);
 
-        /// <summary>Creates a BinaryExpression that represents an arithmetic remainder operation.</summary>
-        public static BinaryExpression Modulo(Expression left, Expression right) =>
-            GetArithmeticBinary(ExpressionType.Modulo, left, right);
+    public static MemberAssignment Bind(MemberInfo member, Expression expression) =>
+        new MemberAssignment(member, expression);
 
-        public static BinaryExpression Modulo(Expression left, Expression right, MethodInfo method) =>
-            GetArithmeticBinary(ExpressionType.Modulo, left, right, method);
+    public static MemberMemberBinding MemberBind(MemberInfo member, params MemberBinding[] bindings) =>
+        new MemberMemberBinding(member, bindings);
 
-        /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
-        public static BinaryExpression RightShift(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.RightShift, left, right);
+    public static MemberMemberBinding MemberBind(MemberInfo member, IEnumerable<MemberBinding> bindings) =>
+        new MemberMemberBinding(member, bindings.AsReadOnlyList());
 
-        public static BinaryExpression RightShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.RightShift, left, right, method);
+    public static MemberListBinding ListBind(MemberInfo member, params ElementInit[] initializers) =>
+        new MemberListBinding(member, initializers);
 
-        /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that does not have overflow checking.</summary>
-        public static BinaryExpression Subtract(Expression left, Expression right) =>
-            GetArithmeticBinary(ExpressionType.Subtract, left, right);
+    public static MemberListBinding ListBind(MemberInfo member, IEnumerable<ElementInit> initializers) =>
+        new MemberListBinding(member, initializers.AsReadOnlyList());
 
-        public static BinaryExpression Subtract(Expression left, Expression right, MethodInfo method) =>
-            GetArithmeticBinary(ExpressionType.Subtract, left, right, method);
+    public static MemberInitExpression MemberInit(NewExpression newExpr) => new MemberInitExpression(newExpr);
 
-        /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that has overflow checking.</summary>
-        public static BinaryExpression SubtractChecked(Expression left, Expression right) =>
-            GetArithmeticBinary(ExpressionType.SubtractChecked, left, right);
+    public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding binding) =>
+        new OneBindingMemberInitExpression(newExpr, binding);
 
-        public static BinaryExpression SubtractChecked(Expression left, Expression right, MethodInfo method) =>
-            GetArithmeticBinary(ExpressionType.SubtractChecked, left, right, method);
+    public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1) =>
+        new TwoBindingsMemberInitExpression(newExpr, b0, b1);
 
-        /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that does not have overflow checking.</summary>
-        public static BinaryExpression Multiply(Expression left, Expression right) =>
-            GetArithmeticBinary(ExpressionType.Multiply, left, right);
+    public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
+        MemberBinding b2) =>
+        new ThreeBindingsMemberInitExpression(newExpr, b0, b1, b2);
 
-        public static BinaryExpression Multiply(Expression left, Expression right, MethodInfo method) =>
-            GetArithmeticBinary(ExpressionType.Multiply, left, right, method);
+    public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
+        MemberBinding b2, MemberBinding b3) =>
+        new FourBindingsMemberInitExpression(newExpr, b0, b1, b2, b3);
 
-        /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that has overflow checking.</summary>
-        public static BinaryExpression MultiplyChecked(Expression left, Expression right) =>
-            GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right);
+    public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
+        MemberBinding b2, MemberBinding b3, MemberBinding b4) =>
+        new FiveBindingsMemberInitExpression(newExpr, b0, b1, b2, b3, b4);
 
-        public static BinaryExpression MultiplyChecked(Expression left, Expression right, MethodInfo method) =>
-            GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right, method);
+    public static MemberInitExpression MemberInit(NewExpression newExpr, MemberBinding b0, MemberBinding b1,
+        MemberBinding b2, MemberBinding b3, MemberBinding b4, MemberBinding b5) =>
+        new SixBindingsMemberInitExpression(newExpr, b0, b1, b2, b3, b4, b5);
 
-        /// <summary>Creates a BinaryExpression that represents an arithmetic division operation.</summary>
-        public static BinaryExpression Divide(Expression left, Expression right) =>
-            GetArithmeticBinary(ExpressionType.Divide, left, right);
+    public static MemberInitExpression MemberInit(NewExpression newExpr, IReadOnlyList<MemberBinding> bindings) =>
+        bindings == null || bindings.Count == 0
+            ? new MemberInitExpression(newExpr)
+            : new ManyBindingsMemberInitExpression(newExpr, bindings);
 
-        public static BinaryExpression Divide(Expression left, Expression right, MethodInfo method) =>
-            GetArithmeticBinary(ExpressionType.Divide, left, right, method);
+    public static MemberInitExpression MemberInit(NewExpression newExpr, params MemberBinding[] bindings) =>
+        MemberInit(newExpr, (IReadOnlyList<MemberBinding>)bindings);
 
-        /// <summary>Creates a BinaryExpression that represents raising a number to a power.</summary>
-        public static BinaryExpression Power(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.Power, left, right);
+    public static MemberInitExpression MemberInit(NewExpression newExpr, IEnumerable<MemberBinding> bindings) =>
+        MemberInit(newExpr, bindings.AsReadOnlyList());
 
-        public static BinaryExpression Power(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Power, left, right, method);
+    // @LightExpression only - System expression does not support the member initialization list on the non new expression but why not :)
+    /// <summary>Does not present in System Expression. Enables member assignment on existing instance expression.</summary>
+    public static MemberInitExpression MemberInit(Expression expression, IReadOnlyList<MemberBinding> bindings) =>
+        bindings == null || bindings.Count == 0
+            ? new MemberInitExpression(expression) // todo: @improve @perf Why to create the expression with Zero bindings anyway and not jsut return the original expression?
+            : new ManyBindingsMemberInitExpression(expression, bindings);
 
-        /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
-        public static BinaryExpression And(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.And, left, right);
+    // @LightExpression only
+    public static MemberInitExpression MemberInit(Expression expression, params MemberBinding[] assignments) =>
+        MemberInit(expression, (IReadOnlyList<MemberBinding>)assignments);
 
-        public static BinaryExpression And(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.And, left, right, method);
+    // @LightExpression only
+    /// <summary>Applies both the New and arbitrary other expression</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static MemberInitExpression MemberInitMany(Expression expression, params MemberBinding[] assignments)
+    {
+        Debug.Assert(assignments != null && assignments.Length > 0, "assignments != null && assignments.Length > 0");
+        return new ManyBindingsMemberInitExpression(expression, assignments);
+    }
 
-        /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
-        public static BinaryExpression AndAlso(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.AndAlso, left, right);
+    // @LightExpression only
+    public static MemberInitExpression MemberInit(Expression expression, IEnumerable<MemberBinding> assignments) =>
+        MemberInit(expression, assignments.AsReadOnlyList());
 
-        public static BinaryExpression AndAlso(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.AndAlso, left, right, method);
+    // todo: @perf optimize for the small amount of initializers the same as NewArrayInit
+    public static ListInitExpression ListInit(NewExpression newExpression, IReadOnlyList<ElementInit> initializers) =>
+        new ListInitExpression(newExpression, initializers);
 
-        // note: @note it should be a `LeftTypedBinaryExpression` and not `LogicalBinaryExpression` so that it works both for logical and bitwise context
-        /// <summary>Creates a BinaryExpression that represents a bitwise OR operation.</summary>
-        public static BinaryExpression Or(Expression left, Expression right) =>
-            new LeftTypedBinaryExpression(ExpressionType.Or, left, right);
+    public static ListInitExpression ListInit(NewExpression newExpression, params ElementInit[] initializers) =>
+        ListInit(newExpression, (IReadOnlyList<ElementInit>)initializers);
 
-        public static BinaryExpression Or(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Or, left, right, method);
+    public static ListInitExpression ListInit(NewExpression newExpression, IEnumerable<ElementInit> initializers) =>
+        ListInit(newExpression, initializers.AsReadOnlyList());
 
-        public static BinaryExpression GetLogicalBinary(ExpressionType nodeType, Expression left, Expression right, bool liftToNull, MethodInfo method) =>
-            !liftToNull && method == null
-                ? new LogicalBinaryExpression(nodeType, left, right)
-                : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull);
+    public static NewArrayExpression NewArrayInit(Type type, IReadOnlyList<Expression> initializers) =>
+        new ManyElementsNewArrayInitExpression(type.MakeArrayType(), initializers);
 
-        /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
-        public static BinaryExpression OrElse(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.OrElse, left, right);
+    public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
+        NewArrayInit(type, (IReadOnlyList<Expression>)initializers);
 
-        public static BinaryExpression OrElse(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.OrElse, left, right, method);
+    public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) =>
+        NewArrayInit(type, initializers.AsReadOnlyList());
 
-        /// <summary>Creates a BinaryExpression that represents an equality comparison.</summary>
-        public static BinaryExpression Equal(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.Equal, left, right);
+    public static NewArrayExpression NewArrayInit(Type type, Expression element) =>
+        new OneElementNewArrayInitExpression(type.MakeArrayType(), element);
 
-        public static BinaryExpression Equal(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
-            GetLogicalBinary(ExpressionType.Equal, left, right, liftToNull, method);
+    public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1) =>
+        new TwoElementNewArrayInitExpression(type.MakeArrayType(), el0, el1);
 
-        /// <summary>Creates a BinaryExpression that represents an inequality comparison.</summary>
-        public static BinaryExpression NotEqual(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
+    public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2) =>
+        new ThreeElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2);
 
-        public static BinaryExpression NotEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
-            GetLogicalBinary(ExpressionType.NotEqual, left, right, liftToNull, method);
+    public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2,
+        Expression el3) =>
+        new FourElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2, el3);
 
-        /// <summary>Creates a BinaryExpression that represents a "greater than" numeric comparison.</summary>
-        public static BinaryExpression GreaterThan(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.GreaterThan, left, right);
+    public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2,
+        Expression el3, Expression el4) =>
+        new FiveElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2, el3, el4);
 
-        public static BinaryExpression GreaterThan(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
-            GetLogicalBinary(ExpressionType.GreaterThan, left, right, liftToNull, method);
+    public static NewArrayExpression NewArrayInit(Type type, Expression el0, Expression el1, Expression el2,
+        Expression el3, Expression el4, Expression el5) =>
+        new SixElementNewArrayInitExpression(type.MakeArrayType(), el0, el1, el2, el3, el4, el5);
 
-        /// <summary>Creates a BinaryExpression that represents a "greater than or equal" numeric comparison.</summary>
-        public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.GreaterThanOrEqual, left, right);
+    public static NewArrayExpression NewArrayBounds(Type type, Expression bound) =>
+        new OneBoundNewArrayBoundsExpression(type.MakeArrayType(), bound);
 
-        public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
-            GetLogicalBinary(ExpressionType.GreaterThanOrEqual, left, right, liftToNull, method);
+    public static NewArrayExpression MakeArrayBounds(Type type, IReadOnlyList<Expression> bounds) =>
+        new ManyBoundsNewArrayBoundsExpression(bounds.Count == 1 ? type.MakeArrayType() : type.MakeArrayType(bounds.Count), bounds);
 
-        /// <summary>Creates a BinaryExpression that represents a "less than" numeric comparison.</summary>
-        public static BinaryExpression LessThan(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.LessThan, left, right);
+    public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) =>
+        MakeArrayBounds(type, (IReadOnlyList<Expression>)bounds);
 
-        public static BinaryExpression LessThan(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
-            GetLogicalBinary(ExpressionType.LessThan, left, right, liftToNull, method);
+    public static NewArrayExpression NewArrayBounds(Type type, IEnumerable<Expression> bounds) =>
+        MakeArrayBounds(type, bounds.AsReadOnlyList());
 
-        /// <summary>Creates a BinaryExpression that represents a " less than or equal" numeric comparison.</summary>
-        public static BinaryExpression LessThanOrEqual(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.LessThanOrEqual, left, right);
+    /// <summary>Creates a BinaryExpression that represents an assignment operation.</summary>
+    public static BinaryExpression Assign(Expression left, Expression right) => new AssignBinaryExpression(left, right);
 
-        public static BinaryExpression LessThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
-            GetLogicalBinary(ExpressionType.LessThanOrEqual, left, right, liftToNull, method);
+    /// <summary>Creates a BinaryExpression that represents raising an expression to a power and assigning the result back to the expression.</summary>
+    public static BinaryExpression PowerAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.PowerAssign, left, right);
 
-        public static BlockExpression Block(Expression expr0) => new BlockExpression(expr0);
+    /// <summary>Creates a BinaryExpression that represents an addition assignment operation that does not have overflow checking.</summary>
+    public static BinaryExpression AddAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.AddAssign, left, right);
 
-        public static BlockExpression Block(Expression expr0, Expression expr1) => new BlockExpression(expr0, expr1);
+    /// <summary>Creates a BinaryExpression that represents an addition assignment operation that has overflow checking.</summary>
+    public static BinaryExpression AddAssignChecked(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.AddAssignChecked, left, right);
 
-        public static BlockExpression Block(Expression expr0, Expression expr1, params Expression[] rest) => new BlockExpression(expr0, expr1, rest);
+    /// <summary>Creates a BinaryExpression that represents a bitwise AND assignment operation.</summary>
+    public static BinaryExpression AndAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.AndAssign, left, right);
 
-        public static BlockExpression Block(IReadOnlyList<Expression> expressions) => new BlockExpression(expressions);
+    /// <summary>Creates a BinaryExpression that represents a bitwise OR assignment operation.</summary>
+    public static BinaryExpression OrAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.OrAssign, left, right);
 
-        public static BlockExpression Block(IEnumerable<Expression> expressions) => new BlockExpression(expressions.AsReadOnlyList()); // todo: @perf optimize the double copying
+    /// <summary>Creates a BinaryExpression that represents a bitwise XOR assignment operation.</summary>
+    public static BinaryExpression ExclusiveOrAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.ExclusiveOrAssign, left, right);
 
-        public static BlockExpression Block(in SmallList2<Expression> expressions) => new BlockExpression(in expressions);
+    /// <summary>Creates a BinaryExpression that represents a bitwise right-shift assignment operation.</summary>
+    public static BinaryExpression RightShiftAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.RightShiftAssign, left, right);
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0) =>
-            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0); // todo: @perf @mem add the check for empty variables
+    public static BinaryExpression LeftShiftAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.LeftShiftAssign, left, right);
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1) =>
-            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0, expr1);
+    /// <summary>Creates a BinaryExpression that represents a remainder assignment operation.</summary>
+    public static BinaryExpression ModuloAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.ModuloAssign, left, right);
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1, params Expression[] rest) =>
-            new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0, expr1, rest);
+    /// <summary>Creates a BinaryExpression that represents a subtraction assignment operation that does not have overflow checking.</summary>
+    public static BinaryExpression SubtractAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.SubtractAssign, left, right);
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
+    /// <summary>Creates a BinaryExpression that represents a subtraction assignment operation that has overflow checking.</summary>
+    public static BinaryExpression SubtractAssignChecked(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.SubtractAssignChecked, left, right);
+
+    /// <summary>Creates a BinaryExpression that represents a multiplication assignment operation that does not have overflow checking.</summary>
+    public static BinaryExpression MultiplyAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.MultiplyAssign, left, right);
+
+    /// <summary>Creates a BinaryExpression that represents a multiplication assignment operation that has overflow checking.</summary>
+    public static BinaryExpression MultiplyAssignChecked(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.MultiplyAssignChecked, left, right);
+
+    /// <summary>Creates a BinaryExpression that represents a division assignment operation that does not have overflow checking.</summary>
+    public static BinaryExpression DivideAssign(Expression left, Expression right) =>
+        new OpAssignBinaryExpression(ExpressionType.DivideAssign, left, right);
+
+    public static ElementInit ElementInit(MethodInfo addMethod, Expression arg) =>
+        new OneArgumentElementInit(addMethod, arg);
+
+    public static ElementInit ElementInit(MethodInfo addMethod, IReadOnlyList<Expression> arguments) =>
+        new ManyArgumentsElementInit(addMethod, arguments);
+
+    public static ElementInit ElementInit(MethodInfo addMethod, params Expression[] arguments) =>
+        ElementInit(addMethod, (IReadOnlyList<Expression>)arguments);
+
+    public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) =>
+        ElementInit(addMethod, arguments.AsReadOnlyList());
+
+    public static InvocationExpression Invoke(LambdaExpression expression) =>
+        new NotNullExpressionInvocationExpression(expression);
+
+    public static InvocationExpression Invoke(LambdaExpression expression, Expression a0) =>
+        new OneArgumentInvocationExpression(expression, a0);
+
+    public static InvocationExpression Invoke(Expression expression, Expression a0) =>
+        expression is LambdaExpression
+            ? new OneArgumentInvocationExpression(expression, a0)
+            : new TypedOneArgumentInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0);
+
+    public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0) =>
+        expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+            ? new OneArgumentInvocationExpression(expression, a0)
+            : new TypedOneArgumentInvocationExpression(expression, returnType, a0);
+
+    public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1) =>
+        new TwoArgumentsInvocationExpression(expression, a0, a1);
+
+    public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1) =>
+        expression is LambdaExpression
+            ? new TwoArgumentsInvocationExpression(expression, a0, a1)
+            : new TypedTwoArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1);
+
+    public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1) =>
+        expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+            ? new TwoArgumentsInvocationExpression(expression, a0, a1)
+            : new TypedTwoArgumentsInvocationExpression(expression, returnType, a0, a1);
+
+    public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2) =>
+        new ThreeArgumentsInvocationExpression(expression, a0, a1, a2);
+
+    public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2) =>
+        expression is LambdaExpression
+            ? new ThreeArgumentsInvocationExpression(expression, a0, a1, a2)
+            : new TypedThreeArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2);
+
+    public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2) =>
+        expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+            ? new ThreeArgumentsInvocationExpression(expression, a0, a1, a2)
+            : new TypedThreeArgumentsInvocationExpression(expression, returnType, a0, a1, a2);
+
+    public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
+        new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3);
+
+    public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
+        expression is LambdaExpression
+            ? new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3)
+            : new TypedFourArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3);
+
+    public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
+        expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+            ? new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3)
+            : new TypedFourArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3);
+
+    public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
+        new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4);
+
+    public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
+        expression is LambdaExpression
+            ? new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4)
+            : new TypedFiveArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4);
+
+    public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
+        expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+            ? new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4)
+            : new TypedFiveArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3, a4);
+
+    public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
+        new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5);
+
+    public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
+        expression is LambdaExpression
+            ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
+            : new TypedSixArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4, a5);
+
+    public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
+        expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+            ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
+            : new TypedSixArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3, a4, a5);
+
+    public static InvocationExpression Invoke(Expression expression, IReadOnlyList<Expression> args) =>
+        expression is LambdaExpression
+            ? new ManyArgumentsInvocationExpression(expression, args)
+            : new TypedManyArgumentsInvocationExpression(expression, args, expression.Type.FindDelegateInvokeMethod().ReturnType);
+
+    public static InvocationExpression Invoke(Expression expression, params Expression[] args) =>
+        Invoke(expression, (IReadOnlyList<Expression>)args);
+
+    public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
+        Invoke(expression, args.AsReadOnlyList());
+
+    public static InvocationExpression Invoke(Type returnType, Expression expression, IReadOnlyList<Expression> args) =>
+        expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
+            ? new ManyArgumentsInvocationExpression(expression, args)
+            : new TypedManyArgumentsInvocationExpression(expression, args, returnType);
+
+    public static InvocationExpression Invoke(Type returnType, Expression expression, params Expression[] args) =>
+        Invoke(returnType, expression, (IReadOnlyList<Expression>)args);
+
+    public static InvocationExpression Invoke(Type returnType, Expression expression, IEnumerable<Expression> args) =>
+        Invoke(returnType, expression, args.AsReadOnlyList());
+
+    public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) =>
+        new WithFalseBranchConditionalExpression(test, ifTrue, ifFalse);
+
+    public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Type type) =>
+        ifTrue.Type == type
+            ? new WithFalseBranchConditionalExpression(test, ifTrue, ifFalse)
+            : (ConditionalExpression)new TypedWithFalseBranchConditionalExpression(test, ifTrue, ifFalse, type);
+
+    public static ConditionalExpression IfThen(Expression test, Expression ifTrue) =>
+        new ConditionalExpression(test, ifTrue); // absence of ifFalse automatically mean void type of all expression
+
+    public static ConditionalExpression IfThenElse(Expression test, Expression ifTrue, Expression ifFalse) =>
+        new VoidWithFalseBranchConditionalExpression(test, ifTrue, ifFalse);
+
+    public static readonly DefaultExpression VoidDefault = new DefaultExpression(typeof(void));
+
+    public static DefaultExpression Empty() => VoidDefault;
+
+    public static DefaultExpression Default(Type type) =>
+        type == typeof(void) ? VoidDefault : new DefaultExpression(type);
+
+    public static BinaryExpression GetArithmeticBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null)
+    {
+        if (method == null)
         {
-            var vars = variables.AsReadOnlyList();
-            return vars.Count == 0
-                ? new BlockExpression(expressions.AsReadOnlyList())
-                : new ManyVariablesBlockExpression(vars, expressions);
+            if (left.Type == right.Type && left.Type.IsArithmetic())
+                return new LeftTypedBinaryExpression(nodeType, left, right);
+            return GetUserDefinedBinaryOperatorOrThrow(nodeType, nodeType.GetArithmeticBinaryOperatorMethodName(), left, right, liftToNull: true);
         }
+        return GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
+    }
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
-            Block(variables, expressions.AsReadOnlyList());
+    public static BinaryExpression GetLeftTypedBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null) =>
+        method == null
+             ? new LeftTypedBinaryExpression(nodeType, left, right)
+             : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
 
-        public static BlockExpression Block(IEnumerable<ParameterExpression> variables, in SmallList2<Expression> expressions)
-        {
-            var vars = variables.AsReadOnlyList();
-            return vars.Count == 0
-                ? new BlockExpression(in expressions)
-                : new ManyVariablesBlockExpression(vars, in expressions);
-        }
+    /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
+    public static BinaryExpression Add(Expression left, Expression right) =>
+        GetArithmeticBinary(ExpressionType.Add, left, right, null);
 
-        public static BlockExpression Block(Type type, Expression expr0) =>
-            new TypedBlockExpression(type, expr0);
+    public static BinaryExpression Add(Expression left, Expression right, MethodInfo method) =>
+        GetArithmeticBinary(ExpressionType.Add, left, right, method);
 
-        public static BlockExpression Block(Type type, Expression expr0, Expression expr1) =>
-            new TypedBlockExpression(type, expr0, expr1);
+    /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that has overflow checking.</summary>
+    public static BinaryExpression AddChecked(Expression left, Expression right) =>
+        GetArithmeticBinary(ExpressionType.AddChecked, left, right);
 
-        public static BlockExpression Block(Type type, Expression expr0, Expression expr1, params Expression[] rest) =>
-            new TypedBlockExpression(type, expr0, expr1, rest);
+    public static BinaryExpression AddChecked(Expression left, Expression right, MethodInfo method) =>
+        GetArithmeticBinary(ExpressionType.AddChecked, left, right, method);
 
-        public static BlockExpression Block(Type type, IReadOnlyList<Expression> expressions) =>
-            new TypedBlockExpression(type, expressions);
+    /// <summary>Creates a BinaryExpression that represents a bitwise XOR operation.</summary>
+    public static BinaryExpression ExclusiveOr(Expression left, Expression right) =>
+        new LeftTypedBinaryExpression(ExpressionType.ExclusiveOr, left, right);
 
-        public static BlockExpression Block(Type type, IEnumerable<Expression> expressions) =>
-            new TypedBlockExpression(type, expressions.AsReadOnlyList()); // todo: @perf @mem
+    public static BinaryExpression ExclusiveOr(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.ExclusiveOr, left, right, method);
 
-        public static BlockExpression Block(Type type, in SmallList2<Expression> expressions) =>
-            new TypedBlockExpression(type, in expressions);
+    /// <summary>Creates a BinaryExpression that represents a bitwise left-shift operation.</summary>
+    public static BinaryExpression LeftShift(Expression left, Expression right) =>
+        new LeftTypedBinaryExpression(ExpressionType.LeftShift, left, right);
 
-        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0)
-        {
-            var vars = variables.AsReadOnlyList();
-            return vars.Count != 0 ? new TypedManyVariablesBlockExpression(type, vars, expr0) : new TypedBlockExpression(type, expr0);
-        }
+    public static BinaryExpression LeftShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.LeftShift, left, right, method);
 
-        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1)
-        {
-            var vars = variables.AsReadOnlyList();
-            return vars.Count != 0 ? new TypedManyVariablesBlockExpression(type, vars, expr0, expr1) : new TypedBlockExpression(type, expr0, expr1);
-        }
+    /// <summary>Creates a BinaryExpression that represents an arithmetic remainder operation.</summary>
+    public static BinaryExpression Modulo(Expression left, Expression right) =>
+        GetArithmeticBinary(ExpressionType.Modulo, left, right);
 
-        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1, params Expression[] rest)
-        {
-            var vars = variables.AsReadOnlyList();
-            return vars.Count != 0 ? new TypedManyVariablesBlockExpression(type, vars, expr0, expr1, rest) : new TypedBlockExpression(type, expr0, expr1, rest);
-        }
+    public static BinaryExpression Modulo(Expression left, Expression right, MethodInfo method) =>
+        GetArithmeticBinary(ExpressionType.Modulo, left, right, method);
 
-        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IReadOnlyList<Expression> expressions) =>
-            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions);
+    /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
+    public static BinaryExpression RightShift(Expression left, Expression right) =>
+        new LeftTypedBinaryExpression(ExpressionType.RightShift, left, right);
 
-        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
-            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList()); // todo: @perf @mem
+    public static BinaryExpression RightShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.RightShift, left, right, method);
 
-        public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, in SmallList2<Expression> expressions) =>
-            new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), in expressions);
+    /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that does not have overflow checking.</summary>
+    public static BinaryExpression Subtract(Expression left, Expression right) =>
+        GetArithmeticBinary(ExpressionType.Subtract, left, right);
 
-        public static BlockExpression MakeBlock(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions)
-        {
-            var vars = variables.AsReadOnlyList();
-            var exprs = expressions.AsReadOnlyList();
-            var result = exprs[exprs.Count - 1]; // todo: @check what if empty?
-            if (result.Type == type)
-                return vars == null || vars.Count == 0
-                    ? new BlockExpression(exprs)
-                    : new ManyVariablesBlockExpression(vars, exprs);
+    public static BinaryExpression Subtract(Expression left, Expression right, MethodInfo method) =>
+        GetArithmeticBinary(ExpressionType.Subtract, left, right, method);
+
+    /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that has overflow checking.</summary>
+    public static BinaryExpression SubtractChecked(Expression left, Expression right) =>
+        GetArithmeticBinary(ExpressionType.SubtractChecked, left, right);
+
+    public static BinaryExpression SubtractChecked(Expression left, Expression right, MethodInfo method) =>
+        GetArithmeticBinary(ExpressionType.SubtractChecked, left, right, method);
+
+    /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that does not have overflow checking.</summary>
+    public static BinaryExpression Multiply(Expression left, Expression right) =>
+        GetArithmeticBinary(ExpressionType.Multiply, left, right);
+
+    public static BinaryExpression Multiply(Expression left, Expression right, MethodInfo method) =>
+        GetArithmeticBinary(ExpressionType.Multiply, left, right, method);
+
+    /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that has overflow checking.</summary>
+    public static BinaryExpression MultiplyChecked(Expression left, Expression right) =>
+        GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right);
+
+    public static BinaryExpression MultiplyChecked(Expression left, Expression right, MethodInfo method) =>
+        GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right, method);
+
+    /// <summary>Creates a BinaryExpression that represents an arithmetic division operation.</summary>
+    public static BinaryExpression Divide(Expression left, Expression right) =>
+        GetArithmeticBinary(ExpressionType.Divide, left, right);
+
+    public static BinaryExpression Divide(Expression left, Expression right, MethodInfo method) =>
+        GetArithmeticBinary(ExpressionType.Divide, left, right, method);
+
+    /// <summary>Creates a BinaryExpression that represents raising a number to a power.</summary>
+    public static BinaryExpression Power(Expression left, Expression right) =>
+        new LeftTypedBinaryExpression(ExpressionType.Power, left, right);
+
+    public static BinaryExpression Power(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Power, left, right, method);
+
+    /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
+    public static BinaryExpression And(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.And, left, right);
+
+    public static BinaryExpression And(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.And, left, right, method);
+
+    /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
+    public static BinaryExpression AndAlso(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.AndAlso, left, right);
+
+    public static BinaryExpression AndAlso(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.AndAlso, left, right, method);
+
+    // note: @note it should be a `LeftTypedBinaryExpression` and not `LogicalBinaryExpression` so that it works both for logical and bitwise context
+    /// <summary>Creates a BinaryExpression that represents a bitwise OR operation.</summary>
+    public static BinaryExpression Or(Expression left, Expression right) =>
+        new LeftTypedBinaryExpression(ExpressionType.Or, left, right);
+
+    public static BinaryExpression Or(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Or, left, right, method);
+
+    public static BinaryExpression GetLogicalBinary(ExpressionType nodeType, Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+        !liftToNull && method == null
+            ? new LogicalBinaryExpression(nodeType, left, right)
+            : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull);
+
+    /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
+    public static BinaryExpression OrElse(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.OrElse, left, right);
+
+    public static BinaryExpression OrElse(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.OrElse, left, right, method);
+
+    /// <summary>Creates a BinaryExpression that represents an equality comparison.</summary>
+    public static BinaryExpression Equal(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.Equal, left, right);
+
+    public static BinaryExpression Equal(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+        GetLogicalBinary(ExpressionType.Equal, left, right, liftToNull, method);
+
+    /// <summary>Creates a BinaryExpression that represents an inequality comparison.</summary>
+    public static BinaryExpression NotEqual(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
+
+    public static BinaryExpression NotEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+        GetLogicalBinary(ExpressionType.NotEqual, left, right, liftToNull, method);
+
+    /// <summary>Creates a BinaryExpression that represents a "greater than" numeric comparison.</summary>
+    public static BinaryExpression GreaterThan(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.GreaterThan, left, right);
+
+    public static BinaryExpression GreaterThan(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+        GetLogicalBinary(ExpressionType.GreaterThan, left, right, liftToNull, method);
+
+    /// <summary>Creates a BinaryExpression that represents a "greater than or equal" numeric comparison.</summary>
+    public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.GreaterThanOrEqual, left, right);
+
+    public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+        GetLogicalBinary(ExpressionType.GreaterThanOrEqual, left, right, liftToNull, method);
+
+    /// <summary>Creates a BinaryExpression that represents a "less than" numeric comparison.</summary>
+    public static BinaryExpression LessThan(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.LessThan, left, right);
+
+    public static BinaryExpression LessThan(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+        GetLogicalBinary(ExpressionType.LessThan, left, right, liftToNull, method);
+
+    /// <summary>Creates a BinaryExpression that represents a " less than or equal" numeric comparison.</summary>
+    public static BinaryExpression LessThanOrEqual(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.LessThanOrEqual, left, right);
+
+    public static BinaryExpression LessThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
+        GetLogicalBinary(ExpressionType.LessThanOrEqual, left, right, liftToNull, method);
+
+    public static BlockExpression Block(Expression expr0) => new BlockExpression(expr0);
+
+    public static BlockExpression Block(Expression expr0, Expression expr1) => new BlockExpression(expr0, expr1);
+
+    public static BlockExpression Block(Expression expr0, Expression expr1, params Expression[] rest) => new BlockExpression(expr0, expr1, rest);
+
+    public static BlockExpression Block(IReadOnlyList<Expression> expressions) => new BlockExpression(expressions);
+
+    public static BlockExpression Block(IEnumerable<Expression> expressions) => new BlockExpression(expressions.AsReadOnlyList()); // todo: @perf optimize the double copying
+
+    public static BlockExpression Block(in SmallList2<Expression> expressions) => new BlockExpression(in expressions);
+
+    public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0) =>
+        new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0); // todo: @perf @mem add the check for empty variables
+
+    public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1) =>
+        new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0, expr1);
+
+    public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1, params Expression[] rest) =>
+        new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0, expr1, rest);
+
+    public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
+    {
+        var vars = variables.AsReadOnlyList();
+        return vars.Count == 0
+            ? new BlockExpression(expressions.AsReadOnlyList())
+            : new ManyVariablesBlockExpression(vars, expressions);
+    }
+
+    public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
+        Block(variables, expressions.AsReadOnlyList());
+
+    public static BlockExpression Block(IEnumerable<ParameterExpression> variables, in SmallList2<Expression> expressions)
+    {
+        var vars = variables.AsReadOnlyList();
+        return vars.Count == 0
+            ? new BlockExpression(in expressions)
+            : new ManyVariablesBlockExpression(vars, in expressions);
+    }
+
+    public static BlockExpression Block(Type type, Expression expr0) =>
+        new TypedBlockExpression(type, expr0);
+
+    public static BlockExpression Block(Type type, Expression expr0, Expression expr1) =>
+        new TypedBlockExpression(type, expr0, expr1);
+
+    public static BlockExpression Block(Type type, Expression expr0, Expression expr1, params Expression[] rest) =>
+        new TypedBlockExpression(type, expr0, expr1, rest);
+
+    public static BlockExpression Block(Type type, IReadOnlyList<Expression> expressions) =>
+        new TypedBlockExpression(type, expressions);
+
+    public static BlockExpression Block(Type type, IEnumerable<Expression> expressions) =>
+        new TypedBlockExpression(type, expressions.AsReadOnlyList()); // todo: @perf @mem
+
+    public static BlockExpression Block(Type type, in SmallList2<Expression> expressions) =>
+        new TypedBlockExpression(type, in expressions);
+
+    public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0)
+    {
+        var vars = variables.AsReadOnlyList();
+        return vars.Count != 0 ? new TypedManyVariablesBlockExpression(type, vars, expr0) : new TypedBlockExpression(type, expr0);
+    }
+
+    public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1)
+    {
+        var vars = variables.AsReadOnlyList();
+        return vars.Count != 0 ? new TypedManyVariablesBlockExpression(type, vars, expr0, expr1) : new TypedBlockExpression(type, expr0, expr1);
+    }
+
+    public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0, Expression expr1, params Expression[] rest)
+    {
+        var vars = variables.AsReadOnlyList();
+        return vars.Count != 0 ? new TypedManyVariablesBlockExpression(type, vars, expr0, expr1, rest) : new TypedBlockExpression(type, expr0, expr1, rest);
+    }
+
+    public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IReadOnlyList<Expression> expressions) =>
+        new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions);
+
+    public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
+        new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList()); // todo: @perf @mem
+
+    public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, in SmallList2<Expression> expressions) =>
+        new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), in expressions);
+
+    public static BlockExpression MakeBlock(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions)
+    {
+        var vars = variables.AsReadOnlyList();
+        var exprs = expressions.AsReadOnlyList();
+        var result = exprs[exprs.Count - 1]; // todo: @check what if empty?
+        if (result.Type == type)
             return vars == null || vars.Count == 0
-                ? new TypedBlockExpression(type, exprs)
-                : new TypedManyVariablesBlockExpression(type, vars, exprs);
-        }
+                ? new BlockExpression(exprs)
+                : new ManyVariablesBlockExpression(vars, exprs);
+        return vars == null || vars.Count == 0
+            ? new TypedBlockExpression(type, exprs)
+            : new TypedManyVariablesBlockExpression(type, vars, exprs);
+    }
 
-        public static Expression DebugInfo(SymbolDocumentInfo doc,
-            int startLine, int startColumn, int endLine, int endColumn) =>
-            new DebugInfoExpression(doc, startLine, startColumn, endLine, endColumn);
+    public static Expression DebugInfo(SymbolDocumentInfo doc,
+        int startLine, int startColumn, int endLine, int endColumn) =>
+        new DebugInfoExpression(doc, startLine, startColumn, endLine, endColumn);
 
-        /// <summary>Creates a LoopExpression with the given body and (optional) break target.</summary>
-        public static LoopExpression Loop(Expression body, LabelTarget @break = null) =>
-            new LoopExpression(body, @break, null);
+    /// <summary>Creates a LoopExpression with the given body and (optional) break target.</summary>
+    public static LoopExpression Loop(Expression body, LabelTarget @break = null) =>
+        new LoopExpression(body, @break, null);
 
-        /// <summary>Creates a LoopExpression with the given body.</summary>
-        public static LoopExpression Loop(Expression body, LabelTarget @break, LabelTarget @continue) =>
-            new LoopExpression(body, @break, @continue);
+    /// <summary>Creates a LoopExpression with the given body.</summary>
+    public static LoopExpression Loop(Expression body, LabelTarget @break, LabelTarget @continue) =>
+        new LoopExpression(body, @break, @continue);
 
-        public static TryExpression TryCatch(Expression body, params CatchBlock[] handlers) =>
-            new TryExpression(body, handlers);
+    public static TryExpression TryCatch(Expression body, params CatchBlock[] handlers) =>
+        new TryExpression(body, handlers);
 
-        public static TryExpression TryCatchFinally(Expression body, Expression @finally, params CatchBlock[] handlers) =>
-            new WithFinallyTryExpression(body, handlers, @finally);
+    public static TryExpression TryCatchFinally(Expression body, Expression @finally, params CatchBlock[] handlers) =>
+        new WithFinallyTryExpression(body, handlers, @finally);
 
-        public static TryExpression TryFinally(Expression body, Expression @finally) =>
-            new WithFinallyTryExpression(body, Tools.Empty<CatchBlock>(), @finally);
+    public static TryExpression TryFinally(Expression body, Expression @finally) =>
+        new WithFinallyTryExpression(body, Tools.Empty<CatchBlock>(), @finally);
 
-        public static CatchBlock Catch(ParameterExpression variable, Expression body) =>
-            new CatchBlock(variable.Type, variable, body, null);
+    public static CatchBlock Catch(ParameterExpression variable, Expression body) =>
+        new CatchBlock(variable.Type, variable, body, null);
 
-        public static CatchBlock Catch(Type test, Expression body) =>
-            new CatchBlock(test, null, body, null);
+    public static CatchBlock Catch(Type test, Expression body) =>
+        new CatchBlock(test, null, body, null);
 
-        public static CatchBlock MakeCatchBlock(Type test, ParameterExpression variable, Expression body, Expression filter) =>
-            new CatchBlock(test, variable, body, filter);
+    public static CatchBlock MakeCatchBlock(Type test, ParameterExpression variable, Expression body, Expression filter) =>
+        new CatchBlock(test, variable, body, filter);
 
-        /// <summary>Creates a UnaryExpression that represents a throwing of an exception.</summary>
-        public static UnaryExpression Throw(Expression value) => new ThrowUnaryExpression(value);
+    /// <summary>Creates a UnaryExpression that represents a throwing of an exception.</summary>
+    public static UnaryExpression Throw(Expression value) => new ThrowUnaryExpression(value);
 
-        /// <summary>Creates a UnaryExpression that represents a throwing of an exception with a given type.</summary>
-        public static UnaryExpression Throw(Expression value, Type type) =>
-            new TypedUnaryExpression(ExpressionType.Throw, value, type);
+    /// <summary>Creates a UnaryExpression that represents a throwing of an exception with a given type.</summary>
+    public static UnaryExpression Throw(Expression value, Type type) =>
+        new TypedUnaryExpression(ExpressionType.Throw, value, type);
 
-        /// <summary> Creates a <see cref="UnaryExpression"/> that represents a rethrowing of an exception in a catch block. </summary>
-        public static UnaryExpression Rethrow(Type type) =>
-            new TypedUnaryExpression(ExpressionType.Throw, null, type);
+    /// <summary> Creates a <see cref="UnaryExpression"/> that represents a rethrowing of an exception in a catch block. </summary>
+    public static UnaryExpression Rethrow(Type type) =>
+        new TypedUnaryExpression(ExpressionType.Throw, null, type);
 
-        public static LabelExpression Label(LabelTarget target) =>
-            new LabelExpression(target);
+    public static LabelExpression Label(LabelTarget target) =>
+        new LabelExpression(target);
 
-        public static LabelExpression Label(LabelTarget target, Expression defaultValue) =>
-            defaultValue == null
-            ? new LabelExpression(target)
-            : new WithDefaultValueLabelExpression(target, defaultValue);
+    public static LabelExpression Label(LabelTarget target, Expression defaultValue) =>
+        defaultValue == null
+        ? new LabelExpression(target)
+        : new WithDefaultValueLabelExpression(target, defaultValue);
 
-        public static LabelTarget Label() => new LabelTarget();
+    public static LabelTarget Label() => new LabelTarget();
 
-        public static LabelTarget Label(Type type) =>
-            type == null
-            ? new LabelTarget()
-            : new TypedLabelTarget(type);
+    public static LabelTarget Label(Type type) =>
+        type == null
+        ? new LabelTarget()
+        : new TypedLabelTarget(type);
 
-        public static LabelTarget Label(string name) =>
-            name == null
-            ? new LabelTarget()
-            : new NamedLabelTarget(name);
+    public static LabelTarget Label(string name) =>
+        name == null
+        ? new LabelTarget()
+        : new NamedLabelTarget(name);
 
-        public static LabelTarget Label(Type type, string name)
+    public static LabelTarget Label(Type type, string name)
+    {
+        if (type == null)
+            return name == null
+                ? new LabelTarget()
+                : new NamedLabelTarget(name);
+        if (name == null)
+            return new TypedLabelTarget(type);
+        return new TypedNamedLabelTarget(type, name);
+    }
+
+    /// <summary>Creates a <see cref="BinaryExpression" />, given the left and right operands, by calling an appropriate factory method.</summary>
+    public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, LambdaExpression conversion = null)
+    {
+        switch (binaryType)
         {
-            if (type == null)
-                return name == null
-                    ? new LabelTarget()
-                    : new NamedLabelTarget(name);
-            if (name == null)
-                return new TypedLabelTarget(type);
-            return new TypedNamedLabelTarget(type, name);
+            case ExpressionType.Add:
+            case ExpressionType.AddChecked:
+            case ExpressionType.Subtract:
+            case ExpressionType.SubtractChecked:
+            case ExpressionType.Multiply:
+            case ExpressionType.MultiplyChecked:
+            case ExpressionType.Divide:
+            case ExpressionType.Modulo:
+                return GetArithmeticBinary(binaryType, left, right);
+
+            // todo: @incomplete - use similar to GetArithmeticBinary
+            case ExpressionType.Power: return Power(left, right);
+            case ExpressionType.And: return And(left, right);
+            case ExpressionType.AndAlso: return AndAlso(left, right);
+            case ExpressionType.Or: return Or(left, right);
+            case ExpressionType.OrElse: return OrElse(left, right);
+            case ExpressionType.LessThan: return LessThan(left, right);
+            case ExpressionType.LessThanOrEqual: return LessThanOrEqual(left, right);
+            case ExpressionType.GreaterThan: return GreaterThan(left, right);
+            case ExpressionType.GreaterThanOrEqual: return GreaterThanOrEqual(left, right);
+
+            case ExpressionType.Equal: return Equal(left, right);
+            case ExpressionType.NotEqual: return NotEqual(left, right);
+
+            case ExpressionType.ExclusiveOr: return ExclusiveOr(left, right);
+            case ExpressionType.Coalesce: return Coalesce(left, right, conversion);
+            case ExpressionType.ArrayIndex: return ArrayIndex(left, right);
+            case ExpressionType.RightShift: return RightShift(left, right);
+            case ExpressionType.LeftShift: return LeftShift(left, right);
+            case ExpressionType.Assign: return Assign(left, right);
+            case ExpressionType.AddAssign: return AddAssign(left, right);
+            case ExpressionType.AndAssign: return AndAssign(left, right);
+            case ExpressionType.DivideAssign: return DivideAssign(left, right);
+            case ExpressionType.ExclusiveOrAssign: return ExclusiveOrAssign(left, right);
+            case ExpressionType.LeftShiftAssign: return LeftShiftAssign(left, right);
+            case ExpressionType.ModuloAssign: return ModuloAssign(left, right);
+            case ExpressionType.MultiplyAssign: return MultiplyAssign(left, right);
+            case ExpressionType.OrAssign: return OrAssign(left, right);
+            case ExpressionType.PowerAssign: return PowerAssign(left, right);
+            case ExpressionType.RightShiftAssign: return RightShiftAssign(left, right);
+            case ExpressionType.SubtractAssign: return SubtractAssign(left, right);
+            case ExpressionType.AddAssignChecked: return AddAssignChecked(left, right);
+            case ExpressionType.SubtractAssignChecked: return SubtractAssignChecked(left, right);
+            case ExpressionType.MultiplyAssignChecked: return MultiplyAssignChecked(left, right);
+            default: throw new ArgumentException($"Unhandled binary node type: `{binaryType}`");
         }
+    }
 
-        /// <summary>Creates a <see cref="BinaryExpression" />, given the left and right operands, by calling an appropriate factory method.</summary>
-        public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, LambdaExpression conversion = null)
+    public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, bool liftToNull, MethodInfo method,
+        LambdaExpression conversion = null)
+    {
+        switch (binaryType)
         {
-            switch (binaryType)
-            {
-                case ExpressionType.Add:
-                case ExpressionType.AddChecked:
-                case ExpressionType.Subtract:
-                case ExpressionType.SubtractChecked:
-                case ExpressionType.Multiply:
-                case ExpressionType.MultiplyChecked:
-                case ExpressionType.Divide:
-                case ExpressionType.Modulo:
-                    return GetArithmeticBinary(binaryType, left, right);
+            case ExpressionType.Add:
+            case ExpressionType.AddChecked:
+            case ExpressionType.Subtract:
+            case ExpressionType.SubtractChecked:
+            case ExpressionType.Multiply:
+            case ExpressionType.MultiplyChecked:
+            case ExpressionType.Divide:
+            case ExpressionType.Modulo:
+                return GetArithmeticBinary(binaryType, left, right, method);
 
-                // todo: @incomplete - use similar to GetArithmeticBinary
-                case ExpressionType.Power: return Power(left, right);
-                case ExpressionType.And: return And(left, right);
-                case ExpressionType.AndAlso: return AndAlso(left, right);
-                case ExpressionType.Or: return Or(left, right);
-                case ExpressionType.OrElse: return OrElse(left, right);
-                case ExpressionType.LessThan: return LessThan(left, right);
-                case ExpressionType.LessThanOrEqual: return LessThanOrEqual(left, right);
-                case ExpressionType.GreaterThan: return GreaterThan(left, right);
-                case ExpressionType.GreaterThanOrEqual: return GreaterThanOrEqual(left, right);
+            case ExpressionType.Power:
+            case ExpressionType.And:
+            case ExpressionType.AndAlso:
+            case ExpressionType.Or:
+            case ExpressionType.OrElse:
+                return GetLeftTypedBinary(binaryType, left, right, method); // todo: @incomplete, see GetArithmeticBinary
 
-                case ExpressionType.Equal: return Equal(left, right);
-                case ExpressionType.NotEqual: return NotEqual(left, right);
+            case ExpressionType.LessThan: return LessThan(left, right, liftToNull, method);
+            case ExpressionType.LessThanOrEqual: return LessThanOrEqual(left, right, liftToNull, method);
+            case ExpressionType.GreaterThan: return GreaterThan(left, right, liftToNull, method);
+            case ExpressionType.GreaterThanOrEqual: return GreaterThanOrEqual(left, right, liftToNull, method);
+            case ExpressionType.Equal: return Equal(left, right, liftToNull, method);
+            case ExpressionType.NotEqual: return NotEqual(left, right, liftToNull, method);
 
-                case ExpressionType.ExclusiveOr: return ExclusiveOr(left, right);
-                case ExpressionType.Coalesce: return Coalesce(left, right, conversion);
-                case ExpressionType.ArrayIndex: return ArrayIndex(left, right);
-                case ExpressionType.RightShift: return RightShift(left, right);
-                case ExpressionType.LeftShift: return LeftShift(left, right);
-                case ExpressionType.Assign: return Assign(left, right);
-                case ExpressionType.AddAssign: return AddAssign(left, right);
-                case ExpressionType.AndAssign: return AndAssign(left, right);
-                case ExpressionType.DivideAssign: return DivideAssign(left, right);
-                case ExpressionType.ExclusiveOrAssign: return ExclusiveOrAssign(left, right);
-                case ExpressionType.LeftShiftAssign: return LeftShiftAssign(left, right);
-                case ExpressionType.ModuloAssign: return ModuloAssign(left, right);
-                case ExpressionType.MultiplyAssign: return MultiplyAssign(left, right);
-                case ExpressionType.OrAssign: return OrAssign(left, right);
-                case ExpressionType.PowerAssign: return PowerAssign(left, right);
-                case ExpressionType.RightShiftAssign: return RightShiftAssign(left, right);
-                case ExpressionType.SubtractAssign: return SubtractAssign(left, right);
-                case ExpressionType.AddAssignChecked: return AddAssignChecked(left, right);
-                case ExpressionType.SubtractAssignChecked: return SubtractAssignChecked(left, right);
-                case ExpressionType.MultiplyAssignChecked: return MultiplyAssignChecked(left, right);
-                default: throw new ArgumentException($"Unhandled binary node type: `{binaryType}`");
-            }
+            case ExpressionType.ExclusiveOr: return ExclusiveOr(left, right, method);
+
+            case ExpressionType.Coalesce: return Coalesce(left, right, conversion);
+
+            case ExpressionType.ArrayIndex: return ArrayIndex(left, right, method);
+            case ExpressionType.RightShift: return RightShift(left, right, method);
+            case ExpressionType.LeftShift: return LeftShift(left, right, method);
+
+            case ExpressionType.Assign: return Assign(left, right);
+
+            // todo: @feature NOT_SUPPORTED_EXPRESSION, will be converted to system expression using the MakeBinary
+            case ExpressionType.AddAssign:
+            case ExpressionType.AndAssign:
+            case ExpressionType.DivideAssign:
+            case ExpressionType.ExclusiveOrAssign:
+            case ExpressionType.LeftShiftAssign:
+            case ExpressionType.ModuloAssign:
+            case ExpressionType.MultiplyAssign:
+            case ExpressionType.OrAssign:
+            case ExpressionType.PowerAssign:
+            case ExpressionType.RightShiftAssign:
+            case ExpressionType.SubtractAssign:
+            case ExpressionType.AddAssignChecked:
+            case ExpressionType.SubtractAssignChecked:
+            case ExpressionType.MultiplyAssignChecked:
+                return new OpAssignMethodConversionBinaryExpression(binaryType, left, right, method, conversion, liftToNull);
+
+            default: throw new ArgumentException($"Unhandled binary node type: `{binaryType}`");
         }
+    }
 
-        public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, bool liftToNull, MethodInfo method,
-            LambdaExpression conversion = null)
+    private static BinaryExpression GetUserDefinedBinaryOperatorOrThrow(ExpressionType binaryType, string name, Expression left, Expression right, bool liftToNull) =>
+         GetUserDefinedBinaryOperator(binaryType, name, left, right, liftToNull) ??
+            throw new InvalidOperationException(string.Format(@"The binary operator {0} is not defined for the types '{1}' and '{2}'.", binaryType, left.Type, right.Type));
+
+    private static BinaryExpression GetUserDefinedBinaryOperator(ExpressionType binaryType, string name, Expression left, Expression right, bool liftToNull)
+    {
+        var leftType = left.Type;
+        var rightType = right.Type;
+        var method = GetUserDefinedBinaryOperator(binaryType, leftType, rightType, name);
+        if (method != null)
+            return new MethodBinaryExpression(binaryType, left, right, method.ReturnType, method);
+
+        if (leftType.IsNullable() && rightType.IsNullable())
         {
-            switch (binaryType)
-            {
-                case ExpressionType.Add:
-                case ExpressionType.AddChecked:
-                case ExpressionType.Subtract:
-                case ExpressionType.SubtractChecked:
-                case ExpressionType.Multiply:
-                case ExpressionType.MultiplyChecked:
-                case ExpressionType.Divide:
-                case ExpressionType.Modulo:
-                    return GetArithmeticBinary(binaryType, left, right, method);
-
-                case ExpressionType.Power:
-                case ExpressionType.And:
-                case ExpressionType.AndAlso:
-                case ExpressionType.Or:
-                case ExpressionType.OrElse:
-                    return GetLeftTypedBinary(binaryType, left, right, method); // todo: @incomplete, see GetArithmeticBinary
-
-                case ExpressionType.LessThan: return LessThan(left, right, liftToNull, method);
-                case ExpressionType.LessThanOrEqual: return LessThanOrEqual(left, right, liftToNull, method);
-                case ExpressionType.GreaterThan: return GreaterThan(left, right, liftToNull, method);
-                case ExpressionType.GreaterThanOrEqual: return GreaterThanOrEqual(left, right, liftToNull, method);
-                case ExpressionType.Equal: return Equal(left, right, liftToNull, method);
-                case ExpressionType.NotEqual: return NotEqual(left, right, liftToNull, method);
-
-                case ExpressionType.ExclusiveOr: return ExclusiveOr(left, right, method);
-
-                case ExpressionType.Coalesce: return Coalesce(left, right, conversion);
-
-                case ExpressionType.ArrayIndex: return ArrayIndex(left, right, method);
-                case ExpressionType.RightShift: return RightShift(left, right, method);
-                case ExpressionType.LeftShift: return LeftShift(left, right, method);
-
-                case ExpressionType.Assign: return Assign(left, right);
-
-                // todo: @feature NOT_SUPPORTED_EXPRESSION, will be converted to system expression using the MakeBinary
-                case ExpressionType.AddAssign:
-                case ExpressionType.AndAssign:
-                case ExpressionType.DivideAssign:
-                case ExpressionType.ExclusiveOrAssign:
-                case ExpressionType.LeftShiftAssign:
-                case ExpressionType.ModuloAssign:
-                case ExpressionType.MultiplyAssign:
-                case ExpressionType.OrAssign:
-                case ExpressionType.PowerAssign:
-                case ExpressionType.RightShiftAssign:
-                case ExpressionType.SubtractAssign:
-                case ExpressionType.AddAssignChecked:
-                case ExpressionType.SubtractAssignChecked:
-                case ExpressionType.MultiplyAssignChecked:
-                    return new OpAssignMethodConversionBinaryExpression(binaryType, left, right, method, conversion, liftToNull);
-
-                default: throw new ArgumentException($"Unhandled binary node type: `{binaryType}`");
-            }
-        }
-
-        private static BinaryExpression GetUserDefinedBinaryOperatorOrThrow(ExpressionType binaryType, string name, Expression left, Expression right, bool liftToNull) =>
-             GetUserDefinedBinaryOperator(binaryType, name, left, right, liftToNull) ??
-                throw new InvalidOperationException(string.Format(@"The binary operator {0} is not defined for the types '{1}' and '{2}'.", binaryType, left.Type, right.Type));
-
-        private static BinaryExpression GetUserDefinedBinaryOperator(ExpressionType binaryType, string name, Expression left, Expression right, bool liftToNull)
-        {
-            var leftType = left.Type;
-            var rightType = right.Type;
-            var method = GetUserDefinedBinaryOperator(binaryType, leftType, rightType, name);
-            if (method != null)
-                return new MethodBinaryExpression(binaryType, left, right, method.ReturnType, method);
-
-            if (leftType.IsNullable() && rightType.IsNullable())
-            {
-                var nnLeftType = leftType.GetNonNullableOrSelf();
-                var nnRightType = rightType.GetNonNullableOrSelf();
-                method = GetUserDefinedBinaryOperator(binaryType, nnLeftType, nnRightType, name);
-                if (method != null && method.ReturnType.IsValueType && !method.ReturnType.IsNullable())
-                {
-                    var type = method.ReturnType != typeof(bool) || liftToNull ? method.ReturnType.GetNullable() : typeof(bool);
-                    return new MethodBinaryExpression(binaryType, left, right, type, method);
-                }
-            }
-            return null;
-        }
-
-        private static MethodInfo GetUserDefinedBinaryOperator(ExpressionType binaryType, Type leftType, Type rightType, string name)
-        {
-            var types = new Type[] { leftType, rightType };
-
             var nnLeftType = leftType.GetNonNullableOrSelf();
-            var method = nnLeftType.GetMethod(name, TypeTools.StaticMethods, null, types, null).MatchesArgumentTypes(types);
-            Type nnRightType = null;
-            if (method == null && !leftType.IsEquivalentTo(rightType))
+            var nnRightType = rightType.GetNonNullableOrSelf();
+            method = GetUserDefinedBinaryOperator(binaryType, nnLeftType, nnRightType, name);
+            if (method != null && method.ReturnType.IsValueType && !method.ReturnType.IsNullable())
             {
-                nnRightType = rightType.GetNonNullableOrSelf();
-                method = nnRightType.GetMethod(name, TypeTools.StaticMethods, null, types, null).MatchesArgumentTypes(types);
-            }
-
-            // Is lifting conditional logical operator
-            if (method == null && rightType != nnRightType && leftType != nnLeftType &&
-                (binaryType == ExpressionType.AndAlso | binaryType == ExpressionType.OrElse))
-                method = GetUserDefinedBinaryOperator(binaryType, nnLeftType, nnRightType, name);
-
-            return method;
-        }
-
-        private static BinaryExpression GetMethodBasedBinaryOperator(ExpressionType binaryType, Expression left, Expression right, MethodInfo method, bool liftToNull)
-        {
-            var lType = left.Type;
-            var rType = right.Type;
-            if (method == null)
-            {
-                if (lType == rType && lType.IsNumeric())
-                    return lType.IsNullable() && liftToNull
-                        ? (BinaryExpression)new LiftedToNullBinaryExpression(binaryType, left, right)
-                        : new LeftTypedBinaryExpression(binaryType, left, right);
-
-                throw new NotSupportedException($"The user-defined binary operator is not supported yet for {binaryType} left `{left}` and `{right}`");
-            }
-
-            var ps = method.GetParameters();
-            if (ps.Length != 2)
-                throw new ArgumentException("IncorrectNumberOfMethodCallArguments in " + method, nameof(method));
-
-            var type = method.ReturnType;
-            if (ps[0].IsAssignableFrom(lType) && ps[1].IsAssignableFrom(rType))
-                return new MethodBinaryExpression(binaryType, left, right, type, method);
-
-            // check for lifted call
-            if (lType.IsNullable() && rType.IsNullable() &&
-                ps[0].IsAssignableFrom(lType.GetNonNullable()) && ps[1].IsAssignableFrom(rType.GetNonNullable()) &&
-                type.IsValueType && !type.IsNullable())
-            {
-                type = type != typeof(bool) || liftToNull ? type.GetNullable() : typeof(bool);
+                var type = method.ReturnType != typeof(bool) || liftToNull ? method.ReturnType.GetNullable() : typeof(bool);
                 return new MethodBinaryExpression(binaryType, left, right, type, method);
             }
-
-            throw new InvalidOperationException($"OperandTypesDoNotMatchParameters for {binaryType} and method {method.Name}");
         }
-
-        public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type)
-        {
-            switch (kind)
-            {
-                case GotoExpressionKind.Return:
-                    if (value == null && type == null)
-                        return new ReturnGotoExpression(target);
-                    if (value == null)
-                        return new ReturnTypedGotoExpression(target, type);
-                    if (type == null)
-                        return new ReturnValueGotoExpression(target, value);
-                    return new ReturnTypedValueGotoExpression(target, value, type);
-                case GotoExpressionKind.Break:
-                    if (value == null && type == null)
-                        return new BreakGotoExpression(target);
-                    if (value == null)
-                        return new BreakTypedGotoExpression(target, type);
-                    if (type == null)
-                        return new BreakValueGotoExpression(target, value);
-                    return new BreakTypedValueGotoExpression(target, value, type);
-                case GotoExpressionKind.Continue:
-                    return type == null
-                        ? new ContinueGotoExpression(target)
-                        : (GotoExpression)new ContinueTypedGotoExpression(target, type);
-                case GotoExpressionKind.Goto:
-                default:
-                    if (value == null && type == null)
-                        return new GotoExpression(target);
-                    if (value == null)
-                        return new TypedGotoExpression(target, type);
-                    if (type == null)
-                        return new ValueGotoExpression(target, value);
-                    return new TypedValueGotoExpression(target, value, type);
-            }
-        }
-
-        public static GotoExpression Goto(LabelTarget target) => new GotoExpression(target);
-
-        public static GotoExpression Goto(LabelTarget target, Expression value) =>
-            value == null ? new GotoExpression(target) : new ValueGotoExpression(target, value);
-
-        public static GotoExpression Goto(LabelTarget target, Type type) =>
-            type == null ? new GotoExpression(target) : new TypedGotoExpression(target, type);
-
-        public static GotoExpression Goto(LabelTarget target, Expression value, Type type) =>
-            MakeGoto(GotoExpressionKind.Goto, target, value, type);
-
-        public static GotoExpression Break(LabelTarget target) => new BreakGotoExpression(target);
-
-        public static GotoExpression Break(LabelTarget target, Expression value) =>
-            value == null
-                ? new BreakGotoExpression(target)
-                : (GotoExpression)new BreakValueGotoExpression(target, value);
-
-        public static GotoExpression Break(LabelTarget target, Type type) =>
-            type == null
-                ? new BreakGotoExpression(target)
-                : (GotoExpression)new BreakTypedGotoExpression(target, type);
-
-        public static GotoExpression Break(LabelTarget target, Expression value, Type type) =>
-            MakeGoto(GotoExpressionKind.Break, target, value, type);
-
-        public static GotoExpression Continue(LabelTarget target) =>
-            new ContinueGotoExpression(target);
-
-        public static GotoExpression Continue(LabelTarget target, Type type) =>
-            type == null ? new ContinueGotoExpression(target) : new ContinueTypedGotoExpression(target, type);
-
-        public static GotoExpression Return(LabelTarget target) =>
-            new ReturnGotoExpression(target);
-
-        public static GotoExpression Return(LabelTarget target, Type type) =>
-            type == null
-            ? new ReturnGotoExpression(target)
-            : (GotoExpression)new ReturnTypedGotoExpression(target, type);
-
-        public static GotoExpression Return(LabelTarget target, Expression value) =>
-            value == null
-            ? new ReturnGotoExpression(target)
-            : (GotoExpression)new ReturnValueGotoExpression(target, value);
-
-        public static GotoExpression Return(LabelTarget target, Expression value, Type type) =>
-            MakeGoto(GotoExpressionKind.Return, target, value, type);
-
-        public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, params SwitchCase[] cases) =>
-            new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases);
-
-        public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, IEnumerable<SwitchCase> cases) =>
-            new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray());
-
-        public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
-            comparison == null
-            ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases)
-            : new WithComparisonSwitchExpression(defaultBody.Type, switchValue, defaultBody, cases, comparison);
-
-        public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
-            comparison == null
-            ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray())
-            : new WithComparisonSwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray(), comparison);
-
-        public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
-            comparison == null
-            ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases)
-            : new WithComparisonSwitchExpression(type, switchValue, defaultBody, cases, comparison);
-
-        public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
-            comparison == null
-            ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray())
-            : new WithComparisonSwitchExpression(type, switchValue, defaultBody, cases.AsArray(), comparison);
-
-        public static SwitchExpression Switch(Expression switchValue, params SwitchCase[] cases) =>
-            new SwitchExpression(null, switchValue, null, cases);
-
-        public static SwitchExpression Switch(Expression switchValue, IEnumerable<SwitchCase> cases) =>
-            new SwitchExpression(null, switchValue, null, cases.AsArray());
-
-        public static SwitchCase SwitchCase(Expression body, IEnumerable<Expression> testValues) =>
-            new SwitchCase(body, testValues);
-
-        public static SwitchCase SwitchCase(Expression body, params Expression[] testValues) =>
-            new SwitchCase(body, testValues);
-
-        /// <summary>Creates a BinaryExpression that represents a reference equality comparison.</summary>
-        public static BinaryExpression ReferenceEqual(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.Equal, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a reference inequality comparison.</summary>
-        public static BinaryExpression ReferenceNotEqual(Expression left, Expression right) =>
-            new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
-
-        /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
-        public static BinaryExpression Coalesce(Expression left, Expression right) =>
-            new CoalesceBinaryExpression(left, right, GetCoalesceType(left.Type, right.Type));
-
-        /// <summary>Creates a BinaryExpression that represents a coalescing operation, given a conversion function.</summary>
-        public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) =>
-            conversion == null
-                ? Coalesce(left, right)
-                : new CoalesceConversionBinaryExpression(left, right, conversion);
-
-        private static Type GetCoalesceType(Type left, Type right)
-        {
-            var underlyingLeft = left.IsNullable() ? left.GetNonNullable() : null;
-            if (underlyingLeft != null && right.IsImplicitlyConvertibleTo(underlyingLeft))
-                return underlyingLeft; // note: For conformity with BCL
-
-            if (right.IsImplicitlyConvertibleTo(left))
-                return left;
-            if (left.IsImplicitlyConvertibleTo(right))
-                return right;
-            throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
-        }
-
-        public static SymbolDocumentInfo SymbolDocument(string fileName) =>
-            new SymbolDocumentInfo(fileName);
+        return null;
     }
 
-    internal struct LightAndSysExpr
+    private static MethodInfo GetUserDefinedBinaryOperator(ExpressionType binaryType, Type leftType, Type rightType, string name)
     {
-        public object LightExpr;
-        public object SysExpr;
+        var types = new Type[] { leftType, rightType };
+
+        var nnLeftType = leftType.GetNonNullableOrSelf();
+        var method = nnLeftType.GetMethod(name, TypeTools.StaticMethods, null, types, null).MatchesArgumentTypes(types);
+        Type nnRightType = null;
+        if (method == null && !leftType.IsEquivalentTo(rightType))
+        {
+            nnRightType = rightType.GetNonNullableOrSelf();
+            method = nnRightType.GetMethod(name, TypeTools.StaticMethods, null, types, null).MatchesArgumentTypes(types);
+        }
+
+        // Is lifting conditional logical operator
+        if (method == null && rightType != nnRightType && leftType != nnLeftType &&
+            (binaryType == ExpressionType.AndAlso | binaryType == ExpressionType.OrElse))
+            method = GetUserDefinedBinaryOperator(binaryType, nnLeftType, nnRightType, name);
+
+        return method;
     }
 
-    internal static class TypeTools
+    private static BinaryExpression GetMethodBasedBinaryOperator(ExpressionType binaryType, Expression left, Expression right, MethodInfo method, bool liftToNull)
     {
-        internal static Type GetNonRef(this Type type) => type.IsByRef ? type.GetElementType() : type;
-
-        internal static bool IsAssignableFrom(this ParameterInfo p, Type argType)
+        var lType = left.Type;
+        var rType = right.Type;
+        if (method == null)
         {
-            var pt = p.ParameterType.GetNonRef();
-            return pt == argType || pt.IsAssignableFrom(argType);
+            if (lType == rType && lType.IsNumeric())
+                return lType.IsNullable() && liftToNull
+                    ? (BinaryExpression)new LiftedToNullBinaryExpression(binaryType, left, right)
+                    : new LeftTypedBinaryExpression(binaryType, left, right);
+
+            throw new NotSupportedException($"The user-defined binary operator is not supported yet for {binaryType} left `{left}` and `{right}`");
         }
 
-        public static Type GetNonNullable(this Type type) => type.GetGenericArguments()[0];
+        var ps = method.GetParameters();
+        if (ps.Length != 2)
+            throw new ArgumentException("IncorrectNumberOfMethodCallArguments in " + method, nameof(method));
 
-        public static Type GetNonNullableOrSelf(this Type type) => type.IsNullable() ? type.GetGenericArguments()[0] : type;
+        var type = method.ReturnType;
+        if (ps[0].IsAssignableFrom(lType) && ps[1].IsAssignableFrom(rType))
+            return new MethodBinaryExpression(binaryType, left, right, type, method);
 
-        public static Type GetNullable(this Type type) => typeof(Nullable<>).MakeGenericType(type);
-
-        public static bool IsArithmetic(this Type type)
+        // check for lifted call
+        if (lType.IsNullable() && rType.IsNullable() &&
+            ps[0].IsAssignableFrom(lType.GetNonNullable()) && ps[1].IsAssignableFrom(rType.GetNonNullable()) &&
+            type.IsValueType && !type.IsNullable())
         {
-            type = type.GetNonNullableOrSelf();
-            if (!type.IsEnum)
-                switch (Type.GetTypeCode(type))
-                {
-                    case TypeCode.Int16:
-                    case TypeCode.Int32:
-                    case TypeCode.Int64:
-                    case TypeCode.Double:
-                    case TypeCode.Single:
-                    case TypeCode.UInt16:
-                    case TypeCode.UInt32:
-                    case TypeCode.UInt64:
-                        return true;
-                }
-            return false;
+            type = type != typeof(bool) || liftToNull ? type.GetNullable() : typeof(bool);
+            return new MethodBinaryExpression(binaryType, left, right, type, method);
         }
 
-        public static bool IsNumeric(this Type type)
+        throw new InvalidOperationException($"OperandTypesDoNotMatchParameters for {binaryType} and method {method.Name}");
+    }
+
+    public static GotoExpression MakeGoto(GotoExpressionKind kind, LabelTarget target, Expression value, Type type)
+    {
+        switch (kind)
         {
-            type = type.GetNonNullableOrSelf();
-            if (!type.IsEnum)
-                switch (Type.GetTypeCode(type))
-                {
-                    case TypeCode.Char:
-                    case TypeCode.SByte:
-                    case TypeCode.Byte:
-                    case TypeCode.Int16:
-                    case TypeCode.Int32:
-                    case TypeCode.Int64:
-                    case TypeCode.Double:
-                    case TypeCode.Single:
-                    case TypeCode.UInt16:
-                    case TypeCode.UInt32:
-                    case TypeCode.UInt64:
-                        return true;
-                }
-            return false;
+            case GotoExpressionKind.Return:
+                if (value == null && type == null)
+                    return new ReturnGotoExpression(target);
+                if (value == null)
+                    return new ReturnTypedGotoExpression(target, type);
+                if (type == null)
+                    return new ReturnValueGotoExpression(target, value);
+                return new ReturnTypedValueGotoExpression(target, value, type);
+            case GotoExpressionKind.Break:
+                if (value == null && type == null)
+                    return new BreakGotoExpression(target);
+                if (value == null)
+                    return new BreakTypedGotoExpression(target, type);
+                if (type == null)
+                    return new BreakValueGotoExpression(target, value);
+                return new BreakTypedValueGotoExpression(target, value, type);
+            case GotoExpressionKind.Continue:
+                return type == null
+                    ? new ContinueGotoExpression(target)
+                    : (GotoExpression)new ContinueTypedGotoExpression(target, type);
+            case GotoExpressionKind.Goto:
+            default:
+                if (value == null && type == null)
+                    return new GotoExpression(target);
+                if (value == null)
+                    return new TypedGotoExpression(target, type);
+                if (type == null)
+                    return new ValueGotoExpression(target, value);
+                return new TypedValueGotoExpression(target, value, type);
         }
+    }
 
-        internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
-            source.IsValueType &&
-            (target == typeof(object) || target == typeof(ValueType)) ||
-             source.IsEnum && target == typeof(Enum);
+    public static GotoExpression Goto(LabelTarget target) => new GotoExpression(target);
 
-        private static bool IsImplicitlyNullableConvertibleTo(Type source, Type target) =>
-            target.IsNullable() && IsImplicitlyConvertibleTo(source.GetNonNullableOrSelf(), target.GetNonNullable());
+    public static GotoExpression Goto(LabelTarget target, Expression value) =>
+        value == null ? new GotoExpression(target) : new ValueGotoExpression(target, value);
 
-        public static bool IsImplicitlyConvertibleTo(this Type source, Type target) =>
-            source == target
-            || IsImplicitlyNumericConvertibleTo(source, target)
-            || target.IsAssignableFrom(source)
-            || IsImplicitlyBoxingConvertibleTo(source, target)
-            || IsImplicitlyNullableConvertibleTo(source, target);
+    public static GotoExpression Goto(LabelTarget target, Type type) =>
+        type == null ? new GotoExpression(target) : new TypedGotoExpression(target, type);
 
-        internal static PropertyInfo FindProperty(this Type type, string propertyName)
-        {
-            var properties = type.GetTypeInfo().DeclaredProperties.AsArray();
-            for (var i = 0; i < properties.Length; i++)
-                if (properties[i].Name == propertyName)
-                    return properties[i];
+    public static GotoExpression Goto(LabelTarget target, Expression value, Type type) =>
+        MakeGoto(GotoExpressionKind.Goto, target, value, type);
 
-            return type.GetTypeInfo().BaseType?.FindProperty(propertyName);
-        }
+    public static GotoExpression Break(LabelTarget target) => new BreakGotoExpression(target);
 
-        internal static FieldInfo FindField(this Type type, string fieldName)
-        {
-            var fields = type.GetTypeInfo().DeclaredFields.AsArray();
-            for (var i = 0; i < fields.Length; i++)
-                if (fields[i].Name == fieldName)
-                    return fields[i];
+    public static GotoExpression Break(LabelTarget target, Expression value) =>
+        value == null
+            ? new BreakGotoExpression(target)
+            : (GotoExpression)new BreakValueGotoExpression(target, value);
 
-            return type.GetTypeInfo().BaseType?.FindField(fieldName);
-        }
+    public static GotoExpression Break(LabelTarget target, Type type) =>
+        type == null
+            ? new BreakGotoExpression(target)
+            : (GotoExpression)new BreakTypedGotoExpression(target, type);
 
-        internal const BindingFlags InstanceMethods = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-        internal const BindingFlags StaticMethods = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+    public static GotoExpression Break(LabelTarget target, Expression value, Type type) =>
+        MakeGoto(GotoExpressionKind.Break, target, value, type);
 
-        internal static MethodInfo MatchesArgumentTypes(this MethodInfo m, Type[] argTypes)
-        {
-            if (m == null)
-                return null;
+    public static GotoExpression Continue(LabelTarget target) =>
+        new ContinueGotoExpression(target);
 
-            var ps = m.GetParameters();
-            if (ps.Length != argTypes.Length)
-                return null;
+    public static GotoExpression Continue(LabelTarget target, Type type) =>
+        type == null ? new ContinueGotoExpression(target) : new ContinueTypedGotoExpression(target, type);
 
-            for (int i = 0; i < ps.Length; i++)
+    public static GotoExpression Return(LabelTarget target) =>
+        new ReturnGotoExpression(target);
+
+    public static GotoExpression Return(LabelTarget target, Type type) =>
+        type == null
+        ? new ReturnGotoExpression(target)
+        : (GotoExpression)new ReturnTypedGotoExpression(target, type);
+
+    public static GotoExpression Return(LabelTarget target, Expression value) =>
+        value == null
+        ? new ReturnGotoExpression(target)
+        : (GotoExpression)new ReturnValueGotoExpression(target, value);
+
+    public static GotoExpression Return(LabelTarget target, Expression value, Type type) =>
+        MakeGoto(GotoExpressionKind.Return, target, value, type);
+
+    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, params SwitchCase[] cases) =>
+        new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases);
+
+    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, IEnumerable<SwitchCase> cases) =>
+        new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray());
+
+    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
+        comparison == null
+        ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases)
+        : new WithComparisonSwitchExpression(defaultBody.Type, switchValue, defaultBody, cases, comparison);
+
+    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
+        comparison == null
+        ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray())
+        : new WithComparisonSwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray(), comparison);
+
+    public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
+        comparison == null
+        ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases)
+        : new WithComparisonSwitchExpression(type, switchValue, defaultBody, cases, comparison);
+
+    public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
+        comparison == null
+        ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray())
+        : new WithComparisonSwitchExpression(type, switchValue, defaultBody, cases.AsArray(), comparison);
+
+    public static SwitchExpression Switch(Expression switchValue, params SwitchCase[] cases) =>
+        new SwitchExpression(null, switchValue, null, cases);
+
+    public static SwitchExpression Switch(Expression switchValue, IEnumerable<SwitchCase> cases) =>
+        new SwitchExpression(null, switchValue, null, cases.AsArray());
+
+    public static SwitchCase SwitchCase(Expression body, IEnumerable<Expression> testValues) =>
+        new SwitchCase(body, testValues);
+
+    public static SwitchCase SwitchCase(Expression body, params Expression[] testValues) =>
+        new SwitchCase(body, testValues);
+
+    /// <summary>Creates a BinaryExpression that represents a reference equality comparison.</summary>
+    public static BinaryExpression ReferenceEqual(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.Equal, left, right);
+
+    /// <summary>Creates a BinaryExpression that represents a reference inequality comparison.</summary>
+    public static BinaryExpression ReferenceNotEqual(Expression left, Expression right) =>
+        new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
+
+    /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
+    public static BinaryExpression Coalesce(Expression left, Expression right) =>
+        new CoalesceBinaryExpression(left, right, GetCoalesceType(left.Type, right.Type));
+
+    /// <summary>Creates a BinaryExpression that represents a coalescing operation, given a conversion function.</summary>
+    public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) =>
+        conversion == null
+            ? Coalesce(left, right)
+            : new CoalesceConversionBinaryExpression(left, right, conversion);
+
+    private static Type GetCoalesceType(Type left, Type right)
+    {
+        var underlyingLeft = left.IsNullable() ? left.GetNonNullable() : null;
+        if (underlyingLeft != null && right.IsImplicitlyConvertibleTo(underlyingLeft))
+            return underlyingLeft; // note: For conformity with BCL
+
+        if (right.IsImplicitlyConvertibleTo(left))
+            return left;
+        if (left.IsImplicitlyConvertibleTo(right))
+            return right;
+        throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
+    }
+
+    public static SymbolDocumentInfo SymbolDocument(string fileName) =>
+        new SymbolDocumentInfo(fileName);
+}
+
+internal struct LightAndSysExpr
+{
+    public object LightExpr;
+    public object SysExpr;
+}
+
+internal static class TypeTools
+{
+    internal static Type GetNonRef(this Type type) => type.IsByRef ? type.GetElementType() : type;
+
+    internal static bool IsAssignableFrom(this ParameterInfo p, Type argType)
+    {
+        var pt = p.ParameterType.GetNonRef();
+        return pt == argType || pt.IsAssignableFrom(argType);
+    }
+
+    public static Type GetNonNullable(this Type type) => type.GetGenericArguments()[0];
+
+    public static Type GetNonNullableOrSelf(this Type type) => type.IsNullable() ? type.GetGenericArguments()[0] : type;
+
+    public static Type GetNullable(this Type type) => typeof(Nullable<>).MakeGenericType(type);
+
+    public static bool IsArithmetic(this Type type)
+    {
+        type = type.GetNonNullableOrSelf();
+        if (!type.IsEnum)
+            switch (Type.GetTypeCode(type))
             {
-                var pType = ps[i].ParameterType;
-                var aType = argTypes[i];
-                if (pType != aType && !pType.IsAssignableFrom(aType))
-                    return null;
-            }
-
-            return m;
-        }
-
-        internal static MethodInfo FindMethodOrThrow(this Type type,
-            string methodName, Type[] typeArgs, IReadOnlyList<Expression> argExprs, BindingFlags flags)
-        {
-            typeArgs = typeArgs ?? Type.EmptyTypes;
-            argExprs = argExprs ?? Tools.Empty<Expression>();
-            var typeArgCount = typeArgs.Length;
-            var argExprCount = argExprs.Count;
-            var methods = type.GetMethods(flags);
-
-            MethodInfo bestMatch = null;
-            var bestScore = 0;
-            if (typeArgCount > 0)
-            {
-                for (var i = 0; i < methods.Length; i++)
-                {
-                    var m = methods[i];
-                    if (!m.IsGenericMethod || m.Name != methodName)
-                        continue;
-
-                    var mTypeArgs = m.GetGenericArguments();
-                    if (mTypeArgs.Length != typeArgCount)
-                        continue;
-
-                    if (m.IsGenericMethodDefinition)
-                        m = m.MakeGenericMethod(typeArgs);
-
-                    var mPars = m.GetParameters();
-                    if (mPars.Length != argExprCount)
-                        continue;
-
-                    if (argExprs.Count == 0)
-                    {
-                        if (m.IsPublic)
-                            return m;
-                        if (bestMatch != null)
-                            return bestMatch;
-                        bestMatch = m; // proceed search
-                    }
-                    else
-                    {
-                        var score = GetScoreOfExpressionsAssignableToParams(argExprs, mPars);
-                        if (score == 0)
-                            continue;
-                        if (score == bestScore)
-                        {
-                            if (m.IsPublic == bestMatch.IsPublic) // prefer public over non-public
-                                throw new InvalidOperationException(
-                                    $"More than one generic method '{m.Name}' with {typeArgCount} type parameter(s) in the type '{type.ToCode()}' is compatible with the supplied arguments.");
-                            if (!m.IsPublic)
-                                continue; // means that `bestMatch` is public so keep it an continue
-                        }
-                        bestMatch = m;
-                        bestScore = score;
-                    }
-                }
-            }
-            else
-            {
-                for (var i = 0; i < methods.Length; i++)
-                {
-                    var m = methods[i];
-                    if (m.IsGenericMethod || m.Name != methodName)
-                        continue;
-
-                    var mPars = m.GetParameters();
-                    if (mPars.Length != argExprCount)
-                        continue;
-
-                    if (argExprs.Count == 0)
-                    {
-                        if (m.IsPublic)
-                            return m;
-                        if (bestMatch != null)
-                            return bestMatch;
-                        bestMatch = m; // proceed search
-                    }
-                    else
-                    {
-                        var score = GetScoreOfExpressionsAssignableToParams(argExprs, mPars);
-                        if (score == 0)
-                            continue;
-                        if (score == bestScore)
-                        {
-                            if (m.IsPublic == bestMatch.IsPublic) // prefer public over non-public 
-                                throw new InvalidOperationException($"More than one non-generic method '{m.Name}' in the type '{type.ToCode()}' is compatible with the supplied arguments.");
-                            if (!m.IsPublic)
-                                continue;
-                        }
-                        bestMatch = m;
-                        bestScore = score;
-                    }
-                }
-            }
-
-            if (bestMatch == null)
-                throw new InvalidOperationException(typeArgCount == 0
-                    ? $"The non-generic method '{methodName}' is not found in the type '{type.ToCode()}'"
-                    : $"The generic method '{methodName}' with {typeArgCount} type parameter(s) is not found in the type '{type.ToCode()}'");
-
-            return bestMatch;
-        }
-
-        // 0 - not assignable
-        // 3 per parameter - same type
-        // 2 per parameter - base type
-        // 1 per parameter - object type
-        private static int GetScoreOfExpressionsAssignableToParams(IReadOnlyList<Expression> argExprs, ParameterInfo[] pars)
-        {
-            var score = 0;
-            for (var i = 0; i < pars.Length; i++)
-            {
-                var pt = pars[i].ParameterType;
-                if (pt.IsByRef)
-                    pt = pt.GetElementType();
-
-                if (pt == argExprs[i].Type)
-                {
-                    score += 3;
-                    continue;
-                }
-
-                if (pt == typeof(object))
-                {
-                    score += 1;
-                    continue;
-                }
-
-
-                if (pt.IsAssignableFrom(argExprs[i].Type))
-                {
-                    score += 2;
-                    continue;
-                }
-
-                return 0;
-            }
-
-            return score;
-        }
-
-        [MethodImpl((MethodImplOptions)256)]
-        public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs)
-        {
-            if (xs is IReadOnlyList<T> list)
-                return list;
-            return xs == null ? Tools.Empty<T>() : new List<T>(xs);
-        }
-
-        internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
-        {
-            var s = Type.GetTypeCode(source);
-            var t = Type.GetTypeCode(target);
-
-            switch (s)
-            {
-                case TypeCode.SByte:
-                    switch (t)
-                    {
-                        case TypeCode.Int16:
-                        case TypeCode.Int32:
-                        case TypeCode.Int64:
-                        case TypeCode.Single:
-                        case TypeCode.Double:
-                        case TypeCode.Decimal:
-                            return true;
-                    }
-                    break;
-                case TypeCode.Byte:
-                    switch (t)
-                    {
-                        case TypeCode.Int16:
-                        case TypeCode.UInt16:
-                        case TypeCode.Int32:
-                        case TypeCode.UInt32:
-                        case TypeCode.Int64:
-                        case TypeCode.UInt64:
-                        case TypeCode.Single:
-                        case TypeCode.Double:
-                        case TypeCode.Decimal:
-                            return true;
-                    }
-                    break;
                 case TypeCode.Int16:
-                    switch (t)
-                    {
-                        case TypeCode.Int32:
-                        case TypeCode.Int64:
-                        case TypeCode.Single:
-                        case TypeCode.Double:
-                        case TypeCode.Decimal:
-                            return true;
-                    }
-                    break;
-                case TypeCode.UInt16:
-                    switch (t)
-                    {
-                        case TypeCode.Int32:
-                        case TypeCode.UInt32:
-                        case TypeCode.Int64:
-                        case TypeCode.UInt64:
-                        case TypeCode.Single:
-                        case TypeCode.Double:
-                        case TypeCode.Decimal:
-                            return true;
-                    }
-                    break;
                 case TypeCode.Int32:
-                    switch (t)
-                    {
-                        case TypeCode.Int64:
-                        case TypeCode.Single:
-                        case TypeCode.Double:
-                        case TypeCode.Decimal:
-                            return true;
-                    }
-                    break;
-                case TypeCode.UInt32:
-                    switch (t)
-                    {
-                        case TypeCode.Int64:
-                        case TypeCode.UInt64:
-                        case TypeCode.Single:
-                        case TypeCode.Double:
-                        case TypeCode.Decimal:
-                            return true;
-                    }
-                    break;
                 case TypeCode.Int64:
-                case TypeCode.UInt64:
-                    switch (t)
-                    {
-                        case TypeCode.Single:
-                        case TypeCode.Double:
-                        case TypeCode.Decimal:
-                            return true;
-                    }
-                    break;
-                case TypeCode.Char:
-                    switch (t)
-                    {
-                        case TypeCode.UInt16:
-                        case TypeCode.Int32:
-                        case TypeCode.UInt32:
-                        case TypeCode.Int64:
-                        case TypeCode.UInt64:
-                        case TypeCode.Single:
-                        case TypeCode.Double:
-                        case TypeCode.Decimal:
-                            return true;
-                    }
-                    break;
+                case TypeCode.Double:
                 case TypeCode.Single:
-                    return t == TypeCode.Double;
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                    return true;
             }
-            return false;
-        }
+        return false;
     }
 
-    public abstract class UnaryExpression : Expression
+    public static bool IsNumeric(this Type type)
     {
-        public override Type Type => Operand.Type;
-        public readonly Expression Operand;
-        public virtual MethodInfo Method => null;
-        public UnaryExpression(Expression operand) => Operand = operand;
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitUnary(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            switch (NodeType)
+        type = type.GetNonNullableOrSelf();
+        if (!type.IsEnum)
+            switch (Type.GetTypeCode(type))
             {
-                case ExpressionType.ArrayLength: return SysExpr.ArrayLength(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.Convert: return SysExpr.Convert(Operand.ToExpression(ref exprsConverted), Type, Method);
-                case ExpressionType.ConvertChecked: return SysExpr.ConvertChecked(Operand.ToExpression(ref exprsConverted), Type, Method);
-                case ExpressionType.Decrement: return SysExpr.Decrement(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.Increment: return SysExpr.Increment(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.IsFalse: return SysExpr.IsFalse(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.IsTrue: return SysExpr.IsTrue(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.Negate: return SysExpr.Negate(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.NegateChecked: return SysExpr.NegateChecked(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.OnesComplement: return SysExpr.OnesComplement(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.PostDecrementAssign: return SysExpr.PostDecrementAssign(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.PostIncrementAssign: return SysExpr.PostIncrementAssign(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.PreDecrementAssign: return SysExpr.PreDecrementAssign(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.PreIncrementAssign: return SysExpr.PreIncrementAssign(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.Quote: return SysExpr.Quote(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.UnaryPlus: return SysExpr.UnaryPlus(Operand.ToExpression(ref exprsConverted));
-                case ExpressionType.Unbox: return SysExpr.Unbox(Operand.ToExpression(ref exprsConverted), Type);
-                case ExpressionType.Throw: return SysExpr.Throw(Operand?.ToExpression(ref exprsConverted), Type);
-                case ExpressionType.TypeAs: return SysExpr.TypeAs(Operand.ToExpression(ref exprsConverted), Type);
-                case ExpressionType.Not: return SysExpr.Not(Operand.ToExpression(ref exprsConverted));
-                default:
-                    throw new NotSupportedException("Cannot convert Expression to Expression of type " + NodeType);
+                case TypeCode.Char:
+                case TypeCode.SByte:
+                case TypeCode.Byte:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.Int64:
+                case TypeCode.Double:
+                case TypeCode.Single:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                    return true;
             }
-        }
+        return false;
     }
 
-    public sealed class NodeTypedUnaryExpression : UnaryExpression
+    internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
+        source.IsValueType &&
+        (target == typeof(object) || target == typeof(ValueType)) ||
+         source.IsEnum && target == typeof(Enum);
+
+    private static bool IsImplicitlyNullableConvertibleTo(Type source, Type target) =>
+        target.IsNullable() && IsImplicitlyConvertibleTo(source.GetNonNullableOrSelf(), target.GetNonNullable());
+
+    public static bool IsImplicitlyConvertibleTo(this Type source, Type target) =>
+        source == target
+        || IsImplicitlyNumericConvertibleTo(source, target)
+        || target.IsAssignableFrom(source)
+        || IsImplicitlyBoxingConvertibleTo(source, target)
+        || IsImplicitlyNullableConvertibleTo(source, target);
+
+    internal static PropertyInfo FindProperty(this Type type, string propertyName)
     {
-        public override ExpressionType NodeType { get; }
-        public NodeTypedUnaryExpression(ExpressionType nodeType, Expression operand) : base(operand) =>
-            NodeType = nodeType;
+        var properties = type.GetTypeInfo().DeclaredProperties.AsArray();
+        for (var i = 0; i < properties.Length; i++)
+            if (properties[i].Name == propertyName)
+                return properties[i];
+
+        return type.GetTypeInfo().BaseType?.FindProperty(propertyName);
     }
 
-    public sealed class NotBooleanUnaryExpression : UnaryExpression
+    internal static FieldInfo FindField(this Type type, string fieldName)
     {
-        public override ExpressionType NodeType => ExpressionType.Not;
-        public override Type Type => typeof(bool);
-        public NotBooleanUnaryExpression(Expression operand) : base(operand) { }
+        var fields = type.GetTypeInfo().DeclaredFields.AsArray();
+        for (var i = 0; i < fields.Length; i++)
+            if (fields[i].Name == fieldName)
+                return fields[i];
+
+        return type.GetTypeInfo().BaseType?.FindField(fieldName);
     }
 
-    public sealed class ThrowUnaryExpression : UnaryExpression
-    {
-        public override ExpressionType NodeType => ExpressionType.Throw;
-        public override Type Type => typeof(void);
-        public ThrowUnaryExpression(Expression operand) : base(operand) { }
-    }
+    internal const BindingFlags InstanceMethods = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+    internal const BindingFlags StaticMethods = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
 
-    public class TypedUnaryExpression : UnaryExpression
+    internal static MethodInfo MatchesArgumentTypes(this MethodInfo m, Type[] argTypes)
     {
-        public override ExpressionType NodeType { get; }
-        public sealed override Type Type { get; }
-        public TypedUnaryExpression(ExpressionType nodeType, Expression operand, Type type) : base(operand)
+        if (m == null)
+            return null;
+
+        var ps = m.GetParameters();
+        if (ps.Length != argTypes.Length)
+            return null;
+
+        for (int i = 0; i < ps.Length; i++)
         {
-            NodeType = nodeType;
-            Type = type;
-        }
-    }
-
-    public sealed class TypedUnaryExpression<T> : UnaryExpression
-    {
-        public override ExpressionType NodeType { get; }
-        public override Type Type => typeof(T);
-        public TypedUnaryExpression(ExpressionType nodeType, Expression operand) : base(operand) =>
-            NodeType = nodeType;
-    }
-
-    public sealed class ConvertUnaryExpression : UnaryExpression
-    {
-        public override ExpressionType NodeType => ExpressionType.Convert;
-        public override Type Type { get; }
-        public ConvertUnaryExpression(Expression operand, Type type) : base(operand) => Type = type;
-    }
-
-    public sealed class TypedConvertUnaryExpression<T> : UnaryExpression
-    {
-        public override ExpressionType NodeType => ExpressionType.Convert;
-        public override Type Type => typeof(T);
-        public TypedConvertUnaryExpression(Expression operand) : base(operand) { }
-    }
-
-    public sealed class ConvertWithMethodUnaryExpression : TypedUnaryExpression
-    {
-        public override MethodInfo Method { get; }
-        public ConvertWithMethodUnaryExpression(ExpressionType nodeType, Expression operand, Type type, MethodInfo method)
-            : base(nodeType, operand, type) =>
-            Method = method;
-    }
-
-    public class ConvertDelegateIntrinsicExpression : UnaryExpression
-    {
-        public sealed override ExpressionType NodeType => ExpressionType.Convert;
-        public override Type Type { get; }
-        internal ConvertDelegateIntrinsicExpression(Expression operand, Type targetDelegateType) : base(operand) =>
-            Type = targetDelegateType;
-
-        public override bool IsIntrinsic => true;
-
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-            ExpressionCompiler.TryCollectInfo(ref closure, Operand, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-
-        public override bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
-        {
-            if (!EmittingVisitor.TryEmit(Operand, paramExprs, il, ref closure, flags, parent, byRefIndex))
-                return false;
-            il.Demit(OpCodes.Ldftn, Operand.Type.FindDelegateInvokeMethod());
-            il.Demit(OpCodes.Newobj, Type.GetConstructors()[0]);
-            return true;
+            var pType = ps[i].ParameterType;
+            var aType = argTypes[i];
+            if (pType != aType && !pType.IsAssignableFrom(aType))
+                return null;
         }
 
-        public override bool IsCustomToCSharpString => true;
-        public override StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
-            int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
-            CodePrinter.ObjectToCode notRecognizedToCode = null)
-        {
-            var encloseInParens = enclosedIn != ToCSharpPrinter.EnclosedIn.LambdaBody && enclosedIn != ToCSharpPrinter.EnclosedIn.Return;
-            sb = encloseInParens ? sb.Append("((") : sb.Append('(');
-
-            sb.Append(Type.ToCode(stripNamespace, printType)).Append(')');
-            sb = Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
-
-            sb.Append(".Invoke"); // Hey, this is the CUSTOM part of the output.
-
-            return encloseInParens ? sb.Append(')') : sb;
-        }
+        return m;
     }
 
-    public class ConvertIntrinsicExpression<T> : UnaryExpression where T : class
+    internal static MethodInfo FindMethodOrThrow(this Type type,
+        string methodName, Type[] typeArgs, IReadOnlyList<Expression> argExprs, BindingFlags flags)
     {
-        public sealed override ExpressionType NodeType => ExpressionType.Convert;
-        public override Type Type => typeof(T);
-        internal ConvertIntrinsicExpression(Expression operand) : base(operand) { }
+        typeArgs = typeArgs ?? Type.EmptyTypes;
+        argExprs = argExprs ?? Tools.Empty<Expression>();
+        var typeArgCount = typeArgs.Length;
+        var argExprCount = argExprs.Count;
+        var methods = type.GetMethods(flags);
 
-        public override bool IsIntrinsic => true;
-
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-            ExpressionCompiler.TryCollectInfo(ref closure, Operand, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-
-        public override bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+        MethodInfo bestMatch = null;
+        var bestScore = 0;
+        if (typeArgCount > 0)
         {
-            if (!EmittingVisitor.TryEmit(Operand, paramExprs, il, ref closure, flags, parent, byRefIndex))
-                return false;
-            if (Type == typeof(object))
+            for (var i = 0; i < methods.Length; i++)
             {
-                var operandType = Operand.Type;
-                if (operandType.IsValueType)
-                    il.Demit(OpCodes.Box, operandType);
-            }
-#if NETFRAMEWORK
-            else
-                // The cast is required only for Full CLR, e.g.
-                // .NET Core does not seem to care about verifiability and it's faster without the explicit cast
-                il.Demit(OpCodes.Castclass, Type);
-#endif
-            return true;
-        }
-    }
+                var m = methods[i];
+                if (!m.IsGenericMethod || m.Name != methodName)
+                    continue;
 
-    public sealed class ConvertIntrinsicExpression : ConvertIntrinsicExpression<object>
-    {
-        public override Type Type { get; }
-        internal ConvertIntrinsicExpression(Expression operand, Type type) : base(operand) => Type = type;
-    }
+                var mTypeArgs = m.GetGenericArguments();
+                if (mTypeArgs.Length != typeArgCount)
+                    continue;
 
-    public abstract class BinaryExpression : Expression
-    {
-        public virtual MethodInfo Method => null; //todo: @feature - not supported yet
+                if (m.IsGenericMethodDefinition)
+                    m = m.MakeGenericMethod(typeArgs);
 
-        public virtual LambdaExpression Conversion => null;
+                var mPars = m.GetParameters();
+                if (mPars.Length != argExprCount)
+                    continue;
 
-        public bool IsLifted =>
-            NodeType != ExpressionType.Coalesce && NodeType != ExpressionType.Assign &&
-            Left.Type.IsNullable() &&
-            (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(Left.Type));
-
-        /// <summary>Gets a value that indicates whether the expression tree node represents a lifted call to an operator whose return type is lifted to a nullable type.</summary>
-        public bool IsLiftedToNull => IsLifted && Type.IsNullable();
-
-        public readonly Expression Left, Right;
-        protected BinaryExpression(Expression left, Expression right)
-        {
-            Left = left;
-            Right = right;
-        }
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBinary(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-    }
-
-    public sealed class MethodBinaryExpression : BinaryExpression
-    {
-        public override ExpressionType NodeType { get; }
-        public override Type Type { get; }
-        public override MethodInfo Method { get; }
-        public MethodBinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type, MethodInfo method) : base(left, right)
-        {
-            NodeType = nodeType;
-            Type = type;
-            Method = method;
-        }
-    }
-
-    /*
-        ExpressionType.Equal
-        ExpressionType.NotEqual
-        ExpressionType.GreaterThan
-        ExpressionType.GreaterThanOrEqual
-        ExpressionType.LessThan
-        ExpressionType.LessThanOrEqual
-        ExpressionType.And
-        ExpressionType.AndAlso
-        ExpressionType.OrElse
-
-        Excluded: ExpressionType.Or - because it should return the Left.Type for the bitwise operations
-    */
-    internal sealed class LogicalBinaryExpression : BinaryExpression
-    {
-        public override ExpressionType NodeType { get; }
-        public override Type Type => typeof(bool);
-        internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
-            NodeType = nodeType;
-
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            if (NodeType == ExpressionType.Equal ||
-                NodeType == ExpressionType.NotEqual)
-            {
-                var left = Left.ToExpression(ref exprsConverted);
-                var right = Right.ToExpression(ref exprsConverted);
-                if (left.Type.GetTypeInfo().IsPrimitive)
+                if (argExprs.Count == 0)
                 {
-                    left = TryConvertSysExprToInt(left);
-                    right = TryConvertSysExprToInt(right);
+                    if (m.IsPublic)
+                        return m;
+                    if (bestMatch != null)
+                        return bestMatch;
+                    bestMatch = m; // proceed search
                 }
-                return SysExpr.MakeBinary(NodeType, left, right);
+                else
+                {
+                    var score = GetScoreOfExpressionsAssignableToParams(argExprs, mPars);
+                    if (score == 0)
+                        continue;
+                    if (score == bestScore)
+                    {
+                        if (m.IsPublic == bestMatch.IsPublic) // prefer public over non-public
+                            throw new InvalidOperationException(
+                                $"More than one generic method '{m.Name}' with {typeArgCount} type parameter(s) in the type '{type.ToCode()}' is compatible with the supplied arguments.");
+                        if (!m.IsPublic)
+                            continue; // means that `bestMatch` is public so keep it an continue
+                    }
+                    bestMatch = m;
+                    bestScore = score;
+                }
             }
-            return base.CreateSysExpression(ref exprsConverted);
         }
-
-        private static SysExpr TryConvertSysExprToInt(SysExpr e)
+        else
         {
-            var t = e.Type;
-            if (t == typeof(byte) ||
-                t == typeof(sbyte) ||
-                t == typeof(short) ||
-                t == typeof(ushort))
-                return SysExpr.Convert(e, typeof(int));
-            return e;
-        }
-    }
-
-    internal sealed class LeftTypedBinaryExpression : BinaryExpression
-    {
-        public override ExpressionType NodeType { get; }
-        public override Type Type => Left.Type;
-        internal LeftTypedBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
-            NodeType = nodeType;
-    }
-
-    internal sealed class LiftedToNullBinaryExpression : BinaryExpression
-    {
-        public override ExpressionType NodeType { get; }
-        public override Type Type => typeof(bool?);
-        internal LiftedToNullBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), true, null);
-    }
-
-    // todo: @perf optimize (split) for the left or right target type
-    internal class CoalesceBinaryExpression : BinaryExpression
-    {
-        public sealed override ExpressionType NodeType => ExpressionType.Coalesce;
-        public override Type Type { get; }
-        internal CoalesceBinaryExpression(Expression left, Expression right, Type type) : base(left, right) =>
-            Type = type;
-
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Coalesce(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
-    }
-
-    internal sealed class CoalesceConversionBinaryExpression : CoalesceBinaryExpression
-    {
-        public override Type Type => Right.Type;
-        public override LambdaExpression Conversion { get; }
-
-        internal CoalesceConversionBinaryExpression(Expression left, Expression right, LambdaExpression conversion)
-            : base(left, right, right.Type) =>
-            Conversion = conversion;
-
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Coalesce(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), Conversion.ToLambdaExpression());
-    }
-
-    public sealed class ArrayIndexExpression : BinaryExpression
-    {
-        public override ExpressionType NodeType => ExpressionType.ArrayIndex;
-        public override Type Type => Left.Type.GetElementType();
-        internal ArrayIndexExpression(Expression left, Expression right) : base(left, right) { }
-    }
-
-    public class AssignBinaryExpression : BinaryExpression
-    {
-        public override ExpressionType NodeType => ExpressionType.Assign;
-        public sealed override Type Type => Left.Type;
-        internal AssignBinaryExpression(Expression left, Expression right) : base(left, right) { }
-    }
-
-    public class OpAssignBinaryExpression : AssignBinaryExpression
-    {
-        public sealed override ExpressionType NodeType { get; }
-        internal OpAssignBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
-    }
-
-    public sealed class OpAssignMethodConversionBinaryExpression : OpAssignBinaryExpression
-    {
-        public override MethodInfo Method { get; }
-        public override LambdaExpression Conversion { get; }
-        public bool LiftToNull { get; }
-        internal OpAssignMethodConversionBinaryExpression(ExpressionType nodeType, Expression left, Expression right, MethodInfo method, LambdaExpression conversion, bool liftToNull)
-            : base(nodeType, left, right)
-        {
-            Method = method;
-            Conversion = conversion;
-            LiftToNull = liftToNull;
-        }
-
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), LiftToNull, Method, Conversion.ToLambdaExpression());
-    }
-
-    public class ElementInit : IArgumentProvider
-    {
-        public readonly MethodInfo AddMethod;
-        public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
-        public virtual int ArgumentCount => 0;
-        public virtual Expression GetArgument(int i) => throw new NotImplementedException();
-        internal ElementInit(MethodInfo addMethod) => AddMethod = addMethod;
-    }
-
-    public sealed class OneArgumentElementInit : ElementInit
-    {
-        public readonly Expression Argument;
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument };
-        public override int ArgumentCount => 1;
-        public override Expression GetArgument(int i) => Argument;
-        internal OneArgumentElementInit(MethodInfo addMethod, Expression a) : base(addMethod) => Argument = a;
-    }
-
-    public sealed class ManyArgumentsElementInit : ElementInit
-    {
-        public override IReadOnlyList<Expression> Arguments { get; }
-        public override int ArgumentCount => Arguments.Count;
-        public override Expression GetArgument(int i) => Arguments[i];
-        internal ManyArgumentsElementInit(MethodInfo addMethod, IReadOnlyList<Expression> args) : base(addMethod) => Arguments = args;
-    }
-
-    // todo: @feature is not supported yet
-    public sealed class ListInitExpression : Expression
-    {
-        public override ExpressionType NodeType => ExpressionType.ListInit;
-        public override Type Type => NewExpression.Type;
-        public readonly NewExpression NewExpression;
-        public readonly IReadOnlyList<ElementInit> Initializers;
-        internal ListInitExpression(NewExpression newExpression, IReadOnlyList<ElementInit> initializers)
-        {
-            NewExpression = newExpression;
-            Initializers = initializers;
-        }
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitListInit(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
-            SysExpr.ListInit(
-                (System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref convertedExpressions),
-                ToElementInits(Initializers, ref convertedExpressions));
-
-        internal static System.Linq.Expressions.ElementInit[] ToElementInits(IReadOnlyList<ElementInit> elemInits,
-            ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            if (elemInits.Count == 0)
-                return Tools.Empty<System.Linq.Expressions.ElementInit>();
-            var result = new System.Linq.Expressions.ElementInit[elemInits.Count];
-            for (var i = 0; i < result.Length; ++i)
-                result[i] = SysExpr.ElementInit(elemInits[i].AddMethod,
-                    ToExpressions(elemInits[i].Arguments, ref exprsConverted));
-            return result;
-        }
-    }
-
-    public sealed class TypeBinaryExpression : Expression
-    {
-        public override ExpressionType NodeType { get; }
-        public override Type Type => typeof(bool);
-        public Type TypeOperand { get; }
-        public readonly Expression Expression;
-        internal TypeBinaryExpression(ExpressionType nodeType, Expression expression, Type typeOperand)
-        {
-            NodeType = nodeType;
-            Expression = expression;
-            TypeOperand = typeOperand;
-        }
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTypeBinary(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            NodeType switch
+            for (var i = 0; i < methods.Length; i++)
             {
-                ExpressionType.TypeIs =>
-                    SysExpr.TypeIs(Expression.ToExpression(ref exprsConverted), TypeOperand),
-                ExpressionType.TypeEqual =>
-                    SysExpr.TypeEqual(Expression.ToExpression(ref exprsConverted), TypeOperand),
-                _ => throw new NotSupportedException()
-            };
+                var m = methods[i];
+                if (m.IsGenericMethod || m.Name != methodName)
+                    continue;
 
-    }
+                var mPars = m.GetParameters();
+                if (mPars.Length != argExprCount)
+                    continue;
 
-    public class MemberInitExpression : Expression, IArgumentProvider<MemberBinding>
-    {
-        public sealed override ExpressionType NodeType => ExpressionType.MemberInit;
-        public override Type Type => Expression.Type;
-        public readonly Expression Expression;
-        public NewExpression NewExpression => Expression as NewExpression;
-        public virtual IReadOnlyList<MemberBinding> Bindings => Tools.Empty<MemberBinding>();
-        public virtual int ArgumentCount => 0;
-        public virtual MemberBinding GetArgument(int i) => throw new NotImplementedException();
-        internal MemberInitExpression(Expression expression) => Expression = expression;
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMemberInit(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.MemberInit((System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref exprsConverted),
-                BindingsToExpressions(Bindings, ref exprsConverted));
-
-        internal static System.Linq.Expressions.MemberBinding[] BindingsToExpressions(
-            IReadOnlyList<MemberBinding> ms, ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            if (ms.Count == 0)
-                return Tools.Empty<System.Linq.Expressions.MemberBinding>();
-
-            if (ms.Count == 1)
-                return new[] { ms[0].ToMemberBinding(ref exprsConverted) };
-
-            var result = new System.Linq.Expressions.MemberBinding[ms.Count];
-            for (var i = 0; i < result.Length; ++i)
-                result[i] = ms[i].ToMemberBinding(ref exprsConverted);
-            return result;
+                if (argExprs.Count == 0)
+                {
+                    if (m.IsPublic)
+                        return m;
+                    if (bestMatch != null)
+                        return bestMatch;
+                    bestMatch = m; // proceed search
+                }
+                else
+                {
+                    var score = GetScoreOfExpressionsAssignableToParams(argExprs, mPars);
+                    if (score == 0)
+                        continue;
+                    if (score == bestScore)
+                    {
+                        if (m.IsPublic == bestMatch.IsPublic) // prefer public over non-public 
+                            throw new InvalidOperationException($"More than one non-generic method '{m.Name}' in the type '{type.ToCode()}' is compatible with the supplied arguments.");
+                        if (!m.IsPublic)
+                            continue;
+                    }
+                    bestMatch = m;
+                    bestScore = score;
+                }
+            }
         }
+
+        if (bestMatch == null)
+            throw new InvalidOperationException(typeArgCount == 0
+                ? $"The non-generic method '{methodName}' is not found in the type '{type.ToCode()}'"
+                : $"The generic method '{methodName}' with {typeArgCount} type parameter(s) is not found in the type '{type.ToCode()}'");
+
+        return bestMatch;
     }
 
-    public sealed class ManyBindingsMemberInitExpression : MemberInitExpression
+    // 0 - not assignable
+    // 3 per parameter - same type
+    // 2 per parameter - base type
+    // 1 per parameter - object type
+    private static int GetScoreOfExpressionsAssignableToParams(IReadOnlyList<Expression> argExprs, ParameterInfo[] pars)
     {
-        public override IReadOnlyList<MemberBinding> Bindings { get; }
-        public override int ArgumentCount => Bindings.Count;
-        public override MemberBinding GetArgument(int i) => Bindings[i];
-        internal ManyBindingsMemberInitExpression(Expression expression, IReadOnlyList<MemberBinding> bindings) : base(expression) =>
-            Bindings = bindings;
-    }
-
-    public sealed class OneBindingMemberInitExpression : MemberInitExpression
-    {
-        public readonly MemberBinding Binding;
-        public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding };
-        public override int ArgumentCount => 1;
-        public override MemberBinding GetArgument(int i) => Binding;
-        internal OneBindingMemberInitExpression(Expression expression, MemberBinding b1) : base(expression) =>
-            Binding = b1;
-    }
-
-    public sealed class TwoBindingsMemberInitExpression : MemberInitExpression
-    {
-        public readonly MemberBinding Binding0, Binding1;
-        public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding0, Binding1 };
-        public override int ArgumentCount => 2;
-        public override MemberBinding GetArgument(int i) => i == 0 ? Binding0 : Binding1;
-        internal TwoBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1) : base(expression)
-        { Binding0 = b0; Binding1 = b1; }
-    }
-
-    public sealed class ThreeBindingsMemberInitExpression : MemberInitExpression
-    {
-        public readonly MemberBinding Binding0, Binding1, Binding2;
-        public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding0, Binding1, Binding2 };
-        public override int ArgumentCount => 3;
-        public override MemberBinding GetArgument(int i) => i == 0 ? Binding0 : i == 1 ? Binding1 : Binding2;
-        internal ThreeBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
-             MemberBinding b2) : base(expression)
-        { Binding0 = b0; Binding1 = b1; Binding2 = b2; }
-    }
-
-    public sealed class FourBindingsMemberInitExpression : MemberInitExpression
-    {
-        public readonly MemberBinding Binding0, Binding1, Binding2, Binding3;
-        public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding0, Binding1, Binding2, Binding3 };
-        public override int ArgumentCount => 4;
-        public override MemberBinding GetArgument(int i) =>
-            i == 0 ? Binding0 : i == 1 ? Binding1 : i == 2 ? Binding2 : Binding3;
-        internal FourBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
-             MemberBinding b2, MemberBinding b3) : base(expression)
-        { Binding0 = b0; Binding1 = b1; Binding2 = b2; Binding3 = b3; }
-    }
-
-    public sealed class FiveBindingsMemberInitExpression : MemberInitExpression
-    {
-        public readonly MemberBinding Binding0, Binding1, Binding2, Binding3, Binding4;
-        public override IReadOnlyList<MemberBinding> Bindings =>
-            new[] { Binding0, Binding1, Binding2, Binding3, Binding4 };
-        public override int ArgumentCount => 5;
-        public override MemberBinding GetArgument(int i) =>
-            i == 0 ? Binding0 : i == 1 ? Binding1 : i == 2 ? Binding2 : i == 3 ? Binding3 : Binding4;
-        internal FiveBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
-             MemberBinding b2, MemberBinding b3, MemberBinding b4) : base(expression)
-        { Binding0 = b0; Binding1 = b1; Binding2 = b2; Binding3 = b3; Binding4 = b4; }
-    }
-
-    public sealed class SixBindingsMemberInitExpression : MemberInitExpression
-    {
-        public readonly MemberBinding Binding0, Binding1, Binding2, Binding3, Binding4, Binding5;
-        public override IReadOnlyList<MemberBinding> Bindings =>
-            new[] { Binding0, Binding1, Binding2, Binding3, Binding4, Binding5 };
-        public override int ArgumentCount => 6;
-        public override MemberBinding GetArgument(int i) =>
-            i == 0 ? Binding0 : i == 1 ? Binding1 : i == 2 ? Binding2 : i == 3 ? Binding3 : i == 4 ? Binding4 : Binding5;
-        internal SixBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
-             MemberBinding b2, MemberBinding b3, MemberBinding b4, MemberBinding b5) : base(expression)
-        { Binding0 = b0; Binding1 = b1; Binding2 = b2; Binding3 = b3; Binding4 = b4; Binding5 = b5; }
-    }
-
-    public class ParameterExpression : Expression
-    {
-        public sealed override ExpressionType NodeType => ExpressionType.Parameter;
-        public override Type Type => typeof(object);
-        public virtual bool IsByRef => false;
-        public string Name { get; }
-        internal ParameterExpression(string name) => Name = name;
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitParameter(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Parameter(IsByRef ? Type.MakeByRefType() : Type, Name);
-
-        internal static System.Linq.Expressions.ParameterExpression[] ToParameterExpressions(
-            IReadOnlyList<ParameterExpression> ps, ref SmallList<LightAndSysExpr> exprsConverted)
+        var score = 0;
+        for (var i = 0; i < pars.Length; i++)
         {
-            if (ps == null || ps.Count == 0)
-                return Tools.Empty<System.Linq.Expressions.ParameterExpression>();
-            if (ps.Count == 1)
-                return new[] { (System.Linq.Expressions.ParameterExpression)ps[0].ToExpression(ref exprsConverted) };
-            var result = new System.Linq.Expressions.ParameterExpression[ps.Count];
-            for (var i = 0; i < result.Length; ++i)
-                result[i] = (System.Linq.Expressions.ParameterExpression)ps[i].ToExpression(ref exprsConverted);
-            return result;
-        }
-    }
+            var pt = pars[i].ParameterType;
+            if (pt.IsByRef)
+                pt = pt.GetElementType();
 
-    public sealed class TypedParameterExpression : ParameterExpression
-    {
-        public override Type Type { get; }
-        internal TypedParameterExpression(Type type, string name) : base(name) => Type = type;
-    }
+            if (pt == argExprs[i].Type)
+            {
+                score += 3;
+                continue;
+            }
 
-    internal sealed class ByRefParameterExpression : ParameterExpression
-    {
-        public override bool IsByRef => true;
-        public override Type Type { get; }
-        internal ByRefParameterExpression(Type type, string name) : base(name) => Type = type;
-    }
+            if (pt == typeof(object))
+            {
+                score += 1;
+                continue;
+            }
 
-    public sealed class TypedParameterExpression<T> : ParameterExpression
-    {
-        public override Type Type => typeof(T);
-        internal TypedParameterExpression(string name) : base(name) { }
-    }
 
-    ///<summary>The base constant type</summary>
-    public abstract class ConstantExpression : Expression
-    {
-        public sealed override ExpressionType NodeType => ExpressionType.Constant;
-        public abstract object Value { get; }
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> _) => SysExpr.Constant(Value, Type);
+            if (pt.IsAssignableFrom(argExprs[i].Type))
+            {
+                score += 2;
+                continue;
+            }
 
-        /// <summary>I want to see the actual Value not the default one</summary>
-        public override string ToString() => $"Constant({Value}, typeof({Type.ToCode()}))";
-    }
-
-    public sealed class TypedNullConstantExpression : ConstantExpression
-    {
-        public override Type Type { get; }
-        public override object Value => null;
-        internal TypedNullConstantExpression(Type type) => Type = type;
-    }
-
-    public sealed class NullConstantExpression<T> : ConstantExpression
-    {
-        public override object Value => null;
-        public override Type Type => typeof(T);
-    }
-
-    public sealed class ValueConstantExpression : ConstantExpression
-    {
-        public override Type Type => Value.GetType();
-        public override object Value { get; }
-        internal ValueConstantExpression(object value) => Value = value;
-    }
-
-    public sealed class ValueConstantExpression<T> : ConstantExpression
-    {
-        public override Type Type => typeof(T);
-        public override object Value { get; }
-        internal ValueConstantExpression(object value) => Value = value;
-    }
-
-    public sealed class TypedValueConstantExpression : ConstantExpression
-    {
-        public override Type Type { get; }
-        public override object Value { get; }
-        internal TypedValueConstantExpression(object value, Type type) { Value = value; Type = type; }
-    }
-
-    public sealed class IntConstantExpression : ConstantExpression
-    {
-        public override Type Type => typeof(int);
-        public override object Value => IntValue;
-        public readonly int IntValue;
-        internal IntConstantExpression(int value) => IntValue = value;
-    }
-
-    public class NewExpression : Expression, IArgumentProvider
-    {
-        public sealed override ExpressionType NodeType => ExpressionType.New;
-        public override Type Type => Constructor.DeclaringType;
-        public readonly ConstructorInfo Constructor;
-        public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
-        public virtual int ArgumentCount => 0;
-        public virtual Expression GetArgument(int i) => throw new NotImplementedException();
-
-        internal NewExpression(ConstructorInfo constructor) => Constructor = constructor;
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNew(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.New(Constructor, ToExpressions(Arguments, ref exprsConverted));
-    }
-
-    public sealed class NewValueTypeExpression : NewExpression
-    {
-        public override Type Type { get; }
-        internal NewValueTypeExpression(Type type) : base(null) => Type = type;
-
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) => SysExpr.New(Type);
-    }
-
-    public sealed class NoArgsNewClassIntrinsicExpression : NewExpression
-    {
-        internal NoArgsNewClassIntrinsicExpression(ConstructorInfo constructor) : base(constructor) { }
-        public override bool IsIntrinsic => true;
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
-        public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
-        {
-            il.Demit(OpCodes.Newobj, Constructor);
-            return true;
-        }
-    }
-
-    public class OneArgumentNewExpression : NewExpression
-    {
-        public readonly object Arg;
-        public Expression Argument => Arg.AsExpr();
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument };
-        public override int ArgumentCount => 1;
-        public override Expression GetArgument(int i) => Argument;
-        internal OneArgumentNewExpression(ConstructorInfo constructor, object arg) : base(constructor) => Arg = arg;
-    }
-
-    public sealed class NoByRefOneArgNewIntrinsicExpression : OneArgumentNewExpression
-    {
-        internal NoByRefOneArgNewIntrinsicExpression(ConstructorInfo constructor, object arg) : base(constructor, arg) { }
-        public override bool IsIntrinsic => true;
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-            ExpressionCompiler.TryCollectInfo(ref closure, Argument, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-        public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
-        {
-            var ok = EmittingVisitor.TryEmit(Argument, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
-            il.Demit(OpCodes.Newobj, Constructor);
-            return ok;
-        }
-    }
-
-    public class TwoArgumentsNewExpression : NewExpression
-    {
-        public readonly object A0, A1;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
-        public override int ArgumentCount => 2;
-        public override Expression GetArgument(int i) => i == 0 ? A0.AsExpr() : A1.AsExpr();
-        internal TwoArgumentsNewExpression(ConstructorInfo constructor, object a0, object a1) : base(constructor)
-        {
-            A0 = a0; A1 = a1;
-        }
-    }
-
-    public sealed class NoByRefTwoArgumentsNewIntrinsicExpression : TwoArgumentsNewExpression
-    {
-        internal NoByRefTwoArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1) : base(constructor, a0, a1) { }
-        public override bool IsIntrinsic => true;
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
-        {
-            var r = Result.OK;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            return ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-        }
-        public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
-        {
-            var f = parent | ParentFlags.CtorCall;
-            var ok =
-                EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1);
-            il.Demit(OpCodes.Newobj, Constructor);
-            return ok;
-        }
-    }
-
-    public class ThreeArgumentsNewExpression : NewExpression
-    {
-        public readonly object A0, A1, A2;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public Expression Argument2 => A2.AsExpr();
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
-        public override int ArgumentCount => 3;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : A2.AsExpr();
-        internal ThreeArgumentsNewExpression(ConstructorInfo constructor, object a0, object a1, object a2) : base(constructor)
-        {
-            A0 = a0; A1 = a1; A2 = a2;
-        }
-    }
-
-    public sealed class NoByRefThreeArgumentsNewIntrinsicExpression : ThreeArgumentsNewExpression
-    {
-        internal NoByRefThreeArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2)
-            : base(constructor, a0, a1, a2) { }
-        public override bool IsIntrinsic => true;
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
-        {
-            var r = Result.OK;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            return ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-        }
-        public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
-        {
-            var f = parent | ParentFlags.CtorCall;
-            var ok =
-                EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1);
-            il.Demit(OpCodes.Newobj, Constructor);
-            return ok;
-        }
-    }
-
-    public class FourArgumentsNewExpression : NewExpression
-    {
-        public readonly object A0, A1, A2, A3;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public Expression Argument2 => A2.AsExpr();
-        public Expression Argument3 => A3.AsExpr();
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
-        public override int ArgumentCount => 4;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : A3.AsExpr();
-        internal FourArgumentsNewExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3) : base(constructor)
-        {
-            A0 = a0; A1 = a1; A2 = a2; A3 = a3;
-        }
-    }
-
-    public sealed class NoByRefFourArgumentsNewIntrinsicExpression : FourArgumentsNewExpression
-    {
-        internal NoByRefFourArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3)
-            : base(constructor, a0, a1, a2, a3) { }
-        public override bool IsIntrinsic => true;
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
-        {
-            var r = Result.OK;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            return ExpressionCompiler.TryCollectInfo(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-        }
-        public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
-        {
-            var f = parent | ParentFlags.CtorCall;
-            var ok =
-                EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1);
-            il.Demit(OpCodes.Newobj, Constructor);
-            return ok;
-        }
-    }
-
-    public class FiveArgumentsNewExpression : NewExpression
-    {
-        public readonly object A0, A1, A2, A3, A4;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public Expression Argument2 => A2.AsExpr();
-        public Expression Argument3 => A3.AsExpr();
-        public Expression Argument4 => A4.AsExpr();
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
-        public override int ArgumentCount => 5;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : A4.AsExpr();
-        internal FiveArgumentsNewExpression(ConstructorInfo constructor,
-            object a0, object a1, object a2, object a3, object a4) : base(constructor)
-        {
-            A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4;
-        }
-    }
-
-    public sealed class NoByRefFiveArgumentsNewIntrinsicExpression : FiveArgumentsNewExpression
-    {
-        internal NoByRefFiveArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3, object a4)
-            : base(constructor, a0, a1, a2, a3, a4) { }
-        public override bool IsIntrinsic => true;
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
-        {
-            var r = Result.OK;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            return ExpressionCompiler.TryCollectInfo(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-        }
-        public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
-        {
-            var f = parent | ParentFlags.CtorCall;
-            var ok =
-                EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, f, -1);
-            il.Demit(OpCodes.Newobj, Constructor);
-            return ok;
-        }
-    }
-
-    public class SixArgumentsNewExpression : NewExpression
-    {
-        public readonly object A0, A1, A2, A3, A4, A5;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public Expression Argument2 => A2.AsExpr();
-        public Expression Argument3 => A3.AsExpr();
-        public Expression Argument4 => A4.AsExpr();
-        public Expression Argument5 => A5.AsExpr();
-        public override IReadOnlyList<Expression> Arguments =>
-            new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5 };
-        public override int ArgumentCount => 6;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : i == 4 ? A4.AsExpr() : A5.AsExpr();
-        internal SixArgumentsNewExpression(ConstructorInfo constructor,
-            object a0, object a1, object a2, object a3, object a4, object a5) : base(constructor)
-        {
-            A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4; A5 = a5;
-        }
-    }
-
-    public sealed class NoByRefSixArgumentsNewIntrinsicExpression : SixArgumentsNewExpression
-    {
-        internal NoByRefSixArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3, object a4, object a5)
-            : base(constructor, a0, a1, a2, a3, a4, a5) { }
-        public override bool IsIntrinsic => true;
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
-        {
-            var r = Result.OK;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-            return ExpressionCompiler.TryCollectInfo(ref closure, Argument5, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-        }
-        public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
-        {
-            var f = parent | ParentFlags.CtorCall;
-            var ok =
-                EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument5, paramExprs, il, ref closure, setup, f, -1);
-            il.Demit(OpCodes.Newobj, Constructor);
-            return ok;
-        }
-    }
-
-    public class SevenArgumentsNewExpression : NewExpression
-    {
-        public readonly object A0, A1, A2, A3, A4, A5, A6;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public Expression Argument2 => A2.AsExpr();
-        public Expression Argument3 => A3.AsExpr();
-        public Expression Argument4 => A4.AsExpr();
-        public Expression Argument5 => A5.AsExpr();
-        public Expression Argument6 => A6.AsExpr();
-        public override IReadOnlyList<Expression> Arguments =>
-            new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5, Argument6 };
-        public override int ArgumentCount => 7;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : i == 4 ? A4.AsExpr() : i == 5 ? A5.AsExpr() : A6.AsExpr();
-        internal SevenArgumentsNewExpression(ConstructorInfo constructor,
-            object a0, object a1, object a2, object a3, object a4, object a5, object a6) : base(constructor)
-        {
-            A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4; A5 = a5; A6 = a6;
-        }
-    }
-
-    public sealed class NoByRefSevenArgumentsNewIntrinsicExpression : SevenArgumentsNewExpression
-    {
-        internal NoByRefSevenArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3, object a4, object a5, object a6)
-            : base(constructor, a0, a1, a2, a3, a4, a5, a6) { }
-        public override bool IsIntrinsic => true;
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
-        {
-            var r = Result.OK;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument5, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-            return ExpressionCompiler.TryCollectInfo(ref closure, Argument6, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-        }
-        public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
-        {
-            var f = parent | ParentFlags.CtorCall;
-            var ok =
-                EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument5, paramExprs, il, ref closure, setup, f, -1) &&
-                EmittingVisitor.TryEmit(Argument6, paramExprs, il, ref closure, setup, f, -1);
-            il.Demit(OpCodes.Newobj, Constructor);
-            return ok;
-        }
-    }
-
-    public class ManyArgumentsNewExpression : NewExpression
-    {
-        protected readonly IReadOnlyList<Expression> Args;
-        public override IReadOnlyList<Expression> Arguments => Args;
-        public override int ArgumentCount => Args.Count;
-        public override Expression GetArgument(int i) => Args[i];
-        internal ManyArgumentsNewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> args) : base(constructor) => Args = args;
-    }
-
-    public sealed class NoByRefManyArgsNewIntrinsicExpression : ManyArgumentsNewExpression
-    {
-        internal NoByRefManyArgsNewIntrinsicExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : base(constructor, arguments) { }
-        public override bool IsIntrinsic => true;
-        public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
-        {
-            var r = Result.OK;
-            var args = Args;
-            for (var i = 0; i < args.Count; i++)
-                if ((r = ExpressionCompiler.TryCollectInfo(ref closure, args[i], paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
-                    return r;
             return 0;
         }
-        public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
-            ILGenerator il, ParentFlags parent, int byRefIndex = -1)
-        {
-            var f = parent | ParentFlags.CtorCall;
-            var args = Args;
-            for (var i = 0; i < args.Count; i++)
-                if (!EmittingVisitor.TryEmit(args[i], paramExprs, il, ref closure, setup, f, -1))
-                    return false;
-            il.Demit(OpCodes.Newobj, Constructor);
-            return true;
-        }
+
+        return score;
     }
 
-    public abstract class NewArrayExpression : Expression, IArgumentProvider
+    [MethodImpl((MethodImplOptions)256)]
+    public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs)
     {
-        public sealed override Type Type { get; }
-        public abstract IReadOnlyList<Expression> Expressions { get; }
-        public virtual int ArgumentCount => Expressions.Count;
-        public virtual Expression GetArgument(int i) => Expressions[i];
-        internal NewArrayExpression(Type arrayType) => Type = arrayType;
+        if (xs is IReadOnlyList<T> list)
+            return list;
+        return xs == null ? Tools.Empty<T>() : new List<T>(xs);
+    }
+
+    internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
+    {
+        var s = Type.GetTypeCode(source);
+        var t = Type.GetTypeCode(target);
+
+        switch (s)
+        {
+            case TypeCode.SByte:
+                switch (t)
+                {
+                    case TypeCode.Int16:
+                    case TypeCode.Int32:
+                    case TypeCode.Int64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        return true;
+                }
+                break;
+            case TypeCode.Byte:
+                switch (t)
+                {
+                    case TypeCode.Int16:
+                    case TypeCode.UInt16:
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        return true;
+                }
+                break;
+            case TypeCode.Int16:
+                switch (t)
+                {
+                    case TypeCode.Int32:
+                    case TypeCode.Int64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        return true;
+                }
+                break;
+            case TypeCode.UInt16:
+                switch (t)
+                {
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        return true;
+                }
+                break;
+            case TypeCode.Int32:
+                switch (t)
+                {
+                    case TypeCode.Int64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        return true;
+                }
+                break;
+            case TypeCode.UInt32:
+                switch (t)
+                {
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        return true;
+                }
+                break;
+            case TypeCode.Int64:
+            case TypeCode.UInt64:
+                switch (t)
+                {
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        return true;
+                }
+                break;
+            case TypeCode.Char:
+                switch (t)
+                {
+                    case TypeCode.UInt16:
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                    case TypeCode.Single:
+                    case TypeCode.Double:
+                    case TypeCode.Decimal:
+                        return true;
+                }
+                break;
+            case TypeCode.Single:
+                return t == TypeCode.Double;
+        }
+        return false;
+    }
+}
+
+public abstract class UnaryExpression : Expression
+{
+    public override Type Type => Operand.Type;
+    public readonly Expression Operand;
+    public virtual MethodInfo Method => null;
+    public UnaryExpression(Expression operand) => Operand = operand;
 #if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitUnary(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        switch (NodeType)
         {
-            var elemType = Type.GetElementType();
-            var exprs = ToExpressions(Expressions, ref exprsConverted);
-            return NodeType == ExpressionType.NewArrayInit
-                // ReSharper disable once AssignNullToNotNullAttribute
-                ? SysExpr.NewArrayInit(Type.GetElementType(), exprs)
-                // ReSharper disable once AssignNullToNotNullAttribute
-                : SysExpr.NewArrayBounds(Type.GetElementType(), exprs);
+            case ExpressionType.ArrayLength: return SysExpr.ArrayLength(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.Convert: return SysExpr.Convert(Operand.ToExpression(ref exprsConverted), Type, Method);
+            case ExpressionType.ConvertChecked: return SysExpr.ConvertChecked(Operand.ToExpression(ref exprsConverted), Type, Method);
+            case ExpressionType.Decrement: return SysExpr.Decrement(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.Increment: return SysExpr.Increment(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.IsFalse: return SysExpr.IsFalse(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.IsTrue: return SysExpr.IsTrue(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.Negate: return SysExpr.Negate(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.NegateChecked: return SysExpr.NegateChecked(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.OnesComplement: return SysExpr.OnesComplement(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.PostDecrementAssign: return SysExpr.PostDecrementAssign(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.PostIncrementAssign: return SysExpr.PostIncrementAssign(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.PreDecrementAssign: return SysExpr.PreDecrementAssign(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.PreIncrementAssign: return SysExpr.PreIncrementAssign(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.Quote: return SysExpr.Quote(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.UnaryPlus: return SysExpr.UnaryPlus(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.Unbox: return SysExpr.Unbox(Operand.ToExpression(ref exprsConverted), Type);
+            case ExpressionType.Throw: return SysExpr.Throw(Operand?.ToExpression(ref exprsConverted), Type);
+            case ExpressionType.TypeAs: return SysExpr.TypeAs(Operand.ToExpression(ref exprsConverted), Type);
+            case ExpressionType.Not: return SysExpr.Not(Operand.ToExpression(ref exprsConverted));
+            default:
+                throw new NotSupportedException("Cannot convert Expression to Expression of type " + NodeType);
         }
     }
+}
 
-    public sealed class ManyElementsNewArrayInitExpression : NewArrayExpression
+public sealed class NodeTypedUnaryExpression : UnaryExpression
+{
+    public override ExpressionType NodeType { get; }
+    public NodeTypedUnaryExpression(ExpressionType nodeType, Expression operand) : base(operand) =>
+        NodeType = nodeType;
+}
+
+public sealed class NotBooleanUnaryExpression : UnaryExpression
+{
+    public override ExpressionType NodeType => ExpressionType.Not;
+    public override Type Type => typeof(bool);
+    public NotBooleanUnaryExpression(Expression operand) : base(operand) { }
+}
+
+public sealed class ThrowUnaryExpression : UnaryExpression
+{
+    public override ExpressionType NodeType => ExpressionType.Throw;
+    public override Type Type => typeof(void);
+    public ThrowUnaryExpression(Expression operand) : base(operand) { }
+}
+
+public class TypedUnaryExpression : UnaryExpression
+{
+    public override ExpressionType NodeType { get; }
+    public sealed override Type Type { get; }
+    public TypedUnaryExpression(ExpressionType nodeType, Expression operand, Type type) : base(operand)
     {
-        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
-        public override IReadOnlyList<Expression> Expressions { get; }
-        internal ManyElementsNewArrayInitExpression(Type arrayType, IReadOnlyList<Expression> elements) : base(arrayType) =>
-            Expressions = elements;
+        NodeType = nodeType;
+        Type = type;
+    }
+}
+
+public sealed class TypedUnaryExpression<T> : UnaryExpression
+{
+    public override ExpressionType NodeType { get; }
+    public override Type Type => typeof(T);
+    public TypedUnaryExpression(ExpressionType nodeType, Expression operand) : base(operand) =>
+        NodeType = nodeType;
+}
+
+public sealed class ConvertUnaryExpression : UnaryExpression
+{
+    public override ExpressionType NodeType => ExpressionType.Convert;
+    public override Type Type { get; }
+    public ConvertUnaryExpression(Expression operand, Type type) : base(operand) => Type = type;
+}
+
+public sealed class TypedConvertUnaryExpression<T> : UnaryExpression
+{
+    public override ExpressionType NodeType => ExpressionType.Convert;
+    public override Type Type => typeof(T);
+    public TypedConvertUnaryExpression(Expression operand) : base(operand) { }
+}
+
+public sealed class ConvertWithMethodUnaryExpression : TypedUnaryExpression
+{
+    public override MethodInfo Method { get; }
+    public ConvertWithMethodUnaryExpression(ExpressionType nodeType, Expression operand, Type type, MethodInfo method)
+        : base(nodeType, operand, type) =>
+        Method = method;
+}
+
+public class ConvertDelegateIntrinsicExpression : UnaryExpression
+{
+    public sealed override ExpressionType NodeType => ExpressionType.Convert;
+    public override Type Type { get; }
+    internal ConvertDelegateIntrinsicExpression(Expression operand, Type targetDelegateType) : base(operand) =>
+        Type = targetDelegateType;
+
+    public override bool IsIntrinsic => true;
+
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+        ExpressionCompiler.TryCollectInfo(ref closure, Operand, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+
+    public override bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    {
+        if (!EmittingVisitor.TryEmit(Operand, paramExprs, il, ref closure, flags, parent, byRefIndex))
+            return false;
+        il.Demit(OpCodes.Ldftn, Operand.Type.FindDelegateInvokeMethod());
+        il.Demit(OpCodes.Newobj, Type.GetConstructors()[0]);
+        return true;
     }
 
-    public sealed class OneElementNewArrayInitExpression : NewArrayExpression
+    public override bool IsCustomToCSharpString => true;
+    public override StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
+        int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
+        CodePrinter.ObjectToCode notRecognizedToCode = null)
     {
-        public readonly Expression Element;
-        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
-        public override IReadOnlyList<Expression> Expressions => new[] { Element };
-        public override int ArgumentCount => 1;
-        public override Expression GetArgument(int i) => Element;
-        internal OneElementNewArrayInitExpression(Type arrayType, Expression element) : base(arrayType) =>
-            Element = element;
-    }
+        var encloseInParens = enclosedIn != ToCSharpPrinter.EnclosedIn.LambdaBody && enclosedIn != ToCSharpPrinter.EnclosedIn.Return;
+        sb = encloseInParens ? sb.Append("((") : sb.Append('(');
 
-    public sealed class TwoElementNewArrayInitExpression : NewArrayExpression
+        sb.Append(Type.ToCode(stripNamespace, printType)).Append(')');
+        sb = Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+
+        sb.Append(".Invoke"); // Hey, this is the CUSTOM part of the output.
+
+        return encloseInParens ? sb.Append(')') : sb;
+    }
+}
+
+public class ConvertIntrinsicExpression<T> : UnaryExpression where T : class
+{
+    public sealed override ExpressionType NodeType => ExpressionType.Convert;
+    public override Type Type => typeof(T);
+    internal ConvertIntrinsicExpression(Expression operand) : base(operand) { }
+
+    public override bool IsIntrinsic => true;
+
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+        ExpressionCompiler.TryCollectInfo(ref closure, Operand, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+
+    public override bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
-        public readonly Expression Element0, Element1;
-        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
-        public override IReadOnlyList<Expression> Expressions => new[] { Element0, Element1 };
-        public override int ArgumentCount => 2;
-        public override Expression GetArgument(int i) => i == 0 ? Element0 : Element1;
-        internal TwoElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1) : base(arrayType)
+        if (!EmittingVisitor.TryEmit(Operand, paramExprs, il, ref closure, flags, parent, byRefIndex))
+            return false;
+        if (Type == typeof(object))
         {
-            Element0 = el0; Element1 = el1;
+            var operandType = Operand.Type;
+            if (operandType.IsValueType)
+                il.Demit(OpCodes.Box, operandType);
         }
+#if NETFRAMEWORK
+        else
+            // The cast is required only for Full CLR, e.g.
+            // .NET Core does not seem to care about verifiability and it's faster without the explicit cast
+            il.Demit(OpCodes.Castclass, Type);
+#endif
+        return true;
     }
+}
 
-    public sealed class ThreeElementNewArrayInitExpression : NewArrayExpression
+public sealed class ConvertIntrinsicExpression : ConvertIntrinsicExpression<object>
+{
+    public override Type Type { get; }
+    internal ConvertIntrinsicExpression(Expression operand, Type type) : base(operand) => Type = type;
+}
+
+public abstract class BinaryExpression : Expression
+{
+    public virtual MethodInfo Method => null; //todo: @feature - not supported yet
+
+    public virtual LambdaExpression Conversion => null;
+
+    public bool IsLifted =>
+        NodeType != ExpressionType.Coalesce && NodeType != ExpressionType.Assign &&
+        Left.Type.IsNullable() &&
+        (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(Left.Type));
+
+    /// <summary>Gets a value that indicates whether the expression tree node represents a lifted call to an operator whose return type is lifted to a nullable type.</summary>
+    public bool IsLiftedToNull => IsLifted && Type.IsNullable();
+
+    public readonly Expression Left, Right;
+    protected BinaryExpression(Expression left, Expression right)
     {
-        public readonly Expression Element0, Element1, Element2;
-        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
-        public override IReadOnlyList<Expression> Expressions => new[] { Element0, Element1, Element2 };
-        public override int ArgumentCount => 3;
-        public override Expression GetArgument(int i) => i == 0 ? Element0 : i == 1 ? Element1 : Element2;
-        internal ThreeElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2) : base(arrayType)
-        {
-            Element0 = el0; Element1 = el1; Element2 = el2;
-        }
+        Left = left;
+        Right = right;
     }
-
-    public sealed class FourElementNewArrayInitExpression : NewArrayExpression
-    {
-        public readonly Expression Element0, Element1, Element2, Element3;
-        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
-        public override IReadOnlyList<Expression> Expressions => new[] { Element0, Element1, Element2, Element3 };
-        public override int ArgumentCount => 4;
-        public override Expression GetArgument(int i) => i == 0 ? Element0 : i == 1 ? Element1 : i == 2 ? Element2 : Element3;
-        internal FourElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2,
-            Expression el3) : base(arrayType)
-        {
-            Element0 = el0; Element1 = el1; Element2 = el2; Element3 = el3;
-        }
-    }
-
-    public sealed class FiveElementNewArrayInitExpression : NewArrayExpression
-    {
-        public readonly Expression Element0, Element1, Element2, Element3, Element4;
-        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
-        public override IReadOnlyList<Expression> Expressions =>
-            new[] { Element0, Element1, Element2, Element3, Element4 };
-        public override int ArgumentCount => 5;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? Element0 : i == 1 ? Element1 : i == 2 ? Element2 : i == 3 ? Element3 : Element4;
-        internal FiveElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2,
-            Expression el3, Expression el4) : base(arrayType)
-        {
-            Element0 = el0; Element1 = el1; Element2 = el2; Element3 = el3; Element4 = el4;
-        }
-    }
-
-    public sealed class SixElementNewArrayInitExpression : NewArrayExpression
-    {
-        public readonly Expression Element0, Element1, Element2, Element3, Element4, Element5;
-        public override ExpressionType NodeType => ExpressionType.NewArrayInit;
-        public override IReadOnlyList<Expression> Expressions =>
-            new[] { Element0, Element1, Element2, Element3, Element4, Element5 };
-        public override int ArgumentCount => 6;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? Element0 : i == 1 ? Element1 : i == 2 ? Element2 : i == 3 ? Element3 : i == 4 ? Element4 : Element5;
-        internal SixElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2,
-            Expression el3, Expression el4, Expression el5) : base(arrayType)
-        {
-            Element0 = el0; Element1 = el1; Element2 = el2; Element3 = el3; Element4 = el4; Element5 = el5;
-        }
-    }
-
-    public sealed class ManyBoundsNewArrayBoundsExpression : NewArrayExpression
-    {
-        public override ExpressionType NodeType => ExpressionType.NewArrayBounds;
-        public override IReadOnlyList<Expression> Expressions { get; }
-        internal ManyBoundsNewArrayBoundsExpression(Type arrayType, IReadOnlyList<Expression> bounds) : base(arrayType) =>
-            Expressions = bounds;
-    }
-
-    public sealed class OneBoundNewArrayBoundsExpression : NewArrayExpression
-    {
-        public override ExpressionType NodeType => ExpressionType.NewArrayBounds;
-        public readonly Expression Bound;
-        public override IReadOnlyList<Expression> Expressions => new[] { Bound };
-        public override int ArgumentCount => 1;
-        public override Expression GetArgument(int i) => Bound;
-        internal OneBoundNewArrayBoundsExpression(Type arrayType, Expression bound) : base(arrayType) =>
-            Bound = bound;
-    }
-
-    public class MethodCallExpression : Expression, IArgumentProvider
-    {
-        public sealed override ExpressionType NodeType => ExpressionType.Call;
-        public override Type Type => Method.ReturnType;
-        public virtual MethodInfo Method => null;
-        public virtual Expression Object => null;
-        public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
-        public virtual int ArgumentCount => 0;
-        public virtual Expression GetArgument(int i) => throw new NotImplementedException();
 #if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMethodCall(this);
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBinary(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
+}
+
+public sealed class MethodBinaryExpression : BinaryExpression
+{
+    public override ExpressionType NodeType { get; }
+    public override Type Type { get; }
+    public override MethodInfo Method { get; }
+    public MethodBinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type, MethodInfo method) : base(left, right)
+    {
+        NodeType = nodeType;
+        Type = type;
+        Method = method;
+    }
+}
+
+/*
+    ExpressionType.Equal
+    ExpressionType.NotEqual
+    ExpressionType.GreaterThan
+    ExpressionType.GreaterThanOrEqual
+    ExpressionType.LessThan
+    ExpressionType.LessThanOrEqual
+    ExpressionType.And
+    ExpressionType.AndAlso
+    ExpressionType.OrElse
+
+    Excluded: ExpressionType.Or - because it should return the Left.Type for the bitwise operations
+*/
+internal sealed class LogicalBinaryExpression : BinaryExpression
+{
+    public override ExpressionType NodeType { get; }
+    public override Type Type => typeof(bool);
+    internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
+        NodeType = nodeType;
+
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        if (NodeType == ExpressionType.Equal ||
+            NodeType == ExpressionType.NotEqual)
         {
-            var objExpr = Object?.ToExpression(ref exprsConverted);
-            var expr = SysExpr.Call(objExpr, Method, ToExpressions(Arguments, ref exprsConverted));
-            return Type == Method.ReturnType ? expr : SysExpr.Convert(expr, Type); // insert the safe-guard convert
-        }
-    }
-
-    public class NotNullMethodCallExpression : MethodCallExpression
-    {
-        public override MethodInfo Method { get; }
-        internal NotNullMethodCallExpression(MethodInfo method) => Method = method;
-    }
-
-    public sealed class InstanceMethodCallExpression : NotNullMethodCallExpression
-    {
-        public override Expression Object { get; }
-        internal InstanceMethodCallExpression(Expression instance, MethodInfo method) : base(method) =>
-            Object = instance;
-    }
-
-    public class ManyArgumentsMethodCallExpression : NotNullMethodCallExpression
-    {
-        private readonly IReadOnlyList<Expression> _arguments;
-        public sealed override IReadOnlyList<Expression> Arguments => _arguments;
-        public sealed override int ArgumentCount => _arguments.Count;
-        public sealed override Expression GetArgument(int i) => _arguments[i];
-        internal ManyArgumentsMethodCallExpression(MethodInfo method, IReadOnlyList<Expression> arguments) : base(method) =>
-            _arguments = arguments;
-    }
-
-    public sealed class InstanceManyArgumentsMethodCallExpression : ManyArgumentsMethodCallExpression
-    {
-        public override Expression Object { get; }
-
-        internal InstanceManyArgumentsMethodCallExpression(Expression instance, MethodInfo method, IReadOnlyList<Expression> arguments)
-            : base(method, arguments) => Object = instance;
-    }
-
-    public class OneArgumentMethodCallExpression : NotNullMethodCallExpression
-    {
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument };
-        public readonly object Arg;
-        public Expression Argument => Arg.AsExpr();
-        public override int ArgumentCount => 1;
-        public override Expression GetArgument(int i) => Argument.AsExpr();
-        internal OneArgumentMethodCallExpression(MethodInfo method, object arg) : base(method) => Arg = arg;
-    }
-
-    public sealed class InstanceOneArgumentMethodCallExpression : OneArgumentMethodCallExpression
-    {
-        public override Expression Object { get; }
-
-        internal InstanceOneArgumentMethodCallExpression(Expression instance, MethodInfo method, Expression argument)
-            : base(method, argument) => Object = instance;
-    }
-
-    public class TwoArgumentsMethodCallExpression : NotNullMethodCallExpression
-    {
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
-        public readonly object A0, A1;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public override int ArgumentCount => 2;
-        public override Expression GetArgument(int i) => i == 0 ? A0.AsExpr() : A1.AsExpr();
-        internal TwoArgumentsMethodCallExpression(MethodInfo method, object a0, object a1) : base(method)
-        {
-            A0 = a0; A1 = a1;
-        }
-    }
-
-    public sealed class InstanceTwoArgumentsMethodCallExpression : TwoArgumentsMethodCallExpression
-    {
-        public override Expression Object { get; }
-
-        internal InstanceTwoArgumentsMethodCallExpression(Expression instance, MethodInfo method,
-            Expression argument0, Expression argument1) : base(method, argument0, argument1) => Object = instance;
-    }
-
-    public class ThreeArgumentsMethodCallExpression : NotNullMethodCallExpression
-    {
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
-        public readonly object A0, A1, A2;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public Expression Argument2 => A2.AsExpr();
-        public override int ArgumentCount => 3;
-        public override Expression GetArgument(int i) => i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : A2.AsExpr();
-        internal ThreeArgumentsMethodCallExpression(MethodInfo method, object a0, object a1, object a2) : base(method)
-        {
-            A0 = a0; A1 = a1; A2 = a2;
-        }
-    }
-
-    public sealed class InstanceThreeArgumentsMethodCallExpression : ThreeArgumentsMethodCallExpression
-    {
-        public override Expression Object { get; }
-        internal InstanceThreeArgumentsMethodCallExpression(Expression instance, MethodInfo method,
-            Expression a0, Expression a1, Expression a2) : base(method, a0, a1, a2) => Object = instance;
-    }
-
-    public class FourArgumentsMethodCallExpression : NotNullMethodCallExpression
-    {
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
-        public readonly object A0, A1, A2, A3;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public Expression Argument2 => A2.AsExpr();
-        public Expression Argument3 => A3.AsExpr();
-        public override int ArgumentCount => 4;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : A3.AsExpr();
-        internal FourArgumentsMethodCallExpression(MethodInfo method, object a0, object a1, object a2, object a3) : base(method)
-        {
-            A0 = a0; A1 = a1; A2 = a2; A3 = a3;
-        }
-    }
-
-    public sealed class InstanceFourArgumentsMethodCallExpression : FourArgumentsMethodCallExpression
-    {
-        public override Expression Object { get; }
-        internal InstanceFourArgumentsMethodCallExpression(Expression instance, MethodInfo method,
-            Expression argument0, Expression argument1, Expression argument2, Expression argument3)
-            : base(method, argument0, argument1, argument2, argument3) => Object = instance;
-    }
-
-    public class FiveArgumentsMethodCallExpression : NotNullMethodCallExpression
-    {
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
-        public readonly object A0, A1, A2, A3, A4;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public Expression Argument2 => A2.AsExpr();
-        public Expression Argument3 => A3.AsExpr();
-        public Expression Argument4 => A4.AsExpr();
-        public override int ArgumentCount => 5;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : A4.AsExpr();
-        internal FiveArgumentsMethodCallExpression(MethodInfo method, object a0, object a1, object a2, object a3, object a4) : base(method)
-        {
-            A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4;
-        }
-    }
-
-    public sealed class InstanceFiveArgumentsMethodCallExpression : FiveArgumentsMethodCallExpression
-    {
-        public override Expression Object { get; }
-        internal InstanceFiveArgumentsMethodCallExpression(Expression instance, MethodInfo method,
-            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4)
-            : base(method, a0, a1, a2, a3, a4) => Object = instance;
-    }
-
-    public class SixArgumentsMethodCallExpression : NotNullMethodCallExpression
-    {
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5 };
-        public readonly object A0, A1, A2, A3, A4, A5;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public Expression Argument2 => A2.AsExpr();
-        public Expression Argument3 => A3.AsExpr();
-        public Expression Argument4 => A4.AsExpr();
-        public Expression Argument5 => A5.AsExpr();
-        public override int ArgumentCount => 6;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : i == 4 ? A4.AsExpr() : A5.AsExpr();
-        internal SixArgumentsMethodCallExpression(MethodInfo method, object a0, object a1, object a2, object a3, object a4, object a5) : base(method)
-        {
-            A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4; A5 = a5;
-        }
-    }
-
-    public sealed class InstanceSixArgumentsMethodCallExpression : SixArgumentsMethodCallExpression
-    {
-        public override Expression Object { get; } // todo: @perf @mem make it an object?
-        internal InstanceSixArgumentsMethodCallExpression(Expression instance, MethodInfo method,
-            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5)
-            : base(method, a0, a1, a2, a3, a4, a5) => Object = instance;
-    }
-
-    public class SevenArgumentsMethodCallExpression : NotNullMethodCallExpression
-    {
-        public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5, Argument6 };
-        public readonly object A0, A1, A2, A3, A4, A5, A6;
-        public Expression Argument0 => A0.AsExpr();
-        public Expression Argument1 => A1.AsExpr();
-        public Expression Argument2 => A2.AsExpr();
-        public Expression Argument3 => A3.AsExpr();
-        public Expression Argument4 => A4.AsExpr();
-        public Expression Argument5 => A5.AsExpr();
-        public Expression Argument6 => A6.AsExpr();
-        public override int ArgumentCount => 7;
-        public override Expression GetArgument(int i) =>
-            i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : i == 4 ? A4.AsExpr() : i == 5 ? A5.AsExpr() : A6.AsExpr();
-        internal SevenArgumentsMethodCallExpression(MethodInfo method, object a0, object a1, object a2, object a3, object a4, object a5, object a6) : base(method)
-        {
-            A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4; A5 = a5; A6 = a6;
-        }
-    }
-
-    public sealed class InstanceSevenArgumentsMethodCallExpression : SevenArgumentsMethodCallExpression
-    {
-        public override Expression Object { get; }
-        internal InstanceSevenArgumentsMethodCallExpression(Expression instance, MethodInfo method,
-            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5, Expression a6)
-            : base(method, a0, a1, a2, a3, a4, a5, a6) => Object = instance;
-    }
-
-    public abstract class MemberExpression : Expression
-    {
-        public sealed override ExpressionType NodeType => ExpressionType.MemberAccess;
-        public readonly MemberInfo Member;
-        public virtual Expression Expression => null;
-        protected MemberExpression(MemberInfo member) => Member = member;
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMember(this);
-#endif
-    }
-
-    public class PropertyExpression : MemberExpression
-    {
-        public override Type Type => PropertyInfo.PropertyType;
-        public PropertyInfo PropertyInfo => (PropertyInfo)Member;
-        internal PropertyExpression(PropertyInfo property) : base(property) { }
-
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            var expr = Expression?.ToExpression(ref exprsConverted);
-            return SysExpr.Property(expr, PropertyInfo);
-        }
-    }
-
-    public sealed class InstancePropertyExpression : PropertyExpression
-    {
-        public override Expression Expression { get; }
-        internal InstancePropertyExpression(Expression instance, PropertyInfo property) : base(property) =>
-            Expression = instance;
-    }
-
-    public class FieldExpression : MemberExpression
-    {
-        public override Type Type => FieldInfo.FieldType;
-        public FieldInfo FieldInfo => (FieldInfo)Member;
-        internal FieldExpression(FieldInfo field) : base(field) { }
-
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Field(Expression?.ToExpression(ref exprsConverted), FieldInfo);
-    }
-
-    public sealed class InstanceFieldExpression : FieldExpression
-    {
-        public override Expression Expression { get; }
-
-        internal InstanceFieldExpression(Expression instance, FieldInfo field) : base(field) =>
-            Expression = instance;
-    }
-
-    public abstract class MemberBinding
-    {
-        public readonly MemberInfo Member;
-        public abstract MemberBindingType BindingType { get; }
-        internal MemberBinding(MemberInfo member) => Member = member;
-
-        internal abstract System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted);
-    }
-
-    public sealed class MemberAssignment : MemberBinding
-    {
-        public readonly Expression Expression;
-        public override MemberBindingType BindingType => MemberBindingType.Assignment;
-        internal MemberAssignment(MemberInfo member, Expression expression) : base(member) => Expression = expression;
-
-        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Bind(Member, Expression.ToExpression(ref exprsConverted));
-    }
-
-    public sealed class MemberMemberBinding : MemberBinding
-    {
-        public override MemberBindingType BindingType => MemberBindingType.MemberBinding;
-        public readonly IReadOnlyList<MemberBinding> Bindings;
-        internal MemberMemberBinding(MemberInfo member, IReadOnlyList<MemberBinding> bindings) : base(member) =>
-            Bindings = bindings;
-
-        private static System.Linq.Expressions.MemberBinding[] ToMemberBindings(IReadOnlyList<MemberBinding> items,
-            ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            if (items.Count == 0)
-                return Tools.Empty<System.Linq.Expressions.MemberBinding>();
-
-            var result = new System.Linq.Expressions.MemberBinding[items.Count];
-            for (var i = 0; i < result.Length; ++i)
-                result[i] = items[i].ToMemberBinding(ref exprsConverted);
-            return result;
-        }
-
-        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.MemberBind(Member, ToMemberBindings(Bindings, ref exprsConverted));
-    }
-
-    public sealed class MemberListBinding : MemberBinding
-    {
-        public override MemberBindingType BindingType => MemberBindingType.ListBinding;
-        public readonly IReadOnlyList<ElementInit> Initializers;
-        internal MemberListBinding(MemberInfo member, IReadOnlyList<ElementInit> initializers) : base(member) =>
-            Initializers = initializers;
-
-        internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.ListBind(Member, ListInitExpression.ToElementInits(Initializers, ref exprsConverted));
-    }
-
-    public class InvocationExpression : Expression, IArgumentProvider
-    {
-        public sealed override ExpressionType NodeType => ExpressionType.Invoke;
-        public override Type Type => ((LambdaExpression)Expression).ReturnType;
-        public virtual Expression Expression => null;
-        public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
-        public virtual int ArgumentCount => 0;
-        public virtual Expression GetArgument(int index) => throw new NotImplementedException();
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            var expr = SysExpr.Invoke(Expression.ToExpression(ref exprsConverted), ToExpressions(Arguments, ref exprsConverted));
-            return Expression is LambdaExpression ? expr
-                : SysExpr.Convert(expr, Type); // insert the safe-guard convert
-        }
-    }
-
-    public class NotNullExpressionInvocationExpression : InvocationExpression
-    {
-        public sealed override Expression Expression { get; }
-        internal NotNullExpressionInvocationExpression(Expression expression) => Expression = expression;
-    }
-
-    /// <summary>Implies that the Type may be different from the `expression` return type</summary>
-    public sealed class TypedInvocationExpression : NotNullExpressionInvocationExpression
-    {
-        public override Type Type { get; }
-        internal TypedInvocationExpression(Expression expression, Type type) : base(expression) =>
-            Type = type;
-    }
-
-    public class OneArgumentInvocationExpression : NotNullExpressionInvocationExpression
-    {
-        public readonly Expression Argument;
-        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument };
-        public sealed override int ArgumentCount => 1;
-        public sealed override Expression GetArgument(int index) => Argument;
-        internal OneArgumentInvocationExpression(Expression expression, Expression argument) : base(expression) =>
-            Argument = argument;
-    }
-
-    public sealed class TypedOneArgumentInvocationExpression : OneArgumentInvocationExpression
-    {
-        public override Type Type { get; }
-        internal TypedOneArgumentInvocationExpression(Expression expression, Type type, Expression argument)
-            : base(expression, argument) => Type = type;
-    }
-
-    public class TwoArgumentsInvocationExpression : NotNullExpressionInvocationExpression
-    {
-        public readonly Expression Argument0, Argument1;
-        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
-        public sealed override int ArgumentCount => 2;
-        public sealed override Expression GetArgument(int i) => i == 0 ? Argument0 : Argument1;
-        internal TwoArgumentsInvocationExpression(Expression expression,
-            Expression a0, Expression a1) : base(expression)
-        { Argument0 = a0; Argument1 = a1; }
-    }
-
-    public sealed class TypedTwoArgumentsInvocationExpression : TwoArgumentsInvocationExpression
-    {
-        public override Type Type { get; }
-        internal TypedTwoArgumentsInvocationExpression(Expression expression, Type type, Expression a0, Expression a1)
-            : base(expression, a0, a1) => Type = type;
-    }
-
-    public class ThreeArgumentsInvocationExpression : NotNullExpressionInvocationExpression
-    {
-        public readonly Expression Argument0, Argument1, Argument2;
-        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
-        public sealed override int ArgumentCount => 3;
-        public sealed override Expression GetArgument(int i) => i == 0 ? Argument0 : i == 1 ? Argument1 : Argument2;
-        internal ThreeArgumentsInvocationExpression(Expression expression,
-            Expression a0, Expression a1, Expression a2) : base(expression)
-        { Argument0 = a0; Argument1 = a1; Argument2 = a2; }
-    }
-
-    public sealed class TypedThreeArgumentsInvocationExpression : ThreeArgumentsInvocationExpression
-    {
-        public override Type Type { get; }
-        internal TypedThreeArgumentsInvocationExpression(Expression expression, Type type, Expression a0, Expression a1, Expression a2)
-            : base(expression, a0, a1, a2) => Type = type;
-    }
-
-    public class FourArgumentsInvocationExpression : NotNullExpressionInvocationExpression
-    {
-        public readonly Expression Argument0, Argument1, Argument2, Argument3;
-        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
-        public sealed override int ArgumentCount => 4;
-        public sealed override Expression GetArgument(int i) =>
-            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : Argument3;
-        internal FourArgumentsInvocationExpression(Expression expression,
-            Expression a0, Expression a1, Expression a2, Expression a3) : base(expression)
-        { Argument0 = a0; Argument1 = a1; Argument2 = a2; Argument3 = a3; }
-    }
-
-    public sealed class TypedFourArgumentsInvocationExpression : FourArgumentsInvocationExpression
-    {
-        public override Type Type { get; }
-        internal TypedFourArgumentsInvocationExpression(Expression expression, Type type,
-            Expression a0, Expression a1, Expression a2, Expression a3)
-            : base(expression, a0, a1, a2, a3) => Type = type;
-    }
-
-    public class FiveArgumentsInvocationExpression : NotNullExpressionInvocationExpression
-    {
-        public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4;
-        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
-        public sealed override int ArgumentCount => 5;
-        public sealed override Expression GetArgument(int i) =>
-            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : i == 3 ? Argument3 : Argument4;
-        internal FiveArgumentsInvocationExpression(Expression expression,
-            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) : base(expression)
-        { Argument0 = a0; Argument1 = a1; Argument2 = a2; Argument3 = a3; Argument4 = a4; }
-    }
-
-    public sealed class TypedFiveArgumentsInvocationExpression : FiveArgumentsInvocationExpression
-    {
-        public override Type Type { get; }
-        internal TypedFiveArgumentsInvocationExpression(Expression expression, Type type,
-            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4)
-            : base(expression, a0, a1, a2, a3, a4) => Type = type;
-    }
-
-    public class SixArgumentsInvocationExpression : NotNullExpressionInvocationExpression
-    {
-        public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4, Argument5;
-        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5 };
-        public sealed override int ArgumentCount => 6;
-        public sealed override Expression GetArgument(int i) =>
-            i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : i == 3 ? Argument3 : i == 4 ? Argument4 : Argument5;
-        internal SixArgumentsInvocationExpression(Expression expression,
-            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) : base(expression)
-        { Argument0 = a0; Argument1 = a1; Argument2 = a2; Argument3 = a3; Argument4 = a4; Argument5 = a5; }
-    }
-
-    public sealed class TypedSixArgumentsInvocationExpression : SixArgumentsInvocationExpression
-    {
-        public override Type Type { get; }
-        internal TypedSixArgumentsInvocationExpression(Expression expression, Type type,
-            Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5)
-            : base(expression, a0, a1, a2, a3, a4, a5) => Type = type;
-    }
-
-    public class ManyArgumentsInvocationExpression : NotNullExpressionInvocationExpression
-    {
-        public sealed override IReadOnlyList<Expression> Arguments { get; }
-        public sealed override int ArgumentCount => Arguments.Count;
-        public sealed override Expression GetArgument(int index) => Arguments[index];
-        internal ManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments) : base(expression) =>
-            Arguments = arguments;
-    }
-
-    public sealed class TypedManyArgumentsInvocationExpression : ManyArgumentsInvocationExpression
-    {
-        public override Type Type { get; }
-        internal TypedManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type)
-            : base(expression, arguments) =>
-            Type = type;
-    }
-
-    public sealed class DefaultExpression : Expression
-    {
-        public override ExpressionType NodeType => ExpressionType.Default;
-        public override Type Type { get; }
-        internal DefaultExpression(Type type) => Type = type;
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDefault(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            Type == typeof(void) ? SysExpr.Empty() : SysExpr.Default(Type);
-    }
-
-    // todo: @test Test all the conditionals + try for the exact op-codes produced, should help with AutoMapper case
-    public class ConditionalExpression : Expression
-    {
-        public override ExpressionType NodeType => ExpressionType.Conditional;
-        public override Type Type => typeof(void);
-        public readonly Expression Test;
-        public readonly Expression IfTrue;
-        public virtual Expression IfFalse => VoidDefault;
-        internal ConditionalExpression(Expression test, Expression ifTrue)
-        {
-            Test = test;
-            IfTrue = ifTrue;
-        }
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConditional(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Condition(Test.ToExpression(ref exprsConverted), IfTrue.ToExpression(ref exprsConverted), IfFalse.ToExpression(ref exprsConverted), Type);
-    }
-
-    public class VoidWithFalseBranchConditionalExpression : ConditionalExpression
-    {
-        public override Expression IfFalse { get; }
-        internal VoidWithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse)
-            : base(test, ifTrue) =>
-            IfFalse = ifFalse;
-    }
-
-    public sealed class WithFalseBranchConditionalExpression : VoidWithFalseBranchConditionalExpression
-    {
-        public override Type Type => IfTrue.Type;
-        internal WithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse)
-            : base(test, ifTrue, ifFalse) { }
-    }
-
-    public sealed class TypedWithFalseBranchConditionalExpression : VoidWithFalseBranchConditionalExpression
-    {
-        public override Type Type { get; }
-        internal TypedWithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse, Type type)
-            : base(test, ifTrue, ifFalse) =>
-            Type = type;
-    }
-
-    /// <summary>For indexer property or array access.</summary>
-    public abstract class IndexExpression : Expression, IArgumentProvider
-    {
-        public sealed override ExpressionType NodeType => ExpressionType.Index;
-        public sealed override Type Type => Indexer?.PropertyType ?? Object.Type.GetElementType();
-        public abstract IReadOnlyList<Expression> Arguments { get; }
-        public readonly Expression Object;
-        public virtual PropertyInfo Indexer => null;
-
-        public virtual int ArgumentCount => Arguments.Count;
-        public virtual Expression GetArgument(int index) => Arguments[index];
-
-        internal IndexExpression(Expression @object) => Object = @object;
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitIndex(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.MakeIndex(Object.ToExpression(ref exprsConverted), Indexer, ToExpressions(Arguments, ref exprsConverted));
-    }
-
-    public class OneArgumentIndexExpression : IndexExpression
-    {
-        public readonly Expression Argument;
-        public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument };
-        public override int ArgumentCount => 1;
-        public override Expression GetArgument(int index) => Argument;
-        internal OneArgumentIndexExpression(Expression @object, Expression argument) : base(@object) =>
-            Argument = argument;
-    }
-
-    public class ManyArgumentsIndexExpression : IndexExpression
-    {
-        public sealed override IReadOnlyList<Expression> Arguments { get; }
-        internal ManyArgumentsIndexExpression(Expression @object, IReadOnlyList<Expression> arguments) : base(@object) =>
-            Arguments = arguments ?? Tools.Empty<Expression>();
-    }
-
-    public sealed class HasIndexerOneArgumentIndexExpression : OneArgumentIndexExpression
-    {
-        public override PropertyInfo Indexer { get; }
-        internal HasIndexerOneArgumentIndexExpression(Expression @object, PropertyInfo indexer, Expression argument)
-            : base(@object, argument) => Indexer = indexer;
-    }
-
-    public sealed class HasIndexerManyArgumentsIndexExpression : ManyArgumentsIndexExpression
-    {
-        public override PropertyInfo Indexer { get; }
-        internal HasIndexerManyArgumentsIndexExpression(Expression @object, PropertyInfo indexer, IReadOnlyList<Expression> arguments)
-            : base(@object, arguments) => Indexer = indexer;
-    }
-
-    /// <summary>Base Block expression with no variables and with Type of its last (Result) expression</summary>
-    public class BlockExpression : Expression, IArgumentProvider
-    {
-        public override ExpressionType NodeType => ExpressionType.Block;
-        public override Type Type => Result.Type;
-        public virtual IReadOnlyList<ParameterExpression> Variables => Tools.Empty<ParameterExpression>();
-        public SmallList2<Expression> Expressions;
-        public Expression Result => Expressions.GetLastSurePresentItem(); // todo: @check what if no expressions?
-        public virtual int ArgumentCount => 0;
-        public virtual Expression GetArgument(int index) => throw new NotImplementedException();
-        internal BlockExpression(in SmallList2<Expression> expressions) =>
-            Expressions = expressions;
-        internal BlockExpression(Expression e0) =>
-            Expressions.Populate1(e0);
-        internal BlockExpression(Expression e0, Expression e1) =>
-            Expressions.Populate2(e0, e1);
-        internal BlockExpression(Expression e0, Expression e1, params Expression[] rest) =>
-            Expressions.Populate(e0, e1, rest);
-        internal BlockExpression(IReadOnlyList<Expression> expressions) =>
-            Expressions.Populate(expressions);
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Block(Type,
-                ParameterExpression.ToParameterExpressions(Variables, ref exprsConverted),
-                ToExpressions(Expressions.ToArray(), ref exprsConverted));
-    }
-
-    /// <summary>Block with no variable but user-specified type.</summary>
-    public sealed class TypedBlockExpression : BlockExpression
-    {
-        public override Type Type { get; }
-        internal TypedBlockExpression(Type type, in SmallList2<Expression> expressions) : base(in expressions) => Type = type;
-        internal TypedBlockExpression(Type type, Expression e0) : base(e0) => Type = type;
-        internal TypedBlockExpression(Type type, Expression e0, Expression e1) : base(e0, e1) => Type = type;
-        internal TypedBlockExpression(Type type, Expression e0, Expression e1, params Expression[] rest) : base(e0, e1, rest) => Type = type;
-        internal TypedBlockExpression(Type type, IReadOnlyList<Expression> expressions) : base(expressions) => Type = type;
-    }
-
-    public class ManyVariablesBlockExpression : BlockExpression
-    {
-        public sealed override IReadOnlyList<ParameterExpression> Variables { get; }
-        public sealed override int ArgumentCount => Expressions.Count;
-        public sealed override Expression GetArgument(int index) => Expressions.GetSurePresentItemRef(index);
-        internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, in SmallList2<Expression> expressions) : base(in expressions) =>
-            Variables = variables;
-        internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, Expression e0) : base(e0) =>
-            Variables = variables;
-        internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1) : base(e0, e1) =>
-            Variables = variables;
-        internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1, params Expression[] rest) : base(e0, e1, rest) =>
-            Variables = variables;
-        internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) : base(expressions) =>
-            Variables = variables;
-    }
-
-    public sealed class TypedManyVariablesBlockExpression : ManyVariablesBlockExpression
-    {
-        public override Type Type { get; }
-        internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, in SmallList2<Expression> expressions)
-            : base(variables, in expressions) => Type = type;
-        internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, Expression e0)
-            : base(variables, e0) => Type = type;
-        internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1)
-            : base(variables, e0, e1) => Type = type;
-        internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1, params Expression[] rest)
-            : base(variables, e0, e1, rest) => Type = type;
-        internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
-            : base(variables, expressions) => Type = type;
-    }
-
-    // todo: @perf optimize the memory for the cases without Break and Continue
-    public sealed class LoopExpression : Expression
-    {
-        public override ExpressionType NodeType => ExpressionType.Loop;
-        public override Type Type => typeof(void);
-        public readonly Expression Body;
-        public readonly LabelTarget BreakLabel;
-        public readonly LabelTarget ContinueLabel;
-        internal LoopExpression(Expression body, LabelTarget breakLabel, LabelTarget continueLabel)
-        {
-            Body = body;
-            BreakLabel = breakLabel;
-            ContinueLabel = continueLabel;
-        }
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLoop(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            BreakLabel == null
-            ? SysExpr.Loop(Body.ToExpression(ref exprsConverted)) :
-            ContinueLabel == null
-            ? SysExpr.Loop(Body.ToExpression(ref exprsConverted), BreakLabel.ToSystemLabelTarget(ref exprsConverted)) :
-            SysExpr.Loop(Body.ToExpression(ref exprsConverted),
-                BreakLabel.ToSystemLabelTarget(ref exprsConverted),
-                ContinueLabel.ToSystemLabelTarget(ref exprsConverted));
-    }
-
-    public class TryExpression : Expression
-    {
-        public override ExpressionType NodeType => ExpressionType.Try;
-        public override Type Type => Body.Type;
-        public readonly Expression Body;
-        public IReadOnlyList<CatchBlock> Handlers => _handlers;
-        private readonly CatchBlock[] _handlers;
-        public virtual Expression Finally => null;
-        internal TryExpression(Expression body, CatchBlock[] handlers)
-        {
-            Body = body;
-            _handlers = handlers;
-        }
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTry(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            Finally == null ?
-                SysExpr.TryCatch(Body.ToExpression(ref exprsConverted),
-                    ToCatchBlocks(_handlers, ref exprsConverted)) :
-            Handlers == null ?
-                SysExpr.TryFinally(Body.ToExpression(ref exprsConverted),
-                    Finally.ToExpression(ref exprsConverted)) :
-                SysExpr.TryCatchFinally(Body.ToExpression(ref exprsConverted),
-                    Finally.ToExpression(ref exprsConverted), ToCatchBlocks(_handlers, ref exprsConverted));
-
-        private static System.Linq.Expressions.CatchBlock ToCatchBlock(
-            ref CatchBlock cb, ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.MakeCatchBlock(cb.Test,
-                (System.Linq.Expressions.ParameterExpression)cb.Variable?.ToExpression(ref exprsConverted),
-                cb.Body.ToExpression(ref exprsConverted),
-                cb.Filter?.ToExpression(ref exprsConverted));
-
-        private static System.Linq.Expressions.CatchBlock[] ToCatchBlocks(
-            CatchBlock[] hs, ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            if (hs == null)
-                return Tools.Empty<System.Linq.Expressions.CatchBlock>();
-            var catchBlocks = new System.Linq.Expressions.CatchBlock[hs.Length];
-            for (var i = 0; i < hs.Length; ++i)
-                catchBlocks[i] = ToCatchBlock(ref hs[i], ref exprsConverted);
-            return catchBlocks;
-        }
-    }
-
-    public sealed class WithFinallyTryExpression : TryExpression
-    {
-        public override Expression Finally { get; }
-        internal WithFinallyTryExpression(Expression body, CatchBlock[] handlers, Expression @finally) : base(body, handlers) =>
-            Finally = @finally;
-    }
-
-    public sealed class CatchBlock
-    {
-        public readonly Type Test;
-        public readonly ParameterExpression Variable;
-        public readonly Expression Body;
-        public readonly Expression Filter;
-        internal CatchBlock(Type test, ParameterExpression variable, Expression body, Expression filter)
-        {
-            Test = test;
-            Variable = variable;
-            Body = body;
-            Filter = filter;
-        }
-    }
-
-    public class LabelExpression : Expression
-    {
-        public override ExpressionType NodeType => ExpressionType.Label;
-        public override Type Type => Target.Type;
-        public readonly LabelTarget Target;
-        public virtual Expression DefaultValue => null;
-        internal LabelExpression(LabelTarget target) => Target = target;
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLabel(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            DefaultValue == null
-                ? SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted))
-                : SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted), DefaultValue.ToExpression(ref exprsConverted));
-    }
-
-    public sealed class WithDefaultValueLabelExpression : LabelExpression
-    {
-        public override Expression DefaultValue { get; }
-        internal WithDefaultValueLabelExpression(LabelTarget target, Expression defaultValue) : base(target) =>
-            DefaultValue = defaultValue;
-    }
-
-    public class LabelTarget
-    {
-        public virtual Type Type => typeof(void);
-        public virtual string Name => null;
-
-        internal System.Linq.Expressions.LabelTarget ToSystemLabelTarget(ref SmallList<LightAndSysExpr> converted)
-        {
-            var i = converted.Count - 1;
-            while (i != -1 && !ReferenceEquals(converted.Items[i].LightExpr, this)) --i;
-            if (i != -1)
-                return (System.Linq.Expressions.LabelTarget)converted.Items[i].SysExpr;
-
-            var sysItem = Name == null
-                ? SysExpr.Label(Type)
-                : SysExpr.Label(Type, Name);
-
-            ref var item = ref converted.Add();
-            item.LightExpr = this;
-            item.SysExpr = sysItem;
-            return sysItem;
-        }
-
-        public override string ToString() => this.ToCSharpString(new StringBuilder()).ToString();
-    }
-
-    public sealed class TypedLabelTarget : LabelTarget
-    {
-        public override Type Type { get; }
-        public TypedLabelTarget(Type type) => Type = type;
-    }
-
-    public class NamedLabelTarget : LabelTarget
-    {
-        public override string Name { get; }
-        public NamedLabelTarget(string name) => Name = name;
-    }
-
-    public sealed class TypedNamedLabelTarget : NamedLabelTarget
-    {
-        public override Type Type { get; }
-        public TypedNamedLabelTarget(Type type, string name) : base(name) => Type = type;
-    }
-
-    public class GotoExpression : Expression
-    {
-        public override ExpressionType NodeType => ExpressionType.Goto;
-        public override Type Type => typeof(void);
-        public virtual GotoExpressionKind Kind => GotoExpressionKind.Goto;
-        public virtual Expression Value => null;
-        public readonly LabelTarget Target;
-        internal GotoExpression(LabelTarget target) => Target = target;
-#if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitGoto(this);
-#endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.MakeGoto(Kind, Target.ToSystemLabelTarget(ref exprsConverted), Value?.ToExpression(ref exprsConverted), Type);
-    }
-
-    public class ValueGotoExpression : GotoExpression
-    {
-        public override Type Type => Target.Type; // non-void when the Value expression is provided
-        public override Expression Value { get; }
-        internal ValueGotoExpression(LabelTarget target, Expression value) : base(target) =>
-            Value = value;
-    }
-
-    public class TypedGotoExpression : GotoExpression
-    {
-        public override Type Type { get; }
-        internal TypedGotoExpression(LabelTarget target, Type type) : base(target) =>
-            Type = type;
-    }
-
-    public class TypedValueGotoExpression : ValueGotoExpression
-    {
-        public override Type Type { get; }
-        internal TypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value) =>
-            Type = type;
-    }
-
-    public sealed class ReturnGotoExpression : GotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Return;
-        internal ReturnGotoExpression(LabelTarget target) : base(target) { }
-    }
-
-    public sealed class ReturnTypedGotoExpression : TypedGotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Return;
-        internal ReturnTypedGotoExpression(LabelTarget target, Type type) : base(target, type) { }
-    }
-
-    public sealed class ReturnValueGotoExpression : ValueGotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Return;
-        internal ReturnValueGotoExpression(LabelTarget target, Expression value) : base(target, value) { }
-    }
-
-    public sealed class ReturnTypedValueGotoExpression : TypedValueGotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Return;
-        internal ReturnTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
-    }
-
-    public sealed class BreakGotoExpression : GotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Break;
-        internal BreakGotoExpression(LabelTarget target) : base(target) { }
-    }
-
-    public sealed class BreakValueGotoExpression : ValueGotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Break;
-        internal BreakValueGotoExpression(LabelTarget target, Expression value) : base(target, value) { }
-    }
-
-    public sealed class BreakTypedGotoExpression : TypedGotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Break;
-        internal BreakTypedGotoExpression(LabelTarget target, Type type) : base(target, type) { }
-    }
-
-    public sealed class BreakTypedValueGotoExpression : TypedValueGotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Break;
-        internal BreakTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
-    }
-
-    public sealed class ContinueGotoExpression : GotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
-        internal ContinueGotoExpression(LabelTarget target) : base(target) { }
-    }
-
-    public sealed class ContinueTypedGotoExpression : TypedGotoExpression
-    {
-        public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
-        internal ContinueTypedGotoExpression(LabelTarget target, Type type) : base(target, type) { }
-    }
-
-    public struct SwitchCase
-    {
-        public readonly IReadOnlyList<Expression> TestValues;
-        public readonly Expression Body;
-        public SwitchCase(Expression body, IEnumerable<Expression> testValues)
-        {
-            Body = body;
-            TestValues = testValues.AsReadOnlyList();
-        }
-
-        public override bool Equals(object obj) =>
-            obj is SwitchCase other && other.Body == Body && ReferenceEquals(other.TestValues, TestValues);
-
-        public override int GetHashCode() => HashCombiner.Combine(Body, TestValues).GetHashCode();
-    }
-
-    internal static class HashCombiner
-    {
-        public static int Combine<T1, T2>(T1 a, T2 b) =>
-            Combine(a?.GetHashCode() ?? 0, b?.GetHashCode() ?? 0);
-
-        public static int Combine(int h1, int h2)
-        {
-            if (h1 == 0) return h2;
-            unchecked
+            var left = Left.ToExpression(ref exprsConverted);
+            var right = Right.ToExpression(ref exprsConverted);
+            if (left.Type.GetTypeInfo().IsPrimitive)
             {
-                return (h1 << 5) + h1 ^ h2;
+                left = TryConvertSysExprToInt(left);
+                right = TryConvertSysExprToInt(right);
             }
+            return SysExpr.MakeBinary(NodeType, left, right);
         }
+        return base.CreateSysExpression(ref exprsConverted);
     }
 
-    public class SwitchExpression : Expression // todo: @perf implement IArgumentProvider<SwitchCase>
+    private static SysExpr TryConvertSysExprToInt(SysExpr e)
     {
-        public sealed override ExpressionType NodeType => ExpressionType.Switch;
-        public sealed override Type Type { get; }
-        public readonly Expression SwitchValue;
-        public IReadOnlyList<SwitchCase> Cases => _cases;
-        private readonly SwitchCase[] _cases;
-        public readonly Expression DefaultBody;
-        public virtual MethodInfo Comparison => null;
-        public SwitchExpression(Type type, Expression switchValue, Expression defaultBody, SwitchCase[] cases)
-        {
-            Type = type;
-            SwitchValue = switchValue;
-            DefaultBody = defaultBody;
-            _cases = cases;
-        }
+        var t = e.Type;
+        if (t == typeof(byte) ||
+            t == typeof(sbyte) ||
+            t == typeof(short) ||
+            t == typeof(ushort))
+            return SysExpr.Convert(e, typeof(int));
+        return e;
+    }
+}
+
+internal sealed class LeftTypedBinaryExpression : BinaryExpression
+{
+    public override ExpressionType NodeType { get; }
+    public override Type Type => Left.Type;
+    internal LeftTypedBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
+        NodeType = nodeType;
+}
+
+internal sealed class LiftedToNullBinaryExpression : BinaryExpression
+{
+    public override ExpressionType NodeType { get; }
+    public override Type Type => typeof(bool?);
+    internal LiftedToNullBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), true, null);
+}
+
+// todo: @perf optimize (split) for the left or right target type
+internal class CoalesceBinaryExpression : BinaryExpression
+{
+    public sealed override ExpressionType NodeType => ExpressionType.Coalesce;
+    public override Type Type { get; }
+    internal CoalesceBinaryExpression(Expression left, Expression right, Type type) : base(left, right) =>
+        Type = type;
+
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.Coalesce(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
+}
+
+internal sealed class CoalesceConversionBinaryExpression : CoalesceBinaryExpression
+{
+    public override Type Type => Right.Type;
+    public override LambdaExpression Conversion { get; }
+
+    internal CoalesceConversionBinaryExpression(Expression left, Expression right, LambdaExpression conversion)
+        : base(left, right, right.Type) =>
+        Conversion = conversion;
+
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.Coalesce(Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), Conversion.ToLambdaExpression());
+}
+
+public sealed class ArrayIndexExpression : BinaryExpression
+{
+    public override ExpressionType NodeType => ExpressionType.ArrayIndex;
+    public override Type Type => Left.Type.GetElementType();
+    internal ArrayIndexExpression(Expression left, Expression right) : base(left, right) { }
+}
+
+public class AssignBinaryExpression : BinaryExpression
+{
+    public override ExpressionType NodeType => ExpressionType.Assign;
+    public sealed override Type Type => Left.Type;
+    internal AssignBinaryExpression(Expression left, Expression right) : base(left, right) { }
+}
+
+public class OpAssignBinaryExpression : AssignBinaryExpression
+{
+    public sealed override ExpressionType NodeType { get; }
+    internal OpAssignBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
+}
+
+public sealed class OpAssignMethodConversionBinaryExpression : OpAssignBinaryExpression
+{
+    public override MethodInfo Method { get; }
+    public override LambdaExpression Conversion { get; }
+    public bool LiftToNull { get; }
+    internal OpAssignMethodConversionBinaryExpression(ExpressionType nodeType, Expression left, Expression right, MethodInfo method, LambdaExpression conversion, bool liftToNull)
+        : base(nodeType, left, right)
+    {
+        Method = method;
+        Conversion = conversion;
+        LiftToNull = liftToNull;
+    }
+
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), LiftToNull, Method, Conversion.ToLambdaExpression());
+}
+
+public class ElementInit : IArgumentProvider
+{
+    public readonly MethodInfo AddMethod;
+    public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
+    public virtual int ArgumentCount => 0;
+    public virtual Expression GetArgument(int i) => throw new NotImplementedException();
+    internal ElementInit(MethodInfo addMethod) => AddMethod = addMethod;
+}
+
+public sealed class OneArgumentElementInit : ElementInit
+{
+    public readonly Expression Argument;
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument };
+    public override int ArgumentCount => 1;
+    public override Expression GetArgument(int i) => Argument;
+    internal OneArgumentElementInit(MethodInfo addMethod, Expression a) : base(addMethod) => Argument = a;
+}
+
+public sealed class ManyArgumentsElementInit : ElementInit
+{
+    public override IReadOnlyList<Expression> Arguments { get; }
+    public override int ArgumentCount => Arguments.Count;
+    public override Expression GetArgument(int i) => Arguments[i];
+    internal ManyArgumentsElementInit(MethodInfo addMethod, IReadOnlyList<Expression> args) : base(addMethod) => Arguments = args;
+}
+
+// todo: @feature is not supported yet
+public sealed class ListInitExpression : Expression
+{
+    public override ExpressionType NodeType => ExpressionType.ListInit;
+    public override Type Type => NewExpression.Type;
+    public readonly NewExpression NewExpression;
+    public readonly IReadOnlyList<ElementInit> Initializers;
+    internal ListInitExpression(NewExpression newExpression, IReadOnlyList<ElementInit> initializers)
+    {
+        NewExpression = newExpression;
+        Initializers = initializers;
+    }
 #if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitSwitch(this);
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitListInit(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Switch(SwitchValue.ToExpression(ref exprsConverted),
-                DefaultBody.ToExpression(ref exprsConverted), Comparison,
-                ToSwitchCaseExpressions(_cases, ref exprsConverted));
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
+        SysExpr.ListInit(
+            (System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref convertedExpressions),
+            ToElementInits(Initializers, ref convertedExpressions));
 
-        internal static System.Linq.Expressions.SwitchCase ToSwitchCase(ref SwitchCase sw, ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.SwitchCase(sw.Body.ToExpression(ref exprsConverted), ToExpressions(sw.TestValues, ref exprsConverted));
-
-        internal static System.Linq.Expressions.SwitchCase[] ToSwitchCaseExpressions(
-            SwitchCase[] switchCases, ref SmallList<LightAndSysExpr> exprsConverted)
-        {
-            if (switchCases.Length == 0)
-                return Tools.Empty<System.Linq.Expressions.SwitchCase>();
-
-            var result = new System.Linq.Expressions.SwitchCase[switchCases.Length];
-            for (var i = 0; i < result.Length; ++i)
-                result[i] = ToSwitchCase(ref switchCases[i], ref exprsConverted);
-            return result;
-        }
-    }
-
-    public sealed class WithComparisonSwitchExpression : SwitchExpression
+    internal static System.Linq.Expressions.ElementInit[] ToElementInits(IReadOnlyList<ElementInit> elemInits,
+        ref SmallList<LightAndSysExpr> exprsConverted)
     {
-        public override MethodInfo Comparison { get; }
-        public WithComparisonSwitchExpression(Type type, Expression switchValue, Expression defaultBody, SwitchCase[] cases, MethodInfo comparison)
-            : base(type, switchValue, defaultBody, cases) => Comparison = comparison;
+        if (elemInits.Count == 0)
+            return Tools.Empty<System.Linq.Expressions.ElementInit>();
+        var result = new System.Linq.Expressions.ElementInit[elemInits.Count];
+        for (var i = 0; i < result.Length; ++i)
+            result[i] = SysExpr.ElementInit(elemInits[i].AddMethod,
+                ToExpressions(elemInits[i].Arguments, ref exprsConverted));
+        return result;
     }
+}
 
-    public abstract class LambdaExpression : Expression, IParameterProvider
+public sealed class TypeBinaryExpression : Expression
+{
+    public override ExpressionType NodeType { get; }
+    public override Type Type => typeof(bool);
+    public Type TypeOperand { get; }
+    public readonly Expression Expression;
+    internal TypeBinaryExpression(ExpressionType nodeType, Expression expression, Type typeOperand)
     {
-        public sealed override ExpressionType NodeType => ExpressionType.Lambda;
-        public readonly Expression Body;
-        public virtual Type ReturnType => Body.Type;
-        public virtual IReadOnlyList<ParameterExpression> Parameters => Tools.Empty<ParameterExpression>();
-        public virtual int ParameterCount => 0;
-        public virtual ParameterExpression GetParameter(int index) =>
-            throw new NotImplementedException("Requested the parameter from the no-parameter lambda");
-        protected LambdaExpression(Expression body) => Body = body;
+        NodeType = nodeType;
+        Expression = expression;
+        TypeOperand = typeOperand;
+    }
 #if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTypeBinary(this);
 #endif
-        public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
-            (System.Linq.Expressions.LambdaExpression)ToExpression();
-
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.Lambda(Type, Body.ToExpression(ref exprsConverted), ParameterExpression.ToParameterExpressions(Parameters, ref exprsConverted));
-    }
-
-    public class TypedLambdaExpression : LambdaExpression
-    {
-        public sealed override Type Type { get; }
-        internal TypedLambdaExpression(Type delegateType, Expression body) : base(body) => Type = delegateType;
-    }
-
-    public class OneParameterLambdaExpression : TypedLambdaExpression
-    {
-        public readonly ParameterExpression Parameter0;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0 };
-        public sealed override int ParameterCount => 1;
-        public sealed override ParameterExpression GetParameter(int index) => Parameter0;
-        internal OneParameterLambdaExpression(Type delegateType, Expression body, ParameterExpression parameter) : base(delegateType, body) =>
-            Parameter0 = parameter;
-    }
-
-    public class TwoParametersLambdaExpression : TypedLambdaExpression
-    {
-        public readonly ParameterExpression Parameter0, Parameter1;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1 };
-        public sealed override int ParameterCount => 2;
-        public sealed override ParameterExpression GetParameter(int index) => index == 0 ? Parameter0 : Parameter1;
-        internal TwoParametersLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1) : base(delegateType, body)
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        NodeType switch
         {
-            Parameter0 = p0; Parameter1 = p1;
-        }
-    }
+            ExpressionType.TypeIs =>
+                SysExpr.TypeIs(Expression.ToExpression(ref exprsConverted), TypeOperand),
+            ExpressionType.TypeEqual =>
+                SysExpr.TypeEqual(Expression.ToExpression(ref exprsConverted), TypeOperand),
+            _ => throw new NotSupportedException()
+        };
 
-    public class ThreeParametersLambdaExpression : TypedLambdaExpression
-    {
-        public readonly ParameterExpression Parameter0, Parameter1, Parameter2;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2 };
-        public sealed override int ParameterCount => 3;
-        public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : Parameter2;
-        internal ThreeParametersLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) : base(delegateType, body)
-        {
-            Parameter0 = p0; Parameter1 = p1; Parameter2 = p2;
-        }
-    }
+}
 
-    public class FourParametersLambdaExpression : TypedLambdaExpression
-    {
-        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3 };
-        public sealed override int ParameterCount => 4;
-        public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : Parameter3;
-        internal FourParametersLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3)
-            : base(delegateType, body)
-        {
-            Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3;
-        }
-    }
-
-    public class FiveParametersLambdaExpression : TypedLambdaExpression
-    {
-        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4 };
-        public sealed override int ParameterCount => 5;
-        public sealed override ParameterExpression GetParameter(int i) => // todo: @perf usually the method is called in a loop, so we may add the explixit LoopParameters method here to avoid condition check on each parameter!!!
-            i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : Parameter4;
-        internal FiveParametersLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4)
-            : base(delegateType, body)
-        {
-            Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4;
-        }
-    }
-
-    public class SixParametersLambdaExpression : TypedLambdaExpression
-    {
-        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5 };
-        public sealed override int ParameterCount => 6;
-        public sealed override ParameterExpression GetParameter(int i) =>
-            i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : i == 5 ? Parameter4 : Parameter5;
-        internal SixParametersLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3,
-            ParameterExpression p4, ParameterExpression p5) : base(delegateType, body)
-        {
-            Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4; Parameter5 = p5;
-        }
-    }
-
-    public class ManyParametersLambdaExpression : TypedLambdaExpression
-    {
-        private readonly IReadOnlyList<ParameterExpression> _parameters;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => _parameters;
-        public sealed override int ParameterCount => _parameters.Count;
-        public sealed override ParameterExpression GetParameter(int index) => _parameters[index];
-        internal ManyParametersLambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters)
-            : base(delegateType, body) => _parameters = parameters;
-    }
-
-    public sealed class TypedReturnLambdaExpression : TypedLambdaExpression
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnLambdaExpression(Type delegateType, Expression body, Type returnType) : base(delegateType, body) =>
-            ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnOneParameterLambdaExpression : OneParameterLambdaExpression
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnOneParameterLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression parameter, Type returnType) : base(delegateType, body, parameter) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnTwoParametersLambdaExpression : TwoParametersLambdaExpression
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnTwoParametersLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, Type returnType)
-            : base(delegateType, body, p0, p1) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnThreeParametersLambdaExpression : ThreeParametersLambdaExpression
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnThreeParametersLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, Type returnType)
-            : base(delegateType, body, p0, p1, p2) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnFourParametersLambdaExpression : FourParametersLambdaExpression
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnFourParametersLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, Type returnType)
-            : base(delegateType, body, p0, p1, p2, p3) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnFiveParametersLambdaExpression : FiveParametersLambdaExpression
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnFiveParametersLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3,
-            ParameterExpression p4, Type returnType)
-            : base(delegateType, body, p0, p1, p2, p3, p4) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnSixParametersLambdaExpression : SixParametersLambdaExpression
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnSixParametersLambdaExpression(Type delegateType, Expression body,
-            ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3,
-            ParameterExpression p4, ParameterExpression p5, Type returnType)
-            : base(delegateType, body, p0, p1, p2, p3, p4, p5) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnManyParametersLambdaExpression : ManyParametersLambdaExpression
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnManyParametersLambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
-            : base(delegateType, body, parameters) => ReturnType = returnType;
-    }
-
-    public class Expression<TDelegate> : LambdaExpression where TDelegate : System.Delegate
-    {
-        public sealed override Type Type => typeof(TDelegate);
-        internal Expression(Expression body) : base(body) { }
+public class MemberInitExpression : Expression, IArgumentProvider<MemberBinding>
+{
+    public sealed override ExpressionType NodeType => ExpressionType.MemberInit;
+    public override Type Type => Expression.Type;
+    public readonly Expression Expression;
+    public NewExpression NewExpression => Expression as NewExpression;
+    public virtual IReadOnlyList<MemberBinding> Bindings => Tools.Empty<MemberBinding>();
+    public virtual int ArgumentCount => 0;
+    public virtual MemberBinding GetArgument(int i) => throw new NotImplementedException();
+    internal MemberInitExpression(Expression expression) => Expression = expression;
 #if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMemberInit(this);
 #endif
-        public new System.Linq.Expressions.Expression<TDelegate> ToLambdaExpression()
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.MemberInit((System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref exprsConverted),
+            BindingsToExpressions(Bindings, ref exprsConverted));
+
+    internal static System.Linq.Expressions.MemberBinding[] BindingsToExpressions(
+        IReadOnlyList<MemberBinding> ms, ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        if (ms.Count == 0)
+            return Tools.Empty<System.Linq.Expressions.MemberBinding>();
+
+        if (ms.Count == 1)
+            return new[] { ms[0].ToMemberBinding(ref exprsConverted) };
+
+        var result = new System.Linq.Expressions.MemberBinding[ms.Count];
+        for (var i = 0; i < result.Length; ++i)
+            result[i] = ms[i].ToMemberBinding(ref exprsConverted);
+        return result;
+    }
+}
+
+public sealed class ManyBindingsMemberInitExpression : MemberInitExpression
+{
+    public override IReadOnlyList<MemberBinding> Bindings { get; }
+    public override int ArgumentCount => Bindings.Count;
+    public override MemberBinding GetArgument(int i) => Bindings[i];
+    internal ManyBindingsMemberInitExpression(Expression expression, IReadOnlyList<MemberBinding> bindings) : base(expression) =>
+        Bindings = bindings;
+}
+
+public sealed class OneBindingMemberInitExpression : MemberInitExpression
+{
+    public readonly MemberBinding Binding;
+    public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding };
+    public override int ArgumentCount => 1;
+    public override MemberBinding GetArgument(int i) => Binding;
+    internal OneBindingMemberInitExpression(Expression expression, MemberBinding b1) : base(expression) =>
+        Binding = b1;
+}
+
+public sealed class TwoBindingsMemberInitExpression : MemberInitExpression
+{
+    public readonly MemberBinding Binding0, Binding1;
+    public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding0, Binding1 };
+    public override int ArgumentCount => 2;
+    public override MemberBinding GetArgument(int i) => i == 0 ? Binding0 : Binding1;
+    internal TwoBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1) : base(expression)
+    { Binding0 = b0; Binding1 = b1; }
+}
+
+public sealed class ThreeBindingsMemberInitExpression : MemberInitExpression
+{
+    public readonly MemberBinding Binding0, Binding1, Binding2;
+    public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding0, Binding1, Binding2 };
+    public override int ArgumentCount => 3;
+    public override MemberBinding GetArgument(int i) => i == 0 ? Binding0 : i == 1 ? Binding1 : Binding2;
+    internal ThreeBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
+         MemberBinding b2) : base(expression)
+    { Binding0 = b0; Binding1 = b1; Binding2 = b2; }
+}
+
+public sealed class FourBindingsMemberInitExpression : MemberInitExpression
+{
+    public readonly MemberBinding Binding0, Binding1, Binding2, Binding3;
+    public override IReadOnlyList<MemberBinding> Bindings => new[] { Binding0, Binding1, Binding2, Binding3 };
+    public override int ArgumentCount => 4;
+    public override MemberBinding GetArgument(int i) =>
+        i == 0 ? Binding0 : i == 1 ? Binding1 : i == 2 ? Binding2 : Binding3;
+    internal FourBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
+         MemberBinding b2, MemberBinding b3) : base(expression)
+    { Binding0 = b0; Binding1 = b1; Binding2 = b2; Binding3 = b3; }
+}
+
+public sealed class FiveBindingsMemberInitExpression : MemberInitExpression
+{
+    public readonly MemberBinding Binding0, Binding1, Binding2, Binding3, Binding4;
+    public override IReadOnlyList<MemberBinding> Bindings =>
+        new[] { Binding0, Binding1, Binding2, Binding3, Binding4 };
+    public override int ArgumentCount => 5;
+    public override MemberBinding GetArgument(int i) =>
+        i == 0 ? Binding0 : i == 1 ? Binding1 : i == 2 ? Binding2 : i == 3 ? Binding3 : Binding4;
+    internal FiveBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
+         MemberBinding b2, MemberBinding b3, MemberBinding b4) : base(expression)
+    { Binding0 = b0; Binding1 = b1; Binding2 = b2; Binding3 = b3; Binding4 = b4; }
+}
+
+public sealed class SixBindingsMemberInitExpression : MemberInitExpression
+{
+    public readonly MemberBinding Binding0, Binding1, Binding2, Binding3, Binding4, Binding5;
+    public override IReadOnlyList<MemberBinding> Bindings =>
+        new[] { Binding0, Binding1, Binding2, Binding3, Binding4, Binding5 };
+    public override int ArgumentCount => 6;
+    public override MemberBinding GetArgument(int i) =>
+        i == 0 ? Binding0 : i == 1 ? Binding1 : i == 2 ? Binding2 : i == 3 ? Binding3 : i == 4 ? Binding4 : Binding5;
+    internal SixBindingsMemberInitExpression(Expression expression, MemberBinding b0, MemberBinding b1,
+         MemberBinding b2, MemberBinding b3, MemberBinding b4, MemberBinding b5) : base(expression)
+    { Binding0 = b0; Binding1 = b1; Binding2 = b2; Binding3 = b3; Binding4 = b4; Binding5 = b5; }
+}
+
+public class ParameterExpression : Expression
+{
+    public sealed override ExpressionType NodeType => ExpressionType.Parameter;
+    public override Type Type => typeof(object);
+    public virtual bool IsByRef => false;
+    public string Name { get; }
+    internal ParameterExpression(string name) => Name = name;
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitParameter(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.Parameter(IsByRef ? Type.MakeByRefType() : Type, Name);
+
+    internal static System.Linq.Expressions.ParameterExpression[] ToParameterExpressions(
+        IReadOnlyList<ParameterExpression> ps, ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        if (ps == null || ps.Count == 0)
+            return Tools.Empty<System.Linq.Expressions.ParameterExpression>();
+        if (ps.Count == 1)
+            return new[] { (System.Linq.Expressions.ParameterExpression)ps[0].ToExpression(ref exprsConverted) };
+        var result = new System.Linq.Expressions.ParameterExpression[ps.Count];
+        for (var i = 0; i < result.Length; ++i)
+            result[i] = (System.Linq.Expressions.ParameterExpression)ps[i].ToExpression(ref exprsConverted);
+        return result;
+    }
+}
+
+public sealed class TypedParameterExpression : ParameterExpression
+{
+    public override Type Type { get; }
+    internal TypedParameterExpression(Type type, string name) : base(name) => Type = type;
+}
+
+internal sealed class ByRefParameterExpression : ParameterExpression
+{
+    public override bool IsByRef => true;
+    public override Type Type { get; }
+    internal ByRefParameterExpression(Type type, string name) : base(name) => Type = type;
+}
+
+public sealed class TypedParameterExpression<T> : ParameterExpression
+{
+    public override Type Type => typeof(T);
+    internal TypedParameterExpression(string name) : base(name) { }
+}
+
+///<summary>The base constant type</summary>
+public abstract class ConstantExpression : Expression
+{
+    public sealed override ExpressionType NodeType => ExpressionType.Constant;
+    public abstract object Value { get; }
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> _) => SysExpr.Constant(Value, Type);
+
+    /// <summary>I want to see the actual Value not the default one</summary>
+    public override string ToString() => $"Constant({Value}, typeof({Type.ToCode()}))";
+}
+
+public sealed class TypedNullConstantExpression : ConstantExpression
+{
+    public override Type Type { get; }
+    public override object Value => null;
+    internal TypedNullConstantExpression(Type type) => Type = type;
+}
+
+public sealed class NullConstantExpression<T> : ConstantExpression
+{
+    public override object Value => null;
+    public override Type Type => typeof(T);
+}
+
+public sealed class ValueConstantExpression : ConstantExpression
+{
+    public override Type Type => Value.GetType();
+    public override object Value { get; }
+    internal ValueConstantExpression(object value) => Value = value;
+}
+
+public sealed class ValueConstantExpression<T> : ConstantExpression
+{
+    public override Type Type => typeof(T);
+    public override object Value { get; }
+    internal ValueConstantExpression(object value) => Value = value;
+}
+
+public sealed class TypedValueConstantExpression : ConstantExpression
+{
+    public override Type Type { get; }
+    public override object Value { get; }
+    internal TypedValueConstantExpression(object value, Type type) { Value = value; Type = type; }
+}
+
+public sealed class IntConstantExpression : ConstantExpression
+{
+    public override Type Type => typeof(int);
+    public override object Value => IntValue;
+    public readonly int IntValue;
+    internal IntConstantExpression(int value) => IntValue = value;
+}
+
+public class NewExpression : Expression, IArgumentProvider
+{
+    public sealed override ExpressionType NodeType => ExpressionType.New;
+    public override Type Type => Constructor.DeclaringType;
+    public readonly ConstructorInfo Constructor;
+    public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
+    public virtual int ArgumentCount => 0;
+    public virtual Expression GetArgument(int i) => throw new NotImplementedException();
+
+    internal NewExpression(ConstructorInfo constructor) => Constructor = constructor;
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNew(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.New(Constructor, ToExpressions(Arguments, ref exprsConverted));
+}
+
+public sealed class NewValueTypeExpression : NewExpression
+{
+    public override Type Type { get; }
+    internal NewValueTypeExpression(Type type) : base(null) => Type = type;
+
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) => SysExpr.New(Type);
+}
+
+public sealed class NoArgsNewClassIntrinsicExpression : NewExpression
+{
+    internal NoArgsNewClassIntrinsicExpression(ConstructorInfo constructor) : base(constructor) { }
+    public override bool IsIntrinsic => true;
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
+    public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    {
+        il.Demit(OpCodes.Newobj, Constructor);
+        return true;
+    }
+}
+
+public class OneArgumentNewExpression : NewExpression
+{
+    public readonly object Arg;
+    public Expression Argument => Arg.AsExpr();
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument };
+    public override int ArgumentCount => 1;
+    public override Expression GetArgument(int i) => Argument;
+    internal OneArgumentNewExpression(ConstructorInfo constructor, object arg) : base(constructor) => Arg = arg;
+}
+
+public sealed class NoByRefOneArgNewIntrinsicExpression : OneArgumentNewExpression
+{
+    internal NoByRefOneArgNewIntrinsicExpression(ConstructorInfo constructor, object arg) : base(constructor, arg) { }
+    public override bool IsIntrinsic => true;
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+        ExpressionCompiler.TryCollectInfo(ref closure, Argument, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+    public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    {
+        var ok = EmittingVisitor.TryEmit(Argument, paramExprs, il, ref closure, setup, parent | ParentFlags.CtorCall, -1);
+        il.Demit(OpCodes.Newobj, Constructor);
+        return ok;
+    }
+}
+
+public class TwoArgumentsNewExpression : NewExpression
+{
+    public readonly object A0, A1;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
+    public override int ArgumentCount => 2;
+    public override Expression GetArgument(int i) => i == 0 ? A0.AsExpr() : A1.AsExpr();
+    internal TwoArgumentsNewExpression(ConstructorInfo constructor, object a0, object a1) : base(constructor)
+    {
+        A0 = a0; A1 = a1;
+    }
+}
+
+public sealed class NoByRefTwoArgumentsNewIntrinsicExpression : TwoArgumentsNewExpression
+{
+    internal NoByRefTwoArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1) : base(constructor, a0, a1) { }
+    public override bool IsIntrinsic => true;
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    {
+        var r = Result.OK;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+    }
+    public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    {
+        var f = parent | ParentFlags.CtorCall;
+        var ok =
+            EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1);
+        il.Demit(OpCodes.Newobj, Constructor);
+        return ok;
+    }
+}
+
+public class ThreeArgumentsNewExpression : NewExpression
+{
+    public readonly object A0, A1, A2;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public Expression Argument2 => A2.AsExpr();
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
+    public override int ArgumentCount => 3;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : A2.AsExpr();
+    internal ThreeArgumentsNewExpression(ConstructorInfo constructor, object a0, object a1, object a2) : base(constructor)
+    {
+        A0 = a0; A1 = a1; A2 = a2;
+    }
+}
+
+public sealed class NoByRefThreeArgumentsNewIntrinsicExpression : ThreeArgumentsNewExpression
+{
+    internal NoByRefThreeArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2)
+        : base(constructor, a0, a1, a2) { }
+    public override bool IsIntrinsic => true;
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    {
+        var r = Result.OK;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+    }
+    public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    {
+        var f = parent | ParentFlags.CtorCall;
+        var ok =
+            EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1);
+        il.Demit(OpCodes.Newobj, Constructor);
+        return ok;
+    }
+}
+
+public class FourArgumentsNewExpression : NewExpression
+{
+    public readonly object A0, A1, A2, A3;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public Expression Argument2 => A2.AsExpr();
+    public Expression Argument3 => A3.AsExpr();
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
+    public override int ArgumentCount => 4;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : A3.AsExpr();
+    internal FourArgumentsNewExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3) : base(constructor)
+    {
+        A0 = a0; A1 = a1; A2 = a2; A3 = a3;
+    }
+}
+
+public sealed class NoByRefFourArgumentsNewIntrinsicExpression : FourArgumentsNewExpression
+{
+    internal NoByRefFourArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3)
+        : base(constructor, a0, a1, a2, a3) { }
+    public override bool IsIntrinsic => true;
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    {
+        var r = Result.OK;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+    }
+    public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    {
+        var f = parent | ParentFlags.CtorCall;
+        var ok =
+            EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1);
+        il.Demit(OpCodes.Newobj, Constructor);
+        return ok;
+    }
+}
+
+public class FiveArgumentsNewExpression : NewExpression
+{
+    public readonly object A0, A1, A2, A3, A4;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public Expression Argument2 => A2.AsExpr();
+    public Expression Argument3 => A3.AsExpr();
+    public Expression Argument4 => A4.AsExpr();
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
+    public override int ArgumentCount => 5;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : A4.AsExpr();
+    internal FiveArgumentsNewExpression(ConstructorInfo constructor,
+        object a0, object a1, object a2, object a3, object a4) : base(constructor)
+    {
+        A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4;
+    }
+}
+
+public sealed class NoByRefFiveArgumentsNewIntrinsicExpression : FiveArgumentsNewExpression
+{
+    internal NoByRefFiveArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3, object a4)
+        : base(constructor, a0, a1, a2, a3, a4) { }
+    public override bool IsIntrinsic => true;
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    {
+        var r = Result.OK;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+    }
+    public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    {
+        var f = parent | ParentFlags.CtorCall;
+        var ok =
+            EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, f, -1);
+        il.Demit(OpCodes.Newobj, Constructor);
+        return ok;
+    }
+}
+
+public class SixArgumentsNewExpression : NewExpression
+{
+    public readonly object A0, A1, A2, A3, A4, A5;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public Expression Argument2 => A2.AsExpr();
+    public Expression Argument3 => A3.AsExpr();
+    public Expression Argument4 => A4.AsExpr();
+    public Expression Argument5 => A5.AsExpr();
+    public override IReadOnlyList<Expression> Arguments =>
+        new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5 };
+    public override int ArgumentCount => 6;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : i == 4 ? A4.AsExpr() : A5.AsExpr();
+    internal SixArgumentsNewExpression(ConstructorInfo constructor,
+        object a0, object a1, object a2, object a3, object a4, object a5) : base(constructor)
+    {
+        A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4; A5 = a5;
+    }
+}
+
+public sealed class NoByRefSixArgumentsNewIntrinsicExpression : SixArgumentsNewExpression
+{
+    internal NoByRefSixArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3, object a4, object a5)
+        : base(constructor, a0, a1, a2, a3, a4, a5) { }
+    public override bool IsIntrinsic => true;
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    {
+        var r = Result.OK;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref closure, Argument5, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+    }
+    public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    {
+        var f = parent | ParentFlags.CtorCall;
+        var ok =
+            EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument5, paramExprs, il, ref closure, setup, f, -1);
+        il.Demit(OpCodes.Newobj, Constructor);
+        return ok;
+    }
+}
+
+public class SevenArgumentsNewExpression : NewExpression
+{
+    public readonly object A0, A1, A2, A3, A4, A5, A6;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public Expression Argument2 => A2.AsExpr();
+    public Expression Argument3 => A3.AsExpr();
+    public Expression Argument4 => A4.AsExpr();
+    public Expression Argument5 => A5.AsExpr();
+    public Expression Argument6 => A6.AsExpr();
+    public override IReadOnlyList<Expression> Arguments =>
+        new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5, Argument6 };
+    public override int ArgumentCount => 7;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : i == 4 ? A4.AsExpr() : i == 5 ? A5.AsExpr() : A6.AsExpr();
+    internal SevenArgumentsNewExpression(ConstructorInfo constructor,
+        object a0, object a1, object a2, object a3, object a4, object a5, object a6) : base(constructor)
+    {
+        A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4; A5 = a5; A6 = a6;
+    }
+}
+
+public sealed class NoByRefSevenArgumentsNewIntrinsicExpression : SevenArgumentsNewExpression
+{
+    internal NoByRefSevenArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3, object a4, object a5, object a6)
+        : base(constructor, a0, a1, a2, a3, a4, a5, a6) { }
+    public override bool IsIntrinsic => true;
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    {
+        var r = Result.OK;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument5, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
+        return ExpressionCompiler.TryCollectInfo(ref closure, Argument6, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+    }
+    public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    {
+        var f = parent | ParentFlags.CtorCall;
+        var ok =
+            EmittingVisitor.TryEmit(Argument0, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument2, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument3, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument4, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument5, paramExprs, il, ref closure, setup, f, -1) &&
+            EmittingVisitor.TryEmit(Argument6, paramExprs, il, ref closure, setup, f, -1);
+        il.Demit(OpCodes.Newobj, Constructor);
+        return ok;
+    }
+}
+
+public class ManyArgumentsNewExpression : NewExpression
+{
+    protected readonly IReadOnlyList<Expression> Args;
+    public override IReadOnlyList<Expression> Arguments => Args;
+    public override int ArgumentCount => Args.Count;
+    public override Expression GetArgument(int i) => Args[i];
+    internal ManyArgumentsNewExpression(ConstructorInfo constructor, IReadOnlyList<Expression> args) : base(constructor) => Args = args;
+}
+
+public sealed class NoByRefManyArgsNewIntrinsicExpression : ManyArgumentsNewExpression
+{
+    internal NoByRefManyArgsNewIntrinsicExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : base(constructor, arguments) { }
+    public override bool IsIntrinsic => true;
+    public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
+        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    {
+        var r = Result.OK;
+        var args = Args;
+        for (var i = 0; i < args.Count; i++)
+            if ((r = ExpressionCompiler.TryCollectInfo(ref closure, args[i], paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                return r;
+        return 0;
+    }
+    public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
+        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    {
+        var f = parent | ParentFlags.CtorCall;
+        var args = Args;
+        for (var i = 0; i < args.Count; i++)
+            if (!EmittingVisitor.TryEmit(args[i], paramExprs, il, ref closure, setup, f, -1))
+                return false;
+        il.Demit(OpCodes.Newobj, Constructor);
+        return true;
+    }
+}
+
+public abstract class NewArrayExpression : Expression, IArgumentProvider
+{
+    public sealed override Type Type { get; }
+    public abstract IReadOnlyList<Expression> Expressions { get; }
+    public virtual int ArgumentCount => Expressions.Count;
+    public virtual Expression GetArgument(int i) => Expressions[i];
+    internal NewArrayExpression(Type arrayType) => Type = arrayType;
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        var elemType = Type.GetElementType();
+        var exprs = ToExpressions(Expressions, ref exprsConverted);
+        return NodeType == ExpressionType.NewArrayInit
+            // ReSharper disable once AssignNullToNotNullAttribute
+            ? SysExpr.NewArrayInit(Type.GetElementType(), exprs)
+            // ReSharper disable once AssignNullToNotNullAttribute
+            : SysExpr.NewArrayBounds(Type.GetElementType(), exprs);
+    }
+}
+
+public sealed class ManyElementsNewArrayInitExpression : NewArrayExpression
+{
+    public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+    public override IReadOnlyList<Expression> Expressions { get; }
+    internal ManyElementsNewArrayInitExpression(Type arrayType, IReadOnlyList<Expression> elements) : base(arrayType) =>
+        Expressions = elements;
+}
+
+public sealed class OneElementNewArrayInitExpression : NewArrayExpression
+{
+    public readonly Expression Element;
+    public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+    public override IReadOnlyList<Expression> Expressions => new[] { Element };
+    public override int ArgumentCount => 1;
+    public override Expression GetArgument(int i) => Element;
+    internal OneElementNewArrayInitExpression(Type arrayType, Expression element) : base(arrayType) =>
+        Element = element;
+}
+
+public sealed class TwoElementNewArrayInitExpression : NewArrayExpression
+{
+    public readonly Expression Element0, Element1;
+    public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+    public override IReadOnlyList<Expression> Expressions => new[] { Element0, Element1 };
+    public override int ArgumentCount => 2;
+    public override Expression GetArgument(int i) => i == 0 ? Element0 : Element1;
+    internal TwoElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1) : base(arrayType)
+    {
+        Element0 = el0; Element1 = el1;
+    }
+}
+
+public sealed class ThreeElementNewArrayInitExpression : NewArrayExpression
+{
+    public readonly Expression Element0, Element1, Element2;
+    public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+    public override IReadOnlyList<Expression> Expressions => new[] { Element0, Element1, Element2 };
+    public override int ArgumentCount => 3;
+    public override Expression GetArgument(int i) => i == 0 ? Element0 : i == 1 ? Element1 : Element2;
+    internal ThreeElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2) : base(arrayType)
+    {
+        Element0 = el0; Element1 = el1; Element2 = el2;
+    }
+}
+
+public sealed class FourElementNewArrayInitExpression : NewArrayExpression
+{
+    public readonly Expression Element0, Element1, Element2, Element3;
+    public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+    public override IReadOnlyList<Expression> Expressions => new[] { Element0, Element1, Element2, Element3 };
+    public override int ArgumentCount => 4;
+    public override Expression GetArgument(int i) => i == 0 ? Element0 : i == 1 ? Element1 : i == 2 ? Element2 : Element3;
+    internal FourElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2,
+        Expression el3) : base(arrayType)
+    {
+        Element0 = el0; Element1 = el1; Element2 = el2; Element3 = el3;
+    }
+}
+
+public sealed class FiveElementNewArrayInitExpression : NewArrayExpression
+{
+    public readonly Expression Element0, Element1, Element2, Element3, Element4;
+    public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+    public override IReadOnlyList<Expression> Expressions =>
+        new[] { Element0, Element1, Element2, Element3, Element4 };
+    public override int ArgumentCount => 5;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? Element0 : i == 1 ? Element1 : i == 2 ? Element2 : i == 3 ? Element3 : Element4;
+    internal FiveElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2,
+        Expression el3, Expression el4) : base(arrayType)
+    {
+        Element0 = el0; Element1 = el1; Element2 = el2; Element3 = el3; Element4 = el4;
+    }
+}
+
+public sealed class SixElementNewArrayInitExpression : NewArrayExpression
+{
+    public readonly Expression Element0, Element1, Element2, Element3, Element4, Element5;
+    public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+    public override IReadOnlyList<Expression> Expressions =>
+        new[] { Element0, Element1, Element2, Element3, Element4, Element5 };
+    public override int ArgumentCount => 6;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? Element0 : i == 1 ? Element1 : i == 2 ? Element2 : i == 3 ? Element3 : i == 4 ? Element4 : Element5;
+    internal SixElementNewArrayInitExpression(Type arrayType, Expression el0, Expression el1, Expression el2,
+        Expression el3, Expression el4, Expression el5) : base(arrayType)
+    {
+        Element0 = el0; Element1 = el1; Element2 = el2; Element3 = el3; Element4 = el4; Element5 = el5;
+    }
+}
+
+public sealed class ManyBoundsNewArrayBoundsExpression : NewArrayExpression
+{
+    public override ExpressionType NodeType => ExpressionType.NewArrayBounds;
+    public override IReadOnlyList<Expression> Expressions { get; }
+    internal ManyBoundsNewArrayBoundsExpression(Type arrayType, IReadOnlyList<Expression> bounds) : base(arrayType) =>
+        Expressions = bounds;
+}
+
+public sealed class OneBoundNewArrayBoundsExpression : NewArrayExpression
+{
+    public override ExpressionType NodeType => ExpressionType.NewArrayBounds;
+    public readonly Expression Bound;
+    public override IReadOnlyList<Expression> Expressions => new[] { Bound };
+    public override int ArgumentCount => 1;
+    public override Expression GetArgument(int i) => Bound;
+    internal OneBoundNewArrayBoundsExpression(Type arrayType, Expression bound) : base(arrayType) =>
+        Bound = bound;
+}
+
+public class MethodCallExpression : Expression, IArgumentProvider
+{
+    public sealed override ExpressionType NodeType => ExpressionType.Call;
+    public override Type Type => Method.ReturnType;
+    public virtual MethodInfo Method => null;
+    public virtual Expression Object => null;
+    public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
+    public virtual int ArgumentCount => 0;
+    public virtual Expression GetArgument(int i) => throw new NotImplementedException();
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMethodCall(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        var objExpr = Object?.ToExpression(ref exprsConverted);
+        var expr = SysExpr.Call(objExpr, Method, ToExpressions(Arguments, ref exprsConverted));
+        return Type == Method.ReturnType ? expr : SysExpr.Convert(expr, Type); // insert the safe-guard convert
+    }
+}
+
+public class NotNullMethodCallExpression : MethodCallExpression
+{
+    public override MethodInfo Method { get; }
+    internal NotNullMethodCallExpression(MethodInfo method) => Method = method;
+}
+
+public sealed class InstanceMethodCallExpression : NotNullMethodCallExpression
+{
+    public override Expression Object { get; }
+    internal InstanceMethodCallExpression(Expression instance, MethodInfo method) : base(method) =>
+        Object = instance;
+}
+
+public class ManyArgumentsMethodCallExpression : NotNullMethodCallExpression
+{
+    private readonly IReadOnlyList<Expression> _arguments;
+    public sealed override IReadOnlyList<Expression> Arguments => _arguments;
+    public sealed override int ArgumentCount => _arguments.Count;
+    public sealed override Expression GetArgument(int i) => _arguments[i];
+    internal ManyArgumentsMethodCallExpression(MethodInfo method, IReadOnlyList<Expression> arguments) : base(method) =>
+        _arguments = arguments;
+}
+
+public sealed class InstanceManyArgumentsMethodCallExpression : ManyArgumentsMethodCallExpression
+{
+    public override Expression Object { get; }
+
+    internal InstanceManyArgumentsMethodCallExpression(Expression instance, MethodInfo method, IReadOnlyList<Expression> arguments)
+        : base(method, arguments) => Object = instance;
+}
+
+public class OneArgumentMethodCallExpression : NotNullMethodCallExpression
+{
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument };
+    public readonly object Arg;
+    public Expression Argument => Arg.AsExpr();
+    public override int ArgumentCount => 1;
+    public override Expression GetArgument(int i) => Argument.AsExpr();
+    internal OneArgumentMethodCallExpression(MethodInfo method, object arg) : base(method) => Arg = arg;
+}
+
+public sealed class InstanceOneArgumentMethodCallExpression : OneArgumentMethodCallExpression
+{
+    public override Expression Object { get; }
+
+    internal InstanceOneArgumentMethodCallExpression(Expression instance, MethodInfo method, Expression argument)
+        : base(method, argument) => Object = instance;
+}
+
+public class TwoArgumentsMethodCallExpression : NotNullMethodCallExpression
+{
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
+    public readonly object A0, A1;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public override int ArgumentCount => 2;
+    public override Expression GetArgument(int i) => i == 0 ? A0.AsExpr() : A1.AsExpr();
+    internal TwoArgumentsMethodCallExpression(MethodInfo method, object a0, object a1) : base(method)
+    {
+        A0 = a0; A1 = a1;
+    }
+}
+
+public sealed class InstanceTwoArgumentsMethodCallExpression : TwoArgumentsMethodCallExpression
+{
+    public override Expression Object { get; }
+
+    internal InstanceTwoArgumentsMethodCallExpression(Expression instance, MethodInfo method,
+        Expression argument0, Expression argument1) : base(method, argument0, argument1) => Object = instance;
+}
+
+public class ThreeArgumentsMethodCallExpression : NotNullMethodCallExpression
+{
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
+    public readonly object A0, A1, A2;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public Expression Argument2 => A2.AsExpr();
+    public override int ArgumentCount => 3;
+    public override Expression GetArgument(int i) => i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : A2.AsExpr();
+    internal ThreeArgumentsMethodCallExpression(MethodInfo method, object a0, object a1, object a2) : base(method)
+    {
+        A0 = a0; A1 = a1; A2 = a2;
+    }
+}
+
+public sealed class InstanceThreeArgumentsMethodCallExpression : ThreeArgumentsMethodCallExpression
+{
+    public override Expression Object { get; }
+    internal InstanceThreeArgumentsMethodCallExpression(Expression instance, MethodInfo method,
+        Expression a0, Expression a1, Expression a2) : base(method, a0, a1, a2) => Object = instance;
+}
+
+public class FourArgumentsMethodCallExpression : NotNullMethodCallExpression
+{
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
+    public readonly object A0, A1, A2, A3;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public Expression Argument2 => A2.AsExpr();
+    public Expression Argument3 => A3.AsExpr();
+    public override int ArgumentCount => 4;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : A3.AsExpr();
+    internal FourArgumentsMethodCallExpression(MethodInfo method, object a0, object a1, object a2, object a3) : base(method)
+    {
+        A0 = a0; A1 = a1; A2 = a2; A3 = a3;
+    }
+}
+
+public sealed class InstanceFourArgumentsMethodCallExpression : FourArgumentsMethodCallExpression
+{
+    public override Expression Object { get; }
+    internal InstanceFourArgumentsMethodCallExpression(Expression instance, MethodInfo method,
+        Expression argument0, Expression argument1, Expression argument2, Expression argument3)
+        : base(method, argument0, argument1, argument2, argument3) => Object = instance;
+}
+
+public class FiveArgumentsMethodCallExpression : NotNullMethodCallExpression
+{
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
+    public readonly object A0, A1, A2, A3, A4;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public Expression Argument2 => A2.AsExpr();
+    public Expression Argument3 => A3.AsExpr();
+    public Expression Argument4 => A4.AsExpr();
+    public override int ArgumentCount => 5;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : A4.AsExpr();
+    internal FiveArgumentsMethodCallExpression(MethodInfo method, object a0, object a1, object a2, object a3, object a4) : base(method)
+    {
+        A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4;
+    }
+}
+
+public sealed class InstanceFiveArgumentsMethodCallExpression : FiveArgumentsMethodCallExpression
+{
+    public override Expression Object { get; }
+    internal InstanceFiveArgumentsMethodCallExpression(Expression instance, MethodInfo method,
+        Expression a0, Expression a1, Expression a2, Expression a3, Expression a4)
+        : base(method, a0, a1, a2, a3, a4) => Object = instance;
+}
+
+public class SixArgumentsMethodCallExpression : NotNullMethodCallExpression
+{
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5 };
+    public readonly object A0, A1, A2, A3, A4, A5;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public Expression Argument2 => A2.AsExpr();
+    public Expression Argument3 => A3.AsExpr();
+    public Expression Argument4 => A4.AsExpr();
+    public Expression Argument5 => A5.AsExpr();
+    public override int ArgumentCount => 6;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : i == 4 ? A4.AsExpr() : A5.AsExpr();
+    internal SixArgumentsMethodCallExpression(MethodInfo method, object a0, object a1, object a2, object a3, object a4, object a5) : base(method)
+    {
+        A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4; A5 = a5;
+    }
+}
+
+public sealed class InstanceSixArgumentsMethodCallExpression : SixArgumentsMethodCallExpression
+{
+    public override Expression Object { get; } // todo: @perf @mem make it an object?
+    internal InstanceSixArgumentsMethodCallExpression(Expression instance, MethodInfo method,
+        Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5)
+        : base(method, a0, a1, a2, a3, a4, a5) => Object = instance;
+}
+
+public class SevenArgumentsMethodCallExpression : NotNullMethodCallExpression
+{
+    public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5, Argument6 };
+    public readonly object A0, A1, A2, A3, A4, A5, A6;
+    public Expression Argument0 => A0.AsExpr();
+    public Expression Argument1 => A1.AsExpr();
+    public Expression Argument2 => A2.AsExpr();
+    public Expression Argument3 => A3.AsExpr();
+    public Expression Argument4 => A4.AsExpr();
+    public Expression Argument5 => A5.AsExpr();
+    public Expression Argument6 => A6.AsExpr();
+    public override int ArgumentCount => 7;
+    public override Expression GetArgument(int i) =>
+        i == 0 ? A0.AsExpr() : i == 1 ? A1.AsExpr() : i == 2 ? A2.AsExpr() : i == 3 ? A3.AsExpr() : i == 4 ? A4.AsExpr() : i == 5 ? A5.AsExpr() : A6.AsExpr();
+    internal SevenArgumentsMethodCallExpression(MethodInfo method, object a0, object a1, object a2, object a3, object a4, object a5, object a6) : base(method)
+    {
+        A0 = a0; A1 = a1; A2 = a2; A3 = a3; A4 = a4; A5 = a5; A6 = a6;
+    }
+}
+
+public sealed class InstanceSevenArgumentsMethodCallExpression : SevenArgumentsMethodCallExpression
+{
+    public override Expression Object { get; }
+    internal InstanceSevenArgumentsMethodCallExpression(Expression instance, MethodInfo method,
+        Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5, Expression a6)
+        : base(method, a0, a1, a2, a3, a4, a5, a6) => Object = instance;
+}
+
+public abstract class MemberExpression : Expression
+{
+    public sealed override ExpressionType NodeType => ExpressionType.MemberAccess;
+    public readonly MemberInfo Member;
+    public virtual Expression Expression => null;
+    protected MemberExpression(MemberInfo member) => Member = member;
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMember(this);
+#endif
+}
+
+public class PropertyExpression : MemberExpression
+{
+    public override Type Type => PropertyInfo.PropertyType;
+    public PropertyInfo PropertyInfo => (PropertyInfo)Member;
+    internal PropertyExpression(PropertyInfo property) : base(property) { }
+
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        var expr = Expression?.ToExpression(ref exprsConverted);
+        return SysExpr.Property(expr, PropertyInfo);
+    }
+}
+
+public sealed class InstancePropertyExpression : PropertyExpression
+{
+    public override Expression Expression { get; }
+    internal InstancePropertyExpression(Expression instance, PropertyInfo property) : base(property) =>
+        Expression = instance;
+}
+
+public class FieldExpression : MemberExpression
+{
+    public override Type Type => FieldInfo.FieldType;
+    public FieldInfo FieldInfo => (FieldInfo)Member;
+    internal FieldExpression(FieldInfo field) : base(field) { }
+
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.Field(Expression?.ToExpression(ref exprsConverted), FieldInfo);
+}
+
+public sealed class InstanceFieldExpression : FieldExpression
+{
+    public override Expression Expression { get; }
+
+    internal InstanceFieldExpression(Expression instance, FieldInfo field) : base(field) =>
+        Expression = instance;
+}
+
+public abstract class MemberBinding
+{
+    public readonly MemberInfo Member;
+    public abstract MemberBindingType BindingType { get; }
+    internal MemberBinding(MemberInfo member) => Member = member;
+
+    internal abstract System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted);
+}
+
+public sealed class MemberAssignment : MemberBinding
+{
+    public readonly Expression Expression;
+    public override MemberBindingType BindingType => MemberBindingType.Assignment;
+    internal MemberAssignment(MemberInfo member, Expression expression) : base(member) => Expression = expression;
+
+    internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.Bind(Member, Expression.ToExpression(ref exprsConverted));
+}
+
+public sealed class MemberMemberBinding : MemberBinding
+{
+    public override MemberBindingType BindingType => MemberBindingType.MemberBinding;
+    public readonly IReadOnlyList<MemberBinding> Bindings;
+    internal MemberMemberBinding(MemberInfo member, IReadOnlyList<MemberBinding> bindings) : base(member) =>
+        Bindings = bindings;
+
+    private static System.Linq.Expressions.MemberBinding[] ToMemberBindings(IReadOnlyList<MemberBinding> items,
+        ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        if (items.Count == 0)
+            return Tools.Empty<System.Linq.Expressions.MemberBinding>();
+
+        var result = new System.Linq.Expressions.MemberBinding[items.Count];
+        for (var i = 0; i < result.Length; ++i)
+            result[i] = items[i].ToMemberBinding(ref exprsConverted);
+        return result;
+    }
+
+    internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.MemberBind(Member, ToMemberBindings(Bindings, ref exprsConverted));
+}
+
+public sealed class MemberListBinding : MemberBinding
+{
+    public override MemberBindingType BindingType => MemberBindingType.ListBinding;
+    public readonly IReadOnlyList<ElementInit> Initializers;
+    internal MemberListBinding(MemberInfo member, IReadOnlyList<ElementInit> initializers) : base(member) =>
+        Initializers = initializers;
+
+    internal override System.Linq.Expressions.MemberBinding ToMemberBinding(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.ListBind(Member, ListInitExpression.ToElementInits(Initializers, ref exprsConverted));
+}
+
+public class InvocationExpression : Expression, IArgumentProvider
+{
+    public sealed override ExpressionType NodeType => ExpressionType.Invoke;
+    public override Type Type => ((LambdaExpression)Expression).ReturnType;
+    public virtual Expression Expression => null;
+    public virtual IReadOnlyList<Expression> Arguments => Tools.Empty<Expression>();
+    public virtual int ArgumentCount => 0;
+    public virtual Expression GetArgument(int index) => throw new NotImplementedException();
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        var expr = SysExpr.Invoke(Expression.ToExpression(ref exprsConverted), ToExpressions(Arguments, ref exprsConverted));
+        return Expression is LambdaExpression ? expr
+            : SysExpr.Convert(expr, Type); // insert the safe-guard convert
+    }
+}
+
+public class NotNullExpressionInvocationExpression : InvocationExpression
+{
+    public sealed override Expression Expression { get; }
+    internal NotNullExpressionInvocationExpression(Expression expression) => Expression = expression;
+}
+
+/// <summary>Implies that the Type may be different from the `expression` return type</summary>
+public sealed class TypedInvocationExpression : NotNullExpressionInvocationExpression
+{
+    public override Type Type { get; }
+    internal TypedInvocationExpression(Expression expression, Type type) : base(expression) =>
+        Type = type;
+}
+
+public class OneArgumentInvocationExpression : NotNullExpressionInvocationExpression
+{
+    public readonly Expression Argument;
+    public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument };
+    public sealed override int ArgumentCount => 1;
+    public sealed override Expression GetArgument(int index) => Argument;
+    internal OneArgumentInvocationExpression(Expression expression, Expression argument) : base(expression) =>
+        Argument = argument;
+}
+
+public sealed class TypedOneArgumentInvocationExpression : OneArgumentInvocationExpression
+{
+    public override Type Type { get; }
+    internal TypedOneArgumentInvocationExpression(Expression expression, Type type, Expression argument)
+        : base(expression, argument) => Type = type;
+}
+
+public class TwoArgumentsInvocationExpression : NotNullExpressionInvocationExpression
+{
+    public readonly Expression Argument0, Argument1;
+    public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
+    public sealed override int ArgumentCount => 2;
+    public sealed override Expression GetArgument(int i) => i == 0 ? Argument0 : Argument1;
+    internal TwoArgumentsInvocationExpression(Expression expression,
+        Expression a0, Expression a1) : base(expression)
+    { Argument0 = a0; Argument1 = a1; }
+}
+
+public sealed class TypedTwoArgumentsInvocationExpression : TwoArgumentsInvocationExpression
+{
+    public override Type Type { get; }
+    internal TypedTwoArgumentsInvocationExpression(Expression expression, Type type, Expression a0, Expression a1)
+        : base(expression, a0, a1) => Type = type;
+}
+
+public class ThreeArgumentsInvocationExpression : NotNullExpressionInvocationExpression
+{
+    public readonly Expression Argument0, Argument1, Argument2;
+    public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2 };
+    public sealed override int ArgumentCount => 3;
+    public sealed override Expression GetArgument(int i) => i == 0 ? Argument0 : i == 1 ? Argument1 : Argument2;
+    internal ThreeArgumentsInvocationExpression(Expression expression,
+        Expression a0, Expression a1, Expression a2) : base(expression)
+    { Argument0 = a0; Argument1 = a1; Argument2 = a2; }
+}
+
+public sealed class TypedThreeArgumentsInvocationExpression : ThreeArgumentsInvocationExpression
+{
+    public override Type Type { get; }
+    internal TypedThreeArgumentsInvocationExpression(Expression expression, Type type, Expression a0, Expression a1, Expression a2)
+        : base(expression, a0, a1, a2) => Type = type;
+}
+
+public class FourArgumentsInvocationExpression : NotNullExpressionInvocationExpression
+{
+    public readonly Expression Argument0, Argument1, Argument2, Argument3;
+    public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3 };
+    public sealed override int ArgumentCount => 4;
+    public sealed override Expression GetArgument(int i) =>
+        i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : Argument3;
+    internal FourArgumentsInvocationExpression(Expression expression,
+        Expression a0, Expression a1, Expression a2, Expression a3) : base(expression)
+    { Argument0 = a0; Argument1 = a1; Argument2 = a2; Argument3 = a3; }
+}
+
+public sealed class TypedFourArgumentsInvocationExpression : FourArgumentsInvocationExpression
+{
+    public override Type Type { get; }
+    internal TypedFourArgumentsInvocationExpression(Expression expression, Type type,
+        Expression a0, Expression a1, Expression a2, Expression a3)
+        : base(expression, a0, a1, a2, a3) => Type = type;
+}
+
+public class FiveArgumentsInvocationExpression : NotNullExpressionInvocationExpression
+{
+    public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4;
+    public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4 };
+    public sealed override int ArgumentCount => 5;
+    public sealed override Expression GetArgument(int i) =>
+        i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : i == 3 ? Argument3 : Argument4;
+    internal FiveArgumentsInvocationExpression(Expression expression,
+        Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) : base(expression)
+    { Argument0 = a0; Argument1 = a1; Argument2 = a2; Argument3 = a3; Argument4 = a4; }
+}
+
+public sealed class TypedFiveArgumentsInvocationExpression : FiveArgumentsInvocationExpression
+{
+    public override Type Type { get; }
+    internal TypedFiveArgumentsInvocationExpression(Expression expression, Type type,
+        Expression a0, Expression a1, Expression a2, Expression a3, Expression a4)
+        : base(expression, a0, a1, a2, a3, a4) => Type = type;
+}
+
+public class SixArgumentsInvocationExpression : NotNullExpressionInvocationExpression
+{
+    public readonly Expression Argument0, Argument1, Argument2, Argument3, Argument4, Argument5;
+    public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1, Argument2, Argument3, Argument4, Argument5 };
+    public sealed override int ArgumentCount => 6;
+    public sealed override Expression GetArgument(int i) =>
+        i == 0 ? Argument0 : i == 1 ? Argument1 : i == 2 ? Argument2 : i == 3 ? Argument3 : i == 4 ? Argument4 : Argument5;
+    internal SixArgumentsInvocationExpression(Expression expression,
+        Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) : base(expression)
+    { Argument0 = a0; Argument1 = a1; Argument2 = a2; Argument3 = a3; Argument4 = a4; Argument5 = a5; }
+}
+
+public sealed class TypedSixArgumentsInvocationExpression : SixArgumentsInvocationExpression
+{
+    public override Type Type { get; }
+    internal TypedSixArgumentsInvocationExpression(Expression expression, Type type,
+        Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5)
+        : base(expression, a0, a1, a2, a3, a4, a5) => Type = type;
+}
+
+public class ManyArgumentsInvocationExpression : NotNullExpressionInvocationExpression
+{
+    public sealed override IReadOnlyList<Expression> Arguments { get; }
+    public sealed override int ArgumentCount => Arguments.Count;
+    public sealed override Expression GetArgument(int index) => Arguments[index];
+    internal ManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments) : base(expression) =>
+        Arguments = arguments;
+}
+
+public sealed class TypedManyArgumentsInvocationExpression : ManyArgumentsInvocationExpression
+{
+    public override Type Type { get; }
+    internal TypedManyArgumentsInvocationExpression(Expression expression, IReadOnlyList<Expression> arguments, Type type)
+        : base(expression, arguments) =>
+        Type = type;
+}
+
+public sealed class DefaultExpression : Expression
+{
+    public override ExpressionType NodeType => ExpressionType.Default;
+    public override Type Type { get; }
+    internal DefaultExpression(Type type) => Type = type;
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDefault(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        Type == typeof(void) ? SysExpr.Empty() : SysExpr.Default(Type);
+}
+
+// todo: @test Test all the conditionals + try for the exact op-codes produced, should help with AutoMapper case
+public class ConditionalExpression : Expression
+{
+    public override ExpressionType NodeType => ExpressionType.Conditional;
+    public override Type Type => typeof(void);
+    public readonly Expression Test;
+    public readonly Expression IfTrue;
+    public virtual Expression IfFalse => VoidDefault;
+    internal ConditionalExpression(Expression test, Expression ifTrue)
+    {
+        Test = test;
+        IfTrue = ifTrue;
+    }
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConditional(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.Condition(Test.ToExpression(ref exprsConverted), IfTrue.ToExpression(ref exprsConverted), IfFalse.ToExpression(ref exprsConverted), Type);
+}
+
+public class VoidWithFalseBranchConditionalExpression : ConditionalExpression
+{
+    public override Expression IfFalse { get; }
+    internal VoidWithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse)
+        : base(test, ifTrue) =>
+        IfFalse = ifFalse;
+}
+
+public sealed class WithFalseBranchConditionalExpression : VoidWithFalseBranchConditionalExpression
+{
+    public override Type Type => IfTrue.Type;
+    internal WithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse)
+        : base(test, ifTrue, ifFalse) { }
+}
+
+public sealed class TypedWithFalseBranchConditionalExpression : VoidWithFalseBranchConditionalExpression
+{
+    public override Type Type { get; }
+    internal TypedWithFalseBranchConditionalExpression(Expression test, Expression ifTrue, Expression ifFalse, Type type)
+        : base(test, ifTrue, ifFalse) =>
+        Type = type;
+}
+
+/// <summary>For indexer property or array access.</summary>
+public abstract class IndexExpression : Expression, IArgumentProvider
+{
+    public sealed override ExpressionType NodeType => ExpressionType.Index;
+    public sealed override Type Type => Indexer?.PropertyType ?? Object.Type.GetElementType();
+    public abstract IReadOnlyList<Expression> Arguments { get; }
+    public readonly Expression Object;
+    public virtual PropertyInfo Indexer => null;
+
+    public virtual int ArgumentCount => Arguments.Count;
+    public virtual Expression GetArgument(int index) => Arguments[index];
+
+    internal IndexExpression(Expression @object) => Object = @object;
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitIndex(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.MakeIndex(Object.ToExpression(ref exprsConverted), Indexer, ToExpressions(Arguments, ref exprsConverted));
+}
+
+public class OneArgumentIndexExpression : IndexExpression
+{
+    public readonly Expression Argument;
+    public sealed override IReadOnlyList<Expression> Arguments => new[] { Argument };
+    public override int ArgumentCount => 1;
+    public override Expression GetArgument(int index) => Argument;
+    internal OneArgumentIndexExpression(Expression @object, Expression argument) : base(@object) =>
+        Argument = argument;
+}
+
+public class ManyArgumentsIndexExpression : IndexExpression
+{
+    public sealed override IReadOnlyList<Expression> Arguments { get; }
+    internal ManyArgumentsIndexExpression(Expression @object, IReadOnlyList<Expression> arguments) : base(@object) =>
+        Arguments = arguments ?? Tools.Empty<Expression>();
+}
+
+public sealed class HasIndexerOneArgumentIndexExpression : OneArgumentIndexExpression
+{
+    public override PropertyInfo Indexer { get; }
+    internal HasIndexerOneArgumentIndexExpression(Expression @object, PropertyInfo indexer, Expression argument)
+        : base(@object, argument) => Indexer = indexer;
+}
+
+public sealed class HasIndexerManyArgumentsIndexExpression : ManyArgumentsIndexExpression
+{
+    public override PropertyInfo Indexer { get; }
+    internal HasIndexerManyArgumentsIndexExpression(Expression @object, PropertyInfo indexer, IReadOnlyList<Expression> arguments)
+        : base(@object, arguments) => Indexer = indexer;
+}
+
+/// <summary>Base Block expression with no variables and with Type of its last (Result) expression</summary>
+public class BlockExpression : Expression, IArgumentProvider
+{
+    public override ExpressionType NodeType => ExpressionType.Block;
+    public override Type Type => Result.Type;
+    public virtual IReadOnlyList<ParameterExpression> Variables => Tools.Empty<ParameterExpression>();
+    public SmallList2<Expression> Expressions;
+    public Expression Result => Expressions.GetLastSurePresentItem(); // todo: @check what if no expressions?
+    public virtual int ArgumentCount => 0;
+    public virtual Expression GetArgument(int index) => throw new NotImplementedException();
+    internal BlockExpression(in SmallList2<Expression> expressions) =>
+        Expressions = expressions;
+    internal BlockExpression(Expression e0) =>
+        Expressions.Populate1(e0);
+    internal BlockExpression(Expression e0, Expression e1) =>
+        Expressions.Populate2(e0, e1);
+    internal BlockExpression(Expression e0, Expression e1, params Expression[] rest) =>
+        Expressions.Populate(e0, e1, rest);
+    internal BlockExpression(IReadOnlyList<Expression> expressions) =>
+        Expressions.Populate(expressions);
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.Block(Type,
+            ParameterExpression.ToParameterExpressions(Variables, ref exprsConverted),
+            ToExpressions(Expressions.ToArray(), ref exprsConverted));
+}
+
+/// <summary>Block with no variable but user-specified type.</summary>
+public sealed class TypedBlockExpression : BlockExpression
+{
+    public override Type Type { get; }
+    internal TypedBlockExpression(Type type, in SmallList2<Expression> expressions) : base(in expressions) => Type = type;
+    internal TypedBlockExpression(Type type, Expression e0) : base(e0) => Type = type;
+    internal TypedBlockExpression(Type type, Expression e0, Expression e1) : base(e0, e1) => Type = type;
+    internal TypedBlockExpression(Type type, Expression e0, Expression e1, params Expression[] rest) : base(e0, e1, rest) => Type = type;
+    internal TypedBlockExpression(Type type, IReadOnlyList<Expression> expressions) : base(expressions) => Type = type;
+}
+
+public class ManyVariablesBlockExpression : BlockExpression
+{
+    public sealed override IReadOnlyList<ParameterExpression> Variables { get; }
+    public sealed override int ArgumentCount => Expressions.Count;
+    public sealed override Expression GetArgument(int index) => Expressions.GetSurePresentItemRef(index);
+    internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, in SmallList2<Expression> expressions) : base(in expressions) =>
+        Variables = variables;
+    internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, Expression e0) : base(e0) =>
+        Variables = variables;
+    internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1) : base(e0, e1) =>
+        Variables = variables;
+    internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1, params Expression[] rest) : base(e0, e1, rest) =>
+        Variables = variables;
+    internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions) : base(expressions) =>
+        Variables = variables;
+}
+
+public sealed class TypedManyVariablesBlockExpression : ManyVariablesBlockExpression
+{
+    public override Type Type { get; }
+    internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, in SmallList2<Expression> expressions)
+        : base(variables, in expressions) => Type = type;
+    internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, Expression e0)
+        : base(variables, e0) => Type = type;
+    internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1)
+        : base(variables, e0, e1) => Type = type;
+    internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, Expression e0, Expression e1, params Expression[] rest)
+        : base(variables, e0, e1, rest) => Type = type;
+    internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, IReadOnlyList<Expression> expressions)
+        : base(variables, expressions) => Type = type;
+}
+
+// todo: @perf optimize the memory for the cases without Break and Continue
+public sealed class LoopExpression : Expression
+{
+    public override ExpressionType NodeType => ExpressionType.Loop;
+    public override Type Type => typeof(void);
+    public readonly Expression Body;
+    public readonly LabelTarget BreakLabel;
+    public readonly LabelTarget ContinueLabel;
+    internal LoopExpression(Expression body, LabelTarget breakLabel, LabelTarget continueLabel)
+    {
+        Body = body;
+        BreakLabel = breakLabel;
+        ContinueLabel = continueLabel;
+    }
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLoop(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        BreakLabel == null
+        ? SysExpr.Loop(Body.ToExpression(ref exprsConverted)) :
+        ContinueLabel == null
+        ? SysExpr.Loop(Body.ToExpression(ref exprsConverted), BreakLabel.ToSystemLabelTarget(ref exprsConverted)) :
+        SysExpr.Loop(Body.ToExpression(ref exprsConverted),
+            BreakLabel.ToSystemLabelTarget(ref exprsConverted),
+            ContinueLabel.ToSystemLabelTarget(ref exprsConverted));
+}
+
+public class TryExpression : Expression
+{
+    public override ExpressionType NodeType => ExpressionType.Try;
+    public override Type Type => Body.Type;
+    public readonly Expression Body;
+    public IReadOnlyList<CatchBlock> Handlers => _handlers;
+    private readonly CatchBlock[] _handlers;
+    public virtual Expression Finally => null;
+    internal TryExpression(Expression body, CatchBlock[] handlers)
+    {
+        Body = body;
+        _handlers = handlers;
+    }
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTry(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        Finally == null ?
+            SysExpr.TryCatch(Body.ToExpression(ref exprsConverted),
+                ToCatchBlocks(_handlers, ref exprsConverted)) :
+        Handlers == null ?
+            SysExpr.TryFinally(Body.ToExpression(ref exprsConverted),
+                Finally.ToExpression(ref exprsConverted)) :
+            SysExpr.TryCatchFinally(Body.ToExpression(ref exprsConverted),
+                Finally.ToExpression(ref exprsConverted), ToCatchBlocks(_handlers, ref exprsConverted));
+
+    private static System.Linq.Expressions.CatchBlock ToCatchBlock(
+        ref CatchBlock cb, ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.MakeCatchBlock(cb.Test,
+            (System.Linq.Expressions.ParameterExpression)cb.Variable?.ToExpression(ref exprsConverted),
+            cb.Body.ToExpression(ref exprsConverted),
+            cb.Filter?.ToExpression(ref exprsConverted));
+
+    private static System.Linq.Expressions.CatchBlock[] ToCatchBlocks(
+        CatchBlock[] hs, ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        if (hs == null)
+            return Tools.Empty<System.Linq.Expressions.CatchBlock>();
+        var catchBlocks = new System.Linq.Expressions.CatchBlock[hs.Length];
+        for (var i = 0; i < hs.Length; ++i)
+            catchBlocks[i] = ToCatchBlock(ref hs[i], ref exprsConverted);
+        return catchBlocks;
+    }
+}
+
+public sealed class WithFinallyTryExpression : TryExpression
+{
+    public override Expression Finally { get; }
+    internal WithFinallyTryExpression(Expression body, CatchBlock[] handlers, Expression @finally) : base(body, handlers) =>
+        Finally = @finally;
+}
+
+public sealed class CatchBlock
+{
+    public readonly Type Test;
+    public readonly ParameterExpression Variable;
+    public readonly Expression Body;
+    public readonly Expression Filter;
+    internal CatchBlock(Type test, ParameterExpression variable, Expression body, Expression filter)
+    {
+        Test = test;
+        Variable = variable;
+        Body = body;
+        Filter = filter;
+    }
+}
+
+public class LabelExpression : Expression
+{
+    public override ExpressionType NodeType => ExpressionType.Label;
+    public override Type Type => Target.Type;
+    public readonly LabelTarget Target;
+    public virtual Expression DefaultValue => null;
+    internal LabelExpression(LabelTarget target) => Target = target;
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLabel(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        DefaultValue == null
+            ? SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted))
+            : SysExpr.Label(Target.ToSystemLabelTarget(ref exprsConverted), DefaultValue.ToExpression(ref exprsConverted));
+}
+
+public sealed class WithDefaultValueLabelExpression : LabelExpression
+{
+    public override Expression DefaultValue { get; }
+    internal WithDefaultValueLabelExpression(LabelTarget target, Expression defaultValue) : base(target) =>
+        DefaultValue = defaultValue;
+}
+
+public class LabelTarget
+{
+    public virtual Type Type => typeof(void);
+    public virtual string Name => null;
+
+    internal System.Linq.Expressions.LabelTarget ToSystemLabelTarget(ref SmallList<LightAndSysExpr> converted)
+    {
+        var i = converted.Count - 1;
+        while (i != -1 && !ReferenceEquals(converted.Items[i].LightExpr, this)) --i;
+        if (i != -1)
+            return (System.Linq.Expressions.LabelTarget)converted.Items[i].SysExpr;
+
+        var sysItem = Name == null
+            ? SysExpr.Label(Type)
+            : SysExpr.Label(Type, Name);
+
+        ref var item = ref converted.Add();
+        item.LightExpr = this;
+        item.SysExpr = sysItem;
+        return sysItem;
+    }
+
+    public override string ToString() => this.ToCSharpString(new StringBuilder()).ToString();
+}
+
+public sealed class TypedLabelTarget : LabelTarget
+{
+    public override Type Type { get; }
+    public TypedLabelTarget(Type type) => Type = type;
+}
+
+public class NamedLabelTarget : LabelTarget
+{
+    public override string Name { get; }
+    public NamedLabelTarget(string name) => Name = name;
+}
+
+public sealed class TypedNamedLabelTarget : NamedLabelTarget
+{
+    public override Type Type { get; }
+    public TypedNamedLabelTarget(Type type, string name) : base(name) => Type = type;
+}
+
+public class GotoExpression : Expression
+{
+    public override ExpressionType NodeType => ExpressionType.Goto;
+    public override Type Type => typeof(void);
+    public virtual GotoExpressionKind Kind => GotoExpressionKind.Goto;
+    public virtual Expression Value => null;
+    public readonly LabelTarget Target;
+    internal GotoExpression(LabelTarget target) => Target = target;
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitGoto(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.MakeGoto(Kind, Target.ToSystemLabelTarget(ref exprsConverted), Value?.ToExpression(ref exprsConverted), Type);
+}
+
+public class ValueGotoExpression : GotoExpression
+{
+    public override Type Type => Target.Type; // non-void when the Value expression is provided
+    public override Expression Value { get; }
+    internal ValueGotoExpression(LabelTarget target, Expression value) : base(target) =>
+        Value = value;
+}
+
+public class TypedGotoExpression : GotoExpression
+{
+    public override Type Type { get; }
+    internal TypedGotoExpression(LabelTarget target, Type type) : base(target) =>
+        Type = type;
+}
+
+public class TypedValueGotoExpression : ValueGotoExpression
+{
+    public override Type Type { get; }
+    internal TypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value) =>
+        Type = type;
+}
+
+public sealed class ReturnGotoExpression : GotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Return;
+    internal ReturnGotoExpression(LabelTarget target) : base(target) { }
+}
+
+public sealed class ReturnTypedGotoExpression : TypedGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Return;
+    internal ReturnTypedGotoExpression(LabelTarget target, Type type) : base(target, type) { }
+}
+
+public sealed class ReturnValueGotoExpression : ValueGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Return;
+    internal ReturnValueGotoExpression(LabelTarget target, Expression value) : base(target, value) { }
+}
+
+public sealed class ReturnTypedValueGotoExpression : TypedValueGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Return;
+    internal ReturnTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
+}
+
+public sealed class BreakGotoExpression : GotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Break;
+    internal BreakGotoExpression(LabelTarget target) : base(target) { }
+}
+
+public sealed class BreakValueGotoExpression : ValueGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Break;
+    internal BreakValueGotoExpression(LabelTarget target, Expression value) : base(target, value) { }
+}
+
+public sealed class BreakTypedGotoExpression : TypedGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Break;
+    internal BreakTypedGotoExpression(LabelTarget target, Type type) : base(target, type) { }
+}
+
+public sealed class BreakTypedValueGotoExpression : TypedValueGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Break;
+    internal BreakTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
+}
+
+public sealed class ContinueGotoExpression : GotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
+    internal ContinueGotoExpression(LabelTarget target) : base(target) { }
+}
+
+public sealed class ContinueTypedGotoExpression : TypedGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
+    internal ContinueTypedGotoExpression(LabelTarget target, Type type) : base(target, type) { }
+}
+
+public struct SwitchCase
+{
+    public readonly IReadOnlyList<Expression> TestValues;
+    public readonly Expression Body;
+    public SwitchCase(Expression body, IEnumerable<Expression> testValues)
+    {
+        Body = body;
+        TestValues = testValues.AsReadOnlyList();
+    }
+
+    public override bool Equals(object obj) =>
+        obj is SwitchCase other && other.Body == Body && ReferenceEquals(other.TestValues, TestValues);
+
+    public override int GetHashCode() => HashCombiner.Combine(Body, TestValues).GetHashCode();
+}
+
+internal static class HashCombiner
+{
+    public static int Combine<T1, T2>(T1 a, T2 b) =>
+        Combine(a?.GetHashCode() ?? 0, b?.GetHashCode() ?? 0);
+
+    public static int Combine(int h1, int h2)
+    {
+        if (h1 == 0) return h2;
+        unchecked
         {
-            var exprsConverted = new SmallList<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
-            return SysExpr.Lambda<TDelegate>(Body.ToExpression(ref exprsConverted),
-                ParameterExpression.ToParameterExpressions(Parameters, ref exprsConverted));
+            return (h1 << 5) + h1 ^ h2;
         }
     }
+}
 
-    public class OneParameterExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+public class SwitchExpression : Expression // todo: @perf implement IArgumentProvider<SwitchCase>
+{
+    public sealed override ExpressionType NodeType => ExpressionType.Switch;
+    public sealed override Type Type { get; }
+    public readonly Expression SwitchValue;
+    public IReadOnlyList<SwitchCase> Cases => _cases;
+    private readonly SwitchCase[] _cases;
+    public readonly Expression DefaultBody;
+    public virtual MethodInfo Comparison => null;
+    public SwitchExpression(Type type, Expression switchValue, Expression defaultBody, SwitchCase[] cases)
     {
-        public readonly ParameterExpression Parameter0;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0 };
-        public sealed override int ParameterCount => 1;
-        public sealed override ParameterExpression GetParameter(int index) => Parameter0;
-        internal OneParameterExpression(Expression body, ParameterExpression p0) : base(body) =>
-            Parameter0 = p0;
+        Type = type;
+        SwitchValue = switchValue;
+        DefaultBody = defaultBody;
+        _cases = cases;
     }
-
-    public class TwoParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
-    {
-        public readonly ParameterExpression Parameter0, Parameter1;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1 };
-        public sealed override int ParameterCount => 2;
-        public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : Parameter1;
-        internal TwoParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1) : base(body)
-        { Parameter0 = p0; Parameter1 = p1; }
-    }
-
-    public class ThreeParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
-    {
-        public readonly ParameterExpression Parameter0, Parameter1, Parameter2;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2 };
-        public sealed override int ParameterCount => 3;
-        public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : Parameter2;
-        internal ThreeParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) : base(body)
-        { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; }
-    }
-
-    public class FourParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
-    {
-        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3 };
-        public sealed override int ParameterCount => 4;
-        public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : Parameter3;
-        internal FourParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
-            ParameterExpression p3) : base(body)
-        { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; }
-    }
-
-    public class FiveParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
-    {
-        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4 };
-        public sealed override int ParameterCount => 5;
-        public sealed override ParameterExpression GetParameter(int i) =>
-            i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : Parameter4;
-        internal FiveParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
-            ParameterExpression p3, ParameterExpression p4) : base(body)
-        { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4; }
-    }
-
-
-    public class SixParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
-    {
-        public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters =>
-            new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5 };
-        public sealed override int ParameterCount => 6;
-        public sealed override ParameterExpression GetParameter(int i) =>
-            i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : i == 4 ? Parameter4 : Parameter5;
-        internal SixParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
-            ParameterExpression p3, ParameterExpression p4, ParameterExpression p5) : base(body)
-        { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4; Parameter5 = p5; }
-    }
-
-    public class ManyParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
-    {
-        private readonly IReadOnlyList<ParameterExpression> _parameters;
-        public sealed override IReadOnlyList<ParameterExpression> Parameters => _parameters;
-        public sealed override int ParameterCount => _parameters.Count;
-        public sealed override ParameterExpression GetParameter(int index) => _parameters[index];
-        internal ManyParametersExpression(Expression body, IReadOnlyList<ParameterExpression> parameters) : base(body) =>
-            _parameters = parameters;
-    }
-
-    public sealed class TypedReturnExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnExpression(Expression body, Type returnType) : base(body) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnOneParameterExpression<TDelegate> : OneParameterExpression<TDelegate> where TDelegate : System.Delegate
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnOneParameterExpression(Expression body, ParameterExpression p0, Type returnType) : base(body, p0) =>
-            ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnTwoParametersExpression<TDelegate> : TwoParametersExpression<TDelegate> where TDelegate : System.Delegate
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnTwoParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, Type returnType)
-            : base(body, p0, p1) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnThreeParametersExpression<TDelegate> : ThreeParametersExpression<TDelegate> where TDelegate : System.Delegate
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnThreeParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1,
-            ParameterExpression p2, Type returnType)
-            : base(body, p0, p1, p2) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnFourParametersExpression<TDelegate> : FourParametersExpression<TDelegate> where TDelegate : System.Delegate
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnFourParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1,
-            ParameterExpression p2, ParameterExpression p3, Type returnType)
-            : base(body, p0, p1, p2, p3) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnFiveParametersExpression<TDelegate> : FiveParametersExpression<TDelegate> where TDelegate : System.Delegate
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnFiveParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1,
-            ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, Type returnType)
-            : base(body, p0, p1, p2, p3, p4) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnSixParametersExpression<TDelegate> : SixParametersExpression<TDelegate> where TDelegate : System.Delegate
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnSixParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1,
-            ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5, Type returnType)
-            : base(body, p0, p1, p2, p3, p4, p5) => ReturnType = returnType;
-    }
-
-    public sealed class TypedReturnManyParametersExpression<TDelegate> : ManyParametersExpression<TDelegate> where TDelegate : System.Delegate
-    {
-        public override Type ReturnType { get; }
-        internal TypedReturnManyParametersExpression(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
-            : base(body, parameters) => ReturnType = returnType;
-    }
-
-    // todo: @feature is not supported yet
-    public sealed class DynamicExpression : Expression
-    {
-        public override ExpressionType NodeType => ExpressionType.Dynamic;
-        public override Type Type => typeof(object);
-        public Type DelegateType { get; }
-        public CallSiteBinder Binder { get; }
-        public IReadOnlyList<Expression> Arguments { get; }
-
-        public DynamicExpression(Type delegateType, CallSiteBinder binder, IReadOnlyList<Expression> arguments)
-        {
-            DelegateType = delegateType;
-            Binder = binder;
-            Arguments = arguments;
-        }
-
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-            SysExpr.MakeDynamic(DelegateType, Binder, ToExpressions(Arguments, ref exprsConverted));
 #if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDynamic(this);
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitSwitch(this);
 #endif
-    }
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.Switch(SwitchValue.ToExpression(ref exprsConverted),
+            DefaultBody.ToExpression(ref exprsConverted), Comparison,
+            ToSwitchCaseExpressions(_cases, ref exprsConverted));
 
-    // todo: @feature is not supported
-    public sealed class RuntimeVariablesExpression : Expression
+    internal static System.Linq.Expressions.SwitchCase ToSwitchCase(ref SwitchCase sw, ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.SwitchCase(sw.Body.ToExpression(ref exprsConverted), ToExpressions(sw.TestValues, ref exprsConverted));
+
+    internal static System.Linq.Expressions.SwitchCase[] ToSwitchCaseExpressions(
+        SwitchCase[] switchCases, ref SmallList<LightAndSysExpr> exprsConverted)
     {
-        public sealed override ExpressionType NodeType => ExpressionType.RuntimeVariables;
-        public sealed override Type Type => typeof(IRuntimeVariables);
-        public readonly IReadOnlyList<ParameterExpression> Variables;
-        internal RuntimeVariablesExpression(IReadOnlyList<ParameterExpression> variables) => Variables = variables;
+        if (switchCases.Length == 0)
+            return Tools.Empty<System.Linq.Expressions.SwitchCase>();
+
+        var result = new System.Linq.Expressions.SwitchCase[switchCases.Length];
+        for (var i = 0; i < result.Length; ++i)
+            result[i] = ToSwitchCase(ref switchCases[i], ref exprsConverted);
+        return result;
+    }
+}
+
+public sealed class WithComparisonSwitchExpression : SwitchExpression
+{
+    public override MethodInfo Comparison { get; }
+    public WithComparisonSwitchExpression(Type type, Expression switchValue, Expression defaultBody, SwitchCase[] cases, MethodInfo comparison)
+        : base(type, switchValue, defaultBody, cases) => Comparison = comparison;
+}
+
+public abstract class LambdaExpression : Expression, IParameterProvider
+{
+    public sealed override ExpressionType NodeType => ExpressionType.Lambda;
+    public readonly Expression Body;
+    public virtual Type ReturnType => Body.Type;
+    public virtual IReadOnlyList<ParameterExpression> Parameters => Tools.Empty<ParameterExpression>();
+    public virtual int ParameterCount => 0;
+    public virtual ParameterExpression GetParameter(int index) =>
+        throw new NotImplementedException("Requested the parameter from the no-parameter lambda");
+    protected LambdaExpression(Expression body) => Body = body;
 #if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitRuntimeVariables(this);
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
-            SysExpr.RuntimeVariables(ParameterExpression.ToParameterExpressions(Variables, ref convertedExpressions));
-    }
+    public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
+        (System.Linq.Expressions.LambdaExpression)ToExpression();
 
-    public class SymbolDocumentInfo
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.Lambda(Type, Body.ToExpression(ref exprsConverted), ParameterExpression.ToParameterExpressions(Parameters, ref exprsConverted));
+}
+
+public class TypedLambdaExpression : LambdaExpression
+{
+    public sealed override Type Type { get; }
+    internal TypedLambdaExpression(Type delegateType, Expression body) : base(body) => Type = delegateType;
+}
+
+public class OneParameterLambdaExpression : TypedLambdaExpression
+{
+    public readonly ParameterExpression Parameter0;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0 };
+    public sealed override int ParameterCount => 1;
+    public sealed override ParameterExpression GetParameter(int index) => Parameter0;
+    internal OneParameterLambdaExpression(Type delegateType, Expression body, ParameterExpression parameter) : base(delegateType, body) =>
+        Parameter0 = parameter;
+}
+
+public class TwoParametersLambdaExpression : TypedLambdaExpression
+{
+    public readonly ParameterExpression Parameter0, Parameter1;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1 };
+    public sealed override int ParameterCount => 2;
+    public sealed override ParameterExpression GetParameter(int index) => index == 0 ? Parameter0 : Parameter1;
+    internal TwoParametersLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1) : base(delegateType, body)
     {
-        public string FileName { get; }
-        internal SymbolDocumentInfo(string fileName) => FileName = fileName;
-
-        public virtual Guid Language => Guid.Empty;
-        public virtual Guid LanguageVendor => Guid.Empty;
-        internal static readonly Guid DocumentType_Text = new Guid(0x5a869d0b, 0x6611, 0x11d3, 0xbd, 0x2a, 0, 0, 0xf8, 8, 0x49, 0xbd);
-        public virtual Guid DocumentType => DocumentType_Text;
+        Parameter0 = p0; Parameter1 = p1;
     }
+}
 
-    // todo: @feature is not supported
-    /// <summary>
-    /// Emits or clears a sequence point for debug information.
-    ///
-    /// This allows the debugger to highlight the correct source code when
-    /// debugging.
-    /// </summary>
-    public class DebugInfoExpression : Expression
+public class ThreeParametersLambdaExpression : TypedLambdaExpression
+{
+    public readonly ParameterExpression Parameter0, Parameter1, Parameter2;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2 };
+    public sealed override int ParameterCount => 3;
+    public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : Parameter2;
+    internal ThreeParametersLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) : base(delegateType, body)
     {
-        public sealed override ExpressionType NodeType => ExpressionType.DebugInfo;
-        public sealed override Type Type => typeof(void);
-        public readonly SymbolDocumentInfo Document;
-        public virtual int StartLine { get; }
-        public virtual int StartColumn { get; }
-        public virtual int EndLine { get; }
-        public virtual int EndColumn { get; }
-        public virtual bool IsClear => false;
-        internal DebugInfoExpression(SymbolDocumentInfo document,
-            int startLine, int startColumn, int endLine, int endColumn)
-        {
-            Document = document;
-            StartLine = startLine;
-            StartColumn = startColumn;
-            EndLine = endLine;
-            EndColumn = endColumn;
-        }
+        Parameter0 = p0; Parameter1 = p1; Parameter2 = p2;
+    }
+}
+
+public class FourParametersLambdaExpression : TypedLambdaExpression
+{
+    public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3 };
+    public sealed override int ParameterCount => 4;
+    public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : Parameter3;
+    internal FourParametersLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3)
+        : base(delegateType, body)
+    {
+        Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3;
+    }
+}
+
+public class FiveParametersLambdaExpression : TypedLambdaExpression
+{
+    public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4 };
+    public sealed override int ParameterCount => 5;
+    public sealed override ParameterExpression GetParameter(int i) => // todo: @perf usually the method is called in a loop, so we may add the explixit LoopParameters method here to avoid condition check on each parameter!!!
+        i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : Parameter4;
+    internal FiveParametersLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4)
+        : base(delegateType, body)
+    {
+        Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4;
+    }
+}
+
+public class SixParametersLambdaExpression : TypedLambdaExpression
+{
+    public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5 };
+    public sealed override int ParameterCount => 6;
+    public sealed override ParameterExpression GetParameter(int i) =>
+        i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : i == 5 ? Parameter4 : Parameter5;
+    internal SixParametersLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3,
+        ParameterExpression p4, ParameterExpression p5) : base(delegateType, body)
+    {
+        Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4; Parameter5 = p5;
+    }
+}
+
+public class ManyParametersLambdaExpression : TypedLambdaExpression
+{
+    private readonly IReadOnlyList<ParameterExpression> _parameters;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => _parameters;
+    public sealed override int ParameterCount => _parameters.Count;
+    public sealed override ParameterExpression GetParameter(int index) => _parameters[index];
+    internal ManyParametersLambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters)
+        : base(delegateType, body) => _parameters = parameters;
+}
+
+public sealed class TypedReturnLambdaExpression : TypedLambdaExpression
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnLambdaExpression(Type delegateType, Expression body, Type returnType) : base(delegateType, body) =>
+        ReturnType = returnType;
+}
+
+public sealed class TypedReturnOneParameterLambdaExpression : OneParameterLambdaExpression
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnOneParameterLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression parameter, Type returnType) : base(delegateType, body, parameter) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnTwoParametersLambdaExpression : TwoParametersLambdaExpression
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnTwoParametersLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, Type returnType)
+        : base(delegateType, body, p0, p1) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnThreeParametersLambdaExpression : ThreeParametersLambdaExpression
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnThreeParametersLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, Type returnType)
+        : base(delegateType, body, p0, p1, p2) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnFourParametersLambdaExpression : FourParametersLambdaExpression
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnFourParametersLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, Type returnType)
+        : base(delegateType, body, p0, p1, p2, p3) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnFiveParametersLambdaExpression : FiveParametersLambdaExpression
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnFiveParametersLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3,
+        ParameterExpression p4, Type returnType)
+        : base(delegateType, body, p0, p1, p2, p3, p4) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnSixParametersLambdaExpression : SixParametersLambdaExpression
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnSixParametersLambdaExpression(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3,
+        ParameterExpression p4, ParameterExpression p5, Type returnType)
+        : base(delegateType, body, p0, p1, p2, p3, p4, p5) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnManyParametersLambdaExpression : ManyParametersLambdaExpression
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnManyParametersLambdaExpression(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
+        : base(delegateType, body, parameters) => ReturnType = returnType;
+}
+
+public class Expression<TDelegate> : LambdaExpression where TDelegate : System.Delegate
+{
+    public sealed override Type Type => typeof(TDelegate);
+    internal Expression(Expression body) : base(body) { }
 #if SUPPORTS_VISITOR
-        protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDebugInfo(this);
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
 #endif
-        internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
-            SysExpr.DebugInfo(SysExpr.SymbolDocument(Document.FileName), StartLine, StartColumn, EndLine, EndColumn);
+    public new System.Linq.Expressions.Expression<TDelegate> ToLambdaExpression()
+    {
+        var exprsConverted = new SmallList<LightAndSysExpr>(Tools.Empty<LightAndSysExpr>());
+        return SysExpr.Lambda<TDelegate>(Body.ToExpression(ref exprsConverted),
+            ParameterExpression.ToParameterExpressions(Parameters, ref exprsConverted));
+    }
+}
+
+public class OneParameterExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+{
+    public readonly ParameterExpression Parameter0;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0 };
+    public sealed override int ParameterCount => 1;
+    public sealed override ParameterExpression GetParameter(int index) => Parameter0;
+    internal OneParameterExpression(Expression body, ParameterExpression p0) : base(body) =>
+        Parameter0 = p0;
+}
+
+public class TwoParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+{
+    public readonly ParameterExpression Parameter0, Parameter1;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1 };
+    public sealed override int ParameterCount => 2;
+    public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : Parameter1;
+    internal TwoParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1) : base(body)
+    { Parameter0 = p0; Parameter1 = p1; }
+}
+
+public class ThreeParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+{
+    public readonly ParameterExpression Parameter0, Parameter1, Parameter2;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2 };
+    public sealed override int ParameterCount => 3;
+    public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : Parameter2;
+    internal ThreeParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) : base(body)
+    { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; }
+}
+
+public class FourParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+{
+    public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3 };
+    public sealed override int ParameterCount => 4;
+    public sealed override ParameterExpression GetParameter(int i) => i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : Parameter3;
+    internal FourParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+        ParameterExpression p3) : base(body)
+    { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; }
+}
+
+public class FiveParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+{
+    public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4 };
+    public sealed override int ParameterCount => 5;
+    public sealed override ParameterExpression GetParameter(int i) =>
+        i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : Parameter4;
+    internal FiveParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+        ParameterExpression p3, ParameterExpression p4) : base(body)
+    { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4; }
+}
+
+
+public class SixParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+{
+    public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters =>
+        new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5 };
+    public sealed override int ParameterCount => 6;
+    public sealed override ParameterExpression GetParameter(int i) =>
+        i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : i == 4 ? Parameter4 : Parameter5;
+    internal SixParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
+        ParameterExpression p3, ParameterExpression p4, ParameterExpression p5) : base(body)
+    { Parameter0 = p0; Parameter1 = p1; Parameter2 = p2; Parameter3 = p3; Parameter4 = p4; Parameter5 = p5; }
+}
+
+public class ManyParametersExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+{
+    private readonly IReadOnlyList<ParameterExpression> _parameters;
+    public sealed override IReadOnlyList<ParameterExpression> Parameters => _parameters;
+    public sealed override int ParameterCount => _parameters.Count;
+    public sealed override ParameterExpression GetParameter(int index) => _parameters[index];
+    internal ManyParametersExpression(Expression body, IReadOnlyList<ParameterExpression> parameters) : base(body) =>
+        _parameters = parameters;
+}
+
+public sealed class TypedReturnExpression<TDelegate> : Expression<TDelegate> where TDelegate : System.Delegate
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnExpression(Expression body, Type returnType) : base(body) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnOneParameterExpression<TDelegate> : OneParameterExpression<TDelegate> where TDelegate : System.Delegate
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnOneParameterExpression(Expression body, ParameterExpression p0, Type returnType) : base(body, p0) =>
+        ReturnType = returnType;
+}
+
+public sealed class TypedReturnTwoParametersExpression<TDelegate> : TwoParametersExpression<TDelegate> where TDelegate : System.Delegate
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnTwoParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1, Type returnType)
+        : base(body, p0, p1) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnThreeParametersExpression<TDelegate> : ThreeParametersExpression<TDelegate> where TDelegate : System.Delegate
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnThreeParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1,
+        ParameterExpression p2, Type returnType)
+        : base(body, p0, p1, p2) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnFourParametersExpression<TDelegate> : FourParametersExpression<TDelegate> where TDelegate : System.Delegate
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnFourParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1,
+        ParameterExpression p2, ParameterExpression p3, Type returnType)
+        : base(body, p0, p1, p2, p3) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnFiveParametersExpression<TDelegate> : FiveParametersExpression<TDelegate> where TDelegate : System.Delegate
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnFiveParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1,
+        ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, Type returnType)
+        : base(body, p0, p1, p2, p3, p4) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnSixParametersExpression<TDelegate> : SixParametersExpression<TDelegate> where TDelegate : System.Delegate
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnSixParametersExpression(Expression body, ParameterExpression p0, ParameterExpression p1,
+        ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5, Type returnType)
+        : base(body, p0, p1, p2, p3, p4, p5) => ReturnType = returnType;
+}
+
+public sealed class TypedReturnManyParametersExpression<TDelegate> : ManyParametersExpression<TDelegate> where TDelegate : System.Delegate
+{
+    public override Type ReturnType { get; }
+    internal TypedReturnManyParametersExpression(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
+        : base(body, parameters) => ReturnType = returnType;
+}
+
+// todo: @feature is not supported yet
+public sealed class DynamicExpression : Expression
+{
+    public override ExpressionType NodeType => ExpressionType.Dynamic;
+    public override Type Type => typeof(object);
+    public Type DelegateType { get; }
+    public CallSiteBinder Binder { get; }
+    public IReadOnlyList<Expression> Arguments { get; }
+
+    public DynamicExpression(Type delegateType, CallSiteBinder binder, IReadOnlyList<Expression> arguments)
+    {
+        DelegateType = delegateType;
+        Binder = binder;
+        Arguments = arguments;
     }
 
-    public interface IArgumentProvider
-    {
-        int ArgumentCount { get; }
-        Expression GetArgument(int index);
-    }
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        SysExpr.MakeDynamic(DelegateType, Binder, ToExpressions(Arguments, ref exprsConverted));
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDynamic(this);
+#endif
+}
 
-    public interface IArgumentProvider<T>
-    {
-        public int ArgumentCount { get; }
-        public T GetArgument(int index);
-    }
+// todo: @feature is not supported
+public sealed class RuntimeVariablesExpression : Expression
+{
+    public sealed override ExpressionType NodeType => ExpressionType.RuntimeVariables;
+    public sealed override Type Type => typeof(IRuntimeVariables);
+    public readonly IReadOnlyList<ParameterExpression> Variables;
+    internal RuntimeVariablesExpression(IReadOnlyList<ParameterExpression> variables) => Variables = variables;
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitRuntimeVariables(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
+        SysExpr.RuntimeVariables(ParameterExpression.ToParameterExpressions(Variables, ref convertedExpressions));
+}
 
-    public interface IParameterProvider
+public class SymbolDocumentInfo
+{
+    public string FileName { get; }
+    internal SymbolDocumentInfo(string fileName) => FileName = fileName;
+
+    public virtual Guid Language => Guid.Empty;
+    public virtual Guid LanguageVendor => Guid.Empty;
+    internal static readonly Guid DocumentType_Text = new Guid(0x5a869d0b, 0x6611, 0x11d3, 0xbd, 0x2a, 0, 0, 0xf8, 8, 0x49, 0xbd);
+    public virtual Guid DocumentType => DocumentType_Text;
+}
+
+// todo: @feature is not supported
+/// <summary>
+/// Emits or clears a sequence point for debug information.
+///
+/// This allows the debugger to highlight the correct source code when
+/// debugging.
+/// </summary>
+public class DebugInfoExpression : Expression
+{
+    public sealed override ExpressionType NodeType => ExpressionType.DebugInfo;
+    public sealed override Type Type => typeof(void);
+    public readonly SymbolDocumentInfo Document;
+    public virtual int StartLine { get; }
+    public virtual int StartColumn { get; }
+    public virtual int EndLine { get; }
+    public virtual int EndColumn { get; }
+    public virtual bool IsClear => false;
+    internal DebugInfoExpression(SymbolDocumentInfo document,
+        int startLine, int startColumn, int endLine, int endColumn)
     {
-        int ParameterCount { get; }
-        ParameterExpression GetParameter(int index);
+        Document = document;
+        StartLine = startLine;
+        StartColumn = startColumn;
+        EndLine = endLine;
+        EndColumn = endColumn;
     }
+#if SUPPORTS_VISITOR
+    protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDebugInfo(this);
+#endif
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
+        SysExpr.DebugInfo(SysExpr.SymbolDocument(Document.FileName), StartLine, StartColumn, EndLine, EndColumn);
+}
+
+public interface IArgumentProvider
+{
+    int ArgumentCount { get; }
+    Expression GetArgument(int index);
+}
+
+public interface IArgumentProvider<T>
+{
+    public int ArgumentCount { get; }
+    public T GetArgument(int index);
+}
+
+public interface IParameterProvider
+{
+    int ParameterCount { get; }
+    ParameterExpression GetParameter(int index);
 }
