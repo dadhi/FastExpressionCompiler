@@ -591,11 +591,38 @@ public abstract class Expression
     public static UnaryExpression IsTrue(Expression expression) =>
         new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
 
-    /// <summary>Creates a UnaryExpression, given an operand, by calling the appropriate factory method.</summary>
-    public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type) =>
-        type == null || type == operand.Type
-            ? new NodeTypedUnaryExpression(unaryType, operand)
-            : new TypedUnaryExpression(unaryType, operand, type);
+    /// <summary>Creates a UnaryExpression, given an operand and its type</summary>
+    public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type = null) =>
+        MakeUnary(unaryType, operand, type, method: null);
+
+    internal static UnaryExpression ThrowNotSupportedUnary(string message) => throw new NotSupportedException("Negate with method is not supported");
+
+    /// <summary>Creates a UnaryExpression, given an operand, its type and a method</summary>
+    public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type, MethodInfo method = null) =>
+        unaryType switch
+        {
+            ExpressionType.Negate => method == null ? Negate(operand) : ThrowNotSupportedUnary("Negate with method is not supported"),
+            ExpressionType.NegateChecked => method == null ? NegateChecked(operand) : ThrowNotSupportedUnary("NegateChecked with method is not supported"),
+            ExpressionType.Not => method == null ? Not(operand) : ThrowNotSupportedUnary("Not with method is not supported"),
+            ExpressionType.IsFalse => method == null ? IsFalse(operand) : ThrowNotSupportedUnary("IsFalse with method is not supported"),
+            ExpressionType.IsTrue => method == null ? IsTrue(operand) : ThrowNotSupportedUnary("IsTrue with method is not supported"),
+            ExpressionType.OnesComplement => method == null ? OnesComplement(operand) : ThrowNotSupportedUnary("OnesComplement with method is not supported"),
+            ExpressionType.ArrayLength => ArrayLength(operand),
+            ExpressionType.Convert => Convert(operand, type, method),
+            ExpressionType.ConvertChecked => ConvertChecked(operand, type, method),
+            ExpressionType.Throw => Throw(operand, type),
+            ExpressionType.TypeAs => TypeAs(operand, type),
+            ExpressionType.Quote => Quote(operand),
+            ExpressionType.UnaryPlus => method == null ? UnaryPlus(operand) : ThrowNotSupportedUnary("UnaryPlus with method is not supported"),
+            ExpressionType.Unbox => Unbox(operand, type),
+            ExpressionType.Increment => method == null ? Increment(operand) : ThrowNotSupportedUnary("Increment with method is not supported"),
+            ExpressionType.Decrement => method == null ? Decrement(operand) : ThrowNotSupportedUnary("Decrement with method is not supported"),
+            ExpressionType.PreIncrementAssign => method == null ? PreIncrementAssign(operand) : ThrowNotSupportedUnary("PreIncrementAssign with method is not supported"),
+            ExpressionType.PostIncrementAssign => method == null ? PostIncrementAssign(operand) : ThrowNotSupportedUnary("PostIncrementAssign with method is not supported"),
+            ExpressionType.PreDecrementAssign => method == null ? PreDecrementAssign(operand) : ThrowNotSupportedUnary("PreDecrementAssign with method is not supported"),
+            ExpressionType.PostDecrementAssign => method == null ? PostDecrementAssign(operand) : ThrowNotSupportedUnary("PostDecrementAssign with method is not supported"),
+            _ => ThrowNotSupportedUnary($"Making UnaryExpression of {unaryType} is not supported")
+        };
 
     /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation.</summary>
     public static UnaryExpression Negate(Expression expression) =>
@@ -1541,7 +1568,7 @@ public abstract class Expression
     public static UnaryExpression Throw(Expression value, Type type) =>
         new TypedUnaryExpression(ExpressionType.Throw, value, type);
 
-    /// <summary> Creates a <see cref="UnaryExpression"/> that represents a rethrowing of an exception in a catch block. </summary>
+    /// <summary> Creates a <see cref="UnaryExpression"/> that represents a re-throwing of an exception in a catch block. </summary>
     public static UnaryExpression Rethrow(Type type) =>
         new TypedUnaryExpression(ExpressionType.Throw, null, type);
 
@@ -1925,6 +1952,55 @@ public abstract class Expression
 
     public static SymbolDocumentInfo SymbolDocument(string fileName) =>
         new SymbolDocumentInfo(fileName);
+}
+
+public static class FromSysExpressionConverter
+{
+    public static Expression ToLightExpression(SysExpr sysExpr)
+    {
+        SmallList<LightAndSysExpr> exprsConverted = default;
+        return sysExpr.ToLightExpression(ref exprsConverted);
+    }
+
+    internal static Expression ToLightExpression(this SysExpr sysExpr, ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        if (sysExpr == null)
+            return null;
+
+        // First check for the already converted expressions 
+        var i = exprsConverted.Count - 1;
+        while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, sysExpr)) --i;
+        if (i != -1)
+            return (Expression)exprsConverted.Items[i].LightExpr;
+
+        var lightExpr = ConvertToLightExpression(sysExpr, ref exprsConverted);
+
+        ref var item = ref exprsConverted.Add();
+        item.SysExpr = sysExpr;
+        item.LightExpr = lightExpr;
+        return lightExpr;
+    }
+
+    internal static Expression ConvertToLightExpression(SysExpr sysExpr, ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        var nodeType = sysExpr.NodeType;
+        var exprType = sysExpr.Type;
+        if (sysExpr is System.Linq.Expressions.UnaryExpression ue)
+        {
+            var operand = ue.Operand.ToLightExpression(ref exprsConverted);
+            return Expression.MakeUnary(nodeType, operand, exprType, ue.Method);
+        }
+
+        if (sysExpr is System.Linq.Expressions.BinaryExpression be)
+        {
+            var left = be.Left.ToLightExpression(ref exprsConverted);
+            var raft = be.Right.ToLightExpression(ref exprsConverted);
+            var conv = be.Conversion?.ToLightExpression(ref exprsConverted) as LambdaExpression;
+            return Expression.MakeBinary(nodeType, left, raft, be.IsLiftedToNull, be.Method, conv);
+        }
+
+        throw new NotSupportedException($"Conversion of {nodeType} is not supported yet");
+    }
 }
 
 internal struct LightAndSysExpr
