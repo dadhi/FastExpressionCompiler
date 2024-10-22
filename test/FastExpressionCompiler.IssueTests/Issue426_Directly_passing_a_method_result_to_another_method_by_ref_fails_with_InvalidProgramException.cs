@@ -15,23 +15,37 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
 {
     public int Run()
     {
-        // Original_case();
-        return 1;
+        Original_case();
+        Two_ref_value_params_case();
+        Class_ref_param_case();
+        return 3;
     }
 
     public static class Numbers
     {
         public static int GetInt() => 40;
         public static int AddTwo(ref int value) => value + 2;
+        public static int AddTwoTwo(ref int value, ref int value2) => value + value2;
+        public static string AckMessage(ref Message msg)
+        {
+            msg = new Message { Data = msg.Data + "Ack" };
+            return msg.Data;
+        }
+        public static Message GetMessage() => new Message { Data = "Duck" };
+    }
+
+    public class Message
+    {
+        public string Data;
     }
 
     [Test]
     public void Original_case()
     {
-        var getIntMethod = typeof(Numbers).GetMethod(nameof(Numbers.GetInt));
-        var addTwoMethod = typeof(Numbers).GetMethod(nameof(Numbers.AddTwo));
+        var getMethod = typeof(Numbers).GetMethod(nameof(Numbers.GetInt));
+        var addMethod = typeof(Numbers).GetMethod(nameof(Numbers.AddTwo));
 
-        var expr = Lambda<Func<int>>(Call(addTwoMethod, Call(getIntMethod)));
+        var expr = Lambda<Func<int>>(Call(addMethod, Call(getMethod)));
 
         expr.PrintCSharp();
 
@@ -51,5 +65,64 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
 
         Assert.AreEqual(42, fs());
         Assert.AreEqual(42, ff());
+    }
+
+    [Test]
+    public void Class_ref_param_case()
+    {
+        var getMethod = typeof(Numbers).GetMethod(nameof(Numbers.GetMessage));
+        var addMethod = typeof(Numbers).GetMethod(nameof(Numbers.AckMessage));
+
+        var expr = Lambda<Func<string>>(Call(addMethod, Call(getMethod)));
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        ff.PrintIL();
+
+        ff.AssertOpCodes(
+            OpCodes.Call,
+            OpCodes.Stloc_0,
+            OpCodes.Ldloca_S, //0
+            OpCodes.Call,
+            OpCodes.Ret
+        );
+
+        Assert.AreEqual("DuckAck", fs());
+        Assert.AreEqual("DuckAck", ff());
+    }
+
+    [Test]
+    public void Two_ref_value_params_case()
+    {
+        var getMethod = typeof(Numbers).GetMethod(nameof(Numbers.GetInt));
+        var addMethod = typeof(Numbers).GetMethod(nameof(Numbers.AddTwoTwo));
+
+        var expr = Lambda<Func<int>>(Call(addMethod, Call(getMethod), Call(getMethod)));
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        ff.PrintIL();
+
+        ff.AssertOpCodes(
+            OpCodes.Call,
+            OpCodes.Stloc_0,
+            OpCodes.Ldloca_S, //0
+            OpCodes.Call,
+            OpCodes.Stloc_1,
+            OpCodes.Ldloca_S, //1
+            OpCodes.Call,
+            OpCodes.Ret
+        );
+
+        Assert.AreEqual(80, fs());
+        Assert.AreEqual(80, ff());
     }
 }

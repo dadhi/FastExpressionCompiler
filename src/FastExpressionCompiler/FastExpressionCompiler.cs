@@ -1965,7 +1965,7 @@ namespace FastExpressionCompiler
                                 TryEmitConstant(expr, il, ref closure, byRefIndex);
 
                         case ExpressionType.Call:
-                            return TryEmitMethodCall(expr, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitMethodCall(expr, paramExprs, il, ref closure, setup, parent, byRefIndex);
 
                         case ExpressionType.MemberAccess:
                             return TryEmitMemberGet((MemberExpression)expr, paramExprs, il, ref closure, setup, parent, byRefIndex);
@@ -4557,7 +4557,7 @@ namespace FastExpressionCompiler
 #else
                 IReadOnlyList<PE> paramExprs,
 #endif
-                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
             {
                 var flags = ParentFlags.Call;
                 var callExpr = (MethodCallExpression)expr;
@@ -4594,8 +4594,12 @@ namespace FastExpressionCompiler
                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
 
                         for (var i = 0; i < parCount; i++)
-                            if (!TryEmit(callArgs.GetArgument(i), paramExprs, il, ref closure, setup, flags, methodParams[i].ParameterType.IsByRef ? i : -1))
+                        {
+                            var argExpr = callArgs.GetArgument(i);
+                            var parType = methodParams[i].ParameterType;
+                            if (!TryEmit(argExpr, paramExprs, il, ref closure, setup, flags, parType.IsByRef ? i : -1))
                                 return false;
+                        }
                     }
                     else
                     {
@@ -4639,6 +4643,9 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Constrained, objExpr.Type);
                     ok = EmitVirtualMethodCall(il, method);
                 }
+
+                if (byRefIndex != -1)
+                    EmitStoreAndLoadLocalVariableAddress(il, method.ReturnType);
 
                 if (parent.IgnoresResult() && method.ReturnType != typeof(void))
                     il.Demit(OpCodes.Pop);
