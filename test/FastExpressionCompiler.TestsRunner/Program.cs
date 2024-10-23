@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run();
+            // new LightExpression.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run();
             // new LightExpression.IssueTests.Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException().Run();
             // new TryCatchTests().Run();
             // new LightExpression.IssueTests.Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile().Run();
