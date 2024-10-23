@@ -20,7 +20,6 @@ namespace FastExpressionCompiler.UnitTests
             IfThen_with_block();
             IfThenElse_with_block();
 
-#if !LIGHT_EXPRESSION
             Logical_and();
             Logical_or();
             Logical_and_with_or();
@@ -30,18 +29,15 @@ namespace FastExpressionCompiler.UnitTests
             Ternarary_operator_with_greater_then();
             Ternarary_operator_with_logical_op();
             return 11;
-#else
-            return 3;
-#endif
         }
 
-#if !LIGHT_EXPRESSION
         [Test]
         public void Logical_and()
         {
             var x = 1;
             var s = "Test";
-            Expression<Func<bool>> expr = () => x == 1 && s.Contains("S");
+            System.Linq.Expressions.Expression<Func<bool>> sExpr = () => x == 1 && s.Contains("S");
+            var expr = sExpr.FromSysExpression();
 
             var dlg = expr.TryCompile<Func<bool>>();
 
@@ -54,7 +50,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             var x = 1;
             var s = "Test";
-            Expression<Func<bool>> expr = () => x == 0 || s.Contains("S");
+            System.Linq.Expressions.Expression<Func<bool>> sExpr = () => x == 0 || s.Contains("S");
+            var expr = sExpr.FromSysExpression();
 
             var dele = expr.TryCompile<Func<bool>>();
 
@@ -66,7 +63,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             var x = 1;
             var s = "Test";
-            Expression<Func<bool>> expr = () => x == 1 && (s.Contains("S") || s.Contains("s"));
+            System.Linq.Expressions.Expression<Func<bool>> sExpr = () => x == 1 && (s.Contains("S") || s.Contains("s"));
+            var expr = sExpr.FromSysExpression();
 
             var dele = expr.TryCompile<Func<bool>>();
 
@@ -80,8 +78,9 @@ namespace FastExpressionCompiler.UnitTests
             var t = true;
             var x = 1;
             var s = "Test";
-            Expression<Func<bool>> expr = () =>
+            System.Linq.Expressions.Expression<Func<bool>> sExpr = () =>
                 (f || x == 1) && (s.Contains("S") || s.Contains("s")) || t;
+            var expr = sExpr.FromSysExpression();
 
             var dlg = expr.TryCompile<Func<bool>>();
 
@@ -94,7 +93,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             var x = 1;
             var s = "Test";
-            Expression<Func<object>> expr = () => x == 1 ? s : string.Empty;
+            System.Linq.Expressions.Expression<Func<object>> sExpr = () => x == 1 ? s : string.Empty;
+            var expr = sExpr.FromSysExpression();
 
             var dlg = expr.TryCompile<Func<object>>();
 
@@ -107,7 +107,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             var x = 1;
             var s = "Test";
-            Expression<Func<object>> expr = () => x != 1 ? string.Concat(s, "ccc") : string.Empty;
+            System.Linq.Expressions.Expression<Func<object>> sExpr = () => x != 1 ? string.Concat(s, "ccc") : string.Empty;
+            var expr = sExpr.FromSysExpression();
 
             var dlg = expr.TryCompile<Func<object>>();
 
@@ -120,7 +121,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             var x = 1;
             var s = "Test";
-            Expression<Func<object>> expr = () => x < 1 ? string.Concat(s, "ccc") : string.Empty;
+            System.Linq.Expressions.Expression<Func<object>> sExpr = () => x < 1 ? string.Concat(s, "ccc") : string.Empty;
+            var expr = sExpr.FromSysExpression();
 
             var dlg = expr.TryCompile<Func<object>>();
 
@@ -133,7 +135,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             var x = 1;
             var s = "Test";
-            Expression<Func<object>> expr = () => x > 0 ? string.Concat(s, "ccc") : string.Empty;
+            System.Linq.Expressions.Expression<Func<object>> sExpr = () => x > 0 ? string.Concat(s, "ccc") : string.Empty;
+            var expr = sExpr.FromSysExpression();
 
             var dlg = expr.TryCompile<Func<object>>();
 
@@ -146,19 +149,19 @@ namespace FastExpressionCompiler.UnitTests
         {
             var x = 1;
             var s = "Test";
-            Expression<Func<object>> expr = () =>
+            System.Linq.Expressions.Expression<Func<object>> sExpr = () =>
                 x > 0 &&
                 (s.Contains("e") && s.Contains("X") ||
                  s.StartsWith("T") && s.EndsWith("t"))
                 ? string.Concat(s, "ccc")
                 : string.Empty;
+            var expr = sExpr.FromSysExpression();
 
             var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
             Assert.AreEqual(string.Concat(s, "ccc"), dlg());
         }
-#endif
 
         [Test]
         public void Test_IfThenElse()

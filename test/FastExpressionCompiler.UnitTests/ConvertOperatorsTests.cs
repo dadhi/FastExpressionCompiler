@@ -20,21 +20,17 @@ namespace FastExpressionCompiler.UnitTests
             Target_type_explicit_operator_in_action();
             Generic_converter_should_work();
 
-#if !LIGHT_EXPRESSION
             Target_type_implicit_operator();
             Source_type_implicit_operator();
             Target_type_explicit_operator();
             return 6;
-#else
-            return 3;
-#endif
         }
 
-#if !LIGHT_EXPRESSION
         [Test]
         public void Target_type_implicit_operator()
         {
-            Expression<Func<string, X>> expr = s => s;
+            System.Linq.Expressions.Expression<Func<string, X>> sExpr = s => s;
+            var expr = sExpr.FromSysExpression();
 
             var f = expr.CompileFast(true);
             var x = f("hey");
@@ -45,7 +41,8 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Source_type_implicit_operator()
         {
-            Expression<Func<Z, X>> expr = z => z;
+            System.Linq.Expressions.Expression<Func<Z, X>> sExpr = z => z;
+            var expr = sExpr.FromSysExpression();
 
             var f = expr.CompileFast(true);
             var x = f(new Z("a"));
@@ -56,14 +53,14 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Target_type_explicit_operator()
         {
-            Expression<Func<string, Y>> expr = s => (Y)s;
+            System.Linq.Expressions.Expression<Func<string, Y>> sExpr = s => (Y)s;
+            var expr = sExpr.FromSysExpression();
 
             var f = expr.CompileFast(true);
             var y = f("hey");
 
             Assert.AreEqual("X:hey", y.S);
         }
-#endif
 
         public delegate string GetString();
 

@@ -18,23 +18,20 @@ namespace FastExpressionCompiler.UnitTests
             Greater_or_equal_than_DateTime_constant();
             Less_or_equal_than_DateTime_constant();
 
-#if !LIGHT_EXPRESSION
             Greater_or_equal_than_DateTime_parameter();
             Less_or_equal_than_DateTime_parameter();
             Complex_expression_with_DateTime_Strings_and_Int();
             Implicit_equal();
-            return 6;
-#else
-            return 2;
-#endif        
-}
 
-#if !LIGHT_EXPRESSION
+            return 6;
+        }
+
         [Test]
         public void Greater_or_equal_than_DateTime_parameter()
         {
-            Expression<Func<DateTime, bool>> e =
+            System.Linq.Expressions.Expression<Func<DateTime, bool>> se =
                 dt => dt >= DateTime.Now;
+            var e = se.FromSysExpression();
 
             var f = e.CompileFast(true);
 
@@ -44,8 +41,9 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Less_or_equal_than_DateTime_parameter()
         {
-            Expression<Func<DateTime, bool>> e =
+            System.Linq.Expressions.Expression<Func<DateTime, bool>> se =
                 dt => dt <= DateTime.Now;
+            var e = se.FromSysExpression();
 
             var f = e.CompileFast(true);
 
@@ -55,8 +53,9 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Implicit_equal()
         {
-            Expression<Func<EntityWithImplicitEquality, Entity, bool>> e =
+            System.Linq.Expressions.Expression<Func<EntityWithImplicitEquality, Entity, bool>> se =
                 (ewe, entity) => ewe == entity;
+            var e = se.FromSysExpression();
 
             var f = e.CompileFast(true);
             var entityWithEquals = new EntityWithImplicitEquality { AvailableDate = DateTime.Now };
@@ -74,24 +73,25 @@ namespace FastExpressionCompiler.UnitTests
             var endTime = "x"; // y >= x
             var timeSliceId = "42";
 
-            Expression<Func<Entity, bool>> e = w =>
+            System.Linq.Expressions.Expression<Func<Entity, bool>> se = w =>
                 w.DateType == version.DateType &&
                 w.AvailableDate == version.AvailableDate &&
                 string.Compare(w.StartTime, startTime) <= 0 &&
                 string.Compare(w.EndTime, endTime) >= 0 &&
                 w.Id != timeSliceId;
+            var e = se.FromSysExpression();
 
             var f = e.CompileFast(true);
 
-
             var tested = new Entity
             {
-                DateType = 1, AvailableDate = dtNow,
-                StartTime = "a", EndTime = "y"
+                DateType = 1,
+                AvailableDate = dtNow,
+                StartTime = "a",
+                EndTime = "y"
             };
             Assert.IsTrue(f(tested));
         }
-#endif
 
         [Test]
         public void Greater_or_equal_than_DateTime_constant()
@@ -120,7 +120,7 @@ namespace FastExpressionCompiler.UnitTests
         public class Entity
         {
             public string Id { get; set; }
-            public int  DateType { get; set; }
+            public int DateType { get; set; }
             public string StartTime { get; set; }
             public string EndTime { get; set; }
             public DateTime AvailableDate { get; set; }

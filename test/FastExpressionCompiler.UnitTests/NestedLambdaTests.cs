@@ -26,23 +26,20 @@ namespace FastExpressionCompiler.UnitTests
             Given_composed_expr_with_closure_over_2_same_parameters_used_in_2_levels_of_nested_lambda();
             Two_same_nested_lambdas_should_compile_once();
 
-#if !LIGHT_EXPRESSION
             Nested_Hoisted_Func_using_outer_parameter();
             Nested_Hoisted_Func_using_outer_parameter_and_closed_value();
             Nested_Hoisted_Action_using_outer_parameter_and_closed_value();
             Nested_Hoisted_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda();
             Given_hoisted_expr_with_closure_over_parameters_in_nested_lambda_should_work();
+
             return 17;
-#else
-            return 12;
-#endif
         }
 
-#if !LIGHT_EXPRESSION
         [Test]
         public void Nested_Hoisted_Func_using_outer_parameter()
         {
-            System.Linq.Expressions.Expression<Func<string, string>> expr = a => GetS(() => a);
+            System.Linq.Expressions.Expression<Func<string, string>> sExpr = a => GetS(() => a);
+            var expr = sExpr.FromSysExpression();
 
             var f = expr.TryCompile<Func<string, string>>();
 
@@ -54,7 +51,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             var b = new S { Value = "b" };
 
-            System.Linq.Expressions.Expression<Func<string, string>> expr = a => GetS(() => b.Append(a));
+            System.Linq.Expressions.Expression<Func<string, string>> sExpr = a => GetS(() => b.Append(a));
+            var expr = sExpr.FromSysExpression();
 
             var f = expr.TryCompile<Func<string, string>>();
 
@@ -66,7 +64,8 @@ namespace FastExpressionCompiler.UnitTests
         {
             // The same hoisted expression: 
             var s = new S();
-            System.Linq.Expressions.Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
+            System.Linq.Expressions.Expression<Func<Action<string>>> sExpr = () => a => s.SetValue(a);
+            var expr = sExpr.FromSysExpression();
 
             var f = expr.TryCompile<Func<Action<string>>>();
 
@@ -78,10 +77,11 @@ namespace FastExpressionCompiler.UnitTests
         {
             var b = new S { Value = "b" };
 
-            System.Linq.Expressions.Expression<Func<string, string>> expr =
+            System.Linq.Expressions.Expression<Func<string, string>> sExpr =
                 a => GetS(
                     () => b.Prepend(a,
                         rest => b.Append(rest)));
+            var expr = sExpr.FromSysExpression();
 
             var f = expr.TryCompile<Func<string, string>>();
 
@@ -91,11 +91,12 @@ namespace FastExpressionCompiler.UnitTests
         [Test]
         public void Given_hoisted_expr_with_closure_over_parameters_in_nested_lambda_should_work()
         {
-            System.Linq.Expressions.Expression<Func<object, object>> funcExpr = a =>
+            System.Linq.Expressions.Expression<Func<object, object>> sExpr = a =>
                 new Func<object>(() =>
                     new Func<object>(() => a)())();
+            var expr = sExpr.FromSysExpression();
 
-            var func = funcExpr.Compile();
+            var func = expr.CompileSys();
 
             var arg1 = new object();
             Assert.AreSame(arg1, func(arg1));
@@ -103,13 +104,11 @@ namespace FastExpressionCompiler.UnitTests
             var arg2 = new object();
             Assert.AreSame(arg2, func(arg2));
 
-            var funcFec = funcExpr.TryCompile<Func<object, object>>();
+            var funcFec = expr.TryCompile<Func<object, object>>();
 
             Assert.AreSame(arg1, funcFec(arg1));
             Assert.AreSame(arg2, funcFec(arg2));
         }
-
-#endif
 
         public static string GetS(Func<string> getS)
         {
@@ -197,7 +196,7 @@ namespace FastExpressionCompiler.UnitTests
                     Lambda(
                         Call(bExpr, "Prepend", Type.EmptyTypes,
                             aParam,
-                            Lambda(Call(bExpr, "Append", Type.EmptyTypes, bbParam), 
+                            Lambda(Call(bExpr, "Append", Type.EmptyTypes, bbParam),
                                 bbParam)))),
                 aParam);
 
@@ -377,11 +376,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var m = Parameter(typeof(int), "m");
             var sub = Lambda<Func<int, int>>(Subtract(
-                m, Invoke(add, Constant(5))), 
+                m, Invoke(add, Constant(5))),
                 m);
 
             var e = Lambda<Func<int>>(
-                Add(Invoke(sub, Constant(42)), 
+                Add(Invoke(sub, Constant(42)),
                     Invoke(add, Constant(13))));
 
             var f = e.CompileFast(true);
@@ -413,7 +412,7 @@ namespace FastExpressionCompiler.UnitTests
                     13));
             Assert.AreEqual(13, @cs());
 
-            var fs =  e.CompileSys();
+            var fs = e.CompileSys();
             fs.PrintIL();
             Assert.AreEqual(13, fs());
 
@@ -432,14 +431,14 @@ namespace FastExpressionCompiler.UnitTests
             var nSaved = Parameter(typeof(int), "nSaved");
 
             var e = Lambda<Func<int, int>>(
-                Subtract(n, 
+                Subtract(n,
                     Block(
                         new[] { nSaved },
                         TryFinally(
                             Block(
                                 Assign(nSaved, n),
                                 Add(n, Constant(10))
-                            ), 
+                            ),
                             Assign(n, nSaved)
                         )
                     )
@@ -448,7 +447,7 @@ namespace FastExpressionCompiler.UnitTests
 
             e.PrintCSharp();
 
-            var fs =  e.CompileSys();
+            var fs = e.CompileSys();
             fs.PrintIL();
             Assert.AreEqual(-10, fs(42));
 
@@ -464,14 +463,14 @@ namespace FastExpressionCompiler.UnitTests
             var nSaved = Parameter(typeof(int), "nSaved");
 
             var e = Lambda<Func<int, int>>(
-                Subtract(n, 
+                Subtract(n,
                     Block(
                         new[] { nSaved },
                         TryFinally(
                             Block(
                                 Assign(nSaved, n),
                                 Add(n, Constant(10))
-                            ), 
+                            ),
                             Block(typeof(void),
                                 Assign(n, nSaved)
                             )
@@ -482,7 +481,7 @@ namespace FastExpressionCompiler.UnitTests
 
             e.PrintCSharp();
 
-            var fs =  e.CompileSys();
+            var fs = e.CompileSys();
             fs.PrintIL();
             Assert.AreEqual(-10, fs(42));
 
@@ -509,7 +508,7 @@ namespace FastExpressionCompiler.UnitTests
                 int__54267293 = 42;
                 ((Action<int>)((int int__54267293) => //void
                 {
-                        int__54267293 = int__54267293 - 2;
+                    int__54267293 = int__54267293 - 2;
                 }))
                 .Invoke(
                     int__54267293);

@@ -2186,6 +2186,57 @@ public static class FromSysExpressionConverter
                 var constExpr = (System.Linq.Expressions.ConstantExpression)sysExpr;
                 return Expression.Constant(constExpr.Value, constExpr.Type);
 
+            case ExpressionType.Invoke:
+                {
+                    var ie = (System.Linq.Expressions.InvocationExpression)sysExpr;
+                    var lambda = ie.Expression?.ToLightExpression(ref exprsConverted);
+                    var args = ie.Arguments;
+                    var argCount = args.Count;
+                    switch (argCount)
+                    {
+                        case 0:
+                            return Expression.Invoke(lambda);
+                        case 1:
+                            return Expression.Invoke(lambda,
+                                args[0].ToLightExpression(ref exprsConverted));
+                        case 2:
+                            return Expression.Invoke(lambda,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted));
+                        case 3:
+                            return Expression.Invoke(lambda,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted));
+                        case 4:
+                            return Expression.Invoke(lambda,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted));
+                        case 5:
+                            return Expression.Invoke(lambda,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted),
+                                args[4].ToLightExpression(ref exprsConverted));
+                        case 6:
+                            return Expression.Invoke(lambda,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted),
+                                args[4].ToLightExpression(ref exprsConverted),
+                                args[5].ToLightExpression(ref exprsConverted));
+                        default:
+                            var ars = new Expression[argCount];
+                            for (var i = 0; i < ars.Length; ++i)
+                                ars[i] = args[i].ToLightExpression(ref exprsConverted);
+                            return Expression.Invoke(lambda, ars);
+                    }
+                }
+
             case ExpressionType.MemberAccess:
                 var me = (System.Linq.Expressions.MemberExpression)sysExpr;
                 return Expression.MakeMemberAccess(me.Expression?.ToLightExpression(ref exprsConverted), me.Member);
