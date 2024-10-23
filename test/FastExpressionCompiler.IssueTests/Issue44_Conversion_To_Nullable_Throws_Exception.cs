@@ -16,22 +16,16 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             Conversion_to_nullable_should_work_with_null_constructed_with_expressions();
-
-#if !LIGHT_EXPRESSION
             Conversion_to_nullable_should_work();
             Conversion_to_nullable_should_work_with_null();
             return 3;
-#else            
-            return 1;
-#endif
         }
 
-
-#if !LIGHT_EXPRESSION
         [Test]
         public void Conversion_to_nullable_should_work()
         {
-            Expression<Func<int?>> expression = () => 42;
+            System.Linq.Expressions.Expression<Func<int?>> sExpression = () => 42;
+            var expression = sExpression.FromSysExpression();
             int? answer = expression.CompileFast(true).Invoke();
 
             Assert.IsTrue(answer.HasValue);
@@ -41,12 +35,12 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Conversion_to_nullable_should_work_with_null()
         {
-            Expression<Func<int?>> expression = () => null;
+            System.Linq.Expressions.Expression<Func<int?>> sExpression = () => null;
+            var expression = sExpression.FromSysExpression();
             int? answer = expression.CompileFast(true).Invoke();
 
             Assert.IsFalse(answer.HasValue);
         }
-#endif
 
         [Test]
         public void Conversion_to_nullable_should_work_with_null_constructed_with_expressions()

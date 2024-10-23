@@ -55,15 +55,12 @@ namespace FastExpressionCompiler.IssueTests
             ConstantOutInCondition();
             ConstantOut();
 
-#if !LIGHT_EXPRESSION
             IntPtrZeroReturn();
             NewIntPtr13Return();
+
             return 33;
-#else            
-            return 31;
-#endif
         }
- 
+
         delegate TResult FuncRef<T, out TResult>(ref T a1);
         delegate TResult FuncRefIn<T1, in T2, out TResult>(ref T1 a1, T2 a2);
         delegate void ActionRef<T>(ref T a1);
@@ -454,7 +451,7 @@ namespace FastExpressionCompiler.IssueTests
             AssertLocal(direct);
         }
 
-        private static void SetMinusOneAndOneForDoubleRefParameterInCallCall(ref int ref1, ref int ref2) {  ref2 = -1; ref1 = 1; }
+        private static void SetMinusOneAndOneForDoubleRefParameterInCallCall(ref int ref1, ref int ref2) { ref2 = -1; ref1 = 1; }
 
         [Test]
         public void SetMinusOneAndOneForDoubleRefParameterInCall()
@@ -662,11 +659,11 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(0, exampleC);
         }
 
-#if !LIGHT_EXPRESSION
         [Test]
         public void IntPtrZeroReturn()
         {
-            Expression<Func<IntPtr>> lambda = () => IntPtr.Zero;
+            System.Linq.Expressions.Expression<Func<IntPtr>> sLambda = () => IntPtr.Zero;
+            var lambda = sLambda.FromSysExpression();
             var compiled = lambda.CompileFast<Func<IntPtr>>(true);
             Assert.AreEqual(IntPtr.Zero, compiled());
         }
@@ -674,11 +671,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void NewIntPtr13Return()
         {
-            Expression<Func<IntPtr>> lambda = () => new IntPtr(13);
+            System.Linq.Expressions.Expression<Func<IntPtr>> sLambda = () => new IntPtr(13);
+            var lambda = sLambda.FromSysExpression();
             var compiled = lambda.CompileFast<Func<IntPtr>>(true);
             Assert.AreEqual(new IntPtr(13), compiled());
         }
-#endif
 
         [Test]
 
@@ -800,9 +797,9 @@ namespace FastExpressionCompiler.IssueTests
         {
             var objRef = Parameter(typeof(StructWithIntField).MakeByRefType());
             var objVal = Parameter(typeof(int));
-            
+
             var body = Assign(
-                PropertyOrField(objRef, nameof(StructWithIntField.IntField)), 
+                PropertyOrField(objRef, nameof(StructWithIntField.IntField)),
                 objVal);
 
             var e = Lambda<ActionRefIn<StructWithIntField, int>>(body, objRef, objVal);

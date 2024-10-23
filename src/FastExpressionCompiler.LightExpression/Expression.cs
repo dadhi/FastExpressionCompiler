@@ -2118,6 +2118,65 @@ public static class FromSysExpressionConverter
                 var ifFalse = ce.IfFalse?.ToLightExpression(ref exprsConverted);
                 return Expression.Condition(test, ifTrue, ifFalse, ce.Type);
 
+            case ExpressionType.New:
+                var ctorExpr = (System.Linq.Expressions.NewExpression)sysExpr;
+                var ctor = ctorExpr.Constructor;
+                var args = ctorExpr.Arguments;
+                var argCount = args.Count;
+                switch (argCount)
+                {
+                    case 0:
+                        return Expression.New(ctor);
+                    case 1:
+                        return Expression.New(ctor,
+                            args[0].ToLightExpression(ref exprsConverted));
+                    case 2:
+                        return Expression.New(ctor,
+                            args[0].ToLightExpression(ref exprsConverted),
+                            args[1].ToLightExpression(ref exprsConverted));
+                    case 3:
+                        return Expression.New(ctor,
+                            args[0].ToLightExpression(ref exprsConverted),
+                            args[1].ToLightExpression(ref exprsConverted),
+                            args[2].ToLightExpression(ref exprsConverted));
+                    case 4:
+                        return Expression.New(ctor,
+                            args[0].ToLightExpression(ref exprsConverted),
+                            args[1].ToLightExpression(ref exprsConverted),
+                            args[2].ToLightExpression(ref exprsConverted),
+                            args[3].ToLightExpression(ref exprsConverted));
+                    case 5:
+                        return Expression.New(ctor,
+                            args[0].ToLightExpression(ref exprsConverted),
+                            args[1].ToLightExpression(ref exprsConverted),
+                            args[2].ToLightExpression(ref exprsConverted),
+                            args[3].ToLightExpression(ref exprsConverted),
+                            args[4].ToLightExpression(ref exprsConverted));
+                    case 6:
+                        return Expression.New(ctor,
+                            args[0].ToLightExpression(ref exprsConverted),
+                            args[1].ToLightExpression(ref exprsConverted),
+                            args[2].ToLightExpression(ref exprsConverted),
+                            args[3].ToLightExpression(ref exprsConverted),
+                            args[4].ToLightExpression(ref exprsConverted),
+                            args[5].ToLightExpression(ref exprsConverted));
+                    case 7:
+                        return Expression.New(ctor,
+                            args[0].ToLightExpression(ref exprsConverted),
+                            args[1].ToLightExpression(ref exprsConverted),
+                            args[2].ToLightExpression(ref exprsConverted),
+                            args[3].ToLightExpression(ref exprsConverted),
+                            args[4].ToLightExpression(ref exprsConverted),
+                            args[5].ToLightExpression(ref exprsConverted),
+                            args[6].ToLightExpression(ref exprsConverted));
+                    default:
+                        var ars = new Expression[argCount];
+                        for (var i = 0; i < argCount; ++i)
+                            ars[i] = args[i].ToLightExpression(ref exprsConverted);
+                        return Expression.New(ctor, ars);
+                }
+
+
             case ExpressionType.Parameter:
                 var pe = (System.Linq.Expressions.ParameterExpression)sysExpr;
                 return Expression.Parameter(pe.Type, pe.Name);
