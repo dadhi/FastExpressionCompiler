@@ -6,7 +6,7 @@ using System.Threading;
 using NUnit.Framework;
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
-#pragma warning disable 649 // Unaasigned fields
+#pragma warning disable 649 // Unassigned fields
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -23,10 +23,7 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             linq2db_NullReferenceException();
-
-#if !LIGHT_EXPRESSION
             linq2db_InvalidProgramException2_reuse_variable_for_upper_and_nested_lambda();
-#endif
             String_to_number_conversion_using_convert_with_method();
             String_to_number_conversion_using_convert_with_method_with_DefaultExpression();
             Jit_compiler_internal_limitation();
@@ -54,10 +51,7 @@ namespace FastExpressionCompiler.IssueTests
             Negate_decimal();
             Increment_decimal();
             Decrement_decimal();
-
             linq2db_Expression();
-
-#if !LIGHT_EXPRESSION
             Equal1_Test();
             Equal2_Test();
             Equal3_Test();
@@ -80,9 +74,6 @@ namespace FastExpressionCompiler.IssueTests
             TestConverterNullable();
             TestLdArg();
             return 51;
-#else
-            return 29;
-#endif
         }
 
         [Test]
@@ -440,20 +431,16 @@ namespace FastExpressionCompiler.IssueTests
             Value2 = 2,
         }
 
-#if !LIGHT_EXPRESSION
         [Test]
         public void Equal1_Test()
         {
             var p = Parameter(typeof(object));
             var pp = new Patient();
             var body = Equal(Constant(pp), p);
-#pragma warning disable CS0252 // Possible unintended reference comparison; left hand side needs cast
-            Expression<Func<object, bool>> e = o => o == pp;
-#pragma warning restore CS0252 // Possible unintended reference comparison; left hand side needs cast
             var expr = Lambda<Func<object, bool>>(body, p);
 
             var compiled = expr.CompileFast(true);
-            var c = expr.Compile();
+            var c = expr.CompileSys();
 
             Assert.AreEqual(c(pp), compiled(pp));
             Assert.AreEqual(c(new Patient()), compiled(new Patient()));
@@ -465,13 +452,10 @@ namespace FastExpressionCompiler.IssueTests
             var p = Parameter(typeof(Patient));
             var pp = new Patient();
             var body = Equal(Constant(pp), p);
-#pragma warning disable CS0252 // Possible unintended reference comparison; left hand side needs cast
-            Expression<Func<object, bool>> e = o => o == pp;
-#pragma warning restore CS0252 // Possible unintended reference comparison; left hand side needs cast
             var expr = Lambda<Func<Patient, bool>>(body, p);
 
             var compiled = expr.CompileFast(true);
-            var c = expr.Compile();
+            var c = expr.CompileSys();
 
             Assert.AreEqual(c(pp), compiled(pp));
             Assert.AreEqual(c(new Patient()), compiled(new Patient()));
@@ -483,11 +467,10 @@ namespace FastExpressionCompiler.IssueTests
             var p = Parameter(typeof(Patient));
             var pp = new Patient2();
             var body = Equal(Constant(pp), p);
-            Expression<Func<Patient, bool>> e = (o) => o == pp;
             var expr = Lambda<Func<Patient, bool>>(body, p);
 
             var compiled = expr.CompileFast(true);
-            var c = expr.Compile();
+            var c = expr.CompileSys();
 
             Assert.AreEqual(c(pp), compiled(pp));
             Assert.AreEqual(c(new Patient()), compiled(new Patient()));
@@ -501,7 +484,7 @@ namespace FastExpressionCompiler.IssueTests
             var expr = Lambda<Func<object, Patient>>(body, p);
 
             var compiled = expr.CompileFast(true);
-            var c = expr.Compile();
+            var c = expr.CompileSys();
 
             var pp = new Patient();
             var s = "a";
@@ -517,14 +500,13 @@ namespace FastExpressionCompiler.IssueTests
             var expr = Lambda<Func<object, bool>>(body, p);
 
             var compiled = expr.CompileFast(true);
-            var c = expr.Compile();
+            var c = expr.CompileSys();
 
             var pp = new Patient();
             var s = "a";
             Assert.AreEqual(c(pp), compiled(pp));
             Assert.AreEqual(c(s), compiled(s));
         }
-#endif
 
         [Test]
         public void Enum_to_enum_conversion()
@@ -611,7 +593,6 @@ namespace FastExpressionCompiler.IssueTests
             return 0;
         }
 
-#if !LIGHT_EXPRESSION
         public static object ConvertDefault(object value, Type conversionType)
         {
             try
@@ -678,7 +659,7 @@ namespace FastExpressionCompiler.IssueTests
 
 
             var compiled = lambda.CompileFast(true);
-            var c = lambda.Compile();
+            var c = lambda.CompileSys();
 
             Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
         }
@@ -743,7 +724,7 @@ namespace FastExpressionCompiler.IssueTests
 
 
             var compiled = lambda.CompileFast(true);
-            var c = lambda.Compile();
+            var c = lambda.CompileSys();
 
             Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
         }
@@ -868,7 +849,7 @@ namespace FastExpressionCompiler.IssueTests
             var mapperBody = Coalesce(Constant(null, typeof(int?)), Constant(7));
             var mapper = Lambda<Func<int>>(mapperBody);
             var compiled = mapper.CompileFast(true);
-            var c = mapper.Compile();
+            var c = mapper.CompileSys();
             compiled();
             c();
         }
@@ -883,7 +864,7 @@ namespace FastExpressionCompiler.IssueTests
                 typeof(object)));
 
 
-            var compiled1 = lambda.Compile();
+            var compiled1 = lambda.CompileSys();
             var compiled2 = lambda.CompileFast(true);
 
             Assert.AreEqual("aa", compiled1());
@@ -895,7 +876,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var lambda = Lambda<Func<string>>(Invoke(Lambda<Func<String>>(Constant("aa"))));
 
-            var compiled1 = lambda.Compile();
+            var compiled1 = lambda.CompileSys();
             var compiled2 = lambda.CompileFast(true);
 
             Assert.AreEqual("aa", compiled1());
@@ -908,7 +889,7 @@ namespace FastExpressionCompiler.IssueTests
             var l = Lambda<Func<String>>(Constant("aa"));
             var lambda = Lambda<Func<string>>(Block(Invoke(l), Invoke(l), Invoke(l)));
 
-            var compiled1 = lambda.Compile();
+            var compiled1 = lambda.CompileSys();
             var compiled2 = lambda.CompileFast(true);
 
             Assert.AreEqual("aa", compiled1());
@@ -918,10 +899,10 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void TestLambdaInvokeSupported3()
         {
-            var l = Lambda<Func<String>>(Block(Constant("aa"), Constant("aa"), Constant("aa"),Constant("aa"),Constant("aa")));
+            var l = Lambda<Func<String>>(Block(Constant("aa"), Constant("aa"), Constant("aa"), Constant("aa"), Constant("aa")));
             var lambda = Lambda<Func<string>>(Block(Invoke(l), Invoke(l), Invoke(l)));
 
-            var compiled1 = lambda.Compile();
+            var compiled1 = lambda.CompileSys();
             var compiled2 = lambda.CompileFast(true);
 
             Assert.AreEqual("aa", compiled1());
@@ -961,7 +942,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var mapper = Lambda<Func<IQueryRunner, IDataContext, IDataReader, Expression, object[], object>>(mapperBody, a1, a2, a3, a4, a5);
 
-            var compiled1 = mapper.Compile();
+            var compiled1 = mapper.CompileSys();
             var compiled2 = mapper.CompileFast(true);
 
             Assert.Throws<NullReferenceException>(() => compiled1(null, null, null, null, null));
@@ -976,14 +957,15 @@ namespace FastExpressionCompiler.IssueTests
             var mapperBody = Condition(Property(p, "HasValue"), Property(p, "Value"), Constant(-1));
             var mapper = Lambda<Func<int?, int>>(mapperBody, p);
 
-            var compiled1 = mapper.Compile();
+            var compiled1 = mapper.CompileSys();
             var compiled2 = mapper.CompileFast(true);
 
             compiled1(null);
             compiled2(null);
         }
 
-        class sPrp {
+        class sPrp
+        {
             public short? v;
         }
 
@@ -995,7 +977,7 @@ namespace FastExpressionCompiler.IssueTests
             var mapperBody = /*Convert(*/Convert(Field(p, nameof(sPrp.v)), typeof(int?))/*, typeof(object))*/;
             var mapper = Lambda<Func<sPrp, int?>>(mapperBody, p);
 
-            var compiled1 = mapper.Compile();
+            var compiled1 = mapper.CompileSys();
             var compiled2 = mapper.CompileFast(true);
 
             var a = compiled1(new sPrp() { v = short.MaxValue });
@@ -1009,7 +991,8 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreEqual(c, d);
         }
 
-        public static string aa(int nr) {
+        public static string aa(int nr)
+        {
             return nr.ToString();
         }
 
@@ -1021,7 +1004,7 @@ namespace FastExpressionCompiler.IssueTests
             var mapperBody = Call(typeof(Issue83_linq2db).GetTypeInfo().GetMethod("aa"), p);
             var mapper = Lambda<Func<int, string>>(mapperBody, p);
 
-            var compiled1 = mapper.Compile();
+            var compiled1 = mapper.CompileSys();
             var compiled2 = mapper.CompileFast(true);
 
             var a = compiled1(5);
@@ -1029,7 +1012,6 @@ namespace FastExpressionCompiler.IssueTests
 
             Assert.AreEqual(a, b);
         }
-#endif
 
         [Test]
         public void Jit_compiler_internal_limitation()
