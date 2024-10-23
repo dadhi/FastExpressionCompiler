@@ -1,6 +1,6 @@
 using NUnit.Framework;
 using System;
-using System.Linq.Expressions;
+
 #if LIGHT_EXPRESSION
 using System.Text;
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -9,7 +9,6 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
-
 {
     [TestFixture]
     public class Issue302_Error_compiling_expression_with_array_access : ITest

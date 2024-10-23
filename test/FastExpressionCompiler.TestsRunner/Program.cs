@@ -259,6 +259,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.IssueTests.Issue322_NullableIntArgumentWithDefaultIntValue().Run);
 
                 Run(new Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run);
+                Run(new LightExpression.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast().Run);
+
                 Run(new Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run);
 
                 Run(new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run);

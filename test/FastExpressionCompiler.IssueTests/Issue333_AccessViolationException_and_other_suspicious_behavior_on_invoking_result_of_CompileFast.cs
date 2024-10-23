@@ -3,10 +3,14 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 
-#if !LIGHT_EXPRESSION
-using System.Linq.Expressions;
+#if LIGHT_EXPRESSION
+using System.Text;
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.IssueTests
+#else
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
+#endif
 {
     [TestFixture]
     public class Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast : ITest
@@ -22,7 +26,8 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Test()
         {
-            Expression<Func<S>> hoistedExpr = () => new Widget(null, null, null, _foo, null).Dodgy;
+            System.Linq.Expressions.Expression<Func<S>> sHoistedExpr = () => new Widget(null, null, null, _foo, null).Dodgy;
+            var hoistedExpr = sHoistedExpr.FromSysExpression();
 
             var manualExpr = hoistedExpr.ToExpressionString();
             // var expr = Lambda<System.Func<S>>( //$
@@ -88,4 +93,3 @@ namespace FastExpressionCompiler.IssueTests
         }
     }
 }
-#endif
