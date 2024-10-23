@@ -4,7 +4,6 @@ using System.Reflection;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
-using FastExpressionCompiler.LightExpression;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
 #else

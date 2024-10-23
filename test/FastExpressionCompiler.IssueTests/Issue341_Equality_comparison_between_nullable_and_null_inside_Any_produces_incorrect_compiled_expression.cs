@@ -1,14 +1,16 @@
-
-#if !LIGHT_EXPRESSION
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Reflection;
 using NUnit.Framework;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.IssueTests
+#else
 using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
+#endif
 {
     [TestFixture]
     public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression : ITest
@@ -36,7 +38,7 @@ namespace FastExpressionCompiler.IssueTests
 
         public enum Ops { Equal, NotEqual, Greater, Less, GreaterOrEqual, LessOrEqual }
 
-        public static Expression<Func<decimal?, decimal?, bool>>[] twoParamsExpressions =
+        public static System.Linq.Expressions.Expression<Func<decimal?, decimal?, bool>>[] sysTwoParamsExpressions =
         {
             (a, b) => a == b,
             (a, b) => a != b,
@@ -45,6 +47,9 @@ namespace FastExpressionCompiler.IssueTests
             (a, b) => a >= b,
             (a, b) => a <= b,
         };
+
+        public static Expression<Func<decimal?, decimal?, bool>>[] twoParamsExpressions =
+            sysTwoParamsExpressions.Select(e => e.FromSysExpression()).ToArray();
 
         public static ParameterExpression aParam = Parameter(typeof(decimal?), "a");
         public static Func<decimal?, Expression<Func<decimal?, bool>>>[] oneParamExpressions =
@@ -83,7 +88,7 @@ namespace FastExpressionCompiler.IssueTests
             var expression = oneParamExpressions[(int)op](b);
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             var compiledFast = expression.CompileFast(true);
 
             compiledSys.PrintIL("sys");
@@ -102,7 +107,7 @@ namespace FastExpressionCompiler.IssueTests
             var expression = twoParamsExpressions[(int)op];
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             var compiledFast = expression.CompileFast(true);
 
             compiledSys.PrintIL("sys");
@@ -118,10 +123,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Nullable_decimal_not_equal_to_zero()
         {
-            Expression<Func<decimal?, bool>> expression = n => n != 0M;
+            System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n != 0M;
+            var expression = sExpression.FromSysExpression();
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             var compiledFast = expression.CompileFast(true);
 
             var instance = default(decimal);
@@ -139,10 +145,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Nullable_decimal_greater_than_zero()
         {
-            Expression<Func<decimal?, bool>> expression = n => n > 0M;
+            System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n > 0M;
+            var expression = sExpression.FromSysExpression();
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             var compiledFast = expression.CompileFast(true);
 
             var instance = default(decimal);
@@ -160,10 +167,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Nullable_decimal_not_equal_decimal()
         {
-            Expression<Func<decimal?, bool>> expression = n => n != 1.11M;
+            System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n != 1.11M;
+            var expression = sExpression.FromSysExpression();
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             var compiledFast = expression.CompileFast(true);
 
             var instance = 1.111M;
@@ -181,10 +189,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Nullable_decimal_less_then_decimal()
         {
-            Expression<Func<decimal?, bool>> expression = n => n < 1.11M;
+            System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n < 1.11M;
+            var expression = sExpression.FromSysExpression();
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             var compiledFast = expression.CompileFast(true);
 
             var instance = 1.101M;
@@ -202,10 +211,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Nullable_decimal_not_equal_to_null()
         {
-            Expression<Func<decimal?, bool>> expression = n => n != null;
+            System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n != null;
+            var expression = sExpression.FromSysExpression();
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             var compiledFast = expression.CompileFast(true);
 
             var instance = default(decimal);
@@ -223,10 +233,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Null_not_equal_to_nullable_decimal()
         {
-            Expression<Func<decimal?, bool>> expression = n => null != n;
+            System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => null != n;
+            var expression = sExpression.FromSysExpression();
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             var compiledFast = expression.CompileFast(true);
 
             var instance = default(decimal);
@@ -244,10 +255,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Nullable_decimal_equal_to_null()
         {
-            Expression<Func<decimal?, bool>> expression = n => n == null;
+            System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n == null;
+            var expression = sExpression.FromSysExpression();
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             var compiledFast = expression.CompileFast(true);
 
             var instance = default(decimal);
@@ -266,10 +278,11 @@ namespace FastExpressionCompiler.IssueTests
         public void Nullable_decimal_member_not_equal_to_null()
         {
             // todo: @perf optimize comparison of nullable with null
-            Expression<Func<Test2, bool>> expression = t => t.Value != null;
+            System.Linq.Expressions.Expression<Func<Test2, bool>> sExpression = t => t.Value != null;
+            var expression = sExpression.FromSysExpression();
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             var compiledFast = expression.CompileFast(true);
 
             var instance = new Test2() { Value = 0 };
@@ -287,10 +300,11 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Nullable_decimal_member_not_equal_to_null_inside_predicate()
         {
-            Expression<Func<Test, bool>> expression = t => t.A.Any(e => e.Value != null);
+            System.Linq.Expressions.Expression<Func<Test, bool>> sExpression = t => t.A.Any(e => e.Value != null);
+            var expression = sExpression.FromSysExpression();
             expression.PrintCSharp(); // just for debug
 
-            var compiledSys = expression.Compile();
+            var compiledSys = expression.CompileSys();
             compiledSys.PrintIL("sys");
 
             var compiledFast = expression.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
@@ -327,4 +341,3 @@ namespace FastExpressionCompiler.IssueTests
         }
     }
 }
-#endif
