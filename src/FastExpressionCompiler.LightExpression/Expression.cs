@@ -2303,6 +2303,9 @@ public static class FromSysExpressionConverter
                 {
                     var ctorExpr = (System.Linq.Expressions.NewExpression)sysExpr;
                     var ctor = ctorExpr.Constructor;
+                    if (ctor == null && exprType.IsValueType)
+                        return new NewValueTypeExpression(exprType);
+
                     var args = ctorExpr.Arguments;
                     var argCount = args.Count;
                     switch (argCount)

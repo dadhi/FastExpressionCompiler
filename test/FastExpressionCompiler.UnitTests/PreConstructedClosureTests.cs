@@ -24,15 +24,11 @@ namespace FastExpressionCompiler.UnitTests
             Can_use_variable_block_when_compiling_a_static_delegate();
             Can_Not_use_primitive_types_in_manual_lambda_closure();
 
-#if !LIGHT_EXPRESSION
-
             Can_prevent_closure_creation_when_compiling_a_static_delegate();
             Can_pass_closure_to_hoisted_expr_with_nested_lambda();
             Can_use_primitive_types_in_hoisted_lambda_closure();
+
             return 11;
-#else            
-            return 8;
-#endif
         }
 
         [Test]
@@ -163,11 +159,11 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual(10, result.DoubleValue);
         }
 
-#if !LIGHT_EXPRESSION
         [Test]
         public void Can_prevent_closure_creation_when_compiling_a_static_delegate()
         {
-            Expression<Func<X>> expr = () => new X();
+            System.Linq.Expressions.Expression<Func<X>> sExpr = () => new X();
+            var expr = sExpr.FromSysExpression();
 
             var f = expr.TryCompileWithoutClosure<Func<X>>();
             Assert.IsNotNull(f);
@@ -180,7 +176,8 @@ namespace FastExpressionCompiler.UnitTests
         public void Can_pass_closure_to_hoisted_expr_with_nested_lambda()
         {
             var x = new X();
-            Expression<Func<Y>> expr = () => new Y(x, () => x);
+            System.Linq.Expressions.Expression<Func<Y>> sExpr = () => new Y(x, () => x);
+            var expr = sExpr.FromSysExpression();
 
             var f1 = expr.TryCompile<Func<Y>>();
             Assert.IsNotNull(f1);
@@ -194,7 +191,8 @@ namespace FastExpressionCompiler.UnitTests
         public void Can_use_primitive_types_in_hoisted_lambda_closure()
         {
             var i = 3;
-            Expression<Func<int>> expr = () => i + 1;
+            System.Linq.Expressions.Expression<Func<int>> sExpr = () => i + 1;
+            var expr = sExpr.FromSysExpression();
 
             var fs = expr.CompileSys();
             Assert.IsNotNull(fs);
@@ -202,7 +200,6 @@ namespace FastExpressionCompiler.UnitTests
             i = 13;
             Assert.AreEqual(14, fs());
         }
-#endif
 
         [Test]
         public void Can_Not_use_primitive_types_in_manual_lambda_closure()

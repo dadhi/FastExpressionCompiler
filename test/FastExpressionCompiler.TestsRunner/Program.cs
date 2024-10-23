@@ -107,6 +107,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new UnaryExpressionTests().Run);
                 Run(new LightExpression.UnitTests.UnaryExpressionTests().Run);
                 Run(new ValueTypeTests().Run);
+                Run(new LightExpression.UnitTests.ValueTypeTests().Run);
                 Run(new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run);
                 Run(new LightExpression.UnitTests.LightExpressionTests().Run);
                 Run(new ToCSharpStringTests().Run);
