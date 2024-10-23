@@ -44,15 +44,11 @@ namespace FastExpressionCompiler.UnitTests
             Can_calculate_arithmetic_operation_on_non_primitive_class();
             Can_calculate_arithmetic_operation_on_non_primitive_value_type();
 
-#if !LIGHT_EXPRESSION
             Can_calculate_arithmetic_operation_with_vectors();
             Can_add_strings();
             Can_add_string_and_not_string();
 
             return 29;
-#else
-            return 26;
-#endif
         }
 
         [Test]
@@ -420,12 +416,11 @@ namespace FastExpressionCompiler.UnitTests
             AssertAdd(new NonPrimitiveInt32ValueType(1), new NonPrimitiveInt32ValueType(2), new NonPrimitiveInt32ValueType(3));
         }
 
-#if !LIGHT_EXPRESSION
-
         [Test]
         public void Can_calculate_arithmetic_function_obeying_operator_precedence()
         {
-            Expression<Func<int, int, int, int, int>> expr = (arg1, arg2, arg3, arg4) => arg1 + arg2 * arg3 / arg4;
+            System.Linq.Expressions.Expression<Func<int, int, int, int, int>> sExpr = (arg1, arg2, arg3, arg4) => arg1 + arg2 * arg3 / arg4;
+            var expr = sExpr.FromSysExpression();
 
             var arithmeticFunc = expr.CompileFast(true);
 
@@ -436,7 +431,8 @@ namespace FastExpressionCompiler.UnitTests
         [Test(Description = "Support all types and operations from System.Numerics ")]
         public void Can_calculate_arithmetic_operation_with_vectors()
         {
-            Expression<Func<Vector2>> expr = () => Vector2.One - new Vector2(2.0f, 2.0f);
+            System.Linq.Expressions.Expression<Func<Vector2>> sExpr = () => Vector2.One - new Vector2(2.0f, 2.0f);
+            var expr = sExpr.FromSysExpression();
 
             var vectorMethod = expr.CompileFast(true);
 
@@ -452,7 +448,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var s1 = "a";
             var s2 = "b";
-            Expression<Func<string>> expr = () => s1 + s2;
+            System.Linq.Expressions.Expression<Func<string>> sExpr = () => s1 + s2;
+            var expr = sExpr.FromSysExpression();
 
             var f = expr.CompileFast(true);
             Assert.AreEqual("ab", f());
@@ -463,14 +460,12 @@ namespace FastExpressionCompiler.UnitTests
         {
             var s1 = "a";
             var s2 = 1;
-            Expression<Func<string>> expr = () => s1 + s2;
+            System.Linq.Expressions.Expression<Func<string>> sExpr = () => s1 + s2;
+            var expr = sExpr.FromSysExpression();
 
             var f = expr.CompileFast(true);
             Assert.AreEqual("a1", f());
         }
-
-#endif
-
         public override bool Equals(object obj)
         {
             return base.Equals(obj);
