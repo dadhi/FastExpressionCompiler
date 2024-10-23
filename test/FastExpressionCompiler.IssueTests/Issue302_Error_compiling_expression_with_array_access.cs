@@ -1,8 +1,15 @@
-#if !LIGHT_EXPRESSION
 using NUnit.Framework;
 using System;
 using System.Linq.Expressions;
+#if LIGHT_EXPRESSION
+using System.Text;
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.IssueTests
+#else
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
+#endif
+
 {
     [TestFixture]
     public class Issue302_Error_compiling_expression_with_array_access : ITest
@@ -17,7 +24,8 @@ namespace FastExpressionCompiler.IssueTests
         public void Test1()
         {
             var counter = 0;
-            Expression<Func<LinqTestModel, int>> expr = m => m.Array[counter].ValorInt;
+            System.Linq.Expressions.Expression<Func<LinqTestModel, int>> se = m => m.Array[counter].ValorInt;
+            var expr = se.FromSysExpression();
 
             expr.PrintCSharp();
 
@@ -46,4 +54,3 @@ namespace FastExpressionCompiler.IssueTests
         }
     }
 }
-#endif

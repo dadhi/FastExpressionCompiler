@@ -205,6 +205,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run);
 
                 Run(new Issue302_Error_compiling_expression_with_array_access().Run);
+                Run(new LightExpression.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run);
 
                 Run(new Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing().Run);
                 Run(new LightExpression.IssueTests.Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing().Run);
