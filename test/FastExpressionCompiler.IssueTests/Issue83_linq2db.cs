@@ -55,8 +55,9 @@ namespace FastExpressionCompiler.IssueTests
             Increment_decimal();
             Decrement_decimal();
 
-#if !LIGHT_EXPRESSION
             linq2db_Expression();
+
+#if !LIGHT_EXPRESSION
             Equal1_Test();
             Equal2_Test();
             Equal3_Test();
@@ -94,7 +95,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var body = Condition(
                 NotEqual(p, Constant(null, from)),
-                Convert(p, to, to.GetTypeInfo().DeclaredMethods.First(x=> x.Name == "Parse" && x.GetParameters().Length==1 && x.GetParameters()[0].ParameterType == from)),
+                Convert(p, to, to.GetTypeInfo().DeclaredMethods.First(x => x.Name == "Parse" && x.GetParameters().Length == 1 && x.GetParameters()[0].ParameterType == from)),
                 Constant(0));
 
             var expr = Lambda<Func<string, int>>(body, p);
@@ -114,7 +115,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var body = Condition(
                 NotEqual(p, Default(from)),
-                Convert(p, to, to.GetTypeInfo().DeclaredMethods.First(x=> x.Name == "Parse" && x.GetParameters().Length==1 && x.GetParameters()[0].ParameterType == from)),
+                Convert(p, to, to.GetTypeInfo().DeclaredMethods.First(x => x.Name == "Parse" && x.GetParameters().Length == 1 && x.GetParameters()[0].ParameterType == from)),
                 Default(typeof(int)));
 
             var expr = Lambda<Func<string, int>>(body, p);
@@ -211,7 +212,7 @@ namespace FastExpressionCompiler.IssueTests
 
         class InheritanceTests
         {
-            
+
 
             public abstract class InheritanceBase
             {
@@ -283,7 +284,7 @@ namespace FastExpressionCompiler.IssueTests
             var ldr = Variable(typeof(SQLiteDataReader), "ldr");
             var mapperBody = Block(
                 new[] { ldr },
-                Assign(ldr, Convert(a3, typeof(SQLiteDataReader)) ),
+                Assign(ldr, Convert(a3, typeof(SQLiteDataReader))),
                 Condition(
                     Equal(
                         Condition(
@@ -388,7 +389,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
-           
+
             res = ff(new QueryRunner(), new SQLiteDataReader(false));
             Assert.IsNotNull(res);
             Assert.AreEqual(TypeCodeEnum.A2, res.TypeCode);
@@ -403,30 +404,29 @@ namespace FastExpressionCompiler.IssueTests
 
         class NullableTestTable1
         {
-             public int? Id;
-             public TestEnum1? TestField;
+            public int? Id;
+            public TestEnum1? TestField;
         }
 
         const int RID = 101;
 
-#if !LIGHT_EXPRESSION
         [Test]
         public void linq2db_Expression()
         {
             var param = TestEnum1.Value1;
 
             var l = new List<NullableTestTable1>();
-            System.Linq.Expressions.Expression<Func<IEnumerable<NullableTestTable1>>> e = () => l
+            System.Linq.Expressions.Expression<Func<IEnumerable<NullableTestTable1>>> se = () => l
                 .Where(r => r.Id == RID && r.TestField == TestEnum1.Value2)
                 .Select(r => new NullableTestTable1
                 {
                     Id = r.Id,
                     TestField = param
                 });
+            var e = se.FromSysExpression();
             var compiled = e.CompileFast(true);
             compiled();
         }
-#endif
 
         enum Enum2
         {
@@ -1185,7 +1185,7 @@ namespace FastExpressionCompiler.IssueTests
         public void NullableEnum()
         {
             var objParam = Parameter(typeof(TestClass2), "obj");
-            
+
             var body = Block(
                 Assign(Field(objParam, nameof(TestClass2.NullEnum2)), Constant(Enum2.Value1, typeof(Enum2?)))
                 );
@@ -1324,13 +1324,13 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void ConvertNullableTest()
         {
-            var body = Convert(ConvertChecked(Constant(long.MaxValue-1, typeof(long)), typeof(int)), typeof(int?));
+            var body = Convert(ConvertChecked(Constant(long.MaxValue - 1, typeof(long)), typeof(int)), typeof(int?));
 
             var expr = Lambda<Func<int?>>(body);
 
             var compiled = expr.CompileFast(true);
 
-           Assert.Throws<OverflowException>(()=> compiled());
+            Assert.Throws<OverflowException>(() => compiled());
         }
 
         [Test]
@@ -1525,7 +1525,7 @@ namespace FastExpressionCompiler.IssueTests
             );
 
             var f = expr.CompileFast(true);
-            decimal? x = 2m; 
+            decimal? x = 2m;
             Assert.AreEqual(2m, f((object)x));
         }
 
@@ -1539,7 +1539,7 @@ namespace FastExpressionCompiler.IssueTests
             );
 
             var f = expr.CompileFast(true);
-            decimal? x = null; 
+            decimal? x = null;
             Assert.AreEqual(null, f((object)x));
         }
 

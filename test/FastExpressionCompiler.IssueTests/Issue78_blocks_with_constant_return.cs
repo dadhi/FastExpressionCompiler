@@ -22,12 +22,8 @@ namespace FastExpressionCompiler.IssueTests
             ConstantReturnIsSupported();
             ConstantReturnIsSupported2();
             Block1();
-#if !LIGHT_EXPRESSION
             Block2();
             return 6;
-#else
-            return 5;
-#endif
         }
 
         [Test]
@@ -85,8 +81,6 @@ namespace FastExpressionCompiler.IssueTests
             fastCompiled();
         }
 
-#if !LIGHT_EXPRESSION
-
         [Test]
         public void Block2()
         {
@@ -98,6 +92,5 @@ namespace FastExpressionCompiler.IssueTests
             Assert.DoesNotThrow(() => fastCompiled("a"));
             Assert.Throws<InvalidCastException>(() => fastCompiled(1));
         }
-#endif
     }
 }

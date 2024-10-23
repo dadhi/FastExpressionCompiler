@@ -406,6 +406,10 @@ public abstract class Expression
         ? new SixArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4, arg5)
         : new InstanceSixArgumentsMethodCallExpression(instance, method, arg0, arg1, arg2, arg3, arg4, arg5);
 
+    public static MethodCallExpression Call(MethodInfo method,
+        Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5, Expression arg6) =>
+        new SevenArgumentsMethodCallExpression(method, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+
     public static MethodCallExpression Call(Expression instance, MethodInfo method,
         Expression arg0, Expression arg1, Expression arg2, Expression arg3, Expression arg4, Expression arg5, Expression arg6) =>
         instance == null
@@ -2097,6 +2101,81 @@ public static class FromSysExpressionConverter
         return lightExpr;
     }
 
+    internal static ElementInit ToLightExpression(
+        this System.Linq.Expressions.ElementInit elemInit, ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        if (elemInit == null)
+            return null;
+
+        // First check for the already converted expressions 
+        var i = exprsConverted.Count - 1;
+        while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, elemInit)) --i;
+        if (i != -1)
+            return (ElementInit)exprsConverted.Items[i].LightExpr;
+
+        ElementInit lightElemInit = null;
+        var args = elemInit.Arguments;
+        var argCount = args.Count;
+        if (argCount == 0)
+            lightElemInit = new ElementInit(elemInit.AddMethod);
+        else if (argCount == 1)
+            lightElemInit = new OneArgumentElementInit(elemInit.AddMethod, args[0].ToLightExpression(ref exprsConverted));
+        else
+        {
+            var convertedArgs = new Expression[args.Count];
+            for (var j = 0; j < convertedArgs.Length; ++j)
+                convertedArgs[j] = args[j].ToLightExpression(ref exprsConverted);
+            lightElemInit = new ManyArgumentsElementInit(elemInit.AddMethod, convertedArgs);
+        }
+
+        ref var item = ref exprsConverted.Add();
+        item.SysExpr = elemInit;
+        item.LightExpr = lightElemInit;
+        return lightElemInit;
+    }
+
+    internal static MemberBinding ToLightExpression(
+        this System.Linq.Expressions.MemberBinding sysBinding, ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        if (sysBinding == null)
+            return null;
+
+        // First check for the already converted expressions 
+        var i = exprsConverted.Count - 1;
+        while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, sysBinding)) --i;
+        if (i != -1)
+            return (MemberBinding)exprsConverted.Items[i].LightExpr;
+
+        MemberBinding lightBinding = null;
+        if (sysBinding is System.Linq.Expressions.MemberAssignment sysAssignment)
+        {
+            var lightExpr = sysAssignment.Expression.ToLightExpression(ref exprsConverted);
+            lightBinding = Expression.Bind(sysAssignment.Member, lightExpr);
+        }
+        else if (sysBinding is System.Linq.Expressions.MemberMemberBinding mmBinding)
+        {
+            var bindings = mmBinding.Bindings;
+            var converted = new MemberBinding[bindings.Count];
+            for (var j = 0; j < converted.Length; ++j)
+                converted[j] = bindings[j].ToLightExpression(ref exprsConverted);
+            lightBinding = Expression.MemberBind(mmBinding.Member, converted);
+        }
+        else if (sysBinding is System.Linq.Expressions.MemberListBinding mlBinding)
+        {
+            var elemInits = mlBinding.Initializers;
+            var converted = new ElementInit[elemInits.Count];
+            for (var j = 0; j < converted.Length; ++j)
+                converted[j] = elemInits[j].ToLightExpression(ref exprsConverted);
+            lightBinding = Expression.ListBind(mlBinding.Member, converted);
+        }
+        else throw new NotSupportedException($"System to LightExpression MemberBinding conversion of {sysBinding.GetType()} is not supported yet");
+
+        ref var item = ref exprsConverted.Add();
+        item.SysExpr = sysBinding;
+        item.LightExpr = lightBinding;
+        return lightBinding;
+    }
+
     internal static Expression ConvertToLightExpression(SysExpr sysExpr, ref SmallList<LightAndSysExpr> exprsConverted)
     {
         var nodeType = sysExpr.NodeType;
@@ -2111,6 +2190,57 @@ public static class FromSysExpressionConverter
                 var me = (System.Linq.Expressions.MemberExpression)sysExpr;
                 return Expression.MakeMemberAccess(me.Expression?.ToLightExpression(ref exprsConverted), me.Member);
 
+            case ExpressionType.MemberInit:
+                {
+                    var mi = (System.Linq.Expressions.MemberInitExpression)sysExpr;
+                    var newExpr = (NewExpression)mi.NewExpression.ToLightExpression(ref exprsConverted);
+                    var bindings = mi.Bindings;
+                    var bindingCount = bindings.Count;
+                    switch (bindingCount)
+                    {
+                        case 0:
+                            return Expression.MemberInit(newExpr);
+                        case 1:
+                            return Expression.MemberInit(newExpr,
+                                bindings[0].ToLightExpression(ref exprsConverted));
+                        case 2:
+                            return Expression.MemberInit(newExpr,
+                                bindings[0].ToLightExpression(ref exprsConverted),
+                                bindings[1].ToLightExpression(ref exprsConverted));
+                        case 3:
+                            return Expression.MemberInit(newExpr,
+                                bindings[0].ToLightExpression(ref exprsConverted),
+                                bindings[1].ToLightExpression(ref exprsConverted),
+                                bindings[2].ToLightExpression(ref exprsConverted));
+                        case 4:
+                            return Expression.MemberInit(newExpr,
+                                bindings[0].ToLightExpression(ref exprsConverted),
+                                bindings[1].ToLightExpression(ref exprsConverted),
+                                bindings[2].ToLightExpression(ref exprsConverted),
+                                bindings[3].ToLightExpression(ref exprsConverted));
+                        case 5:
+                            return Expression.MemberInit(newExpr,
+                                bindings[0].ToLightExpression(ref exprsConverted),
+                                bindings[1].ToLightExpression(ref exprsConverted),
+                                bindings[2].ToLightExpression(ref exprsConverted),
+                                bindings[3].ToLightExpression(ref exprsConverted),
+                                bindings[4].ToLightExpression(ref exprsConverted));
+                        case 6:
+                            return Expression.MemberInit(newExpr,
+                                bindings[0].ToLightExpression(ref exprsConverted),
+                                bindings[1].ToLightExpression(ref exprsConverted),
+                                bindings[2].ToLightExpression(ref exprsConverted),
+                                bindings[3].ToLightExpression(ref exprsConverted),
+                                bindings[4].ToLightExpression(ref exprsConverted),
+                                bindings[5].ToLightExpression(ref exprsConverted));
+                        default:
+                            var mbs = new MemberBinding[bindingCount];
+                            for (var i = 0; i < mbs.Length; ++i)
+                                mbs[i] = bindings[i].ToLightExpression(ref exprsConverted);
+                            return Expression.MemberInit(newExpr, mbs);
+                    }
+                }
+
             case ExpressionType.Conditional:
                 var ce = (System.Linq.Expressions.ConditionalExpression)sysExpr;
                 var test = ce.Test.ToLightExpression(ref exprsConverted);
@@ -2119,63 +2249,123 @@ public static class FromSysExpressionConverter
                 return Expression.Condition(test, ifTrue, ifFalse, ce.Type);
 
             case ExpressionType.New:
-                var ctorExpr = (System.Linq.Expressions.NewExpression)sysExpr;
-                var ctor = ctorExpr.Constructor;
-                var args = ctorExpr.Arguments;
-                var argCount = args.Count;
-                switch (argCount)
                 {
-                    case 0:
-                        return Expression.New(ctor);
-                    case 1:
-                        return Expression.New(ctor,
-                            args[0].ToLightExpression(ref exprsConverted));
-                    case 2:
-                        return Expression.New(ctor,
-                            args[0].ToLightExpression(ref exprsConverted),
-                            args[1].ToLightExpression(ref exprsConverted));
-                    case 3:
-                        return Expression.New(ctor,
-                            args[0].ToLightExpression(ref exprsConverted),
-                            args[1].ToLightExpression(ref exprsConverted),
-                            args[2].ToLightExpression(ref exprsConverted));
-                    case 4:
-                        return Expression.New(ctor,
-                            args[0].ToLightExpression(ref exprsConverted),
-                            args[1].ToLightExpression(ref exprsConverted),
-                            args[2].ToLightExpression(ref exprsConverted),
-                            args[3].ToLightExpression(ref exprsConverted));
-                    case 5:
-                        return Expression.New(ctor,
-                            args[0].ToLightExpression(ref exprsConverted),
-                            args[1].ToLightExpression(ref exprsConverted),
-                            args[2].ToLightExpression(ref exprsConverted),
-                            args[3].ToLightExpression(ref exprsConverted),
-                            args[4].ToLightExpression(ref exprsConverted));
-                    case 6:
-                        return Expression.New(ctor,
-                            args[0].ToLightExpression(ref exprsConverted),
-                            args[1].ToLightExpression(ref exprsConverted),
-                            args[2].ToLightExpression(ref exprsConverted),
-                            args[3].ToLightExpression(ref exprsConverted),
-                            args[4].ToLightExpression(ref exprsConverted),
-                            args[5].ToLightExpression(ref exprsConverted));
-                    case 7:
-                        return Expression.New(ctor,
-                            args[0].ToLightExpression(ref exprsConverted),
-                            args[1].ToLightExpression(ref exprsConverted),
-                            args[2].ToLightExpression(ref exprsConverted),
-                            args[3].ToLightExpression(ref exprsConverted),
-                            args[4].ToLightExpression(ref exprsConverted),
-                            args[5].ToLightExpression(ref exprsConverted),
-                            args[6].ToLightExpression(ref exprsConverted));
-                    default:
-                        var ars = new Expression[argCount];
-                        for (var i = 0; i < argCount; ++i)
-                            ars[i] = args[i].ToLightExpression(ref exprsConverted);
-                        return Expression.New(ctor, ars);
+                    var ctorExpr = (System.Linq.Expressions.NewExpression)sysExpr;
+                    var ctor = ctorExpr.Constructor;
+                    var args = ctorExpr.Arguments;
+                    var argCount = args.Count;
+                    switch (argCount)
+                    {
+                        case 0:
+                            return Expression.New(ctor);
+                        case 1:
+                            return Expression.New(ctor,
+                                args[0].ToLightExpression(ref exprsConverted));
+                        case 2:
+                            return Expression.New(ctor,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted));
+                        case 3:
+                            return Expression.New(ctor,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted));
+                        case 4:
+                            return Expression.New(ctor,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted));
+                        case 5:
+                            return Expression.New(ctor,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted),
+                                args[4].ToLightExpression(ref exprsConverted));
+                        case 6:
+                            return Expression.New(ctor,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted),
+                                args[4].ToLightExpression(ref exprsConverted),
+                                args[5].ToLightExpression(ref exprsConverted));
+                        case 7:
+                            return Expression.New(ctor,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted),
+                                args[4].ToLightExpression(ref exprsConverted),
+                                args[5].ToLightExpression(ref exprsConverted),
+                                args[6].ToLightExpression(ref exprsConverted));
+                        default:
+                            var ars = new Expression[argCount];
+                            for (var i = 0; i < ars.Length; ++i)
+                                ars[i] = args[i].ToLightExpression(ref exprsConverted);
+                            return Expression.New(ctor, ars);
+                    }
                 }
-
+            case ExpressionType.Call:
+                {
+                    var methodExpr = (System.Linq.Expressions.MethodCallExpression)sysExpr;
+                    var method = methodExpr.Method;
+                    var args = methodExpr.Arguments;
+                    var margCount = args.Count;
+                    switch (margCount)
+                    {
+                        case 0:
+                            return Expression.Call(method);
+                        case 1:
+                            return Expression.Call(method,
+                                args[0].ToLightExpression(ref exprsConverted));
+                        case 2:
+                            return Expression.Call(method,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted));
+                        case 3:
+                            return Expression.Call(method,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted));
+                        case 4:
+                            return Expression.Call(method,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted));
+                        case 5:
+                            return Expression.Call(method,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted),
+                                args[4].ToLightExpression(ref exprsConverted));
+                        case 6:
+                            return Expression.Call(method,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted),
+                                args[4].ToLightExpression(ref exprsConverted),
+                                args[5].ToLightExpression(ref exprsConverted));
+                        case 7:
+                            return Expression.Call(method,
+                                args[0].ToLightExpression(ref exprsConverted),
+                                args[1].ToLightExpression(ref exprsConverted),
+                                args[2].ToLightExpression(ref exprsConverted),
+                                args[3].ToLightExpression(ref exprsConverted),
+                                args[4].ToLightExpression(ref exprsConverted),
+                                args[5].ToLightExpression(ref exprsConverted),
+                                args[6].ToLightExpression(ref exprsConverted));
+                        default:
+                            var ars = new Expression[margCount];
+                            for (var i = 0; i < ars.Length; ++i)
+                                ars[i] = args[i].ToLightExpression(ref exprsConverted);
+                            return Expression.Call(method, ars);
+                    }
+                }
 
             case ExpressionType.Parameter:
                 var pe = (System.Linq.Expressions.ParameterExpression)sysExpr;
@@ -3020,10 +3210,10 @@ public sealed class ListInitExpression : Expression
 #if SUPPORTS_VISITOR
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitListInit(this);
 #endif
-    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
         SysExpr.ListInit(
-            (System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref convertedExpressions),
-            ToElementInits(Initializers, ref convertedExpressions));
+            (System.Linq.Expressions.NewExpression)NewExpression.ToExpression(ref exprsConverted),
+            ToElementInits(Initializers, ref exprsConverted));
 
     internal static System.Linq.Expressions.ElementInit[] ToElementInits(IReadOnlyList<ElementInit> elemInits,
         ref SmallList<LightAndSysExpr> exprsConverted)
@@ -4871,7 +5061,7 @@ public class FiveParametersLambdaExpression : TypedLambdaExpression
     public readonly ParameterExpression Parameter0, Parameter1, Parameter2, Parameter3, Parameter4;
     public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4 };
     public sealed override int ParameterCount => 5;
-    public sealed override ParameterExpression GetParameter(int i) => // todo: @perf usually the method is called in a loop, so we may add the explixit LoopParameters method here to avoid condition check on each parameter!!!
+    public sealed override ParameterExpression GetParameter(int i) => // todo: @perf usually the method is called in a loop, so we may add the explicit LoopParameters method here to avoid condition check on each parameter!!!
         i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : Parameter4;
     internal FiveParametersLambdaExpression(Type delegateType, Expression body,
         ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4)
