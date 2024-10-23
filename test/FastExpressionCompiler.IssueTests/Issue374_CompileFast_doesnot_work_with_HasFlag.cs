@@ -1,11 +1,15 @@
-#if !LIGHT_EXPRESSION
-
 using System;
-using System.Linq.Expressions;
 using System.Reflection.Emit;
 using NUnit.Framework;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.IssueTests;
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
+#endif
 
 [TestFixture]
 public class Issue374_CompileFast_doesnot_work_with_HasFlag : ITest
@@ -19,7 +23,8 @@ public class Issue374_CompileFast_doesnot_work_with_HasFlag : ITest
     [Test]
     public void Test1()
     {
-        Expression<Func<Bar, bool>> e = x => x.Foo.HasFlag(Foo.Green);
+        System.Linq.Expressions.Expression<Func<Bar, bool>> se = x => x.Foo.HasFlag(Foo.Green);
+        var e = se.FromSysExpression();
         e.PrintCSharp();
         var @cs = (Func<Bar, bool>)((Bar x) =>
             x.Foo.HasFlag(Foo.Green));
@@ -66,5 +71,3 @@ public class Issue374_CompileFast_doesnot_work_with_HasFlag : ITest
         public Foo Foo;
     }
 }
-
-#endif

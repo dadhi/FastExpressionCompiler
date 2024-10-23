@@ -286,6 +286,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run);
 
                 Run(new Issue374_CompileFast_doesnot_work_with_HasFlag().Run);
+                Run(new LightExpression.IssueTests.Issue374_CompileFast_doesnot_work_with_HasFlag().Run);
 
                 Run(new Issue380_Comparisons_with_nullable_types().Run);
                 Run(new LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types().Run);

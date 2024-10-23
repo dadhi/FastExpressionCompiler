@@ -2310,40 +2310,41 @@ public static class FromSysExpressionConverter
             case ExpressionType.Call:
                 {
                     var methodExpr = (System.Linq.Expressions.MethodCallExpression)sysExpr;
+                    var instance = methodExpr.Object?.ToLightExpression(ref exprsConverted);
                     var method = methodExpr.Method;
                     var args = methodExpr.Arguments;
                     var margCount = args.Count;
                     switch (margCount)
                     {
                         case 0:
-                            return Expression.Call(method);
+                            return Expression.Call(instance, method);
                         case 1:
-                            return Expression.Call(method,
+                            return Expression.Call(instance, method,
                                 args[0].ToLightExpression(ref exprsConverted));
                         case 2:
-                            return Expression.Call(method,
+                            return Expression.Call(instance, method,
                                 args[0].ToLightExpression(ref exprsConverted),
                                 args[1].ToLightExpression(ref exprsConverted));
                         case 3:
-                            return Expression.Call(method,
+                            return Expression.Call(instance, method,
                                 args[0].ToLightExpression(ref exprsConverted),
                                 args[1].ToLightExpression(ref exprsConverted),
                                 args[2].ToLightExpression(ref exprsConverted));
                         case 4:
-                            return Expression.Call(method,
+                            return Expression.Call(instance, method,
                                 args[0].ToLightExpression(ref exprsConverted),
                                 args[1].ToLightExpression(ref exprsConverted),
                                 args[2].ToLightExpression(ref exprsConverted),
                                 args[3].ToLightExpression(ref exprsConverted));
                         case 5:
-                            return Expression.Call(method,
+                            return Expression.Call(instance, method,
                                 args[0].ToLightExpression(ref exprsConverted),
                                 args[1].ToLightExpression(ref exprsConverted),
                                 args[2].ToLightExpression(ref exprsConverted),
                                 args[3].ToLightExpression(ref exprsConverted),
                                 args[4].ToLightExpression(ref exprsConverted));
                         case 6:
-                            return Expression.Call(method,
+                            return Expression.Call(instance, method,
                                 args[0].ToLightExpression(ref exprsConverted),
                                 args[1].ToLightExpression(ref exprsConverted),
                                 args[2].ToLightExpression(ref exprsConverted),
@@ -2351,7 +2352,7 @@ public static class FromSysExpressionConverter
                                 args[4].ToLightExpression(ref exprsConverted),
                                 args[5].ToLightExpression(ref exprsConverted));
                         case 7:
-                            return Expression.Call(method,
+                            return Expression.Call(instance, method,
                                 args[0].ToLightExpression(ref exprsConverted),
                                 args[1].ToLightExpression(ref exprsConverted),
                                 args[2].ToLightExpression(ref exprsConverted),
@@ -2363,7 +2364,7 @@ public static class FromSysExpressionConverter
                             var ars = new Expression[margCount];
                             for (var i = 0; i < ars.Length; ++i)
                                 ars[i] = args[i].ToLightExpression(ref exprsConverted);
-                            return Expression.Call(method, ars);
+                            return Expression.Call(instance, method, ars);
                     }
                 }
 
