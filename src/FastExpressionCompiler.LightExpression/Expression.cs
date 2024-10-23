@@ -762,6 +762,28 @@ public abstract class Expression
     public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) =>
         Lambda(delegateType, body, (IReadOnlyList<ParameterExpression>)parameters);
 
+    public static LambdaExpression Lambda(Type delegateType, Expression body, ParameterExpression p0) =>
+        Lambda(delegateType, body, p0, GetDelegateReturnType(delegateType));
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body, ParameterExpression p0, ParameterExpression p1) =>
+        Lambda(delegateType, body, p0, p1, GetDelegateReturnType(delegateType));
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) =>
+        Lambda(delegateType, body, p0, p1, p2, GetDelegateReturnType(delegateType));
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3) =>
+        Lambda(delegateType, body, p0, p1, p2, p3, GetDelegateReturnType(delegateType));
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4) =>
+        Lambda(delegateType, body, p0, p1, p2, p3, p4, GetDelegateReturnType(delegateType));
+
+    public static LambdaExpression Lambda(Type delegateType, Expression body,
+        ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5) =>
+        Lambda(delegateType, body, p0, p1, p2, p3, p4, p5, GetDelegateReturnType(delegateType));
+
     public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
     {
         if (delegateType == null || delegateType == typeof(Delegate))
@@ -1246,10 +1268,17 @@ public abstract class Expression
     public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) =>
         new WithFalseBranchConditionalExpression(test, ifTrue, ifFalse);
 
-    public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Type type) =>
-        ifTrue.Type == type
+    public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Type type)
+    {
+        if (ifFalse == null)
+        {
+            Debug.Assert(type == typeof(void));
+            return new ConditionalExpression(test, ifTrue);
+        }
+        return ifTrue.Type == type
             ? new WithFalseBranchConditionalExpression(test, ifTrue, ifFalse)
-            : (ConditionalExpression)new TypedWithFalseBranchConditionalExpression(test, ifTrue, ifFalse, type);
+            : new TypedWithFalseBranchConditionalExpression(test, ifTrue, ifFalse, type);
+    }
 
     public static ConditionalExpression IfThen(Expression test, Expression ifTrue) =>
         new ConditionalExpression(test, ifTrue); // absence of ifFalse automatically mean void type of all expression
@@ -1956,10 +1985,97 @@ public abstract class Expression
 
 public static class FromSysExpressionConverter
 {
-    public static Expression ToLightExpression(SysExpr sysExpr)
+    public static Expression ToLightExpression(this SysExpr sysExpr)
     {
         SmallList<LightAndSysExpr> exprsConverted = default;
         return sysExpr.ToLightExpression(ref exprsConverted);
+    }
+
+    public static LambdaExpression ToLightExpression(this System.Linq.Expressions.LambdaExpression sysLambdaExpr)
+    {
+        SmallList<LightAndSysExpr> exprsConverted = default;
+        return (LambdaExpression)sysLambdaExpr.ToLightExpression(ref exprsConverted);
+    }
+
+    public static Expression<TDelegate> ToLightExpression<TDelegate>(this System.Linq.Expressions.Expression<TDelegate> sysExpr)
+        where TDelegate : System.Delegate
+    {
+        SmallList<LightAndSysExpr> exprsConverted = default;
+        return sysExpr.ToLightExpression(ref exprsConverted);
+    }
+
+    internal static Expression<TDelegate> ToLightExpression<TDelegate>(
+        this System.Linq.Expressions.Expression<TDelegate> sysExpr, ref SmallList<LightAndSysExpr> exprsConverted)
+        where TDelegate : System.Delegate
+    {
+        if (sysExpr == null)
+            return null;
+
+        // First check for the already converted expressions 
+        var i = exprsConverted.Count - 1;
+        while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, sysExpr)) --i;
+        if (i != -1)
+            return (Expression<TDelegate>)exprsConverted.Items[i].LightExpr;
+
+        var lightExpr = ConvertLambdaToLightExpression(sysExpr, ref exprsConverted);
+
+        ref var item = ref exprsConverted.Add();
+        item.SysExpr = sysExpr;
+        item.LightExpr = lightExpr;
+        return lightExpr;
+    }
+
+    internal static Expression<TDelegate> ConvertLambdaToLightExpression<TDelegate>(
+        System.Linq.Expressions.Expression<TDelegate> le, ref SmallList<LightAndSysExpr> exprsConverted)
+        where TDelegate : System.Delegate
+    {
+        var body = le.Body.ToLightExpression(ref exprsConverted);
+        var retType = le.ReturnType;
+        var pars = le.Parameters;
+        var parCount = pars.Count;
+        switch (parCount)
+        {
+            case 0:
+                return Expression.Lambda<TDelegate>(body, retType);
+            case 1:
+                return Expression.Lambda<TDelegate>(body,
+                    (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted), retType);
+            case 2:
+                return Expression.Lambda<TDelegate>(body,
+                    (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted), retType);
+            case 3:
+                return Expression.Lambda<TDelegate>(body,
+                    (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted), retType);
+            case 4:
+                return Expression.Lambda<TDelegate>(body,
+                    (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[3].ToLightExpression(ref exprsConverted), retType);
+            case 5:
+                return Expression.Lambda<TDelegate>(body,
+                    (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[3].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[4].ToLightExpression(ref exprsConverted), retType);
+            case 6:
+                return Expression.Lambda<TDelegate>(body,
+                    (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[3].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[5].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[5].ToLightExpression(ref exprsConverted), retType);
+            default:
+                var pes = new ParameterExpression[parCount];
+                for (var i = 0; i < le.Parameters.Count; i++)
+                    pes[i] = (ParameterExpression)le.Parameters[i].ToLightExpression(ref exprsConverted);
+                return Expression.Lambda<TDelegate>(body, pes, retType);
+        }
     }
 
     internal static Expression ToLightExpression(this SysExpr sysExpr, ref SmallList<LightAndSysExpr> exprsConverted)
@@ -1985,21 +2101,95 @@ public static class FromSysExpressionConverter
     {
         var nodeType = sysExpr.NodeType;
         var exprType = sysExpr.Type;
-        if (sysExpr is System.Linq.Expressions.UnaryExpression ue)
+        switch (nodeType)
         {
-            var operand = ue.Operand.ToLightExpression(ref exprsConverted);
-            return Expression.MakeUnary(nodeType, operand, exprType, ue.Method);
-        }
+            case ExpressionType.Constant:
+                var constExpr = (System.Linq.Expressions.ConstantExpression)sysExpr;
+                return Expression.Constant(constExpr.Value, constExpr.Type);
 
-        if (sysExpr is System.Linq.Expressions.BinaryExpression be)
-        {
-            var left = be.Left.ToLightExpression(ref exprsConverted);
-            var raft = be.Right.ToLightExpression(ref exprsConverted);
-            var conv = be.Conversion?.ToLightExpression(ref exprsConverted) as LambdaExpression;
-            return Expression.MakeBinary(nodeType, left, raft, be.IsLiftedToNull, be.Method, conv);
-        }
+            case ExpressionType.MemberAccess:
+                var me = (System.Linq.Expressions.MemberExpression)sysExpr;
+                return Expression.MakeMemberAccess(me.Expression?.ToLightExpression(ref exprsConverted), me.Member);
 
-        throw new NotSupportedException($"Conversion of {nodeType} is not supported yet");
+            case ExpressionType.Conditional:
+                var ce = (System.Linq.Expressions.ConditionalExpression)sysExpr;
+                var test = ce.Test.ToLightExpression(ref exprsConverted);
+                var ifTrue = ce.IfTrue.ToLightExpression(ref exprsConverted);
+                var ifFalse = ce.IfFalse?.ToLightExpression(ref exprsConverted);
+                return Expression.Condition(test, ifTrue, ifFalse, ce.Type);
+
+            case ExpressionType.Parameter:
+                var pe = (System.Linq.Expressions.ParameterExpression)sysExpr;
+                return Expression.Parameter(pe.Type, pe.Name);
+
+            case ExpressionType.Lambda:
+                var le = (System.Linq.Expressions.LambdaExpression)sysExpr;
+                var body = le.Body.ToLightExpression(ref exprsConverted);
+                var type = le.Type;
+                var retType = le.ReturnType;
+                var pars = le.Parameters;
+                var parCount = pars.Count;
+                switch (parCount)
+                {
+                    case 0:
+                        return Expression.Lambda(type, body, retType);
+                    case 1:
+                        return Expression.Lambda(type, body,
+                            (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted), retType);
+                    case 2:
+                        return Expression.Lambda(type, body,
+                            (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted), retType);
+                    case 3:
+                        return Expression.Lambda(type, body,
+                            (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted), retType);
+                    case 4:
+                        return Expression.Lambda(type, body,
+                            (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[3].ToLightExpression(ref exprsConverted), retType);
+                    case 5:
+                        return Expression.Lambda(type, body,
+                            (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[3].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[4].ToLightExpression(ref exprsConverted), retType);
+                    case 6:
+                        return Expression.Lambda(type, body,
+                            (ParameterExpression)pars[0].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[3].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[5].ToLightExpression(ref exprsConverted),
+                            (ParameterExpression)pars[5].ToLightExpression(ref exprsConverted), retType);
+                    default:
+                        var pes = new ParameterExpression[parCount];
+                        for (var i = 0; i < le.Parameters.Count; i++)
+                            pes[i] = (ParameterExpression)le.Parameters[i].ToLightExpression(ref exprsConverted);
+                        return Expression.Lambda(type, body, pes, retType);
+                }
+
+            default:
+                if (sysExpr is System.Linq.Expressions.UnaryExpression ue)
+                {
+                    var operand = ue.Operand.ToLightExpression(ref exprsConverted);
+                    return Expression.MakeUnary(nodeType, operand, exprType, ue.Method);
+                }
+
+                if (sysExpr is System.Linq.Expressions.BinaryExpression be)
+                {
+                    var left = be.Left.ToLightExpression(ref exprsConverted);
+                    var raft = be.Right.ToLightExpression(ref exprsConverted);
+                    var conv = be.Conversion?.ToLightExpression(ref exprsConverted) as LambdaExpression;
+                    return Expression.MakeBinary(nodeType, left, raft, be.IsLiftedToNull, be.Method, conv);
+                }
+
+                throw new NotSupportedException($"System to LightExpression conversion of {nodeType} is not supported yet");
+        }
     }
 }
 

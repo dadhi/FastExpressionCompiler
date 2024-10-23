@@ -168,6 +168,22 @@ namespace FastExpressionCompiler
 #endif
             lambdaExpr.ReturnType, flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
+        /// <summary>Returns the System expression itself or convert the System expression into Light Expression</summary>
+        public static Expression<TDelegate> FromSysExpression<TDelegate>(this System.Linq.Expressions.Expression<TDelegate> lambdaExpr) where TDelegate : System.Delegate =>
+#if LIGHT_EXPRESSION
+            lambdaExpr.ToLightExpression();
+#else
+            lambdaExpr;
+#endif
+
+        /// <summary>Returns the System expression itself or convert the System expression into Light Expression</summary>
+        public static LambdaExpression FromSysExpression(this System.Linq.Expressions.LambdaExpression lambdaExpr) =>
+#if LIGHT_EXPRESSION
+            lambdaExpr.ToLightExpression();
+#else
+            lambdaExpr;
+#endif
+
         /// <summary>Unifies Compile for System.Linq.Expressions and FEC.LightExpression</summary>
         public static TDelegate CompileSys<TDelegate>(this Expression<TDelegate> lambdaExpr) where TDelegate : System.Delegate =>
             lambdaExpr

@@ -14,181 +14,187 @@ namespace FastExpressionCompiler.IssueTests;
 [TestFixture]
 public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation : ITest
 {
-    public int Run()
-    {
-#if !LIGHT_EXPRESSION
-        Original_Case_1();
-        Case_1_Simplified_less();
-        Case_1_simplified();
-        Case_1_Simplified_less_reversed_mul_args();
-#endif
-        Original_Case_2();
-        return 5;
-    }
+  public int Run()
+  {
+    Original_Case_1();
+    Case_1_Simplified_less();
+    Case_1_simplified();
+    Case_1_Simplified_less_reversed_mul_args();
+    Original_Case_2();
+    return 5;
+  }
 
-    public class Obj
-    {
-        public double? X { get; }
-        public Nested Nested { get; }
-        public Obj(double? x, Nested nested) => (X, Nested) = (x, nested);
-    }
+  public class Obj
+  {
+    public double? X { get; }
+    public Nested Nested { get; }
+    public Obj(double? x, Nested nested) => (X, Nested) = (x, nested);
+  }
 
-    public class Nested
-    {
-        public double? Y { get; }
-        public Nested(double? y) => Y = y;
-    }
+  public class Nested
+  {
+    public double? Y { get; }
+    public Nested(double? y) => Y = y;
+  }
 
-#if !LIGHT_EXPRESSION
-    [Test]
-    public void Original_Case_1()
-    {
-        Expression<Func<Obj, bool>> e = d =>
-            (d == null ? null : d.X) >
-            (double?)3 * ((d == null ? null : d.Nested) == null ? null : d.Nested.Y);
+  [Test]
+  public void Original_Case_1()
+  {
+    System.Linq.Expressions.Expression<Func<Obj, bool>> se = d =>
+        (d == null ? null : d.X) >
+        (double?)3 * ((d == null ? null : d.Nested) == null ? null : d.Nested.Y);
 
-        e.PrintCSharp();
-        var @cs = (Func<Obj, bool>)((Obj d) => //bool
-            (d == null ? (double?)null :
-            d.X) > (((double?)3) * (((d == null ? (Nested)null :
-            d.Nested) == null) ? (double?)null :
-            d.Nested.Y)));
+    var e = se.FromSysExpression();
 
-        var data = new Obj(10, new Nested(5));
-        Assert.IsFalse(@cs(data));
+    e.PrintCSharp();
 
-        var fs = e.CompileSys();
-        fs.PrintIL();
+    var @cs = (Func<Obj, bool>)((Obj d) => //bool
+        (d == null ? (double?)null :
+        d.X) > (((double?)3) * (((d == null ? (Nested)null :
+        d.Nested) == null) ? (double?)null :
+        d.Nested.Y)));
 
-        var ff = e.CompileFast(true);
-        ff.PrintIL();
+    var data = new Obj(10, new Nested(5));
+    Assert.IsFalse(@cs(data));
 
-        Assert.IsFalse(fs(data));
-        Assert.IsFalse(ff(data));
-    }
+    var fs = e.CompileSys();
+    fs.PrintIL();
 
-    [Test]
-    public void Case_1_Simplified_less_reversed_mul_args()
-    {
-        Expression<Func<Obj, bool>> e = d =>
-            (d == null ? null : d.X) >
-            (d.Nested == null ? null : d.Nested.Y) * (double?)3;
+    var ff = e.CompileFast(true);
+    ff.PrintIL();
 
-        e.PrintCSharp();
+    Assert.IsFalse(fs(data));
+    Assert.IsFalse(ff(data));
+  }
 
-        var data = new Obj(10, new Nested(5));
+  [Test]
+  public void Case_1_Simplified_less_reversed_mul_args()
+  {
+    System.Linq.Expressions.Expression<Func<Obj, bool>> se = d =>
+        (d == null ? null : d.X) >
+        (d.Nested == null ? null : d.Nested.Y) * (double?)3;
 
-        var fs = e.CompileSys();
-        fs.PrintIL();
+    var e = se.FromSysExpression();
 
-        var ff = e.CompileFast(true);
-        ff.PrintIL();
+    e.PrintCSharp();
 
-        Assert.IsFalse(fs(data));
-        Assert.IsFalse(ff(data));
-    }
+    var data = new Obj(10, new Nested(5));
 
-    [Test]
-    public void Case_1_Simplified_less()
-    {
-        Expression<Func<Obj, bool>> e = d =>
-            (d == null ? null : d.X) >
-            (double?)3 * (d.Nested == null ? null : d.Nested.Y);
+    var fs = e.CompileSys();
+    fs.PrintIL();
 
-        e.PrintCSharp();
+    var ff = e.CompileFast(true);
+    ff.PrintIL();
 
-        var data = new Obj(10, new Nested(5));
+    Assert.IsFalse(fs(data));
+    Assert.IsFalse(ff(data));
+  }
 
-        var fs = e.CompileSys();
-        fs.PrintIL();
+  [Test]
+  public void Case_1_Simplified_less()
+  {
+    System.Linq.Expressions.Expression<Func<Obj, bool>> se = d =>
+        (d == null ? null : d.X) >
+        (double?)3 * (d.Nested == null ? null : d.Nested.Y);
 
-        var ff = e.CompileFast(true);
-        ff.PrintIL();
+    var e = se.FromSysExpression();
 
-        Assert.IsFalse(fs(data));
-        Assert.IsFalse(ff(data));
-    }
+    e.PrintCSharp();
 
-    [Test]
-    public void Case_1_simplified()
-    {
-        Expression<Func<Obj, bool>> e = d =>
-            (d == null ? null : d.X) >
-            (double?)3;
+    var data = new Obj(10, new Nested(5));
 
-        e.PrintCSharp();
+    var fs = e.CompileSys();
+    fs.PrintIL();
 
-        var data = new Obj(10, new Nested(5));
+    var ff = e.CompileFast(true);
+    ff.PrintIL();
 
-        var fs = e.CompileSys();
-        fs.PrintIL();
+    Assert.IsFalse(fs(data));
+    Assert.IsFalse(ff(data));
+  }
 
-        var ff = e.CompileFast(true);
-        ff.PrintIL();
+  [Test]
+  public void Case_1_simplified()
+  {
+    System.Linq.Expressions.Expression<Func<Obj, bool>> se = d =>
+        (d == null ? null : d.X) >
+        (double?)3;
 
-        Assert.IsTrue(fs(data));
-        Assert.IsTrue(ff(data));
-    }
-#endif
+    var e = se.FromSysExpression();
 
-    public delegate TOut RefFunc<TIn, TOut>(in TIn t);
+    e.PrintCSharp();
 
-    [Test]
-    public void Original_Case_2()
-    {
-        var p = new ParameterExpression[1]; // the parameter expressions
-        var e = new Expression[19]; // the unique expressions
-        var expr = Lambda<RefFunc<Obj, bool>>(
-          e[0] = MakeBinary(ExpressionType.GreaterThan,
-            e[1] = Condition(
-              e[2] = MakeBinary(ExpressionType.Equal,
-                p[0] = Parameter(typeof(Obj).MakeByRefType(), "p"),
-                e[3] = Constant(null)),
-              e[4] = Constant(null, typeof(double?)),
-              e[5] = Property(
-                p[0 // (Obj p)
-                  ],
-                typeof(Obj).GetTypeInfo().GetDeclaredProperty("X")),
-              typeof(double?)),
-            e[6] = MakeBinary(ExpressionType.Multiply,
-              e[7] = Convert(
-                e[8] = Constant(2),
-                typeof(double?)),
-              e[9] = Condition(
-                e[10] = MakeBinary(ExpressionType.Equal,
-                  e[11] = Condition(
-                    e[12] = MakeBinary(ExpressionType.Equal,
-                      p[0 // (Obj p)
-                        ],
-                      e[13] = Constant(null)),
-                    e[14] = Constant(null, typeof(Nested)),
-                    e[15] = Property(
-                      p[0 // (Obj p)
-                        ],
-                      typeof(Obj).GetTypeInfo().GetDeclaredProperty("Nested")),
-                    typeof(Nested)),
-                  e[16] = Constant(null)),
-                e[17] = Constant(null, typeof(double?)),
-                e[18] = Property(
-                  e[11 // Conditional of Nested
+    var data = new Obj(10, new Nested(5));
+
+    var fs = e.CompileSys();
+    fs.PrintIL();
+
+    var ff = e.CompileFast(true);
+    ff.PrintIL();
+
+    Assert.IsTrue(fs(data));
+    Assert.IsTrue(ff(data));
+  }
+  // #endif
+
+  public delegate TOut RefFunc<TIn, TOut>(in TIn t);
+
+  [Test]
+  public void Original_Case_2()
+  {
+    var p = new ParameterExpression[1]; // the parameter expressions
+    var e = new Expression[19]; // the unique expressions
+    var expr = Lambda<RefFunc<Obj, bool>>(
+      e[0] = MakeBinary(ExpressionType.GreaterThan,
+        e[1] = Condition(
+          e[2] = MakeBinary(ExpressionType.Equal,
+            p[0] = Parameter(typeof(Obj).MakeByRefType(), "p"),
+            e[3] = Constant(null)),
+          e[4] = Constant(null, typeof(double?)),
+          e[5] = Property(
+            p[0 // (Obj p)
+              ],
+            typeof(Obj).GetTypeInfo().GetDeclaredProperty("X")),
+          typeof(double?)),
+        e[6] = MakeBinary(ExpressionType.Multiply,
+          e[7] = Convert(
+            e[8] = Constant(2),
+            typeof(double?)),
+          e[9] = Condition(
+            e[10] = MakeBinary(ExpressionType.Equal,
+              e[11] = Condition(
+                e[12] = MakeBinary(ExpressionType.Equal,
+                  p[0 // (Obj p)
                     ],
-                  typeof(Nested).GetTypeInfo().GetDeclaredProperty("Y")),
-                typeof(double?)),
-              liftToNull: true,
-              null)),
-          p[0 // (Obj p)
-            ]);
+                  e[13] = Constant(null)),
+                e[14] = Constant(null, typeof(Nested)),
+                e[15] = Property(
+                  p[0 // (Obj p)
+                    ],
+                  typeof(Obj).GetTypeInfo().GetDeclaredProperty("Nested")),
+                typeof(Nested)),
+              e[16] = Constant(null)),
+            e[17] = Constant(null, typeof(double?)),
+            e[18] = Property(
+              e[11 // Conditional of Nested
+                ],
+              typeof(Nested).GetTypeInfo().GetDeclaredProperty("Y")),
+            typeof(double?)),
+          liftToNull: true,
+          null)),
+      p[0 // (Obj p)
+        ]);
 
-        expr.PrintCSharp();
+    expr.PrintCSharp();
 
-        var fs = expr.CompileSys();
-        fs.PrintIL();
+    var fs = expr.CompileSys();
+    fs.PrintIL();
 
-        var ff = expr.CompileFast(true);
-        ff.PrintIL();
+    var ff = expr.CompileFast(true);
+    ff.PrintIL();
 
-        var data = new Obj(5, new Nested(6));
-        Assert.IsFalse(fs(data));
-        Assert.IsFalse(ff(data));
-    }
+    var data = new Obj(5, new Nested(6));
+    Assert.IsFalse(fs(data));
+    Assert.IsFalse(ff(data));
+  }
 }
