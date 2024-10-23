@@ -1,8 +1,14 @@
 ﻿using System;
-using System.Linq.Expressions;
 using NUnit.Framework;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
+#endif
 {
     [TestFixture]
     public class HoistedLambdaExprTests : ITest
@@ -17,7 +23,9 @@ namespace FastExpressionCompiler.UnitTests
         public void Should_compile_nested_lambda()
         {
             var a = new A();
-            Expression<Func<X>> getXExpr = () => X.Get(it => new X(it), new Lazy<A>(() => a));
+            System.Linq.Expressions.Expression<Func<X>> se = () => X.Get(it => new X(it), new Lazy<A>(() => a));
+            var getXExpr = se.FromSysExpression();
+            getXExpr.PrintCSharp();
 
             var getX = getXExpr.CompileFast(true);
 
@@ -25,7 +33,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreSame(a, x.A);
         }
 
-        public class A {}
+        public class A { }
 
         public class X
         {

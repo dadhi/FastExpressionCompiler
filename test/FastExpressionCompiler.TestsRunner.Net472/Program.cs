@@ -77,6 +77,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new GotoTests().Run);
                 Run(new LightExpression.UnitTests.GotoTests().Run);
                 Run(new HoistedLambdaExprTests().Run);
+                Run(new LightExpression.UnitTests.HoistedLambdaExprTests().Run);
                 Run(new LoopTests().Run);
                 Run(new LightExpression.UnitTests.LoopTests().Run);
                 Run(new ListInitTests().Run);

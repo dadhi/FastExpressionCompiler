@@ -92,15 +92,15 @@ namespace FastExpressionCompiler.IssueTests
         {
             // var instance = new TestMethods(314);
             // var instanceExpr = Expression.Constant(instance);
-            var instanceExpr = Expression.New(typeof(TestMethods).GetConstructors()[0], Expression.Constant(314));
+            var instanceExpr = New(typeof(TestMethods).GetConstructors()[0], Constant(314));
 
-            var call = Expression.Call(instanceExpr, typeof(TestMethods).GetMethod("InstanceMethod")!);
+            var call = Call(instanceExpr, typeof(TestMethods).GetMethod("InstanceMethod")!);
 
-            var localint = Expression.Variable(typeof(int), "ret");
-            var setlocaltocall = Expression.Assign(localint, call);
-            var program = Expression.Block(
+            var localint = Variable(typeof(int), "ret");
+            var setlocaltocall = Assign(localint, call);
+            var program = Block(
                 new[] { localint },
-                Expression.IfThen(Expression.Constant(true), setlocaltocall),
+                IfThen(Constant(true), setlocaltocall),
                 Label(Label(typeof(int)), localint)
             );
 
@@ -113,13 +113,13 @@ namespace FastExpressionCompiler.IssueTests
         {
             // var instance = new TestMethods(8675309);
             // var instanceExpr = Expression.Constant(instance);
-            var instanceExpr = Expression.New(typeof(TestMethods).GetConstructors()[0], Expression.Constant(8675309));
+            var instanceExpr = New(typeof(TestMethods).GetConstructors()[0], Constant(8675309));
 
-            var call = Expression.Call(instanceExpr, typeof(TestMethods).GetMethod("InstanceMethod")!);
+            var call = Call(instanceExpr, typeof(TestMethods).GetMethod("InstanceMethod")!);
 
-            var localint = Expression.Variable(typeof(int), "ret");
-            var setlocaltocall = Expression.Assign(localint, call);
-            var program = Expression.Block(
+            var localint = Variable(typeof(int), "ret");
+            var setlocaltocall = Assign(localint, call);
+            var program = Block(
                 new[] { localint },
                 setlocaltocall,
                 Label(Label(typeof(int)), localint)

@@ -10,7 +10,6 @@
         <None Remove="*.ncrunchproject" />
         <Compile Include="..\FastExpressionCompiler.UnitTests\**\*.cs" Exclude="..\FastExpressionCompiler.UnitTests\obj\**\*.*" />
         <Compile Remove="..\FastExpressionCompiler.UnitTests\ConstantAndConversionTests.cs" />
-        <Compile Remove="..\FastExpressionCompiler.UnitTests\HoistedLambdaExprTests.cs" />
     </ItemGroup>
 
     <ItemGroup>

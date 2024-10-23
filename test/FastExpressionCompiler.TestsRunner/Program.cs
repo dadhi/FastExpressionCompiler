@@ -9,6 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            // new LightExpression.UnitTests.HoistedLambdaExprTests().Run();
+            new LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run();
             // new LightExpression.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run();
             // new LightExpression.IssueTests.Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException().Run();
             // new TryCatchTests().Run();
@@ -90,6 +92,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new GotoTests().Run);
                 Run(new LightExpression.UnitTests.GotoTests().Run);
                 Run(new HoistedLambdaExprTests().Run);
+                Run(new LightExpression.UnitTests.HoistedLambdaExprTests().Run);
                 Run(new LoopTests().Run);
                 Run(new LightExpression.UnitTests.LoopTests().Run);
                 Run(new ListInitTests().Run);
