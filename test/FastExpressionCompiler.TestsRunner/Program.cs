@@ -9,10 +9,12 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // new LightExpression.UnitTests.HoistedLambdaExprTests().Run();
-            new LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run();
-            // new LightExpression.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run();
+            new LightExpression.UnitTests.TryCatchTests().Run();
+            // new LightExpression.IssueTests.Issue127_Switch_is_supported().Run();
             // new LightExpression.IssueTests.Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException().Run();
+            // new LightExpression.UnitTests.HoistedLambdaExprTests().Run();
+            // new LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run();
+            // new LightExpression.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run();
             // new TryCatchTests().Run();
             // new LightExpression.IssueTests.Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile().Run();
             // new Issue421_Date_difference_is_giving_wrong_negative_value().Run();

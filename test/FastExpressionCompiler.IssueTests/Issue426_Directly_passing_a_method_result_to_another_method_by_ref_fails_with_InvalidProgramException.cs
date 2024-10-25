@@ -15,8 +15,8 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
 {
     public int Run()
     {
-        Original_case();
         Two_ref_value_params_case();
+        Original_case();
         Class_ref_param_case();
         return 3;
     }

@@ -1,5 +1,5 @@
 ﻿#if DEBUG
-#define PRINTIL
+// #define PRINTIL
 #define PRINTCS
 #endif
 using System;
@@ -12,6 +12,7 @@ using System.Linq.Expressions;
 using System.Diagnostics;
 using NUnit.Framework;
 using FastExpressionCompiler.ILDecoder;
+using System.IO;
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
 #else
@@ -52,29 +53,42 @@ public static class TestTools
         );
 
     [Conditional("DEBUG")]
-    public static void PrintCSharp(this Expression expr, bool completeTypeNames = false)
+    public static void PrintCSharp(this Expression expr, bool completeTypeNames = false,
+        [CallerMemberName] string caller = "",
+        [CallerFilePath] string filePath = "")
     {
 #if PRINTCS
+        Console.WriteLine();
+        Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
+
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
         sb = expr.ToCSharpString(sb, lineIdent: 0, stripNamespace: true, printType: completeTypeNames ? null : _stripOuterTypes, identSpaces: 4);
-        sb.Append(";");
+        sb.Append(';');
         Console.WriteLine(sb.ToString());
 #endif
     }
 
     [Conditional("DEBUG")]
-    public static void PrintCSharp(this Expression expr, Func<string, string> transform)
+    public static void PrintCSharp(this Expression expr, Func<string, string> transform,
+        [CallerMemberName] string caller = "",
+        [CallerFilePath] string filePath = "")
     {
 #if PRINTCS
+        Console.WriteLine();
+        Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
         Console.WriteLine(transform(expr.ToCSharpString()));
 #endif
     }
 
     [Conditional("DEBUG")]
-    public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode)
+    public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode,
+        [CallerMemberName] string caller = "",
+        [CallerFilePath] string filePath = "")
     {
 #if PRINTCS
+        Console.WriteLine();
+        Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
         Console.WriteLine(expr.ToCSharpString(objectToCode));
 #endif
     }

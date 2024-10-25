@@ -18,11 +18,11 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            Can_handle_the_exception_and_return_result_from_TryCatch_block();
             Issue424_Can_be_nested_in_call_expression();
             Can_be_nested_in_binary();
             Can_catch_exception();
             Can_execute_finally();
-            Can_handle_the_exception_and_return_result_from_TryCatch_block();
             Can_use_exception_parameter();
             Can_return_from_catch_block();
             Can_return_with_return_goto_from_the_catch_block();
@@ -83,7 +83,7 @@ namespace FastExpressionCompiler.UnitTests
             var aParamExpr = Parameter(typeof(string), "a");
             var exParamExpr = Parameter(typeof(Exception), "ex");
 
-            var expr = TryCatch(
+            var body = TryCatch(
                 Call(typeof(int).GetTypeInfo().DeclaredMethods.First(m => m.Name == nameof(int.Parse)),
                     aParamExpr
                 ),
@@ -102,10 +102,11 @@ namespace FastExpressionCompiler.UnitTests
                     ))
             );
 
-            var fe = Lambda<Func<string, int>>(expr, aParamExpr);
+            var fe = Lambda<Func<string, int>>(body, aParamExpr);
+
             fe.PrintCSharp();
             // should print this:
-            var f = (Func<string, int>)((string a) => //$
+            var @cs = (Func<string, int>)((string a) => //int
             {
                 try
                 {
@@ -113,9 +114,7 @@ namespace FastExpressionCompiler.UnitTests
                 }
                 catch (Exception ex)
                 {
-                    return ex.Message.Length > (int)0 ?
-                        (int)47 :
-                        (int)0;
+                    return (ex.Message.Length > 0) ? 47 : 0;
                 }
             });
 
