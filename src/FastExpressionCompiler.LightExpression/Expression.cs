@@ -73,7 +73,7 @@ public abstract class Expression
 
     public virtual bool IsCustomToCSharpString => false;
     public virtual StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
-        int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
+        int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
         CodePrinter.ObjectToCode notRecognizedToCode = null) => sb;
 
 #if SUPPORTS_VISITOR
@@ -3002,14 +3002,14 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
 
     public override bool IsCustomToCSharpString => true;
     public override StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
-        int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int identSpaces = 4,
+        int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
         CodePrinter.ObjectToCode notRecognizedToCode = null)
     {
         var encloseInParens = enclosedIn != ToCSharpPrinter.EnclosedIn.LambdaBody && enclosedIn != ToCSharpPrinter.EnclosedIn.Return;
         sb = encloseInParens ? sb.Append("((") : sb.Append('(');
 
         sb.Append(Type.ToCode(stripNamespace, printType)).Append(')');
-        sb = Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, identSpaces, notRecognizedToCode);
+        sb = Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
         sb.Append(".Invoke"); // Hey, this is the CUSTOM part of the output.
 

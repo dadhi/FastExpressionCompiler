@@ -49,7 +49,7 @@ public static class TestTools
             expr.ToExpressionString(out var _, out var _, out var _,
             stripNamespace: true,
             printType: completeTypeNames ? null : _stripOuterTypes,
-            identSpaces: 4)
+            indentSpaces: 4)
         );
 
     [Conditional("DEBUG")]
@@ -63,7 +63,7 @@ public static class TestTools
 
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
-        sb = expr.ToCSharpString(sb, lineIdent: 0, stripNamespace: true, printType: completeTypeNames ? null : _stripOuterTypes, identSpaces: 4);
+        sb = expr.ToCSharpString(sb, lineIdent: 0, stripNamespace: true, printType: completeTypeNames ? null : _stripOuterTypes, indentSpaces: 4);
         sb.Append(';');
         Console.WriteLine(sb.ToString());
 #endif
