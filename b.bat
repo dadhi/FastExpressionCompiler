@@ -4,7 +4,7 @@ echo:
 echo:## Starting: RESTORE and BUILD...
 echo: 
 
-dotnet build -c:Release -v:m
+dotnet build -c:Release -v:m -p:GeneratePackageOnBuild=false
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
@@ -12,7 +12,7 @@ echo:## Finished: RESTORE and BUILD
 
 echo: 
 echo:## Starting: TESTS...
-echo: 
+echo:
 
 dotnet run --no-build -f net8.0 -c Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error

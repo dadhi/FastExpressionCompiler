@@ -18,28 +18,29 @@ public class Issue429_Expression_Switch_without_a_default_case_incorrectly_calls
 {
     public int Run()
     {
-        // Original_case();
+        Original_case();
         return 1;
     }
 
-    public static void AddCase(List<string> cases, string value) => cases.Add(value);
+    public static void AddCase(string value, int n) => Debug.WriteLine($"{value}-{n}");
 
     [Test]
     public void Original_case()
     {
         var number = Parameter(typeof(int), "n");
-        var caseMethod = typeof(Debug).GetMethod(nameof(Debug.WriteLine), new[] { typeof(string) });
+        var caseMethod = GetType().GetMethod(nameof(AddCase));
 
         var expr = Lambda<Action<int>>(
             Switch(
                 number,
                 new SwitchCase[]
                 {
-                    SwitchCase(Call(null, caseMethod, Constant("Case 1")), Constant(1)),
-                    SwitchCase(Call(null, caseMethod, Constant("Case 2")), Constant(2))
+                    SwitchCase(Call(null, caseMethod, Constant("Case"), Constant(1)), Constant(1)),
+                    SwitchCase(Call(null, caseMethod, Constant("Case"), Constant(2)), Constant(2))
                 }
             ),
             number);
+
         expr.PrintCSharp();
 
         var fs = expr.CompileSys();

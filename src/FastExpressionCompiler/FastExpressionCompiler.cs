@@ -4966,8 +4966,11 @@ namespace FastExpressionCompiler
                 var switchValueExpr = expr.SwitchValue;
                 var customEqualMethod = expr.Comparison;
                 var cases = expr.Cases;
-                if (cases.Count == 1)
+                var caseCount = cases.Count;
+                if (caseCount == 1)
                 {
+                    // optimization for the single case
+                    // todo: @perf make a similar one for the two cases, probably use the two IfThenElses emit
                     var cs0 = cases[0];
                     if (cs0.TestValues.Count == 1)
                     {
@@ -5021,13 +5024,13 @@ namespace FastExpressionCompiler
                 var switchValueVar = EmitStoreLocalVariable(il, switchValueType);
 
                 var switchEndLabel = il.DefineLabel();
-                var labels = new Label[cases.Count];
+                var caseLabels = new Label[caseCount];
 
-                for (var caseIndex = 0; caseIndex < cases.Count; ++caseIndex)
+                for (var caseIndex = 0; caseIndex < caseLabels.Length; ++caseIndex)
                 {
                     var cs = cases[caseIndex];
                     var caseBodyLabel = il.DefineLabel();
-                    labels[caseIndex] = caseBodyLabel;
+                    caseLabels[caseIndex] = caseBodyLabel;
 
                     foreach (var caseTestValue in cs.TestValues)
                     {
@@ -5093,22 +5096,22 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                if (expr.DefaultBody != null)
+                var defaultBody = expr.DefaultBody;
+                if (defaultBody != null)
                 {
-                    if (!TryEmit(expr.DefaultBody, paramExprs, il, ref closure, setup, parent))
+                    if (!TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
                         return false;
                     il.Demit(OpCodes.Br, switchEndLabel);
                 }
 
-                for (var caseIndex = 0; caseIndex < cases.Count; ++caseIndex)
+                for (var caseIndex = 0; caseIndex < caseLabels.Length; ++caseIndex)
                 {
-                    il.DmarkLabel(labels[caseIndex]);
+                    il.DmarkLabel(caseLabels[caseIndex]);
                     var cs = cases[caseIndex];
                     if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
                         return false;
 
-                    if (caseIndex != cases.Count - 1)
-                        il.Demit(OpCodes.Br, switchEndLabel);
+                    il.Demit(OpCodes.Br, switchEndLabel);
                 }
 
                 il.DmarkLabel(switchEndLabel);
@@ -7475,7 +7478,7 @@ namespace FastExpressionCompiler
 
                         // before adding anything about method call to the builder,
                         // let's measure the current indent to avoid the double indenting the arguments below in some cases
-                        var realIndent = sb.GetRealIndent();
+                        var methodRealIndent = sb.GetRealIndent();
 
                         var methodReturnType = mc.Method.ReturnType;
                         if (methodReturnType.IsByRef)
@@ -7518,10 +7521,11 @@ namespace FastExpressionCompiler
                         }
                         else if (args.Count > 1)
                         {
+                            var metIndent = methodRealIndent == -1 || methodRealIndent < lineIndent ? lineIndent : methodRealIndent;
+                            var argIndent = metIndent + indentSpaces;
                             for (var i = 0; i < args.Count; i++)
                             {
                                 // arguments will start at that minimal indent
-                                var argIndent = realIndent == -1 || realIndent < lineIndent ? lineIndent : realIndent + indentSpaces;
                                 (i == 0 ? sb : sb.Append(',')).NewLineIndent(argIndent);
                                 var p = pars[i];
                                 var a = args[i];
