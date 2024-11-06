@@ -39,17 +39,20 @@
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        
         <PackageOutputPath>..\..\.dist</PackageOutputPath>
 
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
         <IncludeSymbols>false</IncludeSymbols>
+
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
     </PropertyGroup>
 
-    <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
     </ItemGroup>
 
 </Project>

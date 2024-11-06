@@ -7855,7 +7855,9 @@ namespace FastExpressionCompiler
                         lineIndent = realIndent == -1 ? lineIndent : realIndent;
 
                         sb.Append("switch (");
-                        x.SwitchValue.ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(')');
+                        x.SwitchValue.ToCSharpString(sb, EnclosedIn.ParensByDefault, lineIndent,
+                            stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                        sb.Append(')');
                         sb.NewLineIndent(lineIndent).Append('{');
 
                         var caseValueIndent = lineIndent + indentSpaces;
@@ -8140,7 +8142,7 @@ namespace FastExpressionCompiler
         internal static StringBuilder AppendSemicolonOnce(this StringBuilder sb) =>
             sb[sb.Length - 1] != ';' ? sb.Append(";") : sb;
 
-        internal static StringBuilder AppendLineOnce(this StringBuilder sb)
+        internal static StringBuilder AppendNewLineOnce(this StringBuilder sb)
         {
             for (var end = sb.Length - 1; end >= 0; --end)
             {
@@ -8813,7 +8815,7 @@ namespace FastExpressionCompiler
         internal static StringBuilder NewLineIndent(this StringBuilder sb, int lineIndent)
         {
             var originalLength = sb.Length;
-            sb.AppendLineOnce();
+            sb.AppendNewLineOnce();
             return originalLength == sb.Length ? sb : sb.Append(' ', lineIndent);
         }
 

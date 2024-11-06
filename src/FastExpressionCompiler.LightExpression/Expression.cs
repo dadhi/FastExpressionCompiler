@@ -73,7 +73,7 @@ public abstract class Expression
 
     public virtual bool IsCustomToCSharpString => false;
     public virtual StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
-        int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
+        int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
         CodePrinter.ObjectToCode notRecognizedToCode = null) => sb;
 
 #if SUPPORTS_VISITOR
@@ -3002,14 +3002,14 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
 
     public override bool IsCustomToCSharpString => true;
     public override StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
-        int lineIdent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
+        int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
         CodePrinter.ObjectToCode notRecognizedToCode = null)
     {
         var encloseInParens = enclosedIn != ToCSharpPrinter.EnclosedIn.LambdaBody && enclosedIn != ToCSharpPrinter.EnclosedIn.Return;
         sb = encloseInParens ? sb.Append("((") : sb.Append('(');
 
         sb.Append(Type.ToCode(stripNamespace, printType)).Append(')');
-        sb = Operand.ToCSharpString(sb, lineIdent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+        sb = Operand.ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
         sb.Append(".Invoke"); // Hey, this is the CUSTOM part of the output.
 
@@ -5009,7 +5009,7 @@ public class SwitchExpression : Expression // todo: @perf implement IArgumentPro
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
         SysExpr.Switch(SwitchValue.ToExpression(ref exprsConverted),
-            DefaultBody.ToExpression(ref exprsConverted), Comparison,
+            DefaultBody?.ToExpression(ref exprsConverted), Comparison,
             ToSwitchCaseExpressions(_cases, ref exprsConverted));
 
     internal static System.Linq.Expressions.SwitchCase ToSwitchCase(ref SwitchCase sw, ref SmallList<LightAndSysExpr> exprsConverted) =>

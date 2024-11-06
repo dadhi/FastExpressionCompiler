@@ -1,5 +1,5 @@
 ﻿#if DEBUG
-// #define PRINTIL
+#define PRINTIL
 #define PRINTCS
 #endif
 using System;
@@ -40,15 +40,12 @@ public static class TestTools
         CollectionAssert.AreEqual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual codes are: " + Environment.NewLine + sb);
     }
 
-    private static readonly Func<Type, string, string> _stripOuterTypes =
-        (t, s) => s.Substring(s.LastIndexOf('.') + 1);
-
     [Conditional("DEBUG")]
     public static void PrintExpression(this Expression expr, bool completeTypeNames = false) =>
         Console.WriteLine(
             expr.ToExpressionString(out var _, out var _, out var _,
             stripNamespace: true,
-            printType: completeTypeNames ? null : _stripOuterTypes,
+            printType: completeTypeNames ? null : CodePrinter.PrintTypeStripOuterClasses,
             indentSpaces: 4)
         );
 
@@ -63,7 +60,11 @@ public static class TestTools
 
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
-        sb = expr.ToCSharpString(sb, lineIdent: 0, stripNamespace: true, printType: completeTypeNames ? null : _stripOuterTypes, indentSpaces: 4);
+        sb = expr.ToCSharpString(sb,
+            lineIndent: 0,
+            stripNamespace: true,
+            printType: completeTypeNames ? null : CodePrinter.PrintTypeStripOuterClasses,
+            indentSpaces: 4);
         sb.Append(';');
         Console.WriteLine(sb.ToString());
 #endif
