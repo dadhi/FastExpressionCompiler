@@ -7705,24 +7705,33 @@ namespace FastExpressionCompiler
                             sb.Append("if (");
                             x.Test.ToCSharpString(sb, EnclosedIn.IfTest, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             sb.Append(')');
+
                             x.IfTrue.ToCSharpBlock(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                             if (x.IfFalse.NodeType != ExpressionType.Default || x.IfFalse.Type != typeof(void))
-                                x.IfFalse.ToCSharpBlock(sb.NewLine(lineIndent, indentSpaces).Append("else"),
-                                    lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            {
+                                sb.NewLineIndent(lineIndent).Append("else");
+                                x.IfFalse.ToCSharpBlock(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            }
                         }
                         else
                         {
                             lineIndent = GetRealLineIndent(sb);
-                            sb = enclosedIn == EnclosedIn.AvoidParens ? sb : sb.Append('(');
+
+                            var avoidParens = AvoidParens(enclosedIn);
+                            sb = avoidParens ? sb : sb.Append('(');
+
                             x.Test.ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+
                             sb.Append(" ? ");
                             var doNewLine = !x.IfTrue.IsParamOrConstantOrDefault();
                             x.IfTrue.ToCSharpExpression(sb, EnclosedIn.AvoidParens, doNewLine, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+
                             sb.Append(" : ");
                             doNewLine = !x.IfFalse.IsParamOrConstantOrDefault();
                             x.IfFalse.ToCSharpExpression(sb, EnclosedIn.AvoidParens, doNewLine, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
-                            sb = enclosedIn == EnclosedIn.AvoidParens ? sb : sb.Append(')');
+
+                            sb = avoidParens ? sb : sb.Append(')');
                         }
                         return sb;
                     }
@@ -8112,6 +8121,11 @@ namespace FastExpressionCompiler
             }
         }
 
+        private static bool AvoidParens(EnclosedIn enclosedIn) =>
+            enclosedIn == EnclosedIn.AvoidParens |
+            enclosedIn == EnclosedIn.LambdaBody |
+            enclosedIn == EnclosedIn.Return;
+
         private static StringBuilder ToCSharpBlock(this Expression expr, StringBuilder sb,
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, CodePrinter.ObjectToCode notRecognizedToCode)
         {
@@ -8166,24 +8180,22 @@ namespace FastExpressionCompiler
             return sb.Append(NewLine);
         }
 
-        // Returns the number of consecutive spaces from the current position to the prev newline.
-        // Resets when finds a non-space character.
+        // Returns the number of consecutive spaces from the current position, 
+        // or from the first non-space character to the prev newline.
+        // e.g. for `\n    foo(bar)` and for `\n    ` indent is 4
         internal static int GetRealLineIndent(this StringBuilder sb)
         {
             var end = sb.Length - 1;
             var i = end;
             while (i >= 0)
             {
-                if (sb[i] == ' ')
-                    --i;
-                else if (sb[i] == '\n')
+                if (sb[i] == '\n')
                     return end - i;
-                else
-                {
-                    // reset the counter
-                    end = i;
-                    --i;
-                }
+
+                if (sb[i] != ' ')
+                    end = i; // reset the counter
+
+                --i;
             }
             return 0;
         }

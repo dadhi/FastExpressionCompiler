@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC().Run();
             // new LightExpression.IssueTests.Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run();
             // new LightExpression.UnitTests.TryCatchTests().Run();
             // new LightExpression.IssueTests.Issue127_Switch_is_supported().Run();
@@ -189,8 +190,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.IssueTests.Issue183_NullableDecimal().Run);
                 Run(new Issue190_Inc_Dec_Assign_Parent_Block_Var().Run);
                 Run(new LightExpression.IssueTests.Issue190_Inc_Dec_Assign_Parent_Block_Var().Run);
-                Run(new Issue196_AutoMapper_tests_are_failing_when_using_FEC.FastExpressionCompilerBug().Run);
-                Run(new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC.FastExpressionCompilerBug().Run);
+                Run(new Issue196_AutoMapper_tests_are_failing_when_using_FEC().Run);
+                Run(new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC().Run);
                 Run(new Issue197_Operation_could_destabilize_the_runtime().Run);
                 Run(new LightExpression.IssueTests.Issue197_Operation_could_destabilize_the_runtime().Run);
                 Run(new Issue204_Operation_could_destabilize_the_runtime__AutoMapper().Run);
