@@ -14,7 +14,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 [TestFixture]
-public class Issue429_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values : ITest
+public class Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values : ITest
 {
     public int Run()
     {
@@ -42,6 +42,7 @@ public class Issue429_Expression_Switch_without_a_default_case_incorrectly_calls
             number);
 
         expr.PrintCSharp();
+        expr.PrintExpression();
 
         var fs = expr.CompileSys();
         fs.PrintIL();
