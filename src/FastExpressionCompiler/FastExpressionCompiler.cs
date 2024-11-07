@@ -5097,10 +5097,16 @@ namespace FastExpressionCompiler
                 }
 
                 var defaultBody = expr.DefaultBody;
-                if (defaultBody != null)
+                if (defaultBody == null)
+                {
+                    // hop over the cases bodies right to the end of switch
+                    il.Demit(OpCodes.Br, switchEndLabel);
+                }
+                else
                 {
                     if (!TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
                         return false;
+                    // as we are at the end, no need to jump to it
                     il.Demit(OpCodes.Br, switchEndLabel);
                 }
 

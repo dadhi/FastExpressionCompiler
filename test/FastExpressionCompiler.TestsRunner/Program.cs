@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run();
+            // new LightExpression.IssueTests.Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run();
             // new LightExpression.UnitTests.TryCatchTests().Run();
             // new LightExpression.IssueTests.Issue127_Switch_is_supported().Run();
             // new LightExpression.IssueTests.Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException().Run();
@@ -334,6 +334,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException().Run);
                 Run(new LightExpression.IssueTests.Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException().Run);
+
+                Run(new Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run);
+                Run(new LightExpression.IssueTests.Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
