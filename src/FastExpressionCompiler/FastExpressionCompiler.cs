@@ -7478,7 +7478,7 @@ namespace FastExpressionCompiler
 
                         // before adding anything about method call to the builder,
                         // let's measure the current indent to avoid the double indenting the arguments below in some cases
-                        var methodRealIndent = sb.GetRealIndent();
+                        var lineWithMethodNameIndent = sb.GetRealLineIndent();
 
                         var methodReturnType = mc.Method.ReturnType;
                         if (methodReturnType.IsByRef)
@@ -7521,8 +7521,7 @@ namespace FastExpressionCompiler
                         }
                         else if (args.Count > 1)
                         {
-                            var metIndent = methodRealIndent == -1 || methodRealIndent < lineIndent ? lineIndent : methodRealIndent;
-                            var argIndent = metIndent + indentSpaces;
+                            var argIndent = lineWithMethodNameIndent + indentSpaces;
                             for (var i = 0; i < args.Count; i++)
                             {
                                 // arguments will start at that minimal indent
@@ -7567,8 +7566,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.MemberInit:
                     {
                         var x = (MemberInitExpression)e;
-                        var realIndent = sb.GetRealIndent();
-                        lineIndent = realIndent == -1 ? lineIndent : realIndent;
+                        lineIndent = sb.GetRealLineIndent();
                         x.NewExpression.ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         sb.NewLineIndent(lineIndent).Append('{');
                         x.Bindings.ToCSharpString(sb, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
@@ -7664,6 +7662,9 @@ namespace FastExpressionCompiler
                 case ExpressionType.Invoke:
                     {
                         var x = (InvocationExpression)e;
+
+                        lineIndent = GetRealLineIndent(sb);
+
                         // wrap the expression in the possibly excessive parentheses, because usually the expression is the delegate (except if delegate is parameter)
                         // which should be cast to the proper delegate type, e.g. `(Func<int>)(() => 1)`, so we need an additional `(<whole thing>)` to call `.Invoke`.
                         var encloseInParens = x.Expression.NodeType != ExpressionType.Parameter;
@@ -7676,13 +7677,16 @@ namespace FastExpressionCompiler
                         // Indicates the lambda invocation more explicitly with the new line, 
                         // it also helps to pair the indentation of invocation expression, specifically where it starts. 
                         if (x.Expression.NodeType == ExpressionType.Lambda)
-                            sb.NewLine(lineIndent, indentSpaces);
-
+                        {
+                            lineIndent += indentSpaces; // indent Invoke from its Expression, and indent its argument from the Invoke itself
+                            sb.NewLineIndent(lineIndent);
+                        }
                         sb.Append(".Invoke(");
+
                         for (var i = 0; i < x.Arguments.Count; i++)
                         {
                             sb = i > 0 ? sb.Append(',') : sb;
-                            sb.NewLineIndent(lineIndent);
+                            sb.NewLineIndent(lineIndent + indentSpaces);
                             x.Arguments[i].ToCSharpString(sb, EnclosedIn.AvoidParens, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         }
                         return sb.Append(")");
@@ -7703,16 +7707,15 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
+                            lineIndent = GetRealLineIndent(sb);
                             sb = enclosedIn == EnclosedIn.AvoidParens ? sb : sb.Append('(');
                             x.Test.ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             sb.Append(" ? ");
                             var doNewLine = !x.IfTrue.IsParamOrConstantOrDefault();
-                            x.IfTrue.ToCSharpExpression(sb, EnclosedIn.AvoidParens, doNewLine, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            x.IfTrue.ToCSharpExpression(sb, EnclosedIn.AvoidParens, doNewLine, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             sb.Append(" : ");
                             doNewLine = !x.IfFalse.IsParamOrConstantOrDefault();
-                            if (doNewLine) // when the second branch is on the new line increase the indent to provide more structure to code 
-                                lineIndent += indentSpaces;
-                            x.IfFalse.ToCSharpExpression(sb, EnclosedIn.AvoidParens, doNewLine, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            x.IfFalse.ToCSharpExpression(sb, EnclosedIn.AvoidParens, doNewLine, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             sb = enclosedIn == EnclosedIn.AvoidParens ? sb : sb.Append(')');
                         }
                         return sb;
@@ -7855,8 +7858,7 @@ namespace FastExpressionCompiler
                     {
                         var x = (SwitchExpression)e;
 
-                        var realIndent = sb.GetRealIndent();
-                        lineIndent = realIndent == -1 ? lineIndent : realIndent;
+                        lineIndent = sb.GetRealLineIndent();
 
                         sb.Append("switch (");
                         x.SwitchValue.ToCSharpString(sb, EnclosedIn.ParensByDefault, lineIndent,
@@ -8158,15 +8160,26 @@ namespace FastExpressionCompiler
             return sb.Append(NewLine);
         }
 
-        // Returns the current number of spaces after the new line,
-        // returns -1 if the line has some text instead of just spaces
-        internal static int GetRealIndent(this StringBuilder sb)
+        // Returns the number of consecutive spaces from the current position to the prev newline.
+        // Resets when finds a non-space character.
+        internal static int GetRealLineIndent(this StringBuilder sb)
         {
             var end = sb.Length - 1;
             var i = end;
-            while (i >= 0 && sb[i] == ' ')
-                --i;
-            return i >= 0 && sb[i] == '\n' ? end - i : -1;
+            while (i >= 0)
+            {
+                if (sb[i] == ' ')
+                    --i;
+                else if (sb[i] == '\n')
+                    return end - i;
+                else
+                {
+                    // reset the counter
+                    end = i;
+                    --i;
+                }
+            }
+            return 0;
         }
 
         private const string NotSupportedExpression = "// NOT_SUPPORTED_EXPRESSION: ";
