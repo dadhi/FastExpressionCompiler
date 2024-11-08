@@ -7467,13 +7467,11 @@ namespace FastExpressionCompiler
                         sb.Append("new ").Append(e.Type.ToCode(stripNamespace, printType)).Append('(');
                         var args = x.Arguments;
                         if (args.Count == 1)
-                            args[0].ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            args[0].ToCSharpString(sb, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         else if (args.Count > 1)
                             for (var i = 0; i < args.Count; i++)
                             {
-                                // @debug
-                                // sb.Append($"[lineIndent:{lineIndent}]");
-                                (i > 0 ? sb.Append(',') : sb).NewLineIndent(lineIndent);
+                                (i > 0 ? sb.Append(',') : sb).NewLineIndent(lineIndent + indentSpaces);
                                 args[i].ToCSharpString(sb, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
                         return sb.Append(')');
@@ -7591,14 +7589,14 @@ namespace FastExpressionCompiler
                         var x = (ListInitExpression)e;
                         lineIndent = GetRealLineIndent(sb);
 
-                        x.NewExpression.ToCSharpString(sb, EnclosedIn.ParensByDefault, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                        x.NewExpression.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                         sb.NewLineIndent(lineIndent).Append('{');
 
                         var inits = x.Initializers;
                         for (var i = 0; i < inits.Count; ++i)
                         {
-                            (i == 0 ? sb : sb.Append(", ")).NewLineIndent(lineIndent);
+                            (i == 0 ? sb : sb.Append(", ")).NewLineIndent(lineIndent + indentSpaces);
                             var elemInit = inits[i];
                             var args = elemInit.Arguments;
                             if (args.Count == 1)
@@ -7611,11 +7609,11 @@ namespace FastExpressionCompiler
                                 sb.Append('{');
                                 for (var j = 0; j < args.Count; ++j)
                                     args.GetArgument(j).ToCSharpString(j == 0 ? sb : sb.Append(", "), EnclosedIn.AvoidParens,
-                                    lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                                        lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                 sb.Append('}');
                             }
                         }
-                        return sb.NewLineIndent(lineIndent).Append("};");
+                        return sb.NewLineIndent(lineIndent).Append("}");
                     }
                 case ExpressionType.Lambda:
                     {
@@ -7759,18 +7757,18 @@ namespace FastExpressionCompiler
 
                         if (x.ContinueLabel != null)
                         {
-                            sb.NewLineIndent(lineIndent - indentSpaces);
+                            sb.NewLineIndent(lineIndent);
                             x.ContinueLabel.ToCSharpString(sb).Append(":;"); // todo: @improve the label is with the semicolon, because it will invalid code at the end of lambda without it
                         }
 
-                        sb.NewLineIndent(lineIndent);
+                        sb.NewLineIndent(lineIndent + indentSpaces);
                         x.Body.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                         sb.NewLineIndent(lineIndent).Append("}");
 
                         if (x.BreakLabel != null)
                         {
-                            sb.NewLineIndent(lineIndent - indentSpaces);
+                            sb.NewLineIndent(lineIndent);
                             x.BreakLabel.ToCSharpString(sb).Append(":;"); // todo: @improve the label is with the semicolon, because it will invalid code at the end of lambda without it
                         }
                         return sb;
@@ -7861,7 +7859,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.Label:
                     {
                         var x = (LabelExpression)e;
-                        sb.NewLineIndent(lineIndent - indentSpaces);
+                        sb.NewLineIndent(lineIndent);
                         x.Target.ToCSharpString(sb).Append(':');
                         return sb; // we don't output the default value and relying on the Goto Return `return` instead, otherwise we may change the logic of the code
                     }
@@ -7878,7 +7876,7 @@ namespace FastExpressionCompiler
                             if (isReturnable)
                                 sb.Append("return ");
 
-                            gtValue.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIndent - indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            gtValue.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                             if (isReturnable)
                                 sb.AppendSemicolonOnce();
@@ -8324,7 +8322,7 @@ namespace FastExpressionCompiler
                             EnclosedIn.Return, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode)
                             .AppendSemicolonOnce();
 
-                    sb.NewLineIndent(lineIndent - indentSpaces);
+                    sb.NewLineIndent(lineIndent);
                     label.Target.ToCSharpString(sb).Append(':');
                     if (label.DefaultValue == null)
                         return sb.AppendLine(); // no return because we may have other expressions after label
