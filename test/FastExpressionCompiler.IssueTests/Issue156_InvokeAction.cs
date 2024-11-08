@@ -14,8 +14,8 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run() 
         {
-            InvokeActionConstantIsSupported();
             InvokeFuncConstantIsSupported();
+            InvokeActionConstantIsSupported();
             return 2;
         }
 

@@ -22,11 +22,11 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Test_300();
+            Test_301_Invoke_Lambda_inlining_case();
             Test_301_Invoke_Lambda_inlining_case_simplified();
+            Test_300();
             Test_301_MemberInit_PrivateProperty();
             Test_301_MemberInit_InternalProperty();
-            Test_301_Invoke_Lambda_inlining_case();
             Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present();
             Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present_Custom_constant_output();
             Test_301_Goto_to_label_with_default_value_should_return_the_goto_value_when_no_other_expressions_is_present();
