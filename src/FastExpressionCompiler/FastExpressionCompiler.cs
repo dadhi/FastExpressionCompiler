@@ -7545,8 +7545,16 @@ namespace FastExpressionCompiler
                 case ExpressionType.MemberAccess:
                     {
                         var x = (MemberExpression)e;
-                        if (x.Expression != null)
-                            x.Expression.ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                        var inst = x.Expression;
+                        if (inst != null)
+                        {
+                            // wrap the `new X().Y` into parens as `(new X()).Y` as it is may be a part of the bigger expression
+                            if (inst.NodeType == ExpressionType.New)
+                                sb.Append('(');
+                            inst.ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            if (inst.NodeType == ExpressionType.New)
+                                sb.Append(')');
+                        }
                         else
                             sb.Append(x.Member.DeclaringType.ToCode(stripNamespace, printType));
                         return sb.Append('.').Append(x.Member.GetCSharpName());
@@ -7581,8 +7589,11 @@ namespace FastExpressionCompiler
                 case ExpressionType.ListInit:
                     {
                         var x = (ListInitExpression)e;
-                        x.NewExpression.ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
-                        sb.NewLine(lineIndent, indentSpaces).Append('{');
+                        lineIndent = GetRealLineIndent(sb);
+
+                        x.NewExpression.ToCSharpString(sb, EnclosedIn.ParensByDefault, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+
+                        sb.NewLineIndent(lineIndent).Append('{');
 
                         var inits = x.Initializers;
                         for (var i = 0; i < inits.Count; ++i)
@@ -7592,18 +7603,19 @@ namespace FastExpressionCompiler
                             var args = elemInit.Arguments;
                             if (args.Count == 1)
                             {
-                                args.GetArgument(0).ToCSharpString(sb, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                                args.GetArgument(0).ToCSharpString(sb, EnclosedIn.AvoidParens,
+                                    lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
                             else
                             {
                                 sb.Append('{');
                                 for (var j = 0; j < args.Count; ++j)
-                                    args.GetArgument(j).ToCSharpString(j == 0 ? sb : sb.Append(", "),
-                                        lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                                    args.GetArgument(j).ToCSharpString(j == 0 ? sb : sb.Append(", "), EnclosedIn.AvoidParens,
+                                    lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                 sb.Append('}');
                             }
                         }
-                        return sb.NewLine(lineIndent, indentSpaces).Append("};");
+                        return sb.NewLineIndent(lineIndent).Append("};");
                     }
                 case ExpressionType.Lambda:
                     {
@@ -7740,22 +7752,25 @@ namespace FastExpressionCompiler
                 case ExpressionType.Loop:
                     {
                         var x = (LoopExpression)e;
-                        sb.NewLine(lineIndent, indentSpaces).Append("while (true)");
-                        sb.NewLine(lineIndent, indentSpaces).Append("{");
+                        lineIndent = GetRealLineIndent(sb);
+
+                        sb.NewLineIndent(lineIndent).Append("while (true)");
+                        sb.NewLineIndent(lineIndent).Append("{");
 
                         if (x.ContinueLabel != null)
                         {
-                            sb.NewLine(lineIndent, indentSpaces);
+                            sb.NewLineIndent(lineIndent - indentSpaces);
                             x.ContinueLabel.ToCSharpString(sb).Append(":;"); // todo: @improve the label is with the semicolon, because it will invalid code at the end of lambda without it
                         }
 
-                        x.Body.ToCSharpString(sb.NewLineIndent(lineIndent), lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                        sb.NewLineIndent(lineIndent);
+                        x.Body.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
-                        sb.NewLine(lineIndent, indentSpaces).Append("}");
+                        sb.NewLineIndent(lineIndent).Append("}");
 
                         if (x.BreakLabel != null)
                         {
-                            sb.NewLine(lineIndent, indentSpaces);
+                            sb.NewLineIndent(lineIndent - indentSpaces);
                             x.BreakLabel.ToCSharpString(sb).Append(":;"); // todo: @improve the label is with the semicolon, because it will invalid code at the end of lambda without it
                         }
                         return sb;
@@ -7780,29 +7795,31 @@ namespace FastExpressionCompiler
                 case ExpressionType.Try:
                     {
                         var x = (TryExpression)e;
+                        lineIndent = GetRealLineIndent(sb);
+
                         var returnsValue = e.Type != typeof(void);
                         void PrintPart(Expression part)
                         {
+                            var incIndent = lineIndent + indentSpaces;
                             if (part is BlockExpression pb)
-                                pb.BlockToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
+                                pb.BlockToCSharpString(sb, incIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
                             else
                             {
                                 // avoid additional new line between `try {\n\n while().. }`
                                 if (!part.NodeType.IsBlockLike())
-                                    sb.NewLineIndent(lineIndent);
+                                    sb.NewLineIndent(incIndent);
                                 var isReturnable = returnsValue && part.NodeType.IsReturnable();
                                 if (isReturnable)
                                     sb.Append("return ");
-                                part.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIndent + indentSpaces, stripNamespace,
-                                    printType, indentSpaces, notRecognizedToCode);
+                                part.ToCSharpString(sb, EnclosedIn.AvoidParens, incIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                 sb.AppendSemicolonOnce();
                             }
                         }
 
                         sb.Append("try");
-                        sb.NewLine(lineIndent, indentSpaces).Append('{');
+                        sb.NewLineIndent(lineIndent).Append('{');
                         PrintPart(x.Body);
-                        sb.NewLine(lineIndent, indentSpaces).Append('}');
+                        sb.NewLineIndent(lineIndent).Append('}');
 
                         var handlers = x.Handlers;
                         if (handlers != null && handlers.Count > 0)
@@ -7810,7 +7827,7 @@ namespace FastExpressionCompiler
                             for (var i = 0; i < handlers.Count; i++)
                             {
                                 var h = handlers[i];
-                                sb.NewLine(lineIndent, indentSpaces).Append("catch (");
+                                sb.NewLineIndent(lineIndent).Append("catch (");
                                 var exTypeName = h.Test.ToCode(stripNamespace, printType);
                                 sb.Append(exTypeName);
 
@@ -7823,21 +7840,21 @@ namespace FastExpressionCompiler
                                     sb.Append("when (");
                                     sb.NewLineIndent(lineIndent);
                                     h.Filter.ToCSharpString(sb, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
-                                    sb.NewLine(lineIndent, indentSpaces).Append(')');
+                                    sb.NewLineIndent(lineIndent).Append(')');
                                 }
 
-                                sb.NewLine(lineIndent, indentSpaces).Append('{');
+                                sb.NewLineIndent(lineIndent).Append('{');
                                 PrintPart(h.Body);
-                                sb.NewLine(lineIndent, indentSpaces).Append('}');
+                                sb.NewLineIndent(lineIndent).Append('}');
                             }
                         }
 
                         if (x.Finally != null)
                         {
-                            sb.NewLine(lineIndent, indentSpaces).Append("finally");
-                            sb.NewLine(lineIndent, indentSpaces).Append('{');
+                            sb.NewLineIndent(lineIndent).Append("finally");
+                            sb.NewLineIndent(lineIndent).Append('{');
                             PrintPart(x.Finally);
-                            sb.NewLine(lineIndent, indentSpaces).Append('}');
+                            sb.NewLineIndent(lineIndent).Append('}');
                         }
                         return sb;
                     }
@@ -7876,7 +7893,7 @@ namespace FastExpressionCompiler
                         lineIndent = sb.GetRealLineIndent();
 
                         sb.Append("switch (");
-                        x.SwitchValue.ToCSharpString(sb, EnclosedIn.ParensByDefault, lineIndent,
+                        x.SwitchValue.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIndent,
                             stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         sb.Append(')');
                         sb.NewLineIndent(lineIndent).Append('{');
@@ -8126,6 +8143,7 @@ namespace FastExpressionCompiler
         private static bool AvoidParens(EnclosedIn enclosedIn) =>
             enclosedIn == EnclosedIn.AvoidParens |
             enclosedIn == EnclosedIn.LambdaBody |
+            enclosedIn == EnclosedIn.Block | // statement in a block don't need the parens as well
             enclosedIn == EnclosedIn.Return;
 
         private static StringBuilder ToCSharpBlock(this Expression expr, StringBuilder sb,
@@ -8162,7 +8180,11 @@ namespace FastExpressionCompiler
             else
             {
                 sb.NewLineIndent(lineIndent + indentSpaces);
-                sb = expr?.ToCSharpString(sb, lineIndent + indentSpaces + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode) ?? sb.Append("null");
+                if (expr != null)
+                    expr.ToCSharpString(sb, EnclosedIn.LambdaBody, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                else
+                    sb.Append("null");
+
             }
             return sb.NewLineIndent(lineIndent).Append("})");
         }
@@ -8857,10 +8879,6 @@ namespace FastExpressionCompiler
             sb.AppendNewLineOnce();
             return originalLength == sb.Length ? sb : sb.Append(' ', lineIndent);
         }
-
-        // todo: @wip replace it usages with NewLineIndent
-        internal static StringBuilder NewLine(this StringBuilder sb, int lineIndent, int indentSpaces) =>
-            sb.AppendLine().Append(' ', Math.Max(lineIndent - indentSpaces, 0));
 
         internal static StringBuilder NewLineIndentExpr(this StringBuilder sb,
             Expression expr, List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,

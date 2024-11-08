@@ -2064,7 +2064,7 @@ namespace FastExpressionCompiler.IssueTests
             e.PrintCSharp();
             var @cs = (Func<int>)(() =>
             {
-                return --new Box(42).Field;
+                return --(new Box(42)).Field;
             });
             var a = @cs();
             Assert.AreEqual(41, a);
