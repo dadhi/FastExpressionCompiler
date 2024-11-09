@@ -91,14 +91,14 @@ public abstract class Expression
     internal SysExpr ToExpression(ref SmallList<LightAndSysExpr> exprsConverted)
     {
         var i = exprsConverted.Count - 1;
-        while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].LightExpr, this)) --i;
+        while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].LightObj, this)) --i;
         if (i != -1)
             return (SysExpr)exprsConverted.Items[i].SysExpr;
 
         var sysExpr = CreateSysExpression(ref exprsConverted);
 
         ref var item = ref exprsConverted.Add();
-        item.LightExpr = this;
+        item.LightObj = this;
         item.SysExpr = sysExpr;
         return sysExpr;
     }
@@ -1914,37 +1914,34 @@ public abstract class Expression
     public static GotoExpression Return(LabelTarget target, Expression value, Type type) =>
         MakeGoto(GotoExpressionKind.Return, target, value, type);
 
-    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, params SwitchCase[] cases) =>
-        new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases);
-
-    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, IEnumerable<SwitchCase> cases) =>
-        new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray());
-
-    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
-        comparison == null
-        ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases)
-        : new WithComparisonSwitchExpression(defaultBody.Type, switchValue, defaultBody, cases, comparison);
-
-    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
-        comparison == null
-        ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray())
-        : new WithComparisonSwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray(), comparison);
-
-    public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
-        comparison == null
-        ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases)
-        : new WithComparisonSwitchExpression(type, switchValue, defaultBody, cases, comparison);
+    public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases)
+    {
+        type = type ?? (cases.Length != 0 ? cases[0].Body.Type : defaultBody?.Type ?? typeof(void));
+        return comparison == null
+            ? new SwitchExpression(type, switchValue, defaultBody, cases)
+            : new WithComparisonSwitchExpression(type, switchValue, defaultBody, cases, comparison);
+    }
 
     public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
-        comparison == null
-        ? new SwitchExpression(defaultBody.Type, switchValue, defaultBody, cases.AsArray())
-        : new WithComparisonSwitchExpression(type, switchValue, defaultBody, cases.AsArray(), comparison);
+        Switch(type, switchValue, defaultBody, comparison, cases.AsArray());
+
+    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, params SwitchCase[] cases) =>
+        Switch(null, switchValue, defaultBody, null, cases);
+
+    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, IEnumerable<SwitchCase> cases) =>
+        Switch(null, switchValue, defaultBody, null, cases.AsArray());
+
+    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases) =>
+        Switch(null, switchValue, defaultBody, comparison, cases);
+
+    public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
+        Switch(null, switchValue, defaultBody, comparison, cases.AsArray());
 
     public static SwitchExpression Switch(Expression switchValue, params SwitchCase[] cases) =>
-        new SwitchExpression(null, switchValue, null, cases);
+        Switch(null, switchValue, null, null, cases);
 
     public static SwitchExpression Switch(Expression switchValue, IEnumerable<SwitchCase> cases) =>
-        new SwitchExpression(null, switchValue, null, cases.AsArray());
+        Switch(null, switchValue, null, null, cases.AsArray());
 
     public static SwitchCase SwitchCase(Expression body, IEnumerable<Expression> testValues) =>
         new SwitchCase(body, testValues);
@@ -2019,13 +2016,13 @@ public static class FromSysExpressionConverter
         var i = exprsConverted.Count - 1;
         while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, sysExpr)) --i;
         if (i != -1)
-            return (Expression<TDelegate>)exprsConverted.Items[i].LightExpr;
+            return (Expression<TDelegate>)exprsConverted.Items[i].LightObj;
 
         var lightExpr = ConvertLambdaToLightExpression(sysExpr, ref exprsConverted);
 
         ref var item = ref exprsConverted.Add();
         item.SysExpr = sysExpr;
-        item.LightExpr = lightExpr;
+        item.LightObj = lightExpr;
         return lightExpr;
     }
 
@@ -2091,14 +2088,44 @@ public static class FromSysExpressionConverter
         var i = exprsConverted.Count - 1;
         while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, sysExpr)) --i;
         if (i != -1)
-            return (Expression)exprsConverted.Items[i].LightExpr;
+            return (Expression)exprsConverted.Items[i].LightObj;
 
         var lightExpr = ConvertToLightExpression(sysExpr, ref exprsConverted);
 
         ref var item = ref exprsConverted.Add();
         item.SysExpr = sysExpr;
-        item.LightExpr = lightExpr;
+        item.LightObj = lightExpr;
         return lightExpr;
+    }
+
+    internal static LabelTarget ToLightLabelTarget(this System.Linq.Expressions.LabelTarget source, ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        if (source == null)
+            return null;
+
+        // First check for the already converted expressions 
+        var i = exprsConverted.Count - 1;
+        while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, source)) --i;
+        if (i != -1)
+            return (LabelTarget)exprsConverted.Items[i].LightObj;
+
+        var lightTarget = Expression.Label(source.Type, source.Name);
+
+        ref var item = ref exprsConverted.Add();
+        item.SysExpr = source;
+        item.LightObj = lightTarget;
+        return lightTarget;
+    }
+
+    internal static SwitchCase ToLightSwitchCase(this System.Linq.Expressions.SwitchCase source, ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        Debug.Assert(source != null);
+        var body = source.Body.ToLightExpression(ref exprsConverted);
+        var sourceTestValues = source.TestValues;
+        var testValues = new Expression[sourceTestValues.Count];
+        for (var i = 0; i < testValues.Length; ++i)
+            testValues[i] = sourceTestValues[i].ToLightExpression(ref exprsConverted);
+        return new SwitchCase(body, testValues);
     }
 
     internal static ElementInit ToLightExpression(
@@ -2111,7 +2138,7 @@ public static class FromSysExpressionConverter
         var i = exprsConverted.Count - 1;
         while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, elemInit)) --i;
         if (i != -1)
-            return (ElementInit)exprsConverted.Items[i].LightExpr;
+            return (ElementInit)exprsConverted.Items[i].LightObj;
 
         ElementInit lightElemInit = null;
         var args = elemInit.Arguments;
@@ -2130,7 +2157,7 @@ public static class FromSysExpressionConverter
 
         ref var item = ref exprsConverted.Add();
         item.SysExpr = elemInit;
-        item.LightExpr = lightElemInit;
+        item.LightObj = lightElemInit;
         return lightElemInit;
     }
 
@@ -2144,7 +2171,7 @@ public static class FromSysExpressionConverter
         var i = exprsConverted.Count - 1;
         while (i != -1 && !ReferenceEquals(exprsConverted.Items[i].SysExpr, sysBinding)) --i;
         if (i != -1)
-            return (MemberBinding)exprsConverted.Items[i].LightExpr;
+            return (MemberBinding)exprsConverted.Items[i].LightObj;
 
         MemberBinding lightBinding = null;
         if (sysBinding is System.Linq.Expressions.MemberAssignment sysAssignment)
@@ -2172,7 +2199,7 @@ public static class FromSysExpressionConverter
 
         ref var item = ref exprsConverted.Add();
         item.SysExpr = sysBinding;
-        item.LightExpr = lightBinding;
+        item.LightObj = lightBinding;
         return lightBinding;
     }
 
@@ -2361,6 +2388,30 @@ public static class FromSysExpressionConverter
                             return Expression.New(ctor, ars);
                     }
                 }
+            case ExpressionType.Loop:
+                {
+                    var loopExpr = (System.Linq.Expressions.LoopExpression)sysExpr;
+                    var loopBody = loopExpr.Body.ToLightExpression(ref exprsConverted);
+                    var breakLabel = loopExpr.BreakLabel.ToLightLabelTarget(ref exprsConverted);
+                    var continueLabel = loopExpr.ContinueLabel.ToLightLabelTarget(ref exprsConverted);
+                    return Expression.Loop(loopBody, breakLabel, continueLabel);
+                }
+            case ExpressionType.Switch:
+                {
+                    var switchExpr = (System.Linq.Expressions.SwitchExpression)sysExpr;
+                    var switchValue = switchExpr.SwitchValue.ToLightExpression(ref exprsConverted);
+                    var defaultBody = switchExpr.DefaultBody?.ToLightExpression(ref exprsConverted);
+                    var sysCases = switchExpr.Cases;
+                    var cases = new SwitchCase[sysCases.Count];
+                    for (var i = 0; i < cases.Length; ++i)
+                        cases[i] = sysCases[i].ToLightSwitchCase(ref exprsConverted);
+                    return Expression.Switch(switchExpr.Type, switchValue, defaultBody, switchExpr.Comparison, cases);
+                }
+            case ExpressionType.Try:
+                {
+                    // todo: @wip
+                    return null;
+                }
             case ExpressionType.Call:
                 {
                     var methodExpr = (System.Linq.Expressions.MethodCallExpression)sysExpr;
@@ -2499,7 +2550,7 @@ public static class FromSysExpressionConverter
 
 internal struct LightAndSysExpr
 {
-    public object LightExpr;
+    public object LightObj;
     public object SysExpr;
 }
 
@@ -4825,7 +4876,7 @@ public class LabelTarget
     internal System.Linq.Expressions.LabelTarget ToSystemLabelTarget(ref SmallList<LightAndSysExpr> converted)
     {
         var i = converted.Count - 1;
-        while (i != -1 && !ReferenceEquals(converted.Items[i].LightExpr, this)) --i;
+        while (i != -1 && !ReferenceEquals(converted.Items[i].LightObj, this)) --i;
         if (i != -1)
             return (System.Linq.Expressions.LabelTarget)converted.Items[i].SysExpr;
 
@@ -4834,7 +4885,7 @@ public class LabelTarget
             : SysExpr.Label(Type, Name);
 
         ref var item = ref converted.Add();
-        item.LightExpr = this;
+        item.LightObj = this;
         item.SysExpr = sysItem;
         return sysItem;
     }
