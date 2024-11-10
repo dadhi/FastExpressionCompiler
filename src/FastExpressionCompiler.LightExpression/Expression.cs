@@ -2407,7 +2407,17 @@ public static class FromSysExpressionConverter
                         cases[i] = sysCases[i].ToLightSwitchCase(ref exprsConverted);
                     return Expression.Switch(switchExpr.Type, switchValue, defaultBody, switchExpr.Comparison, cases);
                 }
+            case ExpressionType.Block:
+                {
+                    // todo: @wip
+                    return null;
+                }
             case ExpressionType.Try:
+                {
+                    // todo: @wip
+                    return null;
+                }
+            case ExpressionType.Goto:
                 {
                     // todo: @wip
                     return null;

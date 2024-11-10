@@ -9,12 +9,12 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
+            // new LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
             // new LightExpression.UnitTests.ListInitTests().Run();
             // new LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
-            // new LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
             // new LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
             // new LightExpression.IssueTests.Issue156_InvokeAction().Run();
-            // new LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
             // new IssueTests.Issue390_405_406_Mapster_tests().Run();
             // new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC().Run();
             // new LightExpression.IssueTests.Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run();
