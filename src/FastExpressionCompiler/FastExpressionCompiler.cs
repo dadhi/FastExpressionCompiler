@@ -7870,10 +7870,10 @@ namespace FastExpressionCompiler
                         {
                             var gtValue = gt.Value;
                             if (gtValue == null)
-                                return sb.Append("return;");
+                                return enclosedIn == EnclosedIn.Return ? sb.Append(";") : sb.Append("return;");
 
                             var isReturnable = gtValue.NodeType.IsReturnable();
-                            if (isReturnable)
+                            if (isReturnable & enclosedIn != EnclosedIn.Return)
                                 sb.Append("return ");
 
                             gtValue.ToCSharpString(sb, EnclosedIn.AvoidParens, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
