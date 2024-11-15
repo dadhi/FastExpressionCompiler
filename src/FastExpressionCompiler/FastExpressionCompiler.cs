@@ -674,7 +674,7 @@ namespace FastExpressionCompiler
             /// because the gotos may be reused multiple times in the big expression
             internal SmallMap4<object, (ushort, ushort), RefEq<object>,
                 SmallMap4.SingleArrayEntries<object, (ushort, ushort), RefEq<object>>
-                > TargetToLabelsAndGotos;
+                > TargetToGotosAndLabels;
 
             /// This is required because we have the return from the nested lambda expression,
             /// and when inlined in the parent lambda it is no longer the return but just a jump to the label.
@@ -1473,7 +1473,7 @@ namespace FastExpressionCompiler
                         var labelExpr = (LabelExpression)expr;
                         closure.AddLabel(labelExpr.Target, closure.CurrentInlinedLambdaInvokeIndex);
                         if (labelExpr.Target != null)
-                            closure.TargetToLabelsAndGotos.AddOrGetValueRef(labelExpr.Target, out _).Item2++;
+                            closure.TargetToGotosAndLabels.AddOrGetValueRef(labelExpr.Target, out _).Item2++;
                         if (labelExpr.DefaultValue == null)
                             return r;
                         expr = labelExpr.DefaultValue;
@@ -1482,7 +1482,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
                         if (gotoExpr.Target != null)
-                            closure.TargetToLabelsAndGotos.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
+                            closure.TargetToGotosAndLabels.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
                         if (gotoExpr.Value == null)
                             return r;
                         expr = gotoExpr.Value;
@@ -2133,45 +2133,42 @@ namespace FastExpressionCompiler
                                         if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                                             statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                         {
-                                            var (gotos, labels) = closure.TargetToLabelsAndGotos.TryGetValueRefUnsafe(label.Target, out var found);
-                                            if (!found || gotos > labels)
+                                            var (gotos, labels) = closure.TargetToGotosAndLabels.TryGetValueRefUnsafe(label.Target, out var found);
+                                            if (found && gotos <= labels)
                                             {
-                                                if (!TryEmit(stExpr, paramExprs, il, ref closure, setup, parent | ParentFlags.IgnoreResult))
-                                                    return false;
-                                            }
-
-                                            if ((parent & ParentFlags.TryCatch) != 0)
-                                            {
-                                                if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                                                    throw new NotSupportedExpressionException(Result.NotSupported_Try_GotoReturnToTheFollowupLabel);
-                                                return false; // todo: @feature return from the TryCatch with the internal label is not supported, though it is the unlikely case
-                                            }
-
-                                            // we are generating the return value and ensuring here that it is not popped-out
-                                            var gtOrLabelValue = gt.Value ?? label.DefaultValue;
-                                            if (gtOrLabelValue != null)
-                                            {
-                                                if (!TryEmit(gtOrLabelValue, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
-                                                    return false;
-
-                                                if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
+                                                if ((parent & ParentFlags.TryCatch) != 0)
                                                 {
-                                                    ref var foundLabel = ref closure.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(gt.Target, out var labelFound);
-                                                    if (!labelFound || foundLabel.InlinedLambdaInvokeIndex == -1)
+                                                    if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                                                        throw new NotSupportedExpressionException(Result.NotSupported_Try_GotoReturnToTheFollowupLabel);
+                                                    return false; // todo: @feature return from the TryCatch with the internal label is not supported, though it is the unlikely case
+                                                }
+
+                                                // we are generating the return value and ensuring here that it is not popped-out
+                                                var gtOrLabelValue = gt.Value ?? label.DefaultValue;
+                                                if (gtOrLabelValue != null)
+                                                {
+                                                    if (!TryEmit(gtOrLabelValue, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
                                                         return false;
-                                                    EmitGotoToReturnLabel(ref closure.LambdaInvokeStackLabels.GetSurePresentItemRef(foundLabel.InlinedLambdaInvokeIndex), il, gtOrLabelValue, OpCodes.Br);
+
+                                                    if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
+                                                    {
+                                                        ref var foundLabel = ref closure.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(gt.Target, out var labelFound);
+                                                        if (!labelFound || foundLabel.InlinedLambdaInvokeIndex == -1)
+                                                            return false;
+                                                        EmitGotoToReturnLabel(ref closure.LambdaInvokeStackLabels.GetSurePresentItemRef(foundLabel.InlinedLambdaInvokeIndex), il, gtOrLabelValue, OpCodes.Br);
+                                                    }
+                                                    else
+                                                    {
+                                                        // @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
+                                                        // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
+                                                        // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement), 
+                                                        // so we should avoid it on our side.
+                                                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                                                            il.Demit(OpCodes.Ret);
+                                                    }
                                                 }
-                                                else
-                                                {
-                                                    // @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
-                                                    // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
-                                                    // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement), 
-                                                    // so we should avoid it on our side.
-                                                    if ((parent & ParentFlags.IgnoreResult) != 0)
-                                                        il.Demit(OpCodes.Ret);
-                                                }
+                                                return true;
                                             }
-                                            return true;
                                         }
 
                                         if (!TryEmit(stExpr, paramExprs, il, ref closure, setup, parent | ParentFlags.IgnoreResult))
