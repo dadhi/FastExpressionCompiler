@@ -25,13 +25,13 @@ namespace FastExpressionCompiler.IssueTests
 
         public int Run()
         {
+            Try_compare_strings();
+
             Conditional_with_Equal_true_should_shortcircuit_to_Brtrue_or_Brfalse();
             Conditional_with_Equal_0_should_shortcircuit_to_Brtrue_or_Brfalse();
             Conditional_with_Equal_false_should_shortcircuit_to_Brtrue_or_Brfalse();
             Conditional_with_NotEqual_true_should_shortcircuit_to_Brtrue_or_Brfalse();
             Conditional_with_NotEqual_false_should_shortcircuit_to_Brtrue_or_Brfalse();
-
-            Try_compare_strings();
 
             Should_Deserialize_Simple();
             Should_Deserialize_Simple_via_manual_CSharp_code();
@@ -42,8 +42,8 @@ namespace FastExpressionCompiler.IssueTests
         [Test]
         public void Should_Deserialize_Simple_via_manual_CSharp_code()
         {
-            DeserializerDlg<Word> dlgWord = 
-            /*DeserializerDlg<Word>*/(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => 
+            DeserializerDlg<Word> dlgWord =
+            /*DeserializerDlg<Word>*/(ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) =>
             {
                 SequenceReader<Byte> reader;
                 String wordValue;
@@ -62,8 +62,8 @@ namespace FastExpressionCompiler.IssueTests
                 return true;
             };
 
-            DeserializerDlg<Simple> dlgSimple = 
-            /*DeserializerDlg<Simple>*/(ref ReadOnlySequence<Byte> input, Simple value, out Int64 bytesRead) => 
+            DeserializerDlg<Simple> dlgSimple =
+            /*DeserializerDlg<Simple>*/(ref ReadOnlySequence<Byte> input, Simple value, out Int64 bytesRead) =>
             {
                 SequenceReader<Byte> reader;
                 Int32 identifier;
@@ -100,7 +100,7 @@ namespace FastExpressionCompiler.IssueTests
                 value.Sentence = content;
                 bytesRead = reader.Consumed;
                 return true;
-            }; 
+            };
 
             Serializer.Setup(dlgWord);
             Serializer.Setup(dlgSimple);
@@ -108,11 +108,11 @@ namespace FastExpressionCompiler.IssueTests
             RunDeserializer();
         }
 
-// This is for benchmark
+        // This is for benchmark
 #if !LIGHT_EXPRESSION
         public static void CreateExpression_and_CompileSys(
-            out DeserializerDlg<Word> desWord, 
-            out DeserializerDlg<Simple> desSimple) 
+            out DeserializerDlg<Word> desWord,
+            out DeserializerDlg<Simple> desSimple)
         {
             var reader = Variable(typeof(SequenceReader<byte>), "reader");
             var bytesRead = Parameter(typeof(long).MakeByRefType(), "bytesRead");
@@ -249,11 +249,11 @@ namespace FastExpressionCompiler.IssueTests
             Serializer.Setup(desSimple);
 
             var expected = new Simple
-            { 
-                Identifier = 150, 
-                Sentence = new[] { new Word { Value = "hello" }, new Word { Value = "there" } } 
+            {
+                Identifier = 150,
+                Sentence = new[] { new Word { Value = "hello" }, new Word { Value = "there" } }
             };
-            
+
             Memory<byte> buffer = new byte[19];
             // 4 bytes
             BinaryPrimitives.WriteInt32BigEndian(buffer.Span, expected.Identifier);
@@ -360,11 +360,11 @@ namespace FastExpressionCompiler.IssueTests
         public void RunDeserializer()
         {
             var expected = new Simple
-            { 
-                Identifier = 150, 
-                Sentence = new[] { new Word { Value = "hello" }, new Word { Value = "there" } } 
+            {
+                Identifier = 150,
+                Sentence = new[] { new Word { Value = "hello" }, new Word { Value = "there" } }
             };
-            
+
             Memory<byte> buffer = new byte[19];
             // 4 bytes
             BinaryPrimitives.WriteInt32BigEndian(buffer.Span, expected.Identifier);
@@ -382,7 +382,7 @@ namespace FastExpressionCompiler.IssueTests
             var deserialized = new Simple();
             var input = new ReadOnlySequence<byte>(buffer);
             var isDeserialized = Serializer.TryDeserialize(ref input, deserialized, out var bytesRead);
-            
+
             Assert.True(isDeserialized);
             Assert.AreEqual(buffer.Length, bytesRead);
             Assert.AreEqual(expected, deserialized);
@@ -394,10 +394,10 @@ namespace FastExpressionCompiler.IssueTests
             var returnTarget = Label(typeof(string));
             var returnLabel = Label(returnTarget, Constant(null, typeof(string)));
             var returnTrue = Block(
-                Return(returnTarget, Constant("true"), typeof(string)), 
+                Return(returnTarget, Constant("true"), typeof(string)),
                 returnLabel);
             var returnFalse = Block(
-                Return(returnTarget, Constant("false"), typeof(string)), 
+                Return(returnTarget, Constant("false"), typeof(string)),
                 returnLabel);
 
             var boolParam = Parameter(typeof(bool), "b");
@@ -413,12 +413,12 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL("system compiled il");
-            Assert.AreEqual("true",  fs(true));
+            Assert.AreEqual("true", fs(true));
             Assert.AreEqual("false", fs(false));
-            
+
             var f = expr.CompileFast(true);
             f.PrintIL();
-            Assert.AreEqual("true",  f(true));
+            Assert.AreEqual("true", f(true));
             Assert.AreEqual("false", f(false));
         }
 
@@ -441,12 +441,12 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL("system compiled il");
-            
+
             var f = expr.CompileFast(true);
             Assert.IsNotNull(f);
             f.PrintIL();
 
-            Assert.AreEqual("true",  f(0));
+            Assert.AreEqual("true", f(0));
             Assert.AreEqual("false", f(42));
         }
 
@@ -466,12 +466,12 @@ namespace FastExpressionCompiler.IssueTests
                         returnFalse),
                     returnTrue),
                 boolParam);
-            
+
             var f = expr.CompileFast(true);
             Assert.IsNotNull(f);
             f.PrintIL();
 
-            Assert.AreEqual("true",  f(true));
+            Assert.AreEqual("true", f(true));
             Assert.AreEqual("false", f(false));
         }
 
@@ -491,12 +491,12 @@ namespace FastExpressionCompiler.IssueTests
                         returnFalse),
                     returnTrue),
                 boolParam);
-            
+
             var f = expr.CompileFast(true);
             Assert.IsNotNull(f);
             f.PrintIL();
 
-            Assert.AreEqual("true",  f(true));
+            Assert.AreEqual("true", f(true));
             Assert.AreEqual("false", f(false));
         }
 
@@ -516,41 +516,48 @@ namespace FastExpressionCompiler.IssueTests
                         returnTrue),
                     returnFalse),
                 boolParam);
-            
+
             var f = expr.CompileFast(true);
             Assert.IsNotNull(f);
             f.PrintIL();
 
-            Assert.AreEqual("true",  f(true));
+            Assert.AreEqual("true", f(true));
             Assert.AreEqual("false", f(false));
         }
 
         public void Try_compare_strings()
         {
             var returnTarget = Label(typeof(string));
-            var returnLabel = Label(returnTarget, Constant(null, typeof(string)));
-            var returnFalse = Block(Return(returnTarget, Constant("false"), typeof(string)), returnLabel);
-            var returnTrue = Block(Return(returnTarget, Constant("true"), typeof(string)), returnLabel);
-
+            // var returnTarget2 = Label(typeof(string));
             var strParam = Parameter(typeof(string), "s");
 
             var expr = Lambda<Func<string, string>>(
                 Block(
-                    IfThen(Equal(strParam, Constant("42")),
-                        returnTrue),
-                    returnFalse
+                    IfThen(
+                        Equal(strParam, Constant("42")),
+                        Block(
+                            Return(returnTarget, Constant("true"), typeof(string)),
+                            Label(returnTarget, Constant(null, typeof(string))))
+                    ),
+                    Block(
+                        Return(returnTarget, Constant("false"), typeof(string)),
+                        Label(returnTarget, Constant(null, typeof(string)))
+                    )
                 ),
                 strParam);
 
-            var fs = expr.CompileSys();
-            fs.PrintIL("system compiled il");
-            
-            var f = expr.CompileFast(true);
-            Assert.IsNotNull(f);
-            f.PrintIL();
+            expr.PrintCSharp();
 
-            Assert.AreEqual("true",  f("42"));
-            Assert.AreEqual("false", f("35"));
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Assert.AreEqual("true", fs("42"));
+            Assert.AreEqual("false", fs("35"));
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+
+            Assert.AreEqual("true", ff("42"));
+            Assert.AreEqual("false", ff("35"));
         }
     }
 
@@ -568,8 +575,8 @@ namespace FastExpressionCompiler.IssueTests
     public class Word
     {
         public string Value { get; set; }
-        public override bool Equals(object obj) => 
-            obj is Word w && w.Value == Value; 
+        public override bool Equals(object obj) =>
+            obj is Word w && w.Value == Value;
     }
 
     internal struct VarShort
@@ -659,9 +666,9 @@ namespace FastExpressionCompiler.IssueTests
 
                     var hasNext = (readByte & 128) == 128;
 
-                    if (offset > 0) 
+                    if (offset > 0)
                         result += (readByte & sbyte.MaxValue) << offset;
-                    else 
+                    else
                         result += (readByte & sbyte.MaxValue);
 
                     if (result > short.MaxValue) result -= 65536;

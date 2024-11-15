@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection.Emit;
 using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
@@ -18,7 +15,7 @@ public class Issue430_TryCatch_Bad_label_content_in_ILGenerator : ITest
 {
     public int Run()
     {
-        // Original_case(); // todo: @fixme
+        // Original_case();
         return 1;
     }
 

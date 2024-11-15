@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 #if DEBUG && NET6_0_OR_GREATER
 #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
-// #define DEMIT
+#define DEMIT
 #endif
 #if LIGHT_EXPRESSION
 #define SUPPORTS_ARGUMENT_PROVIDER
@@ -669,6 +669,12 @@ namespace FastExpressionCompiler
 
             /// The stack for the lambda invocation and the labels bound to them
             internal SmallList4<LabelInfo> LambdaInvokeStackLabels;
+
+            /// Tracks of how many gotos, labels referencing the specific target, they may be the same gotos expression,
+            /// because the gotos may be reused multiple times in the big expression
+            internal SmallMap4<object, (ushort, ushort), RefEq<object>,
+                SmallMap4.SingleArrayEntries<object, (ushort, ushort), RefEq<object>>
+                > TargetToLabelsAndGotos;
 
             /// This is required because we have the return from the nested lambda expression,
             /// and when inlined in the parent lambda it is no longer the return but just a jump to the label.
@@ -1459,13 +1465,15 @@ namespace FastExpressionCompiler
                     case ExpressionType.Try:
                         {
                             closure.HasComplexExpression = false;
-                            r = TryCollectTryExprConstants(ref closure, (TryExpression)expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+                            r = TryCollectTryExprInfo(ref closure, (TryExpression)expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
                             closure.HasComplexExpression = true;
                             return r;
                         }
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
                         closure.AddLabel(labelExpr.Target, closure.CurrentInlinedLambdaInvokeIndex);
+                        if (labelExpr.Target != null)
+                            closure.TargetToLabelsAndGotos.AddOrGetValueRef(labelExpr.Target, out _).Item2++;
                         if (labelExpr.DefaultValue == null)
                             return r;
                         expr = labelExpr.DefaultValue;
@@ -1473,6 +1481,8 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
+                        if (gotoExpr.Target != null)
+                            closure.TargetToLabelsAndGotos.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
                         if (gotoExpr.Value == null)
                             return r;
                         expr = gotoExpr.Value;
@@ -1797,7 +1807,7 @@ namespace FastExpressionCompiler
             return r;
         }
 
-        private static Result TryCollectTryExprConstants(ref ClosureInfo closure, TryExpression tryExpr,
+        private static Result TryCollectTryExprInfo(ref ClosureInfo closure, TryExpression tryExpr,
 #if LIGHT_EXPRESSION
             IParameterProvider paramExprs,
 #else
@@ -2123,6 +2133,13 @@ namespace FastExpressionCompiler
                                         if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                                             statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                         {
+                                            var (gotos, labels) = closure.TargetToLabelsAndGotos.TryGetValueRefUnsafe(label.Target, out var found);
+                                            if (!found || gotos > labels)
+                                            {
+                                                if (!TryEmit(stExpr, paramExprs, il, ref closure, setup, parent | ParentFlags.IgnoreResult))
+                                                    return false;
+                                            }
+
                                             if ((parent & ParentFlags.TryCatch) != 0)
                                             {
                                                 if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
@@ -2382,7 +2399,9 @@ namespace FastExpressionCompiler
                 ref var labelInfo = ref closure.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out var foundLabel);
                 if (!foundLabel)
                     return false;
-                il.DmarkLabel(labelInfo.GetOrDefineLabel(il));
+
+                var label = labelInfo.GetOrDefineLabel(il);
+                il.DmarkLabel(label);
 
                 var defaultValue = expr.DefaultValue;
                 if (defaultValue != null && !TryEmit(defaultValue, paramExprs, il, ref closure, setup, parent))

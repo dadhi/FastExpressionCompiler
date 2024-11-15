@@ -1251,7 +1251,7 @@ public static class SmallMap4
     }
 
     ///<summary>Get the value ref by the entry index. Also the index corresponds to entry adding order.
-    ///Important: it does not checks the index bounds, so you need to check that the index is from 0 to map.Count-1</summary>
+    /// Important: it does not check the index bounds, so you need to check that the index is from 0 to map.Count-1</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref Entry<K, V> GetSurePresentEntryRef<K, V, TEq, TEntries>(this ref SmallMap4<K, V, TEq, TEntries> map, int index)
         where TEq : struct, IEq<K>

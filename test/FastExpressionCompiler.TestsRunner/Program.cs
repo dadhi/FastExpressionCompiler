@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             new LightExpression.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run();
+            new LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
             // new LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
             // new LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
             // new LightExpression.UnitTests.ListInitTests().Run();
