@@ -5,7 +5,6 @@ using NUnit.Framework;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
-using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
@@ -15,7 +14,7 @@ public class Issue430_TryCatch_Bad_label_content_in_ILGenerator : ITest
 {
     public int Run()
     {
-        // Original_case();
+        Original_case();
         return 1;
     }
 

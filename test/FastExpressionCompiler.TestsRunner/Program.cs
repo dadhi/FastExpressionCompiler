@@ -9,38 +9,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run();
-            new LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
-            // new LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
-            // new LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
-            // new LightExpression.UnitTests.ListInitTests().Run();
-            // new LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
-            // new LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3().Run();
-            // new LightExpression.IssueTests.Issue156_InvokeAction().Run();
-            // new IssueTests.Issue390_405_406_Mapster_tests().Run();
-            // new LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC().Run();
-            // new LightExpression.IssueTests.Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run();
-            // new LightExpression.UnitTests.TryCatchTests().Run();
-            // new LightExpression.IssueTests.Issue127_Switch_is_supported().Run();
-            // new LightExpression.IssueTests.Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException().Run();
-            // new LightExpression.UnitTests.HoistedLambdaExprTests().Run();
-            // new LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run();
-            // new LightExpression.IssueTests.Issue302_Error_compiling_expression_with_array_access().Run();
-            // new TryCatchTests().Run();
-            // new LightExpression.IssueTests.Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile().Run();
-            // new Issue421_Date_difference_is_giving_wrong_negative_value().Run();
-            // new LightExpression.IssueTests.Issue414_Incorrect_il_when_passing_by_ref_value().Run();
-            // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
+            // new LightExpression.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run();
 
             RunAllTests();
-
-            // new Issue127_Switch_is_supported().Run();
-            // new Issue307_Switch_with_fall_through_throws_InvalidProgramException().Run();
-            // new Issue380_Comparisons_with_nullable_types().Run();
-            // new LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types().Run();
-            // new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run();
-            // new LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables().Run();
-            // new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run();
         }
 
         public static void RunAllTests()
@@ -347,6 +318,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run);
                 Run(new LightExpression.IssueTests.Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run);
+
+                Run(new Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run);
+                Run(new LightExpression.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });

@@ -2133,6 +2133,7 @@ namespace FastExpressionCompiler
                                         if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
                                             statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                         {
+                                            // But we cannot use the return pattern and eliminate the target label if we have more gotos referencing it, see #430
                                             var (gotos, labels) = closure.TargetToGotosAndLabels.TryGetValueRefUnsafe(label.Target, out var found);
                                             if (found && gotos <= labels)
                                             {

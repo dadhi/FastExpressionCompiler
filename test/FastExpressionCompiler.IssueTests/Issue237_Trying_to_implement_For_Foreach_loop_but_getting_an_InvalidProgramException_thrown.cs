@@ -528,7 +528,6 @@ namespace FastExpressionCompiler.IssueTests
         public void Try_compare_strings()
         {
             var returnTarget = Label(typeof(string));
-            // var returnTarget2 = Label(typeof(string));
             var strParam = Parameter(typeof(string), "s");
 
             var expr = Lambda<Func<string, string>>(
