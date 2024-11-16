@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run();
             // new LightExpression.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run();
 
             RunAllTests();

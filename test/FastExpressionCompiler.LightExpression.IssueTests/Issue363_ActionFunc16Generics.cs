@@ -14,13 +14,13 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
         public int Run()
         {
-            Supports_16_Func_Params();
-            Supports_16_Action_Params();
             foreach (var testCase in TestCases)
             {
                 Can_Create_Func((int)testCase);
                 Can_Create_Action((int)testCase);
             }
+            Supports_16_Func_Params();
+            Supports_16_Action_Params();
             return 4;
         }
 
@@ -66,19 +66,27 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
         [TestCaseSource(nameof(TestCases))]
         public void Can_Create_Func(int paramCount)
         {
-            ParameterExpression[] parameters = Enumerable
+            var parameters = Enumerable
                 .Range(0, paramCount)
                 .Select(i => Parameter(typeof(int), $"p{i}"))
                 .ToArray();
 
-            NewArrayExpression arrayInit = NewArrayInit(typeof(int), parameters);
+            var arrayInit = NewArrayInit(typeof(int), parameters);
 
-            LambdaExpression lambda = Lambda(arrayInit, parameters);
+            var expr = Lambda(arrayInit, parameters);
+            expr.PrintCSharp();
+
+#if LIGHT_EXPRESSION
+            // var sysExpr = expr.ToLambdaExpression();
+            // var restoredExpr = sysExpr.ToLightExpression();
+            // restoredExpr.PrintCSharp();
+            // Assert.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+#endif
 
             // (a, b, c, ...) => new[] { a, b, c, ... }
-            Delegate compiled = lambda.CompileFast(flags: CompilerFlags.ThrowOnNotSupportedExpression);
+            var fs = expr.CompileFast(flags: CompilerFlags.ThrowOnNotSupportedExpression);
 
-            int[] result = (int[])compiled.DynamicInvoke(parameters.Select(_ => (object)1).ToArray());
+            var result = (int[])fs.DynamicInvoke(parameters.Select(_ => (object)1).ToArray());
 
             Assert.AreEqual(paramCount, result.Length);
         }

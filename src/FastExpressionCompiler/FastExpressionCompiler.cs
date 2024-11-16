@@ -7566,7 +7566,7 @@ namespace FastExpressionCompiler
                             // wrap the `new X().Y` into parens as `(new X()).Y` as it is may be a part of the bigger expression
                             if (inst.NodeType == ExpressionType.New)
                                 sb.Append('(');
-                            inst.ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            inst.ToCSharpString(sb, EnclosedIn.ParensByDefault, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             if (inst.NodeType == ExpressionType.New)
                                 sb.Append(')');
                         }
@@ -7578,17 +7578,20 @@ namespace FastExpressionCompiler
                 case ExpressionType.NewArrayInit:
                     {
                         var x = (NewArrayExpression)e;
+                        var nextIndent = GetRealLineIndent(sb) + indentSpaces;
+
                         sb.Append("new ").Append(e.Type.GetElementType().ToCode(stripNamespace, printType));
                         sb.Append(e.NodeType == ExpressionType.NewArrayInit ? "[]{" : "[");
 
                         var exprs = x.Expressions;
                         if (exprs.Count == 1)
-                            exprs[0].ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            exprs[0].ToCSharpString(sb, EnclosedIn.AvoidParens, nextIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         else if (exprs.Count > 1)
                             for (var i = 0; i < exprs.Count; i++)
-                                exprs[i].ToCSharpString(
-                                    (i > 0 ? sb.Append(',') : sb).NewLineIndent(lineIndent),
-                                    lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            {
+                                sb = (i > 0 ? sb.Append(',') : sb).NewLineIndent(nextIndent);
+                                exprs[i].ToCSharpString(sb, EnclosedIn.AvoidParens, nextIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                            }
 
                         return sb.Append(e.NodeType == ExpressionType.NewArrayInit ? "}" : "]");
                     }

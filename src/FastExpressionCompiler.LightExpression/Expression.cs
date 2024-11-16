@@ -1055,13 +1055,18 @@ public abstract class Expression
         ListInit(newExpression, initializers.AsReadOnlyList());
 
     public static NewArrayExpression NewArrayInit(Type type, IReadOnlyList<Expression> initializers) =>
-        new ManyElementsNewArrayInitExpression(type.MakeArrayType(), initializers);
+        initializers == null || initializers.Count == 0
+            ? new EmptyNewArrayInitExpression(type.MakeArrayType())
+            : new ManyElementsNewArrayInitExpression(type.MakeArrayType(), initializers);
 
     public static NewArrayExpression NewArrayInit(Type type, params Expression[] initializers) =>
         NewArrayInit(type, (IReadOnlyList<Expression>)initializers);
 
     public static NewArrayExpression NewArrayInit(Type type, IEnumerable<Expression> initializers) =>
         NewArrayInit(type, initializers.AsReadOnlyList());
+
+    public static NewArrayExpression NewArrayInit(Type type) =>
+        new EmptyNewArrayInitExpression(type.MakeArrayType());
 
     public static NewArrayExpression NewArrayInit(Type type, Expression element) =>
         new OneElementNewArrayInitExpression(type.MakeArrayType(), element);
@@ -2392,6 +2397,57 @@ public static class FromSysExpressionConverter
                             return Expression.New(ctor, ars);
                     }
                 }
+            case ExpressionType.NewArrayInit:
+                {
+                    var arrInit = (System.Linq.Expressions.NewArrayExpression)sysExpr;
+                    var sysExprs = arrInit.Expressions;
+                    switch (sysExprs.Count)
+                    {
+                        case 0: return new EmptyNewArrayInitExpression(exprType);
+                        case 1:
+                            return new OneElementNewArrayInitExpression(exprType,
+                                sysExprs[0].ToLightExpression(ref exprsConverted));
+                        case 2:
+                            return new TwoElementNewArrayInitExpression(exprType,
+                                sysExprs[0].ToLightExpression(ref exprsConverted),
+                                sysExprs[1].ToLightExpression(ref exprsConverted));
+                        case 3:
+                            return new ThreeElementNewArrayInitExpression(exprType,
+                                sysExprs[0].ToLightExpression(ref exprsConverted),
+                                sysExprs[1].ToLightExpression(ref exprsConverted),
+                                sysExprs[2].ToLightExpression(ref exprsConverted));
+                        case 4:
+                            return new FourElementNewArrayInitExpression(exprType,
+                                sysExprs[0].ToLightExpression(ref exprsConverted),
+                                sysExprs[1].ToLightExpression(ref exprsConverted),
+                                sysExprs[2].ToLightExpression(ref exprsConverted),
+                                sysExprs[3].ToLightExpression(ref exprsConverted));
+                        case 5:
+                            return new FiveElementNewArrayInitExpression(exprType,
+                                sysExprs[0].ToLightExpression(ref exprsConverted),
+                                sysExprs[1].ToLightExpression(ref exprsConverted),
+                                sysExprs[2].ToLightExpression(ref exprsConverted),
+                                sysExprs[3].ToLightExpression(ref exprsConverted),
+                                sysExprs[4].ToLightExpression(ref exprsConverted));
+                        case 6:
+                            return new SixElementNewArrayInitExpression(exprType,
+                                sysExprs[0].ToLightExpression(ref exprsConverted),
+                                sysExprs[1].ToLightExpression(ref exprsConverted),
+                                sysExprs[2].ToLightExpression(ref exprsConverted),
+                                sysExprs[3].ToLightExpression(ref exprsConverted),
+                                sysExprs[4].ToLightExpression(ref exprsConverted),
+                                sysExprs[5].ToLightExpression(ref exprsConverted));
+                        default:
+                            var exprs = new Expression[sysExprs.Count];
+                            for (var i = 0; i < exprs.Length; ++i)
+                                exprs[i] = sysExprs[i].ToLightExpression(ref exprsConverted);
+                            return new ManyElementsNewArrayInitExpression(exprType, exprs);
+                    }
+                }
+            case ExpressionType.NewArrayBounds:
+                {
+                    return null;
+                }
             case ExpressionType.Loop:
                 {
                     var loopExpr = (System.Linq.Expressions.LoopExpression)sysExpr;
@@ -2584,10 +2640,10 @@ public static class FromSysExpressionConverter
                                 (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted),
                                 (ParameterExpression)pars[3].ToLightExpression(ref exprsConverted),
                                 (ParameterExpression)pars[5].ToLightExpression(ref exprsConverted),
-                                (ParameterExpression)pars[5].ToLightExpression(ref exprsConverted), retType);
+                                (ParameterExpression)pars[6].ToLightExpression(ref exprsConverted), retType);
                         default:
                             var pes = new ParameterExpression[parCount];
-                            for (var i = 0; i < le.Parameters.Count; i++)
+                            for (var i = 0; i < pes.Length; i++)
                                 pes[i] = (ParameterExpression)le.Parameters[i].ToLightExpression(ref exprsConverted);
                             return Expression.Lambda(exprType, body, pes, retType);
                     }
@@ -4032,11 +4088,16 @@ public abstract class NewArrayExpression : Expression, IArgumentProvider
         var elemType = Type.GetElementType();
         var exprs = ToExpressions(Expressions, ref exprsConverted);
         return NodeType == ExpressionType.NewArrayInit
-            // ReSharper disable once AssignNullToNotNullAttribute
-            ? SysExpr.NewArrayInit(Type.GetElementType(), exprs)
-            // ReSharper disable once AssignNullToNotNullAttribute
-            : SysExpr.NewArrayBounds(Type.GetElementType(), exprs);
+            ? SysExpr.NewArrayInit(elemType, exprs)
+            : SysExpr.NewArrayBounds(elemType, exprs);
     }
+}
+
+public sealed class EmptyNewArrayInitExpression : NewArrayExpression
+{
+    public override ExpressionType NodeType => ExpressionType.NewArrayInit;
+    public override IReadOnlyList<Expression> Expressions => Tools.Empty<Expression>();
+    internal EmptyNewArrayInitExpression(Type arrayType) : base(arrayType) { }
 }
 
 public sealed class ManyElementsNewArrayInitExpression : NewArrayExpression
