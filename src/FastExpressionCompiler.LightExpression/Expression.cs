@@ -1554,7 +1554,8 @@ public abstract class Expression
     {
         var vars = variables.AsReadOnlyList();
         var exprs = expressions.AsReadOnlyList();
-        var result = exprs[exprs.Count - 1]; // todo: @check what if empty?
+        Debug.Assert(exprs.Count > 0);
+        var result = exprs[exprs.Count - 1];
         if (result.Type == type)
             return vars == null || vars.Count == 0
                 ? new BlockExpression(exprs)
@@ -2409,8 +2410,32 @@ public static class FromSysExpressionConverter
                 }
             case ExpressionType.Block:
                 {
-                    // todo: @wip
-                    return null;
+                    var blockExpr = (System.Linq.Expressions.BlockExpression)sysExpr;
+
+                    var sysVars = blockExpr.Variables;
+                    var vars = sysVars != null && sysVars.Count != 0 ? new ParameterExpression[sysVars.Count] : Tools.Empty<ParameterExpression>();
+                    for (var i = 0; i < vars.Length; ++i)
+                        vars[i] = (ParameterExpression)sysVars[i].ToLightExpression(ref exprsConverted);
+
+                    var sysExprs = blockExpr.Expressions;
+                    Debug.Assert(sysExprs.Count > 0);
+                    switch (sysExprs.Count)
+                    {
+                        case 1:
+                            return Expression.Block(sysExpr.Type, vars,
+                                sysExprs[0].ToLightExpression(ref exprsConverted));
+                        case 2:
+                            return Expression.Block(sysExpr.Type, vars,
+                                sysExprs[0].ToLightExpression(ref exprsConverted),
+                                sysExprs[1].ToLightExpression(ref exprsConverted));
+                        default:
+                            var expr0 = sysExprs[0].ToLightExpression(ref exprsConverted);
+                            var expr1 = sysExprs[1].ToLightExpression(ref exprsConverted);
+                            var restOfExprs = new Expression[sysExprs.Count - 2];
+                            for (var i = 0; i < restOfExprs.Length; ++i)
+                                restOfExprs[i] = sysExprs[i + 2].ToLightExpression(ref exprsConverted);
+                            return Expression.Block(sysExpr.Type, vars, expr0, expr1, restOfExprs);
+                    };
                 }
             case ExpressionType.Try:
                 {
@@ -2820,12 +2845,8 @@ internal static class TypeTools
     }
 
     [MethodImpl((MethodImplOptions)256)]
-    public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs)
-    {
-        if (xs is IReadOnlyList<T> list)
-            return list;
-        return xs == null ? Tools.Empty<T>() : new List<T>(xs);
-    }
+    public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> xs) =>
+        xs is IReadOnlyList<T> list ? list : xs == null ? Tools.Empty<T>() : new List<T>(xs);
 
     internal static bool IsImplicitlyNumericConvertibleTo(this Type source, Type target)
     {

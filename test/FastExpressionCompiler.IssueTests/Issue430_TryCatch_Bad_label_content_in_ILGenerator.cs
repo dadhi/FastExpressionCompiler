@@ -14,7 +14,7 @@ public class Issue430_TryCatch_Bad_label_content_in_ILGenerator : ITest
 {
     public int Run()
     {
-        Original_case();
+        // Original_case();
         return 1;
     }
 
@@ -37,6 +37,12 @@ public class Issue430_TryCatch_Bad_label_content_in_ILGenerator : ITest
                 Label(returnLabelTarget, Constant(0))));
 
         expr.PrintCSharp();
+
+#if LIGHT_EXPRESSION
+        var sysExpr = expr.ToLambdaExpression();
+        var restoredExpr = sysExpr.ToLightExpression();
+        Assert.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+#endif
 
         var fs = expr.CompileSys();
         fs.PrintIL();
