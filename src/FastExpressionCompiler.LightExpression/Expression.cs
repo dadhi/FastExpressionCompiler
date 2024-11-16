@@ -2456,7 +2456,7 @@ public static class FromSysExpressionConverter
                         handlers[i] = Expression.MakeCatchBlock(sh.Test, handlerVar, handlerBody, filter);
                     }
                     var @finally = tryExpr.Finally?.ToLightExpression(ref exprsConverted);
-                    return Expression.TryCatchFinally(body, @finally);
+                    return Expression.TryCatchFinally(body, @finally, handlers);
                 }
             case ExpressionType.Goto:
                 {
