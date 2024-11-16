@@ -2467,6 +2467,14 @@ public static class FromSysExpressionConverter
 
                     return Expression.MakeGoto(gotoExpr.Kind, target, value, exprType);
                 }
+            case ExpressionType.Label:
+                {
+                    var labelExpr = (System.Linq.Expressions.LabelExpression)sysExpr;
+
+                    var target = labelExpr.Target?.ToLightLabelTarget(ref exprsConverted);
+                    var defaultValue = labelExpr.DefaultValue?.ToLightExpression(ref exprsConverted);
+                    return Expression.Label(target, defaultValue);
+                }
             case ExpressionType.Call:
                 {
                     var methodExpr = (System.Linq.Expressions.MethodCallExpression)sysExpr;
@@ -2599,7 +2607,7 @@ public static class FromSysExpressionConverter
                     return Expression.MakeBinary(nodeType, left, raft, be.IsLiftedToNull, be.Method, conv);
                 }
 
-                throw new NotSupportedException($"System to LightExpression conversion of {nodeType} is not supported yet");
+                throw new NotSupportedException($"System {nodeType} Expression to LightExpression conversion is not supported yet");
         }
     }
 }
