@@ -46,8 +46,5 @@
     ],
     "files.watcherExclude": {
         "**/target": true
-    },
-    "csharp.debug.sourceFileMap": {
-        "\\_\\src\\FastExpressionCompiler\\FastExpressionCompiler.cs" : "C:\\oss\\FastExpressionCompiler\\src\\FastExpressionCompiler\\FastExpressionCompiler.cs"
     }
 }

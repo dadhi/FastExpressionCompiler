@@ -17,7 +17,6 @@
 
         <PackageReadmeFile>readme.md</PackageReadmeFile>
 
-        <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     </PropertyGroup>
 
@@ -39,20 +38,7 @@
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageOutputPath>..\..\.dist</PackageOutputPath>
-
-        <DebugType>embedded</DebugType>
-        <DebugSymbols>true</DebugSymbols>
-        <IncludeSymbols>false</IncludeSymbols>
-
-        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-        <EmbedUntrackedSources>true</EmbedUntrackedSources>
     </PropertyGroup>
-
-    <!-- <ItemGroup>
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
-    </ItemGroup> -->
-
 </Project>

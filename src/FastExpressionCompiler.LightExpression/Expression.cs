@@ -1854,7 +1854,7 @@ public abstract class Expression
             case GotoExpressionKind.Continue:
                 return type == null
                     ? new ContinueGotoExpression(target)
-                    : (GotoExpression)new ContinueTypedGotoExpression(target, type);
+                    : new ContinueTypedGotoExpression(target, type);
             case GotoExpressionKind.Goto:
             default:
                 if (value == null && type == null)
@@ -2212,7 +2212,7 @@ public static class FromSysExpressionConverter
         {
             case ExpressionType.Constant:
                 var constExpr = (System.Linq.Expressions.ConstantExpression)sysExpr;
-                return Expression.Constant(constExpr.Value, constExpr.Type);
+                return Expression.Constant(constExpr.Value, exprType);
 
             case ExpressionType.Invoke:
                 {
@@ -2325,7 +2325,7 @@ public static class FromSysExpressionConverter
                 var test = ce.Test.ToLightExpression(ref exprsConverted);
                 var ifTrue = ce.IfTrue.ToLightExpression(ref exprsConverted);
                 var ifFalse = ce.IfFalse?.ToLightExpression(ref exprsConverted);
-                return Expression.Condition(test, ifTrue, ifFalse, ce.Type);
+                return Expression.Condition(test, ifTrue, ifFalse, exprType);
 
             case ExpressionType.New:
                 {
@@ -2406,7 +2406,7 @@ public static class FromSysExpressionConverter
                     var cases = new SwitchCase[sysCases.Count];
                     for (var i = 0; i < cases.Length; ++i)
                         cases[i] = sysCases[i].ToLightSwitchCase(ref exprsConverted);
-                    return Expression.Switch(switchExpr.Type, switchValue, defaultBody, switchExpr.Comparison, cases);
+                    return Expression.Switch(exprType, switchValue, defaultBody, switchExpr.Comparison, cases);
                 }
             case ExpressionType.Block:
                 {
@@ -2422,10 +2422,10 @@ public static class FromSysExpressionConverter
                     switch (sysExprs.Count)
                     {
                         case 1:
-                            return Expression.Block(sysExpr.Type, vars,
+                            return Expression.Block(exprType, vars,
                                 sysExprs[0].ToLightExpression(ref exprsConverted));
                         case 2:
-                            return Expression.Block(sysExpr.Type, vars,
+                            return Expression.Block(exprType, vars,
                                 sysExprs[0].ToLightExpression(ref exprsConverted),
                                 sysExprs[1].ToLightExpression(ref exprsConverted));
                         default:
@@ -2434,7 +2434,7 @@ public static class FromSysExpressionConverter
                             var restOfExprs = new Expression[sysExprs.Count - 2];
                             for (var i = 0; i < restOfExprs.Length; ++i)
                                 restOfExprs[i] = sysExprs[i + 2].ToLightExpression(ref exprsConverted);
-                            return Expression.Block(sysExpr.Type, vars, expr0, expr1, restOfExprs);
+                            return Expression.Block(exprType, vars, expr0, expr1, restOfExprs);
                     };
                 }
             case ExpressionType.Try:
@@ -2444,8 +2444,12 @@ public static class FromSysExpressionConverter
                 }
             case ExpressionType.Goto:
                 {
-                    // todo: @wip
-                    return null;
+                    var gotoExpr = (System.Linq.Expressions.GotoExpression)sysExpr;
+
+                    var target = gotoExpr.Target?.ToLightLabelTarget(ref exprsConverted);
+                    var value = gotoExpr.Value?.ToLightExpression(ref exprsConverted);
+
+                    return Expression.MakeGoto(gotoExpr.Kind, target, value, exprType);
                 }
             case ExpressionType.Call:
                 {

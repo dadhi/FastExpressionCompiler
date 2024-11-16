@@ -6,16 +6,13 @@
         <OutputType>Exe</OutputType>
 
         <IsTestProject>false</IsTestProject>
-        <TieredCompilation>false</TieredCompilation>
 
         <!--skip tiering jitting for the fare benchmarks -->
+        <TieredCompilation>false</TieredCompilation>
+
         <DebugType>pdbonly</DebugType>
-        <DebugSymbols>true</DebugSymbols>
 
         <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
-
-        <LangVersion>latest</LangVersion>
-
     </PropertyGroup>
 
     <ItemGroup>

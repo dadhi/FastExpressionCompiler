@@ -3,7 +3,6 @@
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">net472;net7.0;net8.0</TargetFrameworks>
         <TargetFrameworks Condition="'$(DevMode)' != 'true'">net472;net7.0</TargetFrameworks>
         <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
-        <LangVersion>latest</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
