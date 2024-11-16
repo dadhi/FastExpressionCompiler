@@ -2077,11 +2077,11 @@ public static class FromSysExpressionConverter
                     (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted),
                     (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted),
                     (ParameterExpression)pars[3].ToLightExpression(ref exprsConverted),
-                    (ParameterExpression)pars[5].ToLightExpression(ref exprsConverted),
+                    (ParameterExpression)pars[4].ToLightExpression(ref exprsConverted),
                     (ParameterExpression)pars[5].ToLightExpression(ref exprsConverted), retType);
             default:
                 var pes = new ParameterExpression[parCount];
-                for (var i = 0; i < le.Parameters.Count; i++)
+                for (var i = 0; i < pes.Length; i++)
                     pes[i] = (ParameterExpression)le.Parameters[i].ToLightExpression(ref exprsConverted);
                 return Expression.Lambda<TDelegate>(body, pes, retType);
         }
@@ -2639,8 +2639,8 @@ public static class FromSysExpressionConverter
                                 (ParameterExpression)pars[1].ToLightExpression(ref exprsConverted),
                                 (ParameterExpression)pars[2].ToLightExpression(ref exprsConverted),
                                 (ParameterExpression)pars[3].ToLightExpression(ref exprsConverted),
-                                (ParameterExpression)pars[5].ToLightExpression(ref exprsConverted),
-                                (ParameterExpression)pars[6].ToLightExpression(ref exprsConverted), retType);
+                                (ParameterExpression)pars[4].ToLightExpression(ref exprsConverted),
+                                (ParameterExpression)pars[5].ToLightExpression(ref exprsConverted), retType);
                         default:
                             var pes = new ParameterExpression[parCount];
                             for (var i = 0; i < pes.Length; i++)
