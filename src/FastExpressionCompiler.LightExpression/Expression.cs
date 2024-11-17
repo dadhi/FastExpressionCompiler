@@ -43,6 +43,8 @@ using FastExpressionCompiler.LightExpression.ImTools;
 namespace FastExpressionCompiler.LightExpression;
 
 using static ExpressionCompiler;
+using static ToCSharpPrinter;
+using static CodePrinter;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -72,9 +74,9 @@ public abstract class Expression
         ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
 
     public virtual bool IsCustomToCSharpString => false;
-    public virtual StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
+    public virtual StringBuilder CustomToCSharpString(StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<object> uniquelyNamed,
         int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
-        CodePrinter.ObjectToCode notRecognizedToCode = null) => sb;
+        ObjectToCode notRecognizedToCode = null) => sb;
 
 #if SUPPORTS_VISITOR
     protected internal abstract Expression Accept(ExpressionVisitor visitor);
@@ -3200,15 +3202,17 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
     }
 
     public override bool IsCustomToCSharpString => true;
-    public override StringBuilder CustomToCSharpString(StringBuilder sb, ToCSharpPrinter.EnclosedIn enclosedIn,
+    public override StringBuilder CustomToCSharpString(StringBuilder sb,
+        EnclosedIn enclosedIn, ref SmallList4<object> uniquelyNamed,
         int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
-        CodePrinter.ObjectToCode notRecognizedToCode = null)
+        ObjectToCode notRecognizedToCode = null)
     {
-        var encloseInParens = enclosedIn != ToCSharpPrinter.EnclosedIn.LambdaBody && enclosedIn != ToCSharpPrinter.EnclosedIn.Return;
+        var encloseInParens = enclosedIn != EnclosedIn.LambdaBody && enclosedIn != EnclosedIn.Return;
         sb = encloseInParens ? sb.Append("((") : sb.Append('(');
 
         sb.Append(Type.ToCode(stripNamespace, printType)).Append(')');
-        sb = Operand.ToCSharpString(sb, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+        sb = Operand.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+            lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
         sb.Append(".Invoke"); // Hey, this is the CUSTOM part of the output.
 
@@ -5043,7 +5047,11 @@ public class LabelTarget
         return sysItem;
     }
 
-    public override string ToString() => this.ToCSharpString(new StringBuilder()).ToString();
+    public override string ToString()
+    {
+        SmallList4<object> uniquelyNamed = default;
+        return new StringBuilder().AppendLabelName(this, ref uniquelyNamed).ToString();
+    }
 }
 
 public sealed class TypedLabelTarget : LabelTarget

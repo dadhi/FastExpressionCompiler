@@ -148,14 +148,16 @@ public static class SmallList
         where TEq : struct, IEq<TItem>
         => source.Items.TryGetIndex(it, 0, source.Count, eq);
 
-    /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
+    /// <summary>Returns the index of the found item or appends the item to the end of the list, and returns its index</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static int GetIndexOrAdd<TItem, TEq>(this ref SmallList<TItem> source, in TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
         var i = TryGetIndex(source.Items, in item, 0, source.Count, eq);
-        if (i == -1)
-            source.Add() = item;
+        if (i != -1)
+            return i;
+        i = source.Count;
+        source.Add() = item;
         return i;
     }
 
@@ -237,7 +239,7 @@ public static class SmallList
         return -1;
     }
 
-    /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
+    /// <summary>Returns the index of the found item or appends the item to the end of the list, and returns its index</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static int GetIndexOrAdd<TItem, TEq>(this ref SmallList4<TItem> source, in TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
@@ -247,20 +249,20 @@ public static class SmallList
             case 0:
                 source._count = 1;
                 source._it0 = item;
-                return -1;
+                return 0;
 
             case 1:
                 if (eq.Equals(item, source._it0)) return 0;
                 source._count = 2;
                 source._it1 = item;
-                return -1;
+                return 1;
 
             case 2:
                 if (eq.Equals(item, source._it0)) return 0;
                 if (eq.Equals(item, source._it1)) return 1;
                 source._count = 3;
                 source._it2 = item;
-                return -1;
+                return 2;
 
             case 3:
                 if (eq.Equals(item, source._it0)) return 0;
@@ -268,7 +270,7 @@ public static class SmallList
                 if (eq.Equals(item, source._it2)) return 2;
                 source._count = 4;
                 source._it3 = item;
-                return -1;
+                return 3;
 
             default:
                 if (eq.Equals(item, source._it0)) return 0;
@@ -283,8 +285,7 @@ public static class SmallList
                         return i + SmallList4<TItem>.StackCapacity;
                 }
                 AddDefaultAndGetRef(ref source._rest, restCount) = item;
-                ++source._count;
-                return -1;
+                return source._count++;
         }
     }
 
@@ -349,7 +350,7 @@ public static class SmallList
         return -1;
     }
 
-    /// <summary>Returns the ref of the found item or appends the item to the end of the list, and returns ref to it</summary>
+    /// <summary>Returns the index of the found item or appends the item to the end of the list, and returns its index</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static int GetIndexOrAdd<TItem, TEq>(this ref SmallList2<TItem> source, TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
@@ -359,13 +360,13 @@ public static class SmallList
             case 0:
                 source._count = 1;
                 source._it0 = item;
-                return -1;
+                return 0;
 
             case 1:
                 if (eq.Equals(item, source._it0)) return 0;
                 source._count = 2;
                 source._it1 = item;
-                return -1;
+                return 1;
 
             default:
                 if (eq.Equals(item, source._it0)) return 0;
@@ -379,8 +380,7 @@ public static class SmallList
                         return i + SmallList2<TItem>.StackCapacity;
                 }
                 AddDefaultAndGetRef(ref source._rest, restCount) = item;
-                ++source._count;
-                return -1;
+                return source._count++;
         }
     }
 }
@@ -810,6 +810,14 @@ public struct IntEq : IEq<int>
     public int GetHashCode(int key) => key;
 }
 
+/// <summary>Instances of the RefEq for the often used K</summary>
+public static class RefEq
+{
+    /// <summary>RefEq for object, possibly the only thing you need</summary>
+    public static readonly RefEq<object> OfObject = default;
+}
+
+// todo: @wip should we even need K here, maybe object implementation is enough?
 /// <summary>Uses the `object.GetHashCode` and `object.ReferenceEquals`</summary>
 public struct RefEq<K> : IEq<K> where K : class
 {
