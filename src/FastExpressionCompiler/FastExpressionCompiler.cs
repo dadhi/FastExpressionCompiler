@@ -7882,7 +7882,11 @@ namespace FastExpressionCompiler
                     {
                         var x = (LabelExpression)e;
                         sb.NewLineIndent(lineIndent);
-                        x.Target.ToCSharpString(sb).Append(':');
+                        var target = x.Target;
+                        // todo: @wip @feature #434, add the unique name for the label based on its identity
+                        sb.AppendName(target.Name, target.Type, target.GetHashCode());
+                        // label is ended with colon to always produce the valid C# code at the end of the scope e.g. before closing `}`, otherwise it is an error in C# 
+                        sb.Append(":;");
                         return sb; // we don't output the default value and relying on the Goto Return `return` instead, otherwise we may change the logic of the code
                     }
                 case ExpressionType.Goto:
@@ -8437,7 +8441,8 @@ namespace FastExpressionCompiler
             {
                 lastExpr.ToCSharpString(sb, enclosedIn, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                 sb = blockResultAssignment?.NodeType == ExpressionType.PowerAssign ? sb.Append(')') : sb;
-                sb.AppendSemicolonOnce();
+                if (lastExpr.NodeType != ExpressionType.Conditional || lastExpr.Type != typeof(void))
+                    sb.AppendSemicolonOnce();
             }
             return sb;
         }

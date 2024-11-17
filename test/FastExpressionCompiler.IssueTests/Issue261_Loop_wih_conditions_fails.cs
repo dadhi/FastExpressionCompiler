@@ -232,6 +232,49 @@ public class Issue261_Loop_wih_conditions_fails : ITest
 
     expr.PrintCSharp();
 
+    _ = (WriteMethods<Nullable<Decimal>[], BufferedStream, Settings_827720117>.WriteSealed)((
+        Nullable<Decimal>[] source,
+        ref BufferedStream stream,
+        Binary<BufferedStream, Settings_827720117> io) => //void
+    {
+      int length0 = default;
+      stream.ReserveSize(4);
+      length0 = source.GetLength(0);
+      stream.Write<int>(length0);
+      if (0 == length0)
+      {
+        goto skipWrite;
+      }
+      int i0 = default;
+      i0 = length0 - 1;
+      while (true)
+      {
+        if (i0 < 0)
+        {
+          goto break0;
+        }
+        else
+        {
+          stream.ReserveSize(17);
+          if (source[i0].HasValue)
+          {
+            stream.Write<byte>((byte)1);
+            stream.Write<Decimal>(source[i0].Value);
+          finishWrite1:;
+          }
+          else
+          {
+            stream.Write<byte>((byte)0);
+          }
+        continue0:
+          i0 = i0 - 1;
+        }
+      }
+    break0:;
+    skipWrite:;
+    finishWrite:;
+    });
+
 #if LIGHT_EXPRESSION
     var sysExpr = expr.ToLambdaExpression();
     var restoredExpr = sysExpr.ToLightExpression();
