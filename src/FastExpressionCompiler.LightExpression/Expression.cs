@@ -2222,6 +2222,10 @@ public static class FromSysExpressionConverter
                     var constExpr = (System.Linq.Expressions.ConstantExpression)sysExpr;
                     return Expression.Constant(constExpr.Value, exprType);
                 }
+            case ExpressionType.Default:
+                {
+                    return Expression.Default(exprType);
+                }
             case ExpressionType.Invoke:
                 {
                     var ie = (System.Linq.Expressions.InvocationExpression)sysExpr;
@@ -2446,7 +2450,35 @@ public static class FromSysExpressionConverter
                 }
             case ExpressionType.NewArrayBounds:
                 {
-                    return null;
+                    var newArrBounds = (System.Linq.Expressions.NewArrayExpression)sysExpr;
+                    var sysExprs = newArrBounds.Expressions;
+                    if (sysExprs.Count == 1)
+                        return new OneBoundNewArrayBoundsExpression(exprType,
+                            sysExprs[0].ToLightExpression(ref exprsConverted));
+
+                    var bounds = new Expression[sysExprs.Count];
+                    for (var i = 0; i < bounds.Length; ++i)
+                        bounds[i] = sysExprs[i].ToLightExpression(ref exprsConverted);
+                    return new ManyBoundsNewArrayBoundsExpression(exprType, bounds);
+                }
+            case ExpressionType.Index:
+                {
+                    var indexExpr = (System.Linq.Expressions.IndexExpression)sysExpr;
+                    var argExprs = indexExpr.Arguments;
+                    var instance = indexExpr.Object?.ToLightExpression(ref exprsConverted);
+                    if (argExprs.Count == 1)
+                    {
+                        var argExpr = argExprs[0].ToLightExpression(ref exprsConverted);
+                        return indexExpr.Indexer != null
+                            ? Expression.Property(instance, indexExpr.Indexer, argExpr)
+                            : Expression.ArrayAccess(instance, argExpr);
+                    }
+                    var sysExprs = new Expression[argExprs.Count];
+                    for (var i = 0; i < sysExprs.Length; ++i)
+                        sysExprs[i] = argExprs[i].ToLightExpression(ref exprsConverted);
+                    return indexExpr.Indexer != null
+                        ? Expression.Property(instance, indexExpr.Indexer, sysExprs)
+                        : Expression.ArrayAccess(instance, sysExprs);
                 }
             case ExpressionType.Loop:
                 {
@@ -2595,7 +2627,7 @@ public static class FromSysExpressionConverter
             case ExpressionType.Parameter:
                 {
                     var pe = (System.Linq.Expressions.ParameterExpression)sysExpr;
-                    return Expression.Parameter(pe.Type, pe.Name);
+                    return Expression.Parameter(pe.IsByRef ? exprType.MakeByRefType() : exprType, pe.Name);
                 }
             case ExpressionType.Lambda:
                 {
@@ -2663,7 +2695,7 @@ public static class FromSysExpressionConverter
                     return Expression.MakeBinary(nodeType, left, raft, be.IsLiftedToNull, be.Method, conv);
                 }
 
-                throw new NotSupportedException($"System {nodeType} Expression to LightExpression conversion is not supported yet");
+                throw new NotSupportedException($"Conversion of `ExpressionType.{nodeType}` to LightExpression is not supported yet");
         }
     }
 }

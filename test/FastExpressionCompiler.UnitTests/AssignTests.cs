@@ -16,6 +16,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            Array_multi_dimensional_index_assign_value_type_block();
             Can_assign_to_parameter();
             Can_assign_to_parameter_in_nested_lambda();
             Parameter_test_try_catch_finally_result();
@@ -29,7 +30,6 @@ namespace FastExpressionCompiler.UnitTests
             Array_index_assign_ref_type_body_less();
             Array_index_assign_value_type_block();
             Array_index_assign_ref_type_block();
-            Array_multi_dimensional_index_assign_value_type_block();
             Array_multi_dimensional_index_assign_ref_type_block();
             Array_index_assign_custom_indexer();
             Array_index_assign_custom_indexer_with_get();
@@ -93,14 +93,17 @@ namespace FastExpressionCompiler.UnitTests
             e.PrintCSharp();
             var @cs = (Func<TryCatchTest, TryCatchTest>)((TryCatchTest assigntests_trycatchtest__54708252) =>
             {
-                assigntests_trycatchtest__54708252 = ((Func<TryCatchTest>)(() => { try
+                assigntests_trycatchtest__54708252 = ((Func<TryCatchTest>)(() =>
                 {
-                    return new TryCatchTest();
-                }
-                catch (Exception)
-                {
-                    return (TryCatchTest)null;
-                }; }))();
+                    try
+                    {
+                        return new TryCatchTest();
+                    }
+                    catch (Exception)
+                    {
+                        return (TryCatchTest)null;
+                    };
+                }))();
                 return assigntests_trycatchtest__54708252;
             });
 
@@ -366,10 +369,20 @@ namespace FastExpressionCompiler.UnitTests
                     Assign(ArrayAccess(variable, Constant(1), Constant(0)), Constant(5)), // a[1,0] = 5
                     ArrayAccess(variable, Constant(1), Constant(0)))); // ret a[1,0]
 
-            var f = expr.CompileFast(true);
+            expr.PrintCSharp();
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(5, f());
+            var fs = expr.CompileFast(true);
+
+#if LIGHT_EXPRESSION
+            var sysExpr = expr.ToLambdaExpression();
+            var restoredExpr = sysExpr.ToLightExpression();
+            restoredExpr.PrintCSharp();
+            // todo: @wip #431 generates different names for the unnamed variables which is not comparable
+            // Assert.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+#endif
+
+            Assert.IsNotNull(fs);
+            Assert.AreEqual(5, fs());
         }
 
         [Test]

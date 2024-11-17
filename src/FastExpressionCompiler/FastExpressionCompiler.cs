@@ -6942,7 +6942,8 @@ namespace FastExpressionCompiler
                     .Append(" // (")
                     .Append(!pe.Type.IsPrimitive && pe.Type.IsValueType ? "[struct] " : string.Empty)
                     .Append(pe.Type.ToCode(stripNamespace, printType))
-                    .Append(' ').AppendName(pe.Name, pe.Type.ToCode(stripNamespace, printType), pe).Append(')')
+                    .Append(' ')
+                    .AppendName(pe.Name, pe.Type.ToCode(stripNamespace, printType), pe.GetHashCode()).Append(')')
                     .NewLineIndent(lineIndent)
                     .Append(']');
 
@@ -6956,7 +6957,7 @@ namespace FastExpressionCompiler
         {
             if (labelTargets.TryGetIndex(out var i, lt, labelTargets.Count, default(RefEq<LabelTarget>)))
                 return sb.Append("l[").Append(i)
-                    .Append(" // (").AppendName(lt.Name, lt.Type.ToCode(stripNamespace, printType), lt).Append(')')
+                    .Append(" // (").AppendName(lt.Name, lt.Type.ToCode(stripNamespace, printType), lt.GetHashCode()).Append(')')
                     .NewLineIndent(lineIndent).Append(']');
 
             labelTargets.Add(lt);
@@ -7476,7 +7477,7 @@ namespace FastExpressionCompiler
                     {
                         if (isReturnByRef)
                             sb.Append("ref ");
-                        return sb.AppendName(((ParameterExpression)e).Name, e.Type.ToCode(stripNamespace, printType), e);
+                        return sb.AppendName(((ParameterExpression)e).Name, e.Type.ToCode(stripNamespace, printType), e.GetHashCode());
                     }
                 case ExpressionType.New:
                     {
@@ -7662,7 +7663,7 @@ namespace FastExpressionCompiler
                                     sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
                                 var typeCode = pe.Type.ToCode(stripNamespace, printType);
                                 sb.Append(typeCode).Append(' ');
-                                sb.AppendName(pe.Name, typeCode, pe);
+                                sb.AppendName(pe.Name, typeCode, pe.GetHashCode());
                             }
                         }
 
@@ -7849,8 +7850,9 @@ namespace FastExpressionCompiler
                                 var exTypeName = h.Test.ToCode(stripNamespace, printType);
                                 sb.Append(exTypeName);
 
-                                if (h.Variable != null)
-                                    sb.Append(' ').AppendName(h.Variable.Name, h.Variable.Type.ToCode(stripNamespace, printType), h.Variable);
+                                var hVar = h.Variable;
+                                if (hVar != null)
+                                    sb.Append(' ').AppendName(hVar.Name, hVar.Type.ToCode(stripNamespace, printType), hVar.GetHashCode());
 
                                 sb.Append(')');
                                 if (h.Filter != null)
@@ -8246,7 +8248,7 @@ namespace FastExpressionCompiler
         private const string NotSupportedExpression = "// NOT_SUPPORTED_EXPRESSION: ";
 
         internal static StringBuilder ToCSharpString(this LabelTarget target, StringBuilder sb) =>
-            sb.AppendName(target.Name, target.Type, target);
+            sb.AppendName(target.Name, target.Type, target.GetHashCode());
 
         private static StringBuilder ToCSharpString(this IReadOnlyList<MemberBinding> bindings, StringBuilder sb,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4, CodePrinter.ObjectToCode notRecognizedToCode = null)
@@ -8317,11 +8319,11 @@ namespace FastExpressionCompiler
                 var vNameSuffix = !vIsByRef ? "" : "__discard_init_by_ref";
 
                 var vTypeCode = vType.ToCode(stripNamespace, printType);
-                var vName = new StringBuilder().AppendName(v.Name, vTypeCode, v, vNameSuffix);
+                var vName = new StringBuilder().AppendName(v.Name, vTypeCode, v.GetHashCode(), vNameSuffix);
                 sb.Append(vTypeCode).Append(' ').Append(vName).Append(vType.IsValueType && !vType.IsNullable() ? " = default;" : " = null;");
 
                 if (vIsByRef)
-                    sb.Append(" ref var ").AppendName(v.Name, vTypeCode, v).Append(" = ref ").Append(vName).Append(';');
+                    sb.Append(" ref var ").AppendName(v.Name, vTypeCode, v.GetHashCode()).Append(" = ref ").Append(vName).Append(';');
             }
 
             // we don't inline a single expression case because it can always go crazy with assignment, e.g. `var a; a = 1 + (a = 2) + a * 2`
@@ -8574,14 +8576,24 @@ namespace FastExpressionCompiler
             return sb.Append(" }))");
         }
 
-        internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, string typeCode, T identity, string suffix = "") =>
-            !string.IsNullOrWhiteSpace(name)
-                ? sb.Append(name + suffix)
-                : sb.Append(typeCode.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(", ", "_").Replace("?", "").ToLowerInvariant())
-                    .Append("__").Append(identity.GetHashCode())
-                    .Append(suffix);
+        internal static StringBuilder AppendName(this StringBuilder sb, string name, string typeCode, int identity, string suffix = "")
+        {
+            if (!string.IsNullOrWhiteSpace(name))
+                return sb.Append(name).Append(suffix);
 
-        internal static StringBuilder AppendName<T>(this StringBuilder sb, string name, Type type, T identity, string suffix = "") =>
+            var validTypeIdent = typeCode
+                .Replace('.', '_')
+                .Replace('<', '_')
+                .Replace('>', '_')
+                .Replace(", ", "_")
+                .Replace("?", "")
+                .Replace("[]", "_arr")
+                .ToLowerInvariant();
+
+            return sb.Append(validTypeIdent).Append("__").Append(identity).Append(suffix);
+        }
+
+        internal static StringBuilder AppendName(this StringBuilder sb, string name, Type type, int identity, string suffix = "") =>
             sb.AppendName(name, type.ToCode(stripNamespace: true), identity, suffix);
 
         // todo: @simplify add `addTypeof = false` or use `AppendTypeOf` generally
