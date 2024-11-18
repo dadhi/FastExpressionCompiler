@@ -28,7 +28,7 @@ THE SOFTWARE.
 // #define LIGHT_EXPRESSION
 #if DEBUG && NET6_0_OR_GREATER
 #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
-#define DEMIT
+// #define DEMIT
 #endif
 #if LIGHT_EXPRESSION
 #define SUPPORTS_ARGUMENT_PROVIDER
@@ -8330,8 +8330,10 @@ namespace FastExpressionCompiler
             StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4, ObjectToCode notRecognizedToCode = null)
         {
-            foreach (var b in bindings)
+            var count = bindings.Count;
+            for (var i = 0; i < count; i++)
             {
+                var b = bindings[i];
                 sb.NewLineIndent(lineIndent);
                 sb.Append(b.Member.Name).Append(" = ");
 
@@ -8350,25 +8352,33 @@ namespace FastExpressionCompiler
                 else if (b is MemberListBinding mlb)
                 {
                     sb.Append("{");
-                    foreach (var i in mlb.Initializers)
+                    var elemInits = mlb.Initializers;
+                    var elemCount = elemInits.Count;
+                    for (var e = 0; e < elemCount; e++)
                     {
+                        var args = elemInits[e].Arguments;
                         sb.NewLineIndent(lineIndent + indentSpaces);
-                        if (i.Arguments.Count > 1)
+                        var manyArgs = args.Count > 1;
+                        if (manyArgs)
                             sb.Append("(");
 
                         var n = 0;
-                        foreach (var a in i.Arguments)
-                            a.ToCSharpString((++n > 1 ? sb.Append(", ") : sb), EnclosedIn.ParensByDefault, ref named,
+                        foreach (var arg in args)
+                            arg.ToCSharpString((++n > 1 ? sb.Append(", ") : sb), EnclosedIn.ParensByDefault, ref named,
                                 lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
-                        if (i.Arguments.Count > 1)
+                        if (manyArgs)
                             sb.Append(")");
 
-                        sb.Append(",");
+                        if (e < elemCount - 1)
+                            sb.Append(",");
                     }
                     sb.NewLineIndent(lineIndent + indentSpaces).Append("}");
                 }
-                sb.Append(",");
+
+                // don't place comma after the last binding
+                if (i < count - 1)
+                    sb.Append(",");
             }
             return sb;
         }
