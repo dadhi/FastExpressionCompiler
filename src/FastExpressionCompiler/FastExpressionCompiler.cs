@@ -7969,35 +7969,43 @@ namespace FastExpressionCompiler
                             }
 
                             sb.NewLineIndent(caseBodyIndent);
+                            var caseBody = cs.Body;
                             if (enclosedIn == EnclosedIn.LambdaBody)
                             {
-                                if (cs.Body is BlockExpression bl)
+                                if (caseBody is BlockExpression bl)
                                     bl.BlockToCSharpString(sb, ref named,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
                                 else
-                                    cs.Body.ToCSharpString(sb.Append("return "), EnclosedIn.Return, ref named,
+                                {
+                                    var bodyIn = caseBody.Type != typeof(void) ? EnclosedIn.Return : EnclosedIn.AvoidParens;
+                                    caseBody.ToCSharpString(bodyIn == EnclosedIn.Return ? sb.Append("return ") : sb, bodyIn, ref named,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
+                                }
                             }
                             else
-                                cs.Body.ToCSharpString(sb, enclosedIn, ref named,
+                                caseBody.ToCSharpString(sb, enclosedIn, ref named,
                                     caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
                         }
 
                         if (x.DefaultBody != null)
                         {
+                            var defaultBody = x.DefaultBody;
                             sb.NewLineIndent(caseValueIndent).Append("default:");
                             sb.NewLineIndent(caseBodyIndent);
                             if (enclosedIn == EnclosedIn.LambdaBody)
                             {
-                                if (x.DefaultBody is BlockExpression bl)
+                                if (defaultBody is BlockExpression bl)
                                     bl.BlockToCSharpString(sb, ref named,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
                                 else
-                                    x.DefaultBody.ToCSharpString(sb.Append("return "), EnclosedIn.Return, ref named,
+                                {
+                                    var bodyIn = defaultBody.Type != typeof(void) ? EnclosedIn.Return : EnclosedIn.AvoidParens;
+                                    defaultBody.ToCSharpString(bodyIn == EnclosedIn.Return ? sb.Append("return ") : sb, bodyIn, ref named,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
+                                }
                             }
                             else
-                                x.DefaultBody.ToCSharpString(sb, enclosedIn, ref named,
+                                defaultBody.ToCSharpString(sb, enclosedIn, ref named,
                                     caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
                         }
 
