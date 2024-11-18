@@ -6938,16 +6938,18 @@ namespace FastExpressionCompiler
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
         {
             if (paramsExprs.TryGetIndex(out var i, pe, paramsExprs.Count, default(RefEq<PE>)))
+            {
+                SmallList4<NamedWithIndex> named = default;
                 return sb
                     .Append("p[").Append(i)
                     .Append(" // (")
                     .Append(!pe.Type.IsPrimitive && pe.Type.IsValueType ? "[struct] " : string.Empty)
                     .Append(pe.Type.ToCode(stripNamespace, printType))
                     .Append(' ')
-                    .AppendName(pe.Name, pe.Type.ToCode(stripNamespace, printType), pe.GetHashCode()).Append(')') // todo: @wip #434 but for ToExpressionString
+                    .AppendName(pe, pe.Name, pe.Type.ToCode(stripNamespace, printType), ref named, pe.GetHashCode()).Append(')') // todo: @wip #434 but for ToExpressionString
                     .NewLineIndent(lineIndent)
                     .Append(']');
-
+            }
             paramsExprs.Add(pe);
             sb.Append("p[").Append(paramsExprs.Count - 1).Append("]=");
             return pe.CreateExpressionString(sb, paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
@@ -6957,10 +6959,12 @@ namespace FastExpressionCompiler
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType)
         {
             if (labelTargets.TryGetIndex(out var i, lt, labelTargets.Count, default(RefEq<LabelTarget>)))
+            {
+                SmallList4<NamedWithIndex> named = default;
                 return sb.Append("l[").Append(i)
-                    .Append(" // (").AppendName(lt.Name, lt.Type.ToCode(stripNamespace, printType), lt.GetHashCode()).Append(')')
+                    .Append(" // (").AppendName(lt, lt.Name, lt.Type.ToCode(stripNamespace, printType), ref named, lt.GetHashCode()).Append(')')
                     .NewLineIndent(lineIndent).Append(']');
-
+            }
             labelTargets.Add(lt);
             sb.Append("l[").Append(labelTargets.Count - 1).Append("]=Label(");
             sb.AppendTypeOf(lt.Type, stripNamespace, printType);
@@ -7414,8 +7418,8 @@ namespace FastExpressionCompiler
         public static StringBuilder ToCSharpString(this Expression e, StringBuilder sb,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4, ObjectToCode notRecognizedToCode = null)
         {
-            var uniquelyNamed = new SmallList4<object>();
-            return e.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+            var named = new SmallList4<NamedWithIndex>();
+            return e.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
         }
 
@@ -7454,13 +7458,13 @@ namespace FastExpressionCompiler
                 : sb;
 
         internal static StringBuilder ToCSharpString(this Expression e,
-            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<object> uniquelyNamed,
+            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
             ObjectToCode notRecognizedToCode = null, bool isReturnByRef = false)
         {
 #if LIGHT_EXPRESSION
             if (e.IsCustomToCSharpString)
-                return e.CustomToCSharpString(sb, enclosedIn, ref uniquelyNamed, 
+                return e.CustomToCSharpString(sb, enclosedIn, ref named, 
                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 #endif
             switch (e.NodeType)
@@ -7484,8 +7488,7 @@ namespace FastExpressionCompiler
                     {
                         if (isReturnByRef)
                             sb.Append("ref ");
-                        var pIndex = uniquelyNamed.GetIndexOrAdd(e, RefEq.OfObject);
-                        return sb.AppendName(((ParameterExpression)e).Name, e.Type.ToCode(stripNamespace, printType), pIndex);
+                        return sb.AppendName(e, ((ParameterExpression)e).Name, e.Type.ToCode(stripNamespace, printType), ref named);
                     }
                 case ExpressionType.New:
                     {
@@ -7493,13 +7496,13 @@ namespace FastExpressionCompiler
                         sb.Append("new ").Append(e.Type.ToCode(stripNamespace, printType)).Append('(');
                         var args = x.Arguments;
                         if (args.Count == 1)
-                            args[0].ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                            args[0].ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                 lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         else if (args.Count > 1)
                             for (var i = 0; i < args.Count; i++)
                             {
                                 (i > 0 ? sb.Append(',') : sb).NewLineIndent(lineIndent + indentSpaces);
-                                args[i].ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                args[i].ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
                         return sb.Append(')');
@@ -7521,7 +7524,7 @@ namespace FastExpressionCompiler
                         if (diffTypes) sb.Append("((").Append(mc.Type.ToCode(stripNamespace, printType)).Append(')');
 
                         if (mc.Object != null)
-                            mc.Object.ToCSharpString(sb, EnclosedIn.Instance, ref uniquelyNamed,
+                            mc.Object.ToCSharpString(sb, EnclosedIn.Instance, ref named,
                                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         else // for the static method or the static extension method we need to qualify with the class
                             sb.Append(mc.Method.DeclaringType.ToCode(stripNamespace, printType));
@@ -7550,7 +7553,7 @@ namespace FastExpressionCompiler
                             var a = args[0];
                             if (p.ParameterType.IsByRef && !a.IsConstantOrDefault())
                                 sb.Append(p.IsOut ? "out " : p.IsIn ? "in" : "ref ");
-                            a.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                            a.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
                                 false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         }
                         else if (args.Count > 1)
@@ -7564,7 +7567,7 @@ namespace FastExpressionCompiler
                                 var a = args[i];
                                 if (p.ParameterType.IsByRef && !a.IsConstantOrDefault())
                                     sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
-                                a.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                                a.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
                                     false, argIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
                         }
@@ -7580,7 +7583,7 @@ namespace FastExpressionCompiler
                             // wrap the `new X().Y` into parens as `(new X()).Y` as it is may be a part of the bigger expression
                             if (inst.NodeType == ExpressionType.New)
                                 sb.Append('(');
-                            inst.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                            inst.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             if (inst.NodeType == ExpressionType.New)
                                 sb.Append(')');
@@ -7600,13 +7603,13 @@ namespace FastExpressionCompiler
 
                         var exprs = x.Expressions;
                         if (exprs.Count == 1)
-                            exprs[0].ToCSharpString(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                            exprs[0].ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                                 nextIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         else if (exprs.Count > 1)
                             for (var i = 0; i < exprs.Count; i++)
                             {
                                 sb = (i > 0 ? sb.Append(',') : sb).NewLineIndent(nextIndent);
-                                exprs[i].ToCSharpString(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                                exprs[i].ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                                     nextIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
 
@@ -7616,10 +7619,10 @@ namespace FastExpressionCompiler
                     {
                         var x = (MemberInitExpression)e;
                         lineIndent = sb.GetRealLineIndent();
-                        x.NewExpression.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                        x.NewExpression.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                             lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         sb.NewLineIndent(lineIndent).Append('{');
-                        x.Bindings.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                        x.Bindings.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         return sb.NewLineIndent(lineIndent).Append('}');
                     }
                 case ExpressionType.ListInit:
@@ -7627,7 +7630,7 @@ namespace FastExpressionCompiler
                         var x = (ListInitExpression)e;
                         lineIndent = GetRealLineIndent(sb);
 
-                        x.NewExpression.ToCSharpString(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                        x.NewExpression.ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                             lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                         sb.NewLineIndent(lineIndent).Append('{');
@@ -7640,7 +7643,7 @@ namespace FastExpressionCompiler
                             var args = elemInit.Arguments;
                             if (args.Count == 1)
                             {
-                                args.GetArgument(0).ToCSharpString(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                                args.GetArgument(0).ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
                             else
@@ -7649,7 +7652,7 @@ namespace FastExpressionCompiler
                                 for (var j = 0; j < args.Count; ++j)
                                 {
                                     sb = j == 0 ? sb : sb.Append(", ");
-                                    args.GetArgument(j).ToCSharpString(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                                    args.GetArgument(j).ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                                         lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                 }
                                 sb.Append('}');
@@ -7684,7 +7687,7 @@ namespace FastExpressionCompiler
                                     sb.Append(p.IsOut ? "out " : p.IsIn ? "in " : "ref ");
                                 var typeCode = pe.Type.ToCode(stripNamespace, printType);
                                 sb.Append(typeCode).Append(' ');
-                                sb.AppendName(pe.Name, typeCode, uniquelyNamed.GetIndexOrAdd(pe, RefEq.OfObject));
+                                sb.AppendName(pe, pe.Name, typeCode, ref named);
                             }
                         }
 
@@ -7697,7 +7700,7 @@ namespace FastExpressionCompiler
                         {
                             var newLineIndent = lineIndent + indentSpaces;
                             sb.NewLineIndent(newLineIndent);
-                            body.ToCSharpString(sb, EnclosedIn.LambdaBody, ref uniquelyNamed,
+                            body.ToCSharpString(sb, EnclosedIn.LambdaBody, ref named,
                                 newLineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, lambdaMethod.ReturnType.IsByRef);
                         }
                         else
@@ -7705,13 +7708,13 @@ namespace FastExpressionCompiler
                             sb.NewLineIndent(lineIndent).Append('{');
                             // Body handles `;` itself
                             if (body is BlockExpression bb)
-                                bb.BlockToCSharpString(sb, ref uniquelyNamed,
+                                bb.BlockToCSharpString(sb, ref named,
                                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode,
                                     inTheLastBlock: true, containerIgnoresResult: ignoresResult);
                             else
                             {
                                 sb.NewLineIndent(lineIndent + indentSpaces);
-                                body.ToCSharpString(sb, EnclosedIn.LambdaBody, ref uniquelyNamed,
+                                body.ToCSharpString(sb, EnclosedIn.LambdaBody, ref named,
                                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                 if (isReturnable)
                                     sb.AppendSemicolonOnce();
@@ -7731,7 +7734,7 @@ namespace FastExpressionCompiler
                         var encloseInParens = x.Expression.NodeType != ExpressionType.Parameter;
                         if (encloseInParens)
                             sb.Append('(');
-                        x.Expression.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                        x.Expression.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                             lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         if (encloseInParens)
                             sb.Append(')');
@@ -7746,7 +7749,7 @@ namespace FastExpressionCompiler
                         {
                             sb = i > 0 ? sb.Append(',') : sb;
                             sb.NewLineIndent(lineIndent + indentSpaces);
-                            x.Arguments[i].ToCSharpString(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                            x.Arguments[i].ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                                 lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         }
                         return sb.Append(")");
@@ -7759,17 +7762,17 @@ namespace FastExpressionCompiler
                         if (e.Type == typeof(void)) // otherwise output as ternary expression
                         {
                             sb.Append("if (");
-                            x.Test.ToCSharpString(sb, EnclosedIn.IfTest, ref uniquelyNamed,
+                            x.Test.ToCSharpString(sb, EnclosedIn.IfTest, ref named,
                                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             sb.Append(')');
 
-                            x.IfTrue.ToCSharpBlock(sb, ref uniquelyNamed,
+                            x.IfTrue.ToCSharpBlock(sb, ref named,
                                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                             if (x.IfFalse.NodeType != ExpressionType.Default || x.IfFalse.Type != typeof(void))
                             {
                                 sb.NewLineIndent(lineIndent).Append("else");
-                                x.IfFalse.ToCSharpBlock(sb, ref uniquelyNamed,
+                                x.IfFalse.ToCSharpBlock(sb, ref named,
                                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
                         }
@@ -7778,17 +7781,17 @@ namespace FastExpressionCompiler
                             var avoidParens = AvoidParens(enclosedIn);
                             sb = avoidParens ? sb : sb.Append('(');
 
-                            x.Test.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                            x.Test.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                             sb.Append(" ? ");
                             var doNewLine = !x.IfTrue.IsParamOrConstantOrDefault();
-                            x.IfTrue.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                            x.IfTrue.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
                                 doNewLine, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                             sb.Append(" : ");
                             doNewLine = !x.IfFalse.IsParamOrConstantOrDefault();
-                            x.IfFalse.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                            x.IfFalse.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
                                 doNewLine, lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                             sb = avoidParens ? sb : sb.Append(')');
@@ -7797,7 +7800,7 @@ namespace FastExpressionCompiler
                     }
                 case ExpressionType.Block:
                     {
-                        return ((BlockExpression)e).BlockToCSharpString(sb, ref uniquelyNamed,
+                        return ((BlockExpression)e).BlockToCSharpString(sb, ref named,
                             lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                     }
                 case ExpressionType.Loop:
@@ -7811,26 +7814,26 @@ namespace FastExpressionCompiler
                         if (x.ContinueLabel != null)
                         {
                             sb.NewLineIndent(lineIndent);
-                            sb.AppendLabelName(x.ContinueLabel, ref uniquelyNamed)
+                            sb.AppendLabelName(x.ContinueLabel, ref named)
                                 .Append(":;"); // the label is with the semicolon, because it will invalid code at the end of lambda without it
                         }
 
                         sb.NewLineIndent(lineIndent + indentSpaces);
-                        x.Body.ToCSharpString(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                        x.Body.ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                             lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                         sb.NewLineIndent(lineIndent).Append("}");
 
                         // the label is with the semicolon, because it will invalid code at the end of lambda without it
                         if (x.BreakLabel != null)
-                            sb.NewLineIndent(lineIndent).AppendLabelName(x.BreakLabel, ref uniquelyNamed).Append(":;");
+                            sb.NewLineIndent(lineIndent).AppendLabelName(x.BreakLabel, ref named).Append(":;");
 
                         return sb;
                     }
                 case ExpressionType.Index:
                     {
                         var x = (IndexExpression)e;
-                        x.Object.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                        x.Object.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                             lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                         var isStandardIndexer = x.Indexer == null || x.Indexer.Name == "Item";
@@ -7840,7 +7843,7 @@ namespace FastExpressionCompiler
                             sb.Append('.').Append(x.Indexer.Name).Append('(');
 
                         for (var i = 0; i < x.Arguments.Count; i++)
-                            x.Arguments[i].ToCSharpString(i > 0 ? sb.Append(", ") : sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                            x.Arguments[i].ToCSharpString(i > 0 ? sb.Append(", ") : sb, EnclosedIn.AvoidParens, ref named,
                                 lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                         return sb.Append(isStandardIndexer ? ']' : ')');
@@ -7851,11 +7854,11 @@ namespace FastExpressionCompiler
                         lineIndent = GetRealLineIndent(sb);
 
                         var returnsValue = e.Type != typeof(void);
-                        void PrintPart(Expression part, ref SmallList4<object> uniquelyNamed)
+                        void PrintPart(Expression part, ref SmallList4<NamedWithIndex> named)
                         {
                             var incIndent = lineIndent + indentSpaces;
                             if (part is BlockExpression pb)
-                                pb.BlockToCSharpString(sb, ref uniquelyNamed,
+                                pb.BlockToCSharpString(sb, ref named,
                                     incIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
                             else
                             {
@@ -7865,7 +7868,7 @@ namespace FastExpressionCompiler
                                 var isReturnable = returnsValue && part.NodeType.IsReturnable();
                                 if (isReturnable)
                                     sb.Append("return ");
-                                part.ToCSharpString(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                                part.ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                                     incIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                 sb.AppendSemicolonOnce();
                             }
@@ -7873,7 +7876,7 @@ namespace FastExpressionCompiler
 
                         sb.Append("try");
                         sb.NewLineIndent(lineIndent).Append('{');
-                        PrintPart(x.Body, ref uniquelyNamed);
+                        PrintPart(x.Body, ref named);
                         sb.NewLineIndent(lineIndent).Append('}');
 
                         var handlers = x.Handlers;
@@ -7888,23 +7891,20 @@ namespace FastExpressionCompiler
 
                                 var hVar = h.Variable;
                                 if (hVar != null)
-                                {
-                                    var hVarIndex = uniquelyNamed.GetIndexOrAdd(hVar, RefEq.OfObject);
-                                    sb.Append(' ').AppendName(hVar.Name, hVar.Type.ToCode(stripNamespace, printType), hVarIndex);
-                                }
+                                    sb.Append(' ').AppendName(hVar, hVar.Name, hVar.Type.ToCode(stripNamespace, printType), ref named);
 
                                 sb.Append(')');
                                 if (h.Filter != null)
                                 {
                                     sb.Append("when (");
                                     sb.NewLineIndent(lineIndent);
-                                    h.Filter.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    h.Filter.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                         lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                     sb.NewLineIndent(lineIndent).Append(')');
                                 }
 
                                 sb.NewLineIndent(lineIndent).Append('{');
-                                PrintPart(h.Body, ref uniquelyNamed);
+                                PrintPart(h.Body, ref named);
                                 sb.NewLineIndent(lineIndent).Append('}');
                             }
                         }
@@ -7913,7 +7913,7 @@ namespace FastExpressionCompiler
                         {
                             sb.NewLineIndent(lineIndent).Append("finally");
                             sb.NewLineIndent(lineIndent).Append('{');
-                            PrintPart(x.Finally, ref uniquelyNamed);
+                            PrintPart(x.Finally, ref named);
                             sb.NewLineIndent(lineIndent).Append('}');
                         }
                         return sb;
@@ -7921,7 +7921,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.Label:
                     {
                         // we don't output the default value and relying on the Goto Return `return` instead, otherwise we may change the logic of the code
-                        return sb.NewLineIndent(lineIndent).AppendLabelName(((LabelExpression)e).Target, ref uniquelyNamed).Append(":;");
+                        return sb.NewLineIndent(lineIndent).AppendLabelName(((LabelExpression)e).Target, ref named).Append(":;");
                     }
                 case ExpressionType.Goto:
                     {
@@ -7936,14 +7936,14 @@ namespace FastExpressionCompiler
                             if (isReturnable & enclosedIn != EnclosedIn.Return)
                                 sb.Append("return ");
 
-                            gtValue.ToCSharpString(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                            gtValue.ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                             if (isReturnable)
                                 sb.AppendSemicolonOnce();
                             return sb;
                         }
-                        return sb.Append("goto ").AppendLabelName(gt.Target, ref uniquelyNamed);
+                        return sb.Append("goto ").AppendLabelName(gt.Target, ref named);
                     }
                 case ExpressionType.Switch:
                     {
@@ -7952,7 +7952,7 @@ namespace FastExpressionCompiler
                         lineIndent = sb.GetRealLineIndent();
 
                         sb.Append("switch (");
-                        x.SwitchValue.ToCSharpString(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                        x.SwitchValue.ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                             lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         sb.Append(')');
                         sb.NewLineIndent(lineIndent).Append('{');
@@ -7964,7 +7964,7 @@ namespace FastExpressionCompiler
                             foreach (var tv in cs.TestValues)
                             {
                                 sb.NewLineIndent(caseValueIndent).Append("case ");
-                                tv.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                tv.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                     caseValueIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(':');
                             }
 
@@ -7972,14 +7972,14 @@ namespace FastExpressionCompiler
                             if (enclosedIn == EnclosedIn.LambdaBody)
                             {
                                 if (cs.Body is BlockExpression bl)
-                                    bl.BlockToCSharpString(sb, ref uniquelyNamed,
+                                    bl.BlockToCSharpString(sb, ref named,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
                                 else
-                                    cs.Body.ToCSharpString(sb.Append("return "), EnclosedIn.Return, ref uniquelyNamed,
+                                    cs.Body.ToCSharpString(sb.Append("return "), EnclosedIn.Return, ref named,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
                             }
                             else
-                                cs.Body.ToCSharpString(sb, enclosedIn, ref uniquelyNamed,
+                                cs.Body.ToCSharpString(sb, enclosedIn, ref named,
                                     caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
                         }
 
@@ -7990,14 +7990,14 @@ namespace FastExpressionCompiler
                             if (enclosedIn == EnclosedIn.LambdaBody)
                             {
                                 if (x.DefaultBody is BlockExpression bl)
-                                    bl.BlockToCSharpString(sb, ref uniquelyNamed,
+                                    bl.BlockToCSharpString(sb, ref named,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
                                 else
-                                    x.DefaultBody.ToCSharpString(sb.Append("return "), EnclosedIn.Return, ref uniquelyNamed,
+                                    x.DefaultBody.ToCSharpString(sb.Append("return "), EnclosedIn.Return, ref named,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
                             }
                             else
-                                x.DefaultBody.ToCSharpString(sb, enclosedIn, ref uniquelyNamed,
+                                x.DefaultBody.ToCSharpString(sb, enclosedIn, ref named,
                                     caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
                         }
 
@@ -8017,13 +8017,13 @@ namespace FastExpressionCompiler
                         // IsSealed returns true for arrays, but arrays are cursed and don't behave like sealed classes (`new string[0] is object[]`, and even `new int[0] is uint[]`)
                         if (x.NodeType == ExpressionType.TypeIs || (x.TypeOperand.IsSealed && !x.TypeOperand.IsArray))
                         {
-                            x.Expression.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                            x.Expression.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             sb.Append(" is ").Append(x.TypeOperand.ToCode(stripNamespace, printType));
                         }
                         else
                         {
-                            x.Expression.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                            x.Expression.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             sb.Append(".GetType() == typeof(").Append(x.TypeOperand.ToCode(stripNamespace, printType)).Append(')');
 
@@ -8033,17 +8033,17 @@ namespace FastExpressionCompiler
                 case ExpressionType.Coalesce:
                     {
                         var x = (BinaryExpression)e;
-                        x.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                        x.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref named,
                             false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         sb.Append(" ?? ");
-                        x.Right.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                        x.Right.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref named,
                             false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         return sb;
                     }
                 case ExpressionType.Extension:
                     {
                         var reduced = e.Reduce(); // proceed with the reduced expression
-                        return reduced.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                        return reduced.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                             lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                     }
                 case ExpressionType.Dynamic:
@@ -8064,33 +8064,33 @@ namespace FastExpressionCompiler
                             switch (e.NodeType)
                             {
                                 case ExpressionType.ArrayLength:
-                                    return op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    return op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode)
                                         .Append(".Length");
 
                                 case ExpressionType.Not: // either the bool not or the binary not
                                     return op.ToCSharpString(
-                                        e.Type == typeof(bool) ? sb.Append("!(") : sb.Append("~("), enclosedIn, ref uniquelyNamed,
+                                        e.Type == typeof(bool) ? sb.Append("!(") : sb.Append("~("), enclosedIn, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode)
                                         .Append(')');
 
                                 case ExpressionType.Convert:
                                 case ExpressionType.ConvertChecked:
                                     if (e.Type == op.Type || e.Type == typeof(Enum) && op.Type.IsEnum)
-                                        return op.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                                        return op.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
                                             false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                                     sb = avoidParens ? sb.Append('(') : sb.Append("((");
                                     sb.Append(e.Type.ToCode(stripNamespace, printType));
                                     sb.Append(')');
-                                    sb = op.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                                    sb = op.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
                                         false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                     return avoidParens ? sb : sb.Append(')');
 
                                 case ExpressionType.Decrement:
                                 case ExpressionType.Increment:
                                     if (!avoidParens) sb.Append('(');
-                                    sb = op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    sb = op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                     sb = e.NodeType == ExpressionType.Decrement ? sb.Append(" - 1") : sb.Append(" + 1");
                                     if (!avoidParens) sb.Append(')');
@@ -8099,7 +8099,7 @@ namespace FastExpressionCompiler
                                 case ExpressionType.Negate:
                                 case ExpressionType.NegateChecked:
                                     if (!avoidParens) sb.Append('(');
-                                    op.ToCSharpString(sb.Append('-'), EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    op.ToCSharpString(sb.Append('-'), EnclosedIn.ParensByDefault, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                     if (!avoidParens) sb.Append(')');
                                     return sb;
@@ -8110,24 +8110,24 @@ namespace FastExpressionCompiler
                                 case ExpressionType.PreDecrementAssign:
                                     if (!avoidParens) sb.Append('(');
                                     sb = e.NodeType == ExpressionType.PreIncrementAssign ? sb.Append("++") : e.NodeType == ExpressionType.PreDecrementAssign ? sb.Append("--") : sb;
-                                    op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                     sb = e.NodeType == ExpressionType.PostIncrementAssign ? sb.Append("++") : e.NodeType == ExpressionType.PostDecrementAssign ? sb.Append("--") : sb;
                                     if (!avoidParens) sb.Append(')');
                                     return sb;
 
                                 case ExpressionType.IsTrue:
-                                    return op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    return op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append("==true");
 
                                 case ExpressionType.IsFalse:
-                                    return op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    return op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append("==false");
 
                                 case ExpressionType.TypeAs:
                                 case ExpressionType.TypeIs:
                                     if (!avoidParens) sb.Append('(');
-                                    op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                     sb = e.NodeType == ExpressionType.TypeAs ? sb.Append(" as ") : sb.Append(" is ");
                                     sb.Append(e.Type.ToCode(stripNamespace, printType));
@@ -8136,13 +8136,13 @@ namespace FastExpressionCompiler
 
                                 case ExpressionType.Throw:
                                     return op is null ? sb.Append("throw") :
-                                        op.ToCSharpString(sb.Append("throw "), EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                        op.ToCSharpString(sb.Append("throw "), EnclosedIn.ParensByDefault, ref named,
                                             lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                                 case ExpressionType.Unbox: // output it as the cast
                                     sb = avoidParens ? sb.Append("(") : sb.Append("((");
                                     sb.Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
-                                    op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                     return avoidParens ? sb : sb.Append(')');
 
@@ -8158,10 +8158,10 @@ namespace FastExpressionCompiler
                             {
                                 var arrInParens = b.Left.NodeType != ExpressionType.Parameter;
                                 if (arrInParens) sb.Append('(');
-                                b.Left.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                b.Left.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                 if (arrInParens) sb.Append(')');
-                                return b.Right.ToCSharpString(sb.Append("["), EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                return b.Right.ToCSharpString(sb.Append("["), EnclosedIn.ParensByDefault, ref named,
                                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append("]");
                             }
 
@@ -8171,22 +8171,22 @@ namespace FastExpressionCompiler
                                 if (b.Right is BlockExpression rightBlock) // it is valid to assign the block and it is used to my surprise
                                 {
                                     sb.Append("// { The block result will be assigned to `")
-                                        .Append(b.Left.ToCSharpString(new StringBuilder(), EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                        .Append(b.Left.ToCSharpString(new StringBuilder(), EnclosedIn.ParensByDefault, ref named,
                                             lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode))
                                         .Append('`');
-                                    rightBlock.BlockToCSharpString(sb, ref uniquelyNamed,
+                                    rightBlock.BlockToCSharpString(sb, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, false, blockResultAssignment: b);
                                     return sb.NewLineIndent(lineIndent).Append("// } end of block assignment");
                                 }
 
-                                b.Left.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                b.Left.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                 if (nodeType == ExpressionType.PowerAssign)
                                 {
                                     sb.Append(" = System.Math.Pow(");
-                                    b.Left.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    b.Left.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(", ");
-                                    return b.Right.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                                    return b.Right.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(")");
                                 }
 
@@ -8195,7 +8195,7 @@ namespace FastExpressionCompiler
                                 if (b.Left is ParameterExpression leftParam && leftParam.IsByRef && !b.Right.IsConstantOrDefault())
                                     sb.Append("ref ");
 
-                                return b.Right.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref uniquelyNamed,
+                                return b.Right.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
                                     false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
 
@@ -8204,7 +8204,7 @@ namespace FastExpressionCompiler
                                 avoidParens = true;
 
                             sb = !avoidParens ? sb.Append('(') : sb;
-                            b.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                            b.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref named,
                                 false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                             if (nodeType == ExpressionType.Equal)
@@ -8222,7 +8222,7 @@ namespace FastExpressionCompiler
                             else
                                 sb.Append(OperatorToCSharpString(nodeType));
 
-                            b.Right.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                            b.Right.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref named,
                                 false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             return !avoidParens ? sb.Append(')') : sb;
                         }
@@ -8238,17 +8238,17 @@ namespace FastExpressionCompiler
             enclosedIn == EnclosedIn.Block | // statement in a block don't need the parens as well
             enclosedIn == EnclosedIn.Return;
 
-        private static StringBuilder ToCSharpBlock(this Expression expr, StringBuilder sb, ref SmallList4<object> uniquelyNamed,
+        private static StringBuilder ToCSharpBlock(this Expression expr, StringBuilder sb, ref SmallList4<NamedWithIndex> named,
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
         {
             sb.NewLineIndent(lineIndent).Append('{');
             if (expr is BlockExpression fb)
-                fb.BlockToCSharpString(sb, ref uniquelyNamed,
+                fb.BlockToCSharpString(sb, ref named,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: false);
             else
             {
                 sb.NewLineIndent(lineIndent + indentSpaces);
-                sb = expr?.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                sb = expr?.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode) ?? sb.Append("null");
                 sb.AppendSemicolonOnce();
             }
@@ -8256,30 +8256,30 @@ namespace FastExpressionCompiler
         }
 
         private static StringBuilder ToCSharpExpression(this Expression expr,
-            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<object> uniquelyNamed, bool newLineExpr,
+            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named, bool newLineExpr,
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
         {
             if (!expr.NodeType.IsBlockLike())
             {
                 if (!newLineExpr)
-                    return expr.ToCSharpString(sb, enclosedIn, ref uniquelyNamed,
+                    return expr.ToCSharpString(sb, enclosedIn, ref named,
                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                 sb.NewLineIndent(lineIndent);
-                return expr.ToCSharpString(sb, enclosedIn, ref uniquelyNamed,
+                return expr.ToCSharpString(sb, enclosedIn, ref named,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
             }
 
             InsertTopFFuncDefinitionOnce(sb);
             sb.NewLineIndent(lineIndent).Append("__f(() => {");
             if (expr is BlockExpression bl)
-                bl.BlockToCSharpString(sb, ref uniquelyNamed,
+                bl.BlockToCSharpString(sb, ref named,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
             else
             {
                 sb.NewLineIndent(lineIndent + indentSpaces);
                 if (expr != null)
-                    expr.ToCSharpString(sb, EnclosedIn.LambdaBody, ref uniquelyNamed,
+                    expr.ToCSharpString(sb, EnclosedIn.LambdaBody, ref named,
                         lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                 else
                     sb.Append("null");
@@ -8327,7 +8327,7 @@ namespace FastExpressionCompiler
         private const string NotSupportedExpression = "// NOT_SUPPORTED_EXPRESSION: ";
 
         private static StringBuilder ToCSharpString(this IReadOnlyList<MemberBinding> bindings,
-            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<object> uniquelyNamed,
+            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4, ObjectToCode notRecognizedToCode = null)
         {
             foreach (var b in bindings)
@@ -8337,13 +8337,13 @@ namespace FastExpressionCompiler
 
                 if (b is MemberAssignment ma)
                 {
-                    ma.Expression.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                    ma.Expression.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                 }
                 else if (b is MemberMemberBinding mmb)
                 {
                     sb.Append("{");
-                    mmb.Bindings.ToCSharpString(sb, enclosedIn, ref uniquelyNamed,
+                    mmb.Bindings.ToCSharpString(sb, enclosedIn, ref named,
                         lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                     sb.NewLineIndent(lineIndent + indentSpaces).Append("}");
                 }
@@ -8358,7 +8358,7 @@ namespace FastExpressionCompiler
 
                         var n = 0;
                         foreach (var a in i.Arguments)
-                            a.ToCSharpString((++n > 1 ? sb.Append(", ") : sb), EnclosedIn.ParensByDefault, ref uniquelyNamed,
+                            a.ToCSharpString((++n > 1 ? sb.Append(", ") : sb), EnclosedIn.ParensByDefault, ref named,
                                 lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                         if (i.Arguments.Count > 1)
@@ -8373,7 +8373,7 @@ namespace FastExpressionCompiler
             return sb;
         }
 
-        private static StringBuilder BlockToCSharpString(this BlockExpression b, StringBuilder sb, ref SmallList4<object> uniquelyNamed,
+        private static StringBuilder BlockToCSharpString(this BlockExpression b, StringBuilder sb, ref SmallList4<NamedWithIndex> named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
             ObjectToCode notRecognizedToCode = null, bool inTheLastBlock = false, BinaryExpression blockResultAssignment = null,
             bool containerIgnoresResult = false // in case of the container is lambda which is the Action/void delegate and ignores result, we don't need the `return` - it will be invalid c#
@@ -8388,7 +8388,7 @@ namespace FastExpressionCompiler
                 exprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
                 st0.Left == vars[0] && st1.Right == vars[0])
                 return Assign(st1.Left, st0.Right).ToCSharpString(sb.NewLineIndent(lineIndent),
-                    EnclosedIn.Block, ref uniquelyNamed, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode)
+                    EnclosedIn.Block, ref named, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode)
                     .AppendSemicolonOnce();
 
             foreach (var v in vars)
@@ -8399,12 +8399,11 @@ namespace FastExpressionCompiler
                 var vNameSuffix = !vIsByRef ? "" : "__discard_init_by_ref";
 
                 var vTypeCode = vType.ToCode(stripNamespace, printType);
-                var vIndex = uniquelyNamed.GetIndexOrAdd(v, RefEq.OfObject);
-                var vName = new StringBuilder().AppendName(v.Name + vNameSuffix, vTypeCode, vIndex);
+                var vName = new StringBuilder().AppendName(v, v.Name + vNameSuffix, vTypeCode, ref named);
                 sb.Append(vTypeCode).Append(' ').Append(vName).Append(vType.IsValueType && !vType.IsNullable() ? " = default;" : " = null;");
 
                 if (vIsByRef)
-                    sb.Append(" ref var ").AppendName(v.Name, vTypeCode, vIndex).Append(" = ref ").Append(vName).Append(';');
+                    sb.Append(" ref var ").AppendName(v, v.Name, vTypeCode, ref named).Append(" = ref ").Append(vName).Append(';');
             }
 
             // we don't inline a single expression case because it can always go crazy with assignment, e.g. `var a; a = 1 + (a = 2) + a * 2`
@@ -8422,17 +8421,17 @@ namespace FastExpressionCompiler
                         sb.Append("return;");
                     else
                         gt.Value.ToCSharpString(sb.Append("return "),
-                            EnclosedIn.Return, ref uniquelyNamed, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode)
+                            EnclosedIn.Return, ref named, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode)
                             .AppendSemicolonOnce();
 
                     sb.NewLineIndent(lineIndent);
-                    sb.AppendLabelName(label.Target, ref uniquelyNamed).Append(":;");
+                    sb.AppendLabelName(label.Target, ref named).Append(":;");
 
                     if (label.DefaultValue == null)
                         return sb.AppendLine(); // no return because we may have other expressions after label
                     sb.NewLineIndent(lineIndent);
                     sb.Append("return ");
-                    label.DefaultValue.ToCSharpString(sb, EnclosedIn.Return, ref uniquelyNamed,
+                    label.DefaultValue.ToCSharpString(sb, EnclosedIn.Return, ref named,
                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                     return sb.AppendSemicolonOnce();
                 }
@@ -8440,13 +8439,13 @@ namespace FastExpressionCompiler
                 if (expr is BlockExpression bl)
                 {
                     // Unrolling the block on the same vertical line
-                    bl.BlockToCSharpString(sb, ref uniquelyNamed,
+                    bl.BlockToCSharpString(sb, ref named,
                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: false);
                 }
                 else
                 {
                     sb.NewLineIndent(lineIndent);
-                    expr.ToCSharpString(sb, EnclosedIn.Block, ref uniquelyNamed,
+                    expr.ToCSharpString(sb, EnclosedIn.Block, ref named,
                         lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                     // Preventing the `};` kind of situation and separating the conditional block with empty line
@@ -8463,7 +8462,7 @@ namespace FastExpressionCompiler
                 return sb;
 
             if (lastExpr is BlockExpression lastBlock)
-                return lastBlock.BlockToCSharpString(sb, ref uniquelyNamed,
+                return lastBlock.BlockToCSharpString(sb, ref named,
                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode,
                     inTheLastBlock, // the last block is marked so if only it is itself in the last block
                     blockResultAssignment);
@@ -8471,7 +8470,7 @@ namespace FastExpressionCompiler
             // todo: @improve the label is already used by the Return GoTo we should skip it output here OR we need to replace the Return Goto `return` with `goto`  
             if (lastExpr is LabelExpression) // keep the last label on the same vertical line
             {
-                lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref uniquelyNamed,
+                lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref named,
                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                 if (inTheLastBlock)
                     sb.AppendSemicolonOnce(); // the last label forms the invalid C#, so we need at least ';' at the end
@@ -8482,14 +8481,14 @@ namespace FastExpressionCompiler
             var enclosedIn = EnclosedIn.Block;
             if (blockResultAssignment != null)
             {
-                blockResultAssignment.Left.ToCSharpString(sb, enclosedIn, ref uniquelyNamed,
+                blockResultAssignment.Left.ToCSharpString(sb, enclosedIn, ref named,
                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                 if (blockResultAssignment.NodeType != ExpressionType.PowerAssign)
                     sb.Append(OperatorToCSharpString(blockResultAssignment.NodeType));
                 else
                 {
                     sb.Append(" = System.Math.Pow(");
-                    blockResultAssignment.Left.ToCSharpString(sb, enclosedIn, ref uniquelyNamed,
+                    blockResultAssignment.Left.ToCSharpString(sb, enclosedIn, ref named,
                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(", ");
                 }
             }
@@ -8508,19 +8507,19 @@ namespace FastExpressionCompiler
             if (lastExpr.NodeType.IsBlockLike() ||
                 lastExpr is DefaultExpression d && d.Type == typeof(void))
             {
-                lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref uniquelyNamed,
+                lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref named,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
             }
             else if (lastExpr.NodeType == ExpressionType.Assign && ((BinaryExpression)lastExpr).Right is BlockExpression)
             {
-                lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref uniquelyNamed,
+                lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref named,
                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                 if (enclosedIn == EnclosedIn.Return)
                     sb.AppendSemicolonOnce();
             }
             else
             {
-                lastExpr.ToCSharpString(sb, enclosedIn, ref uniquelyNamed,
+                lastExpr.ToCSharpString(sb, enclosedIn, ref named,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                 sb = blockResultAssignment?.NodeType == ExpressionType.PowerAssign ? sb.Append(')') : sb;
                 if (lastExpr.NodeType != ExpressionType.Conditional || lastExpr.Type != typeof(void))
@@ -8663,11 +8662,43 @@ namespace FastExpressionCompiler
             return sb.Append(" }))");
         }
 
-        internal static StringBuilder AppendName(this StringBuilder sb, string name, string typeCode, int identity)
+        /// <summary>Named with index indeed</summary>
+        public struct NamedWithIndex
         {
-            if (!string.IsNullOrWhiteSpace(name))
-                return sb.Append(name);
+            /// <summary>Named</summary>
+            public object Named;
+            /// <summary>Provides an unique suffix for the same named things</summary>
+            public int Index;
+        }
 
+        internal static StringBuilder AppendName(this StringBuilder sb, object parOrTarget, string name, string typeCode, ref SmallList4<NamedWithIndex> named,
+            int noNameIndex = 0)
+        {
+            var nameIndex = 0;
+            if (noNameIndex == 0)
+            {
+                var found = false;
+                foreach (var n in named.Enumerate())
+                {
+                    if (found = ReferenceEquals(n.Named, parOrTarget))
+                    {
+                        nameIndex = n.Index;
+                        break;
+                    }
+                    if (n.Named is ParameterExpression pe1 && parOrTarget is ParameterExpression pe2 && pe1.Name == pe2.Name ||
+                        n.Named is LabelTarget lt1 && parOrTarget is LabelTarget lt2 && lt1.Name == lt2.Name)
+                        ++nameIndex;
+                }
+                if (!found)
+                    named.Add(new NamedWithIndex { Named = parOrTarget, Index = nameIndex });
+                noNameIndex = nameIndex;
+            }
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                sb.Append(name);
+                return nameIndex == 0 ? sb : sb.Append('_').Append(nameIndex);
+            }
             var validTypeIdent = typeCode
                 .Replace('.', '_')
                 .Replace('<', '_')
@@ -8677,14 +8708,11 @@ namespace FastExpressionCompiler
                 .Replace("[]", "_arr")
                 .ToLowerInvariant();
 
-            return sb.Append(validTypeIdent).Append("__").Append(identity);
+            return sb.Append(validTypeIdent).Append('_').Append(noNameIndex);
         }
 
-        internal static StringBuilder AppendLabelName(this StringBuilder sb, LabelTarget target, ref SmallList4<object> uniquelyNamed)
-        {
-            var index = uniquelyNamed.GetIndexOrAdd(target, RefEq.OfObject);
-            return sb.AppendName(target.Name, target.Type.ToCode(stripNamespace: true), index);
-        }
+        internal static StringBuilder AppendLabelName(this StringBuilder sb, LabelTarget target, ref SmallList4<NamedWithIndex> named) =>
+            sb.AppendName(target, target.Name, target.Type.ToCode(stripNamespace: true), ref named);
 
         // todo: @simplify add `addTypeof = false` or use `AppendTypeOf` generally
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>

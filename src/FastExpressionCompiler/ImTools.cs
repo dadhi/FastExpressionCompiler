@@ -31,10 +31,11 @@ namespace FastExpressionCompiler.ImTools;
 #endif
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
-using System.Runtime.CompilerServices; // For [MethodImpl(AggressiveInlining)]
+using System.Runtime.CompilerServices;
 
 #if NET7_0_OR_GREATER
 using System.Runtime.InteropServices;
@@ -287,6 +288,59 @@ public static class SmallList
                 AddDefaultAndGetRef(ref source._rest, restCount) = item;
                 return source._count++;
         }
+    }
+
+    /// <summary>Enumerates all the items</summary>
+    public static SmallList4Enumerable<TItem> Enumerate<TItem>(this ref SmallList4<TItem> list) => new SmallList4Enumerable<TItem>(list);
+
+    /// <summary>Enumerable on stack, without allocations</summary>
+    public struct SmallList4Enumerable<TItem> : IEnumerable<TItem>, IEnumerable
+    {
+        private readonly SmallList4<TItem> _list;
+        /// <summary>Constructor</summary>
+        public SmallList4Enumerable(SmallList4<TItem> list) => _list = list;
+        /// <inheritdoc />
+        public SmallList4Enumerator<TItem> GetEnumerator() => new SmallList4Enumerator<TItem>(_list);
+        IEnumerator<TItem> IEnumerable<TItem>.GetEnumerator() => GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    /// <summary>Enumerator on stack, without allocations</summary>
+    public struct SmallList4Enumerator<TItem> : IEnumerator<TItem>, IEnumerator
+    {
+        private readonly SmallList4<TItem> _list;
+        private int _index;
+        internal SmallList4Enumerator(SmallList4<TItem> list)
+        {
+            _list = list;
+            _index = -1;
+        }
+        private TItem _current;
+        /// <inheritdoc />
+        public TItem Current => _current;
+        object IEnumerator.Current => _current;
+        /// <inheritdoc />
+        public bool MoveNext()
+        {
+            var index = ++_index;
+            var list = _list;
+            if (index < _list.Count)
+                switch (index)
+                {
+                    case 0: _current = list._it0; return true;
+                    case 1: _current = list._it1; return true;
+                    case 2: _current = list._it2; return true;
+                    case 3: _current = list._it3; return true;
+                    default:
+                        _current = list._rest[index - SmallList4<TItem>.StackCapacity];
+                        return true;
+                }
+            return false;
+        }
+        /// <inheritdoc />
+        public void Reset() => _index = -1;
+        /// <inheritdoc />
+        public void Dispose() { }
     }
 
     /// <summary>Returns surely present item ref by its index</summary>

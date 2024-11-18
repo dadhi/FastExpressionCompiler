@@ -74,7 +74,7 @@ public abstract class Expression
         ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
 
     public virtual bool IsCustomToCSharpString => false;
-    public virtual StringBuilder CustomToCSharpString(StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<object> uniquelyNamed,
+    public virtual StringBuilder CustomToCSharpString(StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
         int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
         ObjectToCode notRecognizedToCode = null) => sb;
 
@@ -3203,7 +3203,7 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
 
     public override bool IsCustomToCSharpString => true;
     public override StringBuilder CustomToCSharpString(StringBuilder sb,
-        EnclosedIn enclosedIn, ref SmallList4<object> uniquelyNamed,
+        EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
         int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
         ObjectToCode notRecognizedToCode = null)
     {
@@ -3211,7 +3211,7 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
         sb = encloseInParens ? sb.Append("((") : sb.Append('(');
 
         sb.Append(Type.ToCode(stripNamespace, printType)).Append(')');
-        sb = Operand.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref uniquelyNamed,
+        sb = Operand.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
             lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
         sb.Append(".Invoke"); // Hey, this is the CUSTOM part of the output.
@@ -5049,8 +5049,8 @@ public class LabelTarget
 
     public override string ToString()
     {
-        SmallList4<object> uniquelyNamed = default;
-        return new StringBuilder().AppendLabelName(this, ref uniquelyNamed).ToString();
+        SmallList4<NamedWithIndex> named = default;
+        return new StringBuilder().AppendLabelName(this, ref named).ToString();
     }
 }
 
