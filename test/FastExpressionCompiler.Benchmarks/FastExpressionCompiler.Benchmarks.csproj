@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework Condition=" '$(LegacyModeForCI)' != 'true' ">net9.0</TargetFramework>
+        <TargetFramework Condition=" '$(LegacyModeForCI)' == 'true' ">net8.0</TargetFramework>
         <OutputType>Exe</OutputType>
 
         <IsTestProject>false</IsTestProject>
